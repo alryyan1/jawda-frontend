@@ -1,0 +1,50 @@
+{
+  "title": "العيادة",
+  "patientRegistration": {
+    "title": "تسجيل مريض جديد",
+    "nameLabel": "اسم المريض الكامل",
+    "namePlaceholder": "أدخل اسم المريض",
+    "phoneLabel": "رقم الهاتف",
+    "phonePlaceholder": "أدخل رقم الهاتف",
+    "genderLabel": "الجنس",
+    "selectGender": "اختر الجنس...",
+    "male": "ذكر",
+    "female": "أنثى",
+    "other": "آخر",
+    "ageLabel": "العمر",
+    "ageYearsPlaceholder": "سنوات",
+    "ageMonthsPlaceholder": "أشهر",
+    "ageDaysPlaceholder": "أيام",
+    "addressLabel": "العنوان",
+    "addressPlaceholder": "أدخل عنوان المريض",
+    "companyLabel": "الشركة (اختياري)",
+    "selectCompany": "اختر الشركة...",
+    "doctorLabel": "الطبيب المحول إليه",
+    "selectDoctor": "اختر الطبيب...",
+    "visitTypeLabel": "نوع الزيارة",
+    "selectVisitType": "اختر نوع الزيارة...",
+    "newVisit": "زيارة جديدة",
+    "followUp": "متابعة",
+    "notesLabel": "ملاحظات (اختياري)",
+    "notesPlaceholder": "أدخل أي ملاحظات إضافية",
+    "registerButton": "تسجيل المريض",
+    "registeringButton": "جارٍ التسجيل...",
+    "registrationSuccess": "تم تسجيل المريض بنجاح!",
+    "registrationFailed": "فشل تسجيل المريض. يرجى المحاولة مرة أخرى."
+  },
+  "workspace": {
+    "title": "ساحة العمل - المرضى الحاليون",
+    "noActivePatients": "لا يوجد مرضى حاليون.",
+    "patientName": "اسم المريض",
+    "status": "الحالة",
+    "waiting": "في الانتظار",
+    "withDoctor": "مع الطبيب",
+    "completed": "مكتمل"
+  },
+  "validation": {
+    "nameRequired": "اسم المريض مطلوب.",
+    "phoneRequired": "رقم الهاتف مطلوب.",
+    "genderRequired": "الجنس مطلوب.",
+    "doctorRequired": "الطبيب مطلوب."
+  }
+}

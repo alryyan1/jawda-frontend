@@ -1,0 +1,28 @@
+{
+  "appName": "تطبيق  جوده الطبي",
+  "loading": "جار التحميل...",
+  "updatingList": "جار تحديث القائمة...",
+  "cancel": "إلغاء",
+  "edit": "تعديل",
+  "delete": "حذف",
+  "actions": {
+    "openMenu": "فتح القائمة"
+  },
+  "pagination": {
+    "previous": "السابق",
+    "next": "التالي",
+    "pageInfo": "صفحة {{current}} من {{total}}"
+  },
+  "validation": {
+    "required": "{{field}} مطلوب.",
+    "mustBeNumber": "يجب أن يكون رقماً."
+  },
+  "form": {
+    "fillDetails": "الرجاء ملء التفاصيل أدناه."
+  },
+  "error": {
+    "generic": "حدث خطأ غير متوقع.",
+    "loadListsFailed": "فشل تحميل القوائم."
+  },
+  "save": "حفظ"
+}

@@ -1,0 +1,14 @@
+{
+    "title": "تسجيل الدخول",
+    "description": "يرجى إدخال بيانات الاعتماد الخاصة بك للمتابعة.",
+    "usernameLabel": "اسم المستخدم",
+    "usernamePlaceholder": "أدخل اسم المستخدم",
+    "passwordLabel": "كلمة المرور",
+    "passwordPlaceholder": "أدخل كلمة المرور",
+    "fieldRequired": "حقل {{field}} مطلوب.",
+    "loginButton": "تسجيل الدخول",
+    "loggingInButton": "جاري تسجيل الدخول...",
+    "loginFailedDefault": "فشل تسجيل الدخول. يرجى المحاولة مرة أخرى.",
+    "noAccountPrompt": "ليس لديك حساب؟",
+    "registerLinkText": "سجل الآن"
+}

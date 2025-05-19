@@ -1,0 +1,11 @@
+{
+  "addSpecialistButton": "إضافة تخصص",
+  "addDialogTitle": "إضافة تخصص جديد",
+  "addDialogDescription": "أدخل اسم التخصص الجديد هنا. سيتم تحديث القائمة.",
+  "form": {
+    "nameLabel": "اسم التخصص",
+    "namePlaceholder": "مثال: طب العيون، طب الأطفال"
+  },
+  "addSuccess": "تمت إضافة التخصص بنجاح!",
+  "addError": "فشل إضافة التخصص."
+}

@@ -1,57 +1,158 @@
-import React from 'react';
+// src/pages/ClinicPage.tsx
+import React, { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQueryClient } from '@tanstack/react-query'; // For invalidating queries
+import { useQueryClient } from '@tanstack/react-query';
+import { cn } from "@/lib/utils"; // For conditional class names
 
+// Import Child Components (we will create/update these)
+import DoctorsTabs from '@/components/clinic/DoctorsTabs';
 import PatientRegistrationForm from '@/components/clinic/PatientRegistrationForm';
 import ActivePatientsList from '@/components/clinic/ActivePatientsList';
-// import { Separator } from '@/components/ui/separator'; // Optional visual separator
+
+import { Input } from '@/components/ui/input';
+import {  Search } from 'lucide-react'; // Icons
+
+import type { Patient } from '@/types/patiens'; // Or your more specific ActivePatientListItem
+import type { DoctorShift } from '@/types/doctors'; // Assuming a DoctorShift type for Tabs
+import ActionsPane from './ActionsPane';
+import SelectedPatientWorkspace from './SelectedPatientWorkspace';
 
 const ClinicPage: React.FC = () => {
-  const { t } = useTranslation(['clinic', 'common']);
+  const { t, i18n } = useTranslation(['clinic', 'common']);
   const queryClient = useQueryClient();
 
-  // This callback will be passed to PatientRegistrationForm.
-  // When a patient is successfully registered, the form will call this.
-  const handlePatientRegistered = () => {
-    // Invalidate the query for active patients.
-    // This will cause ActivePatientsList (if it uses this query key) to refetch.
-    queryClient.invalidateQueries(['activePatients']);
+  const [showRegistrationForm, setShowRegistrationForm] = useState(true);
+  const [selectedPatientVisit, setSelectedPatientVisit] = useState<{ patient: Patient; visitId: number } | null>(null);
+  const [activeDoctorShift, setActiveDoctorShift] = useState<DoctorShift | null>(null); // For DoctorsTabs interaction
+  const [globalSearchTerm, setGlobalSearchTerm] = useState('');
+  const [currentClinicShiftId, setCurrentClinicShiftId] = useState<number | null>(1); // Example, replace with actual logic
+
+  const handlePatientRegistered = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['activePatients', activeDoctorShift?.id /* or global */] });
+    // Optionally hide form after registration, or keep it open for next one
+    // setShowRegistrationForm(false); 
+    // setSelectedPatientVisit(null); // Clear selection if form is shown
+  }, [queryClient, activeDoctorShift]);
+
+  const handlePatientSelected = useCallback((patient: Patient, visitId: number) => {
+    setSelectedPatientVisit({ patient, visitId });
+    setShowRegistrationForm(false); // Hide registration form when a patient is selected
+  }, []);
+
+  const toggleRegistrationForm = () => {
+    setShowRegistrationForm(prev => !prev);
+    if (!showRegistrationForm) { // If we are about to show the form
+      setSelectedPatientVisit(null); // Clear selected patient
+    }
   };
+  
+  const isRTL = i18n.dir() === 'rtl';
+
+  // Dynamic grid layout based on visibility states
+  // This uses CSS Grid for flexible layout
+  const gridTemplateColumns = showRegistrationForm 
+    ? (isRTL ? "1fr 2fr minmax(350px, 1.5fr) auto" : "auto minmax(350px, 1.5fr) 2fr 1fr")
+    : (isRTL ? "1fr 3fr auto" : "auto 3fr 1fr");
+
 
   return (
-    // The main container for the clinic page, using flexbox for layout.
-    // h-[calc(100vh-4rem)] assumes your AppLayout header is 4rem (64px) high.
-    // Adjust if your header height is different.
-    <div className="flex flex-col md:flex-row h-[calc(100vh-4rem)] bg-muted/40 dark:bg-muted/10">
-      
-      {/* Right Panel (or Left in LTR): Patient Registration Form */}
-      {/* `order-first md:order-last` can be used for RTL to place it on the right */}
-      <aside 
-        className="w-full md:w-[380px] lg:w-[420px] p-4 sm:p-6 border-border bg-card shadow-lg 
-                   overflow-y-auto md:h-full rtl:md:border-r rtl:md:border-l-0 ltr:md:border-l ltr:md:border-r-0"
-      >
-        <div className="sticky top-0 bg-card z-10 pt-1 pb-3 mb-3 border-b -mx-4 px-4 sm:-mx-6 sm:px-6"> {/* Sticky header for form */}
-            <h2 className="text-xl font-semibold text-foreground">
-            {t('clinic:patientRegistration.title')}
-            </h2>
+    <div className="flex flex-col h-screen bg-muted/20 dark:bg-background"> {/* Full screen height */}
+      {/* Top Section: Doctors Tabs & Global Search */}
+      <header className="flex-shrink-0 h-[100px] p-3 border-b bg-card flex items-center gap-4">
+        <div className="flex-grow w-2/3 h-full"> {/* Doctors Tabs Area */}
+      <DoctorsTabs 
+            onShiftSelect={setActiveDoctorShift} 
+            activeShiftId={activeDoctorShift?.id || null} 
+            currentClinicShiftId={currentClinicShiftId} // Pass if needed by DoctorsTabs
+          />
         </div>
-        <PatientRegistrationForm onPatientRegistered={handlePatientRegistered} />
-      </aside>
+        <div className="w-1/3 h-full flex items-center"> {/* Global Search Area */}
+          <div className="relative w-full">
+            <Search className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder={t('clinic:topNav.searchPatientsPlaceholder')}
+              value={globalSearchTerm}
+              onChange={(e) => setGlobalSearchTerm(e.target.value)}
+              className="ps-10 rtl:pr-10 h-12 text-base"
+            />
+          </div>
+        </div>
+      </header>
 
-      {/* Optional: Visual separator for larger screens
-      <Separator orientation="vertical" className="hidden md:block mx-0 px-0 h-auto" /> 
-      */}
-      
-      {/* Middle/Main Panel: Workspace / Active Patients */}
-      <main className="flex-1 p-4 sm:p-6 overflow-y-auto md:h-full">
-        <div className="sticky top-0 bg-muted/40 dark:bg-muted/10 z-10 pt-1 pb-3 mb-3 -mx-4 px-4 sm:-mx-6 sm:px-6 border-b"> {/* Sticky header for list */}
-            <h1 className="text-2xl font-bold text-foreground">
-            {t('clinic:workspace.title')}
-            </h1>
-        </div>
-        {/* The ActivePatientsList component will fetch and display patients */}
-        <ActivePatientsList   />
-      </main>
+      {/* Main Content Area: Actions, Form, Patient List, Selected Patient Workspace */}
+      {/* Using CSS Grid for layout */}
+      <div 
+        className={cn(
+            "flex-grow grid gap-0 overflow-hidden",
+            // Base layout for LTR. Adjust fr units as needed.
+            // "grid-cols-[auto_minmax(350px,1.5fr)_2fr_1fr]",
+            // "[column-gap:0px] [row-gap:0px]"
+        )}
+        style={{ gridTemplateColumns }}
+      >
+        {/* Section 1: Actions Pane (Fixed width, always visible) */}
+         <ActionsPane 
+            showRegistrationForm={showRegistrationForm}
+            onToggleRegistrationForm={toggleRegistrationForm}
+            currentClinicShiftId={currentClinicShiftId} // Pass to dialog
+        />
+
+
+        {/* Section 2: Patient Registration Form Panel (Conditional Visibility) */}
+        {showRegistrationForm && (
+          <section 
+            className={cn(
+                "bg-background border-border p-4 overflow-y-auto h-full shadow-lg",
+                isRTL ? "border-l order-2" : "border-r order-1"
+            )}
+          >
+             <div className="sticky top-0 bg-background z-10 pt-1 pb-3 mb-3 -mx-4 px-4 border-b">
+                <h2 className="text-lg font-semibold text-foreground">
+                {t('clinic:patientRegistration.title')}
+                </h2>
+            </div>
+            <PatientRegistrationForm onPatientRegistered={handlePatientRegistered} />
+          </section>
+        )}
+
+        {/* Section 3: Active Patients List Panel */}
+        <section 
+            className={cn(
+                "p-4 overflow-y-auto h-full bg-muted/40",
+                isRTL ? (showRegistrationForm ? "order-3" : "order-2") : (showRegistrationForm ? "order-2" : "order-2"),
+            )}
+        >
+          <div className="sticky top-0 bg-muted/40 dark:bg-background z-10 pt-1 pb-3 mb-3 -mx-4 px-4 border-b">
+            <h2 className="text-lg font-semibold text-foreground">
+              {t('clinic:workspace.title')}
+            </h2>
+          </div>
+          <ActivePatientsList
+            onPatientSelect={handlePatientSelected}
+            selectedPatientVisitId={selectedPatientVisit?.visitId || null}
+            doctorShiftId={activeDoctorShift?.id || null} // Pass active doctor/shift to filter patients
+            globalSearchTerm={globalSearchTerm} // Pass search term
+          />
+        </section>
+
+        {/* Section 4: Selected Patient Workspace (Conditional Visibility) */}
+        {selectedPatientVisit && !showRegistrationForm && (
+          <section 
+            className={cn(
+                "bg-white dark:bg-card border-border p-4 overflow-y-auto h-full shadow-lg",
+                isRTL ? "border-r order-4" : "border-l order-3"
+            )}
+          >
+            <SelectedPatientWorkspace
+              patient={selectedPatientVisit.patient}
+              visitId={selectedPatientVisit.visitId}
+              onClose={() => setSelectedPatientVisit(null)} // Optional: way to close this panel
+            />
+          </section>
+        )}
+      </div>
+      {/* Toaster for notifications */}
     </div>
   );
 };

@@ -1,33 +1,12 @@
 // src/types/users.ts (or part of src/types/index.ts)
+import type { Permission, Role } from './auth';
 import type { Doctor } from './doctors'; // Assuming this is defined
 
 // Define Role and Permission if not already in auth.ts
 // src/types/auth.ts
-export interface Role {
-  id: number;
-  name: string;
-}
-export interface Permission {
-  id: number;
-  name: string;
-}
+
 // End of auth.ts example parts
 
-export interface User {
-  id: number;
-  name: string;
-  username: string;
-  // email?: string;
-  doctor_id?: number | null;
-  doctor?: Doctor; // If you eager load and want to display doctor name
-  is_nurse: boolean;
-  user_money_collector_type: 'lab' | 'company' | 'clinic' | 'all';
-  created_at: string;
-  updated_at: string;
-  roles?: Role[];
-  permissions?: Permission[]; // Direct permissions
-  // all_permissions?: Permission[]; // All permissions via roles & direct
-}
 
 export interface UserFormData {
   name: string;
@@ -40,3 +19,5 @@ export interface UserFormData {
   user_money_collector_type: 'lab' | 'company' | 'clinic' | 'all' | undefined; // For select
   roles?: string[]; // Array of role names
 }
+export const UserFormMode =  { CREATE : 'create', EDIT : 'edit' }
+export type UserFormMode = typeof UserFormMode[keyof typeof UserFormMode];

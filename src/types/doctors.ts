@@ -75,3 +75,13 @@ export interface PaginatedDoctorsResponse {
     total: number;
   };
 }
+
+// If DoctorShift is a new concept
+export interface DoctorShift {
+  id: number; // This is the ID of the doctor_shift record itself
+  doctor_id: number;
+  doctor_name: string;
+  status: string | number; // Or a more specific enum: 'active', 'on_break', 'ended'
+  shift_id: number; // FK to the main clinic shifts table
+  // Add start_time, end_time if available
+}

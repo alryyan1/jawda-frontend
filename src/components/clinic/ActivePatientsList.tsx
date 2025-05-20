@@ -1,101 +1,147 @@
 // src/components/clinic/ActivePatientsList.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import type { Patient } from '../../types/patiens'; // Main Patient type
+import type { ActivePatientVisit } from '@/types/patiens'; // Or from patients.ts
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import type { Patient } from '@/types/patiens';
-
-// Mock API - Replace with actual service call
-// import { getActivePatients } from '@/services/clinicService';
-
-// --- MOCK Data & Functions (Remove and replace with actual API calls) ---
-const mockActivePatients: Patient[] = [
-  // Example, ensure structure matches your Patient type after registration
-  { id: 101, name: 'علي حسن', phone: '0912345678', gender: 'male', age_year: 30, status: 'waiting', /* ... other fields ... */ created_at: new Date().toISOString(), updated_at: new Date().toISOString(), shift_id: 1, user_id: 1, visit_number:1, result_auth:false,auth_date: new Date().toISOString(), present_complains: '', history_of_present_illness: '', procedures: '', provisional_diagnosis: '', bp: '', temp: 0, weight: 0, height: 0, drug_history: '', family_history: '', rbs: '', care_plan: '', general_examination_notes: '', patient_medical_history: '', social_history: '', allergies: '', general: '', skin: '', head: '', eyes: '', ear: '', nose: '', mouth: '', throat: '', neck: '', respiratory_system: '', cardio_system: '', git_system: '', genitourinary_system: '', nervous_system: '', musculoskeletal_system: '', neuropsychiatric_system: '', endocrine_system: '', peripheral_vascular_system: '', referred: '', discount_comment: '' },
-  { id: 102, name: 'سارة محمود', phone: '0987654321', gender: 'female', age_year: 25, status: 'with_doctor', /* ... */ created_at: new Date().toISOString(), updated_at: new Date().toISOString(), shift_id: 1, user_id: 1, visit_number:1, result_auth:false,auth_date: new Date().toISOString(), present_complains: '', history_of_present_illness: '', procedures: '', provisional_diagnosis: '', bp: '', temp: 0, weight: 0, height: 0, drug_history: '', family_history: '', rbs: '', care_plan: '', general_examination_notes: '', patient_medical_history: '', social_history: '', allergies: '', general: '', skin: '', head: '', eyes: '', ear: '', nose: '', mouth: '', throat: '', neck: '', respiratory_system: '', cardio_system: '', git_system: '', genitourinary_system: '', nervous_system: '', musculoskeletal_system: '', neuropsychiatric_system: '', endocrine_system: '', peripheral_vascular_system: '', referred: '', discount_comment: '' },
-];
-
-const getActivePatients = async (): Promise<Patient[]> => {
-    console.log("Fetching active patients...");
-    return new Promise(resolve => setTimeout(() => {
-        // In a real app, you'd filter or fetch based on criteria
-        resolve([...mockActivePatients]);
-    }, 700));
-};
-// --- END MOCK ---
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { getActiveClinicPatients } from '@/services/clinicService'; // Updated service
+import type { PaginatedResponse } from '@/services/doctorService';
 
 interface ActivePatientsListProps {
-  newPatientTrigger: Patient | null; // Trigger to refetch when a new patient is added
+  onPatientSelect: (patient: Patient, visitId: number) => void;
+  selectedPatientVisitId: number | null;
+  doctorShiftId: number | null; // ID of the selected DoctorShift
+  // Or, if DoctorTabs directly gives doctor_id:
+  // doctorId: number | null; 
+  globalSearchTerm: string;
+  currentClinicShiftId?: number | null; // Optional: overall clinic shift
 }
 
-const ActivePatientsList: React.FC<ActivePatientsListProps> = ({ newPatientTrigger }) => {
+const ActivePatientsList: React.FC<ActivePatientsListProps> = ({ 
+  onPatientSelect, 
+  selectedPatientVisitId, 
+  doctorShiftId, 
+  globalSearchTerm,
+  currentClinicShiftId 
+}) => {
   const { t } = useTranslation(['clinic', 'common']);
-  const [activePatients, setActivePatients] = useState<Patient[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
 
+  // Debounce search term for API calls if performance becomes an issue
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(globalSearchTerm);
   useEffect(() => {
-    const fetchPatients = async () => {
-      setIsLoading(true);
-      try {
-        const patients = await getActivePatients(); // Replace with actual API call
-        // Example: if newPatientTrigger is used to add to list directly without refetching
-        // This is a simple way, React Query's query invalidation is more robust
-        if (newPatientTrigger && !patients.find(p => p.id === newPatientTrigger.id)) {
-             setActivePatients(prev => [newPatientTrigger, ...prev]); // Add to top
-        } else {
-            setActivePatients(patients);
-        }
+      const handler = setTimeout(() => {
+          setDebouncedSearchTerm(globalSearchTerm);
+          setCurrentPage(1); // Reset to page 1 on new search
+      }, 300); // 300ms delay
+      return () => clearTimeout(handler);
+  }, [globalSearchTerm]);
 
-      } catch (error) {
-        console.error("Failed to fetch active patients", error);
-        // toast.error(t('common:error.fetchFailed', "Failed to fetch active patients."));
-      } finally {
-        setIsLoading(false);
-      }
-    };
 
-    fetchPatients();
-  }, [newPatientTrigger, t]); // Refetch when newPatientTrigger changes or t function (language) changes
+  const { 
+    data: paginatedVisits, 
+    isLoading, 
+    isError, 
+    error, 
+    isFetching 
+  } = useQuery<PaginatedResponse<ActivePatientVisit>, Error>({
+    queryKey: ['activePatients', doctorShiftId, debouncedSearchTerm, currentClinicShiftId, currentPage],
+    queryFn: () => getActiveClinicPatients({ 
+        doctor_shift_id: doctorShiftId, // Or doctor_id if using that
+        search: debouncedSearchTerm,
+        clinic_shift_id: currentClinicShiftId,
+        page: currentPage,
+    }),
+    placeholderData: keepPreviousData,
+    // refetchInterval: 15000, // Optional: polling for updates
+  });
 
-  if (isLoading) {
+  // Reset page to 1 if doctorShiftId changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [doctorShiftId]);
+
+  if (isLoading && currentPage === 1 && !isFetching) { // Show main loader only on initial load of new filter/page
     return (
-      <div className="flex justify-center items-center h-40">
+      <div className="flex justify-center items-center h-40 pt-10">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
       </div>
     );
   }
-
-  if (activePatients.length === 0) {
-    return <p className="text-muted-foreground">{t('clinic:workspace.noActivePatients')}</p>;
+  if (isError) {
+    return <p className="text-destructive p-4">{t('common:error.fetchFailed', { entity: t('clinic:workspace.title'), message: error.message })}</p>;
   }
 
+  const visits = paginatedVisits?.data || [];
+  const meta = paginatedVisits?.meta;
+
   return (
-    <ScrollArea className="h-[calc(100%-3.5rem)]"> {/* Adjust height as needed */}
-      <div className="space-y-3">
-        {activePatients.map((patient) => (
-          <Card key={patient.id} className="hover:shadow-md transition-shadow">
-            <CardHeader className="pb-2 pt-4">
-              <CardTitle className="text-lg flex justify-between items-center">
-                {patient.name}
-                {patient.status && <Badge variant={patient.status === 'waiting' ? 'outline' : 'default'}>{t(`clinic:workspace.${patient.status}`)}</Badge>}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm text-muted-foreground space-y-1">
-              <p><strong>{t('clinic:patientRegistration.phoneLabel')}:</strong> {patient.phone}</p>
-              <p>
-                <strong>{t('clinic:patientRegistration.ageLabel')}:</strong> 
-                {patient.age_year || 0} {t('common:years_short', 'Y')} / {patient.age_month || 0} {t('common:months_short', 'M')} / {patient.age_day || 0} {t('common:days_short', 'D')}
-              </p>
-              {/* Add more details or actions here */}
-              {/* Example Action Button */}
-              {/* <Button size="sm" variant="outline" className="mt-2">View Details</Button> */}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </ScrollArea>
+    <div className="h-full flex flex-col">
+        {isFetching && <div className="text-xs text-muted-foreground p-1 text-center"><Loader2 className="inline h-3 w-3 animate-spin ltr:mr-1 rtl:ml-1" />{t('common:updatingList')}</div>}
+        {visits.length === 0 && !isLoading && !isFetching ? (
+            <div className="flex-grow flex flex-col items-center justify-center text-center text-muted-foreground p-6 border rounded-lg bg-card">
+                 <Users className="h-16 w-16 text-muted-foreground/30 mb-4" /> {/* Using Users icon */}
+                <p>{t('clinic:workspace.noActivePatients')}</p>
+                <p className="text-xs mt-1">{t('clinic:workspace.tryDifferentFilters')}</p>
+            </div>
+        ) : (
+            <ScrollArea className="flex-grow">
+                <div className="space-y-2 pr-1"> {/* Added pr-1 for scrollbar space */}
+                    {visits.map((visit) => (
+                    <Card 
+                        key={visit.id} 
+                        className={cn(
+                            "hover:shadow-lg transition-shadow cursor-pointer",
+                            selectedPatientVisitId === visit.id ? "ring-2 ring-primary shadow-lg" : "ring-1 ring-transparent"
+                        )}
+                        onClick={() => onPatientSelect(visit.patient, visit.id)}
+                    >
+                        <CardHeader className="pb-2 pt-3 px-3">
+                        <CardTitle className="text-base flex justify-between items-center">
+                            <span className="truncate" title={visit.patient.name}>{visit.patient.name}</span>
+                            <Badge 
+                                variant={visit.status === 'waiting' ? 'outline' 
+                                        : visit.status === 'with_doctor' ? 'default' 
+                                        : 'secondary'}
+                                className={visit.status === 'with_doctor' ? 'bg-blue-500 text-white' : ''}
+                            >
+                                {t(`clinic:workspace.status.${visit.status}`, visit.status)}
+                            </Badge>
+                        </CardTitle>
+                        </CardHeader>
+                        <CardContent className="text-xs text-muted-foreground space-y-0.5 px-3 pb-2">
+                        <p><strong>{t('common:id')}:</strong> {visit.patient.id} | <strong>{t('common:phoneShort')}:</strong> {visit.patient.phone}</p>
+                        <p>
+                            <strong>{t('common:doctor')}:</strong> {visit.doctor?.name || t('common:unassigned')}
+                        </p>
+                        {/* Add more details like queue number or appointment time */}
+                        </CardContent>
+                    </Card>
+                    ))}
+                </div>
+            </ScrollArea>
+        )}
+
+        {meta && meta.last_page > 1 && (
+            <div className="flex items-center justify-between mt-3 pt-3 border-t shrink-0">
+            <Button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={!meta.links?.prev || isFetching} size="sm" variant="outline">
+                {t('common:pagination.previous')}
+            </Button>
+            <span className="text-xs text-muted-foreground">
+                {t('common:pagination.pageInfo', { current: meta.current_page, total: meta.last_page })}
+            </span>
+            <Button onClick={() => setCurrentPage(p => Math.min(meta.last_page, p + 1))} disabled={!meta.links?.next || isFetching} size="sm" variant="outline">
+                {t('common:pagination.next')}
+            </Button>
+            </div>
+        )}
+    </div>
   );
 };
 

@@ -1,0 +1,31 @@
+{
+  "title": "لوحة التحكم الرئيسية",
+  "welcomeMessage": "أهلاً بك مجدداً، {{name}}!",
+  "contentPlaceholder": "هذه هي لوحة التحكم الرئيسية. سيتم إضافة المزيد من المحتوى هنا قريباً.",
+  "currentShift": "الوردية الحالية",
+  "noShiftOpen": "لا توجد وردية عمل مفتوحة حالياً.",
+  "shiftId": "معرف الوردية: {{id}}",
+  "shiftOpenedAt": "وقت الفتح: {{time}}",
+  "openNewShiftButton": "فتح وردية جديدة",
+  "closeCurrentShiftButton": "إغلاق الوردية الحالية",
+  "patientsToday": "مرضى اليوم",
+  "doctorsOnShift": "الأطباء المناوبون",
+  "revenueToday": "إيرادات اليوم",
+  "appointmentsToday": "مواعيد اليوم",
+  "viewDetails": "عرض التفاصيل",
+  "currencySymbol": "ج.س",
+  "closeShiftDialog": {
+    "title": "إغلاق الورية #{{shiftId}}",
+    "description": "الرجاء إدخال المجاميع النهائية لهذه الوردية قبل الإغلاق.",
+    "totalLabel": "المجموع الكلي (نقداً)",
+    "bankLabel": "إيداع البنك",
+    "expensesLabel": "المصروفات",
+    "touchedLabel": "تم التعديل يدوياً / مراجعة؟",
+    "closeAndSubmitButton": "إغلاق وتقديم المجاميع",
+    "closingShiftButton": "جارٍ إغلاق الوردية..."
+  },
+  "shiftOpenedSuccess": "تم فتح وردية جديدة بنجاح!",
+  "shiftOpenedError": "فشل فتح وردية جديدة.",
+  "shiftClosedSuccess": "تم إغلاق الوردية بنجاح!",
+  "shiftClosedError": "فشل إغلاق الوردية."
+}

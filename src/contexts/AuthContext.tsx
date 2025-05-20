@@ -1,15 +1,4 @@
 // src/types/index.ts (or a dedicated types file)
-export interface User {
-  id: number;
-  name: string;
-  username: string;
-  // email?: string; // if you add email
-  // Add other relevant user fields
-  is_nurse?: boolean;
-  user_money_collector_type?: string;
-  created_at: string;
-  updated_at: string;
-}
 
 export interface AuthResponse {
   user: User;
@@ -19,6 +8,7 @@ export interface AuthResponse {
 // src/contexts/AuthContext.tsx
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import apiClient from '../services/api'; // Your Axios instance
+import type { User } from '@/types/auth';
 
 interface AuthContextType {
   user: User | null;

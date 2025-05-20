@@ -54,6 +54,9 @@ const mainNavItems: NavItem[] = [
   { to: "/clinic", labelKey: "clinic", icon: Stethoscope },
   { to: "/doctors", labelKey: "doctors", icon: Users },
   { to: "/services", labelKey: "services", icon: Users },
+  { to: "/users", labelKey: "users", icon: Users },
+  { to: "/roles", labelKey: "roles", icon: Users },
+  { to: "/companies", labelKey: "companies", icon: Users },
   { to: "/appointments", labelKey: "appointments", icon: CalendarDays },
 ];
 

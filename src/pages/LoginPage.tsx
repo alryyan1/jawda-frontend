@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { Eye, EyeOff, AlertCircle, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,13 +23,10 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"; // shadcn/ui Form component
+} from "@/components/ui/form";
+import { useAuth } from "../contexts/AuthContext";
 
-import { useAuth } from "../contexts/AuthContext"; // Your AuthContext
-import { Loader2 } from "lucide-react"; // For loading spinner
-
-// Define the Zod schema based on your translation keys for error messages
-const getLoginSchema = (t) =>
+const getLoginSchema = (t: any) =>
   z.object({
     username: z
       .string()
@@ -42,11 +40,6 @@ const getLoginSchema = (t) =>
       }),
   });
 
-// Define the type for form values based on the schema
-// We need to infer it after the schema is created with 't'
-// type LoginFormValues = z.infer<ReturnType<typeof getLoginSchema>>; // This would be ideal
-
-// Simpler approach for type if inferring dynamically is tricky with 't'
 type LoginFormValues = z.infer<
   z.ZodObject<{
     username: z.ZodString;
@@ -57,14 +50,11 @@ type LoginFormValues = z.infer<
 const LoginPage: React.FC = () => {
   const { login, isLoading: authIsLoading } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation(); // Get the current location for redirection after login
+  const location = useLocation();
   const [apiError, setApiError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
-  // Specify the 'login' namespace for this component.
-  // 'common' can also be loaded if you use keys from common.json.
   const { t } = useTranslation(["login", "common"]);
-
-  // Create the schema once 't' is available
   const loginSchema = getLoginSchema(t);
 
   const form = useForm<LoginFormValues>({
@@ -85,20 +75,17 @@ const LoginPage: React.FC = () => {
     setApiError(null);
     try {
       await login(data);
-      // Check if there's a 'from' location in the state (passed from ProtectedRoute)
-      const from = location.state?.from?.pathname || "/"; // Default to homepage if no 'from'
-      navigate(from, { replace: true }); // Redirect to original destination or homepage
+      const from = location.state?.from?.pathname || "/";
+      navigate(from, { replace: true });
     } catch (error: any) {
-      let errorMessage = t("login:loginFailedDefault"); // Default error message
+      let errorMessage = t("login:loginFailedDefault");
       if (error.response && error.response.data) {
         if (error.response.data.errors) {
-          // Handle Laravel validation errors (more specific)
           const firstErrorField = Object.keys(error.response.data.errors)[0];
           if (firstErrorField) {
             errorMessage = error.response.data.errors[firstErrorField][0];
           }
         } else if (error.response.data.message) {
-          // Handle general error messages from backend
           errorMessage = error.response.data.message;
         }
       }
@@ -107,28 +94,34 @@ const LoginPage: React.FC = () => {
     }
   };
 
-  // Combine auth context loading state with form submission loading state
   const currentIsLoading = authIsLoading || isSubmitting;
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-slate-100 dark:bg-slate-900 p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader className="space-y-1 text-center">
-          {/* You could add a logo here */}
-          <CardTitle className="text-2xl font-bold">
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-100 via-slate-200 to-slate-300 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800 p-4 transition-colors">
+      <Card className="w-full max-w-md shadow-xl rounded-2xl border-0">
+        <CardHeader className="space-y-4 text-center">
+          {/* Logo or avatar */}
+          <div className="mx-auto mb-2 flex items-center justify-center">
+            <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center">
+              {/* Replace with your logo if desired */}
+              <span className="text-3xl font-black text-primary">🔒</span>
+            </div>
+          </div>
+          <CardTitle className="text-3xl font-extrabold font-cairo tracking-tight">
             {t("login:title")}
           </CardTitle>
-          <CardDescription>{t("login:description")}</CardDescription>
+          <CardDescription className="text-base text-muted-foreground">
+            {t("login:description")}
+          </CardDescription>
         </CardHeader>
 
         <Form {...form}>
-          
-          {/* Spread shadcn/ui form context */}
-          <form onSubmit={handleSubmit(onSubmit)}>
-            <CardContent className="space-y-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-0">
+            <CardContent className="space-y-5">
               {apiError && (
-                <div className="p-3 bg-destructive/10 border border-destructive text-destructive text-sm rounded-md">
-                  {apiError}
+                <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive text-destructive text-sm rounded-md">
+                  <AlertCircle className="w-5 h-5 shrink-0" />
+                  <span>{apiError}</span>
                 </div>
               )}
               <FormField
@@ -142,11 +135,12 @@ const LoginPage: React.FC = () => {
                         type="text"
                         placeholder={t("login:usernamePlaceholder")}
                         {...field}
+                        autoComplete="username"
                         disabled={currentIsLoading}
+                        className="bg-white dark:bg-slate-950"
                       />
                     </FormControl>
                     <FormMessage />
-                    {/* Displays Zod validation error for this field */}
                   </FormItem>
                 )}
               />
@@ -157,15 +151,30 @@ const LoginPage: React.FC = () => {
                   <FormItem>
                     <FormLabel>{t("login:passwordLabel")}</FormLabel>
                     <FormControl>
-                      <Input
-                        type="password"
-                        placeholder={t("login:passwordPlaceholder")}
-                        {...field}
-                        disabled={currentIsLoading}
-                      />
+                      <div className="relative">
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          placeholder={t("login:passwordPlaceholder")}
+                          {...field}
+                          autoComplete="current-password"
+                          disabled={currentIsLoading}
+                          className="pr-10 bg-white dark:bg-slate-950"
+                        />
+                        <button
+                          type="button"
+                          tabIndex={-1}
+                          onClick={() => setShowPassword((v) => !v)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary focus:outline-none"
+                        >
+                          {showPassword ? (
+                            <EyeOff className="w-5 h-5" />
+                          ) : (
+                            <Eye className="w-5 h-5" />
+                          )}
+                        </button>
+                      </div>
                     </FormControl>
                     <FormMessage />
-                    {/* Displays Zod validation error for this field */}
                   </FormItem>
                 )}
               />
@@ -173,21 +182,22 @@ const LoginPage: React.FC = () => {
             <CardFooter className="flex flex-col gap-4">
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full mt-3 gap-2 font-semibold text-lg transition-all"
                 disabled={currentIsLoading}
+                size="lg"
               >
                 {currentIsLoading && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="h-5 w-5 animate-spin" />
                 )}
                 {currentIsLoading
                   ? t("login:loggingInButton")
                   : t("login:loginButton")}
               </Button>
               <div className="text-center text-sm text-muted-foreground">
-                {t("login:noAccountPrompt")}
+                {t("login:noAccountPrompt")}&nbsp;
                 <Link
                   to="/register"
-                  className="font-medium text-primary hover:underline underline-offset-4"
+                  className="font-semibold text-primary hover:underline underline-offset-4 transition-colors"
                 >
                   {t("login:registerLinkText")}
                 </Link>

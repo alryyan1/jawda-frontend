@@ -1,0 +1,46 @@
+
+
+{
+"group": {
+    "doctors": "الأطباء",
+    "patients": "المرضى",
+    "permissions": "الصلاحيات",
+    "roles": "الأدوار",
+    "users": "المستخدمون",
+    "company": "الشركات"
+  },
+  "list_users": "عرض قائمة المستخدمين",
+  "create_users": "إنشاء مستخدمين",
+  "edit_users": "تعديل المستخدمين",
+  "delete_users": "حذف المستخدمين",
+  "assign_roles": "تعيين أدوار للمستخدمين",
+  "create_doctors": "إنشاء أطباء",
+  "delete_doctors": "حذف الأطباء",
+  "edit_doctors": "تعديل الأطباء",
+  "list_doctors": "عرض قائمة الأطباء",
+  "create_patients": "إنشاء مرضى",
+  "delete_patients": "حذف المرضى",
+  "edit_patients": "تعديل المرضى",
+  "list_patients": "عرض قائمة المرضى",
+  "view_patients": "عرض المرضى",
+  "assign_permissions_to_role": "تعيين الصلاحيات للدور",
+  "create_roles": "إنشاء أدوار",
+  "delete_roles": "حذف الأدوار",
+  "edit_roles": "تعديل الأدوار",
+  "list_roles": "عرض قائمة الأدوار",
+  "view_roles": "عرض الأدوار",
+  "view_users": "عرض المستخدمين",
+
+ 
+  "create_companies": "إنشاء شركات",
+  "delete_companies": "حذف الشركات",
+  "edit_companies": "تعديل الشركات",
+  "list_companies": "عرض قائمة الشركات",
+  "view_companies": "عرض الشركات",
+  "create_company_contracts": "إنشاء عقود الشركات",
+  "delete_company_contracts": "حذف عقود الشركات",
+  "edit_company_contracts": "تعديل عقود الشركات",
+  "manage_company_contracts": "إدارة عقود الشركات",
+  "view_company_contracts": "عرض عقود الشركات"
+
+}

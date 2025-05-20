@@ -1,0 +1,96 @@
+// src/services/visitService.ts
+import apiClient from './api';
+import type { Service } from '../types/services';
+import type  { RequestedService } from '../types/services'; // Or from types/visits
+import type { DoctorVisit } from '@/types/visits';
+
+const VISIT_API_BASE = '/visits';
+
+const VISIT_API_URL_BASE = '/doctor-visits'; // Base URL for DoctorVisit CRUD from apiResource
+const VISIT_SERVICES_API_BASE = '/visits'; // Base URL for visit-related service actions if different
+export const getAvailableServicesForVisit = async (visitId: number): Promise<Service[]> => {
+  // Backend returns ServiceResource::collection, which wraps in 'data'
+  const response = await apiClient.get<{ data: Service[] }>(`${VISIT_API_BASE}/${visitId}/available-services`);
+  return response.data.data;
+};
+
+export const addServicesToVisit = async (params: { visitId: number; service_ids: number[] }): Promise<RequestedService[]> => {
+  // Backend returns RequestedServiceResource::collection
+  const response = await apiClient.post<{ data: RequestedService[] }>(`${VISIT_API_BASE}/${params.visitId}/request-services`, { service_ids: params.service_ids });
+  return response.data.data;
+};
+
+
+
+
+
+
+export const getRequestedServicesForVisit = async (visitId: number): Promise<RequestedService[]> => {
+  // Assuming backend returns { data: RequestedService[] }
+  const response = await apiClient.get<{ data: RequestedService[] }>(`${VISIT_SERVICES_API_BASE}/${visitId}/requested-services`);
+  return response.data.data;
+};
+
+export const removeRequestedServiceFromVisit = async (visitId: number, requestedServiceId: number): Promise<void> => {
+  await apiClient.delete(`${VISIT_SERVICES_API_BASE}/${visitId}/requested-services/${requestedServiceId}`);
+};
+
+// --- NEW: Functions for DoctorVisit CRUD and status update ---
+
+/**
+ * Fetches a single detailed doctor visit by its ID.
+ * Interacts with DoctorVisitController@show.
+ * 
+ * @param visitId - The ID of the doctor visit to fetch.
+ * @returns A promise that resolves to the detailed DoctorVisit object.
+ */
+export const getDoctorVisitById = async (visitId: number): Promise<DoctorVisit> => {
+  // Your DoctorVisitController@show returns `new DoctorVisitResource(...)`
+  // Laravel's JsonResource by default wraps single resource responses in a 'data' key.
+  const response = await apiClient.get<{ data: DoctorVisit }>(`${VISIT_API_URL_BASE}/${visitId}`);
+  return response.data.data; 
+};
+
+/**
+ * Updates the status of a specific doctor visit.
+ * Interacts with DoctorVisitController@updateStatus.
+ * 
+ * @param visitId - The ID of the doctor visit to update.
+ * @param status - The new status string.
+ * @returns A promise that resolves to the updated DoctorVisit object.
+ */
+export const updateDoctorVisitStatus = async (visitId: number, status: string): Promise<DoctorVisit> => {
+  // Your DoctorVisitController@updateStatus takes { status: 'new_status' } in the body
+  // and returns `new DoctorVisitResource(...)`
+  const response = await apiClient.put<{ data: DoctorVisit }>(`${VISIT_API_URL_BASE}/${visitId}/status`, { status });
+  return response.data.data;
+};
+
+
+// --- Potentially other DoctorVisit CRUD functions if needed directly ---
+
+/**
+ * Creates a new doctor visit.
+ * (Note: PatientController@store might already handle initial visit creation during patient registration)
+ * Interacts with DoctorVisitController@store.
+ * 
+ * @param visitData - Data for the new visit.
+ * @returns A promise that resolves to the created DoctorVisit object.
+ */
+// export const createDoctorVisit = async (visitData: Partial<Omit<DoctorVisit, 'id' | 'created_at' | 'updated_at' | 'patient' | 'doctor' >>): Promise<DoctorVisit> => {
+//   const response = await apiClient.post<{ data: DoctorVisit }>(VISIT_API_URL_BASE, visitData);
+//   return response.data.data;
+// };
+
+/**
+ * Updates general details of a specific doctor visit.
+ * Interacts with DoctorVisitController@update.
+ * 
+ * @param visitId - The ID of the visit to update.
+ * @param visitData - Partial data to update the visit with.
+ * @returns A promise that resolves to the updated DoctorVisit object.
+ */
+// export const updateDoctorVisitDetails = async (visitId: number, visitData: Partial<Omit<DoctorVisit, 'id' | 'created_at' | 'updated_at' | 'patient' | 'doctor'>>): Promise<DoctorVisit> => {
+//   const response = await apiClient.put<{ data: DoctorVisit }>(`${VISIT_API_URL_BASE}/${visitId}`, visitData);
+//   return response.data.data;
+// };

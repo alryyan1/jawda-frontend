@@ -8,7 +8,7 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 // Define your namespaces
 // It's good practice to have a 'common' namespace for shared translations (like "Save", "Cancel", "Error")
 // And then module-specific namespaces.
-export const namespaces = ['common', 'login', 'dashboard', 'doctors', 'navigation', 'userMenu','clinic'] as const;
+export const namespaces = ['common', 'login', 'dashboard', 'doctors', 'navigation', 'userMenu','clinic','permissions','companies'] as const;
 export type Namespace = typeof namespaces[number];
 
 
@@ -23,7 +23,7 @@ i18n
     // Define namespaces you want to load by default.
     // 'common' is a good candidate to load globally.
     // Other namespaces can be loaded on demand by components.
-    ns: ['common', 'navigation', 'userMenu','login','clinic'], // Namespaces to load initially
+    ns: ['common', 'navigation', 'userMenu','login','clinic','permissions','companies'], // Namespaces to load initially
     defaultNS: 'common', // Default namespace to use if not specified in t() function
 
     debug: import.meta.env.DEV, // Enable debug output in development

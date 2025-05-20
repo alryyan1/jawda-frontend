@@ -5,6 +5,7 @@
   "cancel": "إلغاء",
   "edit": "تعديل",
   "delete": "حذف",
+  "searchPlaceholder": "ابحث هنا...",
   "actions": {
     "openMenu": "فتح القائمة"
   },
@@ -15,14 +16,28 @@
   },
   "validation": {
     "required": "{{field}} مطلوب.",
-    "mustBeNumber": "يجب أن يكون رقماً."
+    "mustBeNumber": "يجب أن يكون رقماً.",
+    "passwordMinLengthGeneral": "يجب أن تفي كلمة المرور بشرط الحد الأدنى للطول.",
+    "invalidEmail": "صيغة بريد إلكتروني غير صحيحة.",
+    "positiveNumber": "يجب أن يكون رقماً موجباً.",
+    "positiveInteger": "يجب أن يكون رقماً صحيحاً موجباً."
   },
   "form": {
     "fillDetails": "الرجاء ملء التفاصيل أدناه."
   },
   "error": {
     "generic": "حدث خطأ غير متوقع.",
-    "loadListsFailed": "فشل تحميل القوائم."
+    "loadListsFailed": "فشل تحميل القوائم.",
+
+    "saveFailed": "فشل حفظ {{entity}}.",
+    "deleteFailed": "فشل حذف {{entity}}.",
+    "fetchFailedExt": "فشل تحميل {{entity}}: {{message}}"
   },
-  "save": "حفظ"
+  "save": "حفظ",
+
+  "id": "م",
+  "none": "لا يوجد",
+  "entityName": "{{entity}}",
+  "entityNamePlural": "{{entity}}",
+  "backToList": "العودة إلى قائمة "
 }

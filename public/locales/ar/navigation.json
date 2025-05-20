@@ -5,5 +5,9 @@
   "doctors": "الأطباء",
   "appointments": "المواعيد",
   "settings": "الإعدادات",
-  "logout": "تسجيل الخروج"
+  "logout": "تسجيل الخروج",
+  "services": "الخدمات",
+  "users": "المستخدمون",
+  "roles": "الأدوار",
+  "companies": "الشركات"
 }

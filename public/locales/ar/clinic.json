@@ -39,7 +39,8 @@
     "status": "الحالة",
     "waiting": "في الانتظار",
     "withDoctor": "مع الطبيب",
-    "completed": "مكتمل"
+    "completed": "مكتمل",
+    "tryDifferentFilters": "جرّب عوامل تصفية مختلفة"
   },
   "validation": {
     "nameRequired": "اسم المريض مطلوب.",
@@ -47,4 +48,56 @@
     "genderRequired": "الجنس مطلوب.",
     "doctorRequired": "الطبيب مطلوب."
   }
+  ,
+    "topNav": {
+    "activeDoctors": "الأطباء المناوبون",
+    "searchPatientsPlaceholder": "ابحث عن مريض بالاسم أو الرقم..."
+  },
+  "actionsPane": {
+    "title": "إجراءات سريعة",
+    "registerNewPatient": "تسجيل مريض جديد",
+    "viewPatientWorkspace": "إخفاء التسجيل/عرض ساحة العمل" ,
+    "manageDoctorShifts": "إدارة مناوبات الأطباء"
+  },
+  "selectedPatientWorkspace": {
+    "title": "تفاصيل المريض: {{patientName}}",
+    "noPatientSelected": "الرجاء اختيار مريض من القائمة لعرض التفاصيل.",
+    "requestServicesTitle": "طلب خدمات للمريض"
+  },
+  "doctorsTabs": {
+    "noActiveShifts": "لا يوجد أطباء مناوبون حالياً."
+  } , "doctorShifts": {
+    "manageTitle": "إدارة مناوبات الأطباء",
+    "manageDescription": "فتح أو إغلاق مناوبات الأطباء لليوم.",
+    "status": "حالة المناوبة",
+    "onShift": "في مناوبة",
+    "offShift": "خارج المناوبة",
+    "openShiftButton": "بدء مناوبة",
+    "closeShiftButton": "إنهاء مناوبة",
+    "openedSuccess": "تم بدء مناوبة الطبيب بنجاح!",
+    "openError": "فشل بدء مناوبة الطبيب.",
+    "closedSuccess": "تم إنهاء مناوبة الطبيب بنجاح!",
+    "closeError": "فشل إنهاء مناوبة الطبيب.",
+    "noClinicShiftSelected": "الرجاء اختيار أو فتح وردية عمل للعيادة أولاً.",
+        "selectedPatientWorkspace": {
+        "title": "بيانات المريض: {{patientName}}",
+        "titleShort": "الزيارة", 
+        "noPatientSelected": "الرجاء اختيار مريض من القائمة لعرض التفاصيل.",
+        "requestServicesTitle": "طلب خدمات للمريض",
+        "noPatientData": "لا يمكن تحميل بيانات المريض/الزيارة."
+    },
+    "tabs": {
+        "services": "الخدمات",
+        "vitals": "العلامات الحيوية",
+        "notes": "ملاحظات الطبيب",
+        "lab": "المختبر",
+        "prescription": "الوصفات الطبية",
+        "documents": "المستندات"
+    },
+    "visit": {
+        "statusUpdateSuccess": "تم تحديث حالة الزيارة بنجاح.",
+        "statusUpdateFailed": "فشل تحديث حالة الزيارة."
+    }
+  }
+
 }

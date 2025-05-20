@@ -168,3 +168,15 @@ export interface PaginatedPatientsResponse {
     total: number;
   };
 }
+export interface ActivePatientVisit { // Represents a DoctorVisit with eager-loaded patient & doctor
+    id: number; // Visit ID
+    patient_id: number;
+    patient: Patient; // Full patient object
+    doctor_id: number;
+    doctor?: Pick<Doctor, 'id' | 'name'>; // Partial doctor object
+    visit_date: string;
+    status: string; // 'waiting', 'with_doctor', 'completed', etc.
+    notes?: string | null;
+    // ... other relevant DoctorVisit fields (e.g., queue_number, appointment_time)
+    created_at: string;
+}

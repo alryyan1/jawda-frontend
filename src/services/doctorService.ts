@@ -5,7 +5,7 @@ import type { Doctor, DoctorFormData, PaginatedDoctorsResponse, Specialist, Fina
 const API_URL = '/doctors';
 
 export const getDoctors = (page = 1, filters: Record<string, any> = {}): Promise<PaginatedDoctorsResponse> => {
-  return apiClient.get<PaginatedDoctorsResponse>(API_URL, { params: { page, ...filters } }).then(res => res.data);
+  return apiClient.get(API_URL, { params: { page, ...filters } }).then(res => res.data);
 };
 
 export const getDoctorById = (id: number): Promise<{ data: Doctor }> => {

@@ -1,0 +1,33 @@
+{
+  "pageTitle": "إدارة الأدوار والصلاحيات",
+  "addRoleButton": "إضافة دور جديد",
+  "editRoleTitle": "تعديل الدور",
+  "createRoleTitle": "إضافة دور جديد",
+  "loadingRoles": "جارٍ تحميل الأدوار...",
+  "errorFetchingRoles": "خطأ في تحميل الأدوار: {{message}}",
+  "noRolesFound": "لم يتم العثور على أدوار.",
+  "table": {
+    "id": "م",
+    "name": "اسم الدور",
+    "permissions": "الصلاحيات الممنوحة",
+    "actions": "إجراءات"
+  },
+  "form": {
+    "nameLabel": "اسم الدور",
+    "namePlaceholder": "مثال: مدير، محرر، مشاهد",
+    "permissionsLabel": "الصلاحيات",
+    "assignPermissionsDescription": "اختر الصلاحيات التي سيتم منحها لهذا الدور.",
+    "saveButton": "حفظ",
+    "savingButton": "جارٍ الحفظ...",
+    "roleSavedSuccess": "تم حفظ الدور بنجاح!",
+    "roleSaveError": "فشل حفظ الدور.",
+    "noPermissionsAvailable": "لا توجد صلاحيات متاحة للاختيار."
+  },
+  "deleteConfirmTitle": "تأكيد الحذف",
+  "deleteConfirmText": "هل أنت متأكد أنك تريد حذف هذا الدور؟ سيتم إزالته من جميع المستخدمين.",
+  "deleteConfirmTextAssigned": "هذا الدور مخصص لـ {{count}} مستخدم. هل أنت متأكد من حذفه؟",
+  "deletedSuccess": "تم حذف الدور بنجاح!",
+  "deleteError": "خطأ أثناء حذف الدور.",
+  "errorCannotDeleteCritical": "لا يمكن حذف هذا الدور الأساسي.",
+  "errorRoleHasUsers": "لا يمكن حذف هذا الدور لأنه مخصص لمستخدمين."
+}

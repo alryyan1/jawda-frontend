@@ -21,6 +21,14 @@ import { DoctorFormMode } from "./services/doctorService";
 import ServiceFormPage from "./components/services/ServiceFormPage";
 import ServicesListPage from "./components/services/ServicesListPage";
 import { ServiceFormMode } from "./types/services";
+import UsersListPage from "./pages/users/UsersListPage";
+import UserFormPage from "./pages/users/UserFormPage";
+import { UserFormMode } from "./types/users";
+import RolesListPage from "./pages/roles/RolesListPage";
+import RoleFormPage, { RoleFormMode } from "./pages/roles/RoleFormPage";
+import CompaniesListPage from "./pages/companies/CompaniesListPage";
+import CompanyFormPage, { CompanyFormMode } from "./pages/companies/CompanyFormPage";
+import CompanyServiceContractsPage from "./pages/companies/CompanyServiceContractsPage";
 // import NotFoundPage from './pages/NotFoundPage'; // Optional: For 404 handling
 
 // Example of a simple component directly in router for brevity, move to own file for real app
@@ -93,7 +101,25 @@ const router = createBrowserRouter([
               },
             ],
           },
-
+          {
+            path: "roles", // Or 'settings/roles'
+            element: <Outlet />,
+            children: [
+              { index: true, element: <RolesListPage /> },
+              {
+                path: "new",
+                element: (
+                  <RoleFormPage mode={RoleFormMode.CREATE} key="roleCreate" />
+                ),
+              },
+              {
+                path: ":roleId/edit",
+                element: (
+                  <RoleFormPage mode={RoleFormMode.EDIT} key="roleEdit" />
+                ),
+              },
+            ],
+          },
           {
             path: "clinic",
             element: <ClinicPage />,
@@ -115,6 +141,55 @@ const router = createBrowserRouter([
             path: "appointments",
             element: <AppointmentsPlaceholderPage />,
             // Example for nested appointment routes later
+          },
+          {
+            path: "users", // Or 'settings/users' if you prefer
+            element: <Outlet />,
+            children: [
+              { index: true, element: <UsersListPage /> },
+              {
+                path: "new",
+                element: (
+                  <UserFormPage mode={UserFormMode.CREATE} key="userCreate" />
+                ),
+              },
+              {
+                path: ":userId/edit",
+                element: (
+                  <UserFormPage mode={UserFormMode.EDIT} key="userEdit" />
+                ),
+              },
+            ],
+          },
+          // Companies Module
+          {
+            path: "companies",
+            element: <Outlet />,
+            children: [
+              { index: true, element: <CompaniesListPage /> },
+              {
+                path: "new",
+                element: (
+                  <CompanyFormPage
+                    mode={CompanyFormMode.CREATE}
+                    key="companyCreate"
+                  />
+                ),
+              },
+              {
+                path: ":companyId/edit",
+                element: (
+                  <CompanyFormPage
+                    mode={CompanyFormMode.EDIT}
+                    key="companyEdit"
+                  />
+                ),
+              },
+              {
+                path: ":companyId/contracts",
+                element: <CompanyServiceContractsPage />,
+              }, // Page for managing contracts
+            ],
           },
           // Settings & Profile (Placeholders)
           {

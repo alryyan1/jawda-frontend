@@ -13,7 +13,10 @@
     "price": "السعر",
     "active": "مفعل",
     "variable": "متغير السعر",
-    "actions": "إجراءات"
+    "actions": "إجراءات",
+    
+    "serviceName": "اسم الخدمة",
+    "statusShort": "الحالة"
   },
   "form": {
     "nameLabel": "اسم الخدمة",
@@ -32,5 +35,19 @@
   "deleteConfirmTitle": "تأكيد الحذف",
   "deleteConfirmText": "هل أنت متأكد أنك تريد حذف هذه الخدمة؟",
   "deletedSuccess": "تم حذف الخدمة بنجاح!",
-  "deleteError": "خطأ أثناء حذف الخدمة."
+  "deleteError": "خطأ أثناء حذف الخدمة.",
+   "selectService": "اختر خدمة",
+  "selectServicePlaceholder": "ابحث أو اختر خدمة...",
+  "noAvailableServices": "لا توجد خدمات متاحة للإضافة.",
+  "requestedServicesTitle": "الخدمات المطلوبة لهذه الزيارة",
+  "noServicesRequestedYet": "لم يتم طلب أي خدمات لهذه الزيارة بعد.",
+
+  "status": {
+    "pending": "قيد الانتظار",
+    "paid": "مدفوعة",
+    "done": "مكتملة"
+  },
+  "addedSuccess": "تمت إضافة الخدمات بنجاح!",
+  "removedSuccess": "تمت إزالة الخدمة بنجاح!",
+  
 }

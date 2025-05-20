@@ -1,4 +1,4 @@
-import { FinanceAccount } from './finance'; // Assuming FinanceAccount type is in finance.ts
+import type { FinanceAccount } from './finance'; // Assuming FinanceAccount type is in finance.ts
 
 // Based on the `companies` table
 export interface Company {
@@ -17,12 +17,12 @@ export interface Company {
 
   created_at: string; // DateTime string (ISO 8601)
   updated_at: string; // DateTime string
-
+  contracted_services_count?: number; // Count of contracted services
   // You might add arrays for related subcompanies or company_relations if fetched
   // subcompanies?: Subcompany[];
   // company_relations?: CompanyRelation[];
 }
-
+export type CompanyFormData = Omit<Company, 'id' | 'created_at' | 'updated_at'> 
 // Based on the `subcompanies` table
 export interface Subcompany {
   id: number;
@@ -53,32 +53,31 @@ export interface CompanyRelation {
   updated_at: string; // DateTime string
 }
 
-// For form data, if you have forms specific to these entities
-export interface CompanyFormData extends Omit<Company, 'id' | 'created_at' | 'updated_at' | 'finance_account'> {
-  // Add any specific form fields if different from the main Company type
+// For the data in the company_service pivot table, plus service details
+export interface CompanyServiceContract {
+  contract_id?: number; // ID from company_service table (pivot table's own ID)
+  company_id: number;
+  service_id: number;
+  service_name: string;
+  service_group_name?: string;
+  price: number | string;
+  static_endurance: number | string;
+  percentage_endurance: number | string;
+  static_wage: number | string;
+  percentage_wage: number | string;
+  use_static: boolean;
+  approval: boolean;
+  // You might also include the full Service object if needed
+  // service?: Service; 
 }
 
-export interface SubcompanyFormData extends Omit<Subcompany, 'id' | 'created_at' | 'updated_at' | 'company'> {
-  // company_id will be set, typically required
-}
-
-export interface CompanyRelationFormData extends Omit<CompanyRelation, 'id' | 'created_at' | 'updated_at' | 'company'> {
-  // company_id will be set, typically required
-}
-
-
-// For paginated responses if you list these entities
-export interface PaginatedCompaniesResponse {
-  data: Company[];
-  // ... (links and meta structure, similar to PaginatedPatientsResponse) ...
-}
-
-export interface PaginatedSubcompaniesResponse {
-  data: Subcompany[];
-  // ... (links and meta structure) ...
-}
-
-export interface PaginatedCompanyRelationsResponse {
-  data: CompanyRelation[];
-  // ... (links and meta structure) ...
+export interface CompanyServiceFormData {
+  service_id: string | undefined; // From select
+  price: string;
+  static_endurance: string;
+  percentage_endurance: string;
+  static_wage: string;
+  percentage_wage: string;
+  use_static: boolean;
+  approval: boolean;
 }

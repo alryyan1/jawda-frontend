@@ -1,5 +1,5 @@
 // src/types/visits.ts (or where DoctorVisit is defined)
-import type { Patient } from './patiens';
+import type { Patient } from './patients';
 import type { Doctor, DoctorShift } from './doctors'; // Assuming DoctorShift is here
 import type { User } from './auth';
 import type { Shift } from './shifts';

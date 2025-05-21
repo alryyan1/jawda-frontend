@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { arSA, enUS } from "date-fns/locale";
 
-import type { Patient } from "@/types/patiens"; // Base patient type
+import type { Patient } from "@/types/patients"; // Base patient type
 import type { DoctorVisit } from "@/types/visits"; // Detailed visit type
 import {
   getDoctorVisitById,
@@ -45,6 +45,7 @@ import {
   FileText,
   AlertTriangle,
   VenusAndMars,
+  Heart,
 } from "lucide-react";
 import { toast } from "sonner";
 

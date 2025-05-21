@@ -6,6 +6,12 @@
   "loadingServices": "جارٍ تحميل الخدمات...",
   "errorFetchingServices": "خطأ في تحميل الخدمات: {{message}}",
   "noServicesFound": "لم يتم العثور على خدمات.",
+   "addMoreServices": "إضافة المزيد من الخدمات",
+  "validation": {
+      "countMinOne": "الكمية يجب أن تكون 1 على الأقل."
+      
+  },
+ 
   "table": {
     "id": "م",
     "name": "اسم الخدمة",
@@ -14,9 +20,14 @@
     "active": "مفعل",
     "variable": "متغير السعر",
     "actions": "إجراءات",
-    
+       "count": "الكمية",
+      "discountPercentage": "خصم (%)",
+      "totalItemPrice": "الإجمالي الفرعي",
+      "amountPaid": "المدفوع",
+      "balance": "المتبقي",
     "serviceName": "اسم الخدمة",
     "statusShort": "الحالة"
+    
   },
   "form": {
     "nameLabel": "اسم الخدمة",
@@ -48,6 +59,9 @@
     "done": "مكتملة"
   },
   "addedSuccess": "تمت إضافة الخدمات بنجاح!",
-  "removedSuccess": "تمت إزالة الخدمة بنجاح!",
+  "removedSuccess": "تمت إزالة الخدمة بنجاح!"
+  
+
+
   
 }

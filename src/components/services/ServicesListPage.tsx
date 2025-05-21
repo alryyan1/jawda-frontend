@@ -84,39 +84,43 @@ export default function ServicesListPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[50px]">{t('services:table.id')}</TableHead>
-                <TableHead>{t('services:table.name')}</TableHead>
-                <TableHead className="hidden sm:table-cell">{t('services:table.group')}</TableHead>
-                <TableHead>{t('services:table.price')}</TableHead>
+                <TableHead className="w-[50px] text-center">{t('services:table.id')}</TableHead>
+                <TableHead className="text-center">{t('services:table.name')}</TableHead>
+                <TableHead className="hidden sm:table-cell text-center">{t('services:table.group')}</TableHead>
+                <TableHead className="text-center">{t('services:table.price')}</TableHead>
                 <TableHead className="hidden md:table-cell text-center">{t('services:table.active')}</TableHead>
                 <TableHead className="hidden md:table-cell text-center">{t('services:table.variable')}</TableHead>
-                <TableHead className="text-right">{t('services:table.actions')}</TableHead>
+                <TableHead className="text-center">{t('services:table.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {services.map((service) => (
-                <TableRow key={service.id}>
-                  <TableCell>{service.id}</TableCell>
-                  <TableCell className="font-medium">{service.name}</TableCell>
-                  <TableCell className="hidden sm:table-cell">{service.service_group?.name || service.service_group_name || 'N/A'}</TableCell>
-                  <TableCell>{Number(service.price).toFixed(2)}</TableCell>
-                  <TableCell className="hidden md:table-cell text-center">
+                <TableRow key={service.id} className="hover:bg-muted transition-colors">
+                  <TableCell className="text-center align-middle">{service.id}</TableCell>
+                  <TableCell className="font-medium text-center align-middle">{service.name}</TableCell>
+                  <TableCell className="hidden sm:table-cell text-center align-middle">{service.service_group?.name || service.service_group_name || 'N/A'}</TableCell>
+                  <TableCell className="text-center align-middle">{Number(service.price).toFixed(2)}</TableCell>
+                  <TableCell className="hidden md:table-cell text-center align-middle">
                     {service.activate ? 
-                        <CheckCircle2 className="h-5 w-5 text-green-500 mx-auto" /> : 
-                        <XCircle className="h-5 w-5 text-red-500 mx-auto" />}
+                      <CheckCircle2 className="h-5 w-5 text-green-500 mx-auto" /> : 
+                      <XCircle className="h-5 w-5 text-red-500 mx-auto" />}
                   </TableCell>
-                  <TableCell className="hidden md:table-cell text-center">
+                  <TableCell className="hidden md:table-cell text-center align-middle">
                     {service.variable ? 
-                        <CheckCircle2 className="h-5 w-5 text-green-500 mx-auto" /> : 
-                        <XCircle className="h-5 w-5 text-red-500 mx-auto" />}
+                      <CheckCircle2 className="h-5 w-5 text-green-500 mx-auto" /> : 
+                      <XCircle className="h-5 w-5 text-red-500 mx-auto" />}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-center align-middle">
                     <DropdownMenu dir={i18n.dir()}>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem asChild><Link to={`/services/${service.id}/edit`} className="flex items-center w-full"><Edit className="rtl:ml-2 ltr:mr-2 h-4 w-4" /> {t('common:edit')}</Link></DropdownMenuItem>
+                        <DropdownMenuItem asChild></DropdownMenuItem>
+                          <Link to={`/services/${service.id}/edit`} className="flex items-center w-full">
+                            <Edit className="rtl:ml-2 ltr:mr-2 h-4 w-4" /> {t('common:edit')}
+                          </Link>
+                      
                         <DropdownMenuSeparator />
                         <AlertDialog open={deleteDialogOpen && serviceToDelete === service.id} onOpenChange={setDeleteDialogOpen}>
                           <AlertDialogTrigger asChild>

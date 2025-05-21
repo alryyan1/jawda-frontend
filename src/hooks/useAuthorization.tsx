@@ -26,6 +26,34 @@ export type PermissionName =
   | 'view-clients'
   | 'create-clients'
   | 'edit-clients'
+  // User Management
+  // Role Management
+  // Doctor Management
+  // Patient Management
+  // Clinic & Appointments
+  // Services (General Service Definitions)
+  // Lab & Results (General - might need more specific ones later)
+  // Settings
+  // Company & Company Contract Permissions
+  | 'list companies' | 'create companies' | 'edit companies' | 'delete companies'
+  | 'view company_contracts' | 'manage company_contracts'
+  | 'create company_contracts' | 'edit company_contracts' | 'delete company_contracts'
+
+  // --- NEW PERMISSIONS ---
+  // General Clinic Shift Management
+  | 'view current_open_shift' | 'open clinic_shifts' | 'close clinic_shifts'
+  | 'manage clinic_shift_financials' | 'list clinic_shifts' | 'view clinic_shifts'
+  // Doctor-Specific Shift Management
+  | 'view active_doctor_shifts' | 'manage doctor_shifts' 
+  | 'start doctor_shifts' | 'end doctor_shifts' // Granular for manage
+  | 'list all_doctor_shifts' | 'edit doctor_shift_details'
+  // Doctor Visit Management
+  | 'list doctor_visits' | 'view doctor_visits' | 'create doctor_visits'
+  | 'edit doctor_visits' | 'update doctor_visit_status' | 'delete doctor_visits'
+  // Visit-Specific Clinical Actions
+  | 'request visit_services' | 'remove visit_services' | 'manage visit_vitals'
+  | 'manage visit_clinical_notes' | 'manage visit_lab_requests' | 'view visit_lab_results'
+  | 'manage visit_prescriptions' | 'manage visit_documents'
   // ... continue with all permissions you've defined in RolesAndPermissionsSeeder
   // It's crucial these string literals exactly match the permission names in your database.
   ;

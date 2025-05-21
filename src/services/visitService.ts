@@ -1,6 +1,6 @@
 // src/services/visitService.ts
 import apiClient from './api';
-import type { Service } from '../types/services';
+import type { RequestedServiceDeposit, Service } from '../types/services';
 import type  { RequestedService } from '../types/services'; // Or from types/visits
 import type { DoctorVisit } from '@/types/visits';
 
@@ -22,7 +22,22 @@ export const addServicesToVisit = async (params: { visitId: number; service_ids:
 
 
 
+interface UpdateRequestedServicePayload {
+  count?: number;
+  discount_per?: number; // Assuming discount is primarily by percentage here
+  discount?: number; // Or a fixed discount amount
+  // Add other editable fields if any
+}
 
+export const updateRequestedServiceDetails = async (
+  visitId: number, // May not be needed if rsId is globally unique and backend doesn't require visitId in URL for this
+  rsId: number, // RequestedService ID
+  data: UpdateRequestedServicePayload
+): Promise<RequestedService> => {
+  // Assuming backend RequestedServiceResource wraps in 'data'
+  const response = await apiClient.put<{ data: RequestedService }>(`/requested-services/${rsId}`, data); // Or `/visits/${visitId}/requested-services/${rsId}`
+  return response.data.data;
+};
 
 
 export const getRequestedServicesForVisit = async (visitId: number): Promise<RequestedService[]> => {
@@ -65,7 +80,21 @@ export const updateDoctorVisitStatus = async (visitId: number, status: string): 
   const response = await apiClient.put<{ data: DoctorVisit }>(`${VISIT_API_URL_BASE}/${visitId}/status`, { status });
   return response.data.data;
 };
+interface CreateDepositPayload {
+  requested_service_id: number;
+  amount: number;
+  is_bank: boolean;
+  shift_id: number; // Current clinic shift ID
+}
 
+export const recordServicePayment = async (payload: CreateDepositPayload): Promise<RequestedServiceDeposit> => {
+  // Assuming backend returns { data: RequestedServiceDeposit }
+  const response = await apiClient.post<{ data: RequestedServiceDeposit }>(
+    `/requested-services/${payload.requested_service_id}/deposits`, 
+    payload
+  );
+  return response.data.data;
+};
 
 // --- Potentially other DoctorVisit CRUD functions if needed directly ---
 

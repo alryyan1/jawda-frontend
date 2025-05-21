@@ -128,24 +128,15 @@ export interface PatientFormData {
   phone: string;
   gender: 'male' | 'female' | 'other' | undefined; // Undefined for initial select state
   
-  age_year?: string; // Input as string, then parse
-  age_month?: string;
-  age_day?: string;
+  age_year?: number | null; // Input as number | null, then parse
+  age_month?: number | null;
+  age_day?: number | null;
+  doctor_shift_id: number; // Input as string from select
+  // address?: string;
   
-  address?: string;
-  
-  doctor_id: string | undefined; // Input as string from select
-  company_id?: string | undefined; // Input as string from select
-  // subcompany_id?: string | undefined;
-  // company_relation_id?: string | undefined;
-  
-  // insurance_no?: string;
-  // expire_date?: string; // YYYY-MM-DD
-
-  // Clinical info that might be captured at registration
-  present_complains?: string; // Often captured as 'notes' or initial complaint
-  // visit_type?: string; // e.g., 'new', 'follow-up' - this isn't on Patient model directly but might drive visit creation
-  notes?: string; // General notes field on the form, could map to 'present_complains' or other
+  doctor_id: number | undefined; // Input as string from select
+  company_id?: number | null; // Input as string from select
+ 
 }
 
 // For paginated responses if you have a patient list API

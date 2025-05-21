@@ -32,21 +32,35 @@
     "registrationSuccess": "تم تسجيل المريض بنجاح!",
     "registrationFailed": "فشل تسجيل المريض. يرجى المحاولة مرة أخرى."
   },
+  "services":{
+    "addedSuccess": "تمت إضافة الخدمات بنجاح!",
+    "removedSuccess": "تمت إزالة الخدمة بنجاح!"
+  },
   "workspace": {
     "title": "ساحة العمل - المرضى الحاليون",
     "noActivePatients": "لا يوجد مرضى حاليون.",
-    "patientName": "اسم المريض",
-    "status": "الحالة",
-    "waiting": "في الانتظار",
-    "withDoctor": "مع الطبيب",
-    "completed": "مكتمل",
+    "status": {
+      "waiting": "في الانتظار",
+      "with_doctor": "مع الطبيب",
+      "lab_pending": "في انتظار المختبر",
+      "imaging_pending": "في انتظار الأشعة",
+      "payment_pending": "في انتظار الدفع",
+      "completed": "مكتمل",
+      "cancelled": "ملغي",
+      "no_show": "لم يحضر"
+    },
     "tryDifferentFilters": "جرّب عوامل تصفية مختلفة"
   },
   "validation": {
     "nameRequired": "اسم المريض مطلوب.",
-    "phoneRequired": "رقم الهاتف مطلوب.",
     "genderRequired": "الجنس مطلوب.",
-    "doctorRequired": "الطبيب مطلوب."
+    "doctorRequired": "الطبيب مطلوب.",
+    "phoneRequired": "رقم الهاتف مطلوب",
+
+    "phoneMaxLength": "رقم الهاتف يجب ألا يتجاوز {{count}} أرقام.",
+    "phoneNumeric": "رقم الهاتف يجب أن يحتوي على أرقام فقط.",
+    "noDoctorSelectedError": "الرجاء اختيار طبيب مناوب من الأعلى."
+  
   }
   ,
     "topNav": {
@@ -71,6 +85,8 @@
     "manageDescription": "فتح أو إغلاق مناوبات الأطباء لليوم.",
     "status": "حالة المناوبة",
     "onShift": "في مناوبة",
+        "activeDoctorShift": "الدوام النشط للطبيب"
+,
     "offShift": "خارج المناوبة",
     "openShiftButton": "بدء مناوبة",
     "closeShiftButton": "إنهاء مناوبة",
@@ -92,12 +108,27 @@
         "notes": "ملاحظات الطبيب",
         "lab": "المختبر",
         "prescription": "الوصفات الطبية",
-        "documents": "المستندات"
+        "documents": "المستندات",
+        "addedSuccess": "تمت إضافة الخدمات بنجاح!",
+        "removedSuccess": "تمت إزالة الخدمة بنجاح!"
     },
     "visit": {
         "statusUpdateSuccess": "تم تحديث حالة الزيارة بنجاح.",
         "statusUpdateFailed": "فشل تحديث حالة الزيارة."
     }
+  },
+  
+  
+
+
+  "tabs": {
+    "services": "الخدمات",
+    "vitals": "العلامات الحيوية",
+    "notes": "ملاحظات",
+    "lab": "المختبر",
+    "prescription": "الوصفة الطبية",
+    "documents": "المستندات"
   }
+
 
 }

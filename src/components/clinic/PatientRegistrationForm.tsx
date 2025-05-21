@@ -1,5 +1,5 @@
 // src/components/clinic/PatientRegistrationForm.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react'; // Added useRef
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -8,307 +8,255 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Loader2 } from 'lucide-react';
-import { toast } from "sonner"; // Or your preferred toast mechanism
+import { toast } from "sonner";
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'; // For fetching companies
 
-import type { Doctor } from '@/types/doctors'; // Define this type
-import type { Company } from '@/types/companies'; // Define this type
-import type { Patient } from '@/types/patiens';
-import { useMutation } from '@tanstack/react-query';
-import { registerNewPatient } from '@/services/patientService';
+import  type { Patient, PatientFormData } from '@/types/patients';
+import type  { Company } from '@/types/companies'; // Assuming this type exists
+import  type { DoctorShift } from '@/types/doctors'; // To receive activeDoctorShift
 
-// Mock API call placeholders - replace with actual service calls
-// import { registerNewPatient } from '@/services/patientService';
-// import { getDoctorsList } from '@/services/doctorService';
-// import { getCompaniesList } from '@/services/companyService';
+import { registerNewPatient as apiRegisterNewPatient } from '@/services/patientService'; // Renamed for clarity
+import { getCompaniesList } from '@/services/companyService'; // Actual service call
 
-// --- MOCK Data & Functions (Remove and replace with actual API calls) ---
-const mockDoctors: Doctor[] = [
-  { id: 1, name: 'د. أحمد محمد', phone: '', cash_percentage: 0, company_percentage:0, static_wage:0, lab_percentage:0,specialist_id:1, start:0, calc_insurance:false, finance_account_id_insurance:1, created_at: '', updated_at: '' },
-  { id: 2, name: 'د. فاطمة علي', phone: '', cash_percentage: 0, company_percentage:0, static_wage:0, lab_percentage:0,specialist_id:1, start:0, calc_insurance:false, finance_account_id_insurance:1, created_at: '', updated_at: '' },
-];
-const mockCompanies: Company[] = [
-  { id: 1, name: 'شركة التأمين المتحدة', lab_endurance:0, service_endurance:0, status:true, lab_roof:0, service_roof:0, phone:'',email:'', created_at:'',updated_at:'' },
-  { id: 2, name: 'الشركة الوطنية للتأمين', lab_endurance:0, service_endurance:0, status:true, lab_roof:0, service_roof:0, phone:'',email:'', created_at:'',updated_at:'' },
-];
-const getDoctorsList = async (): Promise<Doctor[]> => new Promise(resolve => setTimeout(() => resolve(mockDoctors), 500));
-const getCompaniesList = async (): Promise<Company[]> => new Promise(resolve => setTimeout(() => resolve(mockCompanies), 500));
-const saveData = async (data: any): Promise<Patient> => {
-  console.log("Registering patient:", data);
-  return new Promise(resolve => setTimeout(() => {
-    const newPatient: Patient = { 
-        id: Date.now(), 
-        ...data, 
-        age_day: parseInt(data.age_day) || null,
-        age_month: parseInt(data.age_month) || null,
-        age_year: parseInt(data.age_year) || null,
-        shift_id: 1, user_id: 1, visit_number:1, result_auth:false,auth_date: new Date().toISOString(), /* other required fields */
-        created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-        // Defaulting many NOT NULL fields that were in your schema
-        present_complains: data.notes || '', history_of_present_illness: '', procedures: '', provisional_diagnosis: '', bp: '', temp: 0, weight: 0, height: 0,
-        drug_history: '', family_history: '', rbs: '', care_plan: '', general_examination_notes: '', patient_medical_history: '',
-        social_history: '', allergies: '', general: '', skin: '', head: '', eyes: '', ear: '', nose: '', mouth: '', throat: '',
-        neck: '', respiratory_system: '', cardio_system: '', git_system: '', genitourinary_system: '', nervous_system: '',
-        musculoskeletal_system: '', neuropsychiatric_system: '', endocrine_system: '', peripheral_vascular_system: '',
-        referred: '', discount_comment: ''
-    };
-
-    registerNewPatient(newPatient);
-    
-    resolve(newPatient);
-  }, 1000));
-};
-// --- END MOCK ---
-
-// Define the Zod schema for patient registration
-const getPatientRegistrationSchema = (t: Function) => z.object({
+// Zod schema for patient registration
+const getPatientRegistrationSchema = (t: any) => z.object({
   name: z.string().min(1, { message: t('clinic:validation.nameRequired') }),
-  phone: z.string().min(1, { message: t('clinic:validation.phoneRequired') }),
-  gender: z.enum(['male', 'female', 'other'], { required_error: t('clinic:validation.genderRequired')}),
-  age_year: z.string().optional().refine(val => !val || /^\d+$/.test(val), { message: "Must be a number"}),
-  age_month: z.string().optional().refine(val => !val || /^\d+$/.test(val), { message: "Must be a number"}),
-  age_day: z.string().optional().refine(val => !val || /^\d+$/.test(val), { message: "Must be a number"}),
+  phone: z.string()
+    .min(1, { message: t('clinic:validation.phoneRequired') })
+    .max(10, { message: t('clinic:validation.phoneMaxLength', { count: 10 }) }) // Max 10 chars
+    .regex(/^[0-9]+$/, { message: t('clinic:validation.phoneNumeric') }), // Only numbers
+  gender: z.enum(['male', 'female'], { required_error: t('clinic:validation.genderRequired')}), // 'other' removed
+  age_year: z.string().optional().refine(val => !val || /^\d+$/.test(val), { message: t('common:validation.mustBeNumber')}),
+  age_month: z.string().optional().refine(val => !val || /^\d+$/.test(val), { message: t('common:validation.mustBeNumber')}),
+  age_day: z.string().optional().refine(val => !val || /^\d+$/.test(val), { message: t('common:validation.mustBeNumber')}),
   address: z.string().optional(),
-  company_id: z.string().optional(), // Storing ID as string from select, convert to number on submit
-  doctor_id: z.string({ required_error: t('clinic:validation.doctorRequired')}), // Storing ID as string
-  // visit_type: z.string().min(1, "Visit type is required"), // Example
-  notes: z.string().optional(),
+  company_id: z.string().optional(),
+  // doctor_id is removed from schema as it's not a direct form input
+  // notes is removed
 });
 
 type PatientRegistrationFormValues = z.infer<ReturnType<typeof getPatientRegistrationSchema>>;
 
 interface PatientRegistrationFormProps {
   onPatientRegistered: (patient: Patient) => void;
+  activeDoctorShift: DoctorShift | null; // Receive the selected doctor's shift
+  // This prop tells the form if it's visible, to trigger autofocus
+  isVisible?: boolean; 
 }
 
-const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({ onPatientRegistered }) => {
+const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({ 
+  onPatientRegistered, 
+  activeDoctorShift,
+  isVisible 
+}) => {
   const { t } = useTranslation(['clinic', 'common']);
-  const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [isLoadingLists, setIsLoadingLists] = useState(true);
-
+  const queryClient = useQueryClient();
+  const nameInputRef = useRef<HTMLInputElement>(null); // Ref for autofocus
+  console.log(activeDoctorShift,'activeDoctorShift');
   const patientRegistrationSchema = getPatientRegistrationSchema(t);
-  // Example usage of useMutation for registering a patient (not strictly needed with current mock, but for real API)
-  const {mutate} = useMutation({
-    mutationFn: saveData,
-    onSuccess: (newPatient) => {
-      toast.success(t('clinic:patientRegistration.registrationSuccess'));
-      onPatientRegistered(newPatient);
-      reset();
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || t('clinic:patientRegistration.registrationFailed'));
-    }
-  });
+
   const form = useForm<PatientRegistrationFormValues>({
     resolver: zodResolver(patientRegistrationSchema),
     defaultValues: {
       name: '',
       phone: '',
-      gender: undefined, // Important for Select placeholder
+      gender: 'female', // Default to female
       age_year: '',
       age_month: '',
       age_day: '',
       address: '',
       company_id: undefined,
-      doctor_id: undefined,
-      notes: '',
     },
   });
-  const { handleSubmit, control, formState: { isSubmitting }, reset } = form;
+  const { handleSubmit, control, formState: { isSubmitting }, reset, setFocus } = form; // Added setFocus
 
+  const { data: companies, isLoading: isLoadingCompanies } = useQuery<Company[], Error>({
+    queryKey: ['companiesListActive'], // Use a distinct key if you only want active companies
+    queryFn: () => getCompaniesList({ status: true }), // Assuming getCompaniesList can take filters
+  });
+  
+  // Autofocus on name field when the form becomes visible
   useEffect(() => {
-    const fetchLists = async () => {
-      setIsLoadingLists(true);
-      try {
-        const [docs, comps] = await Promise.all([
-          getDoctorsList(),
-          getCompaniesList()
-        ]);
-        setDoctors(docs);
-        setCompanies(comps);
-      } catch (error) {
-        console.error("Failed to load lists for form", error);
-        toast.error(t('common:error.loadListsFailed', "Failed to load doctors/companies."));
-      } finally {
-        setIsLoadingLists(false);
+    if (isVisible && nameInputRef.current) {
+      // Small timeout to ensure element is truly visible and focusable after layout shifts
+      setTimeout(() => {
+        nameInputRef.current?.focus();
+      }, 100);
+    }
+  }, [isVisible, nameInputRef]); // setFocus from react-hook-form can also be used: useEffect(() => { if(isVisible) setFocus('name')}, [isVisible, setFocus])
+
+
+  const registrationMutation = useMutation({
+    mutationFn: apiRegisterNewPatient, // Use the imported actual service function
+    onSuccess: (newPatient) => {
+      toast.success(t('clinic:patientRegistration.registrationSuccess'));
+      onPatientRegistered(newPatient);
+      reset(); // Reset form
+      // Optionally set focus back to name field for next entry
+      if (nameInputRef.current) nameInputRef.current.focus(); 
+    },
+    onError: (error: any) => {
+      let errorMessage = t('clinic:patientRegistration.registrationFailed');
+       if (error.response?.data?.errors) {
+        const fieldErrors = Object.values(error.response.data.errors).flat().join(' ');
+        errorMessage = `${errorMessage}${fieldErrors ? `: ${fieldErrors}` : ''}`;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
       }
-    };
-    fetchLists();
-  }, [t]);
+      toast.error(errorMessage);
+      console.error("Patient registration failed", error.response?.data || error.message);
+    },
+  });
+
 
   const onSubmit = async (data: PatientRegistrationFormValues) => {
-    const submissionData = {
-        ...data,
-        company_id: data.company_id ? parseInt(data.company_id) : null,
-        doctor_id: parseInt(data.doctor_id),
+    if (!activeDoctorShift || !activeDoctorShift.doctor_id) {
+      toast.error(t('clinic:validation.noDoctorSelectedError', "Please select an active doctor from the tabs above."));
+      return;
+    }
+
+    // Prepare data for the backend, including the doctor_id from activeDoctorShift
+    const submissionDataForApi : PatientFormData = { // This should match the backend's expected structure, often closer to Patient model
+        name: data.name,
+        doctor_id: activeDoctorShift.doctor_id, // Use the doctor_id from the selected shift
+        phone: data.phone,
+        gender: data.gender,
         age_year: data.age_year ? parseInt(data.age_year) : null,
         age_month: data.age_month ? parseInt(data.age_month) : null,
         age_day: data.age_day ? parseInt(data.age_day) : null,
+        // address: data.address || null,
+        company_id: data.company_id ? parseInt(data.company_id) : null,
+        doctor_shift_id: activeDoctorShift.id, // Key: doctor for the initial visit
+        // notes: '', // If backend PatientController still expects notes, send empty or specific default
+        // Ensure all other required fields for PatientController@store are included
+        // e.g., shift_id might be determined by backend or needs to be passed
     };
-    try {
-      mutate(submissionData);
-      toast.success(t('clinic:patientRegistration.registrationSuccess'));
-      onPatientRegistered(newPatient);
-      reset(); // Reset form after successful submission
-    } catch (error: any) {
-      console.error("Registration failed", error);
-      toast.error(error.response?.data?.message || t('clinic:patientRegistration.registrationFailed'));
-    }
+    
+    registrationMutation.mutate(submissionDataForApi as any); // Cast as any if submissionDataForApi differs from PatientFormData
   };
 
-  if (isLoadingLists) {
-    return (
-        <div className="flex justify-center items-center h-full">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-    );
-  }
+  const currentIsLoading = isLoadingCompanies || registrationMutation.isPending;
 
   return (
-    <Form {...form}>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
-          control={control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t('clinic:patientRegistration.nameLabel')}</FormLabel>
-              <FormControl>
-                <Input placeholder={t('clinic:patientRegistration.namePlaceholder')} {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={control}
-          name="phone"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t('clinic:patientRegistration.phoneLabel')}</FormLabel>
-              <FormControl>
-                <Input type="tel" placeholder={t('clinic:patientRegistration.phonePlaceholder')} {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={control}
-          name="gender"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t('clinic:patientRegistration.genderLabel')}</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+    // The parent <aside> in ClinicPage.tsx should control the max-width
+    // Or, if this component is used elsewhere, you can add max-w-[380px] here or on a wrapper div
+    <div className="w-full max-w-[380px] mx-auto"> {/* Max width constraint */}
+        <Form {...form}>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-3"> {/* Reduced space-y for compactness */}
+            <FormField
+            control={control}
+            name="name"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>{t('clinic:patientRegistration.nameLabel')}</FormLabel>
                 <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('clinic:patientRegistration.selectGender')} />
-                  </SelectTrigger>
+                    <Input 
+                        placeholder={t('clinic:patientRegistration.namePlaceholder')} 
+                        {...field} 
+                        ref={nameInputRef} // Assign ref
+                        disabled={currentIsLoading}
+                    />
                 </FormControl>
-                <SelectContent>
-                  <SelectItem value="male">{t('clinic:patientRegistration.male')}</SelectItem>
-                  <SelectItem value="female">{t('clinic:patientRegistration.female')}</SelectItem>
-                  <SelectItem value="other">{t('clinic:patientRegistration.other')}</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormMessage />
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+            <FormField
+            control={control}
+            name="phone"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>{t('clinic:patientRegistration.phoneLabel')}</FormLabel>
+                <FormControl>
+                    <Input 
+                        type="tel" 
+                        maxLength={10} // Enforce max length on input
+                        placeholder={t('clinic:patientRegistration.phonePlaceholder')} 
+                        {...field} 
+                        disabled={currentIsLoading}
+                    />
+                </FormControl>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+            <FormField
+            control={control}
+            name="gender"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>{t('clinic:patientRegistration.genderLabel')}</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={currentIsLoading}>
+                    <FormControl>
+                    <SelectTrigger>
+                        <SelectValue placeholder={t('clinic:patientRegistration.selectGender')} />
+                    </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                    <SelectItem value="female">{t('clinic:patientRegistration.female')}</SelectItem>
+                    <SelectItem value="male">{t('clinic:patientRegistration.male')}</SelectItem>
+                    {/* "other" option removed */}
+                    </SelectContent>
+                </Select>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+            <FormItem>
+                <FormLabel>{t('clinic:patientRegistration.ageLabel')}</FormLabel>
+                <div className="grid grid-cols-3 gap-2">
+                    <FormField control={control} name="age_year" render={({ field }) => ( <Input type="number" placeholder={t('clinic:patientRegistration.ageYearsPlaceholder')} {...field} disabled={currentIsLoading}/> )}/>
+                    <FormField control={control} name="age_month" render={({ field }) => ( <Input type="number" placeholder={t('clinic:patientRegistration.ageMonthsPlaceholder')} {...field} disabled={currentIsLoading}/> )}/>
+                    <FormField control={control} name="age_day" render={({ field }) => ( <Input type="number" placeholder={t('clinic:patientRegistration.ageDaysPlaceholder')} {...field} disabled={currentIsLoading}/> )}/>
+                </div>
+                <FormMessage>{form.formState.errors.age_year?.message || form.formState.errors.age_month?.message || form.formState.errors.age_day?.message}</FormMessage>
             </FormItem>
-          )}
-        />
-        <FormItem>
-            <FormLabel>{t('clinic:patientRegistration.ageLabel')}</FormLabel>
-            <div className="grid grid-cols-3 gap-2">
-                <FormField
-                    control={control} name="age_year"
-                    render={({ field }) => ( <Input type="number" placeholder={t('clinic:patientRegistration.ageYearsPlaceholder')} {...field} /> )}
-                />
-                <FormField
-                    control={control} name="age_month"
-                    render={({ field }) => ( <Input type="number" placeholder={t('clinic:patientRegistration.ageMonthsPlaceholder')} {...field} /> )}
-                />
-                <FormField
-                    control={control} name="age_day"
-                    render={({ field }) => ( <Input type="number" placeholder={t('clinic:patientRegistration.ageDaysPlaceholder')} {...field} /> )}
-                />
-            </div>
-            {/* Combined error message for age fields or individual ones if needed */}
-            <FormMessage>{form.formState.errors.age_year?.message || form.formState.errors.age_month?.message || form.formState.errors.age_day?.message}</FormMessage>
-        </FormItem>
 
-        <FormField
-          control={control}
-          name="address"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t('clinic:patientRegistration.addressLabel')}</FormLabel>
-              <FormControl>
-                <Textarea placeholder={t('clinic:patientRegistration.addressPlaceholder')} {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={control}
-          name="doctor_id"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t('clinic:patientRegistration.doctorLabel')}</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+            <FormField
+            control={control}
+            name="address"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>{t('clinic:patientRegistration.addressLabel')}</FormLabel>
                 <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('clinic:patientRegistration.selectDoctor')} />
-                  </SelectTrigger>
+                    <Textarea className="h-20" placeholder={t('clinic:patientRegistration.addressPlaceholder')} {...field} disabled={currentIsLoading}/>
                 </FormControl>
-                <SelectContent>
-                  {doctors.map(doc => <SelectItem key={doc.id} value={String(doc.id)}>{doc.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={control}
-          name="company_id"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t('clinic:patientRegistration.companyLabel')}</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('clinic:patientRegistration.selectCompany')} />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {companies.map(comp => <SelectItem key={comp.id} value={String(comp.id)}>{comp.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-         <FormField
-          control={control}
-          name="notes"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t('clinic:patientRegistration.notesLabel')}</FormLabel>
-              <FormControl>
-                <Textarea placeholder={t('clinic:patientRegistration.notesPlaceholder')} {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <Button type="submit" className="w-full" disabled={isSubmitting || isLoadingLists}>
-          {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {isSubmitting ? t('clinic:patientRegistration.registeringButton') : t('clinic:patientRegistration.registerButton')}
-        </Button>
-      </form>
-    </Form>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+            <FormField
+            control={control}
+            name="company_id"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>{t('clinic:patientRegistration.companyLabel')}</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={isLoadingCompanies || currentIsLoading}>
+                    <FormControl>
+                    <SelectTrigger>
+                        <SelectValue placeholder={t('clinic:patientRegistration.selectCompany')} />
+                    </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                        <SelectItem value=" ">{t('common:none')}</SelectItem>
+                        {isLoadingCompanies ? <SelectItem value="loading_comp" disabled>{t('common:loading')}</SelectItem> :
+                        companies?.map(comp => <SelectItem key={comp.id} value={String(comp.id)}>{comp.name}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+            {/* doctor_id and notes fields are removed */}
+            <Button type="submit" className="w-full" disabled={currentIsLoading}>
+            {registrationMutation.isPending && <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />}
+            {registrationMutation.isPending ? t('clinic:patientRegistration.registeringButton') : t('clinic:patientRegistration.registerButton')}
+            </Button>
+        </form>
+        </Form>
+    </div>
   );
 };
 

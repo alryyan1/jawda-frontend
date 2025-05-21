@@ -20,7 +20,9 @@
     "passwordMinLengthGeneral": "يجب أن تفي كلمة المرور بشرط الحد الأدنى للطول.",
     "invalidEmail": "صيغة بريد إلكتروني غير صحيحة.",
     "positiveNumber": "يجب أن يكون رقماً موجباً.",
-    "positiveInteger": "يجب أن يكون رقماً صحيحاً موجباً."
+    "positiveInteger": "يجب أن يكون رقماً صحيحاً موجباً.",
+        "requiredField": "هذا الحقل مطلوب"
+
   },
   "form": {
     "fillDetails": "الرجاء ملء التفاصيل أدناه."
@@ -39,5 +41,31 @@
   "none": "لا يوجد",
   "entityName": "{{entity}}",
   "entityNamePlural": "{{entity}}",
-  "backToList": "العودة إلى قائمة "
+  "backToList": "العودة إلى قائمة ",
+  
+  "all": "الكل",
+  "pharmacy": "الصيدلية",
+  "close": "إغلاق",
+  "phoneShort": "الهاتف",
+  "doctor": "الطبيب",
+  "loadingDetails": "جاري تحميل بيانات المريض...",
+  "visitId": "رقم الزيارة",
+  "genderEnum": {
+    "female": "أنثى"
+  },
+  "notAvailable_short": "غير متوفر",
+  "status": "الحالة",
+  "add": "إضافة",
+  "price": "السعر",
+  "viewRequested": "عرض المطلوب",
+  "currency": "العملة",
+  "addSelected": "إضافة المحدد",
+    "summary": "الملخص",
+  "totalAmount": "المبلغ الإجمالي",
+  "totalDiscount": "إجمالي الخصم",
+  "totalPaid": "إجمالي المدفوع",
+  "amountLeft": "المبلغ المتبقي",
+  "pay": "دفع",
+  "updatedSuccess": "تم تحديث  بنجاح!"
+
 }

@@ -91,11 +91,11 @@ export default function DoctorsListPage() {
             <Table>
                 <TableHeader>
                 <TableRow>
-                    <TableHead className="w-[80px]">{t('doctors:table.image')}</TableHead>
-                    <TableHead>{t('doctors:table.name')}</TableHead>
-                    <TableHead className="hidden md:table-cell">{t('doctors:table.phone')}</TableHead>
-                    <TableHead className="hidden sm:table-cell">{t('doctors:table.specialist')}</TableHead>
-                    <TableHead className="text-right">{t('doctors:table.actions')}</TableHead>
+                    <TableHead className="w-[80px] text-center">{t('doctors:table.image')}</TableHead>
+                    <TableHead className='text-center'>{t('doctors:table.name')}</TableHead>
+                    <TableHead className="hidden md:table-cell text-center">{t('doctors:table.phone')}</TableHead>
+                    <TableHead className="hidden sm:table-cell text-center">{t('doctors:table.specialist')}</TableHead>
+                    <TableHead className="text-center">{t('doctors:table.actions')}</TableHead>
                 </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -107,10 +107,10 @@ export default function DoctorsListPage() {
                             <AvatarFallback>{getInitials(doctor.name)}</AvatarFallback>
                         </Avatar>
                     </TableCell>
-                    <TableCell className="font-medium">{doctor.name}</TableCell>
-                    <TableCell className="hidden md:table-cell">{doctor.phone}</TableCell>
-                    <TableCell className="hidden sm:table-cell">{doctor.specialist?.name || doctor.specialist_name || 'N/A'}</TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="font-medium text-center">{doctor.name}</TableCell>
+                    <TableCell className="hidden md:table-cell text-center">{doctor.phone}</TableCell>
+                    <TableCell className="hidden sm:table-cell text-center">{doctor.specialist?.name || doctor.specialist_name || 'N/A'}</TableCell>
+                    <TableCell className="text-center">
                         <DropdownMenu dir={i18n.dir()}>
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="h-8 w-8 p-0">

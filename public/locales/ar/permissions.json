@@ -7,7 +7,21 @@
     "permissions": "الصلاحيات",
     "roles": "الأدوار",
     "users": "المستخدمون",
-    "company": "الشركات"
+    "company": "الشركات",
+        "active": "نشط",
+    "all": "الكل",
+    "clinic": "عيادة",
+    "close": "إغلاق",
+    "companies": "شركات",
+    "current": "حالي",
+    "doctor": "طبيب",
+    "end": "إنهاء",
+    "open": "فتح",
+    "remove": "إزالة",
+    "request": "طلب",
+    "start": "بدء",
+    "update": "تحديث",
+    "visit": "زيارة"
   },
   "list_users": "عرض قائمة المستخدمين",
   "create_users": "إنشاء مستخدمين",
@@ -41,6 +55,39 @@
   "delete_company_contracts": "حذف عقود الشركات",
   "edit_company_contracts": "تعديل عقود الشركات",
   "manage_company_contracts": "إدارة عقود الشركات",
-  "view_company_contracts": "عرض عقود الشركات"
+  "view_company_contracts": "عرض عقود الشركات",
+  
+  "list_doctor_visits": "عرض زيارات الطبيب",
+  "manage_doctor_shifts": "إدارة دوام الأطباء",
+  "view_doctor_visits": "مشاهدة زيارات الطبيب",
+  "end_doctor_shifts": "إنهاء دوام الأطباء",
+  "open_clinic_shifts": "فتح دوام العيادة",
+  "remove_visit_services": "إزالة خدمات الزيارة",
+  "request_visit_services": "طلب خدمات الزيارة",
+  "start_doctor_shifts": "بدء دوام الأطباء",
+  "update_doctor_visit_status": "تحديث حالة زيارة الطبيب",
+  "manage_visit_clinical_notes": "إدارة ملاحظات سريرية للزيارة",
+  "manage_visit_documents": "إدارة مستندات الزيارة",
+  "manage_visit_lab_requests": "إدارة طلبات المختبر للزيارة",
+  "manage_visit_prescriptions": "إدارة وصفات الزيارة",
+  "manage_visit_vitals": "إدارة العلامات الحيوية للزيارة",
+  "view_visit_lab_results": "عرض نتائج المختبر للزيارة",
+ 
+  "view_active_doctor_shifts": "عرض دوام الأطباء النشط",
+  "list_all_doctor_shifts": "عرض جميع دوام الأطباء",
+  "list_clinic_shifts": "عرض دوام العيادة",
+  "manage_clinic_shift_financials": "إدارة مالية دوام العيادة",
+  "view_clinic_shifts": "عرض دوام العيادة",
+  "close_clinic_shifts": "إغلاق دوام العيادة",
+  "view_current_open_shift": "عرض الدوام الحالي المفتوح",
+  "create_doctor_visits": "إنشاء زيارة للطبيب",
+  "delete_doctor_visits": "حذف زيارة الطبيب",
+  "edit_doctor_shift_details": "تعديل تفاصيل دوام الطبيب",
+  "edit_doctor_visits": "تعديل زيارات الطبيب",
 
+  
+    "settings": "الإعدادات",
+  
+  "view_settings": "عرض الإعدادات",
+  "update_settings": "تحديث الإعدادات"
 }

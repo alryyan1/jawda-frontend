@@ -54,5 +54,22 @@ export interface ServiceFormData {
   activate: boolean;
   variable: boolean;
 }
+
+export interface ServiceGroupWithServices extends ServiceGroup {
+  services: Service[];
+}
+
+export interface RequestedServiceDeposit {
+  id: number;
+  requested_service_id: number;
+  amount: number;
+  user_id: number;
+  user?: Pick<User, 'id' | 'name'>; // Optional loaded user
+  is_bank: boolean;
+  is_claimed: boolean; // For reconciliation later
+  shift_id: number;
+  created_at: string;
+}
+
 export   const ServiceFormMode =  { CREATE : 'create', EDIT : 'edit' }
 export type ServiceFormMode = typeof ServiceFormMode[keyof typeof ServiceFormMode];

@@ -21,7 +21,8 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId,
     queryKey: ['activeDoctorShifts', currentClinicShiftId], // Include clinicShiftId if it affects the query
     queryFn: () => getActiveDoctorShifts(currentClinicShiftId || undefined),
   });
-
+  console.log(activeShiftId,'activeShiftId');
+  console.log(doctorShifts,'doctorShifts');
   // Select the first doctor by default if no activeShiftId is provided and shifts are loaded
   useEffect(() => {
     if (!activeShiftId && doctorShifts && doctorShifts.length > 0) {
@@ -64,7 +65,7 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId,
             <TabsTrigger 
                 value="all" // A special value
                 onClick={() => onShiftSelect(null)} // Signal to show all patients
-                className="text-xs sm:text-sm px-2 py-1.5 sm:px-3 sm:py-2 h-auto data-[state=active]:shadow-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground whitespace-nowrap"
+                className="text-xs sm:text-sm px-2 py-1.5   sm:px-3 sm:py-2 h-auto data-[state=active]:shadow-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground whitespace-nowrap"
             >
                 {t('common:all', 'All')}
             </TabsTrigger>
@@ -72,7 +73,7 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId,
               <TabsTrigger
                 key={shift.id}
                 value={String(shift.id)}
-                className="text-xs sm:text-sm px-2 py-1.5 sm:px-3 sm:py-2 h-auto data-[state=active]:shadow-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground whitespace-nowrap"
+                className="text-xs sm:text-sm px-2 py-1.5 sm:px-3 hover:cursor-pointer sm:py-2 h-auto data-[state=active]:shadow-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground whitespace-nowrap"
               >
                 {/* <UserMd className="h-4 w-4 mr-1 rtl:ml-1 rtl:mr-0" /> */}
                 {shift.doctor_name}

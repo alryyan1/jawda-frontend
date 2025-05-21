@@ -12,7 +12,7 @@ import ActivePatientsList from '@/components/clinic/ActivePatientsList';
 import { Input } from '@/components/ui/input';
 import {  Search } from 'lucide-react'; // Icons
 
-import type { Patient } from '@/types/patiens'; // Or your more specific ActivePatientListItem
+import type { Patient } from '@/types/patients'; // Or your more specific ActivePatientListItem
 import type { DoctorShift } from '@/types/doctors'; // Assuming a DoctorShift type for Tabs
 import ActionsPane from './ActionsPane';
 import SelectedPatientWorkspace from './SelectedPatientWorkspace';
@@ -51,8 +51,8 @@ const ClinicPage: React.FC = () => {
   // Dynamic grid layout based on visibility states
   // This uses CSS Grid for flexible layout
   const gridTemplateColumns = showRegistrationForm 
-    ? (isRTL ? "1fr 2fr minmax(350px, 1.5fr) auto" : "auto minmax(350px, 1.5fr) 2fr 1fr")
-    : (isRTL ? "1fr 3fr auto" : "auto 3fr 1fr");
+    ? (isRTL ? "60px 380px minmax(350px, 1.5fr) auto" : "auto minmax(350px, 1.5fr) 380px 60px")
+    : (isRTL ? "60px 380px auto" : "auto 380px 60px");
 
 
   return (
@@ -112,7 +112,7 @@ const ClinicPage: React.FC = () => {
                 {t('clinic:patientRegistration.title')}
                 </h2>
             </div>
-            <PatientRegistrationForm onPatientRegistered={handlePatientRegistered} />
+            <PatientRegistrationForm isVisible={showRegistrationForm} activeDoctorShift={activeDoctorShift} onPatientRegistered={handlePatientRegistered} />
           </section>
         )}
 

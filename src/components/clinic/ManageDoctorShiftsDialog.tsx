@@ -19,6 +19,7 @@ import { DoctorShift } from '@/types/doctors'; // Assuming DoctorShift type now 
 // Service functions to get doctors with their shift status, and to open/close shifts
 // These would ideally be in a doctorShiftService.ts
 import { getDoctorsWithShiftStatus, startDoctorShift, endDoctorShift } from '@/services/doctorShiftService'; // Create this service
+import i18n from '@/i18n';
 
 interface DoctorWithShiftStatus { // Type for the data returned by getDoctorsWithShiftStatus
   id: number; // Doctor ID
@@ -117,58 +118,58 @@ const ManageDoctorShiftsDialog: React.FC<ManageDoctorShiftsDialogProps> = ({ tri
             <div className="flex-grow flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
         )}
         {(!isLoading || doctorsList) && (
-            <ScrollArea className="flex-grow border rounded-md">
+            <ScrollArea  className="h-[400px] flex-grow border rounded-md">
             {doctorsList && doctorsList.length > 0 ? (
-                <Table>
+                <Table style={{direction:i18n.dir()}}>
                 <TableHeader>
-                    <TableRow>
-                    <TableHead>{t('doctors:table.name')}</TableHead>
-                    <TableHead className="hidden sm:table-cell">{t('doctors:table.specialist')}</TableHead>
-                    <TableHead className="text-center">{t('clinic:doctorShifts.status')}</TableHead>
-                    <TableHead className="text-right">{t('common:actions.openMenu')}</TableHead>
-                    </TableRow>
+                  <TableRow>
+                  <TableHead className="text-center">{t('doctors:table.name')}</TableHead>
+                  <TableHead className="hidden sm:table-cell text-center">{t('doctors:table.specialist')}</TableHead>
+                  <TableHead className="text-center">{t('clinic:doctorShifts.status')}</TableHead>
+                  <TableHead className="text-center">{t('common:actions.openMenu')}</TableHead>
+                  </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {doctorsList?.map((doc) => (
-                    <TableRow key={doc.id}>
-                        <TableCell className="font-medium">{doc.name}</TableCell>
-                        <TableCell className="hidden sm:table-cell">{doc.specialist_name || '-'}</TableCell>
-                        <TableCell className="text-center">
-                        <Badge variant={doc.is_on_shift ? 'success' : 'outline'}>
-                            {doc.is_on_shift ? t('clinic:doctorShifts.onShift') : t('clinic:doctorShifts.offShift')}
-                        </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                        {doc.is_on_shift && doc.current_doctor_shift_id ? (
-                            <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => handleCloseShift(doc.current_doctor_shift_id!)}
-                                disabled={closeShiftMutation.isPending && closeShiftMutation.variables === doc.current_doctor_shift_id}
-                            >
-                            {closeShiftMutation.isPending && closeShiftMutation.variables === doc.current_doctor_shift_id 
-                                ? <Loader2 className="h-4 w-4 animate-spin ltr:mr-1 rtl:ml-1" /> 
-                                : <LogOut className="h-4 w-4 ltr:mr-1 rtl:ml-1"/>
-                            }
-                            {t('clinic:doctorShifts.closeShiftButton')}
-                            </Button>
-                        ) : (
-                            <Button
-                                size="sm"
-                                variant="default"
-                                onClick={() => handleOpenShift(doc.id)}
-                                disabled={openShiftMutation.isPending && openShiftMutation.variables === doc.id || !currentClinicShiftId}
-                            >
-                            {openShiftMutation.isPending && openShiftMutation.variables === doc.id 
-                                ? <Loader2 className="h-4 w-4 animate-spin ltr:mr-1 rtl:ml-1" /> 
-                                : <LogIn className="h-4 w-4 ltr:mr-1 rtl:ml-1"/>
-                            }
-                            {t('clinic:doctorShifts.openShiftButton')}
-                            </Button>
-                        )}
-                        </TableCell>
-                    </TableRow>
-                    ))}
+                  {doctorsList?.map((doc) => (
+                  <TableRow key={doc.id}>
+                    <TableCell className="font-medium text-center">{doc.name}</TableCell>
+                    <TableCell className="hidden sm:table-cell text-center">{doc.specialist_name || '-'}</TableCell>
+                    <TableCell className="text-center">
+                    <Badge variant={doc.is_on_shift ? 'success' : 'outline'}>
+                      {doc.is_on_shift ? t('clinic:doctorShifts.onShift') : t('clinic:doctorShifts.offShift')}
+                    </Badge>
+                    </TableCell>
+                    <TableCell className="text-center">
+                    {doc.is_on_shift && doc.current_doctor_shift_id ? (
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleCloseShift(doc.current_doctor_shift_id!)}
+                        disabled={closeShiftMutation.isPending && closeShiftMutation.variables === doc.current_doctor_shift_id}
+                      >
+                      {closeShiftMutation.isPending && closeShiftMutation.variables === doc.current_doctor_shift_id 
+                        ? <Loader2 className="h-4 w-4 animate-spin ltr:mr-1 rtl:ml-1" /> 
+                        : <LogOut className="h-4 w-4 ltr:mr-1 rtl:ml-1"/>
+                      }
+                      {t('clinic:doctorShifts.closeShiftButton')}
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="default"
+                        onClick={() => handleOpenShift(doc.id)}
+                        disabled={openShiftMutation.isPending && openShiftMutation.variables === doc.id || !currentClinicShiftId}
+                      >
+                      {openShiftMutation.isPending && openShiftMutation.variables === doc.id 
+                        ? <Loader2 className="h-4 w-4 animate-spin ltr:mr-1 rtl:ml-1" /> 
+                        : <LogIn className="h-4 w-4 ltr:mr-1 rtl:ml-1"/>
+                      }
+                      {t('clinic:doctorShifts.openShiftButton')}
+                      </Button>
+                    )}
+                    </TableCell>
+                  </TableRow>
+                  ))}
                 </TableBody>
                 </Table>
             ) : (

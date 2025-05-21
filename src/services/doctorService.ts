@@ -63,7 +63,7 @@ export const getSpecialistsList = (): Promise<Specialist[]> => { // Assuming dir
     return apiClient.get<PaginatedResponse<Specialist>>('/specialists-list').then(res => res.data.data);
 }
 export const getFinanceAccountsList = (): Promise<FinanceAccount[]> => { // Assuming direct array response
-    return apiClient.get<PaginatedResponse< FinanceAccount>>('/finance-accounts-list').then(res => res.data.data);
+    return apiClient.get('/finance-accounts-list').then(res => res.data.data);
 }
 // Ensure this function is EXPORTED
 export const createSpecialist = async (data: { name: string }): Promise<Specialist> => {

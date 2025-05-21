@@ -1,0 +1,13 @@
+{
+  "dialogTitle": "تسديد دفعة لـ: {{serviceName}}",
+  "balanceDue": "الرصيد المستحق",
+  "amountToPay": "المبلغ المدفوع",
+  "paymentMethod": "طريقة الدفع",
+  "cash": "نقداً",
+  "bank": "شبكة/بنك",
+  "paymentSuccess": "تم تسجيل الدفعة بنجاح!",
+  "paymentError": "فشل تسجيل الدفعة.",
+  "validation": {
+    "amountExceedsBalance": "المبلغ يتجاوز الرصيد المستحق ({{balance}})."
+  }
+}

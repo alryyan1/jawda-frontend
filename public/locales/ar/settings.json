@@ -1,4 +1,87 @@
 {
-  "title": "الإعدادات",
-  "contentPlaceholder": "إعدادات المستخدم والتطبيق ستكون هنا."
+  "pageTitle": "إعدادات النظام",
+  "saveButton": "حفظ الإعدادات",
+  "savingButton": "جارٍ الحفظ...",
+  "settingsSavedSuccess": "تم حفظ الإعدادات بنجاح!",
+  "settingsSaveError": "فشل حفظ الإعدادات.",
+  "errorNoSettings": "لم يتم تهيئة إعدادات النظام بعد. يرجى التواصل مع المسؤول.",
+  "loadingSettings": "جارٍ تحميل الإعدادات...",
+  "tabs": {
+    "general": "عام",
+    "print": "الطباعة",
+    "financial": "مالية",
+    "whatsapp": "واتساب",
+    "workflow": "سير العمل"
+  },
+  "generalSection": {
+    "title": "الإعدادات العامة",
+    "hospitalName": "اسم المستشفى/العيادة",
+    "labName": "اسم المختبر (إن وجد)",
+    "phone": "رقم الهاتف الرئيسي",
+    "email": "البريد الإلكتروني الرئيسي",
+    "address": "العنوان",
+    "currency": "العملة (مثل ج.س)",
+    "vatin": "الرقم الضريبي (VATIN)",
+    "cr": "رقم السجل التجاري (CR)"
+  },
+  "printSection": {
+    "title": "إعدادات الطباعة",
+    "isLogo": "عرض الشعار في المطبوعات",
+    "logoFile": "ملف الشعار",
+    "currentLogo": "الشعار الحالي",
+    "isHeader": "عرض ترويسة الصفحة",
+    "headerContent": "محتوى الترويسة (نص)",
+    "headerImageFile": "صورة الترويسة (اختياري)",
+    "currentHeaderImage": "صورة الترويسة الحالية",
+    "isFooter": "عرض تذييل الصفحة",
+    "footerContent": "محتوى التذييل (نص)",
+    "footerImageFile": "صورة التذييل (اختياري)",
+    "currentFooterImage": "صورة التذييل الحالية",
+    "printDirect": "تمكين الطباعة المباشرة (بدون معاينة)",
+    "barcode": "استخدام الباركود للمرضى/العينات",
+    "showWaterMark": "عرض علامة مائية على التقارير"
+  },
+  "financialSection": {
+    "title": "الإعدادات المالية",
+    "financialYearStart": "بداية السنة المالية",
+    "financialYearEnd": "نهاية السنة المالية",
+    "financeAccountId": "حساب مالي افتراضي (عام)",
+    "bankId": "حساب البنك الافتراضي",
+    "companyAccountId": "حساب الشركات/العملاء الافتراضي",
+    "enduranceAccountId": "حساب التحمل/التأمين الافتراضي",
+    "mainCash": "حساب الصندوق الرئيسي",
+    "mainBank": "حساب البنك الرئيسي",
+    "pharmacyCash": "صندوق الصيدلية",
+    "pharmacyBank": "بنك الصيدلية",
+    "pharmacyIncome": "حساب إيرادات الصيدلية",
+    "selectAccount": "اختر حساب..."
+  },
+  "whatsappSection": {
+     "title": "إعدادات واتساب للأعمال",
+     "instanceId": "معرف النسخة (Instance ID)",
+     "token": "الرمز المميز (Token)",
+     "welcomeMessage": "رسالة الترحيب الآلية",
+     "sendWelcomeMessage": "إرسال رسالة ترحيب للمرضى الجدد"
+  },
+  "workflowSection": {
+     "title": "إعدادات سير العمل",
+     "inventoryNotificationNumber": "رقم جرد الإشعارات (مثال: حد التنبيه للمخزون)",
+     "disableDoctorServiceCheck": "تعطيل التحقق من خدمة الطبيب (السماح لأي طبيب بطلب أي خدمة)",
+     "sendResultAfterAuth": "إرسال النتائج آلياً بعد الاعتماد",
+     "sendResultAfterResult": "إرسال النتائج آلياً فور الإدخال (قبل الاعتماد)",
+     "editResultAfterAuth": "السماح بتعديل النتائج بعد الاعتماد (بصلاحية)"
+  },
+  "stampsSection": {
+     "title": "الأختام",
+     "auditorStampFile": "ختم المدقق المالي",
+     "currentAuditorStamp": "ختم المدقق الحالي",
+     "managerStampFile": "ختم المدير",
+     "currentManagerStamp": "ختم المدير الحالي"
+  },
+  "imageUpload": {
+     "change": "تغيير",
+     "remove": "إزالة",
+     "selectImage": "اختر صورة..."
+  },
+  "selectAccount":"اختر حساب..."
 }

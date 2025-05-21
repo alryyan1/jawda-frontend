@@ -1,5 +1,5 @@
 import apiClient from './api'; // Your configured Axios instance
-import type { Patient, PatientFormData, PaginatedPatientsResponse } from './../types/patiens'; // Your Patient types
+import type { Patient, PatientFormData, PaginatedPatientsResponse } from '../types/patients'; // Your Patient types
 
 const PATIENTS_API_URL = '/patients';
 

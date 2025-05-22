@@ -35,7 +35,8 @@ import {
   ChevronDown,
   Sun,
   Moon,
-  Languages, // For language icon
+  Languages,
+  FileBarChart2, // For language icon
 } from "lucide-react"; // Common icons
 import { useTranslation } from "react-i18next";
 import { Toaster } from "sonner"; // Using sonner for toasts
@@ -58,6 +59,10 @@ const mainNavItems: NavItem[] = [
   { to: "/roles", labelKey: "roles", icon: Users },
   { to: "/companies", labelKey: "companies", icon: Users },
   { to: "/appointments", labelKey: "appointments", icon: CalendarDays },
+  { to: "/patients", labelKey: "patients", icon: Users },
+  { to: "/schedules-appointments", labelKey: "schedules-appointments", icon: CalendarDays },
+  { to: "/reports", labelKey: "reports", icon: FileBarChart2 },
+  { to: "reports/service-statistics", labelKey: "service-statistics", icon: FileBarChart2 },
 ];
 
 const bottomNavItems: NavItem[] = [

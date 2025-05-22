@@ -35,6 +35,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Loader2,
   MoreHorizontal,
   Edit,
@@ -47,6 +57,7 @@ import {
   XCircle,
   Save,
   Search,
+  LibrarySquare,
 } from "lucide-react"; // ArrowRightLeft can be for "Back" in RTL
 
 import type {
@@ -56,7 +67,9 @@ import type {
 } from "@/types/companies";
 import {
   getCompanyById,
+  importAllServicesToCompanyContract,
   updateCompanyServiceContract,
+  type ImportAllServicesPayload,
 } from "@/services/companyService"; // To get company name
 import {
   getCompanyContractedServices,
@@ -126,6 +139,7 @@ export default function CompanyServiceContractsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [editingRowId, setEditingRowId] = useState<number | null>(null); // service_id of the row being edited
+  const [isImportAllDialogOpen, setIsImportAllDialogOpen] = useState(false);
 
   // const { can } = useAuthorization();
   // const canAddContract = can('create company_contracts' as any);
@@ -167,10 +181,42 @@ export default function CompanyServiceContractsPage() {
   } = useQuery<PaginatedResponse<CompanyServiceContract>, Error>({
     queryKey: ["companyContractedServices", companyId, currentPage, searchTerm], // Add searchTerm to queryKey
     queryFn: () =>
-      getCompanyContractedServices(Number(companyId),searchTerm, currentPage), // Pass searchTerm to service
+      getCompanyContractedServices(Number(companyId), currentPage, 
+         {search:searchTerm},
+      ), // Pass searchTerm to service
     enabled: !!companyId,
     placeholderData: keepPreviousData,
   });
+  const importAllMutation = useMutation({
+    mutationFn: (payload?: ImportAllServicesPayload) =>
+      importAllServicesToCompanyContract(Number(companyId), payload),
+    onSuccess: (data) => {
+      toast.success(
+        data.message || t("companies:serviceContracts.allImportedSuccess")
+      );
+      queryClient.invalidateQueries({
+        queryKey: ["companyContractedServices", companyId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["companyAvailableServices", companyId],
+      }); // To update the available list in AddDialog
+    },
+    onError: (error: any) => {
+      toast.error(
+        error.response?.data?.message ||
+          t("companies:serviceContracts.importAllError")
+      );
+    },
+  });
+
+  const handleImportAllServices = () => {
+    setIsImportAllDialogOpen(true);
+  };
+
+  const confirmImportAll = () => {
+    importAllMutation.mutate();
+    setIsImportAllDialogOpen(false);
+  };
 
   const removeContractMutation = useMutation({
     mutationFn: (params: { companyId: number; serviceId: number }) =>
@@ -333,14 +379,25 @@ export default function CompanyServiceContractsPage() {
         </CardHeader>
       </div>
 
-      <div className="flex justify-end mb-4">
-        {/* {canAddContract && ( */}
+      <div className="flex gap-2 w-full sm:w-auto justify-end">
+        <Button
+          onClick={handleImportAllServices}
+          variant="outline"
+          size="sm"
+          disabled={importAllMutation.isPending}
+        >
+          {importAllMutation.isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2" />
+          ) : (
+            <LibrarySquare className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+          )}
+          {t("companies:serviceContracts.importAllButton")}
+        </Button>
         <AddCompanyServiceDialog
           companyId={Number(companyId)}
           companyName={company?.name || ""}
           onContractAdded={handleContractAdded}
         />
-        {/* )} */}
       </div>
 
       <div className="flex flex-col sm:flex-row justify-between items-center gap-2 mb-4">
@@ -369,7 +426,6 @@ export default function CompanyServiceContractsPage() {
             <p className="text-muted-foreground">
               {t("companies:serviceContracts.noContracts")}
             </p>
-            {/* {canAddContract && ( */}
             <AddCompanyServiceDialog
               companyId={Number(companyId)}
               companyName={company?.name || ""}
@@ -381,7 +437,6 @@ export default function CompanyServiceContractsPage() {
                 </Button>
               }
             />
-            {/* )} */}
           </CardContent>
         </Card>
       ) : (
@@ -610,15 +665,12 @@ export default function CompanyServiceContractsPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          {/* {canEditContract && ( */}
                           <DropdownMenuItem
                             onClick={() => startEditing(contract)}
                           >
                             <Edit className="rtl:ml-2 ltr:mr-2 h-4 w-4" />{" "}
                             {t("common:edit")}
                           </DropdownMenuItem>
-                          {/* )} */}
-                          {/* {canDeleteContract && ( */}
                           <DropdownMenuItem
                             onClick={() =>
                               handleRemoveContract(
@@ -633,7 +685,6 @@ export default function CompanyServiceContractsPage() {
                                 contract.service_id
                             }
                           >
-                            {/* ... delete icon and text ... */}
                             {removeContractMutation.isPending &&
                             removeContractMutation.variables?.serviceId ===
                               contract.service_id ? (
@@ -643,7 +694,6 @@ export default function CompanyServiceContractsPage() {
                             )}
                             {t("companies:serviceContracts.removeContract")}
                           </DropdownMenuItem>
-                          {/* )} */}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     )}
@@ -681,18 +731,25 @@ export default function CompanyServiceContractsPage() {
         </div>
       )}
 
-      {/* {editingContract && (
-        <EditCompanyServiceDialog
-            isOpen={!!editingContract}
-            onOpenChange={() => setEditingContract(null)}
-            companyId={Number(companyId)}
-            contract={editingContract}
-            onContractUpdated={() => {
-                queryClient.invalidateQueries({ queryKey: ['companyContractedServices', companyId] });
-                setEditingContract(null);
-            }}
-        />
-      )} */}
+      <AlertDialog open={isImportAllDialogOpen} onOpenChange={setIsImportAllDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("companies:serviceContracts.importAllButton")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("companies:serviceContracts.importAllConfirm")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("common:cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmImportAll} disabled={importAllMutation.isPending}>
+              {importAllMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2" />
+              ) : null}
+              {t("common:confirm")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

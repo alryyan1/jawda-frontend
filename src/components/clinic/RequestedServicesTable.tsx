@@ -12,6 +12,16 @@ import { toast } from 'sonner';
 import { removeRequestedServiceFromVisit, updateRequestedServiceDetails } from '@/services/visitService';
 import { Card } from '../ui/card';
 import ServicePaymentDialog from './ServicePaymentDialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 // import { updateRequestedServiceDetails, removeRequestedServiceFromVisit } from '@/services/visitService'; // You'll need update endpoint
 
 interface RequestedServicesTableProps {
@@ -38,33 +48,34 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
   const { t, i18n } = useTranslation(['services', 'common']);
   const queryClient = useQueryClient();
   const [editingRowId, setEditingRowId] = useState<number | null>(null);
-  const [editData, setEditData] = useState<{ count?: number; discount_per?: number }>({});
+  const [serviceToDelete, setServiceToDelete] = useState<number | null>(null);
   const [payingService, setPayingService] = useState<RequestedService | null>(null);
-  // For inline editing of a single row's data (count, discount_per)
   const [currentEditData, setCurrentEditData] = useState<{ count: number; discount_per: number }>({ count: 1, discount_per: 0 });
 
   const updateMutation = useMutation({
     mutationFn: (data: {rsId: number, payload: Partial<Pick<RequestedService, 'count' | 'discount_per'>>}) => 
-        updateRequestedService({visitId, rsId: data.rsId, data: data.payload}), // Replace with actual service
+        updateRequestedService({visitId, rsId: data.rsId, data: data.payload}),
     onSuccess: () => {
         toast.success(t('common:updatedSuccess'));
         queryClient.invalidateQueries({ queryKey: ['requestedServicesForVisit', visitId] });
         setEditingRowId(null);
     },
-    onError: (error: any) => toast.error(error.response?.data?.message || t('common:error.updateFailed'))
+    onError: (error: Error) => toast.error(error.message || t('common:error.updateFailed'))
   });
 
-  // removeServiceMutation (from previous version of SelectedPatientWorkspace, can be reused here)
- const removeMutation = useMutation({
+  const removeMutation = useMutation({
     mutationFn: (requestedServiceId: number) => removeRequestedServiceFromVisit(visitId, requestedServiceId),
     onSuccess: () => {
         toast.success(t('services:removedSuccess'));
         queryClient.invalidateQueries({ queryKey: ['requestedServicesForVisit', visitId] });
-        queryClient.invalidateQueries({ queryKey: ['availableServicesForVisit', visitId] }); // Make service available again
+        queryClient.invalidateQueries({ queryKey: ['availableServicesForVisit', visitId] });
+        setServiceToDelete(null);
     },
-    onError: (error: any) => toast.error(error.response?.data?.message || t('common:error.requestFailed'))
+    onError: (error: Error) => toast.error(error.message || t('common:error.requestFailed'))
   });
- const handleCancelEdit = () => setEditingRowId(null);
+
+  const handleCancelEdit = () => setEditingRowId(null);
+  
   const handleEdit = (rs: RequestedService) => {
     setEditingRowId(rs.id);
     setCurrentEditData({ count: rs.count || 1, discount_per: rs.discount_per || 0 });
@@ -75,21 +86,10 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
         toast.error(t('services:validation.countMinOne'));
         return;
     }
-    // Here, you decide if 'discount' (fixed amount) or 'discount_per' is primary.
-    // If discount_per is primary, clear fixed discount if percentage is > 0, or vice-versa.
-    // For simplicity, let's assume they can coexist or only one is typically used.
-    // The backend should handle the final calculation.
     updateMutation.mutate({ rsId, payload: currentEditData });
   };
-  
-  const handleRemoveService = (rsId: number) => {
-      if (window.confirm(t('common:confirmDeleteMessage', { item: t('services:serviceEntityName', "Service") }))) {
-        removeMutation.mutate(rsId);
-      }
-  };
 
-
-  const discountOptions = Array.from({ length: 11 }, (_, i) => i * 10); // 0% to 100%
+  const discountOptions = Array.from({ length: 11 }, (_, i) => i * 10);
 
   return (
     <div className="space-y-3">
@@ -107,7 +107,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
           <Table style={{direction:i18n.dir()}} className="text-xs">
             <TableHeader>
               <TableRow>
-                <TableHead>{t('services:table.serviceName')}</TableHead>
+                <TableHead className="text-center">{t('services:table.serviceName')}</TableHead>
                 <TableHead className="text-center w-[70px]">{t('services:table.price')}</TableHead>
                 <TableHead className="text-center w-[90px]">{t('services:table.count')}</TableHead>
                 <TableHead className="text-center w-[130px]">{t('services:table.discountPercentage')}</TableHead>
@@ -138,7 +138,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
 
                 return (
                   <TableRow key={rs.id} className={isEditingThisRow ? "bg-muted/30 dark:bg-muted/20" : ""}>
-                    <TableCell className="py-2 font-medium">
+                    <TableCell className="py-2 font-medium text-center">
                       {rs.service?.name || t('common:unknownService')}
                       {rs.service?.service_group?.name && <span className="block text-muted-foreground text-[10px]">({rs.service.service_group.name})</span>}
                     </TableCell>
@@ -183,7 +183,12 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                           {!rs.is_paid && !rs.done && ( // Can edit/delete if not paid and not done
                             <>
                               <Button size="icon" variant="ghost" onClick={() => handleEdit(rs)} className="h-7 w-7"><Edit className="h-4 w-4"/></Button>
-                              <Button size="icon" variant="ghost" onClick={() => handleRemoveService(rs.id)} disabled={removeMutation.isPending && removeMutation.variables === rs.id} className="h-7 w-7 text-destructive hover:text-destructive">
+                              <Button 
+                                size="icon" 
+                                variant="ghost" 
+                                onClick={() => setServiceToDelete(rs.id)} 
+                                className="h-7 w-7 text-destructive hover:text-destructive"
+                              >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </>
@@ -211,6 +216,30 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                 }}
             />
         )}
+        <AlertDialog open={!!serviceToDelete} onOpenChange={(open) => !open && setServiceToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t('common:confirmDeleteTitle')}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {t('common:confirmDeleteMessage', { item: t('services:serviceEntityName') })}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{t('common:cancel')}</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => serviceToDelete && removeMutation.mutate(serviceToDelete)}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {removeMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2" />
+                ) : (
+                  <Trash2 className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                )}
+                {t('common:delete')}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
     </div>
   );
 };

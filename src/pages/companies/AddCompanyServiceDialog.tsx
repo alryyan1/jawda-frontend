@@ -78,6 +78,7 @@ const AddCompanyServiceDialog: React.FC<AddCompanyServiceDialogProps> = ({ compa
   });
 
   const onSubmit = (data: ContractFormValues) => {
+    console.log(data,'data')
     const submissionData: CompanyServiceFormData = {
         ...data,
         // service_id is already string from select

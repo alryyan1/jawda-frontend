@@ -2,7 +2,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import {
   Tooltip,
   TooltipContent,
@@ -17,7 +16,7 @@ import {
 } from "lucide-react"; // UsersRound for manage doctor shifts
 import ManageDoctorShiftsDialog from "./ManageDoctorShiftsDialog";
 import { cn } from "@/lib/utils";
-
+ 
 interface ActionsPaneProps {
   showRegistrationForm: boolean;
   onToggleRegistrationForm: () => void;

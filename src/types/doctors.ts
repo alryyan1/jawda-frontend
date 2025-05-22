@@ -1,5 +1,6 @@
 // src/types/doctors.ts
-import { User } from './index'; // Assuming User type is in index.ts
+
+import type { User } from "./auth";
 
 export interface Specialist {
   id: number;
@@ -37,6 +38,17 @@ export interface Doctor {
   created_at: string;
   updated_at: string;
 }
+// --- NEW/VERIFY: DoctorStripped Interface ---
+export interface DoctorStripped {
+  id: number;
+  name: string;
+  specialist_name?: string | null; // Optional: if you often need specialist name with stripped info
+  // Add any other absolutely essential fields often needed with just the doctor's ID/Name
+  // For example, if doctors have a primary contact or specific code:
+  // phone?: string; 
+  // code?: string;
+}
+
 // For Doctor Form Data
 export interface DoctorFormData {
   name: string;

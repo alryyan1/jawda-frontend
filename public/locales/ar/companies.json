@@ -53,11 +53,12 @@
     "percentageWage": "أجر بنسبة مئوية",
     "useStatic": "استخدام الثابت",
     "updatedSuccess": "تم تحديث العقد!",
-  "addedSuccess": "تمت إضافة الخدمة إلى العقد!",
+    "addedSuccess": "تمت إضافة الخدمة إلى العقد!",
     "noAvailableServices": "لا توجد خدمات متاحة لإضافتها إلى العقد.",
-    "noServicesInContract": "لا توجد خدمات في هذا العقد."
-  
- },
+    "noServicesInContract": "لا توجد خدمات في هذا العقد.",
+    "importAllButton": "استيراد جميع الخدمات",
+    "importAllConfirm": "هل أنت متأكد أنك تريد استيراد جميع الخدمات المتاحة إلى هذا العقد؟ سيتم استخدام القيم الافتراضية للأسعار والتحمل."
+  },
   "addServiceContractDialog": {
     "title": "إضافة خدمة لعقد الشركة",
     "description": "اختر خدمة وقم بتعيين تفاصيل العقد.",

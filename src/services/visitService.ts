@@ -4,6 +4,8 @@ import type { RequestedServiceDeposit, Service } from '../types/services';
 import type  { RequestedService } from '../types/services'; // Or from types/visits
 import type { DoctorVisit } from '@/types/visits';
 
+import type { PatientVisitSummary } from '../types/visits'; // Adjust import
+import type { PaginatedResponse } from '@/types/common';
 const VISIT_API_BASE = '/visits';
 
 const VISIT_API_URL_BASE = '/doctor-visits'; // Base URL for DoctorVisit CRUD from apiResource
@@ -123,3 +125,21 @@ export const recordServicePayment = async (payload: CreateDepositPayload): Promi
 //   const response = await apiClient.put<{ data: DoctorVisit }>(`${VISIT_API_URL_BASE}/${visitId}`, visitData);
 //   return response.data.data;
 // };
+
+
+
+const DOCTOR_VISITS_API_URL = '/doctor-visits'; // Matches your apiResource route
+
+interface GetVisitsFilters {
+  page?: number;
+  visit_date?: string; // YYYY-MM-DD
+  doctor_id?: number | string | null;
+  search?: string;
+  status?: string | null; // e.g., 'all', 'waiting', 'completed'
+  per_page?: number;
+}
+
+export const getPatientVisitsSummary = async (filters: GetVisitsFilters): Promise<PaginatedResponse<PatientVisitSummary>> => {
+  const response = await apiClient.get<PaginatedResponse<PatientVisitSummary>>(DOCTOR_VISITS_API_URL, { params: filters });
+  return response.data; // Assuming Laravel pagination structure
+};

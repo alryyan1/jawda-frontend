@@ -8,61 +8,82 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 // Define your namespaces
 // It's good practice to have a 'common' namespace for shared translations (like "Save", "Cancel", "Error")
 // And then module-specific namespaces.
-export const namespaces = ['common', 'login', 'dashboard', 'doctors', 'navigation', 'userMenu','clinic','permissions','companies','services','payments'] as const;
+export const namespaces = [
+  'common',
+  'login',
+  'dashboard',
+  'doctors',
+  'navigation',
+  'userMenu',
+  'clinic',
+  'permissions',
+  'companies',
+  'services',
+  'payments',
+  'schedules'
+] as const;
 export type Namespace = typeof namespaces[number];
 
+// Function to preload all namespaces for a language
+const preloadNamespaces = async (language: string) => {
+  const promises = namespaces.map(ns =>
+    fetch(`/locales/${language}/${ns}.json`)
+      .then(response => response.json())
+      .catch(() => ({})) // Return empty object if namespace doesn't exist
+  );
+  const translations = await Promise.all(promises);
+  namespaces.forEach((ns, index) => {
+    i18n.addResourceBundle(language, ns, translations[index], true, true);
+  });
+};
 
 i18n
   .use(HttpBackend)
   .use(LanguageDetector)
   .use(initReactI18next)
-  .init<HttpBackendOptions>({ // Specify HttpBackendOptions for type safety with loadPath
-    lng: 'ar', // Optional: set a default language if LanguageDetector is not used or fails
-    fallbackLng: 'ar', // Fallback language if a translation is missing
-    
-    // Define namespaces you want to load by default.
-    // 'common' is a good candidate to load globally.
-    // Other namespaces can be loaded on demand by components.
-    ns: ['common', 'navigation', 'userMenu','login','clinic','permissions','companies','services'], // Namespaces to load initially
-    defaultNS: 'common', // Default namespace to use if not specified in t() function
-
-    debug: import.meta.env.DEV, // Enable debug output in development
+  .init<HttpBackendOptions>({
+    lng: 'ar',
+    fallbackLng: 'ar',
+    ns: namespaces, // Load all namespaces by default
+    defaultNS: 'common',
+    debug: import.meta.env.DEV,
     
     interpolation: {
-      escapeValue: false, // React already safes from XSS
+      escapeValue: false,
     },
 
     backend: {
-      // Path to load translations
-      // {{lng}} will be replaced with the current language (e.g., 'en')
-      // {{ns}} will be replaced with the namespace (e.g., 'common', 'login')
       loadPath: '/locales/{{lng}}/{{ns}}.json',
     },
 
     // React-i18next specific options
     react: {
-      useSuspense: true, // Recommended for new projects, allows Suspense for translations
-      // wait: true, // Deprecated in favor of useSuspense
-    }
+      useSuspense: true,
+    },
+
+    // Preload settings
+    preload: ['ar', 'en'], // Preload both Arabic and English
+    load: 'currentOnly', // Only load current language
   });
+
 // Function to set document direction and lang
-  const setDocumentDirection = (lng: string | undefined) => {
-    const htmlTag = document.documentElement;
-    if (lng) {
-      htmlTag.lang = lng;
-      if (i18n.dir(lng) === 'rtl') {
-        htmlTag.dir = 'rtl';
-      } else {
-        htmlTag.dir = 'ltr';
-      }
-    }
-  };
+const setDocumentDirection = (lng: string | undefined) => {
+  const htmlTag = document.documentElement;
+  if (lng) {
+    htmlTag.lang = lng;
+    htmlTag.dir = i18n.dir(lng);
+  }
+};
 
-  // Set initial direction
-  setDocumentDirection(i18n.language);
+// Set initial direction
+setDocumentDirection(i18n.language);
 
-  // Listen for language changes to update direction
-  i18n.on('languageChanged', (lng) => {
-    setDocumentDirection(lng);
-  });
+// Listen for language changes to update direction
+i18n.on('languageChanged', (lng) => {
+  setDocumentDirection(lng);
+});
+
+// Preload all namespaces for current language
+preloadNamespaces(i18n.language);
+
 export default i18n;

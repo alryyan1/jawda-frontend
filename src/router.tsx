@@ -1,4 +1,4 @@
-import { createBrowserRouter, Outlet } from "react-router-dom";
+import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
 
 // Layout Components
 import AppLayout from "./components/AppLayout";
@@ -29,14 +29,14 @@ import RoleFormPage, { RoleFormMode } from "./pages/roles/RoleFormPage";
 import CompaniesListPage from "./pages/companies/CompaniesListPage";
 import CompanyFormPage, { CompanyFormMode } from "./pages/companies/CompanyFormPage";
 import CompanyServiceContractsPage from "./pages/companies/CompanyServiceContractsPage";
+import TodaysPatientsPage from "./pages/patients/TodaysPatientsPage";
+import DoctorSchedulesPage from "./components/schedules/DoctorSchedulesPage";
+import DoctorShiftsReportPage from "./pages/reports/DoctorShiftsReportPage";
+import ReportsLayout from "./pages/reports/ReportsLayout";
+import ServiceStatisticsReportPage from "./pages/reports/ServiceStatisticsReportPage";
 // import NotFoundPage from './pages/NotFoundPage'; // Optional: For 404 handling
 
-// Example of a simple component directly in router for brevity, move to own file for real app
-const PatientsPlaceholderPage: React.FC = () => (
-  <div className="p-4">
-    <h1>إدارة المرضى (قيد الإنشاء)</h1>
-  </div>
-);
+
 const AppointmentsPlaceholderPage: React.FC = () => (
   <div className="p-4">
     <h1>إدارة المواعيد (قيد الإنشاء)</h1>
@@ -125,16 +125,7 @@ const router = createBrowserRouter([
             element: <ClinicPage />,
           },
           // Patients Module (Placeholder)
-          {
-            path: "patients",
-            element: <PatientsPlaceholderPage />,
-            // Example for nested patient routes later:
-            // children: [
-            //   { index: true, element: <PatientsListPage /> },
-            //   { path: 'new', element: <PatientFormPage mode="create" /> },
-            //   { path: ':patientId/edit', element: <PatientFormPage mode="edit" /> },
-            // ],
-          },
+      
 
           // Appointments Module (Placeholder)
           {
@@ -160,6 +151,27 @@ const router = createBrowserRouter([
                 ),
               },
             ],
+          },
+          {
+            path: 'reports',
+            element: <ReportsLayout />, // Or <Outlet /> if reports are top-level sections
+            children: [
+              { index: true, element: <Navigate to="doctor-shifts" replace /> }, // Default report
+              { path: 'doctor-shifts', element: <DoctorShiftsReportPage /> },
+              {
+                path: 'service-statistics',
+                element: <ServiceStatisticsReportPage />,
+              },
+              // Add other report routes here
+              // { path: 'patient-visits', element: <PatientVisitsReportPage /> },
+            ]
+          },
+          {
+            path: 'schedules-appointments', // Or just 'schedules' or 'appointments'
+            element: <DoctorSchedulesPage />,
+          },
+          {
+            path:'/patients',element:<TodaysPatientsPage/>
           },
           // Companies Module
           {

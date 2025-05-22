@@ -5,6 +5,13 @@
   "edit": "Edit",
   "add": "Add",
   "loading": "Loading...",
+  "from": "From",
+  "to": "To",
+  "confirm": "Confirm",
+  "previous": "Previous",
+  "next": "Next",
+  "page": "Page",
+  "of": "of",
   "error": {
     "generic": "An unexpected error occurred. Please try again.",
     "notFound": "The requested resource was not found."

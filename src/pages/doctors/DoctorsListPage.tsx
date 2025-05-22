@@ -3,37 +3,44 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { getDoctors, deleteDoctor } from '../../services/doctorService';
-import { Doctor, PaginatedDoctorsResponse } from '../../types/doctors'; // Assuming Doctor includes specialist_name
+import type { Doctor } from '../../types/doctors';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Trash2, Edit, Eye, Loader2, ImageOff } from 'lucide-react';
+import { MoreHorizontal, Trash2, Edit, Loader2, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { useDebounce } from '@/hooks/useDebounce';
 import i18n from '@/i18n';
 
+interface ErrorWithMessage {
+  message: string;
+}
 
 export default function DoctorsListPage() {
   const { t } = useTranslation(['doctors', 'common']);
   const queryClient = useQueryClient();
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebounce(searchTerm, 500);
 
-  const { data: paginatedData, isLoading, error, isFetching } = useQuery({ // v5 syntax
-    queryKey: ['doctors', currentPage], 
-    queryFn: () => getDoctors(currentPage),
-    placeholderData: keepPreviousData, // v5 syntax for keepPreviousData
+  const { data: paginatedData, isLoading, error, isFetching } = useQuery({
+    queryKey: ['doctors', currentPage, debouncedSearch],
+    queryFn: () => getDoctors(currentPage, { search: debouncedSearch }),
+    placeholderData: keepPreviousData,
   });
 
-  const deleteMutation = useMutation({ // v5 syntax
+  const deleteMutation = useMutation({
     mutationFn: deleteDoctor,
     onSuccess: () => {
       toast.success(t('doctors:deletedSuccess'));
-      queryClient.invalidateQueries({ queryKey: ['doctors'] }); // v5 syntax for invalidate
+      queryClient.invalidateQueries({ queryKey: ['doctors'] });
     },
-    onError: (err: any) => {
-        toast.error(t('doctors:deleteError'), { description: err.message || t('common:error.generic')});
+    onError: (err: ErrorWithMessage) => {
+      toast.error(t('doctors:deleteError'), { description: err.message || t('common:error.generic')});
     }
   });
 
@@ -82,6 +89,24 @@ export default function DoctorsListPage() {
         </Button>
       </div>
 
+      <Card className="mb-6">
+        <div className="p-4">
+          <div className="flex items-center gap-2">
+            <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+            <Input
+              type="text"
+              placeholder={t('common:searchPlaceholder')}
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1); // Reset to first page on search
+              }}
+              className="max-w-sm"
+            />
+          </div>
+        </div>
+      </Card>
+
       {isFetching && <div className="text-sm text-muted-foreground mb-2">{t('common:updatingList')}</div>}
       
       {doctors.length === 0 && !isLoading ? (
@@ -95,6 +120,9 @@ export default function DoctorsListPage() {
                     <TableHead className='text-center'>{t('doctors:table.name')}</TableHead>
                     <TableHead className="hidden md:table-cell text-center">{t('doctors:table.phone')}</TableHead>
                     <TableHead className="hidden sm:table-cell text-center">{t('doctors:table.specialist')}</TableHead>
+                    <TableHead className="hidden lg:table-cell text-center">{t('doctors:table.cashPercentage')}</TableHead>
+                    <TableHead className="hidden lg:table-cell text-center">{t('doctors:table.companyPercentage')}</TableHead>
+                    <TableHead className="hidden lg:table-cell text-center">{t('doctors:table.staticWage')}</TableHead>
                     <TableHead className="text-center">{t('doctors:table.actions')}</TableHead>
                 </TableRow>
                 </TableHeader>
@@ -110,6 +138,9 @@ export default function DoctorsListPage() {
                     <TableCell className="font-medium text-center">{doctor.name}</TableCell>
                     <TableCell className="hidden md:table-cell text-center">{doctor.phone}</TableCell>
                     <TableCell className="hidden sm:table-cell text-center">{doctor.specialist?.name || doctor.specialist_name || 'N/A'}</TableCell>
+                    <TableCell className="hidden lg:table-cell text-center">{doctor.cash_percentage || 'N/A'}</TableCell>
+                    <TableCell className="hidden lg:table-cell text-center">{doctor.company_percentage || 'N/A'}</TableCell>
+                    <TableCell className="hidden lg:table-cell text-center">{doctor.static_wage || 'N/A'}</TableCell>
                     <TableCell className="text-center">
                         <DropdownMenu dir={i18n.dir()}>
                         <DropdownMenuTrigger asChild>

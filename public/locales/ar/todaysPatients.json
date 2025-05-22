@@ -1,0 +1,33 @@
+{
+  "pageTitle": "مرضى اليوم",
+  "searchPatientsPlaceholder": "ابحث بالاسم، الهاتف، أو المعرف...",
+  "filterByDate": "تصفية حسب التاريخ",
+  "filterByDoctor": "تصفية حسب الطبيب",
+  "allDoctors": "جميع الأطباء",
+  "noVisitsFound": "لم يتم العثور على زيارات لهذا اليوم/الفلاتر.",
+  "noVisitsForDate": "لا توجد زيارات مسجلة لهذا التاريخ.",
+  "table": {
+    "patientId": "م.مريض",
+    "patientName": "اسم المريض",
+    "doctorName": "الطبيب",
+    "age": "العمر",
+    "phone": "الهاتف",
+    "visitTime": "وقت الزيارة",
+    "totalAmount": "الإجمالي",
+    "amountPaid": "المدفوع",
+    "balance": "المتبقي",
+    "status": "الحالة",
+    "actions": "إجراءات"
+  },
+  "viewServicesButton": "عرض الخدمات",
+  "servicesDialogTitle": "الخدمات المطلوبة للزيارة #{{visitId}}",
+  "servicesDialog": {
+    "serviceName": "الخدمة",
+    "price": "السعر",
+    "count": "الكمية",
+    "paid": "مدفوع",
+    "notPaid": "غير مدفوع",
+    "performed": "منفذة",
+    "pending": "قيد الانتظار"
+  }
+}

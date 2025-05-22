@@ -39,6 +39,7 @@
   "workspace": {
     "title": "ساحة العمل - المرضى الحاليون",
     "noActivePatients": "لا يوجد مرضى حاليون.",
+    "services": "خدمات",
     "status": {
       "waiting": "في الانتظار",
       "with_doctor": "مع الطبيب",
@@ -76,7 +77,10 @@
   "selectedPatientWorkspace": {
     "title": "تفاصيل المريض: {{patientName}}",
     "noPatientSelected": "الرجاء اختيار مريض من القائمة لعرض التفاصيل.",
-    "requestServicesTitle": "طلب خدمات للمريض"
+    "requestServicesTitle": "طلب خدمات للمريض",
+    "titleShort": "زيارة",
+    "title": "زيارة المريض",
+    "description": "إدارة زيارة المريض وتفاصيلها"
   },
   "doctorsTabs": {
     "noActiveShifts": "لا يوجد أطباء مناوبون حالياً."

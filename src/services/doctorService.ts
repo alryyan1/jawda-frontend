@@ -1,10 +1,15 @@
 // src/services/doctorService.ts
 import apiClient from './api';
-import type { Doctor, DoctorFormData, PaginatedDoctorsResponse, Specialist, FinanceAccount } from '../types/doctors'; // Adjust imports as needed
+import type { Doctor, DoctorFormData, PaginatedDoctorsResponse, Specialist, FinanceAccount, DoctorStripped } from '../types/doctors'; // Adjust imports as needed
 
 const API_URL = '/doctors';
 
-export const getDoctors = (page = 1, filters: Record<string, any> = {}): Promise<PaginatedDoctorsResponse> => {
+interface DoctorFilters {
+  search?: string;
+  [key: string]: any;
+}
+
+export const getDoctors = (page = 1, filters: DoctorFilters = {}): Promise<PaginatedDoctorsResponse> => {
   return apiClient.get(API_URL, { params: { page, ...filters } }).then(res => res.data);
 };
 
@@ -34,7 +39,18 @@ const buildDoctorFormData = (data: Partial<DoctorFormData>, method?: 'PUT' | 'PO
     return formData;
 };
 
+// --- THIS IS THE FUNCTION WE NEED FOR DROPDOWNS ---
+export const getDoctorsList = async (filters: { active?: boolean } = {}): Promise<DoctorStripped[]> => {
+  // Assuming your DoctorController@indexList returns DoctorStrippedResource::collection
+  // which by default wraps the array in a 'data' key.
+  const response = await apiClient.get<{ data: DoctorStripped[] }>('/doctors-list', { params: filters });
+  return response.data.data;
 
+  // IF your backend route '/doctors-list' returns a direct array
+  // (e.g., from $doctors->map(...)->toArray() without a ResourceCollection):
+  // const response = await apiClient.get<DoctorStripped[]>('/doctors-list', { params: filters });
+  // return response.data;
+};
 export const createDoctor = (data: DoctorFormData): Promise<{ data: Doctor }> => {
   const formData = buildDoctorFormData(data, 'POST');
   return apiClient.post<{ data: Doctor }>(API_URL, formData, {
@@ -55,9 +71,19 @@ export const deleteDoctor = (id: number): Promise<void> => {
 };
 
 // For fetching lists for dropdowns
-export type PaginatedResponse<T> = {
+export interface PaginatedResponse<T> {
   data: T[];
-};
+  meta: {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+    links?: {
+      prev?: string | null;
+      next?: string | null;
+    };
+  };
+}
 
 export const getSpecialistsList = (): Promise<Specialist[]> => { // Assuming direct array response
     return apiClient.get<PaginatedResponse<Specialist>>('/specialists-list').then(res => res.data.data);

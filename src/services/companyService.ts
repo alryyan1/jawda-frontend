@@ -9,6 +9,14 @@ import type {
 import { Service } from '../types/services';
 import type { PaginatedResponse } from '@/types/common';
 
+export interface ImportAllServicesPayload { // Optional: If you allow overriding default terms from frontend
+    default_static_endurance?: number;
+    default_percentage_endurance?: number;
+    default_static_wage?: number;
+    default_percentage_wage?: number;
+    default_use_static?: boolean;
+    default_approval?: boolean;
+}
 const API_URL = '/companies';
 
 // --- Company CRUD ---
@@ -75,6 +83,16 @@ export const getCompaniesList = async (filters: { status?: boolean } = {}): Prom
 };
 
 
+export const importAllServicesToCompanyContract = async (
+    companyId: number, 
+    payload?: ImportAllServicesPayload
+): Promise<{ message: string; imported_count: number }> => {
+  const response = await apiClient.post<{ message: string; imported_count: number }>(
+      `${API_URL}/${companyId}/contracted-services/import-all`, 
+      payload || {} // Send empty object if no overrides
+  );
+  return response.data;
+};
 // --- Company Service Contract Management ---
 // ... (getCompanyContractedServices, getCompanyAvailableServices, etc. - remain the same) ...
 export const getCompanyContractedServices = (companyId: number, page = 1, filters: { search?: string } = {}): Promise<PaginatedResponse<CompanyServiceContract>> => {
@@ -89,7 +107,7 @@ export const getCompanyAvailableServices = (companyId: number): Promise<Service[
 
 export const addServiceToCompanyContract = (companyId: number, data: CompanyServiceFormData): Promise<{ data: CompanyServiceContract }> => {
   const payload = { /* ... payload transformation from previous step ... */ };
-  return apiClient.post<{ data: CompanyServiceContract }>(`${API_URL}/${companyId}/contracted-services`, payload)
+  return apiClient.post<{ data: CompanyServiceContract }>(`${API_URL}/${companyId}/contracted-services`, data)
     .then(res => res.data);
 };
 

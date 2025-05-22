@@ -1,4 +1,3 @@
-
 {
   "dashboard": "لوحة التحكم",
   "clinic": "العيادة",
@@ -7,7 +6,12 @@
   "settings": "الإعدادات",
   "logout": "تسجيل الخروج",
   "services": "الخدمات",
-  "users": "المستخدمون",
+  "users": "المستخدمين",
   "roles": "الأدوار",
-  "companies": "الشركات"
+  "companies": "الشركات",
+  "patients": "المرضى",
+  "reports": "التقارير",
+  "lab": "المختبر",
+  "pharmacy": "الصيدلية",
+  "schedules-appointments": "مواعيد الطبيب"
 }

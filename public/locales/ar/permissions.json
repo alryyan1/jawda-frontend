@@ -1,5 +1,3 @@
-
-
 {
 "group": {
     "doctors": "الأطباء",
@@ -72,10 +70,12 @@
   "manage_visit_prescriptions": "إدارة وصفات الزيارة",
   "manage_visit_vitals": "إدارة العلامات الحيوية للزيارة",
   "view_visit_lab_results": "عرض نتائج المختبر للزيارة",
- 
+  "manage_own_doctor_schedule": "إدارة دوام الطبيب الخاص",
   "view_active_doctor_shifts": "عرض دوام الأطباء النشط",
   "list_all_doctor_shifts": "عرض جميع دوام الأطباء",
   "list_clinic_shifts": "عرض دوام العيادة",
+  "record_visit_service_payments": "تسجيل المدفوعات لخدمات الزيارة",
+  "doctor_shift_financial_summary": "ملخص المالي لدوام الطبيب",
   "manage_clinic_shift_financials": "إدارة مالية دوام العيادة",
   "view_clinic_shifts": "عرض دوام العيادة",
   "close_clinic_shifts": "إغلاق دوام العيادة",
@@ -84,10 +84,19 @@
   "delete_doctor_visits": "حذف زيارة الطبيب",
   "edit_doctor_shift_details": "تعديل تفاصيل دوام الطبيب",
   "edit_doctor_visits": "تعديل زيارات الطبيب",
-
-  
+  "view":{
+    "reports_section": "التقارير"
+  },
+  "view_reports_section":"عرض التقارير",
+  "record_visit_service_payment": "تسجيل المدفوعات لخدمات الزيارة",
+  "settings_section": "الإعدادات",
     "settings": "الإعدادات",
   
   "view_settings": "عرض الإعدادات",
-  "update_settings": "تحديث الإعدادات"
+  "update_settings": "تحديث الإعدادات",
+  "manage_all_doctor_schedules": "إدارة جميع جداول الأطباء",
+  "view_doctor_schedules": "عرض جداول الأطباء",
+  "view_doctor_shift_financial_summary": "عرض الملخص المالي لمناوبة الطبيب",
+  "view_doctor_shift_reports": "عرض تقارير مناوبات الأطباء",
+  "edit_visit_requested_service_details": "تعديل تفاصيل الخدمة المطلوبة للزيارة"
 }

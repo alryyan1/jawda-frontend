@@ -12,7 +12,10 @@
     "phone": "الهاتف",
     "specialist": "التخصص",
     "image": "الصورة",
-    "actions": "الإجراءات"
+    "actions": "الإجراءات",
+    "cashPercentage": "نسبة الكاش",
+    "companyPercentage": "نسبة التأمين",
+    "staticWage": " الثابت"
   },
   "form": {
     "nameLabel": "اسم الطبيب الكامل",
@@ -23,7 +26,7 @@
     "selectSpecialist": "اختر التخصص...",
     "cashPercentageLabel": "نسبة الكاش (%)",
     "companyPercentageLabel": "نسبة الشركات (%)",
-    "staticWageLabel": "الراتب الثابت",
+    "staticWageLabel": " الثابت",
     "labPercentageLabel": "نسبة المختبر (%)",
     "startLabel": "قيمة البدء (مثال: رقم بداية التسلسل)",
     "imageLabel": "صورة الطبيب",
@@ -36,7 +39,8 @@
     "saveButton": "حفظ",
     "savingButton": "جارٍ الحفظ...",
     "doctorSavedSuccess": "تم حفظ بيانات الطبيب بنجاح!",
-    "doctorSaveError": "فشل حفظ بيانات الطبيب."
+    "doctorSaveError": "فشل حفظ بيانات الطبيب.",
+    "selectDoctor": "اختر الطبيب"
   },
   "deleteConfirmTitle": "تأكيد الحذف",
   "deleteConfirmText": "هل أنت متأكد أنك تريد حذف هذا الطبيب؟ لا يمكن التراجع عن هذا الإجراء.",

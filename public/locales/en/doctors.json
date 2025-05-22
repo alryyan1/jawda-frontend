@@ -6,7 +6,11 @@
     "name": "Name",
     "phone": "Phone",
     "specialist": "Specialist",
-    "actions": "Actions"
+    "actions": "Actions",
+    "image": "Image",
+    "cashPercentage": "Cash %",
+    "companyPercentage": "Insurance %",
+    "staticWage": "Fixed Salary"
   },
   "form": {
     "createTitle": "Create New Doctor",

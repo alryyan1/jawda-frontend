@@ -1,11 +1,11 @@
+import { TranslationProvider } from '@/components/providers/TranslationProvider';
 
 function App() {
-
   return (
-    <>
-    hello
-    </>
-  )
+    <TranslationProvider>
+      {/* Your existing app content */}
+    </TranslationProvider>
+  );
 }
 
-export default App
+export default App;

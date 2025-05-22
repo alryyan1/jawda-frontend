@@ -5,6 +5,14 @@
   "cancel": "إلغاء",
   "edit": "تعديل",
   "delete": "حذف",
+  "from": "من",
+  "to": "إلى",
+  "confirm": "تأكيد",
+  "previous": "السابق",
+  "next": "التالي",
+  "page": "صفحة",
+  "of": "من",
+  "search": "بحث",
   "searchPlaceholder": "ابحث هنا...",
   "actions": {
     "openMenu": "فتح القائمة"
@@ -30,10 +38,13 @@
   "error": {
     "generic": "حدث خطأ غير متوقع.",
     "loadListsFailed": "فشل تحميل القوائم.",
-
     "saveFailed": "فشل حفظ {{entity}}.",
     "deleteFailed": "فشل حذف {{entity}}.",
-    "fetchFailedExt": "فشل تحميل {{entity}}: {{message}}"
+    "fetchFailedExt": "فشل تحميل {{entity}}: {{message}}",
+    "fetchFailed": "فشل في جلب {{entity}}",
+    "updateFailed": "فشل في تحديث {{entity}}",
+    "createFailed": "فشل في إنشاء {{entity}}",
+    "requestFailed": "فشل في تنفيذ الطلب"
   },
   "save": "حفظ",
 
@@ -51,7 +62,8 @@
   "loadingDetails": "جاري تحميل بيانات المريض...",
   "visitId": "رقم الزيارة",
   "genderEnum": {
-    "female": "أنثى"
+    "female": "أنثى",
+    "male": "ذكر"
   },
   "notAvailable_short": "غير متوفر",
   "status": "الحالة",
@@ -61,11 +73,38 @@
   "currency": "العملة",
   "addSelected": "إضافة المحدد",
     "summary": "الملخص",
+  "summaryShort": "ملخص",
   "totalAmount": "المبلغ الإجمالي",
   "totalDiscount": "إجمالي الخصم",
   "totalPaid": "إجمالي المدفوع",
   "amountLeft": "المبلغ المتبقي",
   "pay": "دفع",
-  "updatedSuccess": "تم تحديث  بنجاح!"
-
+  "updatedSuccess": "تم تحديث  بنجاح!",
+  "confirmDeleteTitle": "تأكيد الحذف",
+  "confirmDeleteMessage": "هل أنت متأكد أنك تريد حذف {{item}}؟",
+  "confirmDeleteButton": "حذف",
+  "view": "عرض",
+  "unknown": "غير معروف",
+  "pageXofY": "صفحة {{current}} من {{total}}",
+  "statusEnum": {
+    "open": "مفتوح",
+    "closed": "مغلق"
+  },
+  "print": "طباعة",
+  "permissions": {
+    "group": {
+      "own": "خاص",
+      "record": "تسجيل",
+      "reports": "تقارير",
+      "settings": "إعدادات"
+    },
+    "manage_all_doctor_schedules": "إدارة جميع جداول الأطباء",
+    "view_doctor_schedules": "عرض جداول الأطباء",
+    "view_doctor_shift_financial_summary": "عرض الملخص المالي لمناوبة الطبيب",
+    "view_doctor_shift_reports": "عرض تقارير مناوبات الأطباء",
+    "manage_own_doctor_schedule": "إدارة جدول الطبيب الخاص",
+    "record_visit_service_payment": "تسجيل دفعة خدمة الزيارة",
+    "view_reports_section": "عرض قسم التقارير",
+    "edit_visit_requested_service_details": "تعديل تفاصيل الخدمة المطلوبة للزيارة"
+  }
 }

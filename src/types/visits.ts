@@ -42,3 +42,28 @@ export interface DoctorVisit { // This is the detailed visit object
   created_at: string;
   updated_at: string;
 }
+
+
+export interface RequestedServiceSummary { // For the dialog
+  id: number;
+  service_name: string;
+  price: number;
+  count: number;
+  amount_paid: number;
+  is_paid: boolean;
+  done: boolean;
+}
+
+export interface PatientVisitSummary { // Represents the items in the list
+  id: number; // Visit ID
+  visit_date: string;
+  visit_time?: string | null;
+  status: string;
+  patient: PatientStripped; // Use stripped patient type
+  doctor?: DoctorStripped;  // Use stripped doctor type
+  total_amount: number;
+  total_paid: number;
+  total_discount: number;
+  balance_due: number;
+  requested_services_summary?: RequestedServiceSummary[]; // For the dialog
+}

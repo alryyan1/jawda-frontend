@@ -1,0 +1,13 @@
+{
+  "dashboard": "Dashboard",
+  "clinic": "Clinic",
+  "doctors": "Doctors",
+  "patients": "Patients",
+  "reports": "Reports",
+  "settings": "Settings",
+  "users": "Users",
+  "companies": "Companies",
+  "services": "Services",
+  "lab": "Laboratory",
+  "pharmacy": "Pharmacy"
+} 

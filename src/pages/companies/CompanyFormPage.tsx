@@ -25,8 +25,8 @@ interface CompanyFormPageProps { mode: CompanyFormMode; }
 
 const getCompanyFormSchema = (t: Function) => z.object({
   name: z.string().min(1, { message: t('common:validation.required', { field: t('companies:form.nameLabel')}) }),
-  phone: z.string().optional(),
-  email: z.string().email({ message: t('common:validation.invalidEmail') }).optional().or(z.literal('')), // Allow empty string or valid email
+  phone: z.string().min(1, { message: t('common:validation.required', { field: t('companies:form.phoneLabel')}) }),
+  email: z.string().min(1,{message:t('common:validation.required',{field:t('companies:form.emailLabel')})}).email({ message: t('common:validation.invalidEmail') }), // Allow empty string or valid email
   status: z.boolean().default(true),
   lab_endurance: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, { message: t('common:validation.positiveNumber')}),
   service_endurance: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, { message: t('common:validation.positiveNumber')}),

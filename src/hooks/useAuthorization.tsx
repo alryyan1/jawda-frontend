@@ -2,91 +2,105 @@ import React from 'react';
 import { useAuth } from '../contexts/AuthContext'; // Adjust path as needed
 import type { User as AuthUserType } from '../types/auth'; // Assuming your detailed User type is here (includes roles/permissions)
 
+// Define the Permission type
+interface Permission {
+    name: string;
+}
+
+// Extend the AuthUserType to include all_permissions
+interface UserWithAllPermissions extends AuthUserType {
+    all_permissions?: Permission[];
+}
+
 // Your existing PermissionName type - this is great!
 export type PermissionName =
   // User Management
   | 'list users' | 'view users' | 'create users' | 'edit users' | 'delete users' | 'assign roles'
+  
   // Role Management
   | 'list roles' | 'view roles' | 'create roles' | 'edit roles' | 'delete roles' | 'assign permissions to role'
+  
   // Doctor Management
   | 'list doctors' | 'create doctors' | 'edit doctors' | 'delete doctors'
+  
   // Patient Management
   | 'list patients' | 'create patients' | 'edit patients' | 'delete patients'
+  
   // Clinic & Appointments
   | 'access clinic_workspace' | 'manage appointments' | 'create appointments'
-  // Services
+  
+  // Services Management
   | 'list services' | 'create services' | 'edit services' | 'delete services'
-  // Lab & Results
-  | 'create lab_requests' | 'view lab_results' | 'enter lab_results' | 'authorize lab_results'
-  // Settings
-  | 'manage settings' // General settings permission
-  // Add more specific permissions as defined in your backend seeder
-  // Example from your list:
-  | 'create-sale-returns' // Note: Spatie typically uses spaces, e.g., 'create sale-returns'
-  | 'view-clients'
-  | 'create-clients'
-  | 'edit-clients'
-  // User Management
-  // Role Management
-  // Doctor Management
-  // Patient Management
-  // Clinic & Appointments
-  // Services (General Service Definitions)
-  // Lab & Results (General - might need more specific ones later)
-  // Settings
-  // Company & Company Contract Permissions
+  | 'create-sale-returns' | 'view-clients' | 'create-clients' | 'edit-clients'
+  
+  // Company & Contract Management
   | 'list companies' | 'create companies' | 'edit companies' | 'delete companies'
   | 'view company_contracts' | 'manage company_contracts'
   | 'create company_contracts' | 'edit company_contracts' | 'delete company_contracts'
-
-  // --- NEW PERMISSIONS ---
-  // General Clinic Shift Management
+  
+  // Clinic Shift Management
   | 'view current_open_shift' | 'open clinic_shifts' | 'close clinic_shifts'
   | 'manage clinic_shift_financials' | 'list clinic_shifts' | 'view clinic_shifts'
-  // Doctor-Specific Shift Management
-  | 'view active_doctor_shifts' | 'manage doctor_shifts' 
-  | 'start doctor_shifts' | 'end doctor_shifts' // Granular for manage
+  
+  // Doctor Shift Management
+  | 'view active_doctor_shifts' | 'manage doctor_shifts'
+  | 'start doctor_shifts' | 'end doctor_shifts'
   | 'list all_doctor_shifts' | 'edit doctor_shift_details'
+  | 'view doctor_shift_financial_summary'
+  
   // Doctor Visit Management
   | 'list doctor_visits' | 'view doctor_visits' | 'create doctor_visits'
   | 'edit doctor_visits' | 'update doctor_visit_status' | 'delete doctor_visits'
-  // Visit-Specific Clinical Actions
-  | 'request visit_services' | 'remove visit_services' | 'manage visit_vitals'
+  
+  // Visit Clinical Actions
+  | 'request visit_services' | 'edit visit_requested_service_details' | 'remove visit_services'
+  | 'record visit_service_payment' | 'manage visit_vitals'
   | 'manage visit_clinical_notes' | 'manage visit_lab_requests' | 'view visit_lab_results'
   | 'manage visit_prescriptions' | 'manage visit_documents'
-  // ... continue with all permissions you've defined in RolesAndPermissionsSeeder
-  // It's crucial these string literals exactly match the permission names in your database.
-  ;
+  
+  // Doctor Schedule Management
+  | 'view doctor_schedules' | 'manage own_doctor_schedule' | 'manage all_doctor_schedules'
+  
+  // Lab Tests & Results Management
+  | 'create lab_requests' | 'view lab_results' | 'enter lab_results' | 'authorize lab_results'
+  | 'list lab_tests' | 'create lab_tests' | 'edit lab_tests' | 'delete lab_tests'
+  | 'manage lab_test_containers' | 'manage lab_test_units'
+  | 'manage lab_test_child_groups' | 'manage lab_test_child_options'
+  | 'view lab_price_list' | 'update lab_test_prices'
+  | 'batch_delete lab_tests' | 'print lab_price_list'
+  
+  // Reports
+  | 'view reports_section' | 'view doctor_shift_reports' | 'print doctor_shift_reports'
+  | 'view service_statistics_report' | 'print service_statistics_report'
+  
+  // Settings
+  | 'view settings' | 'update settings' | 'manage settings';
 
 
 /**
  * Custom hook providing utility functions for checking user roles and permissions.
  */
 export const useAuthorization = () => {
-    const { user, isLoading: authIsLoading } = useAuth(); // Get user and loading state from context
+    const { user, isLoading: authIsLoading } = useAuth();
+    const typedUser = user as UserWithAllPermissions;
 
     // Memoize derived values to prevent unnecessary recalculations on re-renders
     // if the user object itself hasn't changed.
     const userRoles = React.useMemo(() => {
-        return user?.roles?.map(role => role.name) || [];
-    }, [user]);
+        return typedUser?.roles?.map(role => role.name) || [];
+    }, [typedUser]);
 
     // For the `can` check, it's best to use all permissions (direct + via roles).
     // Spatie's $user->getAllPermissions() provides this.
     // Ensure your AuthController or UserResource populates this on the user object.
     const userAllPermissions = React.useMemo(() => {
-        // If your backend sends `all_permissions` (from $user->getAllPermissions())
-        if (user?.all_permissions) {
-            return user.all_permissions.map(permission => permission.name);
+        if (typedUser?.all_permissions) {
+            return typedUser.all_permissions.map((permission: Permission) => permission.name);
         }
-        // Fallback: combine direct permissions and permissions from roles
-        // This requires roles to have their permissions eager-loaded or accessible.
-        // This part can get complex on the frontend if not provided directly by backend.
-        // It's simpler if backend provides `all_permissions`.
-        const directPermissions = user?.permissions?.map(p => p.name) || [];
-        const permissionsFromRoles = user?.roles?.flatMap(role => role.permissions?.map(p => p.name) || []) || [];
-        return [...new Set([...directPermissions, ...permissionsFromRoles])]; // Unique permissions
-    }, [user]);
+        const directPermissions = typedUser?.permissions?.map(p => p.name) || [];
+        const permissionsFromRoles = typedUser?.roles?.flatMap(role => role.permissions?.map(p => p.name) || []) || [];
+        return [...new Set([...directPermissions, ...permissionsFromRoles])];
+    }, [typedUser]);
 
 
     /**
@@ -96,7 +110,7 @@ export const useAuthorization = () => {
      */
     const can = (permissionName: PermissionName): boolean | undefined => {
         if (authIsLoading) return undefined; // Still loading, permission status unknown
-        if (!user || !permissionName) return false;
+        if (!typedUser || !permissionName) return false;
 
         // If Super Admin role exists and user has it, they can do anything.
         // This assumes 'Super Admin' role is consistently named.
@@ -114,7 +128,7 @@ export const useAuthorization = () => {
      */
     const canAll = (permissionNames: PermissionName[]): boolean | undefined => {
         if (authIsLoading) return undefined;
-        if (!user || permissionNames.length === 0) return false;
+        if (!typedUser || permissionNames.length === 0) return false;
         if (userRoles.includes('Super Admin')) return true;
 
         return permissionNames.every(permissionName => userAllPermissions.includes(permissionName));
@@ -127,7 +141,7 @@ export const useAuthorization = () => {
      */
     const canAny = (permissionNames: PermissionName[]): boolean | undefined => {
         if (authIsLoading) return undefined;
-        if (!user || permissionNames.length === 0) return false;
+        if (!typedUser || permissionNames.length === 0) return false;
         if (userRoles.includes('Super Admin')) return true;
         
         return permissionNames.some(permissionName => userAllPermissions.includes(permissionName));
@@ -141,7 +155,7 @@ export const useAuthorization = () => {
      */
     const hasRole = (roleOrRoles: string | string[]): boolean | undefined => {
         if (authIsLoading) return undefined;
-        if (!user) return false;
+        if (!typedUser) return false;
 
         const rolesToCheck = Array.isArray(roleOrRoles) ? roleOrRoles : [roleOrRoles];
         return userRoles.some(userRoleName => rolesToCheck.includes(userRoleName));
@@ -158,8 +172,8 @@ export const useAuthorization = () => {
     };
 
     return {
-        user: user as AuthUserType | null, // Cast for more specific type usage if AuthUserType is detailed
-        isLoggedIn: !!user && !authIsLoading,
+        user: typedUser as AuthUserType | null, // Cast for more specific type usage if AuthUserType is detailed
+        isLoggedIn: !!typedUser && !authIsLoading,
         authIsLoading, // Expose the loading state
         can,
         canAll,

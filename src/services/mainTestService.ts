@@ -33,7 +33,7 @@ export const getAllActiveMainTestsForPriceList = async (searchTerm?: string): Pr
 };
 
 export const batchUpdateTestPrices = async (updates: Array<{ id: number; price: number }>): Promise<{ message: string }> => {
-  const response = await apiClient.put<{ message: string }>('/main-tests/batch-update-prices', { updates });
+  const response = await apiClient.put<{ message: string }>('batch-update-prices', { updates });
   return response.data;
 };
 

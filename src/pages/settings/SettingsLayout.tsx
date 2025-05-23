@@ -21,6 +21,7 @@ const settingsNavItems: SettingsNavItem[] = [
   { to: 'companies', labelKey: 'companies', icon: Building, permission: 'manage company_settings' }, // Example permission
   { to: 'laboratory', labelKey: 'laboratory', icon: FlaskConical, permission: 'manage laboratory_settings' },
   { to: 'services', labelKey: 'tabs.servicesConfig', icon: ListOrdered, permission: 'manage service_settings' },
+  { to: '/settings/laboratory/price-list', labelKey: 'priceList', icon: CreditCard, permission: 'manage price_list' },
 ];
 
 const SettingsLayout: React.FC = () => {

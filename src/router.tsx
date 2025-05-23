@@ -40,6 +40,7 @@ import MainTestsListPage from "./pages/lab/MainTestsListPage";
 import SettingsLayout from "./pages/settings/SettingsLayout";
 import GeneralSettingsPage from "./pages/GeneralSettingsPage";
 import ChildTestsManagementPage from "./pages/lab/ChildTestsManagementPage";
+import LabPriceListPage from "./pages/settings/LabPriceListPage";
 // import NotFoundPage from './pages/NotFoundPage'; // Optional: For 404 handling
 
 const AppointmentsPlaceholderPage: React.FC = () => (
@@ -243,6 +244,10 @@ const router = createBrowserRouter([
                   {
                     path: ":mainTestId/parameters",
                     element: <ChildTestsManagementPage />,
+                  },
+                  {
+                    path: "price-list",
+                    element: <LabPriceListPage />,
                   },
                 ],
               },

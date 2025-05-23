@@ -89,3 +89,26 @@ export interface ChildTestFormData {
     _localId?: string; // e.g., for new items not yet saved
     isEditing?: boolean;
   }
+  
+export interface MainTestStripped {
+  id: number;
+  main_test_name: string;
+}
+
+export interface Package {
+  package_id: number;
+  package_name?: string | null;
+  container: string;
+  exp_time: number;
+  main_tests_count?: number;
+  main_tests?: MainTestStripped[]; // For displaying tests in a package
+  // created_at?: string; // If model has timestamps
+  // updated_at?: string;
+}
+
+export interface PackageFormData {
+  package_name: string;
+  container: string;
+  exp_time: string; // Input as string
+  main_test_ids?: number[]; // Array of selected MainTest IDs
+}

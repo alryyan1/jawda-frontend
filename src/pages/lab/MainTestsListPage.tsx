@@ -95,7 +95,7 @@ export default function MainTestsListPage() {
                 <Search className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             </div>
             {canCreateTests && (
-                <Button asChild size="sm" className="h-9"><Link to="/settings/lab-tests/new">{t('labTests:addTestButton')}</Link></Button>
+                <Button asChild size="sm" className="h-9"><Link to="/settings/laboratory/new">{t('labTests:addTestButton')}</Link></Button>
             )}
         </div>
       </div>

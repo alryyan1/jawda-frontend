@@ -265,7 +265,13 @@ const ChildTestsManagementPage: React.FC = () => {
     if (rowData.id) {
       // Only delete if it's a persisted record
       if (window.confirm(t("labTests:childTests.deleteConfirm"))) {
-        deleteMutation.mutate(rowData.id);
+        deleteMutation.mutate(rowData.id, {
+          onSuccess: () => {
+            // Remove the row from the form state after successful deletion
+            remove(index);
+            if (editingRowIndex === index) setEditingRowIndex(null);
+          }
+        });
       }
     } else {
       // If it's a new, unsaved row

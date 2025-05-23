@@ -10,12 +10,12 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardDescription } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Loader2, Search, Save, Trash2, Printer, FlaskConical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-import { MainTest, MainTestPriceListItem } from '@/types/labTests';
+import type { MainTest } from '@/types/labTests';
 import { 
     getAllActiveMainTestsForPriceList, 
     batchUpdateTestPrices, 
@@ -30,20 +30,28 @@ const priceListItemSchema = z.object({
   price: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, { message: "يجب أن يكون السعر رقمًا موجبًا."}),
   isSelectedForDelete: z.boolean().optional(), // For mass delete
 });
-type PriceListItemFormValues = z.infer<typeof priceListItemSchema>;
 
 const priceListSchema = z.object({
   tests: z.array(priceListItemSchema),
 });
 type PriceListFormValues = z.infer<typeof priceListSchema>;
 
+interface ErrorResponse {
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
+}
+
 const LabPriceListPage: React.FC = () => {
-  const { t, i18n } = useTranslation(['labSettings', 'common', 'labTests']);
+  const { t } = useTranslation(['labSettings', 'common', 'labTests']);
   const queryClient = useQueryClient();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [numColumns, setNumColumns] = useState(3); // Default columns
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   // Debounce search term
   useEffect(() => {
@@ -64,8 +72,7 @@ const LabPriceListPage: React.FC = () => {
      return () => window.removeEventListener('resize', calculateCols);
   }, []);
 
-
-  const { data: allTests, isLoading: isLoadingTests, refetch } = useQuery<MainTest[], Error>({
+  const { data: allTests, isLoading: isLoadingTests } = useQuery<MainTest[], Error>({
     queryKey: ['allActiveMainTestsForPriceList', debouncedSearchTerm],
     queryFn: () => getAllActiveMainTestsForPriceList(debouncedSearchTerm),
   });
@@ -76,7 +83,7 @@ const LabPriceListPage: React.FC = () => {
   });
   const { control, handleSubmit, reset, getValues, formState: { dirtyFields, errors, isDirty } } = form;
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields } = useFieldArray({
     control,
     name: "tests",
     keyName: "fieldId" // Important for React key
@@ -102,7 +109,7 @@ const LabPriceListPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['allActiveMainTestsForPriceList'] });
       form.reset(getValues(), { keepValues: true, keepDirty: false, keepDefaultValues: false }); // Reset dirty state
     },
-    onError: (error: any) => toast.error(error.response?.data?.message || t('labSettings:pricesSaveError')),
+    onError: (error: ErrorResponse) => toast.error(error.response?.data?.message || t('labSettings:pricesSaveError')),
   });
 
   const deleteMutation = useMutation({
@@ -114,15 +121,12 @@ const LabPriceListPage: React.FC = () => {
          }
          queryClient.invalidateQueries({ queryKey: ['allActiveMainTestsForPriceList'] });
      },
-     onError: (error: any) => toast.error(error.response?.data?.message || t('labSettings:massDeleteError')),
+     onError: (error: ErrorResponse) => toast.error(error.response?.data?.message || t('labSettings:massDeleteError')),
   });
-
 
   const onSubmit = (data: PriceListFormValues) => {
     const dirtyTestUpdates: Array<{ id: number; price: number }> = [];
     data.tests.forEach((test, index) => {
-      // Check if this specific field was dirty (modified by user)
-      // `dirtyFields.tests?.[index]?.price` indicates if the price for this test[index] was changed.
       if (dirtyFields.tests?.[index]?.price) {
         dirtyTestUpdates.push({ id: test.id, price: parseFloat(test.price) });
       }
@@ -145,12 +149,40 @@ const LabPriceListPage: React.FC = () => {
          deleteMutation.mutate(selectedIds);
      }
   };
-  
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-  const handleGeneratePdf = async () => { /* ... same as DoctorShiftsReportPage PDF handler ... */ };
+
+  const handleGeneratePdf = async () => {
+    setIsGeneratingPdf(true);
+    try {
+        const filters: LabPriceListPdfFilters = {};
+        if (debouncedSearchTerm) {
+            filters.search_service_name = debouncedSearchTerm;
+        }
+        // Add other active filters if your UI has them (e.g., service_group_id)
+
+        const blob = await downloadLabPriceListPdf(filters);
+        
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `lab_price_list_${new Date().toISOString().slice(0,10)}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+        toast.success(t('labSettings:pdfGeneratedSuccess', "Price list PDF generated!"));
+
+    } catch (error: any) {
+        console.error("PDF generation error:", error.message);
+        toast.error(t('labSettings:pdfGeneratedError', "Failed to generate price list PDF."), {
+            description: error.response?.data?.message || error.message
+        });
+    } finally {
+        setIsGeneratingPdf(false);
+    }
+};
 
 
-  const testsToDisplay = fields; // from useFieldArray
+  const testsToDisplay = fields;
 
   // Split tests into chunks for multi-column display
   const testChunks = useMemo(() => {
@@ -161,7 +193,6 @@ const LabPriceListPage: React.FC = () => {
      }
      return chunks;
   }, [testsToDisplay, numColumns]);
-
 
   if (isLoadingTests && !allTests) {
     return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
@@ -179,7 +210,6 @@ const LabPriceListPage: React.FC = () => {
              {isGeneratingPdf ? <Loader2 className="h-4 w-4 animate-spin"/> : <Printer className="h-4 w-4"/>}
              <span className="ltr:ml-2 rtl:mr-2 hidden sm:inline">{t('labSettings:generatePriceListPdf')}</span>
           </Button>
-          {/* TODO: Add permission check */}
           <Button onClick={handleSubmit(onSubmit)} size="sm" disabled={updatePricesMutation.isPending || !isDirty}>
             {updatePricesMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>}
             <span className="ltr:ml-2 rtl:mr-2 hidden sm:inline">{t('labSettings:saveAllPricesButton')}</span>
@@ -216,7 +246,6 @@ const LabPriceListPage: React.FC = () => {
              {searchTerm ? t('common:noResultsFound') : t('labSettings:noTestsToList')}
          </div>
       ) : (
-         <Form {...form}>
          <form onSubmit={handleSubmit(onSubmit)}> {/* Main form for submitting all price changes */}
              <ScrollArea className="w-full" style={{maxHeight: 'calc(100vh - 300px)'}}> {/* Adjust max height */}
                  <div className="space-y-1"> {/* Vertical space between rows of items */}
@@ -267,11 +296,10 @@ const LabPriceListPage: React.FC = () => {
                  ))}
                  </div>
              </ScrollArea>
-             {/* Save button is at the top */}
          </form>
-         </Form>
       )}
     </div>
   );
 };
+
 export default LabPriceListPage;

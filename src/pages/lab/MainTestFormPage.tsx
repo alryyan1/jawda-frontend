@@ -142,7 +142,7 @@ const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
       
       if (!isEditMode && savedMainTest.id) {
         setCurrentMainTestId(savedMainTest.id);
-        navigate(`/lab-tests/${savedMainTest.id}/edit`, { replace: true });
+        navigate(`/settings/laboratory/${savedMainTest.id}/edit`, { replace: true });
       } else if (isEditMode && currentMainTestId) {
         queryClient.invalidateQueries({ queryKey: ['mainTest', String(currentMainTestId)] });
       }
@@ -215,7 +215,7 @@ const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
         </CardContent>
       </Card>
 
-      <ChildTestsSection mainTestId={currentMainTestId} />
+      {/* <ChildTestsSection mainTestId={currentMainTestId} /> */}
     </div>
   );
 };

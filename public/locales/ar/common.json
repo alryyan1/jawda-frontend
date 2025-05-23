@@ -1,5 +1,8 @@
 {
   "appName": "تطبيق  جوده الطبي",
+  "appNameShort": "جوده",
+  "expandSidebar": "توسيع القائمة",
+  "collapseSidebar": "طي القائمة",
   "loading": "جار التحميل...",
   "updatingList": "جار تحديث القائمة...",
   "cancel": "إلغاء",
@@ -14,6 +17,12 @@
   "of": "من",
   "search": "بحث",
   "searchPlaceholder": "ابحث هنا...",
+  "searchPlaceholderName": "ابحث عن {{entity}}...",
+  "downloadPdf": "تحميل PDF",
+  "toggleTheme": "تغيير المظهر",
+  "switchToDark": "التبديل إلى الوضع الداكن",
+  "switchToLight": "التبديل إلى الوضع الفاتح",
+  "underDevelopment": "هذا القسم قيد التطوير.",
   "actions": {
     "openMenu": "فتح القائمة"
   },
@@ -29,8 +38,12 @@
     "invalidEmail": "صيغة بريد إلكتروني غير صحيحة.",
     "positiveNumber": "يجب أن يكون رقماً موجباً.",
     "positiveInteger": "يجب أن يكون رقماً صحيحاً موجباً.",
-        "requiredField": "هذا الحقل مطلوب"
-
+    "requiredField": "هذا الحقل مطلوب",
+    "mustBeNumericOptional": "يجب أن يكون رقماً (اختياري).",
+    "mustBeIntegerOptional": "يجب أن يكون رقماً صحيحاً (اختياري).",
+    "maxLengthText": "النص طويل جداً (الحد الأقصى {{count}} حرف).",
+    "maxLength": "يجب أن لا يتجاوز {{count}} حرف.",
+    "positiveNumberOptional": "يجب أن يكون رقماً موجباً (اختياري)."
   },
   "form": {
     "fillDetails": "الرجاء ملء التفاصيل أدناه."
@@ -47,13 +60,11 @@
     "requestFailed": "فشل في تنفيذ الطلب"
   },
   "save": "حفظ",
-
   "id": "م",
   "none": "لا يوجد",
   "entityName": "{{entity}}",
   "entityNamePlural": "{{entity}}",
   "backToList": "العودة إلى قائمة ",
-  
   "all": "الكل",
   "pharmacy": "الصيدلية",
   "close": "إغلاق",
@@ -72,7 +83,7 @@
   "viewRequested": "عرض المطلوب",
   "currency": "العملة",
   "addSelected": "إضافة المحدد",
-    "summary": "الملخص",
+  "summary": "الملخص",
   "summaryShort": "ملخص",
   "totalAmount": "المبلغ الإجمالي",
   "totalDiscount": "إجمالي الخصم",

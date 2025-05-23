@@ -10,15 +10,16 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Filter, FileBarChart2, BarChart3 } from 'lucide-react';
+import { Loader2, Filter, FileBarChart2, BarChart3, Download } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Form, FormItem, FormLabel } from '@/components/ui/form';
 
 import type { DoctorStripped } from '@/types/doctors';
-import { getDoctorShiftsReport } from '@/services/reportService';
+import { downloadDoctorShiftsReportPdf, getDoctorShiftsReport, type DoctorShiftReportFilters } from '@/services/reportService';
 import { getDoctorsList } from '@/services/doctorService';
 import DoctorShiftFinancialSummaryDialog from '@/components/reports/DoctorShiftFinancialSummaryDialog';
 import type { DoctorShiftReportItem } from '@/types/reports';
+import { toast } from 'sonner';
 
 interface FilterFormValues {
   date_from: string;
@@ -51,18 +52,52 @@ const DoctorShiftsReportPage: React.FC = () => {
   });
 
   const [currentPage, setCurrentPage] = useState(1);
-  const [appliedFilters, setAppliedFilters] = useState({
+  const [appliedFilters, setAppliedFilters] = useState<DoctorShiftReportFilters>({
     date_from: initialDateFrom,
     date_to: initialDateTo,
-    doctor_id: 'all',
+    doctor_id: form.watch('doctor_id'),
     status: 'all',
     shift_id: 'all',
+    // page: 1,
+    // per_page: 10,
   });
 
   const { data: doctorsList, isLoading: isLoadingDoctors } = useQuery<DoctorStripped[], Error>({
     queryKey: ['doctorsSimpleListForReport'],
     queryFn: () => getDoctorsList({ active: true }),
   });
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+
+  const handleDownloadPdf = async () => {
+     setIsDownloadingPdf(true);
+     try {
+         // Transform filters the same way as in the report query
+         const transformedFilters = {
+             ...appliedFilters,
+             doctor_id: appliedFilters.doctor_id === 'all' ? null : appliedFilters.doctor_id,
+             status: appliedFilters.status === 'all' ? null : appliedFilters.status,
+             shift_id: appliedFilters.shift_id === 'all' ? null : appliedFilters.shift_id,
+         };
+         
+         const blob = await downloadDoctorShiftsReportPdf(transformedFilters);
+         const url = window.URL.createObjectURL(blob);
+         const a = document.createElement('a');
+         a.href = url;
+         a.download = `doctor_shifts_report_${format(new Date(), 'yyyyMMdd_HHmmss')}.pdf`;
+         document.body.appendChild(a);
+         a.click();
+         a.remove();
+         window.URL.revokeObjectURL(url);
+         toast.success(t('common:downloadComplete'));
+     } catch (error) {
+         console.error("PDF Download error:", error);
+         toast.error(t('common:error.downloadFailed'), { 
+             description: error instanceof Error ? error.message : t('common:error.unknown') 
+         });
+     } finally {
+         setIsDownloadingPdf(false);
+     }
+  };
 
   const { data: reportData, isLoading, error, isFetching } = useQuery({
     queryKey: ['doctorShiftsReport', currentPage, appliedFilters],
@@ -91,6 +126,10 @@ const DoctorShiftsReportPage: React.FC = () => {
       <div className="flex items-center gap-2">
          <FileBarChart2 className="h-7 w-7 text-primary"/>
          <h1 className="text-2xl sm:text-3xl font-bold">{t('reports:doctorShiftsReport.title')}</h1>
+         <Button onClick={handleDownloadPdf} variant="outline" size="sm" disabled={isDownloadingPdf || isLoading || !doctorShifts || doctorShifts.length === 0}>
+             {isDownloadingPdf ? <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2"/> : <Download className="h-4 w-4 ltr:mr-2 rtl:ml-2"/>}
+             {t('common:downloadPdf')}
+         </Button>
       </div>
       
       <Form {...form}>

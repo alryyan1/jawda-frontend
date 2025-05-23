@@ -90,10 +90,16 @@ export interface PaginatedDoctorsResponse {
 
 // If DoctorShift is a new concept
 export interface DoctorShift {
-  id: number; // This is the ID of the doctor_shift record itself
+  id: number;
   doctor_id: number;
   doctor_name: string;
-  status: string | number; // Or a more specific enum: 'active', 'on_break', 'ended'
-  shift_id: number; // FK to the main clinic shifts table
-  // Add start_time, end_time if available
+  doctor_specialist_name?: string | null;
+  doctor_avatar_url?: string | null; // For avatar
+  status: boolean; // Is this DoctorShift record active/open
+  start_time?: string | null;
+  end_time?: string | null;
+  
+  // New fields for UI
+  is_examining: boolean; // Is the doctor currently with a patient in this shift
+  patients_count: number; // Number of patients waiting or with this doctor in this shift
 }

@@ -6,7 +6,15 @@ import type { Doctor } from './doctors'; // Assuming this is defined
 // src/types/auth.ts
 
 // End of auth.ts example parts
-
+// src/types/users.ts (or a new reports.ts or dashboard.ts)
+export interface UserShiftIncomeSummary {
+  user_id: number;
+  user_name: string;
+  shift_id: number;
+  total_income: number;
+  total_cash: number;
+  total_bank: number;
+}
 
 export interface UserFormData {
   name: string;

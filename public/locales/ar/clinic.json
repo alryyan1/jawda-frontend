@@ -83,8 +83,11 @@
     "description": "إدارة زيارة المريض وتفاصيلها"
   },
   "doctorsTabs": {
-    "noActiveShifts": "لا يوجد أطباء مناوبون حالياً."
-  } , "doctorShifts": {
+    "noActiveShifts": "لا يوجد أطباء مناوبون حالياً.",
+    "examining": "يفحص",
+    "free": "متاح"
+  },
+  "doctorShifts": {
     "manageTitle": "إدارة مناوبات الأطباء",
     "manageDescription": "فتح أو إغلاق مناوبات الأطباء لليوم.",
     "status": "حالة المناوبة",
@@ -132,7 +135,15 @@
     "lab": "المختبر",
     "prescription": "الوصفة الطبية",
     "documents": "المستندات"
+  },
+
+  "userShiftIncomeDialog": {
+    "title": "ملخص الدخل للمستخدم: {{userName}}",
+    "description": "ملخص الإيرادات المسجلة بواسطتك خلال الوردية الحالية #{{shiftId}}.",
+    "totalIncome": "إجمالي الدخل",
+    "totalCash": "إجمالي النقد",
+    "totalBank": "إجمالي الشبكة/البنك",
+    "noData": "لا توجد بيانات دخل لهذه الوردية حتى الآن.",
+    "loading": "جارٍ تحميل الملخص..."
   }
-
-
 }

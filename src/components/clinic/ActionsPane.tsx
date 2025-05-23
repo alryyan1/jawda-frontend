@@ -1,5 +1,5 @@
 // src/components/clinic/ActionsPane.tsx
-import React from "react";
+import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,9 +13,11 @@ import {
   LayoutGrid,
   BriefcaseMedical,
   CalendarClock,
+  WalletCards,
 } from "lucide-react"; // UsersRound for manage doctor shifts
 import ManageDoctorShiftsDialog from "./ManageDoctorShiftsDialog";
 import { cn } from "@/lib/utils";
+import UserShiftIncomeDialog from "./UserShiftIncomeDialog";
  
 interface ActionsPaneProps {
   showRegistrationForm: boolean;
@@ -34,6 +36,8 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
   // Placeholder permissions
   const canRegisterPatient = true; // can('create patients')
   const canManageDoctorShifts = true; // can('manage doctor_shifts')
+  const canViewOwnShiftIncome = true; // can('view own shift income')
+  const [isIncomeDialogOpen, setIsIncomeDialogOpen] = useState(false);
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -80,7 +84,25 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
             </TooltipContent>
           </Tooltip>
         )}
-
+  {canViewOwnShiftIncome && currentClinicShiftId && ( // Only show if a clinic shift is active
+         <Tooltip>
+             <TooltipTrigger asChild>
+                 <Button 
+                     variant="ghost" 
+                     size="icon" 
+                     title={t('clinic:actionsPane.myShiftIncome')}
+                     className="w-11 h-11" 
+                     onClick={() => setIsIncomeDialogOpen(true)}
+                     aria-label={t('clinic:actionsPane.myShiftIncome')}
+                 >
+                     <WalletCards className="h-5 w-5" />
+                 </Button>
+             </TooltipTrigger>
+             <TooltipContent side={i18n.dir() === 'rtl' ? 'left' : 'right'}>
+                 <p>{t('clinic:actionsPane.myShiftIncome')}</p>
+             </TooltipContent>
+         </Tooltip>
+        )}
         {canManageDoctorShifts && (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -119,6 +141,14 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
 
         {/* More actions can be added here */}
       </aside>
+      
+      {currentClinicShiftId && ( // Only render dialog if there's a shift context
+         <UserShiftIncomeDialog
+             isOpen={isIncomeDialogOpen}
+             onOpenChange={setIsIncomeDialogOpen}
+             currentClinicShiftId={currentClinicShiftId}
+         />
+      )}
     </TooltipProvider>
   );
 };

@@ -79,7 +79,14 @@ const DoctorShiftFinancialSummaryDialog: React.FC<DoctorShiftFinancialSummaryDia
             </DialogTitle>
             {doctorShift && (
                 <DialogDescription>
-                    {t('reports:doctorShiftFinancialSummary.shiftId')}: {doctorShift.id} | {doctorShift.formatted_start_time ? format(doctorShift.formatted_start_time, 'P', {locale: dateLocale}) : ''}
+                    {t('reports:doctorShiftFinancialSummary.shiftId')}: {doctorShift.id} | {
+                        doctorShift.formatted_start_time ? 
+                            (typeof doctorShift.formatted_start_time === 'string' ? 
+                                doctorShift.formatted_start_time : 
+                                format(doctorShift.formatted_start_time, 'P', {locale: dateLocale})
+                            )
+                        : ''
+                    }
                 </DialogDescription>
             )}
           </DialogHeader>
@@ -102,14 +109,26 @@ const DoctorShiftFinancialSummaryDialog: React.FC<DoctorShiftFinancialSummaryDia
                   <Card>
                     <CardHeader className="pb-3">
                         <CardTitle className="text-md font-semibold flex items-center gap-2">
-                            <Calendar className="h-4 w-4 text-muted-foreground"/>{t('reports:doctorShiftFinancialSummary.shiftDetails')}
+                            <Calendar className="h-4 w-4 text-muted-foreground"/>{t('reports:doctorShiftsReport.table.startTime')}
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
-                      <DetailRow label={t('reports:doctorShiftsReport.table.startTime')} value={summary.start_time ? format(parseISO(summary.start_time), 'yyyy-MM-dd', { locale: dateLocale }) : '-'} />
-                      <DetailRow label={t('reports:doctorShiftsReport.table.endTime')} value={summary.end_time ? format(parseISO(summary.end_time), 'yyyy-MM-dd', { locale: dateLocale }) : '-'} />
-                      <DetailRow label={t('reports:doctorShiftsReport.table.status')} value={t(`common:statusEnum.${summary.status.toLowerCase()}`, summary.status)} />
-                      <DetailRow label={t('reports:doctorShiftFinancialSummary.totalPatients')} value={summary.total_patients} />
+                      <DetailRow 
+                        label={t('reports:doctorShiftsReport.table.startTime')} 
+                        value={summary.start_time ? format(parseISO(summary.start_time), 'yyyy-MM-dd', { locale: dateLocale }) : '-'} 
+                      />
+                      <DetailRow 
+                        label={t('reports:doctorShiftsReport.table.endTime')} 
+                        value={summary.end_time ? format(parseISO(summary.end_time), 'yyyy-MM-dd', { locale: dateLocale }) : '-'} 
+                      />
+                      <DetailRow 
+                        label={t('reports:doctorShiftsReport.table.status')} 
+                        value={t(`common:statusEnum.${summary.status.toLowerCase()}`, summary.status)} 
+                      />
+                      <DetailRow 
+                        label={t('reports:doctorShiftFinancialSummary.totalPatients')} 
+                        value={summary.total_patients} 
+                      />
                     </CardContent>
                   </Card>
 

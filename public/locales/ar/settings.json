@@ -1,17 +1,27 @@
 {
-  "pageTitle": "إعدادات النظام",
+  "pageTitle": "الإعدادات",
   "saveButton": "حفظ الإعدادات",
   "savingButton": "جارٍ الحفظ...",
   "settingsSavedSuccess": "تم حفظ الإعدادات بنجاح!",
   "settingsSaveError": "فشل حفظ الإعدادات.",
   "errorNoSettings": "لم يتم تهيئة إعدادات النظام بعد. يرجى التواصل مع المسؤول.",
   "loadingSettings": "جارٍ تحميل الإعدادات...",
+  "pharmacySectionTitle": "حسابات الصيدلية",
   "tabs": {
     "general": "عام",
     "print": "الطباعة",
-    "financial": "مالية",
+    "financial": "المالية",
+    "workflow": "سير العمل",
     "whatsapp": "واتساب",
-    "workflow": "سير العمل"
+    "servicesConfig": "إعدادات الخدمات",
+    "laboratory": "المختبر",
+    "companies": "الشركات"
+  },
+  "companies": "الشركات",
+  "laboratory": "المختبر",
+  "labSettings": {
+    "title": "إعدادات المختبر",
+    "description": "تكوين وإدارة إعدادات المختبر في النظام"
   },
   "generalSection": {
     "title": "الإعدادات العامة",
@@ -83,5 +93,9 @@
      "remove": "إزالة",
      "selectImage": "اختر صورة..."
   },
-  "selectAccount":"اختر حساب..."
+  "selectAccount":"اختر حساب...",
+  "serviceSettings": {
+    "title": "إعدادات الخدمات",
+    "description": "تكوين وإدارة إعدادات الخدمات في النظام"
+  }
 }

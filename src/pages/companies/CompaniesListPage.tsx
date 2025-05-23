@@ -47,11 +47,11 @@ export default function CompaniesListPage() {
   const { can ,user} = useAuthorization(); // Get permission checking function
     console.log(user,'user')
   // TODO: Define these permissions in your backend and PermissionName type
-  const canCreateCompany = can("create companies" as any);
-  const canEditCompany = can("edit companies" as any);
-  const canDeleteCompany = can("delete companies" as any);
-  const canManageContracts = can("manage company_contracts" as any); // Example permission for contracts
-
+  const canCreateCompany = can("create companies" );
+  const canEditCompany = can("edit companies" );
+  const canDeleteCompany = can("delete companies" );
+  const canManageContracts = can("manage company_contracts" ); // Example permission for contracts
+  console.log(canCreateCompany,'canCreateCompany','user',user)
   const {
     data: paginatedData,
     isLoading,
@@ -118,7 +118,7 @@ export default function CompaniesListPage() {
         </div>
         {canCreateCompany && (
           <Button asChild size="sm">
-            <Link to="/companies/new">{t("companies:addCompanyButton")}</Link>
+            <Link to="/settings/companies/new">{t("companies:addCompanyButton")}</Link>
           </Button>
         )}
       </div>
@@ -136,7 +136,7 @@ export default function CompaniesListPage() {
           </p>
           {canCreateCompany && (
             <Button asChild size="sm" className="mt-4">
-              <Link to="/companies/new">{t("companies:addCompanyButton")}</Link>
+              <Link to="/settings/companies/new">{t("companies:addCompanyButton")}</Link>
             </Button>
           )}
         </div>

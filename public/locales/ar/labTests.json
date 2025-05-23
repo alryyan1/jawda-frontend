@@ -1,0 +1,102 @@
+{
+    "pageTitle": "إدارة الفحوصات المخبرية الرئيسية",
+    "addTestButton": "إضافة فحص رئيسي جديد",
+    "editTestTitle": "تعديل الفحص الرئيسي",
+    "createTestTitle": "إضافة فحص رئيسي جديد",
+    "loadingTests": "جارٍ تحميل الفحوصات...",
+    "noTestsFound": "لم يتم العثور على فحوصات.",
+    "table": {
+      "name": "اسم الفحص",
+      "container": "نوع العينة (الوعاء)",
+      "price": "السعر",
+      "available": "متاح",
+      "actions": "إجراءات"
+    },
+    "form": {
+      "nameLabel": "اسم الفحص الرئيسي",
+      "namePlaceholder": "مثال: تعداد الدم الكامل (CBC)",
+      "packIdLabel": "معرف الحزمة/المجموعة (اختياري)",
+      "packIdPlaceholder": "أدخل رقم الحزمة إن وجد",
+      "pageBreakLabel": "فاصل صفحات (عند طباعة النتائج)",
+      "containerLabel": "وعاء العينة",
+      "selectContainer": "اختر وعاء العينة...",
+      "priceLabel": "سعر الفحص",
+      "pricePlaceholder": "أدخل السعر (اختياري)",
+      "dividedLabel": "نتائج مقسمة (له مكونات فرعية)",
+      "availableLabel": "الفحص متاح حالياً",
+      "saveButton": "حفظ الفحص",
+      "testSavedSuccess": "تم حفظ الفحص بنجاح!",
+      "testSaveError": "فشل حفظ الفحص."
+    },
+    "deleteConfirmText": "هل أنت متأكد أنك تريد حذف هذا الفحص الرئيسي؟",
+    "deletedSuccess": "تم حذف الفحص بنجاح!",
+    "deleteError": "فشل حذف الفحص.",
+    "containers": {
+       "addDialogTitle": "إضافة وعاء عينة جديد",
+       "addDialogDescription": "أدخل اسم وعاء العينة (مثال: أنبوب EDTA، وعاء بول).",
+       "nameLabel": "اسم الوعاء",
+       "namePlaceholder": "أنبوب EDTA",
+       "addButton": "إضافة وعاء",
+       "addedSuccess": "تمت إضافة الوعاء بنجاح!"
+       
+    },
+   "childTests": {
+    "sectionTitle": "الفحوصات الفرعية (المكونات)",
+    "addChildButton": "إضافة مكون فرعي",
+    "unit": "الوحدة",
+    "group": "المجموعة",
+    "order": "ترتيب العرض",
+    "noChildTests": "لا توجد مكونات فرعية مضافة لهذا الفحص الرئيسي.",
+    "saveMainTestFirst": "الرجاء حفظ الفحص الرئيسي أولاً قبل إضافة مكونات فرعية.",
+    "mainTestIdMissing": "معرف الفحص الرئيسي مفقود لحفظ المكون الفرعي.",
+    "addedSuccess": "تمت إضافة المكون الفرعي بنجاح!",
+    "addError": "فشل إضافة المكون الفرعي.",
+    "updatedSuccess": "تم تحديث المكون الفرعي بنجاح!",
+    "updateError": "فشل تحديث المكون الفرعي.",
+    "deletedSuccess": "تم حذف المكون الفرعي بنجاح!",
+    "deleteError": "فشل حذف المكون الفرعي.",
+    "deleteConfirm": "هل أنت متأكد أنك تريد حذف هذا المكون الفرعي؟",
+    "form": {
+      "name": "اسم المكون الفرعي",
+      "low": "الحد الأدنى (طبيعي)",
+      "upper": "الحد الأعلى (طبيعي)",
+      "unit": "الوحدة",
+      "selectUnit": "اختر الوحدة...",
+      "normalRangeText": "النطاق الطبيعي (نصي - إذا لم يتم استخدام الحدود الرقمية)",
+      "criticalLow": "الحد الأدنى الحرج",
+      "criticalHigh": "الحد الأعلى الحرج",
+      "defaultValue": "القيمة الافتراضية",
+      "displayOrder": "ترتيب العرض",
+      "group": "مجموعة المكون",
+      "selectGroup": "اختر مجموعة...",
+      "namePlaceholder": "مثال: كريات الدم البيضاء، جلوكوز، لون البول",
+      "normalRangePlaceholder": "مثال: < 5.0 أو إيجابي/سلبي",
+      "normalRangeDescription": "استخدم هذا إذا لم تكن الحدود رقمية أو لوصف معقد."
+    },
+    "validation": {
+        "lowGreaterThanUpper": "الحد الأدنى يجب أن يكون أقل من أو يساوي الحد الأعلى.",
+        "lowestGreaterThanMax": "الحد الحرج الأدنى يجب أن يكون أقل من أو يساوي الحد الحرج الأعلى.",
+        "normalRangeOrNumericRequired": "يجب إدخال النطاق الطبيعي النصي أو الحدود الرقمية (الأدنى والأعلى)."
+    }
+  },
+  
+  
+    "units": {
+      "entityName": "وحدة القياس", 
+      "addButton": "إضافة وحدة",
+      "addDialogTitle": "إضافة وحدة قياس جديدة",
+      "addDialogDescription": "أدخل اسم وحدة القياس (مثال: mg/dL، خلايا/µL).",
+      "nameLabel": "اسم الوحدة",
+      "namePlaceholder": "مثال: mg/dL",
+      "addedSuccess": "تمت إضافة الوحدة بنجاح!"
+    },
+    "childGroups": {
+      "entityName": "مجموعة المكونات", 
+      "addButton": "إضافة مجموعة",
+      "addDialogTitle": "إضافة مجموعة مكونات جديدة",
+      "addDialogDescription": "أدخل اسم مجموعة المكونات (مثال: تعداد الدم الأبيض، كيمياء).",
+      "nameLabel": "اسم المجموعة",
+      "namePlaceholder": "مثال: تعداد الدم الأبيض",
+      "addedSuccess": "تمت إضافة المجموعة بنجاح!"
+    }
+}

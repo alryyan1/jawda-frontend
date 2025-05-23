@@ -3,7 +3,7 @@ import type { PaginatedResponse } from '@/types/common';
 import apiClient from './api';
 import type { DoctorShiftFinancialSummary, DoctorShiftReportItem, ServiceStatisticItem } from '@/types/reports';
 
-interface DoctorShiftReportFilters {
+export interface DoctorShiftReportFilters {
   page?: number;
   per_page?: number;
   date_from?: string; // YYYY-MM-DD
@@ -12,7 +12,13 @@ interface DoctorShiftReportFilters {
   status?: string | null; // "0" or "1" or "" for all
   shift_id?: number | string | null; // General clinic shift ID
 }
-
+export const downloadDoctorShiftsReportPdf = async (filters: Omit<DoctorShiftReportFilters, 'page' | 'per_page'>): Promise<Blob> => {
+  const response = await apiClient.get<Blob>('/reports/doctor-shifts/pdf', {
+    params: filters,
+    responseType: 'blob', // Important: tell Axios to expect a binary response
+  });
+  return response.data;
+};
 export const getDoctorShiftsReport = async (filters: DoctorShiftReportFilters): Promise<PaginatedResponse<DoctorShiftReportItem>> => {
   // The endpoint for this DoctorShiftReportItem is DoctorShiftController@index
   const response = await apiClient.get<PaginatedResponse<DoctorShiftReportItem>>('/doctor-shifts', { params: filters });

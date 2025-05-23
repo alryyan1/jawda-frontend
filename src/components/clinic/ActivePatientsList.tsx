@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getActiveClinicPatients } from "@/services/clinicService"; // Updated service
-import type { PaginatedResponse } from "@/services/doctorService";
+import type { PaginatedResponse } from "@/types/common";
 import { Pointer } from "../magicui/pointer";
 import { motion } from "framer-motion";
 
@@ -60,15 +60,16 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
       currentClinicShiftId,
       currentPage,
     ],
-    queryFn: () =>
-      getActiveClinicPatients({
-        doctor_shift_id: doctorShiftId, // Or doctor_id if using that
+    queryFn: async () => {
+      const response = await getActiveClinicPatients({
+        doctor_shift_id: doctorShiftId,
         search: debouncedSearchTerm,
         clinic_shift_id: currentClinicShiftId,
         page: currentPage,
-      }),
+      });
+      return response;
+    },
     placeholderData: keepPreviousData,
-    // refetchInterval: 15000, // Optional: polling for updates
   });
 
   // Reset page to 1 if doctorShiftId changes
@@ -115,7 +116,7 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
       ) : (
         <ScrollArea className="flex-grow">
           <div className="space-y-3 pr-1">
-            {visits.map((visit) => (
+            {visits.map((visit: ActivePatientVisit) => (
               <Card
                 key={visit.id}
                 className={cn(
@@ -151,7 +152,7 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
                             "text-[10px] h-5",
                             visit.status === "with_doctor" && "bg-blue-500 text-white"
                           )}>
-                            {t(`clinic:workspace.status.${visit.status}`, visit.status)}
+                            {t(`clinic:workspace.status.${visit.status}`)}
                           </Badge>
                         </span>
                         <span className="flex items-center gap-1 text-xs">
@@ -202,12 +203,12 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
           </div>
         </ScrollArea>
       )}
-
+    
       {meta && meta.last_page > 1 && (
         <div className="flex items-center justify-between mt-3 pt-3 border-t shrink-0">
           <Button
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={!meta.links?.prev || isFetching}
+            disabled={currentPage === 1 || isFetching}
             size="sm"
             variant="outline"
           >
@@ -223,7 +224,7 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
             onClick={() =>
               setCurrentPage((p) => Math.min(meta.last_page, p + 1))
             }
-            disabled={!meta.links?.next || isFetching}
+            disabled={currentPage === meta.last_page || isFetching}
             size="sm"
             variant="outline"
           >

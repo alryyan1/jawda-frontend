@@ -1,6 +1,7 @@
 // src/services/userService.ts
 import apiClient from "./api";
-import {
+import type { UserShiftIncomeSummary } from '../types/users'; // Adjust path
+import type {
   User,
   UserFormData,
   PaginatedUsersResponse,
@@ -50,4 +51,12 @@ export const getRolesList = (): Promise<Role[]> => {
   // Check your backend response structure for roles-list!
   // Let's assume RoleResource::collection wrapping:
   // return apiClient.get<{data: Role[]}>(ROLES_API_URL).then(res => res.data.data);
+};
+
+export const fetchCurrentUserShiftIncomeSummary = async (shiftId: number): Promise<UserShiftIncomeSummary> => {
+  // Backend response is { data: UserShiftIncomeSummary }
+  const response = await apiClient.get<{ data: UserShiftIncomeSummary }>(`/user/current-shift-income-summary`, {
+    params: { shift_id: shiftId }
+  });
+  return response.data.data;
 };

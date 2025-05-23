@@ -1,8 +1,8 @@
 // src/services/clinicService.ts
+import type { ActivePatientVisit } from '@/types/patients';
 import apiClient from './api';
-import { DoctorShift } from '../types/doctors'; // Or from types/shifts
-import { ActivePatientVisit } from '../types/clinic'; // Or types/patients
 import type { PaginatedResponse } from '@/types/common';
+import type { DoctorShift } from '@/types/doctors';
 
 export const getActiveDoctorShifts = async (clinicShiftId?: number): Promise<DoctorShift[]> => {
   const params: Record<string, any> = {};

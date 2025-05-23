@@ -4,9 +4,8 @@ import {
   Link,
   NavLink,
   useNavigate,
-  useLocation,
 } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext"; // Your AuthContext
+import { useAuth } from "../contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -24,62 +23,75 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Menu,
   Home,
   Users,
   Stethoscope,
-  CalendarDays,
   Settings,
   LogOut,
   ChevronDown,
   Sun,
   Moon,
   Languages,
-  FileBarChart2, // For language icon
-} from "lucide-react"; // Common icons
+  FileBarChart2,
+  ShieldCheck,
+  CalendarClock,
+  BriefcaseMedical,
+  ChevronsLeft,
+  ChevronsRight,
+  FlaskConical,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Toaster } from "sonner"; // Using sonner for toasts
+import { Toaster } from "sonner";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+import { getSidebarCollapsedState, setSidebarCollapsedState } from '../lib/sidebar-store';
 
 // Define navigation items structure
-interface NavItem {
+export interface NavItem {
   to: string;
-  labelKey: string; // Will be used as t(`navigation:${labelKey}`)
+  labelKey: string; // e.g., 'dashboard', 'clinic'
   icon: React.ElementType;
-  children?: NavItem[]; // For nested navigation if needed in the future
+  permission?: string; // Optional: permission string from your PermissionName type
+  children?: NavItem[]; 
 }
 
-// Define your navigation structure
+// Main Navigation Items
 const mainNavItems: NavItem[] = [
-  { to: "/", labelKey: "dashboard", icon: Home },
-  { to: "/clinic", labelKey: "clinic", icon: Stethoscope },
-  { to: "/doctors", labelKey: "doctors", icon: Users },
-  { to: "/services", labelKey: "services", icon: Users },
-  { to: "/users", labelKey: "users", icon: Users },
-  { to: "/roles", labelKey: "roles", icon: Users },
-  { to: "/companies", labelKey: "companies", icon: Users },
-  { to: "/appointments", labelKey: "appointments", icon: CalendarDays },
-  { to: "/patients", labelKey: "patients", icon: Users },
-  { to: "/schedules-appointments", labelKey: "schedules-appointments", icon: CalendarDays },
-  { to: "/reports", labelKey: "reports", icon: FileBarChart2 },
-  { to: "reports/service-statistics", labelKey: "service-statistics", icon: FileBarChart2 },
+  { to: '/', labelKey: 'dashboard', icon: Home, permission: 'view dashboard' },
+  { to: '/clinic', labelKey: 'clinic', icon: BriefcaseMedical, permission: 'access clinic_workspace' },
+  { to: '/schedules-appointments', labelKey: 'schedulesAppointments', icon: CalendarClock, permission: 'view doctor_schedules' }, // Or 'manage appointments'
+  { to: '/patients', labelKey: 'patients', icon: Users, permission: 'list patients' },
+  { to: '/doctors', labelKey: 'doctors', icon: Stethoscope, permission: 'list doctors' },
 ];
 
-const bottomNavItems: NavItem[] = [
-  { to: "/settings", labelKey: "settings", icon: Settings },
+// Utility/Admin Navigation Items (typically at the bottom or in a separate group)
+const utilityNavItems: NavItem[] = [
+  { to: '/reports/doctor-shifts', labelKey: 'reports', icon: FileBarChart2, permission: 'view reports_section' },
+  { to: '/users', labelKey: 'users', icon: Users, permission: 'list users' },
+  { to: '/roles', labelKey: 'roles', icon: ShieldCheck, permission: 'list roles' },
+  { to: '/settings/general', labelKey: 'settings', icon: Settings, permission: 'view settings' }, // Points to the default general settings page
 ];
 
-// Theme Toggle Hook (Example, you can move this to a separate file)
+
+// Theme Toggle Hook (ensure this is defined, possibly in a separate utils/hooks file)
 const useTheme = () => {
   const [theme, setTheme] = useState<"light" | "dark">(() => {
+    if (typeof window === 'undefined') return 'light'; // Default for SSR or non-browser
     const storedTheme = localStorage.getItem("theme");
     if (storedTheme) return storedTheme as "light" | "dark";
-    return window.matchMedia("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light";
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   });
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     const root = window.document.documentElement;
     root.classList.remove("light", "dark");
     root.classList.add(theme);
@@ -93,13 +105,33 @@ const useTheme = () => {
   return { theme, toggleTheme };
 };
 
+
 const AppLayout: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation(); // To get current path for active link styling
-  const { t, i18n } = useTranslation(["navigation", "userMenu", "common"]); // Load necessary namespaces
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  // Ensure all namespaces used by t() are loaded, especially `navigation` and `common`
+  const { t, i18n } = useTranslation(['navigation', 'userMenu', 'common', 'reports', 'labTests', 'settings']); 
   const { theme, toggleTheme } = useTheme();
+
+  const [isDesktopSidebarCollapsed, setIsDesktopSidebarCollapsed] = useState<boolean>(getSidebarCollapsedState());
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  // Placeholder for actual permission checking from useAuthorization hook
+  const can = (permission?: string): boolean => {
+    if (!permission) return true; // If no specific permission is required, item is visible
+    // const { can: checkPermission } = useAuthorization(); // This would be the actual hook
+    // return checkPermission(permission as PermissionName);
+    // For now, for layout purposes, we'll assume all are visible
+    return true; 
+  };
+
+  const toggleDesktopSidebar = () => {
+    setIsDesktopSidebarCollapsed((prev: boolean) => {
+      const newState = !prev;
+      setSidebarCollapsedState(newState);
+      return newState;
+    });
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -108,11 +140,13 @@ const AppLayout: React.FC = () => {
 
   const changeLanguage = (lang: string) => {
     i18n.changeLanguage(lang);
+    // Optionally, store language preference in localStorage
+    // localStorage.setItem('i18nextLng', lang);
   };
 
   const getInitials = (name?: string | null) => {
-    if (!name) return "U";
-    const names = name.split(" ");
+    if (!name?.trim()) return "U";
+    const names = name.trim().split(" ");
     if (names.length > 1 && names[0] && names[names.length - 1]) {
       return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
     }
@@ -125,201 +159,220 @@ const AppLayout: React.FC = () => {
     return "U";
   };
 
-  const NavLinkItem: React.FC<{ item: NavItem; onClick?: () => void }> = ({
-    item,
-    onClick,
-  }) => (
-    <NavLink
-      to={item.to}
-      onClick={onClick}
-      className={({ isActive }) =>
-        `flex items-center px-3 py-2.5 rounded-md text-sm font-medium transition-colors
-         ${
-           isActive
-             ? "bg-primary text-primary-foreground shadow-sm"
-             : "text-foreground/70 hover:bg-muted hover:text-foreground"
-         }`
-      }
-      end // `end` prop is important for '/' to not match every route
-    >
-      <item.icon className="mr-3 h-5 w-5 flex-shrink-0" />
-      {t(`navigation:${item.labelKey}`)}
-    </NavLink>
-  );
+  interface NavLinkItemProps {
+    item: NavItem;
+    isCollapsed: boolean;
+    onClick?: () => void;
+  }
 
-  const SidebarContent = () => (
-    <div className="flex flex-col h-full">
-      <nav className="flex-grow space-y-1 p-3">
-        {mainNavItems.map((item) => (
-          <NavLinkItem
-            key={item.to}
-            item={item}
-            onClick={() => setMobileNavOpen(false)}
-          />
-        ))}
-      </nav>
-      <div className="p-3 border-t border-border">
-        {bottomNavItems.map((item) => (
-          <NavLinkItem
-            key={item.to}
-            item={item}
-            onClick={() => setMobileNavOpen(false)}
-          />
+  const NavLinkItem: React.FC<NavLinkItemProps> = ({ item, isCollapsed, onClick }) => {
+    if (!can(item.permission)) return null;
+
+    const linkContent = (
+      <>
+        <item.icon className={cn("h-5 w-5 flex-shrink-0", !isCollapsed && (i18n.dir() === 'rtl' ? "ml-3" : "mr-3"))} />
+        {!isCollapsed && <span>{t(item.labelKey, { ns: 'navigation' })}</span>}
+      </>
+    );
+
+    return (
+      <NavLink
+        to={item.to}
+        onClick={onClick}
+        className={({ isActive }) =>
+          cn(
+            "flex items-center rounded-md text-sm font-medium transition-colors h-10",
+            isCollapsed ? "justify-center px-2" : "px-3 py-2.5",
+            isActive
+              ? "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
+              : "text-foreground/70 hover:bg-muted hover:text-foreground"
+          )
+        }
+        end={item.to === '/'} // `end` prop for exact match, esp. for home '/'
+      >
+        {isCollapsed ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex items-center justify-center w-full h-full">
+                {linkContent}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side={i18n.dir() === 'rtl' ? 'left' : 'right'} sideOffset={5}>
+              <p>{t(item.labelKey, { ns: 'navigation' })}</p>
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          linkContent
+        )}
+      </NavLink>
+    );
+  };
+
+  const SidebarContent: React.FC<{isMobile?: boolean}> = ({ isMobile = false }) => (
+    <div  className="flex flex-col h-full">
+      <ScrollArea className="flex-grow"> {/* Added ScrollArea for long lists */}
+        <nav style={{direction: isRTL ? 'rtl' : 'ltr'}} className="space-y-1 p-2">
+          {mainNavItems.map((item) => (
+            <NavLinkItem key={item.to} item={item} isCollapsed={!isMobile && isDesktopSidebarCollapsed} onClick={() => isMobile && setMobileNavOpen(false)} />
+          ))}
+        </nav>
+      </ScrollArea>
+      <div className="mt-auto p-2 space-y-1 border-t border-border">
+        {utilityNavItems.map((item) => (
+           <NavLinkItem key={item.to} item={item} isCollapsed={!isMobile && isDesktopSidebarCollapsed} onClick={() => isMobile && setMobileNavOpen(false)} />
         ))}
       </div>
     </div>
   );
+  
+  const isRTL = i18n.dir() === 'rtl';
+  const CollapseIcon = isRTL ? ChevronsRight : ChevronsLeft;
+  const ExpandIcon = isRTL ? ChevronsLeft : ChevronsRight ;
 
   return (
-    <div className="flex h-screen bg-background text-foreground">
-      {/* Desktop Sidebar */}
-      <aside className="hidden md:flex md:w-60 md:flex-col md:fixed md:inset-y-0 border-r border-border bg-card">
-        <div className="flex items-center flex-shrink-0 h-16 px-4 border-b border-border">
-          <Link to="/" className="text-xl font-bold text-primary">
-            {t("common:appName", "MedSys")}{" "}
-            {/* Assuming appName is in common.json */}
-          </Link>
-        </div>
-        <SidebarContent />
-      </aside>
-      {/* Mobile Sidebar (Sheet) - Trigger is in the header, content is here */}
-      <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
-        <SheetContent
-          side={i18n.dir() === "rtl" ? "right" : "left"} // Correctly uses i18n.dir()
-          className="w-60 p-0 bg-card border-border md:hidden" // Removed border-r, SheetContent styles itself
+    <TooltipProvider delayDuration={100}>
+      <div  style={{direction: isRTL ? 'rtl' : 'ltr'}}  className="flex  h-screen bg-muted/30 dark:bg-background text-foreground">
+        {/* Desktop Sidebar */}
+        <aside  style={{direction: isRTL ? 'rtl' : 'ltr'}}
+            className={cn(
+                "hidden md:flex flex-col fixed inset-y-0 border-border bg-card transition-all duration-300 ease-in-out z-40", // Added z-40
+                isDesktopSidebarCollapsed ? "w-16" : "w-60",
+                isRTL ? "border-l" : "border-r"
+            )}
         >
-          <SheetHeader className="h-16 px-4 border-b border-border flex flex-row items-center">
-            <SheetTitle>
-              <Link
-                to="/"
-                onClick={() => setMobileNavOpen(false)}
-                className="text-xl font-bold text-primary"
-              >
-                {t("common:appName", "MedSys")}
-              </Link>
-            </SheetTitle>
-            {/* REMOVE SheetTrigger from here */}
-          </SheetHeader>
+          <div className={cn(
+              "flex items-center flex-shrink-0 h-16 px-4 border-b border-border",
+              isDesktopSidebarCollapsed && "justify-center px-2"
+            )}
+          >
+            <Link to="/" className={cn("font-bold text-primary truncate", isDesktopSidebarCollapsed ? "text-xl" : "text-lg")}>
+              {isDesktopSidebarCollapsed ? t('appNameShort', { ns: 'common' }) : t("appName", { ns: 'common' })}
+            </Link>
+          </div>
           <SidebarContent />
-        </SheetContent>
-      </Sheet>
-      <div
-        className={`flex flex-col flex-1 ${
-          i18n.dir() === "rtl" ? "md:mr-60" : "md:ml-60"
-        }`}
-      >
-        {" "}
-        {/* Adjust margin to match sidebar width and direction */}
-        {/* Header */}
-        <header className="sticky top-0 z-30 flex h-16 flex-shrink-0 items-center justify-between border-b border-border bg-card px-4 sm:px-6 lg:px-8">
-          {/* Header Title or Breadcrumbs (Optional) */}
-          <div className="flex-1 text-lg font-semibold hidden md:block">
-            {/* You could dynamically set this based on current route */}
-            {/* Example: t(`navigation:${mainNavItems.find(item => location.pathname.startsWith(item.to))?.labelKey || 'dashboard'}`) */}
+          <div className="p-2 border-t border-border mt-auto">
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" onClick={toggleDesktopSidebar} className="w-full h-10">
+                    {isDesktopSidebarCollapsed ? <ExpandIcon className="h-5 w-5" /> : <CollapseIcon className="h-5 w-5" />}
+                    <span className="sr-only">{isDesktopSidebarCollapsed ? t('expandSidebar', {ns: 'common'}) : t('collapseSidebar', {ns: 'common'})}</span>
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent side={isRTL ? 'left' : 'right'} sideOffset={5}>
+                    <p>{isDesktopSidebarCollapsed ? t('expandSidebar', {ns: 'common'}) : t('collapseSidebar', {ns: 'common'})}</p>
+                </TooltipContent>
+            </Tooltip>
           </div>
+        </aside>
 
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleTheme}
-              aria-label="Toggle theme"
+        {/* Mobile Sidebar (Sheet) */}
+        <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+            <SheetTrigger asChild className="md:hidden ltr:mr-2 rtl:ml-2">
+                <Button variant="ghost" size="icon"><Menu className="h-6 w-6" /></Button>
+            </SheetTrigger>
+            <SheetContent 
+                side={isRTL ? "right" : "left"} 
+                className="w-60 p-0 bg-card border-border md:hidden"
             >
-              {theme === "light" ? (
-                <Moon className="h-5 w-5" />
-              ) : (
-                <Sun className="h-5 w-5" />
-              )}
-            </Button>
+                <SheetHeader className="h-16 px-4 border-b border-border flex flex-row items-center justify-between">
+                    <SheetTitle>
+                        <Link to="/" onClick={() => setMobileNavOpen(false)} className="text-lg font-bold text-primary">
+                            {t("appName", { ns: 'common' })}
+                        </Link>
+                    </SheetTitle>
+                </SheetHeader>
+                <SidebarContent isMobile={true}/>
+            </SheetContent>
+        </Sheet>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="flex items-center gap-1"
-                >
-                  <Languages className="h-5 w-5" />
-                  {i18n.language.toUpperCase()}
-                  <ChevronDown className="ml-1 h-4 w-4 opacity-70" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={() => changeLanguage("en")}
-                  disabled={i18n.language === "en"}
-                >
-                  English
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => changeLanguage("ar")}
-                  disabled={i18n.language === "ar"}
-                >
-                  العربية
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="relative h-9 w-9 rounded-full"
-                >
-                  <Avatar className="h-9 w-9">
-                    <AvatarImage
-                      src={user?.avatar_url /* Placeholder for user avatar */}
-                      alt={user?.name || "User"}
-                    />
-                    <AvatarFallback>{getInitials(user?.name)}</AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">
-                      {user?.name}
-                    </p>
-                    <p className="text-xs leading-none text-muted-foreground">
-                      {user?.username} {/* Or user?.email */}
-                    </p>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link to="/profile" className="w-full flex items-center">
-                    <Users className="mr-2 h-4 w-4" /> {t("userMenu:profile")}
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/settings" className="w-full flex items-center">
-                    <Settings className="mr-2 h-4 w-4" />{" "}
-                    {t("userMenu:settings")}
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={handleLogout}
-                  className="text-destructive focus:text-destructive focus:bg-destructive/10"
-                >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>{t("navigation:logout")}</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </header>
         {/* Main Content Area */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
-          {/* Add a container here if you want max-width and centering for content */}
-          {/* <div className="max-w-7xl mx-auto"> */}
-          <Outlet /> {/* Child routes render here */}
-          {/* </div> */}
-        </main>
+        <div 
+            className={cn(
+                "flex flex-col flex-1 transition-all duration-300 ease-in-out",
+                isDesktopSidebarCollapsed ? (isRTL ? "md:mr-16" : "md:ml-16") : (isRTL ? "md:mr-60" : "md:ml-60")
+            )}
+        >
+            {/* Header */}
+            <header className={cn(
+                "sticky top-0 z-30 flex h-16 flex-shrink-0 items-center justify-between border-b border-border bg-card",
+                "px-4 sm:px-6 lg:px-8"
+            )}>
+                <div className="flex items-center">
+                    <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+                        <SheetTrigger asChild className="md:hidden ltr:mr-2 rtl:ml-2">
+                            <Button variant="ghost" size="icon"><Menu className="h-6 w-6" /></Button>
+                        </SheetTrigger>
+                    </Sheet>
+                    <div className="flex-1 text-lg font-semibold hidden md:block truncate px-4">
+                        {/* Placeholder for dynamic page title based on location.pathname */}
+                    </div>
+                </div>
+                
+                <div className="flex items-center gap-2 sm:gap-3">
+                  {/* Theme Toggle */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label={t('toggleTheme', {ns: 'common'})}>
+                            {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent><p>{t(theme === 'light' ? 'switchToDark' : 'switchToLight', {ns: 'common'})}</p></TooltipContent>
+                  </Tooltip>
+
+                  {/* Language Switcher */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="flex items-center gap-1 px-2">
+                        <Languages className="h-5 w-5" />
+                        <span className="hidden sm:inline">{i18n.language.toUpperCase()}</span>
+                        <ChevronDown className="ltr:ml-1 rtl:mr-1 h-4 w-4 opacity-70" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => changeLanguage("en")} disabled={i18n.language === "en"}>English</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => changeLanguage("ar")} disabled={i18n.language === "ar"}>العربية</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  {/* User Menu */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0">
+                        <Avatar className="h-9 w-9">
+                          <AvatarImage src={undefined /* user?.avatar_url */} alt={user?.name || "User"} />
+                          <AvatarFallback>{getInitials(user?.name)}</AvatarFallback>
+                        </Avatar>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuLabel className="flex flex-col space-y-1">
+                        <p className="text-sm font-medium leading-none">{user?.name}</p>
+                        <p className="text-xs leading-none text-muted-foreground">{user?.username}</p>
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild disabled={!can('view profile')}>
+                        <Link to="/profile" className="w-full flex items-center"><Users className="ltr:mr-2 rtl:ml-2 h-4 w-4" /> {t('profile', {ns: 'userMenu'})}</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild disabled={!can('view settings')}>
+                        <Link to="/settings/general" className="w-full flex items-center"><Settings className="ltr:mr-2 rtl:ml-2 h-4 w-4" /> {t('settings', {ns: 'userMenu'})}</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                        <LogOut className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
+                        <span>{t('logout', {ns: 'navigation'})}</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+            </header>
+
+            <main className="flex-1 p-1  overflow-y-auto">
+                <Outlet />
+            </main>
+        </div>
+        <Toaster richColors position="top-right" />
       </div>
-      <Toaster richColors position="top-right" /> {/* Sonner Toaster */}
-    </div>
+    </TooltipProvider>
   );
 };
 

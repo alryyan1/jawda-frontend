@@ -1,17 +1,15 @@
 {
   "dashboard": "لوحة التحكم",
   "clinic": "العيادة",
-  "doctors": "الأطباء",
-  "appointments": "المواعيد",
-  "settings": "الإعدادات",
-  "logout": "تسجيل الخروج",
-  "services": "الخدمات",
-  "users": "المستخدمين",
-  "roles": "الأدوار",
-  "companies": "الشركات",
+  "schedulesAppointments": "المواعيد والجداول",
   "patients": "المرضى",
+  "doctors": "الأطباء",
+  "services": "الخدمات",
+  "companies": "الشركات",
+  "labTests": "الفحوصات المخبرية",
   "reports": "التقارير",
-  "lab": "المختبر",
-  "pharmacy": "الصيدلية",
-  "schedules-appointments": "مواعيد الطبيب"
+  "users": "المستخدمين",
+  "roles": "الصلاحيات",
+  "settings": "الإعدادات",
+  "logout": "تسجيل الخروج"
 }

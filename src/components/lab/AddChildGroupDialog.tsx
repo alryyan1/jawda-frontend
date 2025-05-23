@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useTranslation } from 'react-i18next';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
+import { Plus, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   Dialog,
   DialogContent,
@@ -16,100 +16,116 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogClose,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Loader2, PlusCircle } from 'lucide-react';
 
-import { createChildGroup, type CreateChildGroupData } from '@/services/childGroupService';
 import type { ChildGroup } from '@/types/labTests';
+import { createChildGroup } from '@/services/childGroupService';
+
+const childGroupFormSchema = z.object({
+  name: z.string().min(1).max(50),
+  description: z.string().optional(),
+});
+
+type ChildGroupFormValues = z.infer<typeof childGroupFormSchema>;
 
 interface AddChildGroupDialogProps {
-  onChildGroupAdded: (newGroup: ChildGroup) => void;
+  onChildGroupAdded: (group: ChildGroup) => void;
   triggerButton?: React.ReactNode;
 }
 
-const getChildGroupSchema = (t: (key: string, options?: { field?: string; count?: number }) => string) => z.object({
-  name: z.string().min(1, { message: t('common:validation.required', { field: t('labTests:childGroups.nameLabel') }) })
-        .max(50, { message: t('common:validation.maxLength', { field: t('labTests:childGroups.nameLabel'), count: 50 }) }),
-});
-
-type ChildGroupFormValues = CreateChildGroupData;
-
 const AddChildGroupDialog: React.FC<AddChildGroupDialogProps> = ({ onChildGroupAdded, triggerButton }) => {
   const { t } = useTranslation(['labTests', 'common']);
-  const queryClient = useQueryClient();
-  const [isOpen, setIsOpen] = useState(false);
-
-  const childGroupSchema = getChildGroupSchema(t);
+  const [isOpen, setIsOpen] = React.useState(false);
 
   const form = useForm<ChildGroupFormValues>({
-    resolver: zodResolver(childGroupSchema),
-    defaultValues: { name: '' },
+    resolver: zodResolver(childGroupFormSchema),
+    defaultValues: {
+      name: '',
+      description: '',
+    }
   });
 
-  const mutation = useMutation({
+  const { handleSubmit, control, reset } = form;
+
+  const createChildGroupMutation = useMutation({
     mutationFn: createChildGroup,
     onSuccess: (newGroup: ChildGroup) => {
-      toast.success(t('labTests:childGroups.addedSuccess'));
-      queryClient.invalidateQueries({ queryKey: ['childGroupsList'] });
       onChildGroupAdded(newGroup);
-      form.reset();
       setIsOpen(false);
+      reset();
     },
-    onError: (error: { response?: { data?: { message?: string } } }) => {
-      toast.error(error.response?.data?.message || t('common:error.saveFailed', { entity: t('labTests:childGroups.entityName', 'Child Group')}));
-    },
+    onError: () => {
+      toast.error(t('common:errors.saveFailed'));
+    }
   });
 
   const onSubmit = (data: ChildGroupFormValues) => {
-    mutation.mutate(data);
+    createChildGroupMutation.mutate(data);
   };
-
-  useEffect(() => {
-    if (!isOpen) {
-      form.reset({ name: '' });
-    }
-  }, [isOpen, form]);
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         {triggerButton || (
-          <Button type="button" variant="outline" size="icon" className="ltr:ml-2 rtl:mr-2 shrink-0 h-9 w-9">
-            <PlusCircle className="h-4 w-4" />
-            <span className="sr-only">{t('labTests:childGroups.addButton')}</span>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="shrink-0"
+            title={t('labTests:childGroups.addNew')}
+          >
+            <Plus className="h-4 w-4" />
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent>
         <DialogHeader>
-          <DialogTitle>{t('labTests:childGroups.addDialogTitle')}</DialogTitle>
-          <DialogDescription>{t('labTests:childGroups.addDialogDescription')}</DialogDescription>
+          <DialogTitle>{t('labTests:childGroups.addNew')}</DialogTitle>
+          <DialogDescription>{t('labTests:childGroups.addDescription')}</DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <FormField
-              control={form.control}
+              control={control}
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('labTests:childGroups.nameLabel')}</FormLabel>
+                  <FormLabel>{t('labTests:childGroups.form.nameLabel')}</FormLabel>
                   <FormControl>
-                    <Input placeholder={t('labTests:childGroups.namePlaceholder')} {...field} disabled={mutation.isPending} />
+                    <Input {...field} disabled={createChildGroupMutation.isPending} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('labTests:childGroups.form.descriptionLabel')}</FormLabel>
+                  <FormControl>
+                    <Input {...field} disabled={createChildGroupMutation.isPending} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
             <DialogFooter>
-              <DialogClose asChild>
-                <Button type="button" variant="outline" disabled={mutation.isPending}>
-                  {t('common:cancel')}
-                </Button>
-              </DialogClose>
-              <Button type="submit" disabled={mutation.isPending}>
-                {mutation.isPending && <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsOpen(false)}
+                disabled={createChildGroupMutation.isPending}
+              >
+                {t('common:cancel')}
+              </Button>
+              <Button type="submit" disabled={createChildGroupMutation.isPending}>
+                {createChildGroupMutation.isPending && (
+                  <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />
+                )}
                 {t('common:save')}
               </Button>
             </DialogFooter>

@@ -1,112 +1,136 @@
 // src/components/lab/AddUnitDialog.tsx
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useTranslation } from 'react-i18next';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
+import { Plus, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
-  Dialog, DialogContent, DialogDescription, DialogFooter,
-  DialogHeader, DialogTitle, DialogTrigger, DialogClose,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Loader2, PlusCircle } from 'lucide-react';
 
-import { createUnit } from '@/services/unitService'; // Your service function
-import type { Unit } from '@/types/labTests';           // Your type
+import type { Unit } from '@/types/labTests';
+import { createUnit } from '@/services/unitService';
 
-interface AddUnitDialogProps {
-  onUnitAdded: (newUnit: Unit) => void; // Callback after successful add
-  triggerButton?: React.ReactNode;      // Optional custom trigger
-}
-
-// Zod Schema for the unit form
-const getUnitSchema = (t: (key: string, options?: { field?: string; count?: number }) => string) => z.object({
-  name: z.string()
-    .min(1, { message: t('common:validation.required', { field: t('labTests:units.nameLabel') }) })
-    .max(20, { message: t('common:validation.maxLength', { field: t('labTests:units.nameLabel'), count: 20 }) }), // Max length from your 'units' table schema
+const unitFormSchema = z.object({
+  name: z.string().min(1).max(50),
+  description: z.string().optional(),
 });
 
-type UnitFormValues = z.infer<ReturnType<typeof getUnitSchema>>;
+type UnitFormValues = z.infer<typeof unitFormSchema>;
+
+interface AddUnitDialogProps {
+  onUnitAdded: (unit: Unit) => void;
+  triggerButton?: React.ReactNode;
+}
+
+interface UnitResponse {
+  data: Unit;
+}
 
 const AddUnitDialog: React.FC<AddUnitDialogProps> = ({ onUnitAdded, triggerButton }) => {
   const { t } = useTranslation(['labTests', 'common']);
-  const queryClient = useQueryClient();
-  const [isOpen, setIsOpen] = useState(false);
-
-  const unitSchema = getUnitSchema(t);
+  const [isOpen, setIsOpen] = React.useState(false);
 
   const form = useForm<UnitFormValues>({
-    resolver: zodResolver(unitSchema),
-    defaultValues: { name: '' },
+    resolver: zodResolver(unitFormSchema),
+    defaultValues: {
+      name: '',
+      description: '',
+    }
   });
 
-  const mutation = useMutation({
+  const { handleSubmit, control, reset } = form;
+
+  const createUnitMutation = useMutation<Unit, Error, UnitFormValues>({
     mutationFn: createUnit,
     onSuccess: (newUnit) => {
-      toast.success(t('labTests:units.addedSuccess'));
-      queryClient.invalidateQueries({ queryKey: ['unitsList'] }); // Invalidate the list of units
-      onUnitAdded(newUnit); // Call the callback to update parent form (e.g., select it)
-      form.reset();
-      setIsOpen(false); // Close the dialog
+      onUnitAdded(newUnit);
+      setIsOpen(false);
+      reset();
     },
-    onError: (error: { response?: { data?: { message?: string } } }) => {
-      toast.error(error.response?.data?.message || t('common:error.saveFailed', { entity: t('labTests:units.entityName', 'Unit')}));
-    },
+    onError: () => {
+      toast.error(t('common:errors.saveFailed'));
+    }
   });
 
   const onSubmit = (data: UnitFormValues) => {
-    mutation.mutate({ name: data.name }); // Backend expects {name: string}
+    createUnitMutation.mutate(data);
   };
-
-  // Reset form when dialog opens/closes
-  useEffect(() => {
-    if (!isOpen) {
-        form.reset({ name: '' });
-    }
-  }, [isOpen, form]);
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         {triggerButton || (
-          <Button type="button" variant="outline" size="icon" className="ltr:ml-2 rtl:mr-2 shrink-0 h-9 w-9" aria-label={t('labTests:units.addButton')}>
-            <PlusCircle className="h-4 w-4" />
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="shrink-0"
+            title={t('labTests:units.addNew')}
+          >
+            <Plus className="h-4 w-4" />
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent>
         <DialogHeader>
-          <DialogTitle>{t('labTests:units.addDialogTitle')}</DialogTitle>
-          <DialogDescription>{t('labTests:units.addDialogDescription')}</DialogDescription>
+          <DialogTitle>{t('labTests:units.addNew')}</DialogTitle>
+          <DialogDescription>{t('labTests:units.addDescription')}</DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <FormField
-              control={form.control}
+              control={control}
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('labTests:units.nameLabel')}</FormLabel>
+                  <FormLabel>{t('labTests:units.form.nameLabel')}</FormLabel>
                   <FormControl>
-                    <Input placeholder={t('labTests:units.namePlaceholder')} {...field} disabled={mutation.isPending} />
+                    <Input {...field} disabled={createUnitMutation.isPending} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('labTests:units.form.descriptionLabel')}</FormLabel>
+                  <FormControl>
+                    <Input {...field} disabled={createUnitMutation.isPending} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
             <DialogFooter>
-              <DialogClose asChild>
-                <Button type="button" variant="outline" disabled={mutation.isPending}>
-                  {t('common:cancel')}
-                </Button>
-              </DialogClose>
-              <Button type="submit" disabled={mutation.isPending}>
-                {mutation.isPending && <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsOpen(false)}
+                disabled={createUnitMutation.isPending}
+              >
+                {t('common:cancel')}
+              </Button>
+              <Button type="submit" disabled={createUnitMutation.isPending}>
+                {createUnitMutation.isPending && (
+                  <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />
+                )}
                 {t('common:save')}
               </Button>
             </DialogFooter>

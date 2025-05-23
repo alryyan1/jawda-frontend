@@ -79,10 +79,11 @@
   "notAvailable_short": "غير متوفر",
   "status": "الحالة",
   "add": "إضافة",
+  "addSelected": "إضافة المحدد",
+  "addedToList": "تمت إضافته إلى القائمة",
   "price": "السعر",
   "viewRequested": "عرض المطلوب",
   "currency": "العملة",
-  "addSelected": "إضافة المحدد",
   "summary": "الملخص",
   "summaryShort": "ملخص",
   "totalAmount": "المبلغ الإجمالي",
@@ -99,7 +100,9 @@
   "pageXofY": "صفحة {{current}} من {{total}}",
   "statusEnum": {
     "open": "مفتوح",
-    "closed": "مغلق"
+    "closed": "مغلق",
+    "active": "نشط",
+    "inactive": "غير نشط"
   },
   "print": "طباعة",
   "permissions": {

@@ -1,4 +1,5 @@
 {
+    "testEntityName": "الفحص",
     "pageTitle": "إدارة الفحوصات المخبرية الرئيسية",
     "addTestButton": "إضافة فحص رئيسي جديد",
     "editTestTitle": "تعديل الفحص الرئيسي",
@@ -26,7 +27,8 @@
       "availableLabel": "الفحص متاح حالياً",
       "saveButton": "حفظ الفحص",
       "testSavedSuccess": "تم حفظ الفحص بنجاح!",
-      "testSaveError": "فشل حفظ الفحص."
+      "testSaveError": "فشل حفظ الفحص.",
+      "manageParametersButton": "إدارة المكونات الفرعية"
     },
     "deleteConfirmText": "هل أنت متأكد أنك تريد حذف هذا الفحص الرئيسي؟",
     "deletedSuccess": "تم حذف الفحص بنجاح!",
@@ -41,7 +43,13 @@
        
     },
    "childTests": {
+    "entityName": "المكون الفرعي",
     "sectionTitle": "الفحوصات الفرعية (المكونات)",
+    "sectionDescription": "إدارة المكونات الفرعية للفحص الرئيسي",
+    "managePageTitle": "إدارة المكونات الفرعية",
+    "forMainTest": "للفحص الرئيسي: {{testName}}",
+    "addParameterButton": "إضافة مكون فرعي",
+    "noChildTestsYet": "لا توجد مكونات فرعية مضافة لهذا الفحص الرئيسي",
     "addChildButton": "إضافة مكون فرعي",
     "unit": "الوحدة",
     "group": "المجموعة",
@@ -84,19 +92,31 @@
     "units": {
       "entityName": "وحدة القياس", 
       "addButton": "إضافة وحدة",
+      "addNew": "إضافة وحدة قياس جديدة",
+      "addDescription": "أدخل اسم وحدة القياس (مثال: mg/dL، خلايا/µL).",
       "addDialogTitle": "إضافة وحدة قياس جديدة",
       "addDialogDescription": "أدخل اسم وحدة القياس (مثال: mg/dL، خلايا/µL).",
       "nameLabel": "اسم الوحدة",
       "namePlaceholder": "مثال: mg/dL",
-      "addedSuccess": "تمت إضافة الوحدة بنجاح!"
+      "addedSuccess": "تمت إضافة الوحدة بنجاح!",
+      "form": {
+        "nameLabel": "اسم الوحدة",
+        "descriptionLabel": "الوصف (اختياري)"
+      }
     },
     "childGroups": {
       "entityName": "مجموعة المكونات", 
       "addButton": "إضافة مجموعة",
+      "addNew": "إضافة مجموعة مكونات جديدة",
+      "addDescription": "أدخل اسم مجموعة المكونات (مثال: تعداد الدم الأبيض، كيمياء).",
       "addDialogTitle": "إضافة مجموعة مكونات جديدة",
       "addDialogDescription": "أدخل اسم مجموعة المكونات (مثال: تعداد الدم الأبيض، كيمياء).",
       "nameLabel": "اسم المجموعة",
       "namePlaceholder": "مثال: تعداد الدم الأبيض",
-      "addedSuccess": "تمت إضافة المجموعة بنجاح!"
+      "addedSuccess": "تمت إضافة المجموعة بنجاح!",
+      "form": {
+        "nameLabel": "اسم المجموعة",
+        "descriptionLabel": "الوصف (اختياري)"
+      }
     }
 }

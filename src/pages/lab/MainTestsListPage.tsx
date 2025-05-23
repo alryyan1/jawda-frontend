@@ -95,7 +95,7 @@ export default function MainTestsListPage() {
                 <Search className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             </div>
             {canCreateTests && (
-                <Button asChild size="sm" className="h-9"><Link to="/lab-tests/new">{t('labTests:addTestButton')}</Link></Button>
+                <Button asChild size="sm" className="h-9"><Link to="/settings/lab-tests/new">{t('labTests:addTestButton')}</Link></Button>
             )}
         </div>
       </div>
@@ -107,7 +107,7 @@ export default function MainTestsListPage() {
                 <FlaskConical className="mx-auto h-12 w-12 text-muted-foreground/30 mb-4" />
                 <p>{searchTerm ? t('common:noResultsFound') : t('labTests:noTestsFound')}</p>
                 {canCreateTests && !searchTerm && (
-                    <Button asChild size="sm" className="mt-4"><Link to="/lab-tests/new">{t('labTests:addTestButton')}</Link></Button>
+                    <Button asChild size="sm" className="mt-4"><Link to="/settings/laboratory/new">{t('labTests:addTestButton')}</Link></Button>
                 )}
             </CardContent>
         </Card>
@@ -138,7 +138,7 @@ export default function MainTestsListPage() {
                     <DropdownMenu dir={i18n.dir()}>
                       <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        {canEditTests && <DropdownMenuItem asChild><Link to={`/lab-tests/${test.id}/edit`} className="flex items-center w-full"><Edit className="rtl:ml-2 ltr:mr-2 h-4 w-4" /> {t('common:edit')}</Link></DropdownMenuItem>}
+                        {canEditTests && <DropdownMenuItem asChild><Link to={`/settings/laboratory/${test.id}/edit`} className="flex items-center w-full"><Edit className="rtl:ml-2 ltr:mr-2 h-4 w-4" /> {t('common:edit')}</Link></DropdownMenuItem>}
                         {canDeleteTests && (
                             <>
                             <DropdownMenuSeparator />

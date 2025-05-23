@@ -164,7 +164,7 @@ const ChildTestItemRow: React.FC<ChildTestItemRowProps> = ({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">{t('common:none')}</SelectItem>
+                        <SelectItem value=" ">{t('common:none')}</SelectItem>
                         {units.map(u => <SelectItem key={u.id} value={String(u.id)}>{u.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
@@ -231,7 +231,7 @@ const ChildTestItemRow: React.FC<ChildTestItemRowProps> = ({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">{t('common:none')}</SelectItem>
+                        <SelectItem value=" ">{t('common:none')}</SelectItem>
                         {childGroups.map(g => <SelectItem key={g.id} value={String(g.id)}>{g.name}</SelectItem>)}
                       </SelectContent>
                     </Select>

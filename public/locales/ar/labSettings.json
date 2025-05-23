@@ -1,0 +1,18 @@
+{
+    "priceListPageTitle": "إدارة قائمة أسعار الفحوصات المخبرية",
+    "priceListDescription": "عرض وتعديل أسعار الفحوصات بشكل سريع وتحديد الفحوصات للحذف المجمع.",
+    "searchTestsPlaceholder": "ابحث عن فحص...",
+    "testNameHeader": "اسم الفحص",
+    "priceHeader": "السعر",
+    "saveAllPricesButton": "حفظ كل التعديلات على الأسعار",
+    "savingPrices": "جارٍ حفظ الأسعار...",
+    "pricesSavedSuccess": "تم حفظ الأسعار بنجاح!",
+    "pricesSaveError": "فشل حفظ الأسعار.",
+    "deleteSelectedButton": "حذف المحدد ({{count}})",
+    "deletingSelected": "جارٍ حذف المحدد...",
+    "confirmMassDelete": "هل أنت متأكد أنك تريد حذف {{count}} فحص محدد؟",
+    "massDeleteSuccess": "تم حذف {{deletedCount}} فحص بنجاح.",
+    "massDeleteError": "فشل حذف بعض أو كل الفحوصات المحددة.",
+    "noTestsToList": "لا توجد فحوصات لعرضها.",
+    "generatePriceListPdf": "طباعة قائمة الأسعار (PDF)"
+  }

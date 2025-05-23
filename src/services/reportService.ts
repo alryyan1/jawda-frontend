@@ -46,3 +46,11 @@ export const getServiceStatisticsReport = async (filters: ServiceStatisticsFilte
   const response = await apiClient.get<PaginatedResponse<ServiceStatisticItem>>('/reports/service-statistics', { params: filters });
   return response.data; // Backend already structures pagination
 };
+
+export const downloadLabPriceListPdf = async (filters: { search_service_name?: string } = {}): Promise<Blob> => {
+  const response = await apiClient.get('/reports/lab-price-list/pdf', {
+    params: filters,
+    responseType: 'blob',
+  });
+  return response.data;
+};

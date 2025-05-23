@@ -5,7 +5,7 @@ import type { PaginatedResponse } from '@/types/common';
 const API_URL = '/child-groups';
 
 export const getChildGroups = (page = 1, filters: Record<string, unknown> = {}): Promise<PaginatedResponse<ChildGroup>> => {
-  return apiClient.get(API_URL, { params: { page, ...filters } }).then(res => res.data);
+  return apiClient.get(`${API_URL}-list`, { params: { page, ...filters } }).then(res => res.data);
 };
 
 export const getChildGroupById = (id: number): Promise<{ data: ChildGroup }> => {

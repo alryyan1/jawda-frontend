@@ -18,7 +18,8 @@ export const createChildTest = async (mainTestId: number, data: ChildTestFormDat
   //   // ... etc. for numeric fields
   //   test_order: data.test_order ? parseInt(data.test_order) : null,
   // };
-  const response = await apiClient.post<{ data: ChildTest }>(getBaseUrl(mainTestId), payload);
+  // alert('createChildTest')
+  const response = await apiClient.post<{ data: ChildTest }>(getBaseUrl(mainTestId), data);
   return response.data.data;
 };
 

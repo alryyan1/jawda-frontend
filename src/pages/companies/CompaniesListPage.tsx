@@ -52,6 +52,7 @@ export default function CompaniesListPage() {
   const canDeleteCompany = can("delete companies" );
   const canManageContracts = can("manage company_contracts" ); // Example permission for contracts
   console.log(canCreateCompany,'canCreateCompany','user',user)
+  console.log(canManageContracts,'canManageContracts','user',user)
   const {
     data: paginatedData,
     isLoading,
@@ -209,21 +210,22 @@ export default function CompaniesListPage() {
                       </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                      {canManageContracts && (
+                        {canManageContracts && (
                         <DropdownMenuItem asChild>
                         <Link
-                          to={`/companies/${company.id}/contracts`}
+                          to={`/settings/companies/${company.id}/contracts`}
                           className="flex items-center w-full"
                         >
                           <FileText className="rtl:ml-2 ltr:mr-2 h-4 w-4" />{" "}
                           {t("companies:manageContractsButton")}
                         </Link>
                         </DropdownMenuItem>
-                      )}
+                        )}
+                      
                       {canEditCompany && (
                         <DropdownMenuItem asChild>
                         <Link
-                          to={`/companies/${company.id}/edit`}
+                          to={`/settings/companies/${company.id}/edit`}
                           className="flex items-center w-full"
                         >
                           <Edit className="rtl:ml-2 ltr:mr-2 h-4 w-4" />{" "}

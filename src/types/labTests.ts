@@ -21,7 +21,12 @@ export interface Container {
     // created_at?: string; // If timestamps are enabled
     // updated_at?: string;
   }
-  
+  // src/types/labTests.ts
+// ... (MainTest type remains mostly the same, ensure 'price' is string | number for form handling)
+export interface MainTestPriceListItem extends Pick<MainTest, 'id' | 'main_test_name'> {
+  price: string; // Store price as string in the form for controlled input
+  // originalPrice?: number; // To detect changes
+}
   export interface MainTestFormData {
     main_test_name: string;
     pack_id?: string; // Input as string

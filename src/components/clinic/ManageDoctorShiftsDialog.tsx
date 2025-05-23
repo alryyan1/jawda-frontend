@@ -118,7 +118,7 @@ const ManageDoctorShiftsDialog: React.FC<ManageDoctorShiftsDialogProps> = ({ tri
             <div className="flex-grow flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
         )}
         {(!isLoading || doctorsList) && (
-            <ScrollArea  className="h-[400px] flex-grow border rounded-md">
+            <ScrollArea  className="h-[300px] flex-grow border rounded-md">
             {doctorsList && doctorsList.length > 0 ? (
                 <Table style={{direction:i18n.dir()}}>
                 <TableHeader>

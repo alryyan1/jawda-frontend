@@ -90,7 +90,7 @@ const CompanyFormPage: React.FC<CompanyFormPageProps> = ({ mode }) => {
       toast.success(t('companies:form.companySavedSuccess'));
       queryClient.invalidateQueries({ queryKey: ['companies'] });
       if(isEditMode && companyId) queryClient.invalidateQueries({ queryKey: ['company', companyId] });
-      navigate('/companies');
+      navigate('/settings/companies');
     },
     onError: (error: any) => {
       let errorMessage = t('common:error.saveFailed', { entity: t('companies:entityName', "Company") }); // Add entityName to companies.json
@@ -206,7 +206,7 @@ const CompanyFormPage: React.FC<CompanyFormPageProps> = ({ mode }) => {
             )} />
             
             <div className="flex justify-end gap-2 pt-4">
-              <Button type="button" variant="outline" onClick={() => navigate('/companies')} disabled={formIsSubmitting}>{t('common:cancel')}</Button>
+              <Button type="button" variant="outline" onClick={() => navigate('/settings/companies')} disabled={formIsSubmitting}>{t('common:cancel')}</Button>
               <Button type="submit" disabled={dataIsLoading || formIsSubmitting}>
                 {formIsSubmitting && <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />}
                 {t('companies:form.saveButton')}

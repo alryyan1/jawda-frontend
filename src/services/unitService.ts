@@ -5,7 +5,7 @@ import type { PaginatedResponse } from '@/types/common';
 const API_URL = '/units';
 
 export const getUnits = (page = 1, filters: Record<string, unknown> = {}): Promise<PaginatedResponse<Unit>> => {
-  return apiClient.get(API_URL, { params: { page, ...filters } }).then(res => res.data);
+  return apiClient.get(`${API_URL}-list`, { params: { page, ...filters } }).then(res => res.data);
 };
 
 export const getUnitById = (id: number): Promise<{ data: Unit }> => {

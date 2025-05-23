@@ -9,7 +9,6 @@ import HomePage from "./pages/HomePage";
 // Doctors Module Pages (ensure these files exist, even if as placeholders)
 
 // Placeholder Pages (ensure these files exist)
-import SettingsPage from "./pages/GeneralSettingsPage";
 import LoginPage from "./pages/LoginPage";
 import PublicLayout from "./components/PublicLayout";
 import RegisterPage from "./pages/RegisterPage";
@@ -36,13 +35,11 @@ import DoctorSchedulesPage from "./components/schedules/DoctorSchedulesPage";
 import DoctorShiftsReportPage from "./pages/reports/DoctorShiftsReportPage";
 import ReportsLayout from "./pages/reports/ReportsLayout";
 import ServiceStatisticsReportPage from "./pages/reports/ServiceStatisticsReportPage";
-import MainTestFormPage, { TestFormMode } from "./pages/lab/MainTestFormPage";
+import MainTestFormPage from "./pages/lab/MainTestFormPage";
 import MainTestsListPage from "./pages/lab/MainTestsListPage";
 import SettingsLayout from "./pages/settings/SettingsLayout";
 import GeneralSettingsPage from "./pages/GeneralSettingsPage";
-import ServiceSettingsPage from "./pages/settings/ServiceSettingsPage";
-import LabSettingsPage from "./pages/settings/LabSettingsPage";
-import CompanySettingsPage from "./pages/settings/CompanySettingsPage";
+import ChildTestsManagementPage from "./pages/lab/ChildTestsManagementPage";
 // import NotFoundPage from './pages/NotFoundPage'; // Optional: For 404 handling
 
 const AppointmentsPlaceholderPage: React.FC = () => (
@@ -189,7 +186,7 @@ const router = createBrowserRouter([
             children: [
               { index: true, element: <Navigate to="general" replace /> },
               { path: "general", element: <GeneralSettingsPage /> }, // Your main settings form
-              { path: "laboratory", element: <LabSettingsPage /> },
+              // { path: "laboratory", element: <LabSettingsPage /> },
               // Companies Module
               {
                 path: "companies",
@@ -228,8 +225,8 @@ const router = createBrowserRouter([
                   {
                     path: "new",
                     element: (
-                      <MainTestFormPage
-                        mode={TestFormMode.CREATE}
+                      <MainTestFormPage 
+                        mode="create"
                         key="mainTestCreate"
                       />
                     ),
@@ -238,10 +235,14 @@ const router = createBrowserRouter([
                     path: ":testId/edit",
                     element: (
                       <MainTestFormPage
-                        mode={TestFormMode.EDIT}
+                        mode="edit"
                         key="mainTestEdit"
                       />
                     ),
+                  },
+                  {
+                    path: ":mainTestId/parameters",
+                    element: <ChildTestsManagementPage />,
                   },
                 ],
               },

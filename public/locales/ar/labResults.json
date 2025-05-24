@@ -1,0 +1,79 @@
+{
+    "pageTitle": "محطة عمل المختبر - إدخال النتائج",
+    "globalSearchPlaceholder": "بحث شامل بالاسم/المعرف/رقم العينة...",
+    "queueHeader": {
+      "patientsInQueue": "مرضى في الانتظار ({{count}})",
+      "currentShift": "الوردية الحالية",
+      "noShift": "لا توجد وردية محددة",
+      "prevShift": "السابقة",
+      "nextShift": "التالية"
+    },
+    "patientLabItem": {
+      "sampleId": "عينة #{{id}}",
+      "requestId": "طلب #{{id}}"
+    },  
+    "testSelection": {
+      "title": "الفحوصات المطلوبة لـ: {{patientName}}",
+      "testName": "اسم الفحص",
+      "trailer": "مُلحق؟",
+      "noTestsForVisit": "لا توجد فحوصات مطلوبة لهذه الزيارة.",
+      "selectTestToEnterResults": "اختر فحصاً من القائمة لبدء إدخال النتائج.",
+      "description": "اختر فحصاً لبدء إدخال النتائج أو تحديث حالته.",
+      "trailerShort": "ملحق",
+      "markAsTrailer": "تحديد كملحق (لن يظهر في التقرير الرئيسي)",
+      "trailerStatusUpdated": "تم تحديث حالة الملحق للفحص."
+    },
+    "resultEntry": {
+      "title": "إدخال نتائج فحص: {{testName}}",
+      "childTestName": "المكون",
+      "result": "النتيجة",
+      "unit": "الوحدة",
+      "normalRange": "النطاق الطبيعي",
+      "flags": "علامات",
+      "comment": "تعليق",
+      "saveResultsButton": "حفظ النتائج",
+      "savingResults": "جارٍ حفظ النتائج...",
+      "resultsSavedSuccess": "تم حفظ النتائج بنجاح!",
+      "resultsSaveError": "فشل حفظ النتائج."
+    },
+    "statusInfo": {
+      "patientInfoTitle": "بيانات المريض",
+      "requestStatusTitle": "حالة الطلب",
+      "paymentStatus": "حالة الدفع",
+      "paid": "مدفوع",
+      "unpaid": "غير مدفوع",
+      "sampleStatus": "حالة العينة",
+      "collected": "تم السحب",
+      "notCollected": "لم تسحب",
+      "approvalStatus": "الموافقة",
+      "approved": "موافق عليه",
+      "pendingApproval": "بانتظار الموافقة",
+      "actionsTitle": "إجراءات سريعة",
+      "printSampleLabels": "طباعة ملصقات العينات",
+      "viewReportPreview": "معاينة التقرير",
+    "sampleCollectedWithId": "تم السحب (رقم العينة: {{id}})",
+    "sampleCollected": "تم السحب",
+      "sampleNotCollected": "لم يتم سحب العينة",
+      "samplePending": "بانتظار السحب"
+    },
+    "labActions": {
+      "batchAuthorize": "اعتماد مجمع",
+      "lisSync": "مزامنة LIS",
+      "qualityControl": "مراقبة الجودة",
+      "printWorklist": "طباعة قائمة العمل",
+      "labSettings": "إعدادات المختبر"
+    },
+    "selectPatientPrompt": "اختر مريضاً من قائمة الانتظار لعرض فحوصاته.",
+    "selectTestPrompt": "اختر فحصاً من القائمة أعلاه لبدء إدخال النتائج.",
+    "selectPatientAndTestPrompt": "اختر مريضاً ثم فحصاً لبدء إدخال النتائج.",
+    "noInfoToShow": "اختر مريضاً لعرض معلوماته.",
+    "queue": {
+      "noPending": "لا يوجد مرضى في قائمة الانتظار حالياً.",
+      "tryDifferentFilters": "حاول تغيير الفلاتر أو تحديد وردية أخرى.",
+      "checkDoctorsTabs": " " 
+
+  },
+  "patientDataNotAvailable": "تعذر تحميل بيانات المريض."
+
+  
+  }

@@ -1,0 +1,19 @@
+{
+  "entityName": "المريض",
+  "entityNamePlural": "المرضى",
+  "details": {
+    "title": "بيانات المريض",
+    "personalInfo": "المعلومات الشخصية",
+    "insuranceInfo": "معلومات التأمين"
+  },
+  "fields": {
+    "id": "رقم المريض",
+    "name": "الاسم",
+    "phone": "رقم الهاتف",
+    "address": "العنوان",
+    "company": "الشركة",
+    "subCompany": "الشركة الفرعية",
+    "insuranceNo": "رقم التأمين",
+    "expiryDate": "تاريخ انتهاء التأمين"
+  }
+} 

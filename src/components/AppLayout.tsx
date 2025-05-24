@@ -67,6 +67,7 @@ export interface NavItem {
 const mainNavItems: NavItem[] = [
   { to: '/', labelKey: 'dashboard', icon: Home, permission: 'view dashboard' },
   { to: '/clinic', labelKey: 'clinic', icon: BriefcaseMedical, permission: 'access clinic_workspace' },
+  { to: '/lab-workstation', labelKey: 'labWorkstation', icon: FlaskConical, permission: 'access lab_workstation' },
   { to: '/schedules-appointments', labelKey: 'schedulesAppointments', icon: CalendarClock, permission: 'view doctor_schedules' }, // Or 'manage appointments'
   { to: '/patients', labelKey: 'patients', icon: Users, permission: 'list patients' },
   { to: '/doctors', labelKey: 'doctors', icon: Stethoscope, permission: 'list doctors' },

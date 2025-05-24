@@ -2,18 +2,15 @@
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import type { Patient } from "../../types/patients"; // Main Patient type
-import type { ActivePatientVisit } from "@/types/patients"; // Or from patients.ts
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import type { Patient } from "../../types/patients";
+import type { ActivePatientVisit } from "@/types/patients";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Users, Clock, Phone, UserCircle2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Loader2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { getActiveClinicPatients } from "@/services/clinicService"; // Updated service
+import { getActiveClinicPatients } from "@/services/clinicService";
 import type { PaginatedResponse } from "@/types/common";
-import { Pointer } from "../magicui/pointer";
-import { motion } from "framer-motion";
+import ActivePatientCard from "./ActivePatientCard";
+import PatientInfoDialog from "./PatientInfoDialog";
 
 interface ActivePatientsListProps {
   onPatientSelect: (patient: Patient, visitId: number) => void;
@@ -71,6 +68,8 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
     },
     placeholderData: keepPreviousData,
   });
+  const [showPatientInfoDialog, setShowPatientInfoDialog] = useState(false);
+  const [patientInfoId, setPatientInfoId] = useState<number | null>(null);
 
   // Reset page to 1 if doctorShiftId changes
   useEffect(() => {
@@ -85,6 +84,12 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
       </div>
     );
   }
+
+  const handleProfileClickForList = (patientId: number) => {
+    setPatientInfoId(patientId);
+    setShowPatientInfoDialog(true);
+  };
+
   if (isError) {
     return (
       <p className="text-destructive p-4">
@@ -117,88 +122,14 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
         <ScrollArea className="flex-grow">
           <div className="space-y-3 pr-1">
             {visits.map((visit: ActivePatientVisit) => (
-              <Card
-                key={visit.id}
-                className={cn(
-                  "hover:shadow-md transition-all duration-200 cursor-pointer border-l-4",
-                  selectedPatientVisitId === visit.id
-                    ? "border-l-primary shadow-lg bg-primary/5"
-                    : "border-l-transparent hover:border-l-primary/50",
-                  "relative overflow-hidden"
-                )}
-                onClick={() => onPatientSelect(visit.patient, visit.id)}
-              >
-                <div className="absolute top-0 right-0 h-full w-1/3 pointer-events-none bg-gradient-to-l from-primary/5 to-transparent opacity-50" />
-                <CardHeader className="pb-2 pt-3 px-4">
-                  <div className="flex justify-between items-start gap-2">
-                    <div className="flex-grow">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <UserCircle2 className="h-5 w-5 text-muted-foreground/70" />
-                        <span className="truncate font-semibold" title={visit.patient.name}>
-                          {visit.patient.name}
-                        </span>
-                      </CardTitle>
-                      <CardDescription className="mt-1 flex items-center gap-4">
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3.5 w-3.5" />
-                          <Badge variant={
-                            visit.status === "waiting"
-                              ? "outline"
-                              : visit.status === "with_doctor"
-                              ? "default"
-                              : "secondary"
-                          }
-                          className={cn(
-                            "text-[10px] h-5",
-                            visit.status === "with_doctor" && "bg-blue-500 text-white"
-                          )}>
-                            {t(`clinic:workspace.status.${visit.status}`)}
-                          </Badge>
-                        </span>
-                        <span className="flex items-center gap-1 text-xs">
-                          <Phone className="h-3.5 w-3.5" />
-                          {visit.patient.phone}
-                        </span>
-                      </CardDescription>
-                    </div>
-                    <div className="flex flex-col items-end gap-1">
-                      {visit.requested_services_count > 0 && (
-                        <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20">
-                          {visit.requested_services_count} {t('clinic:workspace.services')}
-                        </Badge>
-                      )}
-                      <span className="text-xs text-muted-foreground">
-                        {t("common:id")}: {visit.patient.id}
-                      </span>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="px-4 pb-3 pt-0">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">
-                      <strong>{t("common:doctor")}:</strong>{" "}
-                      {visit.doctor?.name || t("common:unassigned")}
-                    </span>
-                  </div>
-                </CardContent>
-                {selectedPatientVisitId === visit.id && (
-                  <Pointer>
-                    <motion.div
-                      animate={{
-                        scale: [0.8, 1, 0.8],
-                        rotate: [0, 5, -5, 0],
-                      }}
-                      transition={{
-                        duration: 1.5,
-                        repeat: Infinity,
-                        ease: "easeInOut",
-                      }}
-                    >
-                      <div className="text-2xl">👆</div>
-                    </motion.div>
-                  </Pointer>
-                )}
-              </Card>
+                  <ActivePatientCard
+                  key={visit.id}
+                  visit={visit}
+                  isSelected={selectedPatientVisitId === visit.id}
+                  onSelect={onPatientSelect} // Passed down from ClinicPage
+                  onProfileClick={handleProfileClickForList}
+                  selectedPatientVisitIdInWorkspace={selectedPatientVisitId} // Pass this down
+                />
             ))}
           </div>
         </ScrollArea>
@@ -232,6 +163,12 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
           </Button>
         </div>
       )}
+      
+      <PatientInfoDialog 
+        isOpen={showPatientInfoDialog}
+        onOpenChange={setShowPatientInfoDialog}
+        patientId={patientInfoId}
+      />
     </div>
   );
 };

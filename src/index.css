@@ -119,3 +119,16 @@
     @apply bg-background text-foreground font-sans;
   }
 }
+.mui-autocomplete-custom .MuiOutlinedInput-root {
+  /* Adjust padding, font size, border to match shadcn Input */
+  padding-top: 2px !important;
+  padding-bottom: 2px !important;
+  font-size: 0.875rem !important; /* text-sm */
+}
+.mui-autocomplete-custom .MuiInputLabel-outlined {
+  transform: translate(14px, 8px) scale(1) !important; /* Adjust label position */
+  font-size: 0.875rem !important;
+}
+.mui-autocomplete-custom .MuiInputLabel-outlined.MuiInputLabel-shrink {
+  transform: translate(14px, -9px) scale(0.75) !important; /* Adjust shrink label position */
+}

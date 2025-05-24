@@ -93,6 +93,7 @@ export interface ChildTestFormData {
 export interface MainTestStripped {
   id: number;
   main_test_name: string;
+  price: number;
 }
 
 export interface Package {

@@ -221,7 +221,17 @@ export default function CompaniesListPage() {
                         </Link>
                         </DropdownMenuItem>
                         )}
-                      
+                            {canManageContracts && (
+                        <DropdownMenuItem asChild>
+                        <Link
+                          to={`/settings/companies/${company.id}/test-contracts`}
+                          className="flex items-center w-full"
+                        >
+                          <FileText className="rtl:ml-2 ltr:mr-2 h-4 w-4" />{" "}
+                          {t("companies:manageTestContractsButton")}
+                        </Link>
+                        </DropdownMenuItem>
+                        )}
                       {canEditCompany && (
                         <DropdownMenuItem asChild>
                         <Link

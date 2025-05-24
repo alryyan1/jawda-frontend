@@ -19,9 +19,11 @@
   },
   "companies": "الشركات",
   "laboratory": "المختبر",
+  "laboratoryTestsPriceList": "قائمة أسعار الفحوصات المخبرية",
   "labSettings": {
     "title": "إعدادات المختبر",
-    "description": "تكوين وإدارة إعدادات المختبر في النظام"
+    "description": "تكوين وإدارة إعدادات المختبر في النظام",
+    "laboratoryTestsPriceList": "قائمة أسعار الفحوصات المخبرية"
   },
   "generalSection": {
     "title": "الإعدادات العامة",

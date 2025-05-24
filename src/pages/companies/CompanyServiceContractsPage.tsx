@@ -58,6 +58,7 @@ import {
   Save,
   Search,
   LibrarySquare,
+  Printer,
 } from "lucide-react"; // ArrowRightLeft can be for "Back" in RTL
 
 import type {
@@ -84,6 +85,7 @@ import { z } from "zod";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FormField } from "@/components/ui/form";
+import { downloadCompanyServiceContractPdf, type CompanyContractPdfFilters } from "@/services/reportService";
 // import EditCompanyServiceDialog from '@/components/companies/EditCompanyServiceDialog'; // For later
 
 // TODO: Define these permissions in your backend and PermissionName type
@@ -132,6 +134,32 @@ type InlineEditFormValues = z.infer<ReturnType<typeof getInlineEditSchema>>;
 
 export default function CompanyServiceContractsPage() {
   const { t, i18n } = useTranslation(["companies", "common", "services"]);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
+  const handleGenerateServiceContractPdf = async () => {
+    if (!companyId) return;
+    setIsGeneratingPdf(true);
+    try {
+      const filters: CompanyContractPdfFilters = {};
+      if (searchTerm) filters.search = searchTerm; // Use the debounced search term
+
+      const blob = await downloadCompanyServiceContractPdf(Number(companyId), filters);
+      const url = window.URL.createObjectURL(blob); 
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `company_${companyId}_service_contracts_${new Date().toISOString().slice(0,10)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+      toast.success(t('common:pdfGeneratedSuccess'));
+    } catch (error: any) {
+      toast.error(t('common:pdfGeneratedError'), { description: error.response?.data?.message || error.message });
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
   const { companyId } = useParams<{ companyId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -380,6 +408,10 @@ export default function CompanyServiceContractsPage() {
       </div>
 
       <div className="flex gap-2 w-full sm:w-auto justify-end">
+      <Button onClick={handleGenerateServiceContractPdf} variant="outline" size="sm" className="h-9" disabled={isGeneratingPdf || isLoadingContracts || !contracts.length}>
+                    {isGeneratingPdf ? <Loader2 className="h-4 w-4 animate-spin"/> : <Printer className="h-4 w-4"/>}
+                    <span className="ltr:ml-2 rtl:mr-2 hidden sm:inline">{t('common:print')}</span>
+                </Button>
         <Button
           onClick={handleImportAllServices}
           variant="outline"

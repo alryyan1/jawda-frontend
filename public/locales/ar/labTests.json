@@ -1,5 +1,6 @@
 {
     "testEntityName": "الفحص",
+    "testEntityNamePlural": "الفحوصات",
     "pageTitle": "إدارة الفحوصات المخبرية الرئيسية",
     "addTestButton": "إضافة فحص رئيسي جديد",
     "editTestTitle": "تعديل الفحص الرئيسي",
@@ -10,8 +11,16 @@
       "name": "اسم الفحص",
       "container": "نوع العينة (الوعاء)",
       "price": "السعر",
+      "priceDefault": "السعر الافتراضي",
       "available": "متاح",
-      "actions": "إجراءات"
+      "actions": "إجراءات",
+      "testName": "اسم الفحص",
+      "discount": "الخصم",
+      "endurance": "التحمل",
+      "net": "الصافي",
+      "paid": "المدفوع",
+      "balance": "المتبقي",
+      "statusPayment": "حالة الدفع"
     },
     "form": {
       "nameLabel": "اسم الفحص الرئيسي",
@@ -118,5 +127,19 @@
         "nameLabel": "اسم المجموعة",
         "descriptionLabel": "الوصف (اختياري)"
       }
+    },
+    "request": {
+        "title": "طلب فحوصات مخبرية",
+        "selectTests": "اختر الفحوصات المطلوبة",
+        "selectTestsPlaceholder": "اختر الفحوصات...",
+        "commentLabel": "ملاحظات الطلب",
+        "commentPlaceholder": "أدخل أي ملاحظات خاصة بالطلب...",
+        "requestButton": "طلب الفحوصات",
+        "currentRequestsTitle": "الفحوصات المطلوبة",
+        "noRequestsYet": "لم يتم طلب أي فحوصات بعد.",
+        "addedSuccess": "تم إضافة الفحوصات بنجاح!",
+        "cancelledSuccess": "تم إلغاء طلب الفحص بنجاح!",
+        "cancelConfirm": "هل أنت متأكد من إلغاء هذا الطلب؟",
+        "noTestsAvailable": "لا توجد فحوصات متاحة"
     }
 }

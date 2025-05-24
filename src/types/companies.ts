@@ -1,3 +1,4 @@
+import type { PaginatedResponse } from './common';
 import type { FinanceAccount } from './finance'; // Assuming FinanceAccount type is in finance.ts
 
 // Based on the `companies` table
@@ -81,3 +82,30 @@ export interface CompanyServiceFormData {
   use_static: boolean;
   approval: boolean;
 }
+export interface CompanyMainTestContract {
+  main_test_id: number;
+  main_test_name: string;
+  default_price?: number; // Original price from main_tests table
+  container_name?: string;
+  contract_details: { // Pivot data
+    contract_id: number; // PK of the company_main_test row
+    company_id: number;
+    status: boolean;
+    price: number;
+    approve: boolean;
+    endurance_static: number;
+    endurance_percentage: number;
+    use_static: boolean;
+  };
+}
+export interface CompanyMainTestFormData {
+  main_test_id: string | undefined; // From select
+  status: boolean;
+  price: string;
+  approve: boolean;
+  endurance_static: string;
+  endurance_percentage: string;
+  use_static: boolean;
+}
+
+export type PaginatedCompanyMainTestContractsResponse  = PaginatedResponse<CompanyMainTestContract> 

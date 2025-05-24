@@ -138,6 +138,15 @@ export interface PatientFormData {
   company_id?: number | null; // Input as string from select
  
 }
+// --- NEW/VERIFY: PatientStripped Interface ---
+export interface PatientStripped {
+  id: number;
+  name: string;
+  phone?: string; // Optional, but often useful
+  gender?: 'male' | 'female' | 'other'; // Optional
+  // You can add age_year or a computed age_string if frequently needed with stripped info
+  // age_year?: number | null; 
+}
 
 // For paginated responses if you have a patient list API
 export interface PaginatedPatientsResponse {

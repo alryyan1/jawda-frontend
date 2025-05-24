@@ -36,10 +36,15 @@
     "addedSuccess": "تمت إضافة الخدمات بنجاح!",
     "removedSuccess": "تمت إزالة الخدمة بنجاح!"
   },
+  "visit": {
+    "statusUpdateSuccess": "تم تحديث حالة الزيارة بنجاح.",
+    "statusUpdateFailed": "فشل تحديث حالة الزيارة."
+  },
   "workspace": {
     "title": "ساحة العمل - المرضى الحاليون",
     "noActivePatients": "لا يوجد مرضى حاليون.",
     "services": "خدمات",
+    "changeStatusFor": "تغيير حالة المريض {{name}}",
     "status": {
       "waiting": "في الانتظار",
       "with_doctor": "مع الطبيب",
@@ -57,29 +62,26 @@
     "genderRequired": "الجنس مطلوب.",
     "doctorRequired": "الطبيب مطلوب.",
     "phoneRequired": "رقم الهاتف مطلوب",
-
     "phoneMaxLength": "رقم الهاتف يجب ألا يتجاوز {{count}} أرقام.",
     "phoneNumeric": "رقم الهاتف يجب أن يحتوي على أرقام فقط.",
     "noDoctorSelectedError": "الرجاء اختيار طبيب مناوب من الأعلى."
-  
-  }
-  ,
-    "topNav": {
+  },
+  "topNav": {
     "activeDoctors": "الأطباء المناوبون",
     "searchPatientsPlaceholder": "ابحث عن مريض بالاسم أو الرقم..."
   },
   "actionsPane": {
     "title": "إجراءات سريعة",
     "registerNewPatient": "تسجيل مريض جديد",
-    "viewPatientWorkspace": "إخفاء التسجيل/عرض ساحة العمل" ,
-    "manageDoctorShifts": "إدارة مناوبات الأطباء"
+    "viewPatientWorkspace": "إخفاء التسجيل/عرض ساحة العمل",
+    "manageDoctorShifts": "إدارة مناوبات الأطباء",
+    "myShiftIncome": "ملخص دخل مناوبتي"
   },
   "selectedPatientWorkspace": {
     "title": "تفاصيل المريض: {{patientName}}",
     "noPatientSelected": "الرجاء اختيار مريض من القائمة لعرض التفاصيل.",
     "requestServicesTitle": "طلب خدمات للمريض",
     "titleShort": "زيارة",
-    "title": "زيارة المريض",
     "description": "إدارة زيارة المريض وتفاصيلها"
   },
   "doctorsTabs": {
@@ -92,8 +94,7 @@
     "manageDescription": "فتح أو إغلاق مناوبات الأطباء لليوم.",
     "status": "حالة المناوبة",
     "onShift": "في مناوبة",
-        "activeDoctorShift": "الدوام النشط للطبيب"
-,
+    "activeDoctorShift": "الدوام النشط للطبيب",
     "offShift": "خارج المناوبة",
     "openShiftButton": "بدء مناوبة",
     "closeShiftButton": "إنهاء مناوبة",
@@ -102,32 +103,28 @@
     "closedSuccess": "تم إنهاء مناوبة الطبيب بنجاح!",
     "closeError": "فشل إنهاء مناوبة الطبيب.",
     "noClinicShiftSelected": "الرجاء اختيار أو فتح وردية عمل للعيادة أولاً.",
-        "selectedPatientWorkspace": {
-        "title": "بيانات المريض: {{patientName}}",
-        "titleShort": "الزيارة", 
-        "noPatientSelected": "الرجاء اختيار مريض من القائمة لعرض التفاصيل.",
-        "requestServicesTitle": "طلب خدمات للمريض",
-        "noPatientData": "لا يمكن تحميل بيانات المريض/الزيارة."
+    "selectedPatientWorkspace": {
+      "title": "بيانات المريض: {{patientName}}",
+      "titleShort": "الزيارة", 
+      "noPatientSelected": "الرجاء اختيار مريض من القائمة لعرض التفاصيل.",
+      "requestServicesTitle": "طلب خدمات للمريض",
+      "noPatientData": "لا يمكن تحميل بيانات المريض/الزيارة."
     },
     "tabs": {
-        "services": "الخدمات",
-        "vitals": "العلامات الحيوية",
-        "notes": "ملاحظات الطبيب",
-        "lab": "المختبر",
-        "prescription": "الوصفات الطبية",
-        "documents": "المستندات",
-        "addedSuccess": "تمت إضافة الخدمات بنجاح!",
-        "removedSuccess": "تمت إزالة الخدمة بنجاح!"
+      "services": "الخدمات",
+      "vitals": "العلامات الحيوية",
+      "notes": "ملاحظات الطبيب",
+      "lab": "المختبر",
+      "prescription": "الوصفات الطبية",
+      "documents": "المستندات",
+      "addedSuccess": "تمت إضافة الخدمات بنجاح!",
+      "removedSuccess": "تمت إزالة الخدمة بنجاح!"
     },
     "visit": {
-        "statusUpdateSuccess": "تم تحديث حالة الزيارة بنجاح.",
-        "statusUpdateFailed": "فشل تحديث حالة الزيارة."
+      "statusUpdateSuccess": "تم تحديث حالة الزيارة بنجاح.",
+      "statusUpdateFailed": "فشل تحديث حالة الزيارة."
     }
   },
-  
-  
-
-
   "tabs": {
     "services": "الخدمات",
     "vitals": "العلامات الحيوية",
@@ -136,7 +133,6 @@
     "prescription": "الوصفة الطبية",
     "documents": "المستندات"
   },
-
   "userShiftIncomeDialog": {
     "title": "ملخص الدخل للمستخدم: {{userName}}",
     "description": "ملخص الإيرادات المسجلة بواسطتك خلال الوردية الحالية #{{shiftId}}.",

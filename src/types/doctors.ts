@@ -87,6 +87,15 @@ export interface PaginatedDoctorsResponse {
     total: number;
   };
 }
+// --- NEW/VERIFY: DoctorStripped Interface ---
+export interface DoctorStripped {
+  id: number;
+  name: string;
+  specialist_name?: string | null; // Optional: if your DoctorStrippedResource includes this
+  // Add other frequently needed minimal fields if any
+  // phone?: string; 
+}
+
 
 // If DoctorShift is a new concept
 export interface DoctorShift {

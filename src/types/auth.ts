@@ -36,3 +36,10 @@ export interface User {
   permissions?: Permission[]; // Direct permissions
   // all_permissions?: Permission[]; // All permissions via roles & direct
 }
+// --- NEW/VERIFY: UserStripped Interface ---
+export interface UserStripped {
+  id: number;
+  name: string;
+  username?: string; // Username is often a good identifier to show
+  // avatar_url?: string; // If users have avatars
+}

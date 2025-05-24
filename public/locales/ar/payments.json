@@ -9,5 +9,10 @@
   "paymentError": "فشل تسجيل الدفعة.",
   "validation": {
     "amountExceedsBalance": "المبلغ يتجاوز الرصيد المستحق ({{balance}})."
+  },
+  "status": {
+    "paid": "مدفوع",
+    "unpaid": "غير مدفوع",
+    "partial": "مدفوع جزئياً"
   }
 }

@@ -3,11 +3,14 @@ import apiClient from './api';
 import type { 
     Company, 
     CompanyFormData, 
+    CompanyMainTestContract, 
+    CompanyMainTestFormData, 
     CompanyServiceContract, 
     CompanyServiceFormData, 
 } from '../types/companies';
 import { Service } from '../types/services';
 import type { PaginatedResponse } from '@/types/common';
+import type { MainTestStripped } from '@/types/labTests';
 
 export interface ImportAllServicesPayload { // Optional: If you allow overriding default terms from frontend
     default_static_endurance?: number;
@@ -119,4 +122,80 @@ export const updateCompanyServiceContract = (companyId: number, serviceId: numbe
 
 export const removeServiceFromCompanyContract = (companyId: number, serviceId: number): Promise<void> => {
   return apiClient.delete(`${API_URL}/${companyId}/contracted-services/${serviceId}`).then(res => res.data);
+};
+
+
+// --- Company Main Test Contract Management ---
+export const getCompanyContractedMainTests = (
+  companyId: number, 
+  page = 1, 
+  filters: { search?: string } = {}
+): Promise<PaginatedCompanyMainTestContractsResponse> => {
+return apiClient.get<PaginatedCompanyMainTestContractsResponse>(
+      `${API_URL}/${companyId}/contracted-main-tests`, 
+      { params: { page, ...filters } }
+  ).then(res => res.data);
+};
+
+export const getCompanyAvailableMainTests = (companyId: number): Promise<MainTestStripped[]> => {
+// Assuming backend returns MainTestStrippedResource::collection which wraps in 'data'
+return apiClient.get<{ data: MainTestStripped[] }>(`${API_URL}/${companyId}/available-main-tests`)
+  .then(res => res.data.data);
+};
+
+export const addMainTestToCompanyContract = (
+  companyId: number, 
+  data: CompanyMainTestFormData
+): Promise<{ data: CompanyMainTestContract }> => {
+// Ensure data transformation if necessary (e.g., string numbers to float/int)
+const payload = {
+    ...data,
+    price: parseFloat(data.price),
+    endurance_static: parseInt(data.endurance_static),
+    endurance_percentage: parseFloat(data.endurance_percentage),
+};
+return apiClient.post<{ data: CompanyMainTestContract }>(
+      `${API_URL}/${companyId}/contracted-main-tests`, 
+      payload
+  ).then(res => res.data);
+};
+
+export const updateCompanyMainTestContract = (
+  companyId: number, 
+  mainTestId: number, // MainTest ID identifies the contract along with companyId
+  data: Partial<CompanyMainTestFormData>
+): Promise<{ data: CompanyMainTestContract }> => {
+ const payload: Record<string, any> = { ...data };
+ if (data.price !== undefined) payload.price = parseFloat(data.price);
+ if (data.endurance_static !== undefined) payload.endurance_static = parseInt(data.endurance_static);
+ if (data.endurance_percentage !== undefined) payload.endurance_percentage = parseFloat(data.endurance_percentage);
+ 
+return apiClient.put<{ data: CompanyMainTestContract }>(
+      `${API_URL}/${companyId}/contracted-main-tests/${mainTestId}`, 
+      payload
+  ).then(res => res.data);
+};
+
+export const removeMainTestFromCompanyContract = (companyId: number, mainTestId: number): Promise<void> => {
+return apiClient.delete(`${API_URL}/${companyId}/contracted-main-tests/${mainTestId}`)
+  .then(res => res.data);
+};
+
+interface ImportAllMainTestsPayload {
+  default_status?: boolean;
+  default_approve?: boolean;
+  default_endurance_static?: number;
+  default_endurance_percentage?: number;
+  default_use_static?: boolean;
+  // default_price_from_test?: boolean; // Handled by backend now
+}
+export const importAllMainTestsToCompanyContract = async (
+  companyId: number, 
+  payload?: ImportAllMainTestsPayload
+): Promise<{ message: string; imported_count: number }> => {
+const response = await apiClient.post<{ message: string; imported_count: number }>(
+    `${API_URL}/${companyId}/contracted-main-tests/import-all`, 
+    payload || {}
+);
+return response.data;
 };

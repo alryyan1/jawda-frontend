@@ -41,6 +41,9 @@ import SettingsLayout from "./pages/settings/SettingsLayout";
 import GeneralSettingsPage from "./pages/GeneralSettingsPage";
 import ChildTestsManagementPage from "./pages/lab/ChildTestsManagementPage";
 import LabPriceListPage from "./pages/settings/LabPriceListPage";
+import CompanyMainTestContractsPage from "./pages/companies/CompanyMainTestContractsPage";
+import LabWorkstationPage from "./pages/lab/LabWorkstationPage";
+import NotFoundPage from "./pages/NotFoundPage";
 // import NotFoundPage from './pages/NotFoundPage'; // Optional: For 404 handling
 
 const AppointmentsPlaceholderPage: React.FC = () => (
@@ -83,6 +86,14 @@ const router = createBrowserRouter([
           {
             path: "dashboard", // Explicit dashboard route if needed, often same as index
             element: <HomePage />,
+          },
+          {
+            path: '*',
+            element: <NotFoundPage />,
+          },
+          {
+            path: "lab-workstation",
+            element: <LabWorkstationPage />,
           },
           // Doctors Module
           {
@@ -167,6 +178,8 @@ const router = createBrowserRouter([
                 path: "service-statistics",
                 element: <ServiceStatisticsReportPage />,
               },
+            
+            
               // Add other report routes here
               // { path: 'patient-visits', element: <PatientVisitsReportPage /> },
             ],
@@ -216,6 +229,10 @@ const router = createBrowserRouter([
                     path: ":companyId/contracts",
                     element: <CompanyServiceContractsPage />,
                   }, // Page for managing contracts
+                  {
+                    path: ":companyId/test-contracts",
+                    element: <CompanyMainTestContractsPage />,
+                  }, // Page for managing main test contracts
                 ],
               },
               {

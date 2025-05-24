@@ -54,3 +54,27 @@ export const downloadLabPriceListPdf = async (filters: { search_service_name?: s
   });
   return response.data;
 };
+
+// src/services/reportService.ts
+// ... (existing imports and functions) ...
+
+export interface CompanyContractPdfFilters {
+  search?: string; // Matches the 'search' param name in controller if used
+  // Add other filters if your PDF generation supports them
+}
+
+export const downloadCompanyServiceContractPdf = async (companyId: number, filters: CompanyContractPdfFilters = {}): Promise<Blob> => {
+  const response = await apiClient.get(`/reports/company/${companyId}/service-contracts/pdf`, {
+    params: filters,
+    responseType: 'blob',
+  });
+  return response.data;
+};
+
+export const downloadCompanyTestContractPdf = async (companyId: number, filters: CompanyContractPdfFilters = {}): Promise<Blob> => {
+  const response = await apiClient.get(`/reports/company/${companyId}/test-contracts/pdf`, {
+    params: filters, // 'search' will map to 'search_service_name' or 'search_test_name' if backend expects that
+    responseType: 'blob',
+  });
+  return response.data;
+};

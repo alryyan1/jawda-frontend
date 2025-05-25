@@ -107,7 +107,7 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({ patientId, visi
         </Card>
 
         {/* Lab Request Status Card (if a specific lab request is selected for result entry) */}
-        {currentLabRequestToDisplay && (
+        {/* {currentLabRequestToDisplay && (
           <Card>
             <CardHeader className="pb-2 pt-3">
               <CardTitle className="text-base font-semibold flex items-center gap-2">
@@ -140,9 +140,9 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({ patientId, visi
               <DetailRowDisplay label={t('common:price')} value={Number(currentLabRequestToDisplay.price).toFixed(1)} />
               <DetailRowDisplay label={t('payments:amountPaid')} value={Number(currentLabRequestToDisplay.amount_paid).toFixed(1)} />
               {/* Add more: valid, hidden, created_at, requested_by etc. */}
-            </CardContent>
-          </Card>
-        )}
+            {/* </CardContent> */}
+          {/* </Card> */}
+        {/* )} } */}
 
         {/* Actions Card */}
         <Card>

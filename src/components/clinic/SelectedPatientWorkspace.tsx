@@ -1,14 +1,12 @@
 // src/components/clinic/SelectedPatientWorkspace.tsx
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { arSA, enUS } from "date-fns/locale";
+import { useQuery } from "@tanstack/react-query";
 
 import type { Patient } from "@/types/patients";
 import type { DoctorVisit } from "@/types/visits";
 import {
   getDoctorVisitById,
-  updateDoctorVisitStatus,
 } from "@/services/visitService";
 
 import { Button } from "@/components/ui/button";
@@ -20,11 +18,9 @@ import {
   Microscope,
   AlertTriangle,
 } from "lucide-react";
-import { toast } from "sonner";
 
 import ServicesRequestComponent from "./ServicesRequestComponent";
 import LabRequestComponent from "./LabRequestComponent";
-import VisitHeader from './VisitHeader';
 
 interface SelectedPatientWorkspaceProps {
   initialPatient: Patient;
@@ -32,28 +28,17 @@ interface SelectedPatientWorkspaceProps {
   onClose?: () => void;
 }
 
-interface ApiError {
-  response?: {
-    data?: {
-      message?: string;
-    };
-  };
-}
-
 const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
   initialPatient,
   visitId,
   onClose,
 }) => {
-  const { t, i18n } = useTranslation([
+  const { t } = useTranslation([
     "clinic",
     "common",
     "services",
     "patients",
   ]);
-  const queryClient = useQueryClient();
-  const dateLocale = i18n.language.startsWith("ar") ? arSA : enUS;
-
   const visitQueryKey = ["doctorVisit", visitId];
 
   const {
@@ -67,27 +52,6 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
   });
 
   const patient = visit?.patient || initialPatient;
-
-  const statusUpdateMutation = useMutation({
-    mutationFn: (newStatus: string) =>
-      updateDoctorVisitStatus(visitId, newStatus),
-    onSuccess: (updatedVisitData) => {
-      toast.success(t("clinic:visit.statusUpdateSuccess"));
-      queryClient.setQueryData(visitQueryKey, updatedVisitData);
-      queryClient.invalidateQueries({ queryKey: ["activePatients"] });
-    },
-    onError: (error: ApiError) => {
-      toast.error(
-        error.response?.data?.message || t("clinic:visit.statusUpdateFailed")
-      );
-    },
-  });
-
-  const handleStatusChange = (newStatus: string) => {
-    if (visit && visit.status !== newStatus) {
-      statusUpdateMutation.mutate(newStatus);
-    }
-  };
 
   if (isLoading && !visit) {
     return (
@@ -144,15 +108,6 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
 
   return (
     <div className="flex flex-col h-full bg-background dark:bg-card shadow-xl">
-      {/* <VisitHeader 
-        visit={visit}
-        patient={patient}
-        onClose={onClose}
-        dateLocale={dateLocale}
-        onStatusChange={handleStatusChange}
-        statusUpdatePending={statusUpdateMutation.isPending}
-      /> */}
-
       <Tabs
         defaultValue="services"
         className="flex-grow flex flex-col overflow-hidden"

@@ -33,3 +33,10 @@ export const updateChildTest = async (childTestId: number, data: Partial<ChildTe
 export const deleteChildTest = async (childTestId: number): Promise<void> => {
   await apiClient.delete(`/child-tests/${childTestId}`);
 };
+
+export const batchUpdateChildTestOrder = async (mainTestId: number, orderedChildTestIds: number[]): Promise<{ message: string }> => {
+  const response = await apiClient.post<{ message: string }>(`/main-tests/${mainTestId}/child-tests/batch-update-order`, {
+    child_test_ids: orderedChildTestIds,
+  });
+  return response.data;
+};

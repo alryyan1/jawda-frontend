@@ -131,12 +131,12 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId,
           <ScrollArea className="w-full h-full px-1">
             <div 
               ref={contentRef} 
-              className="flex space-x-2 rtl:space-x-reverse py-2 px-2 items-stretch"
+              className="flex space-x-2 rtl:space-x-reverse py-2 px-2 items-stretch gap-2"
               onScroll={checkScrollability}
             >
               <Button
                 variant={activeShiftId === null ? "secondary" : "outline"}
-                className="h-auto py-1.5 px-3 flex flex-col items-center justify-center whitespace-nowrap min-w-[70px] sm:min-w-[80px] shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-primary shrink-0"
+                className="h-auto py-1.5 px-3 flex flex-col items-center justify-center whitespace-nowrap min-w-[150px] sm:min-w-[80px] shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-primary shrink-0"
                 onClick={() => onShiftSelect(null)}
                 data-state={activeShiftId === null ? "active" : "inactive"}
               >
@@ -150,20 +150,17 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId,
                     <Button
                       variant={activeShiftId === shift.id ? "secondary" : "outline"}
                       className={cn(
-                        "h-auto py-1.5 px-3 flex flex-col items-center justify-center relative whitespace-nowrap min-w-[90px] sm:min-w-[100px] shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-primary shrink-0",
+                        "h-auto py-1.5 cursor-pointer px-3 flex flex-col items-center justify-center relative whitespace-nowrap min-w-[90px] sm:min-w-[100px] shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-primary shrink-0",
                         shift.is_examining ? "border-blue-500 dark:border-blue-400 focus-visible:ring-blue-500" 
                                            : "border-green-500 dark:border-green-400 focus-visible:ring-green-500",
-                        activeShiftId === shift.id && (shift.is_examining ? "bg-blue-500/10 dark:bg-blue-500/20" : "bg-green-500/10 dark:bg-green-500/20")
+                        activeShiftId === shift.id && (shift.is_examining ? "bg-blue-500/10 dark:bg-blue-500/20 " : "bg-green-500/10 dark:bg-green-500/20 w-[200px]")
                       )}
                       onClick={() => onShiftSelect(shift)}
                       data-state={activeShiftId === shift.id ? "active" : "inactive"}
                     >
                       <div className="flex items-center mb-0.5">
-                        <Avatar className="h-5 w-5 ltr:mr-1.5 rtl:ml-1.5">
-                          <AvatarImage src={shift.doctor_avatar_url || undefined} alt={shift.doctor_name} />
-                          <AvatarFallback className="text-[10px]">{getInitials(shift.doctor_name)}</AvatarFallback>
-                        </Avatar>
-                        <span className="text-xs font-medium truncate max-w-[60px] sm:max-w-[70px]" title={shift.doctor_name}>
+                     
+                        <span className="text-xs font-medium " title={shift.doctor_name}>
                           {shift.doctor_name}
                         </span>
                       </div>

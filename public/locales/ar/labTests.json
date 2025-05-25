@@ -27,6 +27,8 @@
       "namePlaceholder": "مثال: تعداد الدم الكامل (CBC)",
       "packIdLabel": "معرف الحزمة/المجموعة (اختياري)",
       "packIdPlaceholder": "أدخل رقم الحزمة إن وجد",
+      "packIdDescription": "رقم تعريفي خاص بالحزمة يستخدم للربط مع الأنظمة الخارجية",
+      "selectPackagePlaceholder": "اختر حزمة...",
       "pageBreakLabel": "فاصل صفحات (عند طباعة النتائج)",
       "containerLabel": "وعاء العينة",
       "selectContainer": "اختر وعاء العينة...",
@@ -73,6 +75,12 @@
     "deletedSuccess": "تم حذف المكون الفرعي بنجاح!",
     "deleteError": "فشل حذف المكون الفرعي.",
     "deleteConfirm": "هل أنت متأكد أنك تريد حذف هذا المكون الفرعي؟",
+    "dragToReorder": "اسحب وأفلت لترتيب المكونات",
+    "manageOptions": "إدارة الخيارات",
+    "saveOrderButton": "حفظ الترتيب",
+    "orderSavedSuccess": "تم حفظ ترتيب المكونات بنجاح!",
+    "orderSaveError": "فشل حفظ ترتيب المكونات.",
+    "subSectionTitle": "البارامترات", 
     "form": {
       "name": "اسم المكون الفرعي",
       "low": "الحد الأدنى (طبيعي)",
@@ -141,5 +149,17 @@
         "cancelledSuccess": "تم إلغاء طلب الفحص بنجاح!",
         "cancelConfirm": "هل أنت متأكد من إلغاء هذا الطلب؟",
         "noTestsAvailable": "لا توجد فحوصات متاحة"
-    }
+    },
+    "optionsDialog": {
+      "title": "إدارة خيارات المكون: {{childTestName}}",
+      "description": "أضف أو عدل الخيارات المتاحة لنتيجة هذا المكون.",
+      "optionNameLabel": "اسم الخيار",
+      "optionNamePlaceholder": "مثال: إيجابي, سلبي, A+",
+      "addOptionButton": "إضافة خيار",
+      "noOptionsDefined": "لم يتم تعريف أي خيارات.",
+      "optionAddedSuccess": "تمت إضافة الخيار بنجاح!",
+      "optionUpdatedSuccess": "تم تحديث الخيار بنجاح!",
+      "optionDeletedSuccess": "تم حذف الخيار بنجاح!",
+      "errorPrefix": "خطأ:"
+ }
 }

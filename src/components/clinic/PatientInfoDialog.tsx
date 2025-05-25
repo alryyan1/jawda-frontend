@@ -84,6 +84,7 @@ const PatientInfoDialog: React.FC<PatientInfoDialogProps> = ({ isOpen, onOpenCha
                 </DialogDescription>
               )}
             </div>
+            
           </div>
         </DialogHeader>
 

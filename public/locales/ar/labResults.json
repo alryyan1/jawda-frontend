@@ -34,7 +34,13 @@
       "saveResultsButton": "حفظ النتائج",
       "savingResults": "جارٍ حفظ النتائج...",
       "resultsSavedSuccess": "تم حفظ النتائج بنجاح!",
-      "resultsSaveError": "فشل حفظ النتائج."
+      "resultsSaveError": "فشل حفظ النتائج.",
+      "enterResult": "أدخل النتيجة",
+      "flagsPlaceholder": "أضف علامات (اختياري)",
+      "commentPlaceholder": "أضف تعليق (اختياري)",
+      "mainTestComment": "تعليق على الفحص الرئيسي",
+      "mainTestCommentPlaceholder": "أضف تعليقاً على الفحص الرئيسي (اختياري)",
+      "noChildTestsForEntry": "لا توجد مكونات فرعية لإدخال النتائج"
     },
     "statusInfo": {
       "patientInfoTitle": "بيانات المريض",
@@ -51,8 +57,8 @@
       "actionsTitle": "إجراءات سريعة",
       "printSampleLabels": "طباعة ملصقات العينات",
       "viewReportPreview": "معاينة التقرير",
-    "sampleCollectedWithId": "تم السحب (رقم العينة: {{id}})",
-    "sampleCollected": "تم السحب",
+      "sampleCollectedWithId": "تم السحب (رقم العينة: {{id}})",
+      "sampleCollected": "تم السحب",
       "sampleNotCollected": "لم يتم سحب العينة",
       "samplePending": "بانتظار السحب"
     },
@@ -70,10 +76,7 @@
     "queue": {
       "noPending": "لا يوجد مرضى في قائمة الانتظار حالياً.",
       "tryDifferentFilters": "حاول تغيير الفلاتر أو تحديد وردية أخرى.",
-      "checkDoctorsTabs": " " 
-
-  },
-  "patientDataNotAvailable": "تعذر تحميل بيانات المريض."
-
-  
-  }
+      "checkDoctorsTabs": " "
+    },
+    "patientDataNotAvailable": "تعذر تحميل بيانات المريض."
+}

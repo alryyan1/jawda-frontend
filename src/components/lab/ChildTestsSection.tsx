@@ -13,7 +13,7 @@ import { getChildTestsForMainTest, createChildTest, updateChildTest, deleteChild
 import { getUnits } from '@/services/unitService';
 import { getChildGroups } from '@/services/childGroupService';
 
-import ChildTestItemRow from './ChildTestItemRow'; // Existing component
+import ChildTestItemRow from './management/ChildTestEditableRow'; // Existing component
 // AddUnitDialog and AddChildGroupDialog are used within ChildTestItemRow
 
 interface ChildTestsSectionProps {

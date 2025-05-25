@@ -40,6 +40,7 @@
   "validation": {
     "required": "{{field}} مطلوب.",
     "mustBeNumber": "يجب أن يكون رقماً.",
+    "mustBeInteger": "يجب أن يكون رقماً صحيحاً.",
     "passwordMinLengthGeneral": "يجب أن تفي كلمة المرور بشرط الحد الأدنى للطول.",
     "invalidEmail": "صيغة بريد إلكتروني غير صحيحة.",
     "positiveNumber": "يجب أن يكون رقماً موجباً.",
@@ -138,5 +139,9 @@
   "cancelRequest": "إلغاء الطلب",
   "countTests": "{{count}} فحوصات",
   "today": "اليوم",
-  "shift": "الوردية"
+  "shift": "الوردية",
+  "select": "اختيار",
+  "waitingSince": "في الانتظار منذ",
+  "labRequestId": "رقم طلب المختبر",
+  "closePanel": "إغلاق اللوحة"
 }

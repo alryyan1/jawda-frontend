@@ -6,7 +6,7 @@
     "roles": "الأدوار",
     "users": "المستخدمون",
     "company": "الشركات",
-        "active": "نشط",
+    "active": "نشط",
     "all": "الكل",
     "clinic": "عيادة",
     "close": "إغلاق",
@@ -19,7 +19,31 @@
     "request": "طلب",
     "start": "بدء",
     "update": "تحديث",
-    "visit": "زيارة"
+    "visit": "زيارة",
+    "batch_delete": "حذف متعدد",
+    "lab": "المختبر",
+    "own": "خاص",
+    "print": "طباعة",
+    "record": "تسجيل",
+    "reports": "التقارير",
+    "settings": "الإعدادات"
+  },
+  "batch_delete": {
+    "lab_tests": "حذف متعدد لفحوصات المختبر"
+  },
+  "manage": {
+    "lab_test_child_options": "إدارة خيارات فحوصات المختبر الفرعية"
+  },
+  "view": {
+    "lab_price_list": "عرض قائمة أسعار المختبر",
+    "reports_section": "التقارير"
+  },
+  "print": {
+    "doctor_shift_reports": "طباعة تقارير مناوبات الأطباء",
+    "service_statistics_report": "طباعة تقرير إحصائيات الخدمات"
+  },
+  "update": {
+    "lab_test_prices": "تحديث أسعار فحوصات المختبر"
   },
   "list_users": "عرض قائمة المستخدمين",
   "create_users": "إنشاء مستخدمين",
@@ -42,8 +66,6 @@
   "list_roles": "عرض قائمة الأدوار",
   "view_roles": "عرض الأدوار",
   "view_users": "عرض المستخدمين",
-
- 
   "create_companies": "إنشاء شركات",
   "delete_companies": "حذف الشركات",
   "edit_companies": "تعديل الشركات",
@@ -54,7 +76,6 @@
   "edit_company_contracts": "تعديل عقود الشركات",
   "manage_company_contracts": "إدارة عقود الشركات",
   "view_company_contracts": "عرض عقود الشركات",
-  
   "list_doctor_visits": "عرض زيارات الطبيب",
   "manage_doctor_shifts": "إدارة دوام الأطباء",
   "view_doctor_visits": "مشاهدة زيارات الطبيب",
@@ -84,19 +105,22 @@
   "delete_doctor_visits": "حذف زيارة الطبيب",
   "edit_doctor_shift_details": "تعديل تفاصيل دوام الطبيب",
   "edit_doctor_visits": "تعديل زيارات الطبيب",
-  "view":{
-    "reports_section": "التقارير"
-  },
-  "view_reports_section":"عرض التقارير",
+  "view_reports_section": "عرض التقارير",
+  "print_lab_price_list": "طباعة قائمة أسعار المختبر",
   "record_visit_service_payment": "تسجيل المدفوعات لخدمات الزيارة",
   "settings_section": "الإعدادات",
-    "settings": "الإعدادات",
-  
+  "settings": "الإعدادات",
   "view_settings": "عرض الإعدادات",
   "update_settings": "تحديث الإعدادات",
   "manage_all_doctor_schedules": "إدارة جميع جداول الأطباء",
   "view_doctor_schedules": "عرض جداول الأطباء",
   "view_doctor_shift_financial_summary": "عرض الملخص المالي لمناوبة الطبيب",
   "view_doctor_shift_reports": "عرض تقارير مناوبات الأطباء",
-  "edit_visit_requested_service_details": "تعديل تفاصيل الخدمة المطلوبة للزيارة"
+  "edit_visit_requested_service_details": "تعديل تفاصيل الخدمة المطلوبة للزيارة",
+  "batch_delete_lab_tests": "حذف متعدد لفحوصات المختبر",
+  "manage_lab_test_child_options": "إدارة خيارات فحوصات المختبر الفرعية",
+  "view_lab_price_list": "عرض قائمة أسعار المختبر",
+  "print_doctor_shift_reports": "طباعة تقارير مناوبات الأطباء",
+  "print_service_statistics_report": "طباعة تقرير إحصائيات الخدمات",
+  "update_lab_test_prices": "تحديث أسعار فحوصات المختبر"
 }

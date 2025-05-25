@@ -116,8 +116,9 @@ export default function MainTestsListPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>{t('labTests:table.name')}</TableHead>
-                <TableHead className="hidden sm:table-cell">{t('labTests:table.container')}</TableHead>
+                <TableHead className="text-center">{t('common:id')}</TableHead>
+                <TableHead className="text-center">{t('labTests:table.name')}</TableHead>
+                <TableHead className="hidden sm:table-cell text-center">{t('labTests:table.container')}</TableHead>
                 <TableHead className="text-center hidden md:table-cell">{t('labTests:table.price')}</TableHead>
                 <TableHead className="text-center">{t('labTests:table.available')}</TableHead>
                 <TableHead className="text-right">{t('labTests:table.actions')}</TableHead>
@@ -126,8 +127,9 @@ export default function MainTestsListPage() {
             <TableBody>
               {tests.map((test) => (
                 <TableRow key={test.id}>
-                  <TableCell className="font-medium">{test.main_test_name}</TableCell>
-                  <TableCell className="hidden sm:table-cell">{test.container?.container_name || test.container_name || '-'}</TableCell>
+                  <TableCell className="font-medium text-center">{test.id}</TableCell>
+                  <TableCell className="font-medium text-center">{test.main_test_name}</TableCell>
+                  <TableCell className="hidden sm:table-cell text-center">{test.container?.container_name || test.container_name || '-'}</TableCell>
                   <TableCell className="text-center hidden md:table-cell">{test.price ? Number(test.price).toFixed(2) : '-'}</TableCell>
                   <TableCell className="text-center">
                     {test.available ? 

@@ -121,13 +121,11 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
         <UserCircle className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
       </Button>
 
-      <div className="flex-grow min-w-0 ltr:mr-2 rtl:ml-2">
-        <p className="text-sm font-medium truncate" title={visit.patient.name}>
+      <div style={{flexBasis:'250px'}} className="flex-grow  min-w-0 ltr:mr-2 rtl:ml-2">
+        <p className="text-sm font-medium  border" title={visit.patient.name}>
           {visit.patient.name}
         </p>
-        <p className="text-xs text-muted-foreground truncate" title={visit.doctor?.name || t('common:unassigned')}>
-          {t('common:doctorShort')}: {visit.doctor?.name || t('common:unassigned')}
-        </p>
+   
       </div>
 
       <div className="flex-shrink-0 w-[130px] relative">

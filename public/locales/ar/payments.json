@@ -2,6 +2,7 @@
   "dialogTitle": "تسديد دفعة لـ: {{serviceName}}",
   "balanceDue": "الرصيد المستحق",
   "amountToPay": "المبلغ المدفوع",
+  "amountPaid": "المبلغ المدفوع",
   "paymentMethod": "طريقة الدفع",
   "cash": "نقداً",
   "bank": "شبكة/بنك",

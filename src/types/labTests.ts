@@ -97,8 +97,9 @@ export interface MainTestStripped {
 }
 
 export interface Package {
+  id: number;
   package_id: number;
-  package_name?: string | null;
+  name: string;
   container: string;
   exp_time: number;
   main_tests_count?: number;
@@ -112,4 +113,27 @@ export interface PackageFormData {
   container: string;
   exp_time: string; // Input as string
   main_test_ids?: number[]; // Array of selected MainTest IDs
+}
+
+
+// src/types/labTests.ts
+// ... (MainTest, Container, Unit, ChildGroup etc.) ...
+
+
+
+// If you have a more detailed Package type (e.g., for a full Package CRUD page later):
+// export interface PackageDetail extends Package {
+//   package_id: number;
+//   package_name?: string | null;
+//   container: string;
+//   exp_time: number;
+//   main_tests_count?: number;
+//   main_tests?: MainTestStripped[];
+// }
+
+// For the AddPackageDialog form
+export interface PackageQuickAddFormData {
+    package_name: string;
+    container: string; // Or container_id if it's a select in the dialog
+    exp_time: string;  // Input as string
 }

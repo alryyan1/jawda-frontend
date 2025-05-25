@@ -4,13 +4,13 @@ import { useTranslation } from "react-i18next";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import type { Patient } from "../../types/patients";
 import type { ActivePatientVisit } from "@/types/patients";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getActiveClinicPatients } from "@/services/clinicService";
 import type { PaginatedResponse } from "@/types/common";
 import ActivePatientCard from "./ActivePatientCard";
 import PatientInfoDialog from "./PatientInfoDialog";
+import i18n from "@/i18n";
 
 interface ActivePatientsListProps {
   onPatientSelect: (patient: Patient, visitId: number) => void;
@@ -119,10 +119,11 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
           <p className="text-xs mt-1">{t("clinic:workspace.tryDifferentFilters")}</p>
         </div>
       ) : (
-        <ScrollArea className="flex-grow">
-          <div className="space-y-3 pr-1">
-            {visits.map((visit: ActivePatientVisit) => (
-                  <ActivePatientCard
+        <div className="flex-grow relative">
+          <div className="absolute inset-0 overflow-y-auto scrollbar-thin scrollbar-thumb-muted-foreground/20 hover:scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent">
+            <div style={{direction:i18n.dir()}} className="space-y-3 p-1 min-w-[250px]">
+              {visits.map((visit: ActivePatientVisit) => (
+                <ActivePatientCard
                   key={visit.id}
                   visit={visit}
                   isSelected={selectedPatientVisitId === visit.id}
@@ -130,9 +131,10 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
                   onProfileClick={handleProfileClickForList}
                   selectedPatientVisitIdInWorkspace={selectedPatientVisitId} // Pass this down
                 />
-            ))}
+              ))}
+            </div>
           </div>
-        </ScrollArea>
+        </div>
       )}
     
       {meta && meta.last_page > 1 && (

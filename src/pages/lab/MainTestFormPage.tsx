@@ -13,12 +13,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form } from "@/components/ui/form";
 
-import type { Container } from '@/types/labTests';
+import type { Container, Package } from '@/types/labTests';
 import { createMainTest, updateMainTest, getMainTestById } from '@/services/mainTestService';
 import { getContainers } from '@/services/containerService';
 
 import MainTestFormFields from '@/components/lab/MainTestFormFields';
 import ChildTestsSection from '@/components/lab/ChildTestsSection';
+import { getPackagesList } from '@/services/packageService';
 
 const TestFormMode = {
   CREATE: 'create',
@@ -58,7 +59,10 @@ const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
   const { testId: routeTestId } = useParams<{ testId?: string }>();
   const queryClient = useQueryClient();
   const isEditMode = mode === TestFormMode.EDIT;
-
+  const { data: packages, isLoading: isLoadingPackages } = useQuery<Package[], Error>({
+    queryKey: ['packagesList'], 
+    queryFn: getPackagesList,
+ });
   const [currentMainTestId, setCurrentMainTestId] = useState<number | null>(
     isEditMode && routeTestId ? Number(routeTestId) : null
   );
@@ -86,8 +90,16 @@ const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
       available: true
     }
   });
-
-  const { control, handleSubmit, reset, setValue } = form;
+  
+  const handlePackageAdded = (newPackage: Package) => {
+    queryClient.invalidateQueries({ queryKey: ['packagesList'] });
+    // Optionally set the new package as selected
+    setMainValue('pack_id', String(newPackage.id), { shouldValidate: true, shouldDirty: true });
+    toast.info(`${t('labPackages:entityName')} "${newPackage.name}" ${t('common:addedToListAndSelected')}`);
+ };
+ 
+ const dataIsLoading = isLoadingMainTestInitial || isLoadingContainers || isLoadingPackages; // Add isLoadingPackages
+ const { control, handleSubmit, reset, setValue: setMainValue } = form;
 
   useEffect(() => {
     if (isEditMode && routeTestId) {
@@ -157,11 +169,10 @@ const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
   };
 
   const handleContainerAdded = (newContainer: Container) => {
-    setValue('container_id', String(newContainer.id), { shouldValidate: true, shouldDirty: true });
+    setMainValue('container_id', String(newContainer.id), { shouldValidate: true, shouldDirty: true });
     toast.info(`${t('labTests:containers.entityName')} "${newContainer.container_name}" ${t('common:addedToListAndSelected')}`);
   };
 
-  const dataIsLoading = isLoadingMainTestInitial || isLoadingContainers;
   const formIsSubmitting = mainTestMutation.isPending;
 
   if (isEditMode && isLoadingMainTestInitial && !mainTestData) {
@@ -189,6 +200,9 @@ const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
                 containers={containers}
                 isLoadingContainers={isLoadingContainers}
                 onContainerAdded={handleContainerAdded}
+                packages={packages}
+                isLoadingPackages={isLoadingPackages}
+                onPackageAdded={handlePackageAdded}
               />
               <div className="flex justify-end gap-2 pt-4">
               {currentMainTestId && (

@@ -5,9 +5,10 @@ import type { Control } from 'react-hook-form';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import AddContainerDialog from './AddContainerDialog';
-import type { Container } from '@/types/labTests';
+import type { Container, Package   } from '@/types/labTests';
+import AddPackageDialog from './AddPackageDialog';
 
 interface MainTestFormValues {
   main_test_name: string;
@@ -26,6 +27,9 @@ interface MainTestFormFieldsProps {
   containers: Container[] | undefined;
   isLoadingContainers: boolean;
   onContainerAdded: (newContainer: Container) => void;
+  packages: Package[] | undefined; // NEW PROP
+  isLoadingPackages: boolean; // NEW PROP
+  onPackageAdded: (newPackage: Package) => void; // NEW PROP
 }
 
 const MainTestFormFields: React.FC<MainTestFormFieldsProps> = ({
@@ -35,6 +39,9 @@ const MainTestFormFields: React.FC<MainTestFormFieldsProps> = ({
   containers,
   isLoadingContainers,
   onContainerAdded,
+  packages,
+  isLoadingPackages,
+  onPackageAdded,
 }) => {
   const { t, i18n } = useTranslation(['labTests', 'common']);
   const disabled = isLoadingData || isSubmitting;
@@ -65,17 +72,44 @@ const MainTestFormFields: React.FC<MainTestFormFieldsProps> = ({
             </FormItem>
           )}
         />
-        <FormField
-          control={control}
-          name="pack_id"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t('labTests:form.packIdLabel')}</FormLabel>
-              <FormControl><Input type="number" placeholder={t('labTests:form.packIdPlaceholder')} {...field} value={field.value || ''} disabled={disabled} /></FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+     {/* --- UPDATED pack_id FIELD --- */}
+     <FormField
+        control={control}
+        name="pack_id" // This will store the selected package_id as a string
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>{t('labTests:form.packIdLabel')}</FormLabel>
+            <div className="flex items-center gap-2">
+              <Select
+                onValueChange={field.onChange}
+                value={field.value || ""} // Handle undefined/null for placeholder
+                defaultValue={field.value || ""}
+                disabled={isLoadingPackages || disabled}
+                dir={i18n.dir()}
+              >
+                <FormControl className="flex-grow">
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('labTests:form.selectPackagePlaceholder', "Select a package...")} />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value=" ">{t('common:none')}</SelectItem> {/* Option for no package */}
+                  {isLoadingPackages ? (
+                    <SelectItem value="loading_pkg" disabled>{t('common:loading')}</SelectItem>
+                  ) : (
+                    packages?.map(pkg => (
+                      <SelectItem key={pkg.id} value={String(pkg.id)}>{pkg.name}</SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              <AddPackageDialog onPackageAdded={onPackageAdded} />
+            </div>
+            <FormDescription>{t('labTests:form.packIdDescription')}</FormDescription>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
       </div>
       
       <FormField

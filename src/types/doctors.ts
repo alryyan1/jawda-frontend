@@ -101,6 +101,7 @@ export interface DoctorStripped {
 export interface DoctorShift {
   id: number;
   doctor_id: number;
+  user_id: number;
   doctor_name: string;
   doctor_specialist_name?: string | null;
   doctor_avatar_url?: string | null; // For avatar

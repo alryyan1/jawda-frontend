@@ -15,3 +15,17 @@ export interface Shift {
   // opened_by_user_name?: string;
   // closed_by_user_name?: string;
 }
+export interface ShiftFinancialSummary {
+  shift_id: number;
+  is_closed: boolean;
+  closed_at?: string | null;
+  total_net_income: number;
+  total_discount_applied: number; // Or total_discounts_given
+  total_cash_collected: number;
+  total_bank_collected: number;
+  total_collected: number;
+  recorded_expenses: number;
+  expected_cash_in_drawer: number;
+  shift_total_recorded?: number; // From manual entry on shift close
+  shift_bank_recorded?: number;  // From manual entry on shift close
+}

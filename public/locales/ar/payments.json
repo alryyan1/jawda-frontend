@@ -5,15 +5,37 @@
   "amountPaid": "المبلغ المدفوع",
   "paymentMethod": "طريقة الدفع",
   "cash": "نقداً",
+  "cashShort": "نقداً",
   "bank": "شبكة/بنك",
   "paymentSuccess": "تم تسجيل الدفعة بنجاح!",
+  "batchPayDialogTitleLab": "تسديد دفعة مجمعة لطلبات المختبر",
+  "batchPayDialogDescription": "سيتم تسديد دفعة لـ {{count}} طلب فحص غير مدفوع.",
+  "totalNetPayableIs": "إجمالي صافي المستحق (قبل الدفعات الحالية)",
+  "totalAlreadyPaidIs": "إجمالي المدفوع سابقاً",
+  "totalBalanceDueIs": "إجمالي الرصيد المستحق للدفع حالياً",
+  "allLabRequestsPaidOrNoBalance": "جميع طلبات المختبر مدفوعة بالكامل أو لا يوجد رصيد مستحق.",
+  "totalAmountToPayNow": "المبلغ الإجمالي للدفع الآن",
+  "paymentNotesOptional": "ملاحظات على الدفعة (اختياري)",
+  "paymentNotesPlaceholder": "أدخل أي ملاحظات...",
+  "batchPaymentSuccess": "تم تسجيل الدفعة المجمعة بنجاح!",
+  "batchPaymentError": "فشل تسجيل الدفعة المجمعة.",
   "paymentError": "فشل تسجيل الدفعة.",
   "validation": {
-    "amountExceedsBalance": "المبلغ يتجاوز الرصيد المستحق ({{balance}})."
+    "amountExceedsBalance": "المبلغ يتجاوز الرصيد المستحق ({{balance}}).",
+    "amountMinRequired": "المبلغ يجب أن يكون على الأقل {{amount}}.",
+    "amountExceedsTotalBalance": "المبلغ يتجاوز إجمالي الرصيد المستحق ({{balance}})."
   },
   "status": {
     "paid": "مدفوع",
     "unpaid": "غير مدفوع",
     "partial": "مدفوع جزئياً"
-  }
+  },
+  "dialogTitleLab": "تسديد دفعة للمختبر",
+  "netPayable": "المبلغ المستحق للدفع",
+  "paymentMethodBankak": "بنكك",
+  "payAllDueLab": "تسديد جميع المستحقات المخبرية",
+  "paid": "مدفوع",
+  "pending": "قيد الانتظار",
+  "confirmDirectPayLab": "هل أنت متأكد من تسديد جميع المستحقات المخبرية؟",
+  "confirmDirectPayLabItem": "هل أنت متأكد من تسديد مستحقات الفحص '{{testName}}'؟"
 }

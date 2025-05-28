@@ -1,16 +1,16 @@
-import type { Company } from './companies'; // Assuming these types are defined
-import type { Subcompany } from './companies';
-import type { CompanyRelation } from './companies';
-import type { Doctor } from './doctors'; // Assuming this type is defined
-import { User } from './index'; // Assuming User type from a general index.ts or auth types
+import type { Company } from "./companies"; // Assuming these types are defined
+import type { Subcompany } from "./companies";
+import type { CompanyRelation } from "./companies";
+import type { Doctor } from "./doctors"; // Assuming this type is defined
+import { User } from "./index"; // Assuming User type from a general index.ts or auth types
 // import { Country } from './locations'; // If you have a Country type
 
 export interface Patient {
   id: number;
   name: string;
   shift_id: number; // Should probably also have Shift object if loaded
-  user_id: number;  // User who registered/is responsible for this patient entry
-  user?: User;     // Optional: loaded User object
+  user_id: number; // User who registered/is responsible for this patient entry
+  user?: User; // Optional: loaded User object
 
   doctor_id?: number | null;
   doctor?: Doctor; // Optional: loaded Doctor object
@@ -39,8 +39,8 @@ export interface Patient {
   result_is_locked: boolean;
   sample_collected: boolean;
   sample_collect_time?: string | null; // Time string, e.g., "HH:MM:SS"
-  result_print_date?: string | null;  // DateTime string (ISO 8601)
-  sample_print_date?: string | null;  // DateTime string
+  result_print_date?: string | null; // DateTime string (ISO 8601)
+  sample_print_date?: string | null; // DateTime string
 
   visit_number: number;
   result_auth: boolean;
@@ -76,7 +76,7 @@ export interface Patient {
   heart_rate?: string | null;
   spo2?: string | null; // Oxygen saturation
   discount: number; // double in schema, (decimal in migration)
-  
+
   drug_history: string;
   family_history: string;
   rbs: string; // Random Blood Sugar
@@ -126,26 +126,44 @@ export interface Patient {
 export interface PatientFormData {
   name: string;
   phone: string;
-  gender: 'male' | 'female' | 'other' | undefined; // Undefined for initial select state
-  
+  gender: "male" | "female" | "other" | undefined; // Undefined for initial select state
+
   age_year?: number | null; // Input as number | null, then parse
   age_month?: number | null;
   age_day?: number | null;
   doctor_shift_id: number; // Input as string from select
   // address?: string;
-  
+
   doctor_id: number | undefined; // Input as string from select
   company_id?: number | null; // Input as string from select
- 
+  // Company-specific fields
+  insurance_no?: string;
+  guarantor?: string;
+  subcompany_id?: string | undefined;
+  company_relation_id?: string | undefined;
+  expire_date?: Date | undefined; // For shadcn DatePicker
+}
+// src/types/patients.ts
+// ... (Patient, PatientFormData) ...
+export interface PatientSearchResult {
+  id: number;
+  name: string;
+  phone?: string | null;
+  gender?: 'male' | 'female' | 'other';
+  age_year?: number | null;
+  last_visit_id?: number | null;
+  last_visit_date?: string | null;
+  last_visit_doctor_name?: string | null;
+  last_visit_file_id?: number | null;
 }
 // --- NEW/VERIFY: PatientStripped Interface ---
 export interface PatientStripped {
   id: number;
   name: string;
   phone?: string; // Optional, but often useful
-  gender?: 'male' | 'female' | 'other'; // Optional
+  gender?: "male" | "female" | "other"; // Optional
   // You can add age_year or a computed age_string if frequently needed with stripped info
-  // age_year?: number | null; 
+  // age_year?: number | null;
 }
 
 // For paginated responses if you have a patient list API
@@ -175,7 +193,15 @@ export interface ActivePatientVisit {
     id: number;
     name: string;
   };
-  status: 'waiting' | 'with_doctor' | 'lab_pending' | 'imaging_pending' | 'payment_pending' | 'completed' | 'cancelled' | 'no_show';
+  status:
+    | "waiting"
+    | "with_doctor"
+    | "lab_pending"
+    | "imaging_pending"
+    | "payment_pending"
+    | "completed"
+    | "cancelled"
+    | "no_show";
   requested_services_count: number;
   created_at: string;
   updated_at: string;

@@ -75,7 +75,8 @@
     "registerNewPatient": "تسجيل مريض جديد",
     "viewPatientWorkspace": "إخفاء التسجيل/عرض ساحة العمل",
     "manageDoctorShifts": "إدارة مناوبات الأطباء",
-    "myShiftIncome": "ملخص دخل مناوبتي"
+    "myShiftIncome": "ملخص دخل مناوبتي",
+    "viewShiftSummary": "عرض ملخص الوردية"
   },
   "selectedPatientWorkspace": {
     "title": "تفاصيل المريض: {{patientName}}",
@@ -88,6 +89,22 @@
     "noActiveShifts": "لا يوجد أطباء مناوبون حالياً.",
     "examining": "يفحص",
     "free": "متاح"
+  },
+  "shiftSummary": {
+    "dialogTitle": "الملخص المالي للوردية",
+    "closedOn": "أُغلقت في: {{date}}",
+    "currentlyOpen": "هذه الوردية مفتوحة حالياً.",
+    "incomeTitle": "الإيرادات",
+    "totalNetIncome": "إجمالي صافي الإيراد",
+    "totalDiscount": "إجمالي الخصومات",
+    "collectionsTitle": "المحصلات",
+    "totalCashCollected": "إجمالي المحصل نقداً",
+    "totalBankCollected": "إجمالي المحصل بنك/شبكة",
+    "totalCollected": "إجمالي المحصلات",
+    "expensesAndNet": "المصروفات والصافي",
+    "recordedExpenses": "المصروفات المسجلة",
+    "expectedCash": "النقدية المتوقعة بالدرج",
+    "closureValues": "قيم الإغلاق (اليدوية)"
   },
   "doctorShifts": {
     "manageTitle": "إدارة مناوبات الأطباء",

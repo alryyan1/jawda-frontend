@@ -14,6 +14,41 @@
     "company": "الشركة",
     "subCompany": "الشركة الفرعية",
     "insuranceNo": "رقم التأمين",
-    "expiryDate": "تاريخ انتهاء التأمين"
+    "expiryDate": "تاريخ انتهاء التأمين",
+    "guarantor": "الضامن",
+    "relation": "العلاقة",
+    "selectSubCompany": "اختر الشركة الفرعية",
+    "selectRelation": "اختر العلاقة",
+    "subCompanyName": "اسم الشركة الفرعية",
+    "relationName": "اسم العلاقة",
+    "labEnduranceShort": "تحمل المختبر",
+    "serviceEnduranceShort": "تحمل الخدمة"
+  },
+  "search": {
+    "lastVisit": "آخر زيارة",
+    "lastDoctor": "آخر طبيب",
+    "createVisitFromThis": "إنشاء زيارة لهذا المريض",
+    "visitCreatedSuccess": "تم إنشاء زيارة جديدة للمريض: {{patientName}} بنجاح."
+  },
+  "insuranceDetailsSectionTitle": "تفاصيل التأمين",
+  "subcompany": {
+    "addButton": "إضافة شركة فرعية",
+    "addDialogTitle": "إضافة شركة فرعية جديدة",
+    "addDialogDescription": "أدخل تفاصيل الشركة الفرعية الجديدة",
+    "selectParentCompanyFirst": "اختر الشركة الأم أولاً",
+    "parentCompanyRequiredError": "الشركة الأم مطلوبة",
+    "addedSuccess": "تمت إضافة الشركة الفرعية بنجاح"
+  },
+  "relation": {
+    "addButton": "إضافة علاقة",
+    "addDialogTitle": "إضافة علاقة جديدة",
+    "addDialogDescription": "أدخل تفاصيل العلاقة الجديدة",
+    "selectParentCompanyFirst": "اختر الشركة أولاً",
+    "parentCompanyRequiredError": "الشركة مطلوبة",
+    "addedSuccess": "تمت إضافة العلاقة بنجاح"
+  },
+  "validation": {
+    "noDoctorSelectedError": "الرجاء اختيار طبيب مناوب من الأعلى لتسجيل الزيارة."
+
   }
 } 

@@ -12,23 +12,27 @@ import { Toaster } from "@/components/ui/sonner"; // Assuming sonner for toasts
 import PatientQueuePanel from '@/components/lab/workstation/PatientQueuePanel';
 
 // Import Types
-import type { PatientLabQueueItem } from '@/types/labWorkflow';
+import type { ChildTestWithResult, PatientLabQueueItem } from '@/types/labWorkflow';
 import type { Shift } from '@/types/shifts';
 
 // Import Services
 import { getCurrentOpenShift } from '@/services/shiftService';
 import TestSelectionPanel from './TestSelectionPanel';
 import ResultEntryPanel from '@/components/lab/workstation/ResultEntryPanel';
-import StatusAndInfoPanel from '@/components/lab/workstation/StatusAndInfoPanel';
 import LabActionsPane from '@/components/lab/workstation/LabActionsPane';
 import type { LabRequest } from '@/types/visits';
 import { format } from 'date-fns';
+import StatusAndInfoPanel from '@/components/lab/workstation/StatusAndInfoPanel';
 // Other services will be called within the panel components themselves
 
 const LabWorkstationPage: React.FC = () => {
   const { t, i18n } = useTranslation(['labResults', 'common', 'labTests', 'patients', 'payments']);
   const queryClient = useQueryClient();
-  
+  const [focusedChildTestForInfo, setFocusedChildTestForInfo] = useState<ChildTestWithResult | null>(null);
+
+const handleChildTestFocus = useCallback((childTest: ChildTestWithResult | null) => {
+    setFocusedChildTestForInfo(childTest);
+}, []);
   // --- Top Level State for the Workstation ---
   const [globalSearchTerm, setGlobalSearchTerm] = useState('');
   const [debouncedGlobalSearch, setDebouncedGlobalSearch] = useState('');
@@ -186,6 +190,7 @@ const LabWorkstationPage: React.FC = () => {
         <main className="flex-grow bg-slate-100 dark:bg-slate-900/70 flex flex-col h-full overflow-hidden relative">
           {selectedLabRequestForEntry ? (
             <ResultEntryPanel 
+                onChildTestFocus={handleChildTestFocus}
                 key={`result-entry-${selectedLabRequestForEntry.id}`}
                 initialLabRequest={selectedLabRequestForEntry}
                 onResultsSaved={handleResultsSaved}
@@ -213,6 +218,8 @@ const LabWorkstationPage: React.FC = () => {
                     patientId={selectedQueueItem.patient_id} 
                     visitId={selectedQueueItem.visit_id}
                     selectedLabRequest={selectedLabRequestForEntry}
+                    focusedChildTest={focusedChildTestForInfo}
+                    
                 />
             ) : (
                  <div className="p-4 text-center text-muted-foreground hidden lg:flex flex-col items-center justify-center h-full">

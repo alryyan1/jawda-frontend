@@ -23,11 +23,14 @@ import type { ChildTestOption } from '@/types/labTests';
 import type { MainTestWithChildrenResults, ResultEntryFormValues, ResultEntryItemFormValue, ChildTestWithResult } from '@/types/labWorkflow';
 import { getLabRequestForEntry, saveLabResults } from '@/services/labWorkflowService';
 import { cn } from '@/lib/utils';
+import { TableBody, TableCell, TableHead, TableHeader, TableRow ,Table } from '@/components/ui/table';
+import { Paper } from '@mui/material';
 
 interface ResultEntryPanelProps {
   initialLabRequest: LabRequest;
   onResultsSaved: () => void;
   onClosePanel?: () => void;
+  onChildTestFocus: (childTest: ChildTestWithResult | null) => void;
 }
 
 type TranslateFunction = (key: string, options?: Record<string, unknown>) => string;
@@ -64,7 +67,7 @@ const getResultEntrySchema = (t: TranslateFunction) => z.object({
   main_test_comment: z.string().max(1000).optional().nullable(),
 });
 
-const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({ initialLabRequest, onResultsSaved, onClosePanel }) => {
+const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({ initialLabRequest, onResultsSaved, onClosePanel, onChildTestFocus }) => {
   const { t } = useTranslation(['labResults', 'common', 'labTests', 'payments']);
   const queryClient = useQueryClient();
   // alert('This component is deprecated and will be removed in future versions. Please use the new lab results entry panel.');
@@ -179,86 +182,97 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({ initialLabRequest, 
             )}
             <div className="space-y-4">
               {fields.map((item, index) => (
-                <Card key={item.fieldId} className="p-3 shadow-sm">
-                  <h4 className="font-medium text-sm mb-1.5">{item.child_test_name}</h4>
-                  <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr_1fr] gap-x-3 gap-y-2 items-start">
-                    {/* Result Value Input */}
-                    <FormField
-                      control={control}
-                      name={`results.${index}.result_value`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs sr-only">{t('labResults:resultEntry.result')}</FormLabel>
-                          <FormControl>
-                            {item.options && item.options.length > 0 ? (
-                              <Autocomplete
-                                options={item.options.map(opt => opt.name)}
-                                getOptionLabel={(option) => option}
-                                value={field.value || null}
-                                onChange={(event, newValue) => field.onChange(newValue)}
-                                freeSolo={!item.is_boolean_result}
-                                filterOptions={(options, params) => {
-                                    const filtered = filterOptions(options, params);
-                                    if (params.inputValue !== '' && !item.is_boolean_result) {
-                                        filtered.push(params.inputValue);
-                                    }
-                                    return filtered;
-                                }}
-                                renderInput={(params) => (
-                                  <TextField {...params} 
-                                    variant="outlined" 
-                                    size="small" 
-                                    className="mui-autocomplete-custom bg-background text-sm"
-                                    placeholder={t('labResults:resultEntry.enterOrSelectResult')}
-                                    sx={{ '& .MuiOutlinedInput-root': { fontSize: '0.875rem', padding: '2px 8px !important' } }}
-                                  />
-                                )}
-                                disabled={saveResultsMutation.isPending}
-                                size="small"
-                                fullWidth
-                              />
-                            ) : item.is_boolean_result ? (
-                                <div className="flex items-center space-x-2 pt-1.5">
-                                    <Checkbox id={`bool-res-${item.child_test_id}`} 
-                                        checked={field.value === t('common:yes')}
-                                        onCheckedChange={(checked) => field.onChange(checked ? t('common:yes') : t('common:no'))}
-                                    />
-                                    <label htmlFor={`bool-res-${item.child_test_id}`} className="text-sm">
-                                        {field.value === t('common:yes') ? t('common:yes') : (field.value === t('common:no') ? t('common:no') : t('common:selectValue'))}
-                                    </label>
-                                </div>
-                            ) : (
-                              <Input 
-                                {...field} 
-                                value={field.value || ''} 
-                                type={item.is_numeric ? "number" : "text"}
-                                step={item.is_numeric ? "any" : undefined}
-                                className="h-9 text-sm" 
-                                placeholder={t('labResults:resultEntry.enterResult')}
-                                disabled={saveResultsMutation.isPending}
-                              />
-                            )}
-                          </FormControl>
-                          <FormMessage className="text-xs"/>
-                        </FormItem>
-                      )}
-                    />
-                    <div className="text-xs text-muted-foreground pt-1 sm:pt-[26px]">
-                       {item.unit_name && <span className="whitespace-nowrap">({item.unit_name})</span>}
-                    </div>
-                    <div className="text-xs text-muted-foreground pt-1 sm:pt-[26px] truncate" title={item.normal_range_text || ''}>
-                       {item.normal_range_text || t('common:notApplicableShort')}
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-[80px_1fr] gap-2 mt-1.5">
-                    <FormField control={control} name={`results.${index}.result_flags`} render={({ field }) => (
-                        <FormItem><FormLabel className="text-xs sr-only">{t('labResults:resultEntry.flags')}</FormLabel><FormControl><Input {...field} value={field.value || ''} className="h-8 text-xs" placeholder={t('labResults:resultEntry.flagsPlaceholder')} disabled={saveResultsMutation.isPending}/></FormControl></FormItem>
-                    )}/>
-                    <FormField control={control} name={`results.${index}.result_comment`} render={({ field }) => (
-                        <FormItem><FormLabel className="text-xs sr-only">{t('labResults:resultEntry.comment')}</FormLabel><FormControl><Input {...field} value={field.value || ''} className="h-8 text-xs" placeholder={t('labResults:resultEntry.commentPlaceholder')} disabled={saveResultsMutation.isPending}/></FormControl></FormItem>
-                    )}/>
-                  </div>
-                </Card>
+               <Table key={item.fieldId} className="min-w-[400px]"> {/* Simple table for results */}
+               <TableHeader>
+                 <TableRow>
+                   <TableHead className="w-[40%] sm:w-[35%]">{t('labResults:resultEntry.childTestName')}</TableHead>
+                   <TableHead className="w-[60%] sm:w-[45%]">{t('labResults:resultEntry.result')}</TableHead>
+                   <TableHead className="hidden sm:table-cell w-[20%]">{t('labResults:resultEntry.flags')}</TableHead>
+                   {/* Comment might be in a separate row or a small input below result */}
+                 </TableRow>
+               </TableHeader>
+               <TableBody>
+                 {fields.map((item, index) => (
+                   <TableRow key={item.fieldId}>
+                     <TableCell className="py-1.5 align-top font-medium text-xs sm:text-sm">
+                       {item.child_test_name}
+                       <div className="text-[10px] text-muted-foreground">
+                          {item.unit_name && <span>({item.unit_name})</span>}
+                          {/* Normal range is now shown in StatusAndInfoPanel on focus */}
+                       </div>
+                     </TableCell>
+                     <TableCell className="py-1.5 align-top">
+                       <FormField
+                         control={control}
+                         name={`results.${index}.result_value`}
+                         render={({ field }) => (
+                           <FormItem className="w-full">
+                             {/* <FormLabel className="sr-only">Result</FormLabel> */}
+                             <FormControl>
+                               {item.is_qualitative_with_options && item.options ? (
+                                 <Autocomplete
+                                   fullWidth
+                                   size="small"
+                                   options={item.options} // These are ChildTestOption objects
+                                   getOptionLabel={(option) => typeof option === 'string' ? option : option.name} // Handle string or object
+                                   value={field.value} // RHF value can be string or ChildTestOption object
+                                   onChange={(event, newValue) => {
+                                      // newValue can be string (if freeSolo and new value) or ChildTestOption object or null
+                                      field.onChange(newValue);
+                                   }}
+                                   onFocus={() => onChildTestFocus(testDataForEntry?.child_tests_with_results[index] || null)}
+                                   onBlur={() => onChildTestFocus(null)} // Clear focus
+                                   isOptionEqualToValue={(option, value) => option.name === (typeof value === 'string' ? value : value?.name)}
+                                   freeSolo // Allow typing values not in the list
+                                   filterOptions={(options, params) => {
+                                      const filtered = filter(options, params);
+                                      const { inputValue } = params;
+                                      const isExisting = options.some((option) => inputValue === option.name);
+                                      if (inputValue !== '' && !isExisting) {
+                                        // Create a temporary option object for the new string value
+                                        filtered.push({ id: 0, child_test_id: item.child_test_id, name: inputValue });
+                                      }
+                                      return filtered;
+                                    }}
+                                   renderInput={(params) => (
+                                     <TextField {...params} 
+                                          variant="outlined" 
+                                          placeholder={t('labResults:resultEntry.enterOrSelectResult')}
+                                          sx={{ '& .MuiOutlinedInput-root': { fontSize: '0.875rem', padding: '1px 6px !important', backgroundColor: 'var(--background)', borderRadius: 'var(--radius)' }, '& .MuiInputLabel-root': {fontSize: '0.875rem'} }}
+                                     />
+                                   )}
+                                   disabled={saveResultsMutation.isPending}
+                                   PaperComponent={props => <Paper {...props} className="dark:bg-slate-800 dark:text-slate-100"/>}
+                                 />
+                               ) : (
+                                 <Input 
+                                   {...field} 
+                                   value={field.value || ''}
+                                   onChange={(e) => field.onChange(e.target.value)}
+                                   onFocus={() => onChildTestFocus(testDataForEntry?.child_tests_with_results[index] || null)}
+                                   onBlur={() => onChildTestFocus(null)} // Clear focus
+                                   type={item.is_numeric ? "number" : "text"}
+                                   step={item.is_numeric ? "any" : undefined}
+                                   className="h-9 text-sm" 
+                                   disabled={saveResultsMutation.isPending}
+                                 />
+                               )}
+                             </FormControl>
+                             <FormMessage className="text-xs"/>
+                           </FormItem>
+                         )}
+                       />
+                     </TableCell>
+                     <TableCell className="py-1.5 align-top hidden sm:table-cell">
+                       <FormField control={control} name={`results.${index}.result_flags`} render={({ field }) => (
+                           <FormItem><FormControl><Input {...field} value={field.value || ''} className="h-9 text-sm w-20" placeholder={t('labResults:resultEntry.flagsShort')} disabled={saveResultsMutation.isPending}/></FormControl></FormItem>
+                       )}/>
+                     </TableCell>
+                     {/* Comment could be a separate row or a larger textarea below if needed */}
+                   </TableRow>
+                 ))}
+               </TableBody>
+             </Table>
               ))}
             </div>
           </ScrollArea>

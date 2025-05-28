@@ -4,11 +4,20 @@
   "expandSidebar": "توسيع القائمة",
   "collapseSidebar": "طي القائمة",
   "loading": "جار التحميل...",
+  "loadingShiftInfo": "جار تحميل معلومات الوردية...",
   "updatingList": "جار تحديث القائمة...",
   "refreshList": "تحديث القائمة",
   "datePicker": {
-    "pickDateRange": "اختر نطاق التاريخ"
+    "pickDateRange": "اختر نطاق التاريخ",
+    "pickDateTime": "اختر التاريخ والوقت",
+    "timeTitle": "الوقت",
+    "hours": "الساعة",
+    "minutes": "الدقيقة",
+    "timezoneNote": "المنطقة الزمنية: {{timezone}}"
   },
+  "openedAt": "تم الفتح في",
+  "requestedAt": "تم الطلب في",
+  "years_shortInitial": "س",
   "cancel": "إلغاء",
   "edit": "تعديل",
   "delete": "حذف",
@@ -29,7 +38,11 @@
   "switchToLight": "التبديل إلى الوضع الفاتح",
   "underDevelopment": "هذا القسم قيد التطوير.",
   "actions": {
-    "openMenu": "فتح القائمة"
+    "openMenu": "فتح القائمة",
+    "add": "إضافة",
+    "goBack": "رجوع",
+    "goHome": "الصفحة الرئيسية",
+    "retry": "حاول مرة أخرى"
   },
   "pagination": {
     "previous": "السابق",
@@ -39,12 +52,15 @@
   },
   "validation": {
     "required": "{{field}} مطلوب.",
+    "requiredWhen": "هذا الحقل مطلوب عند اختيار {{context}}",
     "mustBeNumber": "يجب أن يكون رقماً.",
     "mustBeInteger": "يجب أن يكون رقماً صحيحاً.",
+    "mustBeNumeric": "يجب أن يكون رقماً.",
     "passwordMinLengthGeneral": "يجب أن تفي كلمة المرور بشرط الحد الأدنى للطول.",
     "invalidEmail": "صيغة بريد إلكتروني غير صحيحة.",
     "positiveNumber": "يجب أن يكون رقماً موجباً.",
     "positiveInteger": "يجب أن يكون رقماً صحيحاً موجباً.",
+    "positiveNumberMin": "يجب أن يكون رقماً موجباً أكبر من {{min}}",
     "requiredField": "هذا الحقل مطلوب",
     "mustBeNumericOptional": "يجب أن يكون رقماً (اختياري).",
     "mustBeIntegerOptional": "يجب أن يكون رقماً صحيحاً (اختياري).",
@@ -61,10 +77,14 @@
     "saveFailed": "فشل حفظ {{entity}}.",
     "deleteFailed": "فشل حذف {{entity}}.",
     "fetchFailedExt": "فشل تحميل {{entity}}: {{message}}",
-    "fetchFailed": "فشل في جلب {{entity}}",
+    "fetchFailed": "فشل في جلب {{entity}}: {{message}}",
     "updateFailed": "فشل في تحديث {{entity}}",
     "createFailed": "فشل في إنشاء {{entity}}",
-    "requestFailed": "فشل في تنفيذ الطلب"
+    "requestFailed": "فشل في تنفيذ الطلب",
+    "pageNotFound": "الصفحة غير موجودة",
+    "somethingWentWrong": "حدث خطأ ما",
+    "unknownError": "حدث خطأ غير متوقع",
+    "noPermissions": "ليس لديك الصلاحية لعرض هذا القسم"
   },
   "save": "حفظ",
   "id": "م",
@@ -103,9 +123,11 @@
   "amountLeft": "المبلغ المتبقي",
   "pay": "دفع",
   "updatedSuccess": "تم تحديث  بنجاح!",
+  "detailsUpdatedSuccess": "تم تحديث التفاصيل بنجاح!",
   "confirmDeleteTitle": "تأكيد الحذف",
   "confirmDeleteMessage": "هل أنت متأكد أنك تريد حذف {{item}}؟",
   "confirmDeleteButton": "حذف",
+  "payTotalAmount": "دفع المبلغ الإجمالي",
   "view": "عرض",
   "viewProfile": "عرض الملف",
   "viewProfileFor": "عرض ملف {{name}}",
@@ -123,7 +145,10 @@
       "own": "خاص",
       "record": "تسجيل",
       "reports": "تقارير",
-      "settings": "إعدادات"
+      "settings": "إعدادات",
+      "lab": "المختبر",
+      "clinical": "العيادة",
+      "appointments": "المواعيد"
     },
     "manage_all_doctor_schedules": "إدارة جميع جداول الأطباء",
     "view_doctor_schedules": "عرض جداول الأطباء",
@@ -132,7 +157,34 @@
     "manage_own_doctor_schedule": "إدارة جدول الطبيب الخاص",
     "record_visit_service_payment": "تسجيل دفعة خدمة الزيارة",
     "view_reports_section": "عرض قسم التقارير",
-    "edit_visit_requested_service_details": "تعديل تفاصيل الخدمة المطلوبة للزيارة"
+    "edit_visit_requested_service_details": "تعديل تفاصيل الخدمة المطلوبة للزيارة",
+    
+    "edit_lab_request_flags": "تعديل علامات طلب المختبر",
+    "clear_pending_lab_requests": "مسح طلبات المختبر المعلقة",
+    "record_batch_lab_payment": "تسجيل دفعة مجمعة للمختبر",
+    "edit_lab_results": "تعديل نتائج المختبر",
+    "batch_authorize_lab_results": "اعتماد مجموعة نتائج المختبر",
+    "print_lab_sample_labels": "طباعة ملصقات عينات المختبر",
+    "view_lab_report_preview": "عرض معاينة تقرير المختبر",
+    
+    "view_patient_vitals": "عرض العلامات الحيوية للمريض",
+    "record_patient_vitals": "تسجيل العلامات الحيوية للمريض",
+    "edit_patient_vitals": "تعديل العلامات الحيوية للمريض",
+    "delete_patient_vitals": "حذف العلامات الحيوية للمريض",
+    
+    "view_clinical_notes": "عرض الملاحظات السريرية",
+    "create_clinical_notes": "إنشاء الملاحظات السريرية",
+    "edit_own_clinical_notes": "تعديل الملاحظات السريرية الخاصة",
+    "edit_all_clinical_notes": "تعديل جميع الملاحظات السريرية",
+    "delete_clinical_notes": "حذف الملاحظات السريرية",
+    
+    "list_appointments": "عرض قائمة المواعيد",
+    "view_appointment_details": "عرض تفاصيل الموعد",
+    "cancel_appointments": "إلغاء المواعيد",
+    "update_appointment_status": "تحديث حالة الموعد",
+    
+    "view_monthly_lab_income_report": "عرض تقرير الدخل الشهري للمختبر",
+    "print_monthly_lab_income_report": "طباعة تقرير الدخل الشهري للمختبر"
   },
   "totalAmountNet": "المبلغ الإجمالي الصافي",
   "totalBalanceDue": "إجمالي المبلغ المتبقي",
@@ -143,5 +195,24 @@
   "select": "اختيار",
   "waitingSince": "في الانتظار منذ",
   "labRequestId": "رقم طلب المختبر",
-  "closePanel": "إغلاق اللوحة"
+  "closePanel": "إغلاق اللوحة",
+  "queueNumber": "رقم الدور",
+  "queueNumberShort": "رقم",
+  "summaryFinancial": "الملخص المالي",
+  "summaryFinancial_lab": "الملخص المالي للمختبر",
+  "month": "الشهر",
+  "year": "السنة",
+  "generateReport": "إنشاء التقرير",
+  "months": {
+    "1": "يناير", "2": "فبراير", "3": "مارس", "4": "أبريل",
+    "5": "مايو", "6": "يونيو", "7": "يوليو", "8": "أغسطس",
+    "9": "سبتمبر", "10": "أكتوبر", "11": "نوفمبر", "12": "ديسمبر"
+  },
+  "months_shortInitial": {
+    "1": "ي", "2": "ف", "3": "م", "4": "أ",
+    "5": "م", "6": "ي", "7": "ي", "8": "أ",
+    "9": "س", "10": "أ", "11": "ن", "12": "د"
+  },
+  "viewDetails": "عرض التفاصيل",
+  "manage": "إدارة"
 }

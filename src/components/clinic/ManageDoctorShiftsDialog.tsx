@@ -40,7 +40,7 @@ const ManageDoctorShiftsDialog: React.FC<ManageDoctorShiftsDialogProps> = ({ tri
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-
+  console.log('currentClinicShiftId', currentClinicShiftId);
   useEffect(() => {
     const handler = setTimeout(() => setDebouncedSearchTerm(searchTerm), 300);
     return () => clearTimeout(handler);

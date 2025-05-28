@@ -18,7 +18,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <AuthProvider>
           <RouterProvider router={router} />
         </AuthProvider>
-        <ReactQueryDevtools initialIsOpen={false} /> {/* Optional */}
+        <ReactQueryDevtools initialIsOpen={false} /> 
       </QueryClientProvider>
     </Suspense>
   </React.StrictMode>

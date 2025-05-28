@@ -107,5 +107,17 @@ export interface CompanyMainTestFormData {
   endurance_percentage: string;
   use_static: boolean;
 }
-
+// src/types/companies.ts
+// ... (Company type) ...
+export interface Subcompany {
+  id: number;
+  name: string;
+  company_id: number; // Parent company
+  // ... other fields like lab_endurance if needed
+}
+export interface CompanyRelation { // Generic relations
+  id: number;
+  name: string;
+  // ... other fields if any
+}
 export type PaginatedCompanyMainTestContractsResponse  = PaginatedResponse<CompanyMainTestContract> 

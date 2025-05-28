@@ -14,31 +14,37 @@ import {
   BriefcaseMedical,
   CalendarClock,
   WalletCards,
+  ReceiptText,
+  BarChart3,
 } from "lucide-react"; // UsersRound for manage doctor shifts
 import ManageDoctorShiftsDialog from "./ManageDoctorShiftsDialog";
 import { cn } from "@/lib/utils";
 import UserShiftIncomeDialog from "./UserShiftIncomeDialog";
+import AddCostDialog from "./AddCostDialog";
+import { Separator } from "@radix-ui/react-separator";
+import { useAuth } from "@/contexts/AuthContext";
+import ShiftSummaryDialog from "./ShiftSummaryDialog"; // Make sure this component exists
  
 interface ActionsPaneProps {
   showRegistrationForm: boolean;
   onToggleRegistrationForm: () => void;
-  currentClinicShiftId: number | null; // To pass to ManageDoctorShiftsDialog if needed
 }
 
 const ActionsPane: React.FC<ActionsPaneProps> = ({
   showRegistrationForm,
   onToggleRegistrationForm,
-  currentClinicShiftId,
 }) => {
-  const { t, i18n } = useTranslation(["clinic", "common"]);
+  const { t, i18n } = useTranslation(["clinic", "common", "finances"]);
   // const { can } = useAuthorization(); // For permission checks
-
+  const { currentClinicShift, isLoading } = useAuth();
+  console.log('currentClinicShift', currentClinicShift ,'in actions pane');
   // Placeholder permissions
   const canRegisterPatient = true; // can('create patients')
   const canManageDoctorShifts = true; // can('manage doctor_shifts')
   const canViewOwnShiftIncome = true; // can('view own shift income')
   const [isIncomeDialogOpen, setIsIncomeDialogOpen] = useState(false);
-
+  const canRecordCosts = true; // can('record costs')
+  const [showShiftSummaryDialog, setShowShiftSummaryDialog] = useState(false);
   return (
     <TooltipProvider delayDuration={200}>
       <aside
@@ -84,7 +90,7 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
             </TooltipContent>
           </Tooltip>
         )}
-  {canViewOwnShiftIncome && currentClinicShiftId && ( // Only show if a clinic shift is active
+  {canViewOwnShiftIncome && currentClinicShift && ( // Only show if a clinic shift is active
          <Tooltip>
              <TooltipTrigger asChild>
                  <Button 
@@ -106,26 +112,78 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
         {canManageDoctorShifts && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <ManageDoctorShiftsDialog
-                currentClinicShiftId={currentClinicShiftId}
-                triggerButton={
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="w-11 h-11"
-                    aria-label={t("clinic:actionsPane.manageDoctorShifts")}
-                  >
-                    <CalendarClock className="h-5 w-5" />
-                  </Button>
-                }
-              />
+              <span className="inline-block"> {/* Wrap in span to prevent button nesting */}
+                <ManageDoctorShiftsDialog
+                  currentClinicShiftId={currentClinicShift?.id ?? null}
+                  triggerButton={
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="w-11 h-11"
+                      aria-label={t("clinic:actionsPane.manageDoctorShifts")}
+                    >
+                      <CalendarClock className="h-5 w-5" />
+                    </Button>
+                  }
+                />
+              </span>
             </TooltipTrigger>
             <TooltipContent side={i18n.dir() === "rtl" ? "left" : "right"}>
               <p>{t("clinic:actionsPane.manageDoctorShifts")}</p>
             </TooltipContent>
           </Tooltip>
         )}
+ <Separator className="my-1" />
 
+{canRecordCosts && (
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <span className="inline-block"> {/* Wrap in span to prevent button nesting */}
+        <AddCostDialog
+          currentOpenClinicShift={currentClinicShift}
+          triggerButton={
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="w-11 h-11" 
+              aria-label={t('finances:costs.addButton')} 
+              disabled={!currentClinicShift || isLoading}
+            >
+              <ReceiptText className="h-5 w-5" />
+            </Button>
+          }
+          onCostAdded={() => {
+            // Potentially invalidate dashboard summary or other relevant queries
+          }}
+        />
+      </span>
+    </TooltipTrigger>
+    <TooltipContent side={i18n.dir() === 'rtl' ? 'left' : 'right'} sideOffset={5}>
+      <p>{t('finances:costs.addButton')}</p>
+    </TooltipContent>
+  </Tooltip>
+)}
+
+<Separator className="my-1" />
+
+{currentClinicShift && ( // Show button only if a shift is active/known
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        className="w-11 h-11" 
+        onClick={() => setShowShiftSummaryDialog(true)}
+        aria-label={t('clinic:actionsPane.viewShiftSummary')}
+      >
+        <BarChart3 className="h-5 w-5" />
+      </Button>
+    </TooltipTrigger>
+    <TooltipContent side={i18n.dir() === 'rtl' ? 'left' : 'right'} sideOffset={5}>
+      <p>{t('clinic:actionsPane.viewShiftSummary')}</p>
+    </TooltipContent>
+  </Tooltip>
+)}
         {/* Example other action */}
         <Tooltip>
           <TooltipTrigger asChild>
@@ -142,12 +200,20 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
         {/* More actions can be added here */}
       </aside>
       
-      {currentClinicShiftId && ( // Only render dialog if there's a shift context
+      {currentClinicShift && ( // Only render dialog if there's a shift context
          <UserShiftIncomeDialog
              isOpen={isIncomeDialogOpen}
              onOpenChange={setIsIncomeDialogOpen}
-             currentClinicShiftId={currentClinicShiftId}
+             currentClinicShiftId={currentClinicShift?.id ?? null}
          />
+      )}
+
+      {currentClinicShift && (
+        <ShiftSummaryDialog
+          isOpen={showShiftSummaryDialog}
+          onOpenChange={setShowShiftSummaryDialog}
+          shift={currentClinicShift}
+        />
       )}
     </TooltipProvider>
   );

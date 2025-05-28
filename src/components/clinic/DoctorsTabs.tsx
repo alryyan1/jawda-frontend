@@ -12,28 +12,36 @@ import { Button } from '../ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Badge } from '../ui/badge';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
+import { useAuthorization } from '@/hooks/useAuthorization';
 
 interface DoctorsTabsProps {
   onShiftSelect: (shift: DoctorShift | null) => void;
   activeShiftId: number | null;
-  currentClinicShiftId?: number | null;
 }
 
-const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId, currentClinicShiftId }) => {
+const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId }) => {
   const { t, i18n } = useTranslation(['clinic', 'common']);
   const isRTL = i18n.dir() === 'rtl';
-  
+  const {can} = useAuthorization()
+  const {user} = useAuth()
   const scrollViewportRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
-
+  const {currentClinicShift,isLoadingShift,refetchCurrentClinicShift} = useAuth()
   const { data: doctorShifts, isLoading, error } = useQuery<DoctorShift[], Error>({
-    queryKey: ['activeDoctorShifts', currentClinicShiftId],
-    queryFn: () => getActiveDoctorShifts(currentClinicShiftId || undefined),
+    queryKey: ['activeDoctorShifts', currentClinicShift?.id],
+    queryFn: () => getActiveDoctorShifts(currentClinicShift?.id || undefined),
     refetchInterval: 30000,
   });
-
+  //filter doctorShifts to show only the shifts that the user has access to
+   const filteredDoctorShifts = doctorShifts?.filter((ds)=>{
+    if(can('view active_doctor_shifts')){
+      return true
+    }
+    return ds.user_id === user?.id
+  })
   const checkScrollability = () => {
     if (scrollViewportRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = scrollViewportRef.current;
@@ -62,19 +70,19 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId,
       });
     }
   };
-
+ console.log("doctorShifts",doctorShifts)
   useEffect(() => {
-    if (!activeShiftId && doctorShifts && doctorShifts.length > 0) {
-      onShiftSelect(doctorShifts[0]);
-    } else if (activeShiftId && doctorShifts) {
-      const currentActive = doctorShifts.find(ds => ds.id === activeShiftId);
-      if (!currentActive && doctorShifts.length > 0) {
-        onShiftSelect(doctorShifts[0]);
-      } else if (!currentActive && doctorShifts.length === 0) {
+    if (!activeShiftId && filteredDoctorShifts && filteredDoctorShifts.length > 0) {
+      onShiftSelect(filteredDoctorShifts[0]);
+    } else if (activeShiftId && filteredDoctorShifts) {
+      const currentActive = filteredDoctorShifts.find(ds => ds.id === activeShiftId);
+      if (!currentActive && filteredDoctorShifts.length > 0) {
+        onShiftSelect(filteredDoctorShifts[0]);
+      } else if (!currentActive && filteredDoctorShifts.length === 0) {
         onShiftSelect(null);
       }
     }
-  }, [activeShiftId, doctorShifts, onShiftSelect]);
+  }, [activeShiftId, filteredDoctorShifts, onShiftSelect]);
 
   const getInitials = (name?: string | null) => {
     if (!name) return "DR";
@@ -136,7 +144,7 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId,
             >
               <Button
                 variant={activeShiftId === null ? "secondary" : "outline"}
-                className="h-auto py-1.5 px-3 flex flex-col items-center justify-center whitespace-nowrap min-w-[150px] sm:min-w-[80px] shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-primary shrink-0"
+                className="h-auto py-1.5 px-3 flex flex-col items-center justify-center  whitespace-nowrap min-w-[150px] sm:min-w-[80px] shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-primary shrink-0"
                 onClick={() => onShiftSelect(null)}
                 data-state={activeShiftId === null ? "active" : "inactive"}
               >
@@ -144,13 +152,13 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId,
                 <span className="text-[11px] sm:text-xs font-medium">{t('common:all')}</span>
               </Button>
 
-              {doctorShifts?.map((shift) => (
+              {filteredDoctorShifts?.map((shift) => (
                 <Tooltip key={shift.id}>
                   <TooltipTrigger asChild>
                     <Button
                       variant={activeShiftId === shift.id ? "secondary" : "outline"}
                       className={cn(
-                        "h-auto py-1.5 cursor-pointer px-3 flex flex-col items-center justify-center relative whitespace-nowrap min-w-[90px] sm:min-w-[100px] shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-primary shrink-0",
+                        "h-auto py-1.5 cursor-pointer px-3 flex flex-col bg-amber-100 items-center justify-center relative whitespace-nowrap min-w-[90px] sm:min-w-[100px] shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-primary shrink-0",
                         shift.is_examining ? "border-blue-500 dark:border-blue-400 focus-visible:ring-blue-500" 
                                            : "border-green-500 dark:border-green-400 focus-visible:ring-green-500",
                         activeShiftId === shift.id && (shift.is_examining ? "bg-blue-500/10 dark:bg-blue-500/20 " : "bg-green-500/10 dark:bg-green-500/20 w-[200px]")

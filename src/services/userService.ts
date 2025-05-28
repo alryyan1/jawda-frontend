@@ -42,7 +42,11 @@ export const updateUser = (
 export const deleteUser = (id: number): Promise<void> => {
   return apiClient.delete(`${API_URL}/${id}`).then((res) => res.data);
 };
+// Route::post('/users/{user}/update-password', [UserController::class, 'updatePassword']);
 
+export const updateUserPassword = (id: number, data: { password: string }): Promise<void> => {
+  return apiClient.post(`${API_URL}/${id}/update-password`, data).then((res) => res.data);
+}
 export const getRolesList = (): Promise<Role[]> => {
   // Expects an array of Role objects
   return apiClient.get(ROLES_API_URL).then((res) => res.data.data); // Laravel ResourceCollection wraps in 'data'

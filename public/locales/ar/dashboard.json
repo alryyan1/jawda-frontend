@@ -3,6 +3,7 @@
   "welcomeMessage": "أهلاً بك مجدداً، {{name}}!",
   "contentPlaceholder": "هذه هي لوحة التحكم الرئيسية. سيتم إضافة المزيد من المحتوى هنا قريباً.",
   "currentShift": "الوردية الحالية",
+  "currentShiftActive": "الوردية النشطة",
   "noShiftOpen": "لا توجد وردية عمل مفتوحة حالياً.",
   "noShiftOpenDescription": "الرجاء فتح وردية جديدة لبدء عمليات العيادة وعرض إحصائيات اليوم.",
   "shiftId": "معرف الوردية: {{id}}",
@@ -28,5 +29,7 @@
   "shiftOpenedSuccess": "تم فتح وردية جديدة بنجاح!",
   "shiftOpenedError": "فشل فتح وردية جديدة.",
   "shiftClosedSuccess": "تم إغلاق الوردية بنجاح!",
-  "shiftClosedError": "فشل إغلاق الوردية."
+  "shiftClosedError": "فشل إغلاق الوردية.",
+  "noShiftOpenStatsNoteTitle": "إحصائيات اليوم",
+  "noShiftOpenStatsNote": "هذه الإحصائيات تعرض بيانات اليوم الحالي. لتسجيل المعاملات الجديدة، يرجى فتح وردية جديدة."
 }

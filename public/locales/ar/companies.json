@@ -5,6 +5,8 @@
   "createCompanyTitle": "إضافة شركة جديدة",
   "loadingCompanies": "جارٍ تحميل الشركات...",
   "manageTestContractsButton": "إدارة عقود الفحوصات",
+  "addSubcompany": "إضافة شركة فرعية",
+  "addRelation": "إضافة علاقة",
   "table": {
     "name": "اسم الشركة",
     "phone": "الهاتف",

@@ -31,7 +31,7 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
 }) => {
   const { t } = useTranslation(["clinic", "common"]);
   const [currentPage, setCurrentPage] = useState(1);
-
+  console.log("doctorShiftId", doctorShiftId);
   // Debounce search term for API calls if performance becomes an issue
   const [debouncedSearchTerm, setDebouncedSearchTerm] =
     useState(globalSearchTerm);
@@ -67,6 +67,7 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
       return response;
     },
     placeholderData: keepPreviousData,
+    enabled: !!doctorShiftId,
   });
   const [showPatientInfoDialog, setShowPatientInfoDialog] = useState(false);
   const [patientInfoId, setPatientInfoId] = useState<number | null>(null);

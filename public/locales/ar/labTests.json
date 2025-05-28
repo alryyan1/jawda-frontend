@@ -16,11 +16,15 @@
       "actions": "إجراءات",
       "testName": "اسم الفحص",
       "discount": "الخصم",
+      "discountPercentageShort": "نسبة الخصم",
       "endurance": "التحمل",
       "net": "الصافي",
+      "netPriceShort": "الصافي",
+      "amountPaid": "المدفوع",
       "paid": "المدفوع",
       "balance": "المتبقي",
-      "statusPayment": "حالة الدفع"
+      "statusPayment": "حالة الدفع",
+      "paymentMethodShort": "طريقة الدفع"
     },
     "form": {
       "nameLabel": "اسم الفحص الرئيسي",
@@ -148,7 +152,21 @@
         "addedSuccess": "تم إضافة الفحوصات بنجاح!",
         "cancelledSuccess": "تم إلغاء طلب الفحص بنجاح!",
         "cancelConfirm": "هل أنت متأكد من إلغاء هذا الطلب؟",
-        "noTestsAvailable": "لا توجد فحوصات متاحة"
+        "noTestsAvailable": "لا توجد فحوصات متاحة",
+        "unpackaged": "فحوصات غير مجمعة", 
+        "noTestsInPackage": "لا توجد فحوصات في هذه الحزمة/الفلتر.",
+        "addByTestIdPlaceholder": "أو أدخل معرف الفحص مباشرة...",
+        "commentPlaceholderOverall": "ملاحظات عامة للطلب...",
+        "requestSelectedButton": "طلب {{count}} فحص محدد",
+        "testAddedToSelection": "تمت إضافة '{{testName}}' إلى قائمة التحديد.",
+        "testAlreadySelected": "الفحص '{{testName}}' محدد بالفعل.",
+        "addMoreTestsButton": "إضافة فحوصات أخرى",
+        "selectTestsTitle": "اختيار الفحوصات المخبرية",
+        "selectAndAddDescription": "اختر الفحوصات المطلوبة من القائمة أدناه",
+        "searchTestsPlaceholder": "ابحث عن فحص...",
+        "removeAllButton": "إلغاء جميع الفحوصات",
+        "addedSuccessMultiple": "تم إضافة {{count}} فحص بنجاح!",
+        "cancelConfirmForItem": "هل أنت متأكد من إلغاء طلب الفحص '{{testName}}'؟"
     },
     "optionsDialog": {
       "title": "إدارة خيارات المكون: {{childTestName}}",

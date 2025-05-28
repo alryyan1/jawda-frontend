@@ -61,6 +61,12 @@
     "totalPaidByPatient": "إجمالي المدفوع",
     "doctorShareFromPatient": "حصة الطبيب"
   },
+  "monthlyLabIncome": {
+    "pageTitle": "تقرير إيرادات المختبر الشهري",
+    "filterTitle": "تحديد الشهر والسنة",
+    "filterDescription": "اختر الشهر والسنة لعرض التقرير.",
+    "titleShort": "إيرادات المختبر الشهرية"
+  },
   "serviceStatisticsReport": {
     "title": "تقرير إحصائيات الخدمات",
     "titleShort": "إحصائيات الخدمات", 

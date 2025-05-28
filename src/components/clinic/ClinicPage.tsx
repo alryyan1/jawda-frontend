@@ -16,16 +16,17 @@ import type { Patient } from '@/types/patients'; // Or your more specific Active
 import type { DoctorShift } from '@/types/doctors'; // Assuming a DoctorShift type for Tabs
 import ActionsPane from './ActionsPane';
 import SelectedPatientWorkspace from './SelectedPatientWorkspace';
+import { useAuth } from '@/contexts/AuthContext';
 
 const ClinicPage: React.FC = () => {
   const { t, i18n } = useTranslation(['clinic', 'common']);
   const queryClient = useQueryClient();
-
+   
+  const {currentClinicShift,isLoadingShift,refetchCurrentClinicShift} = useAuth()
   const [showRegistrationForm, setShowRegistrationForm] = useState(true);
   const [selectedPatientVisit, setSelectedPatientVisit] = useState<{ patient: Patient; visitId: number } | null>(null);
   const [activeDoctorShift, setActiveDoctorShift] = useState<DoctorShift | null>(null); // For DoctorsTabs interaction
   const [globalSearchTerm, setGlobalSearchTerm] = useState('');
-  const [currentClinicShiftId, setCurrentClinicShiftId] = useState<number | null>(1); // Example, replace with actual logic
 
   const handlePatientRegistered = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['activePatients', activeDoctorShift?.id /* or global */] });
@@ -63,7 +64,6 @@ const ClinicPage: React.FC = () => {
       <DoctorsTabs 
             onShiftSelect={setActiveDoctorShift} 
             activeShiftId={activeDoctorShift?.id || null} 
-            currentClinicShiftId={currentClinicShiftId} // Pass if needed by DoctorsTabs
           />
         </div>
         <div className="w-1/3 h-full flex items-center"> {/* Global Search Area */}
@@ -95,7 +95,6 @@ const ClinicPage: React.FC = () => {
          <ActionsPane 
             showRegistrationForm={showRegistrationForm}
             onToggleRegistrationForm={toggleRegistrationForm}
-            currentClinicShiftId={currentClinicShiftId} // Pass to dialog
         />
 
 

@@ -1,6 +1,6 @@
 // src/services/shiftService.ts
 import apiClient from './api';
-import type { Shift } from '../types/shifts'; // Assuming Shift type from previous steps
+import type { Shift, ShiftFinancialSummary } from '../types/shifts'; // Assuming Shift type from previous steps
 import { CloseShiftFormData } from '../types/dashboard'; // For closing shift
 
 const SHIFT_API_URL = '/shifts';
@@ -33,5 +33,10 @@ export const closeShift = async (shiftId: number, data: CloseShiftFormData): Pro
   return response.data.data;
 };
 
+
+export const getShiftFinancialSummary = async (shiftId: number): Promise<ShiftFinancialSummary> => {
+  const response = await apiClient.get<{ data: ShiftFinancialSummary }>(`/shifts/${shiftId}/financial-summary`);
+  return response.data.data;
+};
 // Get all shifts (for a potential admin list page, not directly for dashboard open/close)
 // export const getShifts = async (page = 1, filters = {}): Promise<PaginatedShiftsResponse> => { ... };

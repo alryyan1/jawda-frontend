@@ -5,6 +5,7 @@ import AppLayout from "./components/AppLayout";
 
 // Page Components
 import HomePage from "./pages/HomePage";
+import ErrorPage from "./pages/ErrorPage";
 
 // Doctors Module Pages (ensure these files exist, even if as placeholders)
 
@@ -57,6 +58,7 @@ const router = createBrowserRouter([
   // Routes accessible without authentication (e.g., Login, Register)
   {
     element: <PublicLayout />, // Wraps all public routes
+    errorElement: <ErrorPage />,
     children: [
       {
         path: "/login",
@@ -73,11 +75,12 @@ const router = createBrowserRouter([
   // Routes requiring authentication
   {
     element: <ProtectedRoute />, // This component checks auth and redirects if not authenticated
+    errorElement: <ErrorPage />,
     children: [
       // All routes inside this block will be rendered within AppLayout
       {
         element: <AppLayout />, // The main application layout (header, sidebar, etc.)
-        // errorElement: <CustomErrorPage />, // Optional: An error boundary for this part of the app
+        errorElement: <ErrorPage />,
         children: [
           {
             index: true, // Default route for '/' after login

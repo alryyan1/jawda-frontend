@@ -21,6 +21,7 @@ export interface DoctorVisit {
   is_new: boolean;
   number: number;
   only_lab: boolean;
+  lab_requests?: LabRequest[];
 
   patient_id: number;
   patient: Patient; // Full patient object

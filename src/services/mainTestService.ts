@@ -1,6 +1,7 @@
 import apiClient from './api';
-import type { MainTest } from '@/types/labTests';
+import type { MainTest, MainTestStripped } from '@/types/labTests';
 import type { PaginatedResponse } from '@/types/common';
+import { toast } from 'sonner';
 
 const API_URL = '/main-tests';
 
@@ -68,3 +69,32 @@ export const updateMainTest = (id: number, data: Partial<MainTestFormData>): Pro
 export const deleteMainTest = (id: number): Promise<void> => {
   return apiClient.delete(`${API_URL}/${id}`).then(res => res.data);
 }; 
+
+export const getMainTestsListForSelection = async (
+  filters: { 
+      pack_id?: number | 'none' | 'all' | null; 
+      visit_id_to_exclude_requests?: number; 
+      search?: string 
+  }
+): Promise<MainTestStripped[]> => {
+const params: any = { no_pagination: true, available: true, ...filters };
+if (filters.pack_id === 'all') delete params.pack_id; // Don't send pack_id if 'all'
+
+const response = await apiClient.get<{ data: MainTestStripped[] }>('/main-tests', { params });
+return response.data.data; // Assuming MainTestStrippedResource::collection
+};
+
+export const findMainTestByIdentifier = async (identifier: string, visitIdToExclude?:number): Promise<MainTestStripped | null> => {
+  try {
+      const params: any = {};
+      if(visitIdToExclude) params.visit_id = visitIdToExclude;
+      const response = await apiClient.get<{ data: MainTestStripped }>(`/main-tests/find/${identifier}`, {params});
+      return response.data.data;
+  } catch (error: any) {
+      if (error.response && (error.response.status === 404 || error.response.status === 409)) {
+          toast.warning(error.response.data.message || "Test not found or already requested.");
+          return null;
+      }
+      throw error;
+  }
+};

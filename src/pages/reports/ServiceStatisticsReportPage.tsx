@@ -76,16 +76,17 @@ const ServiceStatisticsReportPage: React.FC = () => {
     }),
     placeholderData: keepPreviousData,
   });
-
+  console.log(reportData,'reportData')
   const onSubmit = (values: FilterFormValues) => {
     setCurrentPage(1);
     setAppliedFilters(values);
   };
-  
-  if (error) return <p className="text-destructive p-4">{t('common:error.fetchFailedExt', { entity: t('reports:serviceStatisticsReport.title'), message: error.message })}</p>;
-
   const statistics = reportData?.data || [];
+  // console.log(statistics?.data.length,'statistics')
   const meta = reportData?.meta;
+  console.log(statistics,'statistics')
+  if (error) return <p className="text-destructive p-4">{t('common:error.fetchFailedExt', { entity: t('reports:serviceStatisticsReport.title'), message: error.message })}</p>;
+  
 
   return (
     <div className="space-y-6">
@@ -176,22 +177,22 @@ const ServiceStatisticsReportPage: React.FC = () => {
         </Card>
       )}
 
-      {!isLoading && statistics.length > 0 && (
+      { statistics?.data?.length > 0 && (
         <Card>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>{t('reports:serviceStatisticsReport.table.serviceName')}</TableHead>
-                <TableHead className="hidden sm:table-cell">{t('reports:serviceStatisticsReport.table.groupName')}</TableHead>
+                <TableHead className="text-center">{t('reports:serviceStatisticsReport.table.serviceName')}</TableHead>
+                <TableHead className="hidden sm:table-cell text-center">{t('reports:serviceStatisticsReport.table.groupName')}</TableHead>
                 <TableHead className="text-center hidden md:table-cell">{t('reports:serviceStatisticsReport.table.price')}</TableHead>
                 <TableHead className="text-center">{t('reports:serviceStatisticsReport.table.requestCount')}</TableHead>
                 <TableHead className="text-center hidden md:table-cell">{t('reports:serviceStatisticsReport.table.status')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {statistics.map((stat: ServiceStatisticItem) => (
+              {statistics?.data.map((stat: ServiceStatisticItem) => (
                 <TableRow key={stat.id}>
-                  <TableCell className="font-medium">{stat.name}</TableCell>
+                  <TableCell className="font-medium text-center">{stat.name}</TableCell>
                   <TableCell className="hidden sm:table-cell">{stat.service_group_name || '-'}</TableCell>
                   <TableCell className="text-center hidden md:table-cell">{Number(stat.price).toFixed(2)}</TableCell>
                   <TableCell className="text-center font-semibold text-lg">{stat.request_count}</TableCell>

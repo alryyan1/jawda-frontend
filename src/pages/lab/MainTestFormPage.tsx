@@ -216,7 +216,7 @@ const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
                     {t('labTests:form.manageParametersButton')}
                   </Button>
                 )}
-                <Button type="button" variant="outline" onClick={() => navigate('/laboratory')} disabled={formIsSubmitting}>
+                <Button type="button" variant="outline" onClick={() => navigate('/settings/laboratory')} disabled={formIsSubmitting}>
                   {t('common:cancel')}
                 </Button>
                 <Button type="submit" disabled={dataIsLoading || formIsSubmitting}>

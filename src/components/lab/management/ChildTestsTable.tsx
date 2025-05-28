@@ -306,21 +306,21 @@ const ChildTestsTable: React.FC<ChildTestsTableProps> = ({
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-10 print:hidden"></TableHead>
-                        <TableHead>{t("labTests:childTests.form.name")}</TableHead>
-                        <TableHead className="hidden sm:table-cell">
+                        <TableHead className="w-10 print:hidden text-center"></TableHead>
+                        <TableHead className="text-center">{t("labTests:childTests.form.name")}</TableHead>
+                        <TableHead className="hidden sm:table-cell text-center">
                           {t("labTests:childTests.form.unit")}
                         </TableHead>
-                        <TableHead className="hidden md:table-cell">
+                        <TableHead className="hidden md:table-cell text-center">
                           {t("labTests:childTests.form.group")}
                         </TableHead>
-                        <TableHead className="hidden lg:table-cell">
+                        <TableHead className="hidden lg:table-cell text-center">
                           {t("labTests:childTests.form.normalRangeText")}
                         </TableHead>
                         <TableHead className="text-center">
                           {t("labTests:childTests.form.displayOrder")}
                         </TableHead>
-                        <TableHead className="text-right">
+                        <TableHead className="text-center">
                           {t("common:actions.openMenu")}
                         </TableHead>
                       </TableRow>

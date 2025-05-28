@@ -1,5 +1,6 @@
 import apiClient from './api'; // Your configured Axios instance
-import type { Patient, PatientFormData, PaginatedPatientsResponse } from '../types/patients'; // Your Patient types
+import type { Patient, PatientFormData, PaginatedPatientsResponse, PatientSearchResult } from '../types/patients'; // Your Patient types
+import type { DoctorVisit } from '@/types/visits';
 
 const PATIENTS_API_URL = '/patients';
 
@@ -80,6 +81,24 @@ export const getPatientById = async (patientId: number): Promise<Patient> => {
   return response.data.data;
 };
 
+export const searchExistingPatients = async (term: string): Promise<PatientSearchResult[]> => {
+  // Backend returns PatientSearchResultResource::collection which wraps in 'data'
+  const response = await apiClient.get<{ data: PatientSearchResult[] }>('/patients/search-existing', { params: { term } });
+  return response.data.data;
+};
+
+interface StoreVisitFromHistoryPayload {
+  previous_visit_id?: number | null;
+  doctor_id: number; // New assigned doctor
+  active_doctor_shift_id?: number | null;
+  // current_clinic_shift_id: number; // Backend gets this now
+  reason_for_visit?: string;
+}
+export const storeVisitFromHistory = async (patientId: number, payload: StoreVisitFromHistoryPayload): Promise<DoctorVisit> => {
+  // Backend returns DoctorVisitResource, wrapped in 'data'
+  const response = await apiClient.post<{ data: DoctorVisit }>(`/patients/${patientId}/store-visit-from-history`, payload);
+  return response.data.data;
+};
 /**
  * Updates an existing patient.
  * 

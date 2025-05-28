@@ -140,7 +140,7 @@ const ChildTestsManagementPage: React.FC = () => {
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex items-center gap-2 mb-4">
-        <Button variant="outline" size="icon" onClick={() => navigate(`/lab-tests/${mainTestId}/edit`)} className="h-8 w-8">
+        <Button variant="outline" size="icon" onClick={() => navigate(`../${mainTestId}/edit`)} className="h-8 w-8">
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>

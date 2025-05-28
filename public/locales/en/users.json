@@ -1,0 +1,38 @@
+{
+  "changePassword": "Change Password",
+  "passwordChanged": "Password changed successfully",
+  "passwordChangeFailed": "Failed to change password",
+  "form": {
+    "currentPasswordLabel": "Current Password",
+    "newPasswordLabel": "New Password",
+    "confirmNewPasswordLabel": "Confirm New Password",
+    "nameLabel": "Name",
+    "usernameLabel": "Username",
+    "passwordLabel": "Password",
+    "confirmPasswordLabel": "Confirm Password",
+    "doctorIdLabel": "Associated Doctor",
+    "isNurseLabel": "Is Nurse",
+    "moneyCollectorTypeLabel": "Money Collector Type",
+    "rolesLabel": "Roles",
+    "selectRoles": "Select one or more roles",
+    "namePlaceholder": "Enter name",
+    "usernamePlaceholder": "Enter username",
+    "passwordPlaceholder": "Leave empty to keep current password",
+    "selectDoctor": "Select a doctor",
+    "selectMoneyCollectorType": "Select money collector type",
+    "saveButton": "Save User"
+  },
+  "validation": {
+    "currentPasswordRequired": "Current password is required",
+    "usernameMinLength": "Username must be at least 3 characters",
+    "passwordMinLength": "Password must be at least 8 characters",
+    "passwordsDoNotMatch": "Passwords do not match",
+    "roleRequired": "At least one role is required"
+  },
+  "moneyCollectorTypes": {
+    "lab": "Laboratory",
+    "company": "Company",
+    "clinic": "Clinic",
+    "all": "All"
+  }
+} 

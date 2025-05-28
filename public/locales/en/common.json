@@ -15,9 +15,65 @@
   "downloadPdf": "Download PDF",
   "error": {
     "generic": "An unexpected error occurred. Please try again.",
-    "notFound": "The requested resource was not found."
+    "notFound": "The requested resource was not found.",
+    "pageNotFound": "Page Not Found",
+    "somethingWentWrong": "Something Went Wrong",
+    "unknownError": "An unexpected error occurred",
+    "fetchFailed": "Failed to fetch {{entity}}: {{message}}",
+    "noPermissions": "You do not have permission to perform this action"
   },
   "validation": {
     "required": "{{field}} is required."
+  },
+  "actions": {
+    "goBack": "Go Back",
+    "goHome": "Go to Home",
+    "retry": "Try Again"
+  },
+  "permissions": {
+    "group": {
+      "own": "Own",
+      "record": "Record",
+      "reports": "Reports",
+      "settings": "Settings",
+      "lab": "Laboratory",
+      "clinical": "Clinical",
+      "appointments": "Appointments"
+    },
+    "manage_all_doctor_schedules": "Manage all doctor schedules",
+    "view_doctor_schedules": "View doctor schedules",
+    "view_doctor_shift_financial_summary": "View doctor shift financial summary",
+    "view_doctor_shift_reports": "View doctor shift reports",
+    "manage_own_doctor_schedule": "Manage own doctor schedule",
+    "record_visit_service_payment": "Record visit service payment",
+    "view_reports_section": "View reports section",
+    "edit_visit_requested_service_details": "Edit visit requested service details",
+    
+    "edit_lab_request_flags": "Edit lab request flags",
+    "clear_pending_lab_requests": "Clear pending lab requests",
+    "record_batch_lab_payment": "Record batch lab payment",
+    "edit_lab_results": "Edit lab results",
+    "batch_authorize_lab_results": "Batch authorize lab results",
+    "print_lab_sample_labels": "Print lab sample labels",
+    "view_lab_report_preview": "View lab report preview",
+    
+    "view_patient_vitals": "View patient vitals",
+    "record_patient_vitals": "Record patient vitals",
+    "edit_patient_vitals": "Edit patient vitals",
+    "delete_patient_vitals": "Delete patient vitals",
+    
+    "view_clinical_notes": "View clinical notes",
+    "create_clinical_notes": "Create clinical notes",
+    "edit_own_clinical_notes": "Edit own clinical notes",
+    "edit_all_clinical_notes": "Edit all clinical notes",
+    "delete_clinical_notes": "Delete clinical notes",
+    
+    "list_appointments": "List appointments",
+    "view_appointment_details": "View appointment details",
+    "cancel_appointments": "Cancel appointments",
+    "update_appointment_status": "Update appointment status",
+    
+    "view_monthly_lab_income_report": "View monthly lab income report",
+    "print_monthly_lab_income_report": "Print monthly lab income report"
   }
 }

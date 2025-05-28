@@ -24,6 +24,19 @@ export const getDoctorShiftsReport = async (filters: DoctorShiftReportFilters): 
   const response = await apiClient.get<PaginatedResponse<DoctorShiftReportItem>>('/doctor-shifts', { params: filters });
   return response.data; // Assuming Laravel pagination structure
 };
+// src/services/reportService.ts
+// ... (existing functions) ...
+export interface MonthlyLabIncomeFilters {
+  month: number;
+  year: number;
+}
+export const downloadMonthlyLabIncomePdf = async (filters: MonthlyLabIncomeFilters): Promise<Blob> => {
+  const response = await apiClient.get('/reports/monthly-lab-income/pdf', {
+    params: filters,
+    responseType: 'blob',
+  });
+  return response.data;
+};
 
 export const getDoctorShiftFinancialSummary = async (doctorShiftId: number): Promise<DoctorShiftFinancialSummary> => {
   // Backend returns { data: DoctorShiftFinancialSummary }

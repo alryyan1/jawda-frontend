@@ -6,6 +6,7 @@
   "loadingUsers": "جارٍ تحميل المستخدمين...",
   "errorFetchingUsers": "خطأ في تحميل المستخدمين: {{message}}",
   "noUsersFound": "لم يتم العثور على مستخدمين.",
+  
   "table": {
     "id": "م",
     "name": "الاسم",
@@ -31,23 +32,34 @@
     "saveButton": "حفظ",
     "savingButton": "جارٍ الحفظ...",
     "userSavedSuccess": "تم حفظ بيانات المستخدم بنجاح!",
-    "userSaveError": "فشل حفظ بيانات المستخدم."
+    "userSaveError": "فشل حفظ بيانات المستخدم.",
+    "newPasswordLabel": "كلمة المرور الجديدة",
+    "confirmNewPasswordLabel": "تأكيد كلمة المرور الجديدة",
+    "namePlaceholder": "أدخل الاسم",
+    "passwordPlaceholder": "اتركه فارغاً للإبقاء على كلمة المرور الحالية",
+    "selectDoctor": "اختر طبيباً",
+    "selectMoneyCollectorType": "اختر نوع محصل الأموال",
+    "saveButton": "حفظ المستخدم"
   },
   "deleteConfirmTitle": "تأكيد الحذف",
   "deleteConfirmText": "هل أنت متأكد أنك تريد حذف هذا المستخدم؟",
   "deletedSuccess": "تم حذف المستخدم بنجاح!",
   "deleteError": "خطأ أثناء حذف المستخدم.",
   "moneyCollectorTypes": {
-    "lab": "مختبر",
-    "company": "شركة",
-    "clinic": "عيادة",
+    "lab": "المختبر",
+    "company": "الشركة",
+    "clinic": "العيادة",
     "all": "الكل"
   },
     "validation": {
     "usernameMinLength": "يجب أن يكون اسم المستخدم 3 أحرف على الأقل.",
-    "passwordMinLength": "يجب أن تكون كلمة المرور 6 أحرف على الأقل.",
+    "passwordMinLength": "يجب أن تكون كلمة المرور 8 أحرف على الأقل.",
     "roleRequired": "يجب اختيار دور واحد على الأقل.",
     "passwordsDoNotMatch": "كلمتا المرور غير متطابقتين.",
-    "passwordMinLengthCreate": "كلمة المرور (6 أحرف على الأقل) مطلوبة للمستخدمين الجدد."
-  }
+    "passwordMinLengthCreate": "كلمة المرور (6 أحرف على الأقل) مطلوبة للمستخدمين الجدد.",
+    "required": "مطلوب"
+  },
+  "changePassword": "تغيير كلمة المرور",
+  "passwordChanged": "تم تغيير كلمة المرور بنجاح",
+  "passwordChangeFailed": "فشل تغيير كلمة المرور"
 }

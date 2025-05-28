@@ -90,16 +90,16 @@ const ChildTestDisplayRow: React.FC<ChildTestDisplayRowProps> = ({
       </TableCell>
 
       {/* Data Cells */}
-      <TableCell className="py-2 font-medium min-w-[180px] sm:min-w-[200px] truncate" title={childTest.child_test_name}>
+      <TableCell className="py-2 font-medium min-w-[180px] sm:min-w-[200px] truncate text-center" title={childTest.child_test_name}>
         {childTest.child_test_name}
       </TableCell>
-      <TableCell className="py-2 hidden sm:table-cell min-w-[70px] sm:min-w-[80px] truncate" title={childTest.unit?.name || childTest.unit_name || ''}>
+      <TableCell className="py-2 hidden sm:table-cell min-w-[70px] sm:min-w-[80px] truncate text-center" title={childTest.unit?.name || childTest.unit_name || ''}>
         {childTest.unit?.name || childTest.unit_name || '-'}
       </TableCell>
-      <TableCell className="py-2 hidden md:table-cell min-w-[100px] sm:min-w-[120px] truncate" title={childTest.child_group?.name || childTest.child_group_name || ''}>
+      <TableCell className="py-2 hidden md:table-cell min-w-[100px] sm:min-w-[120px] truncate text-center" title={childTest.child_group?.name || childTest.child_group_name || ''}>
         {childTest.child_group?.name || childTest.child_group_name || '-'}
       </TableCell>
-      <TableCell className="py-2 hidden lg:table-cell min-w-[120px] sm:min-w-[150px] truncate" title={childTest.normalRange || ''}>
+      <TableCell className="py-2 hidden lg:table-cell min-w-[120px] sm:min-w-[150px] truncate text-center" title={childTest.normalRange || ''}>
         {childTest.normalRange || 
          ((childTest.low !== null && childTest.low !== undefined && String(childTest.low).trim() !== '') || 
           (childTest.upper !== null && childTest.upper !== undefined && String(childTest.upper).trim() !== '') ? 

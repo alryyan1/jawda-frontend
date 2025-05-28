@@ -5,14 +5,17 @@ import type {
     CompanyFormData, 
     CompanyMainTestContract, 
     CompanyMainTestFormData, 
+    CompanyRelation, 
     CompanyServiceContract, 
-    CompanyServiceFormData, 
+    CompanyServiceFormData,
+    PaginatedCompanyMainTestContractsResponse,
+    Subcompany, 
 } from '../types/companies';
-import { Service } from '../types/services';
+import type { Service } from '../types/services';
 import type { PaginatedResponse } from '@/types/common';
 import type { MainTestStripped } from '@/types/labTests';
 
-export interface ImportAllServicesPayload { // Optional: If you allow overriding default terms from frontend
+export interface ImportAllServicesPayload {
     default_static_endurance?: number;
     default_percentage_endurance?: number;
     default_static_wage?: number;
@@ -20,10 +23,25 @@ export interface ImportAllServicesPayload { // Optional: If you allow overriding
     default_use_static?: boolean;
     default_approval?: boolean;
 }
+
+export interface SubcompanyCreateData {
+  name: string;
+  company_id: number;
+  lab_endurance: number;
+  service_endurance: number;
+}
+
+export interface CompanyRelationCreateData {
+  name: string;
+  company_id: number;
+  lab_endurance: number;
+  service_endurance: number;
+}
+
 const API_URL = '/companies';
 
 // --- Company CRUD ---
-export const getCompanies = async (page = 1, filters: Record<string, any> = {}): Promise<PaginatedResponse<Company>> => {
+export const getCompanies = async (page = 1, filters: Record<string, string | number | boolean> = {}): Promise<PaginatedResponse<Company>> => {
   // This is for the paginated list on CompaniesListPage
   const response = await apiClient.get<PaginatedResponse<Company>>(API_URL, { 
     params: { page, ...filters } 
@@ -51,7 +69,7 @@ export const createCompany = async (data: CompanyFormData): Promise<{ data: Comp
 };
 
 export const updateCompany = async (id: number, data: Partial<CompanyFormData>): Promise<{ data: Company }> => {
-  const payload: Record<string, any> = { ...data };
+  const payload: Record<string, string | number | boolean | undefined> = { ...data };
   // Parse numeric fields if they are present and are strings
   if (data.lab_endurance !== undefined) payload.lab_endurance = parseFloat(String(data.lab_endurance));
   if (data.service_endurance !== undefined) payload.service_endurance = parseFloat(String(data.service_endurance));
@@ -96,8 +114,8 @@ export const importAllServicesToCompanyContract = async (
   );
   return response.data;
 };
+
 // --- Company Service Contract Management ---
-// ... (getCompanyContractedServices, getCompanyAvailableServices, etc. - remain the same) ...
 export const getCompanyContractedServices = (companyId: number, page = 1, filters: { search?: string } = {}): Promise<PaginatedResponse<CompanyServiceContract>> => {
   return apiClient.get<PaginatedResponse<CompanyServiceContract>>(`${API_URL}/${companyId}/contracted-services`, { params: { page, ...filters } })
     .then(res => res.data);
@@ -109,14 +127,12 @@ export const getCompanyAvailableServices = (companyId: number): Promise<Service[
 };
 
 export const addServiceToCompanyContract = (companyId: number, data: CompanyServiceFormData): Promise<{ data: CompanyServiceContract }> => {
-  const payload = { /* ... payload transformation from previous step ... */ };
   return apiClient.post<{ data: CompanyServiceContract }>(`${API_URL}/${companyId}/contracted-services`, data)
     .then(res => res.data);
 };
 
 export const updateCompanyServiceContract = (companyId: number, serviceId: number, data: Partial<CompanyServiceFormData>): Promise<{ data: CompanyServiceContract }> => {
-   const payload = { ...data /* ... payload transformation ... */ };
-  return apiClient.put<{ data: CompanyServiceContract }>(`${API_URL}/${companyId}/contracted-services/${serviceId}`, payload)
+  return apiClient.put<{ data: CompanyServiceContract }>(`${API_URL}/${companyId}/contracted-services/${serviceId}`, data)
     .then(res => res.data);
 };
 
@@ -165,7 +181,7 @@ export const updateCompanyMainTestContract = (
   mainTestId: number, // MainTest ID identifies the contract along with companyId
   data: Partial<CompanyMainTestFormData>
 ): Promise<{ data: CompanyMainTestContract }> => {
- const payload: Record<string, any> = { ...data };
+ const payload: Record<string, string | number | boolean | undefined> = { ...data };
  if (data.price !== undefined) payload.price = parseFloat(data.price);
  if (data.endurance_static !== undefined) payload.endurance_static = parseInt(data.endurance_static);
  if (data.endurance_percentage !== undefined) payload.endurance_percentage = parseFloat(data.endurance_percentage);
@@ -187,8 +203,8 @@ interface ImportAllMainTestsPayload {
   default_endurance_static?: number;
   default_endurance_percentage?: number;
   default_use_static?: boolean;
-  // default_price_from_test?: boolean; // Handled by backend now
 }
+
 export const importAllMainTestsToCompanyContract = async (
   companyId: number, 
   payload?: ImportAllMainTestsPayload
@@ -198,4 +214,24 @@ const response = await apiClient.post<{ message: string; imported_count: number 
     payload || {}
 );
 return response.data;
+};
+
+export const createSubcompany = async (data: SubcompanyCreateData): Promise<Subcompany> => {
+  const response = await apiClient.post<{ data: Subcompany }>(`${API_URL}/${data.company_id}/subcompanies`, data);
+  return response.data.data;
+};
+
+export const createCompanyRelation = async (data: CompanyRelationCreateData): Promise<CompanyRelation> => {
+  const response = await apiClient.post<{ data: CompanyRelation }>(`${API_URL}/${data.company_id}/relations`, data);
+  return response.data.data;
+};
+
+export const getSubcompaniesList = async (companyId: number): Promise<Subcompany[]> => {
+  const response = await apiClient.get<{ data: Subcompany[] }>(`${API_URL}/${companyId}/subcompanies`);
+  return response.data.data;
+};
+
+export const getCompanyRelationsList = async (): Promise<CompanyRelation[]> => {
+  const response = await apiClient.get<{ data: CompanyRelation[] }>('/company-relations');
+  return response.data.data;
 };

@@ -367,7 +367,7 @@ const AppLayout: React.FC = () => {
                 </div>
             </header>
 
-            <main className="flex-1 p-1  overflow-y-auto">
+            <main style={{userSelect: 'none'}} className="flex-1 p-1  overflow-y-auto">
                 <Outlet />
             </main>
         </div>

@@ -61,6 +61,18 @@ export interface Setting {
   clear_footer_base64?: boolean;
   clear_auditor_stamp?: boolean;
   clear_manager_stamp?: boolean;
+  report_header_company_name?: string | null;
+  report_header_address_line1?: string | null;
+  report_header_address_line2?: string | null;
+  report_header_phone?: string | null;
+  report_header_email?: string | null;
+  report_header_vatin?: string | null;
+  report_header_cr?: string | null;
+  report_header_logo_base64?: string | null; // For display/preview
+  // For form handling (file input and clearing)
+  report_header_logo_file?: File | null;
+  clear_report_header_logo_base64?: boolean;
+
 }
 
 // For the form, all fields are optional as we are patching

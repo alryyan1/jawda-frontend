@@ -5,6 +5,7 @@ import type { User, UserStripped } from "./auth";
 import type { Shift } from "./shifts";
 import type { RequestedService } from "./services";
 import type { ChildTest, Container } from "./labTests";
+import type { Company } from "./companies";
 // import { Vital } from './vitals'; // When you add vitals
 // import { ClinicalNote } from './notes'; // When you add notes
 
@@ -22,6 +23,7 @@ export interface DoctorVisit {
   number: number;
   only_lab: boolean;
   lab_requests?: LabRequest[];
+  company?: Company;
 
   patient_id: number;
   patient: Patient; // Full patient object

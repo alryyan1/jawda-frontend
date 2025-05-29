@@ -22,6 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { formatNumber } from '@/lib/utils';
 // import { updateRequestedServiceDetails, removeRequestedServiceFromVisit } from '@/services/visitService'; // You'll need update endpoint
 
 interface RequestedServicesTableProps {
@@ -142,7 +143,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                       {rs.service?.name || t('common:unknownService')}
                       {rs.service?.service_group?.name && <span className="block text-muted-foreground text-[10px]">({rs.service.service_group.name})</span>}
                     </TableCell>
-                    <TableCell className="text-center py-2">{price.toFixed(2)}</TableCell>
+                    <TableCell className="text-center py-2">{formatNumber(price)}</TableCell>
                     <TableCell className="text-center py-2">
                       {isEditingThisRow ? (
                         <Input type="number" min="1" value={currentEditData.count} 
@@ -160,10 +161,10 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                         </Select>
                       ) : `${discountPer}%` }
                     </TableCell>
-                    <TableCell className="text-center py-2 font-semibold">{netPrice.toFixed(2)}</TableCell>
-                    <TableCell className="text-center py-2 text-green-600 dark:text-green-500">{amountPaid.toFixed(2)}</TableCell>
+                    <TableCell className="text-center py-2 font-semibold">{formatNumber(netPrice)}</TableCell>
+                    <TableCell className="text-center py-2 text-green-600 dark:text-green-500">{formatNumber(amountPaid)}</TableCell>
                     <TableCell className={`text-center py-2 font-semibold ${balance > 0 ? 'text-red-600 dark:text-red-500' : 'text-green-600 dark:text-green-500'}`}>
-                        {balance.toFixed(2)}
+                        {formatNumber(balance)}
                     </TableCell>
                     <TableCell className="text-right py-2">
                       {isEditingThisRow ? (

@@ -34,8 +34,11 @@
   },
   "services":{
     "addedSuccess": "تمت إضافة الخدمات بنجاح!",
-    "removedSuccess": "تمت إزالة الخدمة بنجاح!"
+    "removedSuccess": "تمت إزالة الخدمة بنجاح!",
+    "noServicesAvailable": "لا يوجد خدمات متاحة.",
+    "multipleAddedSuccess": "تمت إضافة {{count}} خدمة بنجاح!"
   },
+
   "visit": {
     "statusUpdateSuccess": "تم تحديث حالة الزيارة بنجاح.",
     "statusUpdateFailed": "فشل تحديث حالة الزيارة."
@@ -157,6 +160,8 @@
     "totalCash": "إجمالي النقد",
     "totalBank": "إجمالي الشبكة/البنك",
     "noData": "لا توجد بيانات دخل لهذه الوردية حتى الآن.",
+    "serviceIncome": "إيرادات الخدمات",
+    "totalServiceIncome": "إجمالي إيرادات الخدمات", 
     "loading": "جارٍ تحميل الملخص..."
   }
 }

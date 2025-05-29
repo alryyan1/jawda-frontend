@@ -19,6 +19,27 @@ export const downloadDoctorShiftsReportPdf = async (filters: Omit<DoctorShiftRep
   });
   return response.data;
 };
+export const downloadDoctorShiftFinancialSummaryPdf = async (doctorShiftId: number): Promise<Blob> => {
+  const response = await apiClient.get(`/reports/doctor-shifts/${doctorShiftId}/financial-summary/pdf`, {
+    responseType: 'blob',
+  });
+  return response.data;
+};
+export interface ClinicReportPdfFilters {
+  shift: number; // Shift ID is required
+  user?: number | string | null; // User ID is optional
+}
+
+export const downloadClinicShiftSummaryPdf = async (filters: ClinicReportPdfFilters): Promise<Blob> => {
+  // The route for allclinicsReportNew was not explicitly defined previously, let's assume it's:
+  // GET /api/reports/clinic-shift-summary/pdf (or the one you set for `allclinicsReportNew`)
+  // The backend method expects 'shift' and 'user' as query parameters.
+  const response = await apiClient.get('/reports/clinic-shift-summary/pdf', { // ADJUST URL TO MATCH YOUR ROUTE
+    params: filters,
+    responseType: 'blob',
+  });
+  return response.data;
+};
 export const getDoctorShiftsReport = async (filters: DoctorShiftReportFilters): Promise<PaginatedResponse<DoctorShiftReportItem>> => {
   // The endpoint for this DoctorShiftReportItem is DoctorShiftController@index
   const response = await apiClient.get<PaginatedResponse<DoctorShiftReportItem>>('/doctor-shifts', { params: filters });

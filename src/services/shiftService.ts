@@ -40,3 +40,19 @@ export const getShiftFinancialSummary = async (shiftId: number): Promise<ShiftFi
 };
 // Get all shifts (for a potential admin list page, not directly for dashboard open/close)
 // export const getShifts = async (page = 1, filters = {}): Promise<PaginatedShiftsResponse> => { ... };
+
+export interface PaginatedShiftsResponse { // If backend paginates
+  data: Shift[];
+  links: any; meta: any;
+}
+// Fetches a list of shifts, potentially filtered (e.g., last N days, open/closed)
+export const getShiftsList = async (filters: { per_page?: number; is_closed?: string | boolean; /* other filters */ } = {}): Promise<Shift[]> => {
+const response = await apiClient.get<PaginatedShiftsResponse | Shift[]>('/shifts', { params: filters }); // Adjust endpoint if different
+// If paginated and wrapped in 'data': return response.data.data;
+// If direct array: return response.data;
+// For now, assuming it might be paginated but we want all for dropdown, or your index returns non-paginated based on params
+if ('data' in response.data && Array.isArray(response.data.data)) { // Check if it's Laravel Paginated Structure
+    return response.data.data;
+}
+return response.data as Shift[]; // Assume direct array if not paginated structure
+};

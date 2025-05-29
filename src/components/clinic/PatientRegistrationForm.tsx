@@ -28,6 +28,7 @@ import AddCompanyRelationDialog from '../clinic/AddCompanyRelationDialog';
 import { useDebounce } from '@/hooks/useDebounce';
 import { Popover, PopoverAnchor, PopoverContent } from '../ui/popover';
 import PatientSearchResultDisplay from './PatientSearchResultDisplay';
+import { Calendar } from '../ui/calendar';
 
 // Update Zod schema to include new company-related fields, make them optional
 const getPatientRegistrationSchema = (t: TFunction, isCompanySelected: boolean = false) => z.object({
@@ -46,10 +47,7 @@ const getPatientRegistrationSchema = (t: TFunction, isCompanySelected: boolean =
   guarantor: z.string().optional().nullable(),
   subcompany_id: z.string().optional().nullable(),
   company_relation_id: z.string().optional().nullable(),
-  expire_date: z.date().optional().nullable()
-    .refine(val => !isCompanySelected || val, { 
-      message: t('common:validation.requiredWhen', { context: t('patients:fields.company') })
-    }),
+
 });
 
 type PatientRegistrationFormValues = z.infer<ReturnType<typeof getPatientRegistrationSchema>>;
@@ -185,13 +183,13 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
       guarantor: '',
       subcompany_id: '',
       company_relation_id: '',
-      expire_date: undefined,
     },
   });
 
-  const { handleSubmit, control, formState: { isSubmitting: formSubmitting }, reset, watch, setValue } = form;
+  const { handleSubmit, control, formState: { isSubmitting: formSubmitting,errors }, reset, watch, setValue } = form;
   const companyId = watch('company_id');
 
+  console.log(errors);
   // Update isCompanySelected when company_id changes
   useEffect(() => {
     setIsCompanySelected(!!companyId && companyId !== '');
@@ -242,7 +240,7 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
         guarantor: companyId ? data.guarantor || undefined : undefined,
         subcompany_id: companyId && data.subcompany_id ? parseInt(data.subcompany_id) : undefined,
         company_relation_id: companyId && data.company_relation_id ? parseInt(data.company_relation_id) : undefined,
-        expire_date: data.expire_date instanceof Date ? data.expire_date : undefined,
+        // expire_date: data.expire_date instanceof Date ? data.expire_date : undefined,
       };
       
       return apiRegisterNewPatient(submissionData);
@@ -419,22 +417,18 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
                      </FormItem>
                  )} />
              </PopoverAnchor>
-             <PopoverContent  sticky='always'
-                 className="w-[var(--radix-popover-trigger-width)] p-0 shadow-xl max-h-[40vh] overflow-hidden" 
-                 side="top"
-                 align="start"
-                 sideOffset={5}
-                 alignOffset={0}
-                 onOpenAutoFocus={(e) => e.preventDefault()}
-                 collisionPadding={10}
-                 avoidCollisions
-             >
-                 <PatientSearchResultDisplay 
-                     results={searchResults || []} 
-                     onSelectPatientVisit={handleSelectPatientFromSearch}
-                     isLoading={isLoadingSearchResults}
-                 />
-             </PopoverContent>
+             <PopoverContent sticky='always'
+              className="w-[var(--radix-popover-trigger-width)] p-0 shadow-xl max-h-[0vh] " 
+              // side="bottom"
+              // align="end"
+              onOpenAutoFocus={(e) => e.preventDefault()}
+            >
+              <PatientSearchResultDisplay 
+                results={searchResults || []} 
+                onSelectPatientVisit={handleSelectPatientFromSearch}
+                isLoading={isLoadingSearchResults}
+              />
+            </PopoverContent>
           </Popover>
        
           <FormField
@@ -564,18 +558,24 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
                     <FormMessage className="text-xs"/>
                   </FormItem>
                 )} />
-
-                <FormField control={control} name="expire_date" render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel className="text-xs mb-1">{t('patients:fields.expiryDate')}</FormLabel>
-                    <DateTimePicker
+          {/* <DateTimePicker
                       date={field.value instanceof Date ? field.value : undefined}
                       onDateChange={field.onChange}
+                      disabled={currentIsLoading}
+                    /> */}
+                {/* <FormField control={control} name="expire_date" render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel className="text-xs mb-1">{t('patients:fields.expiryDate')}</FormLabel>
+          
+                    <Calendar
+                      mode="single"
+                      selected={field.value}
+                      onSelect={field.onChange}
                       disabled={currentIsLoading}
                     />
                     <FormMessage className="text-xs"/>
                   </FormItem>
-                )} />
+                )} /> */}
               </div>
             </Card>
           )}

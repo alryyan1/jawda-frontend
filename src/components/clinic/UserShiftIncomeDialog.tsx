@@ -11,6 +11,7 @@ import { Loader2, DollarSign, Landmark, Coins } from 'lucide-react'; // Landmark
 import type { UserShiftIncomeSummary } from '@/types/users'; // Adjust path
 import { fetchCurrentUserShiftIncomeSummary } from '@/services/userService'; // Adjust path
 import { useAuth } from '@/contexts/AuthContext'; // To get current user info for display
+import { formatNumber } from '@/lib/utils';
 
 interface UserShiftIncomeDialogProps {
   isOpen: boolean;
@@ -75,6 +76,7 @@ const UserShiftIncomeDialog: React.FC<UserShiftIncomeDialogProps> = ({ isOpen, o
           {summary && !isLoading && !isFetching && (
             <Card>
               <CardContent className="pt-6 space-y-1">
+                 <h4 className="font-semibold text-md mb-3">{t('clinic:userShiftIncomeDialog.serviceIncome')}</h4>
                  <DetailRow 
                      label={t('clinic:userShiftIncomeDialog.totalCash')} 
                      value={summary.total_cash}

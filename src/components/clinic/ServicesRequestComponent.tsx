@@ -1,11 +1,10 @@
 // src/components/clinic/ServicesRequestComponent.tsx
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 // ... other imports (toast, Loader2, types, services)
 
 import ServiceSelectionGrid from './ServiceSelectionGrid';
-import { Button } from '@/components/ui/button';
 import { getRequestedServicesForVisit, addServicesToVisit } from '@/services/visitService';
 import type { RequestedService, ServiceGroupWithServices } from '@/types/services'; // Or types/visits
 import { getServiceGroupsWithServices } from '@/services/serviceGroupService';
@@ -15,14 +14,14 @@ import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import i18n from '@/i18n';
 import RequestedServicesTable from './RequestedServicesTable';
+import { formatNumber } from '@/lib/utils';
 
 
 interface ServicesRequestComponentProps {
-  patientId: number;
   visitId: number;
 }
 
-const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ patientId, visitId }) => {
+const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ visitId }) => {
   const { t } = useTranslation(['clinic', 'services', 'common']);
   const queryClient = useQueryClient();
 
@@ -30,7 +29,7 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ pat
   const serviceCatalogQueryKey = ['serviceGroupsWithServices', visitId]; // visitId to potentially filter available
 
   const [showServiceSelectionGrid, setShowServiceSelectionGrid] = useState(false); // Control visibility
-
+   
   const { 
     isFetching,
     data: requestedServices, 
@@ -51,6 +50,12 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ pat
     // }
   });
 
+  useEffect(()=>{
+    if(requestedServices && requestedServices.length === 0){
+      setShowServiceSelectionGrid(true);
+    }
+  },[requestedServices])
+
   // Fetch catalog for the selection grid (all groups and their services)
   // This is fetched regardless, but ServiceSelectionGrid will use it when visible
   const { 
@@ -63,15 +68,18 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ pat
   });
 
   const addMultipleServicesMutation = useMutation({
-    mutationFn: (serviceIds: number[]) => addServicesToVisit({ visitId, service_ids: serviceIds }),
-    onSuccess: () => {
-      toast.success(t('clinic:services.multipleAddedSuccess', "Selected services added successfully!"));
+    mutationFn: (serviceIds: number[]) => addServicesToVisit({ visitId, service_ids: serviceIds}),
+    onSuccess: (_, serviceIds) => {
+      toast.success(t('clinic:services.multipleAddedSuccess', {
+        count: serviceIds.length
+      }));
       queryClient.invalidateQueries({ queryKey: requestedServicesQueryKey });
       queryClient.invalidateQueries({ queryKey: serviceCatalogQueryKey }); // If available services change
       setShowServiceSelectionGrid(false); // Hide grid after adding
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || t('common:error.requestFailed'));
+    onError: (error: unknown) => {
+      const apiError = error as { response?: { data?: { message?: string } } };
+      toast.error(apiError.response?.data?.message || t('common:error.requestFailed'));
     }
   });
 
@@ -140,11 +148,11 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ pat
             <Card style={{direction:i18n.dir(),maxWidth:'300px'}} className="mt-4">
               <CardHeader><CardTitle className="text-md">{t('common:summary')}</CardTitle></CardHeader>
               <CardContent className="text-sm space-y-1">
-                <div className="flex justify-between"><span>{t('common:totalAmount')}:</span> <span className="font-semibold">{summary.totalAmount.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span>{t('common:totalDiscount')}:</span> <span className="font-semibold text-orange-600">-{summary.totalDiscount.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span>{t('common:totalPaid')}:</span> <span className="font-semibold text-green-600">{summary.totalPaid.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span>{t('common:totalAmount')}:</span> <span className="font-semibold">{formatNumber(summary.totalAmount)}</span></div>
+                <div className="flex justify-between"><span>{t('common:totalDiscount')}:</span> <span className="font-semibold text-orange-600">-{formatNumber(summary.totalDiscount)}</span></div>
+                <div className="flex justify-between"><span>{t('common:totalPaid')}:</span> <span className="font-semibold text-green-600">{formatNumber(summary.totalPaid)}</span></div>
                 <Separator className="my-1"/>
-                <div className="flex justify-between font-bold text-md"><span>{t('common:amountLeft')}:</span> <span>{summary.amountLeft.toFixed(2)}</span></div>
+                <div className="flex justify-between font-bold text-md"><span>{t('common:amountLeft')}:</span> <span>{formatNumber(summary.amountLeft)}</span></div>
               </CardContent>
             </Card>
           )}

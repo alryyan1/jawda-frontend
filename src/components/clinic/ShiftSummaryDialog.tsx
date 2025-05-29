@@ -24,6 +24,8 @@ import type { Shift } from "@/types/shifts";
 import type { ShiftFinancialSummary } from "@/types/shifts"; // Or reports.ts
 import { getShiftFinancialSummary } from "@/services/shiftService";
 import DetailRowDisplay from "../ui/DetailRowDisplay";
+import { formatNumber } from '@/lib/utils';
+
 interface ShiftSummaryDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
@@ -96,12 +98,12 @@ const ShiftSummaryDialog: React.FC<ShiftSummaryDialogProps> = ({
             </h4>
             <DetailRowDisplay
               label={t("clinic:shiftSummary.totalNetIncome")}
-              value={summary.total_net_income.toFixed(1)}
+              value={formatNumber(summary.total_net_income, 1)}
               unit={t("common:currency")}
             />
             <DetailRowDisplay
               label={t("clinic:shiftSummary.totalDiscount")}
-              value={summary.total_discount_applied.toFixed(1)}
+              value={formatNumber(summary.total_discount_applied, 1)}
               unit={t("common:currency")}
               valueClassName="text-orange-600"
             />
@@ -112,19 +114,19 @@ const ShiftSummaryDialog: React.FC<ShiftSummaryDialogProps> = ({
             </h4>
             <DetailRowDisplay
               label={t("clinic:shiftSummary.totalCashCollected")}
-              value={summary.total_cash_collected.toFixed(1)}
+              value={formatNumber(summary.total_cash_collected, 1)}
               unit={t("common:currency")}
               icon={DollarSign}
             />
             <DetailRowDisplay
               label={t("clinic:shiftSummary.totalBankCollected")}
-              value={summary.total_bank_collected.toFixed(1)}
+              value={formatNumber(summary.total_bank_collected, 1)}
               unit={t("common:currency")}
               icon={Landmark}
             />
             <DetailRowDisplay
               label={t("clinic:shiftSummary.totalCollected")}
-              value={summary.total_collected.toFixed(1)}
+              value={formatNumber(summary.total_collected, 1)}
               unit={t("common:currency")}
               valueClassName="font-bold text-green-600"
             />
@@ -135,13 +137,13 @@ const ShiftSummaryDialog: React.FC<ShiftSummaryDialogProps> = ({
             </h4>
             <DetailRowDisplay
               label={t("clinic:shiftSummary.recordedExpenses")}
-              value={summary.recorded_expenses.toFixed(1)}
+              value={formatNumber(summary.recorded_expenses, 1)}
               unit={t("common:currency")}
               valueClassName="text-red-600"
             />
             <DetailRowDisplay
               label={t("clinic:shiftSummary.expectedCash")}
-              value={summary.expected_cash_in_drawer.toFixed(1)}
+              value={formatNumber(summary.expected_cash_in_drawer, 1)}
               unit={t("common:currency")}
               valueClassName="font-bold"
             />
@@ -154,12 +156,12 @@ const ShiftSummaryDialog: React.FC<ShiftSummaryDialogProps> = ({
                 </h4>
                 <DetailRowDisplay
                   label={t("dashboard:closeShiftDialog.totalLabel")}
-                  value={summary.shift_total_recorded?.toFixed(1)}
+                  value={formatNumber(summary.shift_total_recorded || 0, 1)}
                   unit={t("common:currency")}
                 />
                 <DetailRowDisplay
                   label={t("dashboard:closeShiftDialog.bankLabel")}
-                  value={summary.shift_bank_recorded?.toFixed(1)}
+                  value={formatNumber(summary.shift_bank_recorded || 0, 1)}
                   unit={t("common:currency")}
                 />
               </>

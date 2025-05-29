@@ -7,11 +7,12 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { UserCircle, Loader2 } from 'lucide-react';
+import { UserCircle, Loader2, Heart } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 import type { Patient } from '@/types/patients';
 import { updateDoctorVisitStatus } from '@/services/visitService';
+import type { Company } from '@/types/companies';
 
 const VISIT_STATUSES_FOR_DROPDOWN = ['waiting', 'with_doctor', 'lab_pending', 'imaging_pending', 'payment_pending', 'completed', 'cancelled', 'no_show'] as const;
 type VisitStatus = typeof VISIT_STATUSES_FOR_DROPDOWN[number];
@@ -20,6 +21,7 @@ interface ActivePatientVisit {
   id: number;
   status: VisitStatus;
   patient: Patient;
+  company?: Company;
   doctor?: {
     name: string;
   };
@@ -136,7 +138,7 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
   };
 
   const queueNumberOrVisitId = visit.number 
-
+  // console.log(visit,'visit')
   return (
     <Card 
       className={cn(
@@ -212,7 +214,11 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
               </div>
           }
         </div>
+      
       </div>
+      {visit.company != null && <div className="flex-shrink-0  relative">
+        {<Heart></Heart>}
+        </div>}
     </Card>
   );
 };

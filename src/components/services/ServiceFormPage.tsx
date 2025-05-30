@@ -80,7 +80,7 @@ const ServiceFormPage: React.FC<ServiceFormPageProps> = ({ mode }) => {
       toast.success(t('services:form.serviceSavedSuccess'));
       queryClient.invalidateQueries({ queryKey: ['services'] });
       if(isEditMode && serviceId) queryClient.invalidateQueries({ queryKey: ['service', serviceId] });
-      navigate('/services');
+      navigate('/settings/services');
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || t('services:form.serviceSaveError'));

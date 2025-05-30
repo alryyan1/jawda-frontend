@@ -144,7 +144,7 @@ const ClinicPage: React.FC = () => {
             )}
           >
             <SelectedPatientWorkspace
-              patient={selectedPatientVisit.patient}
+              doctorvisit={selectedPatientVisit}
               visitId={selectedPatientVisit.visitId}
               onClose={() => setSelectedPatientVisit(null)} // Optional: way to close this panel
             />

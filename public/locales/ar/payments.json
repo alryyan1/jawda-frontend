@@ -2,12 +2,36 @@
   "dialogTitle": "تسديد دفعة لـ: {{serviceName}}",
   "balanceDue": "الرصيد المستحق",
   "amountToPay": "المبلغ المدفوع",
+  "amountToPayNow": "المبلغ المطلوب دفعه الآن",
   "amountPaid": "المبلغ المدفوع",
+  "netPriceAfterDiscount": "السعر الصافي بعد الخصم",
+  "patientPayableBalance": "الرصيد المستحق على المريض",
+  "companyEnduranceApplied": "تحمل الشركة المطبق",
   "paymentMethod": "طريقة الدفع",
   "cash": "نقداً",
   "cashShort": "نقداً",
   "bank": "شبكة/بنك",
+  "bankShort": "شبكة/بنك",
   "paymentSuccess": "تم تسجيل الدفعة بنجاح!",
+  "depositAddedSuccess": "تمت إضافة العربون بنجاح!",
+  "depositUpdatedSuccess": "تم تحديث العربون بنجاح!",
+  "depositDeletedSuccess": "تم حذف العربون بنجاح!",
+  "manageDepositsDialog": {
+    "title": "إدارة العربون لـ: {{serviceName}}",
+    "description": "إجمالي المدفوع: {{totalPaid}}",
+    "triggerButtonTooltip": "إدارة العربون",
+    "noDeposits": "لا يوجد عربون مسجل بعد",
+    "addDepositButton": "إضافة عربون جديد"
+  },
+  "table": {
+    "amount": "المبلغ",
+    "method": "الطريقة",
+    "user": "المستخدم",
+    "dateTime": "التاريخ والوقت"
+  },
+  "error": {
+    "noActiveShiftForPayment": "لا يمكن إضافة عربون بدون وجود وردية نشطة"
+  },
   "batchPayDialogTitleLab": "تسديد دفعة مجمعة لطلبات المختبر",
   "batchPayDialogDescription": "سيتم تسديد دفعة لـ {{count}} طلب فحص غير مدفوع.",
   "totalNetPayableIs": "إجمالي صافي المستحق (قبل الدفعات الحالية)",
@@ -37,5 +61,7 @@
   "paid": "مدفوع",
   "pending": "قيد الانتظار",
   "confirmDirectPayLab": "هل أنت متأكد من تسديد جميع المستحقات المخبرية؟",
-  "confirmDirectPayLabItem": "هل أنت متأكد من تسديد مستحقات الفحص '{{testName}}'؟"
+  "confirmDirectPayLabItem": "هل أنت متأكد من تسديد مستحقات الفحص '{{testName}}'؟",
+  "companyEnduranceTotal": "تحمل الشركة الكلي"
+    
 }

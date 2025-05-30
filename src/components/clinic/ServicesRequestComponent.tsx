@@ -15,13 +15,16 @@ import { Loader2 } from 'lucide-react';
 import i18n from '@/i18n';
 import RequestedServicesTable from './RequestedServicesTable';
 import { formatNumber } from '@/lib/utils';
-
+import type { DoctorVisit } from '@/types/visits';
+import type { DoctorVisit } from '@/types/visits';
+import RequestedServicesSummary from './RequestedServicesSummary';
 
 interface ServicesRequestComponentProps {
   visitId: number;
+  visit: DoctorVisit;
 }
 
-const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ visitId }) => {
+const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ visitId, visit }) => {
   const { t } = useTranslation(['clinic', 'services', 'common']);
   const queryClient = useQueryClient();
 
@@ -137,25 +140,19 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ vis
       ) : (
         <>
           <RequestedServicesTable 
+            visit={visit}
             visitId={visitId}
             requestedServices={requestedServices || []} 
             isLoading={isLoadingRequested || isFetching} // isFetching from useQuery can be used
             currentClinicShiftId={1} // TODO: Get current actual clinic shift ID
             onAddMoreServices={() => setShowServiceSelectionGrid(true)} // Button to re-open grid
           />
-          {/* Summary Section */}
-          {requestedServices && requestedServices.length > 0 && (
-            <Card style={{direction:i18n.dir(),maxWidth:'300px'}} className="mt-4">
-              <CardHeader><CardTitle className="text-md">{t('common:summary')}</CardTitle></CardHeader>
-              <CardContent className="text-sm space-y-1">
-                <div className="flex justify-between"><span>{t('common:totalAmount')}:</span> <span className="font-semibold">{formatNumber(summary.totalAmount)}</span></div>
-                <div className="flex justify-between"><span>{t('common:totalDiscount')}:</span> <span className="font-semibold text-orange-600">-{formatNumber(summary.totalDiscount)}</span></div>
-                <div className="flex justify-between"><span>{t('common:totalPaid')}:</span> <span className="font-semibold text-green-600">{formatNumber(summary.totalPaid)}</span></div>
-                <Separator className="my-1"/>
-                <div className="flex justify-between font-bold text-md"><span>{t('common:amountLeft')}:</span> <span>{formatNumber(summary.amountLeft)}</span></div>
-              </CardContent>
-            </Card>
-          )}
+      {/* USE THE NEW SUMMARY COMPONENT */}
+      <RequestedServicesSummary
+            requestedServices={requestedServices || []}
+            visit={visit} // Pass the fetched patient
+            className="max-w-xs ml-auto mr-auto sm:mr-0 sm:ml-auto" // Example styling
+          />
         </>
       )}
     </div>

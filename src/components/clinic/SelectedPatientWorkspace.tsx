@@ -56,7 +56,7 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
   });
 
   const patient = visit?.patient || initialPatient;
-
+  // console.log('doctorvisit', doctorvisit);
   if (isLoading && !visit) {
     return (
       <div className="flex flex-col h-full items-center justify-center bg-background dark:bg-card p-6">
@@ -175,7 +175,7 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
           value="services"
           className="flex-grow overflow-y-auto p-3 sm:p-4 focus-visible:ring-0 focus-visible:ring-offset-0"
         >
-          <ServicesRequestComponent patientId={patient.id} visitId={visit.id} />
+          <ServicesRequestComponent patientId={patient.id} visit={visit} visitId={visit.id} />
         </TabsContent>
 
         <TabsContent 

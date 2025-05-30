@@ -1,5 +1,4 @@
 // src/types/services.ts
-import type { Service } from './services'; // Existing Service type
 import type { User } from './auth'; // Assuming User type
 
 export interface ServiceGroup {
@@ -11,6 +10,7 @@ export interface ServiceGroup {
 export interface RequestedService {
   id: number; // ID of the requested_services record itself
   visit_id: number;
+  doctorvisits_id: number; // ID of the doctor visit this service belongs to
   service_id: number;
   service?: Service; // Eager-loaded service details
   user_id: number;
@@ -113,4 +113,45 @@ export interface ServiceCostApiPayload {
     cost_type: 'total' | 'after cost';
     percentage?: number | null;
     fixed?: number | null;
+}
+// src/types/services.ts (or a new src/types/costs.ts)
+// ... other types like Service, SubServiceCost, ServiceCost ...
+
+export interface RequestedServiceCost {
+  id: number;
+  requested_service_id: number;
+  sub_service_cost_id: number;
+  service_cost_id: number; // The ID of the ServiceCost definition rule used
+  amount: number; // The actual calculated or overridden cost amount for this instance
+  created_at?: string;
+  updated_at?: string;
+
+  // Optional: for display or if eager loaded from backend
+  sub_service_cost_name?: string; 
+  service_cost_definition_name?: string; // Name from the ServiceCost definition
+  subServiceCost?: SubServiceCost; // Full object if eager loaded
+  serviceCostDefinition?: ServiceCost; // Full object if eager loaded
+}
+
+// src/types/services.ts
+// ... existing types ...
+
+export interface RequestedServiceDeposit {
+  id: number;
+  requested_service_id: number;
+  amount: number;
+  user_id: number; // User who processed this specific deposit
+  user?: { id: number; name: string }; // Optional loaded user
+  is_bank: boolean;
+  is_claimed: boolean; // For reconciliation
+  shift_id: number;
+  created_at: string;
+  updated_at?: string; // If your pivot has timestamps
+}
+
+export interface RequestedServiceDepositFormData {
+  id?: number; // For updates
+  amount: string; // Input as string
+  is_bank: boolean;
+  // shift_id and user_id will usually be set by the backend or from context
 }

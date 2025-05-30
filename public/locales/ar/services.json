@@ -27,7 +27,8 @@
       "amountPaid": "المدفوع",
       "balance": "المتبقي",
     "serviceName": "اسم الخدمة",
-    "statusShort": "الحالة"
+    "statusShort": "الحالة",
+    "endurance": "التحمل"
     
   },
   "form": {
@@ -94,5 +95,6 @@
     "addedSuccess": "تمت إضافة نوع التكلفة بنجاح",
     "addError": "حدث خطأ أثناء إضافة نوع التكلفة",
     "addedToList": "تمت إضافة {{name}} إلى القائمة"
-  }
+  },
+  "manageCostsButton": "إدارة التكاليف"
 }

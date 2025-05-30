@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useTranslation } from 'react-i18next';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -17,9 +17,14 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Loader2 } from 'lucide-react';
 import type { RequestedService } from '@/types/services';
-import { recordServicePayment } from '@/services/visitService'; // Your service
+import type { Patient } from '@/types/patients';
+import { recordServicePayment } from '@/services/visitService';
+import { getPatientById } from '@/services/patientService';
+import { formatNumber } from '@/lib/utils'; // Assuming you have this
+import type { DoctorVisit } from '@/types/visits';
 
 interface ServicePaymentDialogProps {
+  visit?: DoctorVisit;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   requestedService: RequestedService;
@@ -28,62 +33,159 @@ interface ServicePaymentDialogProps {
   onPaymentSuccess: () => void;
 }
 
-const getPaymentSchema = (t: Function, maxAmount: number) => z.object({
+const paymentSchema = z.object({
   amount: z.string()
-    .refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, { message: t('common:validation.positiveNumber') })
-    .refine(val => parseFloat(val) <= maxAmount, { message: t('payments:validation.amountExceedsBalance', { balance: maxAmount.toFixed(2) }) }),
-  is_bank: z.string().min(1, { message: t('common:validation.required', { field: t('payments:paymentMethod')}) }), // "0" for cash, "1" for bank
+    .refine(val => !isNaN(parseFloat(val)), { message: 'Must be numeric' })
+    .transform(val => parseFloat(val))
+    .refine(val => val >= 0.01, { message: 'Amount must be at least 0.01' })
+    .refine(val => val <= 999999.99, { message: 'Amount exceeds maximum' }),
+  is_bank: z.string().min(1, { message: 'Payment method is required' }),
 });
 
+type PaymentFormValues = z.infer<typeof paymentSchema>;
 
 const ServicePaymentDialog: React.FC<ServicePaymentDialogProps> = ({ 
-    isOpen, onOpenChange, requestedService, visitId, currentClinicShiftId, onPaymentSuccess 
+  visit,
+  isOpen, onOpenChange, requestedService, visitId, currentClinicShiftId, onPaymentSuccess 
 }) => {
-  const { t } = useTranslation(['payments', 'common']); // New namespace 'payments'
+  const { t } = useTranslation(['payments', 'common']);
   
-  const balance = useMemo(() => {
+  const { data: patient, isLoading: isLoadingPatient } = useQuery<Patient, Error>({
+    queryKey: ['patientDetailsForPaymentDialog', visitId],
+    queryFn: () => getPatientById(visitId),
+    enabled: isOpen && !!visitId,
+  });
+
+  const isCompanyPatient = useMemo(() => !!visit?.patient?.company_id, [visit?.patient?.company_id]);
+
+  const { displayBalance, calculatedPaymentDefault, fullNetPrice } = useMemo(() => {
+    if (!requestedService) return { displayBalance: 0, calculatedPaymentDefault: 0, fullNetPrice: 0 };
+
     const itemPrice = Number(requestedService.price) || 0;
     const itemCount = Number(requestedService.count) || 1;
     const subTotal = itemPrice * itemCount;
-    const discountAmount = (subTotal * (Number(requestedService.discount_per) || 0)) / 100 + (Number(requestedService.discount) || 0);
-    const netPrice = subTotal - discountAmount;
-    return netPrice - (Number(requestedService.amount_paid) || 0);
-  }, [requestedService]);
+    
+    const discountFromPercentage = (subTotal * (Number(requestedService.discount_per) || 0)) / 100;
+    const fixedDiscount = Number(requestedService.discount) || 0;
+    const totalDiscount = discountFromPercentage + fixedDiscount;
+    const amountAfterDiscount = subTotal - totalDiscount;
+    
+    const enduranceAmountPerItem = Number(requestedService.endurance) || 0;
+    const totalEnduranceAmount = enduranceAmountPerItem * itemCount; // Endurance applies per item count
 
-  const paymentSchema = getPaymentSchema(t, balance);
-  type PaymentFormValues = z.infer<ReturnType<typeof getPaymentSchema>>;
+    const alreadyPaidByPatient = Number(requestedService.amount_paid) || 0;
+    
+    let netPayableByPatient: number;
+    let paymentDefault: number;
+    console.log(isCompanyPatient,'isCompanyPatient')
+    if (isCompanyPatient) {
+        // For company patient, what they are expected to pay is the amount *after* company endurance.
+        // The 'endurance' field on RequestedService already represents the company's part for this service instance.
+        netPayableByPatient =  totalEnduranceAmount;
+        paymentDefault = totalEnduranceAmount;
+    } else {
+        // For cash patient, they pay the amount after discount. Endurance is not applicable.
+        netPayableByPatient = amountAfterDiscount;
+        paymentDefault = netPayableByPatient - alreadyPaidByPatient;
+    }
+    
+    // Ensure payment default and display balance are not negative
+    const finalPaymentDefault = paymentDefault < 0 ? 0 : paymentDefault;
+    const finalDisplayBalance = netPayableByPatient - alreadyPaidByPatient < 0 ? 0 : netPayableByPatient - alreadyPaidByPatient;
+
+    return { 
+        displayBalance: finalDisplayBalance, 
+        calculatedPaymentDefault: finalPaymentDefault,
+        fullNetPrice: amountAfterDiscount // Price after discount, before endurance or payment
+    };
+
+  }, [requestedService, isCompanyPatient, patient]); // Added patient
 
   const form = useForm<PaymentFormValues>({
-    resolver: zodResolver(paymentSchema),
-    defaultValues: { amount: balance > 0 ? balance.toFixed(2) : '0.00', is_bank: "0" }, // Default to balance, cash
+    defaultValues: { 
+        amount: calculatedPaymentDefault > 0 ? calculatedPaymentDefault.toFixed(1) : '0.00', 
+        is_bank: "0" 
+    },
+    resolver: (values) => {
+      const errors: Record<string, { type: string; message: string }> = {};
+      
+      // Validate amount
+      const amount = parseFloat(values.amount);
+      if (isNaN(amount)) {
+        errors.amount = {
+          type: 'validate',
+          message: t('common:validation.mustBeNumeric')
+        };
+      } else if (displayBalance > 0 && amount < 0.01) {
+        errors.amount = {
+          type: 'validate',
+          message: t('payments:validation.amountMinRequired', { amount: '0.01' })
+        };
+      } else if (amount > displayBalance + 0.009) {
+        errors.amount = {
+          type: 'validate',
+          message: t('payments:validation.amountExceedsBalance', { balance: displayBalance.toFixed(1) })
+        };
+      }
+
+      // Validate payment method
+      if (!values.is_bank) {
+        errors.is_bank = {
+          type: 'validate',
+          message: t('common:validation.required', { field: t('payments:paymentMethod') })
+        };
+      }
+
+      return {
+        values,
+        errors: Object.keys(errors).length > 0 ? errors : {}
+      };
+    }
   });
 
-  useEffect(() => { // Reset form when requestedService or isOpen changes
+  const { control, handleSubmit, setValue, getValues } = form;
+
+  useEffect(() => {
     if (isOpen) {
-        form.reset({ amount: balance > 0 ? balance.toFixed(2) : '0.00', is_bank: "0" });
+        const defaultAmount = calculatedPaymentDefault > 0 ? calculatedPaymentDefault.toFixed(1) : '0.00';
+        form.reset({ 
+            amount: defaultAmount,
+            is_bank: "0" 
+        });
+        setValue("amount", defaultAmount);
     }
-  }, [isOpen, requestedService, balance, form]);
+  }, [isOpen, requestedService, calculatedPaymentDefault, form, patient, setValue]);
 
   const mutation = useMutation({
-    mutationFn: (data: { amount: number; is_bank: boolean }) => 
+    mutationFn: (data: PaymentFormValues) => 
         recordServicePayment({ 
             requested_service_id: requestedService.id, 
-            amount: data.amount, 
-            is_bank: data.is_bank,
-            shift_id: currentClinicShiftId // Pass current general clinic shift
+            amount: parseFloat(data.amount), 
+            is_bank: data.is_bank === "1",
+            shift_id: currentClinicShiftId
         }),
     onSuccess: () => {
       toast.success(t('payments:paymentSuccess'));
-      onPaymentSuccess(); // This will invalidate queries and close dialog from parent
+      onPaymentSuccess();
     },
-    onError: (error: any) => {
+    onError: (error: Error & { response?: { data?: { message?: string } } }) => {
       toast.error(error.response?.data?.message || t('payments:paymentError'));
     },
   });
 
   const onSubmit = (data: PaymentFormValues) => {
-    mutation.mutate({ amount: parseFloat(data.amount), is_bank: data.is_bank === "1" });
+    const amount = parseFloat(data.amount);
+    if (displayBalance <= 0 && amount <= 0) {
+        toast.info(t('payments:itemAlreadyPaidOrNoBalance'));
+        onOpenChange(false);
+        return;
+    }
+    mutation.mutate(data);
   };
+  
+  if (!isOpen || (isLoadingPatient && !patient && visitId)) {
+    return isOpen ? <Dialog open={isOpen} onOpenChange={onOpenChange}><DialogContent><div className="p-6 text-center"><Loader2 className="h-6 w-6 animate-spin"/></div></DialogContent></Dialog> : null;
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -91,19 +193,34 @@ const ServicePaymentDialog: React.FC<ServicePaymentDialogProps> = ({
         <DialogHeader>
           <DialogTitle>{t('payments:dialogTitle', { serviceName: requestedService.service?.name || 'Service' })}</DialogTitle>
           <DialogDescription>
-            {t('payments:balanceDue')}: <span className="font-semibold">{balance.toFixed(2)}</span> {t('common:currency')}
+            {t('payments:netPriceAfterDiscount')}: <span className="font-semibold">{formatNumber(fullNetPrice)}</span> {t('common:currencySymbolShort')} <br/>
+            {isCompanyPatient && requestedService.endurance > 0 && (
+                <span className="text-xs text-muted-foreground">
+                    ({t('payments:companyEnduranceApplied')}: {formatNumber(Number(requestedService.endurance) * (Number(requestedService.count) || 1))} {t('common:currencySymbolShort')}) <br/>
+                </span>
+            )}
+            {t('payments:patientPayableBalance')}: <span className="font-semibold">{formatNumber(displayBalance)}</span> {t('common:currencySymbolShort')}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2">
-            <FormField control={form.control} name="amount" render={({ field }) => (
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2">
+            <FormField control={control} name="amount" render={({ field }) => (
               <FormItem>
-                <FormLabel>{t('payments:amountToPay')}</FormLabel>
-                <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                <FormLabel>{t('payments:amountToPayNow')}</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="number" 
+                    step="0.01" 
+                    {...field} 
+                    onChange={(e) => field.onChange(e.target.value)}
+                    value={String(field.value)} // Ensure value is string for input
+                    disabled={mutation.isPending || (displayBalance <= 0 && field.value <= 0) }
+                  />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )} />
-            <FormField control={form.control} name="is_bank" render={({ field }) => (
+            <FormField control={control} name="is_bank" render={({ field }) => (
               <FormItem className="space-y-2">
                 <FormLabel>{t('payments:paymentMethod')}</FormLabel>
                 <FormControl>
@@ -111,6 +228,7 @@ const ServicePaymentDialog: React.FC<ServicePaymentDialogProps> = ({
                     onValueChange={field.onChange}
                     defaultValue={field.value}
                     className="flex space-x-4 rtl:space-x-reverse"
+                    disabled={mutation.isPending || (displayBalance <= 0 && getValues("amount") <= 0)}
                   >
                     <FormItem className="flex items-center space-x-2 rtl:space-x-reverse">
                       <FormControl><RadioGroupItem value="0" id={`cash-${requestedService.id}`} /></FormControl>
@@ -127,7 +245,7 @@ const ServicePaymentDialog: React.FC<ServicePaymentDialogProps> = ({
             )} />
             <DialogFooter className="pt-4">
               <DialogClose asChild><Button type="button" variant="outline" disabled={mutation.isPending}>{t('common:cancel')}</Button></DialogClose>
-              <Button type="submit" disabled={mutation.isPending || balance <= 0}>
+              <Button type="submit" disabled={mutation.isPending || (displayBalance <= 0 && getValues("amount") <= 0)}>
                 {mutation.isPending && <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />}
                 {t('common:pay')}
               </Button>

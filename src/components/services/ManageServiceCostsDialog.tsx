@@ -14,7 +14,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter,
   DialogHeader, DialogTitle, DialogClose,
 } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormField } from "@/components/ui/form";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Loader2, PlusCircle, Trash2, Save } from 'lucide-react';
@@ -142,7 +142,7 @@ const ManageServiceCostsDialog: React.FC<ManageServiceCostsDialogProps> = ({
       }
       const payload = {
         ...rest,
-        name: selectedSubServiceCost.name, // Use the sub-service cost name
+        name: selectedSubServiceCost.name,
         percentage: data.percentage ? parseFloat(data.percentage) : null,
         fixed: data.fixed ? parseFloat(data.fixed) : null,
         sub_service_cost_id: parseInt(data.sub_service_cost_id),
@@ -167,7 +167,7 @@ const ManageServiceCostsDialog: React.FC<ManageServiceCostsDialogProps> = ({
         throw new Error('Selected sub-service cost not found');
       }
       const payload = {
-        name: selectedSubServiceCost.name, // Use the sub-service cost name
+        name: selectedSubServiceCost.name,
         sub_service_cost_id: parseInt(data.sub_service_cost_id),
         cost_type: data.cost_type,
         percentage: data.percentage ? parseFloat(data.percentage) : null,

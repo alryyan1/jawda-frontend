@@ -163,5 +163,15 @@
     "serviceIncome": "إيرادات الخدمات",
     "totalServiceIncome": "إجمالي إيرادات الخدمات", 
     "loading": "جارٍ تحميل الملخص..."
+  },
+  "requestedServiceCost": {
+    "dialogTitle": "إدارة تكاليف {{serviceName}}",
+    "dialogDescription": "إدارة التكاليف المرتبطة بهذه الخدمة",
+    "addCostEntry": "إضافة تكلفة جديدة",
+    "costDefinition": "تعريف التكلفة",
+    "costType": "نوع التكلفة",
+    "calculatedAmount": "المبلغ المحسوب",
+    "selectDefinition": "اختر تعريف التكلفة",
+    "costTypeReadOnly": "نوع التكلفة (للقراءة فقط)"
   }
 }

@@ -85,7 +85,8 @@
     "pageNotFound": "الصفحة غير موجودة",
     "somethingWentWrong": "حدث خطأ ما",
     "unknownError": "حدث خطأ غير متوقع",
-    "noPermissions": "ليس لديك الصلاحية لعرض هذا القسم"
+    "noPermissions": "ليس لديك الصلاحية لعرض هذا القسم",
+    "pdfGeneratedError": "حدث خطأ أثناء إنشاء ملف PDF"
   },
   "save": "حفظ",
   "id": "م",
@@ -94,6 +95,7 @@
   "entityNamePlural": "{{entity}}",
   "backToList": "العودة إلى قائمة ",
   "all": "الكل",
+  "allGroups": "كل المجموعات",
   "allUsers": "جميع المستخدمين",
   "pharmacy": "الصيدلية",
   "close": "إغلاق",
@@ -219,5 +221,14 @@
     "9": "س", "10": "أ", "11": "ن", "12": "د"
   },
   "viewDetails": "عرض التفاصيل",
-  "manage": "إدارة"
+  "manage": "إدارة",
+  "filters": "عوامل التصفية",
+  "financialSummary": "الملخص المالي",
+  "summaryLabels": {
+    "grossTotalServices": "إجمالي الخدمات (قبل الخصم)",
+    "totalDiscount": "مجموع الخصومات",
+    "netPayableByPatient": "صافي مستحق على المريض",
+    "totalPaidByPatient": "إجمالي مدفوع من المريض",
+    "patientBalanceDue": "الرصيد على المريض"
+  }
 }

@@ -64,7 +64,12 @@ export const getDoctorShiftFinancialSummary = async (doctorShiftId: number): Pro
   const response = await apiClient.get<{ data: DoctorShiftFinancialSummary }>(`/doctor-shifts/${doctorShiftId}/financial-summary`);
   return response.data.data;
 };
-
+export const downloadThermalReceiptPdf = async (visitId: number): Promise<Blob> => {
+  const response = await apiClient.get(`/visits/${visitId}/thermal-receipt/pdf`, {
+    responseType: 'blob',
+  });
+  return response.data;
+};
 export interface ServiceStatisticsFilters {
   page?: number;
   per_page?: number;

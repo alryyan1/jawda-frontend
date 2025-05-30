@@ -321,7 +321,7 @@ const ChildTestsTable: React.FC<ChildTestsTableProps> = ({
                           {t("labTests:childTests.form.displayOrder")}
                         </TableHead>
                         <TableHead className="text-center">
-                          {t("common:actions.openMenu")}
+                          {t("common:table.actions", "Actions")}
                         </TableHead>
                       </TableRow>
                     </TableHeader>

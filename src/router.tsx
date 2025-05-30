@@ -46,6 +46,7 @@ import CompanyMainTestContractsPage from "./pages/companies/CompanyMainTestContr
 import LabWorkstationPage from "./pages/lab/LabWorkstationPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import ClinicShiftSummaryReportPage from "./pages/reports/ClinicShiftSummaryReportPage";
+import CostsReportPage from "./pages/CostsReportPage";
 // import NotFoundPage from './pages/NotFoundPage'; // Optional: For 404 handling
 
 const AppointmentsPlaceholderPage: React.FC = () => (
@@ -186,7 +187,10 @@ const router = createBrowserRouter([
                 path: 'clinic-shift-summary', // Or whatever path you chose for the backend route / allclinicsReportNew
                 element: <ClinicShiftSummaryReportPage />,
               },
-            
+              {
+                path: 'costs', // Or whatever path you chose for the backend route / allclinicsReportNew
+                element: <CostsReportPage />,
+              },
             
               // Add other report routes here
               // { path: 'patient-visits', element: <PatientVisitsReportPage /> },

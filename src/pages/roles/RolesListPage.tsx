@@ -1,4 +1,3 @@
-
 // src/pages/roles/RolesListPage.tsx
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -99,7 +98,7 @@ export default function RolesListPage() {
                   <TableCell>{renderPermissions(role.permissions)}</TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu dir={i18n.dir()}>
-                      <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">{t('common:actions.openMenu')}</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                      <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">{t('common:actions.openMenu', 'Open menu')}</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         {/* TODO: Add permission check for edit */}
                         <DropdownMenuItem asChild><Link to={`/roles/${role.id}/edit`} className="flex items-center w-full"><Edit className="rtl:ml-2 ltr:mr-2 h-4 w-4" /> {t('common:edit')}</Link></DropdownMenuItem>

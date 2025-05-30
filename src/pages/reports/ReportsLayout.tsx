@@ -9,7 +9,8 @@ import { cn } from '@/lib/utils';
 const reportNavItems = [
   { to: '/reports/doctor-shifts', labelKey: 'doctorShiftsReport.titleShort', icon: FileBarChart2 },
   { to: '/reports/service-statistics', labelKey: 'serviceStatisticsReport.titleShort', icon: FileBarChart2 },
-  { to: '/reports/clinic-shift-summary', labelKey: 'clinicShiftSummaryReport.titleShort', icon: FileSpreadsheet }, // New Icon
+  { to: '/reports/clinic-shift-summary', labelKey: 'clinicShiftSummaryReport.titleShort', icon: FileSpreadsheet },
+  { to: '/reports/costs', labelKey: 'costsReport.titleShort', icon: FileSpreadsheet },
   // Add more reports here:
   // { to: '/reports/patient-visits', labelKey: 'patientVisitsReport.titleShort', icon: Users },
   // { to: '/reports/financial-summary', labelKey: 'financialSummaryReport.titleShort', icon: LineChart },

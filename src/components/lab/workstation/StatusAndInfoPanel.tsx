@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { format, parseISO } from "date-fns";
@@ -23,23 +23,23 @@ import {
   AlertTriangle,
   Info,
   ClipboardList,
-  Settings2
+  Settings2,
+  Receipt,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { toast } from 'sonner';
+import { toast } from "sonner";
 
 import type { Patient } from "@/types/patients";
 import type { LabRequest } from "@/types/visits";
 import { getPatientById } from "@/services/patientService";
-import { getFullLabRequestDetails } from "@/services/labRequestService"; // If fetching full details here
 import type { ChildTestWithResult } from "@/types/labWorkflow";
+import { downloadThermalReceiptPdf } from "@/services/reportService";
 
 interface StatusAndInfoPanelProps {
   patientId: number | null;
   // visitId: number | null; // Not directly used for fetching here, but good for context if needed
   selectedLabRequest: LabRequest | null; // The LabRequest object selected for result entry
   focusedChildTest: ChildTestWithResult | null; // NEW PROP
-
 }
 
 // Reusable Detail Row component
@@ -51,7 +51,6 @@ const DetailRowDisplay: React.FC<{
   labelClassName?: string;
   titleValue?: string; // For long values that might be truncated
   className?: string;
-
 }> = ({
   label,
   value,
@@ -59,7 +58,7 @@ const DetailRowDisplay: React.FC<{
   valueClassName,
   labelClassName,
   titleValue,
-  className
+  className,
 }) => {
   const { t } = useTranslation("common");
   return (
@@ -77,7 +76,6 @@ const DetailRowDisplay: React.FC<{
         <div className="w-4" />
       )}
       <div className="min-w-0">
-        
         {/* For truncation */}
         <p className={cn("text-xs text-muted-foreground", labelClassName)}>
           {label}:
@@ -119,6 +117,35 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
     "payments",
   ]);
   const dateLocale = i18n.language.startsWith("ar") ? arSA : enUS;
+  const [isPrintingReceipt, setIsPrintingReceipt] = useState(false);
+
+  const handlePrintReceipt = async () => {
+    const visitId = selectedLabRequest?.doctor_visit_id;
+    if (!visitId) {
+      toast.error(t("common:error.noVisitId", "Visit ID is required"));
+      return;
+    }
+    setIsPrintingReceipt(true);
+    try {
+      const blob = await downloadThermalReceiptPdf(visitId);
+      const url = window.URL.createObjectURL(blob);
+      const pdfWindow = window.open(url);
+      if (pdfWindow) {
+        pdfWindow.onload = () => {
+          // Wait for PDF to load in new tab
+          // pdfWindow.print(); // This might trigger print dialog
+          // pdfWindow.onafterprint = () => pdfWindow.close(); // Close after print (might be blocked)
+        };
+      } else {
+        toast.error(t("common:error.popupBlocked", "Popup was blocked"));
+      }
+    } catch (error) {
+      console.error("Failed to generate receipt:", error);
+      toast.error(t("common:error.pdfGeneratedError", "Failed to generate PDF"));
+    } finally {
+      setIsPrintingReceipt(false);
+    }
+  };
 
   const {
     data: patient,
@@ -162,9 +189,7 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
       (itemSubTotal * (Number(lr.discount_per) || 0)) / 100;
     const enduranceAmount = Number(lr.endurance) || 0;
     const netPrice =
-      itemSubTotal -
-      discountAmount -
-      (isCompanyPatient ? enduranceAmount : 0);
+      itemSubTotal - discountAmount - (isCompanyPatient ? enduranceAmount : 0);
     return netPrice - (Number(lr.amount_paid) || 0);
   };
 
@@ -274,29 +299,58 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
             </CardContent>
           </Card>
         )}
- {focusedChildTest && (
+        {focusedChildTest && (
           <Card className="shadow-sm border-primary/50">
             <CardHeader className="pb-2 pt-3">
               <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
-                <Info className="h-4 w-4 text-primary"/> 
-                {t('labResults:statusInfo.parameterDetails')}: {focusedChildTest.child_test_name}
+                <Info className="h-4 w-4 text-primary" />
+                {t("labResults:statusInfo.parameterDetails")}:{" "}
+                {focusedChildTest.child_test_name}
               </CardTitle>
             </CardHeader>
             <CardContent className="text-xs">
-              <DetailRowDisplay 
-                 label={t('labTests:childTests.form.normalRangeText')} 
-                 value={focusedChildTest.normalRange || 
-                        ((focusedChildTest.low !== null && focusedChildTest.low !== undefined) && 
-                         (focusedChildTest.upper !== null && focusedChildTest.upper !== undefined) ? 
-                         `${focusedChildTest.low} - ${focusedChildTest.upper}` : t('common:notSet'))
-                       } 
+              <DetailRowDisplay
+                label={t("labTests:childTests.form.normalRangeText")}
+                value={
+                  focusedChildTest.normalRange ||
+                  (focusedChildTest.low !== null &&
+                  focusedChildTest.low !== undefined &&
+                  focusedChildTest.upper !== null &&
+                  focusedChildTest.upper !== undefined
+                    ? `${focusedChildTest.low} - ${focusedChildTest.upper}`
+                    : t("common:notSet"))
+                }
               />
-              <DetailRowDisplay label={t('labTests:childTests.form.unit')} value={focusedChildTest.unit?.name || focusedChildTest.unit_name} />
-              {focusedChildTest.defval && <DetailRowDisplay label={t('labTests:childTests.form.defaultValue')} value={focusedChildTest.defval} />}
+              <DetailRowDisplay
+                label={t("labTests:childTests.form.unit")}
+                value={
+                  focusedChildTest.unit?.name || focusedChildTest.unit_name
+                }
+              />
+              {focusedChildTest.defval && (
+                <DetailRowDisplay
+                  label={t("labTests:childTests.form.defaultValue")}
+                  value={focusedChildTest.defval}
+                />
+              )}
               {/* Add Critical Low/High if available on focusedChildTest */}
-              {(focusedChildTest.lowest || focusedChildTest.max) && <Separator className="my-1"/>}
-              {focusedChildTest.lowest && <DetailRowDisplay label={t('labTests:childTests.form.criticalLow')} value={String(focusedChildTest.lowest)} valueClassName="text-orange-600 font-bold"/>}
-              {focusedChildTest.max && <DetailRowDisplay label={t('labTests:childTests.form.criticalHigh')} value={String(focusedChildTest.max)} valueClassName="text-red-600 font-bold"/>}
+              {(focusedChildTest.lowest || focusedChildTest.max) && (
+                <Separator className="my-1" />
+              )}
+              {focusedChildTest.lowest && (
+                <DetailRowDisplay
+                  label={t("labTests:childTests.form.criticalLow")}
+                  value={String(focusedChildTest.lowest)}
+                  valueClassName="text-orange-600 font-bold"
+                />
+              )}
+              {focusedChildTest.max && (
+                <DetailRowDisplay
+                  label={t("labTests:childTests.form.criticalHigh")}
+                  value={String(focusedChildTest.max)}
+                  valueClassName="text-red-600 font-bold"
+                />
+              )}
             </CardContent>
           </Card>
         )}
@@ -395,7 +449,9 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
               />
               <DetailRowDisplay
                 label={t("payments:balanceDue")}
-                value={calculateLabRequestBalance(selectedLabRequest).toFixed(1)}
+                value={calculateLabRequestBalance(selectedLabRequest).toFixed(
+                  1
+                )}
                 valueClassName={cn(
                   "font-bold",
                   calculateLabRequestBalance(selectedLabRequest) > 0.09
@@ -406,17 +462,15 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
               {selectedLabRequest.created_at && (
                 <DetailRowDisplay
                   label={t("common:requestedAt")}
-                  value={format(
-                    parseISO(selectedLabRequest.created_at),
-                    "Pp",
-                    { locale: dateLocale }
-                  )}
+                  value={format(parseISO(selectedLabRequest.created_at), "Pp", {
+                    locale: dateLocale,
+                  })}
                 />
               )}
             </CardContent>
           </Card>
         )}
- {/* NEW: Focused Child Test Info Card */}
+        {/* NEW: Focused Child Test Info Card */}
 
         {/* Actions Card */}
         <Card className="shadow-sm">
@@ -427,6 +481,9 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-1.5">
+          <Button variant="outline" size="sm" className="w-full justify-start text-xs" onClick={handlePrintReceipt} disabled={isPrintingReceipt /* || !visitFullyPaid */}>
+            <Receipt className="ltr:mr-2 rtl:ml-2 h-3.5 w-3.5"/> {t('common:printReceipt', "Print Receipt")}
+          </Button>
             <Button
               variant="outline"
               size="sm"

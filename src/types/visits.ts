@@ -101,6 +101,7 @@ export interface LabRequest {
   patient_name?: string;
   patient?: PatientStripped;
   doctor_visit_id?: number | null;
+  visit_id?: number | null; // Added for receipt printing
 
   hidden: boolean;
   is_lab2lab: boolean;

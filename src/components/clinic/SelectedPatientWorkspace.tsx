@@ -1,5 +1,5 @@
 // src/components/clinic/SelectedPatientWorkspace.tsx
-import React from "react";
+import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 
@@ -17,10 +17,13 @@ import {
   ListOrdered,
   Microscope,
   AlertTriangle,
+  Receipt,
 } from "lucide-react";
 
 import ServicesRequestComponent from "./ServicesRequestComponent";
 import LabRequestComponent from "./LabRequestComponent";
+import { toast } from "sonner";
+import { downloadThermalReceiptPdf } from "@/services/reportService";
 
 interface SelectedPatientWorkspaceProps {
   initialPatient: Patient;
@@ -33,6 +36,7 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
   visitId,
   onClose,
 }) => {
+  const [isPrintingReceipt, setIsPrintingReceipt] = useState(false);
   const { t } = useTranslation([
     "clinic",
     "common",
@@ -106,6 +110,45 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
     );
   }
 
+  const handlePrintReceipt = async () => {
+    if (!visitId) {
+      toast.error(t("common:error.noVisitId"));
+      return;
+    }
+    setIsPrintingReceipt(true);
+    try {
+      const blob = await downloadThermalReceiptPdf(visitId);
+      // For thermal printers, direct print is often desired.
+      // This requires browser print dialog or specific thermal printer web API/SDK.
+      // For now, we'll open it in a new tab for preview/manual print.
+      const url = window.URL.createObjectURL(blob);
+      const pdfWindow = window.open(url);
+      if (pdfWindow) {
+        pdfWindow.onload = () => {
+          // Wait for PDF to load in new tab
+          // pdfWindow.print(); // This might trigger print dialog
+          // pdfWindow.onafterprint = () => pdfWindow.close(); // Close after print (might be blocked)
+        };
+      } else {
+        toast.error(t("common:error.popupBlocked"));
+      }
+      // For direct download (less common for receipts):
+      // const a = document.createElement('a');
+      // a.href = url;
+      // a.download = `receipt_visit_${visitId}.pdf`;
+      // document.body.appendChild(a);
+      // a.click();
+      // window.URL.revokeObjectURL(url);
+      // a.remove();
+      // toast.success(t('common:receiptGenerated'));
+    } catch (error) {
+      console.error("Failed to generate receipt:", error);
+      toast.error(t("common:error.pdfGeneratedError"));
+    } finally {
+      setIsPrintingReceipt(false);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-background dark:bg-card shadow-xl">
       <Tabs
@@ -122,6 +165,9 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
               <Microscope className="h-4 w-4 ltr:mr-1 rtl:ml-1" />
               {t("clinic:tabs.lab")}
             </TabsTrigger>
+            <Button variant="outline" size="sm" className="w-full justify-start text-xs" onClick={handlePrintReceipt} disabled={isPrintingReceipt /* || !visitFullyPaid */}>
+              <Receipt className="ltr:mr-2 rtl:ml-2 h-3.5 w-3.5"/> {t('common:printReceipt', "Print Receipt")}
+            </Button>
           </TabsList>
         </ScrollArea>
 

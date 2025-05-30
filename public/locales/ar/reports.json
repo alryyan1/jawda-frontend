@@ -1,5 +1,6 @@
 {
   "sidebarTitle": "التقارير",
+  "reportPreview": "معاينة التقرير",
   "doctorShiftsReport": {
     "title": "تقرير مناوبات الأطباء",
     "titleShort": "مناوبات الأطباء",
@@ -72,6 +73,7 @@
     "titleShort": "ملخص وردية العيادات",
     "description": "إنشاء تقرير مالي مفصل لوردية محددة، يشمل متحصلات المستخدمين ومستحقات الأطباء والمصروفات.",
     "filterTitle": "تحديد الوردية والمستخدم (اختياري)",
+    "filterDescription": "اختر الوردية والمستخدم (اختياري) لعرض التقرير المالي المفصل.",
     "selectShiftLabel": "اختر الوردية العامة",
     "selectShiftPlaceholder": "اختر وردية...",
     "selectUserLabel": "المستخدم (اختياري)",
@@ -98,5 +100,34 @@
       "requestCount": "عدد الطلبات",
       "totalRevenue": "إجمالي الإيراد"
     }
-  }
+  },
+  "costsReport": {
+    "pageTitle": "تقرير المصروفات",
+    "titleShort": "المصروفات",
+    "description": "عرض وتصفية سجلات المصروفات للعيادة.",
+    "categoryFilter": "فئة المصروف",
+      "allCategories": "جميع الفئات",
+      "userFilter": "المستخدم المسجل",
+      "allUsers": "جميع المستخدمين",
+      "shiftFilter": "الوردية العامة",
+      "allShifts": "جميع الورديات",
+      "paymentMethodFilter": "طريقة الدفع",
+      "allPaymentMethods": "الكل",
+      "searchDescription": "بحث بالوصف...",
+      "noData": "لا توجد مصروفات تطابق هذه الفلاتر.",
+      "table": {
+        "date": "التاريخ والوقت",
+        "description": "الوصف/البيان",
+        "category": "الفئة",
+        "user": "المستخدم",
+        "shift": "الوردية",
+        "paymentMethod": "طريقة الدفع",
+        "totalAmount": "المبلغ الإجمالي"
+      },
+      "summaryTitle": "ملخص المصروفات (للفترة المحددة)",
+      "totalCashPaid": "إجمالي المدفوع نقداً",
+      "totalBankPaid": "إجمالي المدفوع بنك/شبكة",
+      "grandTotalPaid": "الإجمالي العام للمصروفات"
+    }
+  
 } 

@@ -53,6 +53,8 @@ i18n
       escapeValue: false,
     },
 
+    returnObjects: true, // Enable returnObjects for nested translations
+
     backend: {
       loadPath: '/locales/{{lng}}/{{ns}}.json',
     },

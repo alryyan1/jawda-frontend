@@ -27,5 +27,9 @@
       "nameLabel": "اسم الفئة",
       "namePlaceholder": "أدوات نظافة",
       "addedSuccess": "تمت إضافة الفئة بنجاح!"
-    }
+    },
+    "paymentMethods": {
+      "cash": "نقداً",
+      "bank": "بنك/شبكة"
+  }
   }

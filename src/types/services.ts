@@ -73,3 +73,44 @@ export interface RequestedServiceDeposit {
 
 export   const ServiceFormMode =  { CREATE : 'create', EDIT : 'edit' }
 export type ServiceFormMode = typeof ServiceFormMode[keyof typeof ServiceFormMode];
+// src/types/services.ts
+
+// ... (Existing Service, ServiceGroup, etc.)
+
+export interface SubServiceCost {
+  id: number;
+  name: string;
+  // description?: string; // If you add it
+}
+
+export interface ServiceCost {
+  id: number;
+  name: string;
+  service_id: number;
+  sub_service_cost_id: number;
+  sub_service_cost_name?: string; // From eager loading
+  sub_service_cost?: SubServiceCost; // Full object if eager loaded
+  cost_type: 'total' | 'after cost';
+  percentage: number | null;
+  fixed: number | null;
+  // created_at, updated_at if your table has them
+}
+
+// For the form item within ManageServiceCostsDialog
+export interface ServiceCostFormItem {
+  id?: number | null; // For existing items
+  name: string;
+  sub_service_cost_id: string; // string from select
+  cost_type: 'total' | 'after cost';
+  percentage: string; // string from input
+  fixed: string;      // string from input
+}
+
+// If the API for create/update ServiceCost expects a different structure
+export interface ServiceCostApiPayload {
+    name: string;
+    sub_service_cost_id: number;
+    cost_type: 'total' | 'after cost';
+    percentage?: number | null;
+    fixed?: number | null;
+}

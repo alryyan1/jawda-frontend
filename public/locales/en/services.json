@@ -1,0 +1,19 @@
+{
+  "manageCosts": "Manage Costs",
+  "manageServiceCostsDialog": {
+    "title": "Manage {{serviceName}} Costs",
+    "description": "Manage the costs associated with this service"
+  },
+  "serviceCost": {
+    "name": "Name",
+    "costType": "Cost Type",
+    "basis": "Basis",
+    "percentage": "Percentage",
+    "fixedAmount": "Fixed Amount",
+    "addCostItem": "Add Cost Item",
+    "costItemName": "Cost Item Name",
+    "selectType": "Select Type",
+    "costTypeTotal": "Total",
+    "costTypeAfterCost": "After Cost"
+  }
+} 

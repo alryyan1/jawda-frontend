@@ -1,6 +1,6 @@
 // src/services/costService.ts
 import apiClient from './api';
-import type { Cost, CostFormData, CostCategory } from '@/types/finance';
+import type { Cost, CostFormData, CostCategory, PaginatedCostsResponse } from '@/types/finance';
 
 const API_URL = '/costs';
 const CATEGORIES_API_URL = '/cost-categories-list';
@@ -24,4 +24,21 @@ export const addCost = async (data: CostFormData): Promise<Cost> => {
   return response.data.data;
 };
 
+export interface CostFilters { // Same as ServiceStatisticsFilters
+  page?: number; per_page?: number; date_from?: string; date_to?: string;
+  cost_category_id?: number | string | null; user_cost_id?: number | string | null;
+  shift_id?: number | string | null; payment_method?: 'cash' | 'bank' | 'all' | null;
+  search_description?: string; sort_by?: string; sort_direction?: string;
+}
+
+export const getCostsReportData = async (filters: CostFilters): Promise<PaginatedCostsResponse> => {
+  return apiClient.get<PaginatedCostsResponse>('/costs-report-data', { params: filters }).then(res => res.data);
+};
+export const downloadCostsReportPdf = async (filters: Omit<CostFilters, 'page' | 'per_page'>): Promise<Blob> => {
+  const response = await apiClient.get('/reports/costs/pdf', {
+    params: filters,
+    responseType: 'blob',
+  });
+  return response.data;
+};
 // Add getCosts, updateCost, deleteCost later for a full cost management page

@@ -60,9 +60,39 @@
     "done": "مكتملة"
   },
   "addedSuccess": "تمت إضافة الخدمات بنجاح!",
-  "removedSuccess": "تمت إزالة الخدمة بنجاح!"
-  
-
-
-  
+  "removedSuccess": "تمت إزالة الخدمة بنجاح!",
+  "manageCosts": "إدارة التكاليف",
+  "manageServiceCostsDialog": {
+    "title": "إدارة تكاليف {{serviceName}}",
+    "description": "إدارة التكاليف المرتبطة بهذه الخدمة"
+  },
+  "serviceCost": {
+    "name": "الاسم",
+    "costType": "نوع التكلفة",
+    "basis": "الأساس",
+    "percentage": "النسبة المئوية",
+    "fixedAmount": "المبلغ الثابت",
+    "addCostItem": "إضافة تكلفة جديدة",
+    "costItemName": "اسم عنصر التكلفة",
+    "selectType": "اختر النوع",
+    "costTypeTotal": "المجموع",
+    "costTypeAfterCost": "بعد التكلفة",
+    "description": "الوصف",
+    "costTypeEnum": {
+      "total": "المجموع",
+      "after_cost": "بعد التكلفة"
+    },
+    "costItemNamePlaceholder": "مثال: تكلفة المواد",
+    "addedSuccess": "تمت إضافة التكلفة بنجاح",
+    "updatedSuccess": "تم تحديث التكلفة بنجاح"
+  },
+  "subServiceCostType": {
+    "nameLabel": "اسم نوع التكلفة",
+    "namePlaceholder": "أدخل اسم نوع التكلفة",
+    "addDialogTitle": "إضافة نوع تكلفة جديد",
+    "addDialogDescription": "أضف نوعًا جديدًا من التكاليف للخدمات",
+    "addedSuccess": "تمت إضافة نوع التكلفة بنجاح",
+    "addError": "حدث خطأ أثناء إضافة نوع التكلفة",
+    "addedToList": "تمت إضافة {{name}} إلى القائمة"
+  }
 }

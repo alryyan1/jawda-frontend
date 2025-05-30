@@ -66,7 +66,8 @@
     "mustBeIntegerOptional": "يجب أن يكون رقماً صحيحاً (اختياري).",
     "maxLengthText": "النص طويل جداً (الحد الأقصى {{count}} حرف).",
     "maxLength": "يجب أن لا يتجاوز {{count}} حرف.",
-    "positiveNumberOptional": "يجب أن يكون رقماً موجباً (اختياري)."
+    "positiveNumberOptional": "يجب أن يكون رقماً موجباً (اختياري).",
+    "checkErrorsInRow": "يرجى التحقق من الأخطاء في الصف"
   },
   "form": {
     "fillDetails": "الرجاء ملء التفاصيل أدناه."
@@ -93,6 +94,7 @@
   "entityNamePlural": "{{entity}}",
   "backToList": "العودة إلى قائمة ",
   "all": "الكل",
+  "allUsers": "جميع المستخدمين",
   "pharmacy": "الصيدلية",
   "close": "إغلاق",
   "phoneShort": "الهاتف",
@@ -115,6 +117,7 @@
   "price": "السعر",
   "viewRequested": "عرض المطلوب",
   "currency": "العملة",
+  "currencySymbolShort": "ج.س",
   "summary": "الملخص",
   "summaryShort": "ملخص",
   "totalAmount": "المبلغ الإجمالي",
@@ -140,6 +143,7 @@
     "inactive": "غير نشط"
   },
   "print": "طباعة",
+  "printReceipt": "طباعة الإيصال",
   "permissions": {
     "group": {
       "own": "خاص",
@@ -203,6 +207,7 @@
   "month": "الشهر",
   "year": "السنة",
   "generateReport": "إنشاء التقرير",
+  "generatingReport": "جاري إنشاء التقرير...",
   "months": {
     "1": "يناير", "2": "فبراير", "3": "مارس", "4": "أبريل",
     "5": "مايو", "6": "يونيو", "7": "يوليو", "8": "أغسطس",

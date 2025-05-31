@@ -1,6 +1,10 @@
 {
   "sidebarTitle": "التقارير",
   "reportPreview": "معاينة التقرير",
+  "filtersTitle": "عوامل التصفية",
+  "applyFiltersButton": "تطبيق الفلترة",
+  "reportForPeriod": "تقرير عن الفترة",
+  "noDataAvailableForPeriod": "لا توجد بيانات متاحة لهذه الفترة",
   "doctorShiftsReport": {
     "title": "تقرير مناوبات الأطباء",
     "titleShort": "مناوبات الأطباء",
@@ -129,6 +133,19 @@
       "totalCashPaid": "إجمالي المدفوع نقداً",
       "totalBankPaid": "إجمالي المدفوع بنك/شبكة",
       "grandTotalPaid": "الإجمالي العام للمصروفات"
+    },
+    "monthlyServiceIncomeReport": {
+      "title": "تقرير الدخل الشهري للخدمات",
+      "totalDeposits": "إجمالي الإيداعات",
+      "cashDeposits": "الإيداعات النقدية",
+      "bankDeposits": "الإيداعات البنكية",
+      "totalCosts": "إجمالي التكاليف",
+      "netCashFlow": "صافي التدفق النقدي",
+      "netBankFlow": "صافي التدفق البنكي",
+      "netDailyIncome": "صافي الدخل اليومي"
+    },
+    "error": {
+      "fetchFailedTitle": "فشل في جلب التقرير",
+      "generic": "حدث خطأ أثناء جلب التقرير"
     }
-  
-} 
+  }

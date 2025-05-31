@@ -12,6 +12,7 @@
   "export": "تصدير",
   "exportPdf": "تصدير PDF",
   "exportExcel": "تصدير Excel",
+  "noResultsFound": "لم يتم العثور على نتائج",
   "by": "بواسطة",
   "datePicker": {
     "pickDateRange": "اختر نطاق التاريخ",
@@ -86,7 +87,8 @@
     "positiveNumberOptional": "يجب أن يكون رقماً موجباً (اختياري).",
     "checkErrorsInRow": "يرجى التحقق من الأخطاء في الصف",
     "dateRequired": "التاريخ مطلوب",
-    "dateFromAfterTo": "تاريخ البداية يجب أن يكون قبل تاريخ النهاية"
+    "dateFromAfterTo": "تاريخ البداية يجب أن يكون قبل تاريخ النهاية",
+    "minLength": "يجب أن يكون {{count}} حرف على الأقل"
   },
   "form": {
     "fillDetails": "الرجاء ملء التفاصيل أدناه."
@@ -248,5 +250,8 @@
     "totalPaidByPatient": "إجمالي مدفوع من المريض",
     "patientBalanceDue": "الرصيد على المريض"
   },
-  "addSelectedCount": "إضافة المحدد ({{count}})"
+  "addSelectedCount": "إضافة المحدد ({{count}})",
+  "date": "التاريخ",
+  "noDataAvailableForPeriod": "لا توجد بيانات متاحة لهذه الفترة",
+  "send": "إرسال"
 }

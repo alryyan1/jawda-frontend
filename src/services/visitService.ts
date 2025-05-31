@@ -143,3 +143,7 @@ export const getPatientVisitsSummary = async (filters: GetVisitsFilters): Promis
   const response = await apiClient.get<PaginatedResponse<PatientVisitSummary>>(DOCTOR_VISITS_API_URL, { params: filters });
   return response.data; // Assuming Laravel pagination structure
 };
+export const reassignDoctorVisitToShift = async (visitId: number, targetDoctorShiftId: number): Promise<DoctorVisit> => {
+  const response = await apiClient.post<{ data: DoctorVisit }>(`/doctor-visits/${visitId}/reassign-shift`, { target_doctor_shift_id: targetDoctorShiftId });
+  return response.data.data;
+};

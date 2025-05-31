@@ -1,6 +1,7 @@
 import apiClient from './api'; // Your configured Axios instance
 import type { Patient, PatientFormData, PaginatedPatientsResponse, PatientSearchResult } from '../types/patients'; // Your Patient types
 import type { DoctorVisit } from '@/types/visits';
+import type { PaginatedResponse } from '@/types/common';
 
 const PATIENTS_API_URL = '/patients';
 
@@ -133,3 +134,25 @@ export const deletePatient = async (patientId: number): Promise<void> => {
 // - searchPatientsByNameOrPhone
 // - getPatientVisitHistory
 // - etc.
+export const getPatientVisitHistory = async (patientId: number, page: number = 1): Promise<PaginatedResponse<DoctorVisit>> => { // Or DoctorVisit[] if not paginated
+  const response = await apiClient.get<PaginatedResponse<DoctorVisit>>(`/patients/${patientId}/visit-history`, { params: { page } });
+  return response.data;
+};
+
+
+export interface CreateCopiedVisitPayload {
+  target_doctor_shift_id: number;
+  reason_for_visit?: string;
+  // original_visit_id?: number; // If needed for context on backend
+}
+
+export const createCopiedVisitForNewShift = async (
+  sourcePatientId: number,
+  payload: CreateCopiedVisitPayload
+): Promise<DoctorVisit> => {
+  const response = await apiClient.post<{ data: DoctorVisit }>(
+    `/patients/${sourcePatientId}/copy-to-new-visit`,
+    payload
+  );
+  return response.data.data;
+};

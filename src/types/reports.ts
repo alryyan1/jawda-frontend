@@ -66,3 +66,33 @@ export interface DoctorShiftFinancialSummary {
   total_doctor_share: number;
   patients_breakdown: PatientVisitFinancialBreakdown[];
 }
+export interface DailyServiceIncomeData {
+  date: string; // YYYY-MM-DD
+  total_income: number;          // Sum of deposits for the day
+  total_cash_income: number;
+  total_bank_income: number;
+  total_cost: number;            // Sum of costs for the day
+  net_cash: number;              // cash_income - cash_costs
+  net_bank: number;              // bank_income - bank_costs
+  net_income_for_day: number;    // total_income - total_cost
+}
+
+export interface MonthlyServiceIncomeSummary {
+  total_deposits: number;
+  total_cash_deposits: number;
+  total_bank_deposits: number;
+  total_costs_for_days_with_deposits: number;
+  net_total_income: number;
+  net_cash_flow: number;
+  net_bank_flow: number;
+}
+
+export interface MonthlyServiceIncomeReportResponse {
+  daily_data: DailyServiceIncomeData[];
+  summary: MonthlyServiceIncomeSummary;
+  report_period: {
+    month_name: string;
+    from: string;
+    to: string;
+  };
+}

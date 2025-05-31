@@ -1,7 +1,7 @@
 // src/services/reportService.ts
 import type { PaginatedResponse } from '@/types/common';
 import apiClient from './api';
-import type { DoctorShiftFinancialSummary, DoctorShiftReportItem, ServiceStatisticItem } from '@/types/reports';
+import type { DoctorShiftFinancialSummary, DoctorShiftReportItem, MonthlyServiceIncomeReportResponse, ServiceStatisticItem } from '@/types/reports';
 
 export interface DoctorShiftReportFilters {
   page?: number;
@@ -116,4 +116,19 @@ export const downloadCompanyTestContractPdf = async (companyId: number, filters:
     responseType: 'blob',
   });
   return response.data;
+};
+export interface MonthlyServiceIncomeFilters {
+  month: number; // 1-12
+  year: number;  // e.g., 2023
+  // user_id?: number; // Optional filter by user
+}
+
+export const getMonthlyServiceDepositsIncome = async (
+  filters: MonthlyServiceIncomeFilters
+): Promise<MonthlyServiceIncomeReportResponse> => {
+  const response = await apiClient.get<MonthlyServiceIncomeReportResponse>(
+    '/reports/monthly-service-deposits-income', 
+    { params: filters }
+  );
+  return response.data; // Assuming backend directly returns the structure
 };

@@ -40,7 +40,7 @@ interface EditAddAuditedServiceDialogProps {
 const auditedServiceItemFormSchema = z.object({
   service_id: z.string().min(1, "Service selection is required."),
   audited_price: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Valid price required."),
-  audited_count: z.string().refine(val => /^\\d+$/.test(val) && parseInt(val) >= 1, "Count must be at least 1."),
+  audited_count: z.string(),
   audited_discount_per: z.string().refine(val => val === '' || (!isNaN(parseFloat(val)) && parseFloat(val) >= 0 && parseFloat(val) <= 100), "0-100 or empty").optional().nullable(),
   audited_discount_fixed: z.string().refine(val => val === '' || (!isNaN(parseFloat(val)) && parseFloat(val) >= 0), "Positive or empty").optional().nullable(),
   audited_endurance: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Valid endurance required."),

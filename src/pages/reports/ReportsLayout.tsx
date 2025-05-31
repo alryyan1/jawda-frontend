@@ -3,7 +3,7 @@ import React from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ListCollapse, FileBarChart2, FileSpreadsheet } from 'lucide-react'; // Example icons
+import { ListCollapse, FileBarChart2, FileSpreadsheet, BarChartBig } from 'lucide-react'; // Example icons
 import { cn } from '@/lib/utils';
 
 const reportNavItems = [
@@ -11,6 +11,7 @@ const reportNavItems = [
   { to: '/reports/service-statistics', labelKey: 'serviceStatisticsReport.titleShort', icon: FileBarChart2 },
   { to: '/reports/clinic-shift-summary', labelKey: 'clinicShiftSummaryReport.titleShort', icon: FileSpreadsheet },
   { to: '/reports/costs', labelKey: 'costsReport.titleShort', icon: FileSpreadsheet },
+  { to: '/reports/monthly-service-income', labelKey: 'monthlyServiceIncomeReport.titleShort', icon: BarChartBig }, // NEW
   // Add more reports here:
   // { to: '/reports/patient-visits', labelKey: 'patientVisitsReport.titleShort', icon: Users },
   // { to: '/reports/financial-summary', labelKey: 'financialSummaryReport.titleShort', icon: LineChart },

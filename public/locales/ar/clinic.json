@@ -41,7 +41,44 @@
 
   "visit": {
     "statusUpdateSuccess": "تم تحديث حالة الزيارة بنجاح.",
-    "statusUpdateFailed": "فشل تحديث حالة الزيارة."
+    "statusUpdateFailed": "فشل تحديث حالة الزيارة.",
+    "newVisitForPatientCreatedSuccess": "تم إنشاء زيارة جديدة للمريض بنجاح!",
+    "copyDialog": {
+      "title": "نسخ تفاصيل الزيارة",
+      "description": "سيتم نسخ تفاصيل هذه الزيارة إلى الحافظة",
+      "copyButton": "نسخ",
+      "selectTargetShift": "اختر المناوبة المستهدفة",
+      "targetShiftPlaceholder": "اختر مناوبة..."
+    },
+    "createNewVisitDialog": {
+      "title": "إنشاء زيارة جديدة للمريض",
+      "description": "إنشاء زيارة جديدة للمريض {{name}}",
+      "selectTargetShift": "اختر المناوبة المستهدفة",
+      "targetShiftPlaceholder": "اختر مناوبة...",
+      "reasonLabel": "سبب الزيارة",
+      "reasonPlaceholder": "أدخل سبب الزيارة...",
+      "createButton": "إنشاء زيارة"
+    },
+    "whatsAppDialog": {
+      "title": "إرسال عبر واتساب",
+      "description": "إرسال تفاصيل الزيارة عبر واتساب",
+      "messageContent": "محتوى الرسالة",
+      "messagePlaceholder": "اكتب رسالتك هنا..."
+    },
+    "historyDialog": {
+      "title": "سجل زيارات المريض",
+      "noHistory": "لا يوجد سجل زيارات سابقة لهذا المريض",
+      "forPatient": "سجل زيارات المريض: {{name}}",
+      "reasonOrServices": "سبب الزيارة / الخدمات"
+    },
+    "contextMenu": {
+      "copyToShift": "نسخ إلى مناوبة أخرى",
+      "sendWhatsApp": "إرسال عبر واتساب",
+      "showHistory": "عرض السجل السابق",
+      "manageServiceCosts": "إدارة تكاليف الخدمات",
+      "createNewVisitForPatient": "إنشاء زيارة جديدة للمريض"
+    },
+    "copiedToShiftSuccess": "تم نسخ الزيارة بنجاح إلى المناوبة المحددة"
   },
   "workspace": {
     "title": "ساحة العمل - المرضى الحاليون",

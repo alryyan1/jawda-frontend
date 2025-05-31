@@ -4,7 +4,10 @@
   "details": {
     "title": "بيانات المريض",
     "personalInfo": "المعلومات الشخصية",
-    "insuranceInfo": "معلومات التأمين"
+    "insuranceInfo": "معلومات التأمين",
+    "editDialogTitle": "تعديل بيانات المريض: {{name}}",
+    "editDialogDescription": "تعديل المعلومات الشخصية ومعلومات التأمين للمريض",
+    "updateSuccess": "تم تحديث بيانات المريض بنجاح"
   },
   "fields": {
     "id": "رقم المريض",
@@ -22,7 +25,8 @@
     "subCompanyName": "اسم الشركة الفرعية",
     "relationName": "اسم العلاقة",
     "labEnduranceShort": "تحمل المختبر",
-    "serviceEnduranceShort": "تحمل الخدمة"
+    "serviceEnduranceShort": "تحمل الخدمة",
+    "addressPlaceholder": "أدخل العنوان هنا..."
   },
   "search": {
     "lastVisit": "آخر زيارة",
@@ -49,6 +53,5 @@
   },
   "validation": {
     "noDoctorSelectedError": "الرجاء اختيار طبيب مناوب من الأعلى لتسجيل الزيارة."
-
   }
 } 

@@ -1,0 +1,97 @@
+{
+  "pageTitle": "تدقيق التأمين",
+  "backToListPage": "العودة إلى القائمة",
+  "auditRecordPageTitle": "سجل التدقيق",
+  "forPatientVisit": "لزيارة المريض: {{patientName}} - رقم الزيارة: {{visitId}}",
+  "lastAudited": "آخر تدقيق",
+  "noVisitsFound": "لم يتم العثور على زيارات للتدقيق",
+  "filters": {
+    "titleShort": "الفلترة",
+    "title": "فلترة التدقيق",
+    "company": "الشركة",
+    "selectCompany": "اختر الشركة",
+    "applyButton": "تطبيق الفلترة",
+    "dateRange": "نطاق التاريخ",
+    "patientName": "اسم المريض",
+    "patientNamePlaceholder": "البحث باسم المريض...",
+    "auditStatus": "حالة التدقيق",
+    "selectStatus": "اختر الحالة"
+  },
+  "export": {
+    "dialogTitle": "تصدير تقرير التدقيق",
+    "dialogDescription": "حدد معايير التصدير لتقرير التدقيق",
+    "selectServiceGroups": "مجموعات الخدمات",
+    "selectServiceGroupsDescription": "اختر مجموعات الخدمات التي تريد تضمينها في التقرير",
+    "success": "تم تصدير التقرير بنجاح بتنسيق {{type}}",
+    "error": "حدث خطأ أثناء تصدير التقرير"
+  },
+  "table": {
+    "visitId": "رقم الزيارة",
+    "patientName": "اسم المريض",
+    "visitDate": "تاريخ الزيارة",
+    "doctorName": "اسم الطبيب",
+    "companyName": "اسم الشركة",
+    "auditStatus": "حالة التدقيق",
+    "actions": "الإجراءات"
+  },
+  "actions": {
+    "auditDetails": "تفاصيل التدقيق",
+    "copyServices": "نسخ الخدمات",
+    "statusUpdatedSuccess": "تم تحديث حالة التدقيق بنجاح"
+  },
+  "selectCompanyPrompt": "اختر شركة",
+  "status": {
+    "all": "الكل",
+    "pending_review": "قيد المراجعة",
+    "verified": "تم التحقق",
+    "needs_correction": "يحتاج تصحيح",
+    "rejected": "مرفوض"
+  },
+  "auditedServices": {
+    "title": "الخدمات المدققة",
+    "description": "قائمة الخدمات المطلوبة للمراجعة والتدقيق",
+    "service": "الخدمة",
+    "price": "السعر",
+    "count": "العدد",
+    "discountPerc": "نسبة الخصم",
+    "discountFixed": "خصم ثابت",
+    "endurance": "نسبة التحمل",
+    "status": "الحالة",
+    "notes": "الملاحظات",
+    "selectServicePlaceholder": "اختر الخدمة",
+    "createdSuccess": "تمت إضافة الخدمة بنجاح",
+    "updatedSuccess": "تم تحديث الخدمة بنجاح",
+    "addAuditedService": "إضافة خدمة للتدقيق",
+    "noServices": "لا توجد خدمات مدققة",
+    "addDialogTitle": "إضافة خدمة جديدة للتدقيق",
+    "editDialogTitle": "تعديل الخدمة المدققة",
+    "addDialogDescription": "أدخل تفاصيل الخدمة الجديدة للتدقيق",
+    "editDialogDescription": "تعديل تفاصيل الخدمة: {{serviceName}}",
+    "discountPercShort": "نسبة الخصم %",
+    "discountFixedShort": "خصم ثابت"
+  },
+  "serviceStatus": {
+    "pending_review": "قيد المراجعة",
+    "approved_for_claim": "معتمد للمطالبة",
+    "rejected_by_auditor": "مرفوض من المدقق",
+    "pending_edits": "في انتظار التعديلات"
+  },
+  "patientInfo": {
+    "title": "معلومات المريض",
+    "description": "مراجعة وتعديل معلومات المريض",
+    "descriptionAudit": "مراجعة وتدقيق معلومات المريض",
+    "saveButton": "حفظ التغييرات",
+    "auditedDoctor": "الطبيب المعتمد",
+    "selectAuditedDoctor": "اختر الطبيب المعتمد",
+    "updatedSuccess": "تم تحديث معلومات المريض بنجاح"
+  },
+  "submission": {
+    "title": "تقديم التدقيق",
+    "statusLabel": "حالة التدقيق النهائية",
+    "selectStatusPlaceholder": "اختر حالة التدقيق",
+    "notesLabel": "ملاحظات التدقيق",
+    "notesPlaceholder": "أدخل ملاحظات التدقيق هنا...",
+    "submitButton": "حفظ وإنهاء التدقيق",
+    "alreadyFinalized": "تم إنهاء هذا التدقيق مسبقاً"
+  }
+} 

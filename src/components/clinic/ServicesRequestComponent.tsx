@@ -2,73 +2,111 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-// ... other imports (toast, Loader2, types, services)
 
 import ServiceSelectionGrid from './ServiceSelectionGrid';
 import { getRequestedServicesForVisit, addServicesToVisit } from '@/services/visitService';
-import type { RequestedService, ServiceGroupWithServices } from '@/types/services'; // Or types/visits
+import type { RequestedService, ServiceGroupWithServices } from '@/types/services';
+import type { Patient } from '@/types/patients';
+import type { CompanyServiceContract } from '@/types/companies';
+import type { DoctorVisit } from '@/types/visits';
 import { getServiceGroupsWithServices } from '@/services/serviceGroupService';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Separator } from '../ui/separator';
+import { getPatientById } from '@/services/patientService';
+import { getCompanyContractedServices } from '@/services/companyService';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import i18n from '@/i18n';
 import RequestedServicesTable from './RequestedServicesTable';
-import { formatNumber } from '@/lib/utils';
-import type { DoctorVisit } from '@/types/visits';
-import type { DoctorVisit } from '@/types/visits';
 import RequestedServicesSummary from './RequestedServicesSummary';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ServicesRequestComponentProps {
   visitId: number;
-  visit: DoctorVisit;
+  patientId: number;
+  visit: DoctorVisit; // Make this required since child components need it
 }
 
-const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ visitId, visit }) => {
+const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ visitId, patientId, visit }) => {
   const { t } = useTranslation(['clinic', 'services', 'common']);
   const queryClient = useQueryClient();
+  const { currentClinicShift } = useAuth();
 
-  const requestedServicesQueryKey = ['requestedServicesForVisit', visitId];
-  const serviceCatalogQueryKey = ['serviceGroupsWithServices', visitId]; // visitId to potentially filter available
-
-  const [showServiceSelectionGrid, setShowServiceSelectionGrid] = useState(false); // Control visibility
+  const [showServiceSelectionGrid, setShowServiceSelectionGrid] = useState(false);
    
+  const requestedServicesQueryKey = ['requestedServicesForVisit', visitId] as const;
+  const patientDetailsQueryKey = ['patientDetailsForServiceSelection', patientId] as const;
+  
   const { 
-    isFetching,
-    data: requestedServices, 
+    data: requestedServices = [], 
     isLoading: isLoadingRequested, 
+    isFetching: isFetchingRequested,
     error: requestedServicesError 
   } = useQuery<RequestedService[], Error>({
     queryKey: requestedServicesQueryKey,
     queryFn: () => getRequestedServicesForVisit(visitId),
-    // onSuccess: (data) => {
-    //     // Show grid only if no services are requested yet, or if user explicitly wants to add more from grid
-    //     if (data && data.length === 0 && !showServiceSelectionGrid) {
-    //         setShowServiceSelectionGrid(true);
-    //     } else if (data && data.length > 0 && showServiceSelectionGrid) {
-    //         // If services were added and grid was shown, hide grid to show table
-    //         // This logic might need refinement based on UX preference
-    //         // setShowServiceSelectionGrid(false); 
-    //     }
-    // }
   });
 
-  useEffect(()=>{
-    if(requestedServices && requestedServices.length === 0){
-      setShowServiceSelectionGrid(true);
-    }
-  },[requestedServices])
+  const { data: patient, isLoading: isLoadingPatient } = useQuery<Patient, Error>({
+    queryKey: patientDetailsQueryKey,
+    queryFn: () => getPatientById(patientId),
+    enabled: !!patientId,
+  });
 
-  // Fetch catalog for the selection grid (all groups and their services)
-  // This is fetched regardless, but ServiceSelectionGrid will use it when visible
+  const isCompanyPatient = !!patient?.company_id;
+
+  // Remove the automatic showing of grid when no services
+  // Let it be controlled only by user action and successful additions
+  useEffect(() => {
+    if (!isLoadingRequested && requestedServices && requestedServices.length > 0) {
+      setShowServiceSelectionGrid(false);
+    }
+  }, [isLoadingRequested, requestedServices]);
+
+  // Fetch all service groups with their services (standard catalog)
   const { 
-    data: serviceCatalog, 
+    data: baseServiceCatalog, 
     isLoading: isLoadingCatalog,
     error: catalogError
   } = useQuery<ServiceGroupWithServices[], Error>({
-    queryKey: serviceCatalogQueryKey,
-    queryFn: () => getServiceGroupsWithServices(visitId), // Pass visitId if backend filters available services
+    queryKey: ['baseServiceCatalogForAll'], // General catalog
+    queryFn: () => getServiceGroupsWithServices(undefined), // Fetch all, no visitId filter here
+    staleTime: 1000 * 60 * 10, // Cache for 10 mins
   });
+  
+  // Fetch company-specific contracted services if it's a company patient
+  const { data: companyContracts, isLoading: isLoadingCompanyContracts } = useQuery<CompanyServiceContract[], Error>({
+    queryKey: ['companyContractedServicesForSelection', patient?.company_id],
+    queryFn: () => getCompanyContractedServices(patient!.company_id!, 0, { search: '' }).then(res => res.data),
+    enabled: isCompanyPatient && !!patient?.company_id && showServiceSelectionGrid,
+  });
+
+  console.log(companyContracts,'companyContracts');
+  const serviceCatalogForGrid = useMemo(() => {
+    if (!baseServiceCatalog) return [];
+    if (isCompanyPatient && companyContracts) {
+      const contractMap = new Map<number, CompanyServiceContract>();
+      companyContracts.forEach(contract => {
+        contractMap.set(contract.service_id, contract);
+      });
+
+      return baseServiceCatalog.map(group => ({
+        ...group,
+        services: group.services.map(service => {
+          const contractDetails = contractMap.get(service.id);
+          if (contractDetails) {
+            return {
+              ...service,
+              contract_price: parseFloat(String(contractDetails.price)),
+              contract_requires_approval: contractDetails.approval,
+            };
+          }
+          return service;
+        }),
+      })).filter(group => group.services.length > 0);
+    }
+    return baseServiceCatalog;
+  }, [baseServiceCatalog, isCompanyPatient, companyContracts]);
+
+  console.log(serviceCatalogForGrid,'serviceCatalogForGrid in ServicesRequestComponent');
 
   const addMultipleServicesMutation = useMutation({
     mutationFn: (serviceIds: number[]) => addServicesToVisit({ visitId, service_ids: serviceIds}),
@@ -76,9 +114,16 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ vis
       toast.success(t('clinic:services.multipleAddedSuccess', {
         count: serviceIds.length
       }));
-      queryClient.invalidateQueries({ queryKey: requestedServicesQueryKey });
-      queryClient.invalidateQueries({ queryKey: serviceCatalogQueryKey }); // If available services change
-      setShowServiceSelectionGrid(false); // Hide grid after adding
+      // After successful addition, invalidate queries and hide the grid
+      queryClient.invalidateQueries({ 
+        queryKey: requestedServicesQueryKey,
+        exact: true 
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ['baseServiceCatalogForAll'],
+        exact: true 
+      });
+      setShowServiceSelectionGrid(false);
     },
     onError: (error: unknown) => {
       const apiError = error as { response?: { data?: { message?: string } } };
@@ -92,66 +137,39 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ vis
     }
   };
   
-  // Calculate Summary
-  const summary = useMemo(() => {
-    if (!requestedServices) return { totalAmount: 0, totalPaid: 0, totalDiscount: 0, amountLeft: 0 };
-    let totalAmount = 0;
-    let totalPaid = 0;
-    let totalDiscount = 0;
-
-    requestedServices.forEach(rs => {
-        const pricePerItem = Number(rs.price) || 0;
-        const count = Number(rs.count) || 1;
-        const itemSubTotal = pricePerItem * count;
-        
-        totalAmount += itemSubTotal;
-        totalPaid += Number(rs.amount_paid) || 0;
-        
-        // Calculate discount amount: can be from fixed or percentage
-        let itemDiscountAmount = Number(rs.discount) || 0; // Fixed discount amount
-        if (rs.discount_per && rs.discount_per > 0) { // Percentage discount
-            itemDiscountAmount += (itemSubTotal * (Number(rs.discount_per) / 100));
-        }
-        totalDiscount += itemDiscountAmount;
-    });
-    const amountLeft = totalAmount - totalDiscount - totalPaid;
-    return { totalAmount, totalPaid, totalDiscount, amountLeft };
-  }, [requestedServices]);
-
-
-  if (isLoadingRequested || isLoadingCatalog) {
+  if (isLoadingRequested || isLoadingCatalog || (patientId && isLoadingPatient) || (isCompanyPatient && showServiceSelectionGrid && isLoadingCompanyContracts)) {
     return <div className="py-4 text-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
   }
 
-  if (requestedServicesError || catalogError) {
-    return <div className="p-4 text-center text-sm text-destructive">{t('common:error.loadFailed')}</div>;
+  const errorToShow = requestedServicesError || catalogError || (patientId && !patient && !isLoadingPatient ? new Error(t('common:error.patientLoadFailed')) : null);
+  if (errorToShow) {
+    return <div className="p-4 text-center text-sm text-destructive">{t('common:error.loadFailed')}: {errorToShow.message}</div>;
   }
-
+ 
   return (
     <div style={{direction:i18n.dir()}} className="space-y-4">
-      {/* Conditional rendering of Service Selection Grid or Requested Services Table */}
-      {showServiceSelectionGrid && serviceCatalog ? (
+      {showServiceSelectionGrid && serviceCatalogForGrid ? (
         <ServiceSelectionGrid 
-            serviceCatalog={serviceCatalog}
+            serviceCatalog={serviceCatalogForGrid}
             onAddServices={handleAddMultipleServices}
             isLoading={addMultipleServicesMutation.isPending}
-            onCancel={() => setShowServiceSelectionGrid(false)} // Button in grid to go back to table
+            onCancel={() => setShowServiceSelectionGrid(false)}
+            isCompanyPatient={isCompanyPatient} // Pass this down
         />
       ) : (
         <>
           <RequestedServicesTable 
-            visit={visit}
             visitId={visitId}
+            visit={visit}
             requestedServices={requestedServices || []} 
-            isLoading={isLoadingRequested || isFetching} // isFetching from useQuery can be used
-            currentClinicShiftId={1} // TODO: Get current actual clinic shift ID
-            onAddMoreServices={() => setShowServiceSelectionGrid(true)} // Button to re-open grid
+            isLoading={isLoadingRequested || isFetchingRequested}
+            currentClinicShiftId={currentClinicShift?.id ?? null}
+            onAddMoreServices={() => setShowServiceSelectionGrid(true)}
           />
-      {/* USE THE NEW SUMMARY COMPONENT */}
-      <RequestedServicesSummary
+          <RequestedServicesSummary
             requestedServices={requestedServices || []}
-            visit={visit} // Pass the fetched patient
-            className="max-w-xs ml-auto mr-auto sm:mr-0 sm:ml-auto" // Example styling
+            visit={visit}
+            className="max-w-sm ml-auto mr-auto sm:mr-0 sm:ml-auto"
           />
         </>
       )}

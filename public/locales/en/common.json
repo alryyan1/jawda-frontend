@@ -13,6 +13,9 @@
   "page": "Page",
   "of": "of",
   "downloadPdf": "Download PDF",
+  "table": {
+    "actions": "Actions"
+  },
   "error": {
     "generic": "An unexpected error occurred. Please try again.",
     "notFound": "The requested resource was not found.",

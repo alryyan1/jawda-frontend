@@ -79,38 +79,7 @@ const DoctorShiftsReportPage: React.FC = () => {
     new Date(new Date().setDate(new Date().getDate() - 7)),
     "yyyy-MM-dd"
   );
-  const [generatingFinancialPdfId, setGeneratingFinancialPdfId] = useState<
-    number | null
-  >(null);
 
-  const handleGenerateFinancialSummaryPdf = async (
-    ds: DoctorShiftReportItem
-  ) => {
-    setGeneratingFinancialPdfId(ds.id);
-    try {
-      const blob = await downloadDoctorShiftFinancialSummaryPdf(ds.id);
-      // Create URL and trigger download
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `doctor_shift_financial_summary_${ds.id}_${format(
-        new Date(),
-        "yyyyMMdd_HHmmss"
-      )}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-      toast.success(t("reports:pdfGeneratedSuccess"));
-    } catch (error) {
-      console.error("Financial PDF Generation error:", error);
-      toast.error(t("reports:pdfGeneratedError"), {
-        description: error instanceof Error ? error.message : t("common:error.unknown"),
-      });
-    } finally {
-      setGeneratingFinancialPdfId(null);
-    }
-  };
   const form = useForm<FilterFormValues>({
     defaultValues: {
       date_from: initialDateFrom,
@@ -421,14 +390,7 @@ const DoctorShiftsReportPage: React.FC = () => {
                       <BarChart3 className="h-3.5 w-3.5 ltr:mr-1 rtl:ml-1" />
                       {t("common:summaryShort", "Summary")}
                     </Button>
-                    <Button onClick={() => handleGenerateFinancialSummaryPdf(ds)} disabled={generatingFinancialPdfId === ds.id}>
-                      {generatingFinancialPdfId === ds.id ? (
-                        <Loader2 />
-                      ) : (
-                        <FileSpreadsheet />
-                      )}
-                      Financial Summary
-                    </Button>
+                  
                     {/* Or put it inside the existing DropdownMenu */}
                   </TableCell>
                 </TableRow>

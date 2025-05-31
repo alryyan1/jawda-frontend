@@ -47,6 +47,8 @@ import LabWorkstationPage from "./pages/lab/LabWorkstationPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import ClinicShiftSummaryReportPage from "./pages/reports/ClinicShiftSummaryReportPage";
 import CostsReportPage from "./pages/CostsReportPage";
+import InsuranceAuditPage from "./pages/audit/InsuranceAuditPage";
+import AuditRecordPage from "./pages/audit/AuditRecordPage";
 // import NotFoundPage from './pages/NotFoundPage'; // Optional: For 404 handling
 
 const AppointmentsPlaceholderPage: React.FC = () => (
@@ -146,6 +148,7 @@ const router = createBrowserRouter([
             path: "clinic",
             element: <ClinicPage />,
           },
+      
           // Patients Module (Placeholder)
 
           // Appointments Module (Placeholder)
@@ -212,6 +215,14 @@ const router = createBrowserRouter([
             children: [
               { index: true, element: <Navigate to="general" replace /> },
               { path: "general", element: <GeneralSettingsPage /> }, // Your main settings form
+              {
+                path: "insurance-audit",
+                element: <InsuranceAuditPage />,
+              },
+              {
+                path: "insurance-audit/visit/:visitId", // Or use auditRecordId if that's the primary identifier
+                element: <AuditRecordPage />,
+              },
               // { path: "laboratory", element: <LabSettingsPage /> },
               // Companies Module
               {

@@ -1,6 +1,7 @@
 {
   "pageTitle": "إدارة الخدمات",
   "serviceEntityName": "الخدمة",
+  "servicesEntityNamePlural": "الخدمات",
   "addServiceButton": "إضافة خدمة جديدة",
   "editServiceTitle": "تعديل الخدمة",
   "createServiceTitle": "إضافة خدمة جديدة",

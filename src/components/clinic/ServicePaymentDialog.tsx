@@ -1,5 +1,5 @@
 // src/components/clinic/ServicePaymentDialog.tsx
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -183,6 +183,33 @@ const ServicePaymentDialog: React.FC<ServicePaymentDialogProps> = ({
     mutation.mutate(data);
   };
   
+  const handleKeyPress = useCallback((event: KeyboardEvent) => {
+    if (!isOpen) return;
+
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      const amount = parseFloat(getValues('amount'));
+      const displayBalanceCheck = displayBalance <= 0 && amount <= 0;
+      const isPendingCheck = mutation.isPending;
+
+      if (!displayBalanceCheck && !isPendingCheck) {
+        handleSubmit(onSubmit)();
+      }
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      onOpenChange(false);
+    }
+  }, [isOpen, getValues, displayBalance, mutation.isPending, handleSubmit, onSubmit, onOpenChange]);
+
+  useEffect(() => {
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyPress);
+      return () => {
+        window.removeEventListener('keydown', handleKeyPress);
+      };
+    }
+  }, [isOpen, handleKeyPress]);
+
   if (!isOpen || (isLoadingPatient && !patient && visitId)) {
     return isOpen ? <Dialog open={isOpen} onOpenChange={onOpenChange}><DialogContent><div className="p-6 text-center"><Loader2 className="h-6 w-6 animate-spin"/></div></DialogContent></Dialog> : null;
   }

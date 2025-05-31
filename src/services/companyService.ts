@@ -120,6 +120,18 @@ export const getCompanyContractedServices = (companyId: number, page = 1, filter
   return apiClient.get<PaginatedResponse<CompanyServiceContract>>(`${API_URL}/${companyId}/contracted-services`, { params: { page, ...filters } })
     .then(res => res.data);
 };
+// src/services/companyService.ts
+// ... (existing imports and functions) ...
+
+export const copyServiceContractsFromCompany = async (
+  targetCompanyId: number,
+  sourceCompanyId: number
+): Promise<{ message: string; copied_count: number }> => {
+  const response = await apiClient.post<{ message: string; copied_count: number }>(
+    `${API_URL}/${targetCompanyId}/copy-contracts-from/${sourceCompanyId}`
+  );
+  return response.data;
+};
 
 export const getCompanyAvailableServices = (companyId: number): Promise<Service[]> => {
   // Assuming this backend endpoint returns ServiceResource::collection which wraps in 'data'

@@ -59,6 +59,7 @@ import {
   Search,
   LibrarySquare,
   Printer,
+  Copy,
 } from "lucide-react"; // ArrowRightLeft can be for "Back" in RTL
 
 import type {
@@ -66,6 +67,7 @@ import type {
   CompanyServiceContract,
   CompanyServiceFormData,
 } from "@/types/companies";
+import type { ApiError } from "@/types/api";
 import {
   getCompanyById,
   importAllServicesToCompanyContract,
@@ -77,7 +79,7 @@ import {
   removeServiceFromCompanyContract,
 } from "@/services/companyService"; // Service functions related to contracts
 
-import type { PaginatedResponse } from "@/services/doctorService";
+import type { PaginatedResponse } from "@/types/common";
 import AddCompanyServiceDialog from "./AddCompanyServiceDialog";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -85,14 +87,18 @@ import { z } from "zod";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FormField } from "@/components/ui/form";
-import { downloadCompanyServiceContractPdf, type CompanyContractPdfFilters } from "@/services/reportService";
+import {
+  downloadCompanyServiceContractPdf,
+  type CompanyContractPdfFilters,
+} from "@/services/reportService";
+import CopyCompanyContractDialog from "@/components/companies/CopyCompanyContractDialog";
 // import EditCompanyServiceDialog from '@/components/companies/EditCompanyServiceDialog'; // For later
 
 // TODO: Define these permissions in your backend and PermissionName type
 // import { useAuthorization } from '@/hooks/useAuthorization';
 
-// Zod schema for inline editing form (subset of CompanyServiceFormData)
-const getInlineEditSchema = (t: Function) =>
+// Zod schema for inline editing form
+const getInlineEditSchema = (t: TFunction) =>
   z.object({
     price: z
       .string()
@@ -141,40 +147,41 @@ export default function CompanyServiceContractsPage() {
     setIsGeneratingPdf(true);
     try {
       const filters: CompanyContractPdfFilters = {};
-      if (searchTerm) filters.search = searchTerm; // Use the debounced search term
+      if (searchTerm) filters.search = searchTerm;
 
-      const blob = await downloadCompanyServiceContractPdf(Number(companyId), filters);
-      const url = window.URL.createObjectURL(blob); 
-      const a = document.createElement('a');
+      const blob = await downloadCompanyServiceContractPdf(
+        Number(companyId),
+        filters
+      );
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
       a.href = url;
-      a.download = `company_${companyId}_service_contracts_${new Date().toISOString().slice(0,10)}.pdf`;
+      a.download = `company_${companyId}_service_contracts_${new Date()
+        .toISOString()
+        .slice(0, 10)}.pdf`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
       a.remove();
-      toast.success(t('common:pdfGeneratedSuccess'));
-    } catch (error: any) {
-      toast.error(t('common:pdfGeneratedError'), { description: error.response?.data?.message || error.message });
+      toast.success(t("common:pdfGeneratedSuccess"));
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      toast.error(t("common:pdfGeneratedError"), {
+        description: apiError.response?.data?.message || apiError.message,
+      });
     } finally {
       setIsGeneratingPdf(false);
     }
   };
 
   const { companyId } = useParams<{ companyId: string }>();
+  const [isCopyContractDialogOpen, setIsCopyContractDialogOpen] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [isAddServiceDialogOpen, setIsAddServiceDialogOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-  const [editingRowId, setEditingRowId] = useState<number | null>(null); // service_id of the row being edited
+  const [editingRowId, setEditingRowId] = useState<number | null>(null);
   const [isImportAllDialogOpen, setIsImportAllDialogOpen] = useState(false);
-
-  // const { can } = useAuthorization();
-  // const canAddContract = can('create company_contracts' as any);
-  // const canEditContract = can('edit company_contracts' as any);
-  // const canDeleteContract = can('delete company_contracts' as any);
-  const canEditContract = true; // Placeholder for permission
-  const canDeleteContract = true; // Placeholder
 
   const inlineEditSchema = getInlineEditSchema(t);
   const inlineEditForm = useForm<InlineEditFormValues>({
@@ -183,13 +190,6 @@ export default function CompanyServiceContractsPage() {
       /* will be set when editing starts */
     },
   });
-
-  // const [editingContract, setEditingContract] = useState<CompanyServiceContract | null>(null);
-
-  // const { can } = useAuthorization();
-  // const canAddContract = can('create company_contracts' as any);
-  // const canEditContract = can('edit company_contracts' as any);
-  // const canDeleteContract = can('delete company_contracts'as any);
 
   // Fetch Company details (mainly for the name in the title)
   const { data: company, isLoading: isLoadingCompany } = useQuery<
@@ -209,9 +209,9 @@ export default function CompanyServiceContractsPage() {
   } = useQuery<PaginatedResponse<CompanyServiceContract>, Error>({
     queryKey: ["companyContractedServices", companyId, currentPage, searchTerm], // Add searchTerm to queryKey
     queryFn: () =>
-      getCompanyContractedServices(Number(companyId), currentPage, 
-         {search:searchTerm},
-      ), // Pass searchTerm to service
+      getCompanyContractedServices(Number(companyId), currentPage, {
+        search: searchTerm,
+      }), // Pass searchTerm to service
     enabled: !!companyId,
     placeholderData: keepPreviousData,
   });
@@ -229,7 +229,7 @@ export default function CompanyServiceContractsPage() {
         queryKey: ["companyAvailableServices", companyId],
       }); // To update the available list in AddDialog
     },
-    onError: (error: any) => {
+    onError: (error: ApiError) => {
       toast.error(
         error.response?.data?.message ||
           t("companies:serviceContracts.importAllError")
@@ -242,7 +242,7 @@ export default function CompanyServiceContractsPage() {
   };
 
   const confirmImportAll = () => {
-    importAllMutation.mutate();
+    importAllMutation.mutate(undefined);
     setIsImportAllDialogOpen(false);
   };
 
@@ -263,7 +263,7 @@ export default function CompanyServiceContractsPage() {
         queryKey: ["companyAvailableServices", companyId],
       }); // Also refetch available services
     },
-    onError: (err: any) => {
+    onError: (error: ApiError) => {
       toast.error(
         t("common:error.deleteFailed", {
           entity: t(
@@ -271,13 +271,13 @@ export default function CompanyServiceContractsPage() {
             "Contract"
           ),
         }),
-        { description: err.response?.data?.message || err.message }
+        { description: error.response?.data?.message || error.message }
       );
     },
   });
   const handleContractAdded = () => {
-    // The dialog already invalidates 'companyContractedServices' and 'companyAvailableServices'
-    // So, nothing specific needed here unless you want to set current page to 1 for instance
+    // The dialog already invalidates queries
+    // If you want to reset to page 1 after adding:
     // setCurrentPage(1);
   };
   const updateContractMutation = useMutation({
@@ -290,7 +290,7 @@ export default function CompanyServiceContractsPage() {
         params.serviceId,
         params.data as Partial<CompanyServiceFormData>
       ), // Cast might be needed
-    onSuccess: (updatedContractData) => {
+    onSuccess: () => {
       toast.success(
         t("companies:serviceContracts.updatedSuccess", "Contract updated!")
       );
@@ -301,7 +301,7 @@ export default function CompanyServiceContractsPage() {
       setEditingRowId(null); // Exit edit mode
       inlineEditForm.reset();
     },
-    onError: (err: any) => {
+    onError: (error: ApiError) => {
       toast.error(
         t("common:error.saveFailed", {
           entity: t(
@@ -309,7 +309,7 @@ export default function CompanyServiceContractsPage() {
             "Contract"
           ),
         }),
-        { description: err.response?.data?.message || err.message }
+        { description: error.response?.data?.message || error.message }
       );
     },
   });
@@ -380,13 +380,29 @@ export default function CompanyServiceContractsPage() {
     })(); // Immediately invoke the handleSubmit result
   };
 
+  const handleContractsCopied = () => {
+    setIsCopyContractDialogOpen(false);
+    // Force a refresh of the contracts list
+    queryClient.invalidateQueries({
+      queryKey: ["companyContractedServices", companyId],
+      exact: true
+    });
+    // Reset to first page to ensure we see the new contracts
+    setCurrentPage(1);
+    toast.info(t("companies:serviceContracts.copyProcessCompletedRefresh"));
+  };
+
+  // Determine if the "Copy Contract" button should be enabled
+  const canCopyContracts =
+    contracts.length === 0 && !isLoadingContracts && !isFetchingContracts;
+
   return (
     <div className="container mx-auto py-4 sm:py-6 lg:py-8">
       <div className="mb-6">
         <Button
           variant="outline"
           size="sm"
-          onClick={() => navigate("/companies")}
+          onClick={() => navigate("/settings/companies")}
           className="mb-4"
         >
           <BackButtonIcon className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
@@ -408,10 +424,33 @@ export default function CompanyServiceContractsPage() {
       </div>
 
       <div className="flex gap-2 w-full sm:w-auto justify-end">
-      <Button onClick={handleGenerateServiceContractPdf} variant="outline" size="sm" className="h-9" disabled={isGeneratingPdf || isLoadingContracts || !contracts.length}>
-                    {isGeneratingPdf ? <Loader2 className="h-4 w-4 animate-spin"/> : <Printer className="h-4 w-4"/>}
-                    <span className="ltr:ml-2 rtl:mr-2 hidden sm:inline">{t('common:print')}</span>
-                </Button>
+        <Button
+          onClick={() => setIsCopyContractDialogOpen(true)}
+          variant="outline"
+          size="sm"
+          disabled={!canCopyContracts || importAllMutation.isPending} // Disable if importing all or cannot copy
+          className="h-9"
+        >
+          <Copy className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+          {t("companies:serviceContracts.copyContractsButton")}
+        </Button>
+   
+        <Button
+          onClick={handleGenerateServiceContractPdf}
+          variant="outline"
+          size="sm"
+          className="h-9"
+          disabled={isGeneratingPdf || isLoadingContracts || !contracts.length}
+        >
+          {isGeneratingPdf ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Printer className="h-4 w-4" />
+          )}
+          <span className="ltr:ml-2 rtl:mr-2 hidden sm:inline">
+            {t("common:print")}
+          </span>
+        </Button>
         <Button
           onClick={handleImportAllServices}
           variant="outline"
@@ -763,17 +802,25 @@ export default function CompanyServiceContractsPage() {
         </div>
       )}
 
-      <AlertDialog open={isImportAllDialogOpen} onOpenChange={setIsImportAllDialogOpen}>
+      <AlertDialog
+        open={isImportAllDialogOpen}
+        onOpenChange={setIsImportAllDialogOpen}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t("companies:serviceContracts.importAllButton")}</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t("companies:serviceContracts.importAllButton")}
+            </AlertDialogTitle>
             <AlertDialogDescription>
               {t("companies:serviceContracts.importAllConfirm")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t("common:cancel")}</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmImportAll} disabled={importAllMutation.isPending}>
+            <AlertDialogAction
+              onClick={confirmImportAll}
+              disabled={importAllMutation.isPending}
+            >
               {importAllMutation.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2" />
               ) : null}
@@ -782,6 +829,16 @@ export default function CompanyServiceContractsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+         {/* NEW: Copy Contract Dialog */}
+         {company && ( // Ensure company data is loaded before rendering this dialog
+        <CopyCompanyContractDialog
+            isOpen={isCopyContractDialogOpen}
+            onOpenChange={setIsCopyContractDialogOpen}
+            targetCompanyId={company.id}
+            targetCompanyName={company.name}
+            onContractsCopied={handleContractsCopied}
+        />
+      )}
     </div>
   );
 }

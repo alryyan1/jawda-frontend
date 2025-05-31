@@ -16,12 +16,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, Calendar, DollarSign, Eye, Printer } from 'lucide-react'; // Added Eye, Printer
+import { Loader2, Calendar, DollarSign, Eye, Printer, FileSpreadsheet } from 'lucide-react'; // Added Eye, Printer
 
 import type { DoctorShiftReportItem, DoctorShiftFinancialSummary } from '@/types/reports';
 import { ScrollArea } from '@radix-ui/react-scroll-area';
-import { getDoctorShiftFinancialSummary } from '@/services/reportService';
+import { downloadDoctorShiftFinancialSummaryPdf, getDoctorShiftFinancialSummary } from '@/services/reportService';
 import PatientFinancialBreakdownDialog from '@/pages/reports/PatientFinancialBreakdownDialog';
+import { toast } from 'sonner';
 
 interface DoctorShiftFinancialSummaryDialogProps {
   isOpen: boolean;
@@ -68,7 +69,38 @@ const DoctorShiftFinancialSummaryDialog: React.FC<DoctorShiftFinancialSummaryDia
     }
     onOpenChange(open);
   };
+  const [generatingFinancialPdfId, setGeneratingFinancialPdfId] = useState<
+    number | null
+  >(null);
 
+  const handleGenerateFinancialSummaryPdf = async (
+    ds: DoctorShiftReportItem
+  ) => {
+    setGeneratingFinancialPdfId(ds.id);
+    try {
+      const blob = await downloadDoctorShiftFinancialSummaryPdf(ds.id);
+      // Create URL and trigger download
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `doctor_shift_financial_summary_${ds.id}_${format(
+        new Date(),
+        "yyyyMMdd_HHmmss"
+      )}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success(t("reports:pdfGeneratedSuccess"));
+    } catch (error) {
+      console.error("Financial PDF Generation error:", error);
+      toast.error(t("reports:pdfGeneratedError"), {
+        description: error instanceof Error ? error.message : t("common:error.unknown"),
+      });
+    } finally {
+      setGeneratingFinancialPdfId(null);
+    }
+  };
   return (
     <>
       <Dialog open={isOpen} onOpenChange={handleMainDialogOpenChange}>
@@ -175,13 +207,17 @@ const DoctorShiftFinancialSummaryDialog: React.FC<DoctorShiftFinancialSummaryDia
           </ScrollArea>
 
           <DialogFooter className="p-4 sm:p-6 border-t mt-auto">
-            {summary && !isLoading && ( // Show print only if data is loaded
-                <Button type="button" variant="secondary" onClick={() => window.print()} disabled> {/* TODO: Implement proper print */}
-                    <Printer className="h-4 w-4 ltr:mr-2 rtl:ml-2"/>{t('common:print')}
-                </Button>
-            )}
+            <Button onClick={() => handleGenerateFinancialSummaryPdf(doctorShift)} disabled={generatingFinancialPdfId === doctorShift?.id}>
+                      {generatingFinancialPdfId === doctorShift?.id ? (
+                        <Loader2 />
+                      ) : (
+                        <FileSpreadsheet />
+                      )}
+                      {t("reports:doctorShiftsReport.financialSummary")}
+                    </Button>
             <DialogClose asChild>
               <Button type="button" variant="outline">{t('common:close')}</Button>
+             
             </DialogClose>
           </DialogFooter>
         </DialogContent>

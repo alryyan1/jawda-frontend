@@ -7,6 +7,12 @@
   "loadingShiftInfo": "جار تحميل معلومات الوردية...",
   "updatingList": "جار تحديث القائمة...",
   "refreshList": "تحديث القائمة",
+  "companyPrice": "سعر الشركة",
+  "requiresApproval": "يتطلب موافقة",
+  "export": "تصدير",
+  "exportPdf": "تصدير PDF",
+  "exportExcel": "تصدير Excel",
+  "by": "بواسطة",
   "datePicker": {
     "pickDateRange": "اختر نطاق التاريخ",
     "pickDateTime": "اختر التاريخ والوقت",
@@ -33,16 +39,27 @@
   "searchPlaceholderName": "ابحث عن {{entity}}...",
   "searchByName": "البحث باسم {{entity}}",
   "downloadPdf": "تحميل PDF",
+  "generatePdf": "إنشاء PDF",
+  "pdfGeneratedSuccess": "تم إنشاء ملف PDF بنجاح",
   "toggleTheme": "تغيير المظهر",
   "switchToDark": "التبديل إلى الوضع الداكن",
   "switchToLight": "التبديل إلى الوضع الفاتح",
   "underDevelopment": "هذا القسم قيد التطوير.",
+  "saveChanges": "حفظ التغييرات",
+  "genderEnum": {
+    "female": "أنثى",
+    "male": "ذكر",
+    "other": "آخر"
+  },
   "actions": {
     "openMenu": "فتح القائمة",
     "add": "إضافة",
     "goBack": "رجوع",
     "goHome": "الصفحة الرئيسية",
     "retry": "حاول مرة أخرى"
+  },
+  "table": {
+    "actions": "إجراءات"
   },
   "pagination": {
     "previous": "السابق",
@@ -67,7 +84,9 @@
     "maxLengthText": "النص طويل جداً (الحد الأقصى {{count}} حرف).",
     "maxLength": "يجب أن لا يتجاوز {{count}} حرف.",
     "positiveNumberOptional": "يجب أن يكون رقماً موجباً (اختياري).",
-    "checkErrorsInRow": "يرجى التحقق من الأخطاء في الصف"
+    "checkErrorsInRow": "يرجى التحقق من الأخطاء في الصف",
+    "dateRequired": "التاريخ مطلوب",
+    "dateFromAfterTo": "تاريخ البداية يجب أن يكون قبل تاريخ النهاية"
   },
   "form": {
     "fillDetails": "الرجاء ملء التفاصيل أدناه."
@@ -86,7 +105,9 @@
     "somethingWentWrong": "حدث خطأ ما",
     "unknownError": "حدث خطأ غير متوقع",
     "noPermissions": "ليس لديك الصلاحية لعرض هذا القسم",
-    "pdfGeneratedError": "حدث خطأ أثناء إنشاء ملف PDF"
+    "pdfGeneratedError": "حدث خطأ أثناء إنشاء ملف PDF",
+    "saveFailedExt": "فشل في حفظ {{entity}}: {{message}}",
+    "deleteFailedExt": "فشل في حذف {{entity}}: {{message}}"
   },
   "save": "حفظ",
   "id": "م",
@@ -107,10 +128,6 @@
   "visitId": "رقم الزيارة",
   "gender": "الجنس",
   "age": "العمر",
-  "genderEnum": {
-    "female": "أنثى",
-    "male": "ذكر"
-  },
   "notAvailable_short": "غير متوفر",
   "status": "الحالة",
   "add": "إضافة",
@@ -230,5 +247,6 @@
     "netPayableByPatient": "صافي مستحق على المريض",
     "totalPaidByPatient": "إجمالي مدفوع من المريض",
     "patientBalanceDue": "الرصيد على المريض"
-  }
+  },
+  "addSelectedCount": "إضافة المحدد ({{count}})"
 }

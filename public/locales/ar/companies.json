@@ -15,7 +15,9 @@
     "active": "نشطة",
     "inactive": "غير نشطة",
     "contracts": "العقود",
-    "actions": "إجراءات"
+    "actions": "إجراءات",
+    "service_endurance": "نسبة تحمل الخدمات",
+    "lab_endurance": "نسبة تحمل المختبر"
   },
   "form": {
     "nameLabel": "اسم الشركة",
@@ -60,7 +62,16 @@
     "noAvailableServices": "لا توجد خدمات متاحة لإضافتها إلى العقد.",
     "noServicesInContract": "لا توجد خدمات في هذا العقد.",
     "importAllButton": "استيراد جميع الخدمات",
-    "importAllConfirm": "هل أنت متأكد أنك تريد استيراد جميع الخدمات المتاحة إلى هذا العقد؟ سيتم استخدام القيم الافتراضية للأسعار والتحمل."
+    "importAllConfirm": "هل أنت متأكد أنك تريد استيراد جميع الخدمات المتاحة إلى هذا العقد؟ سيتم استخدام القيم الافتراضية للأسعار والتحمل.",
+    "copyContractsButton": "نسخ العقود",
+    "copyDialogTitle": "نسخ عقود الخدمات إلى {{companyName}}",
+    "copyDialogDescription": "اختر الشركة التي تريد نسخ عقود خدماتها.",
+    "selectSourceCompany": "اختر الشركة المصدر",
+    "sourceCompanyPlaceholder": "اختر شركة...",
+    "noOtherCompanies": "لا توجد شركات أخرى متاحة للنسخ منها.",
+    "copyButton": "نسخ العقود",
+    "copiedSuccess": "تم نسخ العقود بنجاح!",
+    "copyProcessCompletedRefresh": "تم نسخ العقود بنجاح. سيتم تحديث القائمة."
   },
   "addServiceContractDialog": {
     "title": "إضافة خدمة لعقد الشركة",

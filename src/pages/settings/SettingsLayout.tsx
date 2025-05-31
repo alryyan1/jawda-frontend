@@ -22,6 +22,7 @@ const settingsNavItems: SettingsNavItem[] = [
   { to: 'laboratory', labelKey: 'laboratory', icon: FlaskConical, permission: 'manage laboratory_settings' },
   { to: 'services', labelKey: 'tabs.servicesConfig', icon: ListOrdered, permission: 'manage service_settings' },
   { to: '/settings/laboratory/price-list', labelKey: 'laboratoryTestsPriceList', icon: CreditCard, permission: 'manage price_list' },
+  { to: 'insurance-audit', labelKey: 'insuranceAudit', icon: CreditCard, permission: 'manage insurance_audit' },
 ];
 
 const SettingsLayout: React.FC = () => {

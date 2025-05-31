@@ -15,6 +15,7 @@
     "closed": "مغلقة",
     "applyFilters": "تطبيق التصفية",
     "noData": "لا توجد مناوبات للعرض",
+    "financialSummary": "الملخص المالي",
     "table": {
       "id": "م. المناوبة",
       "doctorName": "اسم الطبيب",

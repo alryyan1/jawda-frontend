@@ -154,7 +154,10 @@ export default function CompaniesListPage() {
                   {t("companies:table.phone")}
                 </TableHead>
                 <TableHead className="hidden lg:table-cell text-center">
-                  {t("companies:table.email")}
+                  {t("companies:table.service_endurance")}
+                </TableHead>
+                <TableHead className="hidden lg:table-cell text-center">
+                  {t("companies:table.lab_endurance")}
                 </TableHead>
                 <TableHead className="text-center">
                   {t("companies:table.status")}
@@ -178,8 +181,13 @@ export default function CompaniesListPage() {
                     {company.phone || "-"}
                     </TableCell>
                     <TableCell className="hidden lg:table-cell text-center">
-                    {company.email || "-"}
+                    {company.service_endurance || "-"}
                     </TableCell>
+                    <TableCell className="hidden lg:table-cell text-center">
+                    {company.lab_endurance || "-"}
+                    </TableCell>
+
+
                     <TableCell className="text-center">
                     <Badge
                       variant={company.status ? "default" : "destructive"}

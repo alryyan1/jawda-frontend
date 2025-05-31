@@ -44,6 +44,8 @@ export interface Service {
   variable: boolean;
   created_at: string;
   updated_at: string;
+  contract_price?: number | null;
+  contract_requires_approval?: boolean;
 }
 
 // For Service Form Data

@@ -52,6 +52,7 @@ import {
 } from "@/services/visitService";
 import ManageRequestedServiceCostsDialog from "./ManageRequestedServiceCostsDialog";
 import ManageServiceDepositsDialog from "./ManageServiceDepositsDialog";
+import type { AxiosError } from "axios";
 
 interface RequestedServicesTableProps {
   visitId: number;
@@ -150,8 +151,11 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
       });
       setServiceToDelete(null);
     },
-    onError: (error: Error) =>
-      toast.error(error.message || t("common:error.requestFailed")),
+    onError: (error: AxiosError) =>
+     {
+      console.log(error,'error')
+      toast.error(error.response?.data?.message || t("common:error.requestFailed"))
+     }
   });
 
   const handleCancelEdit = () => setEditingRowId(null);

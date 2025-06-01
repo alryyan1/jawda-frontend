@@ -26,7 +26,16 @@
     "print": "طباعة",
     "record": "تسجيل",
     "reports": "التقارير",
-    "settings": "الإعدادات"
+    "settings": "الإعدادات",
+    "appointment": "موعد",
+    "appointments": "المواعيد",
+    "batch_authorize": "تفويض متعدد",
+    "cancel": "إلغاء",
+    "clear_pending_lab_requests": "مسح طلبات المختبر المعلقة",
+    "clinical": "سريري",
+    "monthly": "شهري",
+    "patient": "مريض",
+    "record_batch": "تسجيل دفعة"
   },
   "batch_delete": {
     "lab_tests": "حذف متعدد لفحوصات المختبر"
@@ -36,14 +45,50 @@
   },
   "view": {
     "lab_price_list": "عرض قائمة أسعار المختبر",
-    "reports_section": "التقارير"
+    "reports_section": "التقارير",
+    "appointment_details": "عرض تفاصيل الموعد",
+    "clinical_notes": "عرض الملاحظات السريرية",
+    "lab_report_preview": "عرض معاينة تقرير المختبر",
+    "monthly_lab_income_report": "عرض تقرير الدخل الشهري للمختبر",
+    "patient_vitals": "عرض العلامات الحيوية للمريض"
   },
   "print": {
     "doctor_shift_reports": "طباعة تقارير مناوبات الأطباء",
-    "service_statistics_report": "طباعة تقرير إحصائيات الخدمات"
+    "service_statistics_report": "طباعة تقرير إحصائيات الخدمات",
+    "lab_sample_labels": "طباعة ملصقات عينات المختبر",
+    "monthly_lab_income_report": "طباعة تقرير الدخل الشهري للمختبر"
   },
   "update": {
-    "lab_test_prices": "تحديث أسعار فحوصات المختبر"
+    "lab_test_prices": "تحديث أسعار فحوصات المختبر",
+    "appointment_status": "تحديث حالة الموعد"
+  },
+  "edit": {
+    "all_clinical_notes": "تعديل جميع الملاحظات السريرية",
+    "lab_request_flags": "تعديل علامات طلب المختبر",
+    "lab_results": "تعديل نتائج المختبر",
+    "own_clinical_notes": "تعديل الملاحظات السريرية الخاصة",
+    "patient_vitals": "تعديل العلامات الحيوية للمريض"
+  },
+  "list": {
+    "appointments": "قائمة المواعيد"
+  },
+  "batch_authorize": {
+    "lab_results": "تفويض متعدد لنتائج المختبر"
+  },
+  "cancel": {
+    "appointments": "إلغاء المواعيد"
+  },
+  "clear_pending_lab_requests": "مسح طلبات المختبر المعلقة",
+  "create": {
+    "clinical_notes": "إنشاء ملاحظات سريرية"
+  },
+  "delete": {
+    "clinical_notes": "حذف الملاحظات السريرية",
+    "patient_vitals": "حذف العلامات الحيوية للمريض"
+  },
+  "record": {
+    "patient_vitals": "تسجيل العلامات الحيوية للمريض",
+    "batch_lab_payment": "تسجيل دفعة مدفوعات المختبر"
   },
   "list_users": "عرض قائمة المستخدمين",
   "create_users": "إنشاء مستخدمين",
@@ -93,7 +138,7 @@
   "view_visit_lab_results": "عرض نتائج المختبر للزيارة",
   "manage_own_doctor_schedule": "إدارة دوام الطبيب الخاص",
   "view_active_doctor_shifts": "عرض دوام الأطباء النشط",
-  "list_all_doctor_shifts": "عرض جميع دوام الأطباء",
+  "list_all_doctor_shifts": "عرض جميع منوابات الأطباء",
   "list_clinic_shifts": "عرض دوام العيادة",
   "record_visit_service_payments": "تسجيل المدفوعات لخدمات الزيارة",
   "doctor_shift_financial_summary": "ملخص المالي لدوام الطبيب",
@@ -122,5 +167,27 @@
   "view_lab_price_list": "عرض قائمة أسعار المختبر",
   "print_doctor_shift_reports": "طباعة تقارير مناوبات الأطباء",
   "print_service_statistics_report": "طباعة تقرير إحصائيات الخدمات",
-  "update_lab_test_prices": "تحديث أسعار فحوصات المختبر"
+  "update_lab_test_prices": "تحديث أسعار فحوصات المختبر",
+
+  "update_appointment_status": "تحديث حالة الموعد",
+  "edit_all_clinical_notes": "تعديل جميع الملاحظات السريرية",
+  "view_appointment_details": "عرض تفاصيل الموعد",
+  "list_appointments": "قائمة المواعيد",
+  "batch_authorize_lab_results": "تفويض متعدد لنتائج المختبر",
+  "cancel_appointments": "إلغاء المواعيد",
+  "create_clinical_notes": "إنشاء ملاحظات سريرية",
+  "delete_clinical_notes": "حذف الملاحظات السريرية",
+  "view_clinical_notes": "عرض الملاحظات السريرية",
+  "edit_lab_request_flags": "تعديل علامات طلب المختبر",
+  "edit_lab_results": "تعديل نتائج المختبر",
+  "view_lab_report_preview": "عرض معاينة تقرير المختبر",
+  "view_monthly_lab_income_report": "عرض تقرير الدخل الشهري للمختبر",
+  "edit_own_clinical_notes": "تعديل الملاحظات السريرية الخاصة",
+  "delete_patient_vitals": "حذف العلامات الحيوية للمريض",
+  "edit_patient_vitals": "تعديل العلامات الحيوية للمريض",
+  "view_patient_vitals": "عرض العلامات الحيوية للمريض",
+  "print_lab_sample_labels": "طباعة ملصقات عينات المختبر",
+  "print_monthly_lab_income_report": "طباعة تقرير الدخل الشهري للمختبر",
+  "record_patient_vitals": "تسجيل العلامات الحيوية للمريض",
+  "record_batch_lab_payment": "تسجيل دفعة مدفوعات المختبر"
 }

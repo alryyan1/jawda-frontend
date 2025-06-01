@@ -16,6 +16,7 @@ import {
   WalletCards,
   ReceiptText,
   BarChart3,
+  FilePieChart,
 } from "lucide-react"; // UsersRound for manage doctor shifts
 import ManageDoctorShiftsDialog from "./ManageDoctorShiftsDialog";
 import { cn } from "@/lib/utils";
@@ -24,6 +25,7 @@ import AddCostDialog from "./AddCostDialog";
 import { Separator } from "@radix-ui/react-separator";
 import { useAuth } from "@/contexts/AuthContext";
 import ShiftSummaryDialog from "./ShiftSummaryDialog"; // Make sure this component exists
+import DoctorShiftFinancialReviewDialog from "./dialogs/DoctorShiftFinancialReviewDialog";
  
 interface ActionsPaneProps {
   showRegistrationForm: boolean;
@@ -45,6 +47,8 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
   const [isIncomeDialogOpen, setIsIncomeDialogOpen] = useState(false);
   const canRecordCosts = true; // can('record costs')
   const [showShiftSummaryDialog, setShowShiftSummaryDialog] = useState(false);
+  const [isFinancialReviewDialogOpen, setIsFinancialReviewDialogOpen] = useState(false);
+
   return (
     <TooltipProvider delayDuration={200}>
       <aside
@@ -184,6 +188,26 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
     </TooltipContent>
   </Tooltip>
 )}
+<Separator className="my-1" />
+        
+        {/* Button to open the new dialog */}
+        {/* Add permission check: can('review doctor_shift_financials') */}
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="w-11 h-11" 
+                    onClick={() => setIsFinancialReviewDialogOpen(true)}
+                    aria-label={t('clinic:actionsPane.financialReview')}
+                >
+                    <FilePieChart className="h-5 w-5" />
+                </Button>
+            </TooltipTrigger>
+            <TooltipContent side={i18n.dir() === 'rtl' ? 'left' : 'right'} sideOffset={5}>
+            <p>{t('clinic:actionsPane.financialReview')}</p>
+            </TooltipContent>
+        </Tooltip>
         {/* Example other action */}
         <Tooltip>
           <TooltipTrigger asChild>
@@ -215,6 +239,10 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
           shift={currentClinicShift}
         />
       )}
+         <DoctorShiftFinancialReviewDialog
+        isOpen={isFinancialReviewDialogOpen}
+        onOpenChange={setIsFinancialReviewDialogOpen}
+      />
     </TooltipProvider>
   );
 };

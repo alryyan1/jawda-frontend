@@ -9,9 +9,11 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
-import { Loader2, Filter, BarChartBig, AlertTriangle } from 'lucide-react'; // BarChartBig or similar
+import { Loader2, Filter, BarChartBig, AlertTriangle, FileText, Download } from 'lucide-react'; // BarChartBig or similar
 import { getMonthlyServiceDepositsIncome, type MonthlyServiceIncomeFilters } from '@/services/reportService';
 import { formatNumber } from '@/lib/utils';
+import apiClient from '@/services/api';
+import { toast } from 'sonner';
 
 const currentYear = getYear(new Date());
 const years = Array.from({ length: 10 }, (_, i) => currentYear - i); // Last 10 years
@@ -30,7 +32,7 @@ const MonthlyServiceIncomeReportPage: React.FC = () => {
       month: getMonth(prevMonthDate) + 1, // getMonth is 0-indexed
     };
   });
-
+  
   const { data: reportData, isLoading, error, isFetching, refetch } = useQuery({
     queryKey: ['monthlyServiceDepositsIncomeReport', filters],
     queryFn: () => getMonthlyServiceDepositsIncome(filters),
@@ -40,13 +42,47 @@ const MonthlyServiceIncomeReportPage: React.FC = () => {
   const handleFilterChange = (type: 'year' | 'month', value: string) => {
     setFilters(prev => ({ ...prev, [type]: parseInt(value) }));
   };
-
+  const [isExporting, setIsExporting] = useState<'pdf' | 'excel' | false>(false);
+  
   const handleApplyFilters = () => {
     refetch();
   };
   
   const dailyData = reportData?.daily_data || [];
   const summary = reportData?.summary;
+    
+  const handleExport = async (formatType: 'pdf' | 'excel') => {
+    if (!filters.year || !filters.month) {
+        toast.error(t('common:validation.monthYearRequired'));
+        return;
+    }
+    setIsExporting(formatType);
+    try {
+        const endpoint = `/reports/monthly-service-deposits-income/${formatType}`;
+        const response = await apiClient.get(endpoint, {
+            params: filters,
+            responseType: 'blob',
+        });
+
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        const extension = formatType === 'pdf' ? 'pdf' : 'xlsx';
+        const monthStr = String(filters.month).padStart(2, '0');
+        link.setAttribute('download', `monthly_service_income_${filters.year}_${monthStr}.${extension}`);
+        document.body.appendChild(link);
+        link.click();
+        link.parentNode?.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        toast.success(t('common:exportSuccess'));
+    } catch (err: any) {
+        toast.error(t('common:error.exportFailed'), { 
+            description: err.response?.data?.message || err.message 
+        });
+    } finally {
+        setIsExporting(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -54,7 +90,19 @@ const MonthlyServiceIncomeReportPage: React.FC = () => {
         <BarChartBig className="h-7 w-7 text-primary"/>
         <h1 className="text-2xl sm:text-3xl font-bold">{t('reports:monthlyServiceIncomeReport.title')}</h1>
       </div>
-      
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
+    
+        <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => handleExport('pdf')} disabled={isExporting === 'pdf' || isLoading}>
+                {isExporting === 'pdf' ? <Loader2 className="h-4 w-4 animate-spin"/> : <FileText className="h-4 w-4"/>} 
+                <span className="ltr:ml-2 rtl:mr-2 hidden sm:inline">{t('common:exportPdf')}</span>
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => handleExport('excel')} disabled={isExporting === 'excel' || isLoading}>
+                {isExporting === 'excel' ? <Loader2 className="h-4 w-4 animate-spin"/> : <Download className="h-4 w-4"/>} 
+                <span className="ltr:ml-2 rtl:mr-2 hidden sm:inline">{t('common:exportExcel')}</span>
+            </Button>
+        </div>
+        </div>
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">{t('reports:filtersTitle')}</CardTitle>

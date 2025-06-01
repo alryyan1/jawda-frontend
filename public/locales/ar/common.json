@@ -4,6 +4,7 @@
   "expandSidebar": "توسيع القائمة",
   "collapseSidebar": "طي القائمة",
   "loading": "جار التحميل...",
+  "loadingData": "جار تحميل البيانات...",
   "loadingShiftInfo": "جار تحميل معلومات الوردية...",
   "updatingList": "جار تحديث القائمة...",
   "refreshList": "تحديث القائمة",
@@ -13,6 +14,7 @@
   "exportPdf": "تصدير PDF",
   "exportExcel": "تصدير Excel",
   "noResultsFound": "لم يتم العثور على نتائج",
+  "noDataAvailable": "لا توجد بيانات متاحة",
   "by": "بواسطة",
   "datePicker": {
     "pickDateRange": "اختر نطاق التاريخ",
@@ -37,7 +39,7 @@
   "of": "من",
   "search": "بحث",
   "searchPlaceholder": "ابحث هنا...",
-  "searchPlaceholderName": "ابحث عن {{entity}}...",
+  "searchPlaceholderName": "ابحث بالاسم...",
   "searchByName": "البحث باسم {{entity}}",
   "downloadPdf": "تحميل PDF",
   "generatePdf": "إنشاء PDF",
@@ -253,5 +255,9 @@
   "addSelectedCount": "إضافة المحدد ({{count}})",
   "date": "التاريخ",
   "noDataAvailableForPeriod": "لا توجد بيانات متاحة لهذه الفترة",
-  "send": "إرسال"
+  "send": "إرسال",
+  "user": "المستخدم",
+  "dateFrom": "من تاريخ",
+  "dateTo": "إلى تاريخ",
+  "searchDoctor": "بحث عن طبيب"
 }

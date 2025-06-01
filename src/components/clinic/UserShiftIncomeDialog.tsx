@@ -27,7 +27,7 @@ const DetailRow: React.FC<{ label: string; value?: string | number | null; icon?
          <span>{label}:</span>
      </div>
      <span className={`text-sm font-semibold ${valueClass || ''}`}>
-         {value === null || value === undefined ? '-' : Number(value).toFixed(2)}
+         {value === null || value === undefined ? '-' : value}
          {unit && <span className="text-xs text-muted-foreground ltr:ml-1 rtl:mr-1">{unit}</span>}
      </span>
  </div>
@@ -51,7 +51,7 @@ const UserShiftIncomeDialog: React.FC<UserShiftIncomeDialogProps> = ({ isOpen, o
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="w-[500px]">
         <DialogHeader>
           <DialogTitle>
             {t('clinic:userShiftIncomeDialog.title', { userName: user?.name || '...' })}
@@ -79,21 +79,21 @@ const UserShiftIncomeDialog: React.FC<UserShiftIncomeDialogProps> = ({ isOpen, o
                  <h4 className="font-semibold text-md mb-3">{t('clinic:userShiftIncomeDialog.serviceIncome')}</h4>
                  <DetailRow 
                      label={t('clinic:userShiftIncomeDialog.totalCash')} 
-                     value={summary.total_cash}
+                     value={formatNumber(summary.total_cash)}
                      icon={Coins}
                      unit={t('dashboard:currencySymbol')}
                      valueClass="text-blue-600 dark:text-blue-400"
                  />
                  <DetailRow 
                      label={t('clinic:userShiftIncomeDialog.totalBank')} 
-                     value={summary.total_bank}
+                     value={formatNumber(summary.total_bank)}
                      icon={Landmark}
                      unit={t('dashboard:currencySymbol')}
                      valueClass="text-purple-600 dark:text-purple-400"
                  />
                  <DetailRow 
                      label={t('clinic:userShiftIncomeDialog.totalIncome')} 
-                     value={summary.total_income}
+                     value={formatNumber(summary.total_income)}
                      icon={DollarSign}
                      unit={t('dashboard:currencySymbol')}
                      valueClass="text-xl text-green-600 dark:text-green-500"

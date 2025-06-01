@@ -35,12 +35,14 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId 
     queryFn: () => getActiveDoctorShifts(currentClinicShift?.id || undefined),
     refetchInterval: 30000,
   });
+  console.log(can('list all_doctor_shifts'),'can list all doctor shifts',user,'user')
   //filter doctorShifts to show only the shifts that the user has access to
    const filteredDoctorShifts = doctorShifts?.filter((ds)=>{
-    if(can('view active_doctor_shifts')){
+   
+    if(can('list all_doctor_shifts')){
       return true
     }
-    return ds.user_id === user?.id
+    return ds.user_id === user?.id 
   })
   const checkScrollability = () => {
     if (scrollViewportRef.current) {

@@ -76,7 +76,7 @@
       "reasonOrServices": "سبب الزيارة / الخدمات"
     },
     "contextMenu": {
-      "copyToShift": "نسخ إلى مناوبة أخرى",
+      "copyToShift": "قص إلى مناوبة أخرى",
       "sendWhatsApp": "إرسال عبر واتساب",
       "showHistory": "عرض السجل السابق",
       "manageServiceCosts": "إدارة تكاليف الخدمات",
@@ -120,7 +120,8 @@
     "viewPatientWorkspace": "إخفاء التسجيل/عرض ساحة العمل",
     "manageDoctorShifts": "إدارة مناوبات الأطباء",
     "myShiftIncome": "ملخص دخل مناوبتي",
-    "viewShiftSummary": "عرض ملخص الوردية"
+    "viewShiftSummary": "عرض ملخص الوردية",
+    "financialReview": "المراجعة المالية"
   },
   "selectedPatientWorkspace": {
     "title": "تفاصيل المريض: {{patientName}}",
@@ -214,5 +215,22 @@
     "calculatedAmount": "المبلغ المحسوب",
     "selectDefinition": "اختر تعريف التكلفة",
     "costTypeReadOnly": "نوع التكلفة (للقراءة فقط)"
+  },
+  "doctorShiftReview": {
+    "dialogTitle": "مراجعة المناوبات الطبية",
+    "dialogDescription": "مراجعة وإثبات المناوبات والمستحقات المالية",
+    "totalEntitlement": "إجمالي المستحقات",
+    "cashEntitlement": "المستحقات النقدية",
+    "insuranceEntitlement": "مستحقات التأمين",
+    "proofingActions": "إجراءات الإثبات",
+    "proveCashRevenue": "إثبات الإيرادات النقدية",
+    "proveCashEntitlement": "إثبات المستحقات النقدية",
+    "proveInsuranceRevenue": "إثبات إيرادات التأمين",
+    "proveInsuranceEntitlement": "إثبات مستحقات التأمين",
+    "forDoctorShift": "للطبيب {{doctorName}} - مناوبة رقم {{shiftId}}",
+    "totalEntitlementIs": "إجمالي المستحقات",
+    "defaultCostDescription": "مستحقات الطبيب {{doctorName}} للمناوبة رقم {{shiftId}}",
+    "recordEntitlementCostTitle": "تسجيل مستحقات المناوبة",
+    "proofingStatusUpdated": "تم تحديث حالة الإثبات بنجاح"
   }
 }

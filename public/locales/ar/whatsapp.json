@@ -1,0 +1,17 @@
+{
+  "errors": {
+    "configMissingAdmin": "لم يتم تكوين إعدادات واتساب. يرجى الاتصال بمسؤول النظام.",
+    "patientPhoneMissingAdmin": "لم يتم تسجيل رقم هاتف للمريض. يرجى تحديث بيانات المريض أولاً."
+  },
+  "attachmentOptional": "مرفق (اختياري)",
+  "message": "الرسالة",
+  "noTemplate": "بدون قالب",
+  "templates": {
+    "greetingName": "تحية بسيطة",
+    "greetingContent": "عزيزي {{patientName}}،\n\nنتمنى أن تكون بخير.\n\nمع تحيات،\n{{clinicName}}",
+    "reminderName": "تذكير بالموعد",
+    "reminderContent": "عزيزي {{patientName}}،\n\nهذا تذكير بموعدك للزيارة رقم {{visitId}} في {{date}} الساعة {{time}}.\n\n{{clinicName}}",
+    "labResultsReadyName": "نتائج المختبر جاهزة",
+    "labResultsReadyContent": "عزيزي {{patientName}}،\n\nنود إعلامك أن نتائج فحوصات المختبر الخاصة بزيارتك رقم {{visitId}} جاهزة.\n\nيرجى مراجعة العيادة لاستلامها.\n\n{{clinicName}}"
+  }
+} 

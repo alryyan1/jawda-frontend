@@ -136,6 +136,7 @@
     },
     "monthlyServiceIncomeReport": {
       "title": "تقرير الدخل الشهري للخدمات",
+      "titleShort": "الدخل الشهري للخدمات",
       "totalDeposits": "إجمالي الإيداعات",
       "cashDeposits": "الإيداعات النقدية",
       "bankDeposits": "الإيداعات البنكية",

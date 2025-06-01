@@ -61,9 +61,13 @@
     },
     "whatsAppDialog": {
       "title": "إرسال عبر واتساب",
+      "titleShort": "إرسال واتساب",
       "description": "إرسال تفاصيل الزيارة عبر واتساب",
+      "descriptionTo": "إرسال رسالة واتساب إلى {{phone}}",
       "messageContent": "محتوى الرسالة",
-      "messagePlaceholder": "اكتب رسالتك هنا..."
+      "messagePlaceholder": "اكتب رسالتك هنا...",
+      "selectTemplate": "اختر قالب الرسالة",
+      "templatePlaceholder": "اختر قالباً..."
     },
     "historyDialog": {
       "title": "سجل زيارات المريض",

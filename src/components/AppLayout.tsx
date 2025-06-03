@@ -71,6 +71,7 @@ const mainNavItems: NavItem[] = [
   { to: '/schedules-appointments', labelKey: 'schedulesAppointments', icon: CalendarClock, permission: 'view doctor_schedules' }, // Or 'manage appointments'
   { to: '/patients', labelKey: 'patients', icon: Users, permission: 'list patients' },
   { to: '/doctors', labelKey: 'doctors', icon: Stethoscope, permission: 'list doctors' },
+  { to: '/analysis', labelKey: 'analysis', icon: FileBarChart2, permission: 'view analysis' },
 ];
 
 // Utility/Admin Navigation Items (typically at the bottom or in a separate group)

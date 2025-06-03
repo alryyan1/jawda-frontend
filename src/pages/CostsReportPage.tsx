@@ -67,6 +67,7 @@ import {
 import { getUsers } from "@/services/userService";
 import { getShiftsList } from "@/services/shiftService";
 import type { DateRange } from "react-day-picker";
+import { formatNumber } from "@/lib/utils";
 
 // Zod schema for filter form
 const getCostReportFilterSchema = (
@@ -489,16 +490,16 @@ const CostsReportPage: React.FC = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[130px]">
+                <TableHead className="w-[130px] text-center">
                   {t("reports:costsReport.table.date")}
                 </TableHead>
-                <TableHead>
+                <TableHead className="text-center">
                   {t("reports:costsReport.table.description")}
                 </TableHead>
-                <TableHead className="hidden md:table-cell">
+                <TableHead className="hidden md:table-cell text-center">
                   {t("reports:costsReport.table.category")}
                 </TableHead>
-                <TableHead className="hidden sm:table-cell">
+                <TableHead className="hidden sm:table-cell text-center">
                   {t("reports:costsReport.table.user")}
                 </TableHead>
                 <TableHead className="hidden lg:table-cell">
@@ -515,23 +516,23 @@ const CostsReportPage: React.FC = () => {
             <TableBody>
               {costs.map((cost: Cost) => (
                 <TableRow key={cost.id}>
-                  <TableCell className="text-xs">
+                  <TableCell className="text-xs text-center">
                     {cost.created_at
                       ? format(parseISO(cost.created_at), "Pp", {
                           locale: dateLocale,
                         })
                       : "-"}
                   </TableCell>
-                  <TableCell className="font-medium">
+                  <TableCell className="font-medium text-center">
                     {cost.description}
                   </TableCell>
-                  <TableCell className="hidden md:table-cell">
+                  <TableCell className="hidden md:table-cell text-center">
                     {cost.cost_category_name || "-"}
                   </TableCell>
-                  <TableCell className="hidden sm:table-cell">
+                  <TableCell className="hidden sm:table-cell text-center">
                     {cost.user_cost_name || "-"}
                   </TableCell>
-                  <TableCell className="hidden lg:table-cell">
+                  <TableCell className="hidden lg:table-cell text-center">
                     {cost.shift_name ||
                       (cost.shift_id ? `#${cost.shift_id}` : "-")}
                   </TableCell>
@@ -545,7 +546,7 @@ const CostsReportPage: React.FC = () => {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right font-semibold">
-                    {Number(cost.total_cost_amount).toFixed(2)}
+                    {formatNumber(cost.total_cost_amount)}
                   </TableCell>
                 </TableRow>
               ))}
@@ -554,22 +555,22 @@ const CostsReportPage: React.FC = () => {
           {summary && (
             <CardFooter className="flex flex-col items-end gap-1 border-t pt-3 text-sm">
               <div>
-                {t("reports:costsReport.totalCashPaid")}:{" "}
+                {t("reports:costsReport.totalCashPaid")}:
                 <span className="font-bold">
-                  {Number(summary.total_cash_paid).toFixed(2)}
+                  {formatNumber(summary.total_cash_paid)}
                 </span>
               </div>
               <div>
-                {t("reports:costsReport.totalBankPaid")}:{" "}
+                {t("reports:costsReport.totalBankPaid")}:
                 <span className="font-bold">
-                  {Number(summary.total_bank_paid).toFixed(2)}
+                  {formatNumber(summary.total_bank_paid)}
                 </span>
               </div>
               <Separator className="my-1 w-40 self-end" />
               <div className="font-bold text-md">
-                {t("reports:costsReport.grandTotalPaid")}:{" "}
+                {t("reports:costsReport.grandTotalPaid")}:
                 <span className="text-primary">
-                  {Number(summary.grand_total_paid).toFixed(2)}
+                  {formatNumber(summary.grand_total_paid)}
                 </span>
               </div>
             </CardFooter>

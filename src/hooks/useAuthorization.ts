@@ -15,6 +15,10 @@ export type PermissionName =
   // Dashboard & General
   | 'view dashboard'
   | 'view dashboard_summary'
+  //open financials shift
+  | 'open financials_shift'
+  //close financials shift
+  | 'close financials_shift'
 
   // User Management
   | 'list users'

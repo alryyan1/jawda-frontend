@@ -17,7 +17,10 @@
       "cash": "نقداً (من الصندوق)",
       "bank": "شبكة/بنك (من حساب البنك)",
       "addedSuccess": "تم تسجيل المصروف بنجاح!",
-      "addError": "فشل تسجيل المصروف."
+      "addError": "فشل تسجيل المصروف.",
+      "cashAmount": "المبلغ النقدي",
+      "bankAmount": "المبلغ البنكي",
+      "commentLabelOptional": "ملاحظات (اختياري)"
     },
     "costCategories": {
       "entityName": "فئة المصروفات",

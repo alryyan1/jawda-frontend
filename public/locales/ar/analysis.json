@@ -1,0 +1,27 @@
+{
+  "pageTitle": "تحليل أداء العيادة",
+  "applyFiltersButton": "تحديث البيانات",
+  "dateRangeRequiredError": "يرجى اختيار نطاق تاريخ صالح.",
+  "reportForPeriod": "تقرير للفترة: {{from}} إلى {{to}}",
+  "numberOfDays": "{{count}} يومًا",
+  "kpi": {
+    "totalIncome": "إجمالي الدخل",
+    "doctorsPresent": "عدد الأطباء الحاضرين",
+    "avgDailyIncome": "متوسط الدخل اليومي",
+    "avgPatientFrequency": "متوسط عدد المرضى يوميًا",
+    "visitsPerDay": "زيارات/يوم",
+    "totalCosts": "إجمالي التكاليف"
+  },
+  "topServices": {
+    "title": "الخدمات الأكثر طلبًا",
+    "description": "أكثر {{count}} خدمات طلبًا خلال الفترة.",
+    "requestCount": "عدد الطلبات",
+    "noData": "لا توجد بيانات عن الخدمات لهذه الفترة."
+  },
+  "mostFrequentDoctor": {
+    "title": "أنشط طبيب",
+    "description": "الطبيب الذي لديه أعلى عدد من المرضى خلال الفترة.",
+    "visitCount": "{{count}} مريض تمت معاينته",
+    "noData": "لا توجد بيانات عن نشاط الأطباء لهذه الفترة."
+  }
+}

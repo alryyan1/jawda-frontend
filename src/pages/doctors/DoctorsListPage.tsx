@@ -7,7 +7,7 @@ import type { Doctor } from '../../types/doctors';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Trash2, Edit, Loader2, Search } from 'lucide-react';
+import { MoreHorizontal, Trash2, Edit, Loader2, Search, ListChecks } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -15,6 +15,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useDebounce } from '@/hooks/useDebounce';
 import i18n from '@/i18n';
+import ManageDoctorServicesDialog from '@/components/doctors/ManageDoctorServicesDialog';
 
 interface ErrorWithMessage {
   message: string;
@@ -26,6 +27,37 @@ export default function DoctorsListPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 500);
+  const [dialogState, setDialogState] = useState<{
+    isOpen: boolean;
+    doctor: Doctor | null;
+  }>({
+    isOpen: false,
+    doctor: null
+  });
+
+  const handleManageDoctorServices = (doctor: Doctor) => {
+    setDialogState({
+      isOpen: true,
+      doctor
+    });
+  };
+
+  const handleDialogOpenChange = (open: boolean) => {
+    setDialogState(prev => ({
+      ...prev,
+      isOpen: open
+    }));
+    
+    // If dialog is closing, clear the doctor
+    if (!open) {
+      setTimeout(() => {
+        setDialogState(prev => ({
+          ...prev,
+          doctor: null
+        }));
+      }, 300); // Wait for dialog animation
+    }
+  };
 
   const { data: paginatedData, isLoading, error, isFetching } = useQuery({
     queryKey: ['doctors', currentPage, debouncedSearch],
@@ -156,6 +188,9 @@ export default function DoctorsListPage() {
                             </Link>
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleManageDoctorServices(doctor)} className="flex items-center w-full">
+      <ListChecks className="rtl:ml-2 ltr:mr-2 h-4 w-4" /> {t('doctors:manageServicesButton')}
+    </DropdownMenuItem>
                             <DropdownMenuItem
                             onClick={() => handleDelete(doctor.id)}
                             className="text-destructive focus:text-destructive flex items-center w-full"
@@ -199,6 +234,17 @@ export default function DoctorsListPage() {
             {t('common:pagination.next')}
           </Button>
         </div>
+      )}
+            {dialogState.doctor && (
+        <ManageDoctorServicesDialog
+          isOpen={dialogState.isOpen}
+          onOpenChange={handleDialogOpenChange}
+          doctor={dialogState.doctor}
+          onConfigurationUpdated={() => {
+            // Optional: Could refetch the main doctors list if the dialog shows a count of configured services
+            // queryClient.invalidateQueries({ queryKey: ['doctors', currentPage] });
+          }}
+        />
       )}
     </div>
   );

@@ -1,0 +1,46 @@
+{
+  "review": {
+    "dialogTitle": "مراجعة مناوبات الطبيب",
+    "dialogDescription": "تفاصيل مناوبات الطبيب",
+    "totalEntitlement": "إجمالي المستحقات",
+    "cashEntitlement": "المستحقات النقدية",
+    "insuranceEntitlement": "مستحقات التأمين",
+    "proofingActions": "إجراءات التدقيق",
+    "proveCashRevenue": "تدقيق الإيرادات النقدية",
+    "proveCashEntitlement": "تدقيق المستحقات النقدية",
+    "proveInsuranceRevenue": "تدقيق إيرادات التأمين",
+    "proveInsuranceEntitlement": "تدقيق مستحقات التأمين",
+    "proofingStatusUpdated": "تم تحديث حالة التدقيق بنجاح"
+  },
+  "table": {
+    "id": "رقم المناوبة",
+    "doctorName": "اسم الطبيب",
+    "startTime": "وقت البدء",
+    "endTime": "وقت الانتهاء",
+    "duration": "المدة",
+    "status": "الحالة",
+    "openedBy": "فتحت بواسطة",
+    "actions": "الإجراءات"
+  },
+  "filters": {
+    "user": "المستخدم",
+    "allUsers": "جميع المستخدمين",
+    "dateFrom": "من تاريخ",
+    "dateTo": "إلى تاريخ",
+    "searchDoctor": "بحث عن طبيب",
+    "searchPlaceholderName": "البحث بالاسم"
+  },
+  "common": {
+    "noDataAvailable": "لا توجد بيانات متاحة",
+    "loadingData": "جاري تحميل البيانات...",
+    "close": "إغلاق",
+    "actions": {
+      "openMenu": "القائمة"
+    },
+    "pagination": {
+      "previous": "السابق",
+      "next": "التالي",
+      "pageXOfY": "صفحة {{current}} من {{total}}"
+    }
+  }
+} 

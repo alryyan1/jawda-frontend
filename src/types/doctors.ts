@@ -113,3 +113,27 @@ export interface DoctorShift {
   is_examining: boolean; // Is the doctor currently with a patient in this shift
   patients_count: number; // Number of patients waiting or with this doctor in this shift
 }
+
+// src/types/doctors.ts
+// ... (existing Doctor, DoctorStripped, Specialist etc.) ...
+
+// Represents the doctor_services pivot table entry with service details
+export interface DoctorService {
+  doctor_service_id: number; // The ID from doctor_services table
+  doctor_id: number;
+  service_id: number;
+  service_name: string;
+  service_group_name?: string;
+  standard_price: number; // Standard price of the service for reference
+  percentage: number | null;
+  fixed: number | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// For the form in ManageDoctorServicesDialog
+export interface DoctorServiceFormData {
+  service_id: string; // From select
+  percentage?: string; // Input as string
+  fixed?: string;      // Input as string
+}

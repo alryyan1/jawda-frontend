@@ -50,6 +50,7 @@ import CostsReportPage from "./pages/CostsReportPage";
 import InsuranceAuditPage from "./pages/audit/InsuranceAuditPage";
 import AuditRecordPage from "./pages/audit/AuditRecordPage";
 import MonthlyServiceIncomeReportPage from "./pages/reports/MonthlyServiceIncomeReportPage";
+import AnalysisPage from "./pages/anaylsis/AnalysisPage";
 // import NotFoundPage from './pages/NotFoundPage'; // Optional: For 404 handling
 
 const AppointmentsPlaceholderPage: React.FC = () => (
@@ -90,6 +91,10 @@ const router = createBrowserRouter([
           {
             index: true, // Default route for '/' after login
             element: <HomePage />,
+          },
+           {
+            path: "analysis", // Or "/reports/analysis" if under reports
+            element: <AnalysisPage />,
           },
           {
             path: "dashboard", // Explicit dashboard route if needed, often same as index

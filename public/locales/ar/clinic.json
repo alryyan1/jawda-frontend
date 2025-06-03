@@ -231,6 +231,38 @@
     "totalEntitlementIs": "إجمالي المستحقات",
     "defaultCostDescription": "مستحقات الطبيب {{doctorName}} للمناوبة رقم {{shiftId}}",
     "recordEntitlementCostTitle": "تسجيل مستحقات المناوبة",
-    "proofingStatusUpdated": "تم تحديث حالة الإثبات بنجاح"
+    "proofingStatusUpdated": "تم تحديث حالة الإثبات بنجاح",
+    "error": {
+      "costExceedsEntitlement": "المبلغ المدخل يتجاوز المستحقات المتبقية"
+    }
+  },
+  "filters": {
+    "user": "المستخدم",
+    "allUsers": "جميع المستخدمين",
+    "status": "الحالة",
+    "statusOpen": "مفتوح",
+    "statusClosed": "مغلق",
+    "statusAll": "الكل",
+    "dateFrom": "من تاريخ",
+    "dateTo": "إلى تاريخ",
+    "searchDoctor": "بحث عن طبيب",
+    "searchPlaceholderName": "ابحث باسم الطبيب..."
+  },
+  "table": {
+    "doctorName": "اسم الطبيب",
+    "id": "الرقم",
+    "startTime": "وقت البدء"
+  },
+  "review": {
+    "dialogTitle": "مراجعة المالية للمناوبات",
+    "dialogDescription": "مراجعة وتدقيق المستحقات المالية لمناوبات الأطباء",
+    "totalEntitlement": "إجمالي المستحقات",
+    "cashEntitlement": "المستحقات النقدية",
+    "insuranceEntitlement": "مستحقات التأمين",
+    "proofingActions": "إجراءات التدقيق",
+    "proveCashRevenue": "تأكيد الإيرادات النقدية",
+    "proveCashEntitlement": "تأكيد المستحقات النقدية",
+    "proveInsuranceRevenue": "تأكيد إيرادات التأمين",
+    "proveInsuranceEntitlement": "تأكيد مستحقات التأمين"
   }
 }

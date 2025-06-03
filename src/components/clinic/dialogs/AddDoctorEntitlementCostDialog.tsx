@@ -16,7 +16,6 @@ import { Textarea } from '@/components/ui/textarea'; // For description/comment
 
 import { addCost } from '@/services/costService'; // Use existing cost service
 import { useAuth } from '@/contexts/AuthContext';
-import type { DoctorShiftWithFinancials } from './DoctorShiftFinancialReviewDialog';
 import type { CostFormData } from '@/types/finance';
 
 interface AddDoctorEntitlementCostDialogProps {

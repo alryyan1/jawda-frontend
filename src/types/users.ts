@@ -16,16 +16,36 @@ export interface UserShiftIncomeSummary {
   total_bank: number;
 }
 
+export interface Role {
+  id: number;
+  name: string;
+  guard_name: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface User {
+  id: number;
+  name: string;
+  username: string;
+  doctor_id?: number;
+  is_nurse: boolean;
+  roles?: Role[];
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface UserFormData {
   name: string;
   username: string;
-  // email?: string;
-  password?: string; // Optional on edit
+  password?: string;
   password_confirmation?: string;
-  doctor_id?: string | undefined; // From select
+  doctor_id?: string | number;
   is_nurse: boolean;
-  user_money_collector_type: 'lab' | 'company' | 'clinic' | 'all' | undefined; // For select
-  roles?: string[]; // Array of role names
+  roles: string[];
 }
-export const UserFormMode =  { CREATE : 'create', EDIT : 'edit' }
-export type UserFormMode = typeof UserFormMode[keyof typeof UserFormMode];
+
+export enum UserFormMode {
+  CREATE = 'create',
+  EDIT = 'edit'
+}

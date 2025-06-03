@@ -21,7 +21,9 @@
     "savingButton": "جارٍ الحفظ...",
     "roleSavedSuccess": "تم حفظ الدور بنجاح!",
     "roleSaveError": "فشل حفظ الدور.",
-    "noPermissionsAvailable": "لا توجد صلاحيات متاحة للاختيار."
+    "noPermissionsAvailable": "لا توجد صلاحيات متاحة للاختيار.",
+    "selectPermissions": "اختر الصلاحيات",
+    "searchPermissions": "ابحث عن صلاحية"
   },
   "deleteConfirmTitle": "تأكيد الحذف",
   "deleteConfirmText": "هل أنت متأكد أنك تريد حذف هذا الدور؟ سيتم إزالته من جميع المستخدمين.",
@@ -29,5 +31,6 @@
   "deletedSuccess": "تم حذف الدور بنجاح!",
   "deleteError": "خطأ أثناء حذف الدور.",
   "errorCannotDeleteCritical": "لا يمكن حذف هذا الدور الأساسي.",
-  "errorRoleHasUsers": "لا يمكن حذف هذا الدور لأنه مخصص لمستخدمين."
+  "errorRoleHasUsers": "لا يمكن حذف هذا الدور لأنه مخصص لمستخدمين.",
+  "access": "الوصول"
 }

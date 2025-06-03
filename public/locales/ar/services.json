@@ -8,6 +8,7 @@
   "loadingServices": "جارٍ تحميل الخدمات...",
   "errorFetchingServices": "خطأ في تحميل الخدمات: {{message}}",
   "noServicesFound": "لم يتم العثور على خدمات.",
+  "noServicesAvailableForSelection": "لا توجد خدمات متاحة للإضافة.",
    "addMoreServices": "إضافة المزيد من الخدمات",
   "validation": {
       "countMinOne": "الكمية يجب أن تكون 1 على الأقل."

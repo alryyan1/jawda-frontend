@@ -21,7 +21,10 @@ export const namespaces = [
   'services',
   'payments',
   'schedules',
-  'patients'
+  'patients',
+  'reports',
+  'finances',
+  'analysis'
 ] as const;
 export type Namespace = typeof namespaces[number];
 

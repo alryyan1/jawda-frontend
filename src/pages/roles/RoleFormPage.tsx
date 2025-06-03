@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Loader2, Search } from 'lucide-react';
+import { CloudCog, Loader2, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -144,7 +144,7 @@ const RoleFormPage: React.FC<RoleFormPageProps> = ({ mode }) => {
     
     return filtered;
   }, [groupedPermissions, searchTerm, t]);
-
+  console.log(groupedPermissions);  
   if (isEditMode && isLoadingRole) return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin" /> {t('common:loading')}</div>;
 
 

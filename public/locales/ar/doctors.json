@@ -17,6 +17,7 @@
     "companyPercentage": "نسبة التأمين",
     "staticWage": " الثابت"
   },
+  "manageServicesButton": "إدارة خدمات الطبيب",
   "form": {
     "nameLabel": "اسم الطبيب الكامل",
     "namePlaceholder": "أدخل اسم الطبيب",
@@ -47,5 +48,14 @@
   "deleteButton": "حذف",
   "cancelButton": "إلغاء",
   "deletedSuccess": "تم حذف الطبيب بنجاح!",
-  "deleteError": "خطأ أثناء حذف الطبيب."
+  "deleteError": "خطأ أثناء حذف الطبيب.",
+  "serviceConfig": {
+    "dialogTitle": "إدارة خدمات الطبيب: {{doctorName}}",
+    "dialogDescription": "تكوين وإدارة الخدمات المتاحة للطبيب ونسب الأرباح",
+    "percentage": "النسبة المئوية",
+    "fixedAmount": "المبلغ الثابت",
+    "addServiceConfig": "إضافة خدمة جديدة",
+    "addedSuccess": "تمت إضافة تكوين الخدمة بنجاح!",
+    "updatedSuccess": "تم تحديث تكوين الخدمة بنجاح!"
+  }
 }

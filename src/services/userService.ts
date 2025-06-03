@@ -16,7 +16,7 @@ export const getUsers = (
   filters: Record<string, any> = {}
 ): Promise<PaginatedUsersResponse> => {
   return apiClient
-    .get<PaginatedUsersResponse>(API_URL, { params: { page, ...filters } })
+    .get<PaginatedUsersResponse>('get-users', { params: { page, ...filters } })
     .then((res) => res.data);
 };
 

@@ -34,10 +34,7 @@ const getUserFormSchema = (t: Function, isEditMode: boolean) => z.object({
     ? z.string().optional() 
     : z.string(),
   doctor_id: z.string().optional(),
-  is_nurse: z.boolean().default(false),
-  user_money_collector_type: z.enum(['lab', 'company', 'clinic', 'all'], {
-    required_error: t('common:validation.required', { field: t('users:form.moneyCollectorTypeLabel')})
-  }),
+  is_nurse: z.boolean(),
   roles: z.array(z.string()).min(1, { message: t('users:validation.roleRequired', "At least one role is required.") }),
 }).refine((data) => {
   if (!data.password && !data.password_confirmation) return true;
@@ -47,7 +44,15 @@ const getUserFormSchema = (t: Function, isEditMode: boolean) => z.object({
   path: ["password_confirmation"],
 });
 
-type UserFormValues = z.infer<ReturnType<typeof getUserFormSchema>>;
+type FormData = {
+  name: string;
+  username: string;
+  password?: string;
+  password_confirmation?: string;
+  doctor_id?: string;
+  is_nurse: boolean;
+  roles: string[];
+};
 
 const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
   const { t } = useTranslation(['users', 'common']);
@@ -77,11 +82,15 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
     },  // Using the one from doctorService
   });
 
-  const form = useForm<UserFormValues>({
+  const form = useForm<FormData>({
     resolver: zodResolver(userFormSchema),
     defaultValues: {
-      name: '', username: '', password: '', password_confirmation: '',
-      doctor_id: undefined, is_nurse: false, user_money_collector_type: undefined,
+      name: '', 
+      username: '', 
+      password: '', 
+      password_confirmation: '',
+      doctor_id: undefined, 
+      is_nurse: false, 
       roles: [],
     },
   });
@@ -92,12 +101,11 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
       reset({
         name: userData.name,
         username: userData.username,
-        password: '', // Password fields are typically not pre-filled for edit
+        password: '',
         password_confirmation: '',
         doctor_id: userData.doctor_id ? String(userData.doctor_id) : undefined,
         is_nurse: userData.is_nurse,
-        user_money_collector_type: userData.user_money_collector_type,
-        roles: userData.roles?.map(role => role.name) || [], // Map roles to array of names
+        roles: userData.roles?.map(role => role.name) || [],
       });
     }
   }, [isEditMode, userData, reset]);
@@ -124,13 +132,12 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
     },
   });
 
-  const onSubmit = (data: UserFormValues) => {
+  const onSubmit = (data: FormData) => {
     const submissionData: UserFormData = {
       name: data.name,
       username: data.username,
       doctor_id: data.doctor_id || undefined,
       is_nurse: data.is_nurse,
-      user_money_collector_type: data.user_money_collector_type,
       roles: data.roles || [],
     };
     
@@ -145,13 +152,6 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
 
   const formIsSubmitting = mutation.isPending;
   const dataIsLoading = isLoadingUser || isFetchingUser || isLoadingRoles || isLoadingDoctors;
-
-  const moneyCollectorTypes = [
-    { value: 'lab', label: t('users:moneyCollectorTypes.lab') },
-    { value: 'company', label: t('users:moneyCollectorTypes.company') },
-    { value: 'clinic', label: t('users:moneyCollectorTypes.clinic') },
-    { value: 'all', label: t('users:moneyCollectorTypes.all') },
-  ];
 
   if (isEditMode && isLoadingUser) return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin" /> {t('common:loading')}</div>;
 
@@ -223,21 +223,9 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
                     <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={dataIsLoading || formIsSubmitting}>
                       <FormControl><SelectTrigger><SelectValue placeholder={t('users:form.selectDoctor')} /></SelectTrigger></FormControl>
                       <SelectContent>
-                        <SelectItem value=" ">{t('common:none')}</SelectItem> {/* Option for no doctor */}
+                        <SelectItem value=" ">{t('common:none')}</SelectItem>
                         {isLoadingDoctors ? <SelectItem value="loading_docs" disabled>{t('common:loading')}</SelectItem> :
                           doctorsList?.map(doc => <SelectItem key={doc.id} value={String(doc.id)}>{doc.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={control} name="user_money_collector_type" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t('users:form.moneyCollectorTypeLabel')}</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={dataIsLoading || formIsSubmitting}>
-                      <FormControl><SelectTrigger><SelectValue placeholder={t('users:form.selectMoneyCollectorType')} /></SelectTrigger></FormControl>
-                      <SelectContent>
-                        {moneyCollectorTypes.map(type => <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>)}
                       </SelectContent>
                     </Select>
                     <FormMessage />

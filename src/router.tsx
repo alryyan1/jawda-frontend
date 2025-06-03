@@ -51,6 +51,7 @@ import InsuranceAuditPage from "./pages/audit/InsuranceAuditPage";
 import AuditRecordPage from "./pages/audit/AuditRecordPage";
 import MonthlyServiceIncomeReportPage from "./pages/reports/MonthlyServiceIncomeReportPage";
 import AnalysisPage from "./pages/anaylsis/AnalysisPage";
+import BulkWhatsAppPage from "./pages/communication/BulkWhatsAppPage";
 // import NotFoundPage from './pages/NotFoundPage'; // Optional: For 404 handling
 
 const AppointmentsPlaceholderPage: React.FC = () => (
@@ -95,6 +96,10 @@ const router = createBrowserRouter([
            {
             path: "analysis", // Or "/reports/analysis" if under reports
             element: <AnalysisPage />,
+          },
+          {
+            path: "bulk-whatsapp",
+            element: <BulkWhatsAppPage />,
           },
           {
             path: "dashboard", // Explicit dashboard route if needed, often same as index

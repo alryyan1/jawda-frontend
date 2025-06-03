@@ -1,17 +1,37 @@
 {
   "errors": {
     "configMissingAdmin": "لم يتم تكوين إعدادات واتساب. يرجى الاتصال بمسؤول النظام.",
-    "patientPhoneMissingAdmin": "لم يتم تسجيل رقم هاتف للمريض. يرجى تحديث بيانات المريض أولاً."
+    "patientPhoneMissingAdmin": "لم يتم تسجيل رقم هاتف للمريض. يرجى تحديث بيانات المريض أولاً.",
+    "patientPhoneMissing": "رقم هاتف المريض غير موجود."
   },
-  "attachmentOptional": "مرفق (اختياري)",
   "message": "الرسالة",
   "noTemplate": "بدون قالب",
+  "bulk": {
+    "pageTitle": "الرسائل الجماعية عبر واتساب",
+    "filtersTitle": "فلاتر الجمهور المستهدف",
+    "filtersDescription": "حدد المعايير لاختيار المرضى للرسائل.",
+    "uniquePhonesOnly": "إرسال إلى أرقام الهواتف الفريدة فقط",
+    "fetchPatientsButton": "جلب المرضى",
+    "messageCompositionTitle": "إنشاء رسالة",
+    "messageContentLabel": "محتوى الرسالة",
+    "messagePlaceholder": "اكتب رسالتك هنا. استخدم {{patientName}} لاسم المريض.",
+    "sendIntervalLabel": "فاصل الإرسال (بالثواني)",
+    "patientListTitle": "قائمة المرضى (تم العثور على {{count}})",
+    "selectPatientsToSend": "حدد المرضى من القائمة لإدراجهم في الرسالة الجماعية.",
+    "selectedForSending": "{{count}} تم تحديدهم للإرسال",
+    "successfullySent": "{{count}} تم إرسالهم بنجاح",
+    "processing": "جارٍ المعالجة",
+    "startSendingButton": "ابدأ الإرسال",
+    "sendingProcessCompleted": "اكتملت عملية الإرسال.",
+    "noPatientsSelectedToSend": "لم يتم تحديد أي مرضى أو تم بالفعل معالجة جميع المحددين."
+  },
   "templates": {
-    "greetingName": "تحية بسيطة",
-    "greetingContent": "عزيزي {{patientName}}،\n\nنتمنى أن تكون بخير.\n\nمع تحيات،\n{{clinicName}}",
+    "greetingName": "تحية عامة",
+    "greetingContent": "عزيزي {{patientName}},\n\nنأمل أن تكون هذه الرسالة قد وصلتك وأنت بخير.\n\nمن {{clinicName}}.",
     "reminderName": "تذكير بالموعد",
-    "reminderContent": "عزيزي {{patientName}}،\n\nهذا تذكير بموعدك للزيارة رقم {{visitId}} في {{date}} الساعة {{time}}.\n\n{{clinicName}}",
-    "labResultsReadyName": "نتائج المختبر جاهزة",
-    "labResultsReadyContent": "عزيزي {{patientName}}،\n\nنود إعلامك أن نتائج فحوصات المختبر الخاصة بزيارتك رقم {{visitId}} جاهزة.\n\nيرجى مراجعة العيادة لاستلامها.\n\n{{clinicName}}"
-  }
-} 
+    "reminderContent": "عزيزي {{patientName}},\nهذه رسالة تذكير بموعدك في {{clinicName}} بتاريخ {{date}} في الساعة {{time}} للزيارة رقم {{visitId}}.\nشكرًا لك.",
+    "labResultsReadyName": "نتائج التحاليل جاهزة",
+    "labResultsReadyContent": "عزيزي {{patientName}},\nنتائج التحاليل الخاصة بك للزيارة رقم {{visitId}} جاهزة للاستلام في {{clinicName}}.\nيرجى زيارتنا في أقرب وقت ممكن."
+  },
+  "attachmentOptional": "إرفاق ملف (اختياري)"
+}

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
+@import './fonts.css';
 @import "tailwindcss";
 @import "tw-animate-css";
 

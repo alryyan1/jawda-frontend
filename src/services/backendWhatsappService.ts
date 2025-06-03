@@ -1,5 +1,7 @@
 // src/services/backendWhatsappService.ts
+import type { PatientStripped } from '@/types/patients';
 import apiClient from './api'; // Your internal API client
+import type { BulkMessageFilters } from '@/types/whatsapp';
 
 export interface BackendWhatsAppTextPayload {
   patient_id?: number;
@@ -39,3 +41,12 @@ export const sendBackendWhatsAppMedia = async (payload: BackendWhatsAppMediaPayl
 //   const response = await apiClient.get<{data: AppWhatsAppTemplate[]}>('/whatsapp/templates');
 //   return response.data.data;
 // };
+
+export interface FetchPatientsForBulkMessagePayload extends BulkMessageFilters {}
+
+export const fetchPatientsForBulkMessage = async (
+  filters: FetchPatientsForBulkMessagePayload
+): Promise<PatientStripped[]> => { // Backend should return a simple array, not paginated for this UI
+  const response = await apiClient.get<{ data: PatientStripped[] }>('/whatsapp/bulk-message-patients', { params: filters });
+  return response.data.data; 
+};

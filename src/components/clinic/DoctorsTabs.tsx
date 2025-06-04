@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area";
 import { ChevronLeft, ChevronRight, Loader2, Users } from 'lucide-react';
 import type { DoctorShift } from '@/types/doctors';
 import { getActiveDoctorShifts } from '@/services/clinicService';
@@ -18,9 +19,10 @@ import { useAuthorization } from '@/hooks/useAuthorization';
 interface DoctorsTabsProps {
   onShiftSelect: (shift: DoctorShift | null) => void;
   activeShiftId: number | null;
+  setSelectedPatientVisit: (visit: Visit | null) => void;
 }
 
-const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId }) => {
+const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId,setSelectedPatientVisit }) => {
   const { t, i18n } = useTranslation(['clinic', 'common']);
   const isRTL = i18n.dir() === 'rtl';
   const {can} = useAuthorization()
@@ -68,6 +70,7 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId 
 
   const handleScroll = (direction: 'left' | 'right') => {
     if (scrollViewportRef.current) {
+    // alert('scroll')
       const scrollAmount = 200;
       scrollViewportRef.current.scrollBy({
         left: direction === 'left' ? -scrollAmount : scrollAmount,
@@ -126,7 +129,7 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId 
         </h3> */}
 
         <div className="relative flex-grow flex items-center">
-          {canScrollLeft && (
+          
             <Button
               variant="ghost"
               size="icon"
@@ -139,74 +142,79 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId 
             >
               {isRTL ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
             </Button>
-          )}
+          
 
           <ScrollArea className="w-full h-full px-1">
-            <div 
-              ref={contentRef} 
-              className="flex space-x-2 rtl:space-x-reverse py-2 px-2 items-stretch gap-2"
+            <ScrollAreaPrimitive.Viewport
+              ref={scrollViewportRef}
+              className="focus-visible:ring-ring/50 size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:outline-1"
               onScroll={checkScrollability}
             >
-              <Button
-                variant={activeShiftId === null ? "secondary" : "outline"}
-                className="h-auto py-1.5 px-3 flex flex-col items-center justify-center  whitespace-nowrap min-w-[150px] sm:min-w-[80px] shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-primary shrink-0"
-                onClick={() => onShiftSelect(null)}
-                data-state={activeShiftId === null ? "active" : "inactive"}
+              <div 
+                ref={contentRef} 
+                className="flex space-x-2 rtl:space-x-reverse py-2 px-2 items-stretch gap-2"
               >
-                <Users className="h-4 w-4 mb-0.5"/>
-                <span className="text-[11px] sm:text-xs font-medium">{t('common:all')}</span>
-              </Button>
+                {/* <Button
+                  variant={activeShiftId === null ? "secondary" : "outline"}
+                  className="h-auto py-1.5 px-3 flex flex-col items-center justify-center  whitespace-nowrap min-w-[150px] sm:min-w-[80px] shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-primary shrink-0"
+                  onClick={() => onShiftSelect(null)}
+                  data-state={activeShiftId === null ? "active" : "inactive"}
+                >
+                  <Users className="h-4 w-4 mb-0.5"/>
+                  <span className="text-[11px] sm:text-xs font-medium">{t('common:all')}</span>
+                </Button> */}
 
-              {filteredDoctorShifts?.map((shift) => (
-                <Tooltip key={shift.id}>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant={activeShiftId === shift.id ? "secondary" : "outline"}
-                      className={cn(
-                        "h-auto py-1.5 cursor-pointer px-3 flex flex-col  items-center justify-center relative whitespace-nowrap min-w-[90px] sm:min-w-[100px] shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-primary shrink-0",
-                        shift.is_examining ? "border-blue-500 dark:border-blue-400 focus-visible:ring-blue-500" 
-                                           : "border-green-500 dark:border-green-400 focus-visible:ring-green-500",
-                        activeShiftId === shift.id && (shift.is_examining ? "bg-blue-500/10 dark:bg-blue-500/20 " : "bg-green-500/10 dark:bg-green-500/20 w-[200px]")
-                      )}
-                      onClick={() => onShiftSelect(shift)}
-                      data-state={activeShiftId === shift.id ? "active" : "inactive"}
-                    >
-                      <div className="flex items-center mb-0.5">
-                     
-                        <span className="text-xs font-medium " title={shift.doctor_name}>
-                          {shift.doctor_name}
-                        </span>
-                      </div>
-                      <div className="flex items-center text-[10px] text-muted-foreground gap-1">
-                        {shift.patients_count > 0 && (
-                          <Badge variant="secondary" className="px-1.5 py-0 text-[9px] h-4 leading-tight">
-                            {shift.patients_count}
-                          </Badge>
+                {filteredDoctorShifts?.map((shift) => (
+                  <Tooltip key={shift.id}>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant={activeShiftId === shift.id ? "secondary" : "outline"}
+                        className={cn(
+                          "h-auto py-1.5 cursor-pointer px-3 flex flex-col  items-center justify-center relative whitespace-nowrap min-w-[90px] sm:min-w-[100px] shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-primary shrink-0",
+                          shift.is_examining ? "border-blue-500 dark:border-blue-400 focus-visible:ring-blue-500" 
+                                             : "border-green-500 dark:border-green-400 focus-visible:ring-green-500",
+                          activeShiftId === shift.id && (shift.is_examining ? "bg-blue-500/10 dark:bg-blue-500/20 " : "bg-green-500/10 dark:bg-green-500/20 w-[200px]")
                         )}
-                        <Badge 
-                          variant="outline" 
-                          className={cn("px-1.5 py-0 text-[9px] h-4 leading-tight",
-                            shift.is_examining ? "border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-500/10" 
-                                               : "border-green-500 text-green-600 dark:text-green-400 bg-green-500/10"
+                        onClick={() => onShiftSelect(shift)}
+                        data-state={activeShiftId === shift.id ? "active" : "inactive"}
+                      >
+                        <div className="flex items-center mb-0.5">
+                       
+                          <span className="text-xs font-medium " title={shift.doctor_name}>
+                            {shift.doctor_name}
+                          </span>
+                        </div>
+                        <div className="flex items-center text-[10px] text-muted-foreground gap-1">
+                          {shift.patients_count > 0 && (
+                            <Badge variant="secondary" className="px-1.5 py-0 text-[9px] h-4 leading-tight bg-blue-400">
+                              {shift.patients_count}
+                            </Badge>
                           )}
-                        >
-                          {shift.is_examining ? t('clinic:doctorsTabs.examining') : t('clinic:doctorsTabs.free')}
-                        </Badge>
-                      </div>
-                    </Button>
-                  </TooltipTrigger>
-                  {shift.doctor_specialist_name && (
-                    <TooltipContent>
-                      <p>{t('doctors:table.specialist')}: {shift.doctor_specialist_name}</p>
-                    </TooltipContent>
-                  )}
-                </Tooltip>
-              ))}
-            </div>
+                          {/* <Badge 
+                            variant="outline" 
+                            className={cn("px-1.5 py-0 text-[9px] h-4 leading-tight",
+                              shift.is_examining ? "border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-500/10" 
+                                                 : "border-green-500 text-green-600 dark:text-green-400 bg-green-500/10"
+                            )}
+                          >
+                            {shift.is_examining ? t('clinic:doctorsTabs.examining') : t('clinic:doctorsTabs.free')}
+                          </Badge> */}
+                        </div>
+                      </Button>
+                    </TooltipTrigger>
+                    {shift.doctor_specialist_name && (
+                      <TooltipContent>
+                        <p>{t('doctors:table.specialist')}: {shift.doctor_specialist_name}</p>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                ))}
+              </div>
+            </ScrollAreaPrimitive.Viewport>
             <ScrollBar orientation="horizontal" className="h-2" />
           </ScrollArea>
 
-          {canScrollRight && (
+        
             <Button
               variant="ghost"
               size="icon"
@@ -219,7 +227,7 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId 
             >
               {isRTL ? <ChevronLeft className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
             </Button>
-          )}
+          
         </div>
       </div>
     </TooltipProvider>

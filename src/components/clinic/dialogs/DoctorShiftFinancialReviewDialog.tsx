@@ -30,6 +30,7 @@ import { formatNumber } from '@/lib/utils';
 import type { DoctorShiftReportItem } from '@/types/reports';
 import { updateDoctorShiftProofingFlags } from '@/services/doctorShiftService';
 import { useAuthorization } from '@/hooks/useAuthorization'; // For permission check
+import { webUrl } from '@/pages/constants';
 
 // Combine DoctorShiftReportItem with its full financial summary
 interface DoctorShiftWithFinancials extends DoctorShiftReportItem {
@@ -285,6 +286,10 @@ const DoctorShiftFinancialReviewDialog: React.FC<DoctorShiftFinancialReviewDialo
                           >
                             {isDownloadingPdfId === ds.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileText className="h-3 w-3" />}
                           </Button>
+                          {/* reports/clinic-report-old/pdf */}
+                          <a  size="xs" className="h-6 px-1.5 py-0.5 text-[10px]"  href={`${webUrl}reports/clinic-report-old/pdf?doctor_shift_id=${ds.id}`}>
+                            {t('reports:clinicReportOldPdf')}
+                          </a>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="outline" size="xs" className="h-6 px-1.5 py-0.5 text-[10px]">

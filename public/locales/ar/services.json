@@ -56,7 +56,8 @@
   "noAvailableServices": "لا توجد خدمات متاحة للإضافة.",
   "requestedServicesTitle": "الخدمات المطلوبة لهذه الزيارة",
   "noServicesRequestedYet": "لم يتم طلب أي خدمات لهذه الزيارة بعد.",
-
+  "allServices": "جميع الخدمات",
+  "selectServicePlaceholder": "ابحث أو اختر خدمة...",
   "status": {
     "pending": "قيد الانتظار",
     "paid": "مدفوعة",

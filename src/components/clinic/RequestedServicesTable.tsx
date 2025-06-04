@@ -132,8 +132,8 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
       setEditingRowId(null);
       setCurrentEditData({ count: 1, discount_per: 0, endurance: 0 });
     },
-    onError: (error: Error) =>
-      toast.error(error.message || t("common:error.updateFailed")),
+    onError: (error: AxiosError) =>
+      toast.error(error.response?.data?.message || t("common:error.updateFailed")),
   });
 
   const removeMutation = useMutation({

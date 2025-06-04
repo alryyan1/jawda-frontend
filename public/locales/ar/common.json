@@ -15,6 +15,7 @@
   "exportExcel": "تصدير Excel",
   "noResultsFound": "لم يتم العثور على نتائج",
   "noDataAvailable": "لا توجد بيانات متاحة",
+  "receiptPreviewTitle": "عرض الإيصال",
   "by": "بواسطة",
   "datePicker": {
     "pickDateRange": "اختر نطاق التاريخ",
@@ -262,5 +263,10 @@
   "user": "المستخدم",
   "dateFrom": "من تاريخ",
   "dateTo": "إلى تاريخ",
-  "searchDoctor": "بحث عن طبيب"
+  "searchDoctor": "بحث عن طبيب",
+  "defaultClinicName": "اسم العيادة الافتراضي",
+  "dateRange": "نطاق التاريخ",
+  "selectDoctorPlaceholder": "اختر الطبيب",
+  "allDoctors": "جميع الأطباء",
+  "download": "تحميل الإيصال"
 }

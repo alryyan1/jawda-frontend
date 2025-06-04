@@ -25,6 +25,8 @@
     "actions": "الإجراءات"
   }
 },
+"clinicReportOldPdf": "تقرير العيادة (PDF قديم)"
+,
 "doctorShiftFinancialSummary": {
   "dialogTitle": "ملخص مالي لمناوبة الطبيب: {{doctorName}}",
   "shiftDetails": "تفاصيل المناوبة",

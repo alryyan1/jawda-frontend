@@ -6,6 +6,9 @@
   "loadingDoctors": "جارٍ تحميل قائمة الأطباء...",
   "errorFetchingDoctors": "خطأ في تحميل قائمة الأطباء: {{message}}",
   "noDoctorsFound": "لم يتم العثور على أطباء.",
+  "specialist": "الاختصاص",
+  "selectSpecialistPlaceholder": "اختر اختصاصًا",
+  "allSpecialists": "جميع الاختصاصات",
   "table": {
     "id": "المعرف",
     "name": "الاسم",
@@ -16,6 +19,11 @@
     "cashPercentage": "نسبة الكاش",
     "companyPercentage": "نسبة التأمين",
     "staticWage": " الثابت"
+  },
+  "doctor": {
+    "specialist": "التخصص",
+    "selectSpecialistPlaceholder": "اختر التخصص",
+    "allSpecialists": "جميع التخصصات"
   },
   "manageServicesButton": "إدارة خدمات الطبيب",
   "form": {
@@ -49,6 +57,7 @@
   "cancelButton": "إلغاء",
   "deletedSuccess": "تم حذف الطبيب بنجاح!",
   "deleteError": "خطأ أثناء حذف الطبيب.",
+  
   "serviceConfig": {
     "dialogTitle": "إدارة خدمات الطبيب: {{doctorName}}",
     "dialogDescription": "تكوين وإدارة الخدمات المتاحة للطبيب ونسب الأرباح",

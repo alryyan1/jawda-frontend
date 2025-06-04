@@ -121,7 +121,15 @@
     "manageDoctorShifts": "إدارة مناوبات الأطباء",
     "myShiftIncome": "ملخص دخل مناوبتي",
     "viewShiftSummary": "عرض ملخص الوردية",
-    "financialReview": "المراجعة المالية"
+    "financialReview": "المراجعة المالية",
+    "doctorFinder": "البحث عن طبيب",
+    "findDoctor": "البحث عن طبيب"
+  },
+  "doctorFinder": {
+    "title": "البحث عن طبيب",
+    "description": "يمكنك العثور على طبيب حسب الاختصاص أو المناوبة الحالية.",
+    "allActiveShiftsTab": "جميع المناوبات النشطة",
+    "bySpecialistTab": "حسب الاختصاص"
   },
   "selectedPatientWorkspace": {
     "title": "تفاصيل المريض: {{patientName}}",

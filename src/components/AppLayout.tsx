@@ -73,7 +73,7 @@ const mainNavItems: NavItem[] = [
   { to: '/patients', labelKey: 'patients', icon: Users, permission: 'list patients' },
   { to: '/doctors', labelKey: 'doctors', icon: Stethoscope, permission: 'list doctors' },
   { to: '/analysis', labelKey: 'analysis', icon: FileBarChart2, permission: 'view analysis' },
-  { to: '/bulk-whatsapp', labelKey: 'bulkWhatsApp', icon: MessageCircle, permission: 'send bulk whatsapp' },
+  // { to: '/bulk-whatsapp', labelKey: 'bulkWhatsApp', icon: MessageCircle, permission: 'send bulk whatsapp' },
 ];
 
 // Utility/Admin Navigation Items (typically at the bottom or in a separate group)

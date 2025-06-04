@@ -17,6 +17,7 @@ import {
   ReceiptText,
   BarChart3,
   FilePieChart,
+  UserSearch,
 } from "lucide-react"; // UsersRound for manage doctor shifts
 import ManageDoctorShiftsDialog from "./ManageDoctorShiftsDialog";
 import { cn } from "@/lib/utils";
@@ -26,15 +27,22 @@ import { Separator } from "@radix-ui/react-separator";
 import { useAuth } from "@/contexts/AuthContext";
 import ShiftSummaryDialog from "./ShiftSummaryDialog"; // Make sure this component exists
 import DoctorShiftFinancialReviewDialog from "./dialogs/DoctorShiftFinancialReviewDialog";
+import DoctorFinderDialog from "./dialogs/DoctorFinderDialog";
+import type { DoctorShift } from "@/types/doctors";
  
 interface ActionsPaneProps {
   showRegistrationForm: boolean;
   onToggleRegistrationForm: () => void;
+  onDoctorShiftSelectedFromFinder: (shift: DoctorShift) => void;
+  onOpenDoctorFinderDialog: () => void; // NEW PROP to open the dialog controlled by ClinicPage
+
 }
 
 const ActionsPane: React.FC<ActionsPaneProps> = ({
   showRegistrationForm,
   onToggleRegistrationForm,
+  onDoctorShiftSelectedFromFinder,
+  onOpenDoctorFinderDialog, // NEW PROP to open the dialog controlled by ClinicPage
 }) => {
   const { t, i18n } = useTranslation(["clinic", "common", "finances"]);
   // const { can } = useAuthorization(); // For permission checks
@@ -48,7 +56,7 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
   const canRecordCosts = true; // can('record costs')
   const [showShiftSummaryDialog, setShowShiftSummaryDialog] = useState(false);
   const [isFinancialReviewDialogOpen, setIsFinancialReviewDialogOpen] = useState(false);
-
+  const [isDoctorFinderOpen, setIsDoctorFinderOpen] = useState(false); // NEW
   return (
     <TooltipProvider delayDuration={200}>
       <aside
@@ -113,6 +121,23 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
              </TooltipContent>
          </Tooltip>
         )}
+         {/* NEW DOCTOR FINDER BUTTON */}
+         <Tooltip>
+            <TooltipTrigger asChild>
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="w-11 h-11" 
+                    onClick={onOpenDoctorFinderDialog} // Use the prop here
+                    aria-label={t('clinic:actionsPane.findDoctor')}
+                >
+                    <UserSearch className="h-5 w-5" />
+                </Button>
+            </TooltipTrigger>
+            <TooltipContent side={i18n.dir() === 'rtl' ? 'left' : 'right'}>
+                <p>{t('clinic:actionsPane.findDoctor')}</p>
+            </TooltipContent>
+        </Tooltip>
         {canManageDoctorShifts && (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -243,6 +268,7 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
         isOpen={isFinancialReviewDialogOpen}
         onOpenChange={setIsFinancialReviewDialogOpen}
       />
+    
     </TooltipProvider>
   );
 };

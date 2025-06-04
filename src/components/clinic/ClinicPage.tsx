@@ -1,5 +1,5 @@
 // src/pages/ClinicPage.tsx
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { cn } from "@/lib/utils"; // For conditional class names
@@ -17,6 +17,7 @@ import type { DoctorShift } from '@/types/doctors'; // Assuming a DoctorShift ty
 import ActionsPane from './ActionsPane';
 import SelectedPatientWorkspace from './SelectedPatientWorkspace';
 import { useAuth } from '@/contexts/AuthContext';
+import DoctorFinderDialog from './dialogs/DoctorFinderDialog';
 
 const ClinicPage: React.FC = () => {
   const { t, i18n } = useTranslation(['clinic', 'common']);
@@ -27,7 +28,40 @@ const ClinicPage: React.FC = () => {
   const [selectedPatientVisit, setSelectedPatientVisit] = useState<{ patient: Patient; visitId: number } | null>(null);
   const [activeDoctorShift, setActiveDoctorShift] = useState<DoctorShift | null>(null); // For DoctorsTabs interaction
   const [globalSearchTerm, setGlobalSearchTerm] = useState('');
+ // NEW CALLBACK for DoctorFinderDialog
 
+// NEW: State for DoctorFinderDialog visibility, now controlled by F9 too
+const [isDoctorFinderDialogOpen, setIsDoctorFinderDialogOpen] = useState(false);
+
+const handleDoctorShiftSelectedFromFinder = useCallback((shift: DoctorShift) => {
+  setActiveDoctorShift(shift);
+  setIsDoctorFinderDialogOpen(false); // Close dialog after selection
+  // If registration form is not the primary focus after finder, you might show it:
+  // if (!showRegistrationForm) {
+  //   setShowRegistrationForm(true);
+  //   setSelectedPatientVisit(null);
+  // }
+  // Or focus on patient registration name input if form is already visible
+  // This depends on desired UX flow after selecting a doctor via F9
+}, [/* showRegistrationForm, setShowRegistrationForm, setSelectedPatientVisit */]);
+
+// NEW: useEffect for F9 keyboard shortcut
+useEffect(() => {
+  const handleKeyDown = (event: KeyboardEvent) => {
+    if (event.key === 'F9') {
+      event.preventDefault(); // Prevent default F9 browser behavior (if any)
+      setIsDoctorFinderDialogOpen(prev => !prev); // Toggle the dialog
+    }
+  };
+
+  // Add event listener when the component mounts
+  document.addEventListener('keydown', handleKeyDown);
+
+  // Clean up event listener when the component unmounts
+  return () => {
+    document.removeEventListener('keydown', handleKeyDown);
+  };
+}, []); // Empty dependency array means this effect runs once on mount and cleans up on unmount
   const handlePatientRegistered = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['activePatients', activeDoctorShift?.id /* or global */] });
     // Optionally hide form after registration, or keep it open for next one
@@ -48,7 +82,10 @@ const ClinicPage: React.FC = () => {
   };
   
   const isRTL = i18n.dir() === 'rtl';
-
+  const onShiftSelect = (shift: DoctorShift) => {
+    setActiveDoctorShift(shift);
+    setSelectedPatientVisit(null); // Clear selected patient
+  }
   // Dynamic grid layout based on visibility states
   // This uses CSS Grid for flexible layout
   const gridTemplateColumns = showRegistrationForm 
@@ -60,9 +97,11 @@ const ClinicPage: React.FC = () => {
     <div className="flex flex-col h-screen bg-muted/20 dark:bg-background"> {/* Full screen height */}
       {/* Top Section: Doctors Tabs & Global Search */}
       <header className="flex-shrink-0 h-[100px] p-3 border-b bg-card flex items-center gap-4">
-        <div className="flex-grow w-2/3 h-full"> {/* Doctors Tabs Area */}
+        <div className="flex-grow w-[200px] h-full"> {/* Doctors Tabs Area */}
       <DoctorsTabs 
-            onShiftSelect={setActiveDoctorShift} 
+      setSelectedPatientVisit={setSelectedPatientVisit}
+       
+            onShiftSelect={onShiftSelect} 
             activeShiftId={activeDoctorShift?.id || null} 
           />
         </div>
@@ -95,6 +134,8 @@ const ClinicPage: React.FC = () => {
          <ActionsPane 
             showRegistrationForm={showRegistrationForm}
             onToggleRegistrationForm={toggleRegistrationForm}
+            onOpenDoctorFinderDialog={() => setIsDoctorFinderDialogOpen(true)} 
+
         />
 
 
@@ -144,13 +185,20 @@ const ClinicPage: React.FC = () => {
             )}
           >
             <SelectedPatientWorkspace
+             
               doctorvisit={selectedPatientVisit}
               visitId={selectedPatientVisit.visitId}
               onClose={() => setSelectedPatientVisit(null)} // Optional: way to close this panel
             />
+      
           </section>
         )}
       </div>
+      <DoctorFinderDialog
+        isOpen={isDoctorFinderDialogOpen}
+        onOpenChange={setIsDoctorFinderDialogOpen}
+        onDoctorShiftSelect={handleDoctorShiftSelectedFromFinder}
+      />
       {/* Toaster for notifications */}
     </div>
   );

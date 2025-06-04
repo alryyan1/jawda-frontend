@@ -18,12 +18,15 @@ import {
   Microscope,
   AlertTriangle,
   Receipt,
+  PrinterIcon,
 } from "lucide-react";
 
 import ServicesRequestComponent from "./ServicesRequestComponent";
 import LabRequestComponent from "./LabRequestComponent";
 import { toast } from "sonner";
 import { downloadThermalReceiptPdf } from "@/services/reportService";
+import apiClient from "@/services/api";
+import PdfPreviewDialog from "../common/PdfPreviewDialog";
 
 interface SelectedPatientWorkspaceProps {
   initialPatient: Patient;
@@ -36,7 +39,6 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
   visitId,
   onClose,
 }) => {
-  const [isPrintingReceipt, setIsPrintingReceipt] = useState(false);
   const { t } = useTranslation([
     "clinic",
     "common",
@@ -44,7 +46,7 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
     "patients",
   ]);
   const visitQueryKey = ["doctorVisit", visitId];
-
+  const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false);
   const {
     data: visit,
     isLoading,
@@ -56,7 +58,41 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
   });
 
   const patient = visit?.patient || initialPatient;
-  // console.log('doctorvisit', doctorvisit);
+  // console.log('doctorvisit', doctorvisit);const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [pdfFileName, setPdfFileName] = useState('receipt.pdf');
+
+
+  const handlePrintReceipt = async () => {
+    if (!visit) return;
+    setIsGeneratingPdf(true);
+    setPdfUrl(null); // Clear previous URL
+    setIsPdfPreviewOpen(true); // Open dialog to show loader
+
+    try {
+      const response = await apiClient.get(
+        `/visits/${visit.id}/thermal-receipt/pdf`, 
+        { responseType: 'blob' }
+      );
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const objectUrl = URL.createObjectURL(blob);
+      setPdfUrl(objectUrl);
+      // Construct a more descriptive filename
+      const patientNameSanitized = visit.patient.name.replace(/[^A-Za-z0-9\-\_]/g, '_');
+      setPdfFileName(`Receipt_Visit_${visit.id}_${patientNameSanitized}.pdf`);
+
+    } catch (error: any) {
+      console.error("Error generating PDF receipt:", error);
+      toast.error(t('common:error.generatePdfFailed'), {
+        description: error.response?.data?.message || error.message
+      });
+      setIsPdfPreviewOpen(false); // Close dialog on error
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
   if (isLoading && !visit) {
     return (
       <div className="flex flex-col h-full items-center justify-center bg-background dark:bg-card p-6">
@@ -110,44 +146,7 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
     );
   }
 
-  const handlePrintReceipt = async () => {
-    if (!visitId) {
-      toast.error(t("common:error.noVisitId"));
-      return;
-    }
-    setIsPrintingReceipt(true);
-    try {
-      const blob = await downloadThermalReceiptPdf(visitId);
-      // For thermal printers, direct print is often desired.
-      // This requires browser print dialog or specific thermal printer web API/SDK.
-      // For now, we'll open it in a new tab for preview/manual print.
-      const url = window.URL.createObjectURL(blob);
-      const pdfWindow = window.open(url);
-      if (pdfWindow) {
-        pdfWindow.onload = () => {
-          // Wait for PDF to load in new tab
-          // pdfWindow.print(); // This might trigger print dialog
-          // pdfWindow.onafterprint = () => pdfWindow.close(); // Close after print (might be blocked)
-        };
-      } else {
-        toast.error(t("common:error.popupBlocked"));
-      }
-      // For direct download (less common for receipts):
-      // const a = document.createElement('a');
-      // a.href = url;
-      // a.download = `receipt_visit_${visitId}.pdf`;
-      // document.body.appendChild(a);
-      // a.click();
-      // window.URL.revokeObjectURL(url);
-      // a.remove();
-      // toast.success(t('common:receiptGenerated'));
-    } catch (error) {
-      console.error("Failed to generate receipt:", error);
-      toast.error(t("common:error.pdfGeneratedError"));
-    } finally {
-      setIsPrintingReceipt(false);
-    }
-  };
+ 
 
   return (
     <div className="flex flex-col h-full bg-background dark:bg-card shadow-xl">
@@ -165,9 +164,7 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
               <Microscope className="h-4 w-4 ltr:mr-1 rtl:ml-1" />
               {t("clinic:tabs.lab")}
             </TabsTrigger>
-            <Button variant="outline" size="sm" className="w-full justify-start text-xs" onClick={handlePrintReceipt} disabled={isPrintingReceipt /* || !visitFullyPaid */}>
-              <Receipt className="ltr:mr-2 rtl:ml-2 h-3.5 w-3.5"/> {t('common:printReceipt', "Print Receipt")}
-            </Button>
+           
           </TabsList>
         </ScrollArea>
 
@@ -175,6 +172,12 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
           value="services"
           className="flex-grow overflow-y-auto p-3 sm:p-4 focus-visible:ring-0 focus-visible:ring-offset-0"
         >
+            <div className="p-2 border-b flex justify-end">
+        <Button onClick={handlePrintReceipt} variant="outline" size="sm" disabled={isGeneratingPdf  || !visit}>
+          {isGeneratingPdf ? <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2"/> : <PrinterIcon className="h-4 w-4 ltr:mr-2 rtl:ml-2"/>}
+          {t('common:printReceipt')}
+        </Button>
+      </div>
           <ServicesRequestComponent patientId={patient.id} visit={visit} visitId={visit.id} />
         </TabsContent>
 
@@ -185,6 +188,20 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
           <LabRequestComponent visitId={visit.id} />
         </TabsContent>
       </Tabs>
+      <PdfPreviewDialog
+        isOpen={isPdfPreviewOpen}
+        onOpenChange={(open) => {
+            setIsPdfPreviewOpen(open);
+            if (!open && pdfUrl) { // Clean up URL when dialog is manually closed
+                URL.revokeObjectURL(pdfUrl);
+                setPdfUrl(null);
+            }
+        }}
+        pdfUrl={pdfUrl}
+        isLoading={isGeneratingPdf && !pdfUrl} // Show loader while generating before URL is ready
+        title={t('common:receiptPreviewTitle', {visitId: visit?.id})}
+        fileName={pdfFileName}
+      />
     </div>
   );
 };

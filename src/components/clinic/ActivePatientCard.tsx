@@ -42,6 +42,7 @@ import CopyVisitToShiftDialog from "./CopyVisitToShiftDialog";
 import SendWhatsAppDialog from "./SendWhatsAppDialog";
 import PatientVisitHistoryDialog from "./PatientVisitHistoryDialog";
 import CreateNewVisitForPatientDialog from "./CreateNewVisitForPatientDialog";
+import Badge  from '@mui/material/Badge'; // MUI Badge
 
 const VISIT_STATUSES_FOR_DROPDOWN = [
   "waiting",
@@ -314,6 +315,21 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
               "common:queueNumberShort"
             )}${queueNumberOrVisitId}`}
           >
+                 <Badge 
+                badgeContent={visit.requested_services_count > 0 ? visit.requested_services_count : null} 
+                color="secondary" // Or "primary", "error"
+                anchorOrigin={{ vertical: 'top', horizontal: 'left' }} // Adjust badge position
+                sx={{ // MUI sx prop for custom styling
+                    '& .MuiBadge-badge': { 
+                        fontSize: '0.6rem', 
+                        height: '14px', 
+                        minWidth: '14px', 
+                        padding: '0 4px',
+                        // Adjust position if needed relative to the button
+                        // transform: 'scale(0.9) translate(0%, -10%)', 
+                    }
+                }}
+              >
             <Button
               variant="ghost"
               size="icon"
@@ -326,7 +342,7 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
             >
               <UserCircle className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
             </Button>
-
+            </Badge>
             <div
               className={cn(
                 "flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded text-white text-xs sm:text-sm font-bold ltr:mr-2 rtl:ml-2 shadow",

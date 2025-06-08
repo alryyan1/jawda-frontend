@@ -160,7 +160,7 @@ const MonthlyServiceIncomeReportPage: React.FC = () => {
       {reportData && !isLoading && (
         <>
           <CardDescription className="text-center text-sm">
-            {t('reports:reportForPeriod')}: {reportData.report_period.month_name}
+            {t('reports:reportForPeriod',{from: reportData.report_period.from, to: reportData.report_period.to})}
           </CardDescription>
           <Card>
             <Table>

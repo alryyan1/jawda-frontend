@@ -86,6 +86,7 @@ const RegisterPage: React.FC = () => {
     } catch (error: any) {
       let errorMessage = t('register:registrationFailedDefault');
       if (error.response && error.response.data) {
+          
         if (error.response.data.errors) {
           // Handle Laravel validation errors
           const fieldErrors = Object.entries(error.response.data.errors)

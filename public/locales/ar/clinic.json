@@ -59,6 +59,7 @@
       "reasonPlaceholder": "أدخل سبب الزيارة...",
       "createButton": "إنشاء زيارة"
     },
+    "printReclaimsReport": "طباعة التقرير",
     "whatsAppDialog": {
       "title": "إرسال عبر واتساب",
       "titleShort": "إرسال واتساب",
@@ -271,6 +272,7 @@
     "proveCashRevenue": "تأكيد الإيرادات النقدية",
     "proveCashEntitlement": "تأكيد المستحقات النقدية",
     "proveInsuranceRevenue": "تأكيد إيرادات التأمين",
-    "proveInsuranceEntitlement": "تأكيد مستحقات التأمين"
+    "proveInsuranceEntitlement": "تأكيد مستحقات التأمين",
+    "printReclaimsReport": "طباعة التقرير"
   }
 }

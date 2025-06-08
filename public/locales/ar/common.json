@@ -96,9 +96,11 @@
     "dateFromAfterTo": "تاريخ البداية يجب أن يكون قبل تاريخ النهاية",
     "minLength": "يجب أن يكون {{count}} حرف على الأقل"
   },
+  "pagination.pageXOfY": "صفحة {{current}} من {{total}}",
   "form": {
     "fillDetails": "الرجاء ملء التفاصيل أدناه."
   },
+  "pageXOfY": "صفحة {{current}} من {{total}}",
   "error": {
     "generic": "حدث خطأ غير متوقع.",
     "loadListsFailed": "فشل تحميل القوائم.",

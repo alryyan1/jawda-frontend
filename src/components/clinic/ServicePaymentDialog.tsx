@@ -31,6 +31,7 @@ interface ServicePaymentDialogProps {
   visitId: number;
   currentClinicShiftId: number;
   onPaymentSuccess: () => void;
+  handlePrintReceipt:()=>void;
 }
 
 const paymentSchema = z.object({
@@ -45,6 +46,7 @@ const paymentSchema = z.object({
 type PaymentFormValues = z.infer<typeof paymentSchema>;
 
 const ServicePaymentDialog: React.FC<ServicePaymentDialogProps> = ({ 
+  handlePrintReceipt,
   visit,
   isOpen, onOpenChange, requestedService, visitId, currentClinicShiftId, onPaymentSuccess 
 }) => {
@@ -166,6 +168,8 @@ const ServicePaymentDialog: React.FC<ServicePaymentDialogProps> = ({
         }),
     onSuccess: () => {
       toast.success(t('payments:paymentSuccess'));
+    handlePrintReceipt()
+      
       onPaymentSuccess();
     },
     onError: (error: Error & { response?: { data?: { message?: string } } }) => {

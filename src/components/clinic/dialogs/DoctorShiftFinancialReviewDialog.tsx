@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Loader2, MoreHorizontal, FileText, CheckCircle, ShieldQuestion, Filter } from 'lucide-react'; // Added Filter
+import { Loader2, MoreHorizontal, FileText, CheckCircle, ShieldQuestion, Download } from 'lucide-react'; // Added Filter
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 
@@ -21,7 +21,9 @@ import type { PaginatedResponse } from '@/types/common';
 import {
   getDoctorShiftsReport, // This service now needs to accept doctor_name_search and user_id_opened
   getDoctorShiftFinancialSummary,
-  downloadDoctorShiftFinancialSummaryPdf // IMPORT THIS
+  downloadDoctorShiftFinancialSummaryPdf, // IMPORT THIS
+  type DoctorReclaimsPdfFilters,
+  downloadDoctorReclaimsPdf
 } from '@/services/reportService';
 import { getUsers } from '@/services/userService';
 import { useAuth } from '@/contexts/AuthContext';
@@ -85,7 +87,7 @@ const DoctorShiftFinancialReviewDialog: React.FC<DoctorShiftFinancialReviewDialo
   const [isAddCostDialogOpen, setIsAddCostDialogOpen] = useState(false);
   const [selectedShiftForCost, setSelectedShiftForCost] = useState<DoctorShiftWithFinancials | null>(null);
   const [isDownloadingPdfId, setIsDownloadingPdfId] = useState<number | null>(null);
-
+  const [isDownloadingReclaimsPdf, setIsDownloadingReclaimsPdf] = useState(false); // NEW state for overall repor
 
   useEffect(() => {
     const handler = setTimeout(() => setDebouncedSearchDoctor(filters.searchDoctor), 300);
@@ -200,6 +202,33 @@ const DoctorShiftFinancialReviewDialog: React.FC<DoctorShiftFinancialReviewDialo
 
   const shifts = paginatedShifts?.data || [];
   const meta = paginatedShifts?.meta;
+  // NEW: Handler for downloading the overall reclaims PDF
+  const handleDownloadReclaimsReport = async () => {
+    setIsDownloadingReclaimsPdf(true);
+    try {
+      const pdfFilters: DoctorReclaimsPdfFilters = {
+        date_from: filters.dateFrom,
+        date_to: filters.dateTo,
+        user_id_opened: filters.userId === 'all' ? null : filters.userId,
+        doctor_name_search: debouncedSearchDoctor || undefined,
+        // status: filters.status === 'all' ? undefined : filters.status, // Add if your backend uses it for this report
+      };
+      const blob = await downloadDoctorReclaimsPdf(pdfFilters);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');  
+      a.href = url;
+      a.download = `Doctor_Reclaims_Report_${filters.dateFrom}_to_${filters.dateTo}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success(t('reports:pdfGeneratedSuccess'));
+    } catch (error: any) {
+      toast.error(t('reports:pdfGeneratedError'), { description: error.message || error.response?.data?.message });
+    } finally {
+      setIsDownloadingReclaimsPdf(false);
+    }
+  };
 
   return (
     <>
@@ -208,6 +237,16 @@ const DoctorShiftFinancialReviewDialog: React.FC<DoctorShiftFinancialReviewDialo
           <DialogHeader className="px-6 pt-6">
             <DialogTitle>{t('review.dialogTitle')}</DialogTitle>
             <DialogDescription>{t('review.dialogDescription')}</DialogDescription>
+              {/* NEW PDF Export Button for the whole filtered list */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownloadReclaimsReport}
+            disabled={isDownloadingReclaimsPdf || isLoading || isFetching || shifts.length === 0}
+          >
+            {isDownloadingReclaimsPdf ? <Loader2 className="h-4 w-4 animate-spin ltr:mr-1 rtl:ml-1"/> : <Download className="h-4 w-4 ltr:mr-1 rtl:ml-1"/>}
+            {t('review.printReclaimsReport')}
+          </Button>
           </DialogHeader>
 
           <div className="px-6 py-3 border-b grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 items-end">
@@ -248,7 +287,7 @@ const DoctorShiftFinancialReviewDialog: React.FC<DoctorShiftFinancialReviewDialo
             </div>
           </div>
 
-          <ScrollArea className="flex-grow px-2 sm:px-4 py-2">
+          <ScrollArea className="h-[calc(100vh-400px)] flex-grow px-2 sm:px-4 py-2">
             {isLoading && !isFetching && <div className="text-center py-10"><Loader2 className="h-8 w-8 animate-spin" /></div>}
             {isFetching && <div className="text-xs text-center py-1 text-muted-foreground"><Loader2 className="inline h-3 w-3 animate-spin" /> {t('common:loadingData')}</div>}
             {!isLoading && shifts.length === 0 && <p className="text-center py-10 text-muted-foreground">{t('common:noDataAvailable')}</p>}

@@ -178,7 +178,7 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
           {t('common:printReceipt')}
         </Button>
       </div>
-          <ServicesRequestComponent patientId={patient.id} visit={visit} visitId={visit.id} />
+          <ServicesRequestComponent handlePrintReceipt={handlePrintReceipt} patientId={patient.id} visit={visit} visitId={visit.id} />
         </TabsContent>
 
         <TabsContent 

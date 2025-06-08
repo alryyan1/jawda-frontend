@@ -61,6 +61,7 @@ interface RequestedServicesTableProps {
   isLoading: boolean;
   currentClinicShiftId: number | null;
   onAddMoreServices: () => void;
+  handlePrintReceipt: () => void;
 }
 
 interface RowEditData {
@@ -77,6 +78,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
   isLoading,
   currentClinicShiftId,
   onAddMoreServices,
+  handlePrintReceipt,
 }) => {
   const { t, i18n } = useTranslation([
     "services",
@@ -472,7 +474,10 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                                 <Button
                                   size="icon"
                                   variant="ghost"
-                                  onClick={() => setPayingService(rs)}
+                                  onClick={() => {
+                                    setPayingService(rs);
+                                    // handlePrintReceipt();
+                                  }}
                                   className="h-7 w-7 text-green-600 hover:text-green-700"
                                   title={t("common:pay")}
                                 >
@@ -533,6 +538,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
         )}
         {payingService && currentClinicShiftId && visit && (
           <ServicePaymentDialog
+          handlePrintReceipt={handlePrintReceipt}
             visit={visit}
             isOpen={!!payingService}
             onOpenChange={(open) => !open && setPayingService(null)}

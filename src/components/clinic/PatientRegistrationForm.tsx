@@ -29,6 +29,7 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { Popover, PopoverAnchor, PopoverContent } from '../ui/popover';
 import PatientSearchResultDisplay from './PatientSearchResultDisplay';
 import { Calendar } from '../ui/calendar';
+import type { AxiosError } from 'axios';
 
 // Update Zod schema to include new company-related fields, make them optional
 const getPatientRegistrationSchema = (t: TFunction, isCompanySelected: boolean = false) => z.object({
@@ -251,7 +252,7 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
       reset();
       if (nameInputRef.current) nameInputRef.current.focus();
     },
-    onError: (error: unknown) => {
+    onError: (error: AxiosError) => {
       let errorMessage = t('clinic:patientRegistration.registrationFailed');
       const apiError = error as { response?: { data?: { errors?: Record<string, string[]>; message?: string; } } };
       if (apiError.response?.data?.errors) {

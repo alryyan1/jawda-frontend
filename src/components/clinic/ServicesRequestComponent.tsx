@@ -18,14 +18,16 @@ import i18n from '@/i18n';
 import RequestedServicesTable from './RequestedServicesTable';
 import RequestedServicesSummary from './RequestedServicesSummary';
 import { useAuth } from '@/contexts/AuthContext';
+import { getServiceById } from '@/services/serviceService';
 
 interface ServicesRequestComponentProps {
   visitId: number;
   patientId: number;
   visit: DoctorVisit; // Make this required since child components need it
+  handlePrintReceipt: () => void;
 }
 
-const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ visitId, patientId, visit }) => {
+const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ visitId, patientId, visit, handlePrintReceipt }) => {
   const { t } = useTranslation(['clinic', 'services', 'common']);
   const queryClient = useQueryClient();
   const { currentClinicShift } = useAuth();
@@ -136,7 +138,37 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ vis
       addMultipleServicesMutation.mutate(selectedServiceIds);
     }
   };
-  
+   // NEW: Handler for adding a single service by ID from the input field
+   const handleAddSingleServiceById = async (serviceId: number): Promise<boolean> => {
+    if (!serviceId) return false;
+
+    // Check if service is already requested for this visit
+    if (requestedServices.some(rs => rs.service_id === serviceId)) {
+        toast.info(t('services:serviceAlreadyRequested', { serviceName: requestedServices.find(rs=>rs.service_id === serviceId)?.service?.name || `ID ${serviceId}`}));
+        return false; // Indicate not added because it's a duplicate
+    }
+    
+    try {
+      // 1. Verify the service exists (optional, backend will also do this)
+      //    The getServiceById might not be strictly necessary if addServicesToVisit handles non-existent IDs gracefully,
+      //    but it's good for immediate feedback.
+      const serviceDetails = await getServiceById(serviceId).then(res => res.data);
+      if (!serviceDetails) {
+        toast.error(t('services:serviceNotFoundWithId', { serviceId }));
+        return false;
+      }
+      // 2. Add the single service using the existing mutation
+      // addMultipleServicesMutation expects an array
+      addMultipleServicesMutation.mutate([serviceId]); 
+      // The mutation's onSuccess will handle toast, invalidation, and hiding the grid
+      return true; // Indicate success
+    } catch (error: any) {
+      toast.error(t('common:error.fetchFailed', { entity: t('services:serviceEntityName') }), {
+        description: error.response?.data?.message || error.message,
+      });
+      return false;
+    }
+  };
   if (isLoadingRequested || isLoadingCatalog || (patientId && isLoadingPatient) || (isCompanyPatient && showServiceSelectionGrid && isLoadingCompanyContracts)) {
     return <div className="py-4 text-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
   }
@@ -150,6 +182,7 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ vis
     <div style={{direction:i18n.dir()}} className="space-y-4">
       {showServiceSelectionGrid && serviceCatalogForGrid ? (
         <ServiceSelectionGrid 
+            onAddSingleServiceById={handleAddSingleServiceById}
             serviceCatalog={serviceCatalogForGrid}
             onAddServices={handleAddMultipleServices}
             isLoading={addMultipleServicesMutation.isPending}
@@ -160,6 +193,7 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ vis
         <>
           <RequestedServicesTable 
             visitId={visitId}
+            handlePrintReceipt={handlePrintReceipt}
             visit={visit}
             requestedServices={requestedServices || []} 
             isLoading={isLoadingRequested || isFetchingRequested}

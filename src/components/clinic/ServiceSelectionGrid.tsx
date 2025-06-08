@@ -7,9 +7,10 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, List, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { Search, List, CheckCircle2, AlertCircle, Loader2, PlusCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn, formatNumber } from '@/lib/utils'; // Assuming formatNumber is also from utils
+import { toast } from 'sonner';
 
 // Define a more specific type for the service if contract_price and contract_requires_approval are always present
 // or ensure your base Service type includes them as optional.
@@ -23,6 +24,8 @@ interface ServiceSelectionGridProps {
   onAddServices: (selectedServiceIds: number[]) => void;
   isLoading: boolean;
   onCancel: () => void;
+  onAddSingleServiceById: (serviceId: number) => Promise<boolean>; // NEW: For adding single by ID, returns promise indicating success
+
   isCompanyPatient: boolean;
 }
 
@@ -36,6 +39,7 @@ const ServiceSelectionGrid: React.FC<ServiceSelectionGridProps> = ({
   onAddServices,
   isLoading,
   onCancel,
+  onAddSingleServiceById,
   isCompanyPatient,
 }) => {
   const { t, i18n } = useTranslation(['services', 'common']);
@@ -45,15 +49,38 @@ const ServiceSelectionGrid: React.FC<ServiceSelectionGridProps> = ({
   // Memoized calculation for the initial active tab
   const initialActiveTab = useMemo(() => findInitialActiveTab(serviceCatalog || []), [serviceCatalog]);
   const [activeTab, setActiveTab] = useState<string | undefined>(initialActiveTab);
-
+  const [serviceIdInput, setServiceIdInput] = useState(''); // 
   // Effect to set initial active tab when catalog loads or changes
   useEffect(() => {
     if (serviceCatalog && serviceCatalog.length > 0 && !activeTab) {
       setActiveTab(findInitialActiveTab(serviceCatalog));
     }
   }, [serviceCatalog, activeTab]);
-
-
+  const [isFindingServiceById, setIsFindingServiceById] = useState(false); // NEW: 
+  // NEW: Handler for adding service by ID input
+  const handleAddServiceByIdInput = async () => {
+    const id = parseInt(serviceIdInput.trim());
+    if (isNaN(id) || id <= 0) {
+      toast.error(t('services:validation.invalidServiceId'));
+      return;
+    }
+    setIsFindingServiceById(true);
+    try {
+      // The onAddSingleServiceById should handle fetching and then adding
+      // It needs to be an async function that returns a boolean (or throws)
+      const addedSuccessfully = await onAddSingleServiceById(id);
+      if (addedSuccessfully) {
+        setServiceIdInput(''); // Clear input on success
+      }
+      // Toast messages (success/failure) should be handled by the parent's mutation logic
+    } catch (error) {
+      // Error already toasted by parent's mutation or service call
+      console.error("Error in handleAddServiceByIdInput (already handled by parent)", error);
+    } finally {
+      setIsFindingServiceById(false);
+    }
+  };
+  
   // Memoized calculation for the filtered catalog
   const filteredCatalog = useMemo(() => {
     if (!serviceCatalog) return [];
@@ -203,6 +230,24 @@ const ServiceSelectionGrid: React.FC<ServiceSelectionGridProps> = ({
           />
           <Search className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
         </div>
+         {/* NEW: Input for adding service by ID */}
+         <div className="flex items-center gap-1 w-full sm:w-auto md:max-w-xs">
+            <Input
+                type="number"
+                placeholder={t('services:addByIdPlaceholder', "Enter Service ID...")}
+                value={serviceIdInput}
+                onChange={(e) => setServiceIdInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddServiceByIdInput();}}}
+                className="h-9 flex-grow"
+                disabled={isLoading || isFindingServiceById}
+            />
+            <Button onClick={handleAddServiceByIdInput} size="icon" className="h-9 w-9 shrink-0" disabled={isLoading || isFindingServiceById || !serviceIdInput.trim()}>
+                {isFindingServiceById ? <Loader2 className="h-4 w-4 animate-spin"/> : <PlusCircle className="h-4 w-4"/>}
+            </Button>
+        </div>
+     
+      
+      
         <Button onClick={onCancel} variant="outline" size="sm" className="w-full sm:w-auto h-9 flex-shrink-0">
           <List className="h-4 w-4 ltr:mr-2 rtl:ml-2" aria-hidden="true" /> {t('common:viewRequested')}
         </Button>
@@ -217,8 +262,8 @@ const ServiceSelectionGrid: React.FC<ServiceSelectionGridProps> = ({
         </div>
       ) : (
         <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue={activeTab || filteredCatalog[0]?.id.toString()} dir={i18n.dir()} className="w-full flex flex-col flex-grow">
-          <ScrollArea className="w-full whitespace-nowrap border-b flex-shrink-0">
-            <TabsList className="inline-flex h-auto p-1 bg-muted rounded-lg" aria-label={t('services:serviceGroupsNavigation')}>
+          <ScrollArea type='scroll' className="w-full whitespace-nowrap border-b flex-shrink-0">
+            <TabsList  className="flex h-auto p-1 bg-muted rounded-lg" aria-label={t('services:serviceGroupsNavigation')}>
               {filteredCatalog.map((group) => (
                 <TabsTrigger
                   key={group.id}

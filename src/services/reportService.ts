@@ -132,3 +132,22 @@ export const getMonthlyServiceDepositsIncome = async (
   );
   return response.data; // Assuming backend directly returns the structure
 };
+
+// src/services/reportService.ts
+// ... (existing imports and functions) ...
+
+export interface DoctorReclaimsPdfFilters {
+  date_from: string;
+  date_to: string;
+  user_id_opened?: string | null; // User who managed/opened the DoctorShift
+  doctor_name_search?: string;
+  // status?: 'open' | 'closed' | 'all'; // Add if needed for this specific report
+}
+
+export const downloadDoctorReclaimsPdf = async (filters: DoctorReclaimsPdfFilters): Promise<Blob> => {
+  const response = await apiClient.get<Blob>('/reports/doctor-reclaims/pdf', {
+    params: filters,
+    responseType: 'blob',
+  });
+  return response.data;
+};

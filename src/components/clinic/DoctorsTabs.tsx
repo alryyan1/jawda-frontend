@@ -186,7 +186,7 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId,
                         </div>
                         <div className="flex items-center text-[10px] text-muted-foreground gap-1">
                           {shift.patients_count > 0 && (
-                            <Badge variant="secondary" className="px-1.5 py-0 text-[9px] h-4 leading-tight bg-blue-400">
+                            <Badge variant="secondary" className="px-1.5 py-0 text-[9px] h-4 leading-tight ">
                               {shift.patients_count}
                             </Badge>
                           )}

@@ -3,15 +3,15 @@ import React, {
   useContext,
   useState,
   useEffect,
-  ReactNode,
+  type ReactNode,
   useCallback,
   useMemo,
 } from "react";
 import apiClient from "../services/api"; // Your Axios instance
-import { User, AuthResponse } from "../types"; // Your User types from types/index.ts or types/auth.ts
-import { Shift } from "../types/shifts"; // Your Shift type
+import type { Shift } from "../types/shifts"; // Your Shift type
 import { getCurrentOpenShift as apiGetCurrentOpenShift } from "../services/shiftService";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import type { User } from "@/types/auth";
 
 // 1. Define the Context Type (as we did before)
 export interface AuthContextType {

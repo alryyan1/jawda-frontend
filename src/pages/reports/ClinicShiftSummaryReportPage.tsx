@@ -1,5 +1,5 @@
 // src/pages/reports/ClinicShiftSummaryReportPage.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { format, parseISO } from "date-fns";
@@ -32,10 +32,11 @@ import {
   Printer,
   XCircle,
 } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
+import dayjs from "dayjs";
 
 import type { Shift } from "@/types/shifts";
 import { getShiftsList } from "@/services/shiftService";
@@ -44,6 +45,8 @@ import {
   downloadClinicShiftSummaryPdf,
   type ClinicReportPdfFilters,
 } from "@/services/reportService";
+import { Autocomplete, TextField } from "@mui/material";
+import { CircularProgress } from "@mui/material";
 
 interface AppUser {
   id: number;
@@ -85,7 +88,7 @@ const ClinicShiftSummaryReportPage: React.FC = () => {
   const { data: shifts, isLoading: isLoadingShifts } = useQuery<Shift[], Error>(
     {
       queryKey: ["shiftsListForReportFilter"],
-      queryFn: () => getShiftsList({ per_page: 100, is_closed: "" }),
+      queryFn: () => getShiftsList({ per_page: 0, is_closed: "" }),
     }
   );
 
@@ -119,6 +122,14 @@ const ClinicShiftSummaryReportPage: React.FC = () => {
       setIsGeneratingPdf(false);
     }
   };
+  const shiftOptions = useMemo(() => {
+    return shifts?.map(s => ({
+      label: `${t('common:shift')} #${s.id} ${dayjs(s.created_at).format('DD/MM/YYYY ')}`,
+      id: s.id,
+      // Include the full shift object if needed by form/validation
+      originalShift: s 
+    })) || [];
+  }, [shifts, t, i18n.language]);
 
   useEffect(() => {
     return () => {
@@ -151,64 +162,43 @@ const ClinicShiftSummaryReportPage: React.FC = () => {
               onSubmit={form.handleSubmit(handleGeneratePdf)}
               className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-end"
             >
-              <FormField
-                control={form.control}
+             <Controller
                 name="shift"
+                control={form.control}
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      {t("reports:clinicShiftSummaryReport.selectShiftLabel")}
-                    </FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                      defaultValue={field.value}
-                      dir={i18n.dir()}
-                      disabled={isLoadingDropdowns || isGeneratingPdf}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue
-                            placeholder={t(
-                              "reports:clinicShiftSummaryReport.selectShiftPlaceholder"
-                            )}
-                          />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {isLoadingShifts ? (
-                          <SelectItem value="loading" disabled>
-                            {t("common:loading")}
-                          </SelectItem>
-                        ) : shifts && shifts.length > 0 ? (
-                          shifts.map((s) => (
-                            <SelectItem key={s.id} value={String(s.id)}>
-                              {s.name ||
-                                `${t("common:shift")} #${s.id} (${
-                                  s.is_closed
-                                    ? t("common:statusEnum.closed")
-                                    : t("common:statusEnum.open")
-                                }, ${
-                                  s.created_at
-                                    ? format(parseISO(s.created_at), "P")
-                                    : ""
-                                })`}
-                            </SelectItem>
-                          ))
-                        ) : (
-                          <div className="p-4 text-center text-xs text-muted-foreground">
-                            {t(
-                              "reports:clinicShiftSummaryReport.noShiftsAvailable"
-                            )}
-                          </div>
-                        )}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
+                  <Autocomplete
+                    options={shiftOptions}
+                    loading={isLoadingShifts}
+                    getOptionLabel={(option) => option.label || ''}
+                    value={shiftOptions.find(opt => opt.id === field.value?.id) || null}
+                    onChange={(event, newValue) => {
+                      field.onChange(newValue ? newValue.originalShift.id.toString() : null); // Store the full Shift object or null     
+                      console.log(newValue,'newValue')                                       
+                    }}
+                    isOptionEqualToValue={(option, value) => option.id === value.id}
+                    disabled={isGeneratingPdf}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label={t("reports:clinicShiftSummaryReport.selectShiftPlaceholder")}
+                        variant="outlined"
+                        size="small"
+                        error={!!form.formState.errors.shift}
+                        helperText={form.formState.errors.shift?.message}
+                        InputProps={{
+                          ...params.InputProps,
+                          endAdornment: (
+                            <>
+                              {isLoadingShifts ? <CircularProgress color="inherit" size={20} /> : null}
+                              {params.InputProps.endAdornment}
+                            </>
+                          ),
+                        }}
+                      />
+                    )}
+                  />
                 )}
               />
-
               <FormField
                 control={form.control}
                 name="user"
@@ -299,3 +289,4 @@ const ClinicShiftSummaryReportPage: React.FC = () => {
 };
 
 export default ClinicShiftSummaryReportPage;
+

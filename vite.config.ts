@@ -9,14 +9,7 @@ export default defineConfig({
     host: true, 
   },
   plugins: [
-    react({
-      // Enable React refresh
-      refresh: true,
-      // Enable development mode features
-      development: process.env.NODE_ENV === 'development',
-      // Enable source maps for development
-      devTools: true,
-    }),
+    react(),
     tailwindcss()
   ],
   resolve: {
@@ -25,7 +18,8 @@ export default defineConfig({
     },
   },
   build: {
-    sourcemap: true,
+    // sourcemap: true,
+    outDir:'c:/jawda-frontend/dist'
   },
   // Enable more detailed source maps in development
   css: {

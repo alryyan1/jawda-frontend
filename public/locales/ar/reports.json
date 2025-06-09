@@ -147,6 +147,8 @@
   "sidebarTitle": "التقارير",
   "filtersTitle": "عوامل التصفية",
   "applyFiltersButton": "تحديث البيانات",
-  "reportForPeriod": "تقرير للفترة: {{from}} إلى {{to}}"
+  "reportForPeriod": "تقرير للفترة: {{from}} إلى {{to}}",
+  "reportPreview": "عرض التقرير",
+  "reportPreviewDescription": "عرض التقرير للفترة المحددة"
 }
 

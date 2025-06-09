@@ -1,8 +1,8 @@
-import type { Company } from "./companies"; // Assuming these types are defined
-import type { Subcompany } from "./companies";
-import type { CompanyRelation } from "./companies";
-import type { Doctor } from "./doctors"; // Assuming this type is defined
-import { User } from "./index"; // Assuming User type from a general index.ts or auth types
+import type { Company } from "@/types/companies"; // Assuming these types are defined
+import type { Subcompany } from "@/types/companies";
+import type { CompanyRelation } from "@/types/companies";
+// import type { Doctor } from "./doctors"; // Assuming this type is defined
+// import { User } from "./index"; // Assuming User type from a general index.ts or auth types
 // import { Country } from './locations'; // If you have a Country type
 
 

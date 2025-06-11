@@ -1,7 +1,7 @@
 // src/services/shiftService.ts
 import apiClient from './api';
 import type { Shift, ShiftFinancialSummary } from '../types/shifts'; // Assuming Shift type from previous steps
-import { CloseShiftFormData } from '../types/dashboard'; // For closing shift
+  // import { CloseShiftFormData } from '../types/dashboard'; // For closing shift
 
 const SHIFT_API_URL = '/shifts';
 
@@ -22,14 +22,8 @@ export const openNewShift = async (data?: { pharmacy_entry?: boolean; name?: str
   return response.data.data;
 };
 
-export const closeShift = async (shiftId: number, data: CloseShiftFormData): Promise<Shift> => {
-  const payload = { // Convert strings to numbers before sending if backend expects numbers
-      total: parseFloat(data.total),
-      bank: parseFloat(data.bank),
-      expenses: parseFloat(data.expenses),
-      touched: data.touched ?? false, // Send default if not provided
-  };
-  const response = await apiClient.put<{ data: Shift }>(`${SHIFT_API_URL}/${shiftId}/close`, payload);
+export const closeShift = async (shiftId: number): Promise<Shift> => {
+  const response = await apiClient.put<{ data: Shift }>(`${SHIFT_API_URL}/${shiftId}/close`);
   return response.data.data;
 };
 

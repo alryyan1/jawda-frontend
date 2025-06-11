@@ -42,7 +42,8 @@ import CopyVisitToShiftDialog from "./CopyVisitToShiftDialog";
 import SendWhatsAppDialog from "./SendWhatsAppDialog";
 import PatientVisitHistoryDialog from "./PatientVisitHistoryDialog";
 import CreateNewVisitForPatientDialog from "./CreateNewVisitForPatientDialog";
-import Badge  from '@mui/material/Badge'; // MUI Badge
+import Badge from "@mui/material/Badge"; // MUI Badge
+import type { DoctorVisit } from "@/types/visits";
 
 const VISIT_STATUSES_FOR_DROPDOWN = [
   "waiting",
@@ -89,7 +90,7 @@ interface ActivePatientCardProps {
   visit: ActivePatientVisit;
   isSelected: boolean;
   onSelect: (patient: Patient, visitId: number) => void;
-  onProfileClick: (patientId: number) => void;
+  onProfileClick: (visit: DoctorVisit) => void;
   selectedPatientVisitIdInWorkspace: number | null;
 }
 
@@ -128,20 +129,30 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
   const [isCopyDialogOpen, setIsCopyDialogOpen] = useState(false);
   const [isWhatsAppDialogOpen, setIsWhatsAppDialogOpen] = useState(false);
   const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
-  const [isCreateNewVisitDialogOpen, setIsCreateNewVisitDialogOpen] = useState(false); // NEW
+  const [isCreateNewVisitDialogOpen, setIsCreateNewVisitDialogOpen] =
+    useState(false); // NEW
 
   // Data for "Create New Visit for Patient" Dialog (similar to reassign, but might have different filtering for target shifts)
-  const { data: availableDoctorShiftsForNewVisit, isLoading: isLoadingShiftsForNewVisit } = useQuery<DoctorShift[], Error>({
-    queryKey: ['activeDoctorShiftsForNewVisit', currentUser?.id, currentClinicShift?.id],
+  const {
+    data: availableDoctorShiftsForNewVisit,
+    isLoading: isLoadingShiftsForNewVisit,
+  } = useQuery<DoctorShift[], Error>({
+    queryKey: [
+      "activeDoctorShiftsForNewVisit",
+      currentUser?.id,
+      currentClinicShift?.id,
+    ],
     queryFn: () => getActiveDoctorShifts(currentClinicShift?.id), // Fetch active shifts
     enabled: isCreateNewVisitDialogOpen,
   });
 
   const targetShiftOptionsForNewVisit = useMemo(() => {
-    return availableDoctorShiftsForNewVisit?.filter(ds => 
-        ds.user_id === currentUser?.id && ds.status === true // Example: any open shift of current user
+    return (
+      availableDoctorShiftsForNewVisit?.filter(
+        (ds) => ds.user_id === currentUser?.id && ds.status === true // Example: any open shift of current user
         // Or: ds.status === true // Any open shift if admin
-      ) || [];
+      ) || []
+    );
   }, [availableDoctorShiftsForNewVisit, currentUser?.id]);
 
   const statusUpdateMutation = useMutation({
@@ -195,7 +206,7 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
 
   const handleProfileButtonClick = (event: React.MouseEvent) => {
     event.stopPropagation();
-    onProfileClick(visit.patient.id);
+    onProfileClick(visit);
   };
 
   const queueNumberOrVisitId = visit.number || visit.id;
@@ -211,9 +222,12 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
       currentClinicShift?.id,
     ],
     queryFn: () => {
-      console.log('Query Function Running with clinic shift:', currentClinicShift?.id);
+      console.log(
+        "Query Function Running with clinic shift:",
+        currentClinicShift?.id
+      );
       if (!currentClinicShift?.id) {
-        console.log('No clinic shift ID available');
+        console.log("No clinic shift ID available");
         return Promise.resolve([]);
       }
       return getActiveDoctorShifts(currentClinicShift.id);
@@ -257,7 +271,7 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
 
   // Cleanup function to restore pointer-events
   const cleanupBodyPointerEvents = () => {
-    document.body.style.removeProperty('pointer-events');
+    document.body.style.removeProperty("pointer-events");
   };
 
   // Cleanup on component unmount
@@ -275,7 +289,9 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
     if (!isOpen) {
       // Give time for animations to complete before removing overlay
       setTimeout(() => {
-        const contextMenuOverlay = document.querySelector('[data-radix-popper-content-wrapper]');
+        const contextMenuOverlay = document.querySelector(
+          "[data-radix-popper-content-wrapper]"
+        );
         if (contextMenuOverlay instanceof HTMLElement) {
           contextMenuOverlay.remove();
         }
@@ -290,8 +306,8 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
   };
   const handleNewVisitCreated = () => {
     setIsCreateNewVisitDialogOpen(false);
-    queryClient.invalidateQueries({ queryKey: ['activePatients'] }); // Refresh patient lists
-    toast.success(t('clinic:visit.newVisitForPatientCreatedSuccess'));
+    queryClient.invalidateQueries({ queryKey: ["activePatients"] }); // Refresh patient lists
+    toast.success(t("clinic:visit.newVisitForPatientCreatedSuccess"));
   };
   return (
     <>
@@ -315,33 +331,38 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
               "common:queueNumberShort"
             )}${queueNumberOrVisitId}`}
           >
-                 <Badge 
-                badgeContent={visit.requested_services_count > 0 ? visit.requested_services_count : null} 
-                color="secondary" // Or "primary", "error"
-                anchorOrigin={{ vertical: 'top', horizontal: 'left' }} // Adjust badge position
-                sx={{ // MUI sx prop for custom styling
-                    '& .MuiBadge-badge': { 
-                        fontSize: '0.6rem', 
-                        height: '14px', 
-                        minWidth: '14px', 
-                        padding: '0 4px',
-                        // Adjust position if needed relative to the button
-                        // transform: 'scale(0.9) translate(0%, -10%)', 
-                    }
-                }}
-              >
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 rounded-full flex-shrink-0 ltr:mr-2 rtl:ml-2 p-0"
-              onClick={handleProfileButtonClick}
-              title={t("common:viewProfile")}
-              aria-label={t("common:viewProfileFor", {
-                name: visit.patient.name,
-              })}
+            <Badge
+              badgeContent={
+                visit.requested_services_count > 0
+                  ? visit.requested_services_count
+                  : null
+              }
+              color="secondary" // Or "primary", "error"
+              anchorOrigin={{ vertical: "top", horizontal: "left" }} // Adjust badge position
+              sx={{
+                // MUI sx prop for custom styling
+                "& .MuiBadge-badge": {
+                  fontSize: "0.6rem",
+                  height: "14px",
+                  minWidth: "14px",
+                  padding: "0 4px",
+                  // Adjust position if needed relative to the button
+                  // transform: 'scale(0.9) translate(0%, -10%)',
+                },
+              }}
             >
-              <UserCircle className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
-            </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-full flex-shrink-0 ltr:mr-2 rtl:ml-2 p-0"
+                onClick={handleProfileButtonClick}
+                title={t("common:viewProfile")}
+                aria-label={t("common:viewProfileFor", {
+                  name: visit.patient.name,
+                })}
+              >
+                <UserCircle className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
+              </Button>
             </Badge>
             <div
               className={cn(
@@ -419,7 +440,9 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
         </ContextMenuTrigger>
         <ContextMenuContent className="w-56">
           <ContextMenuItem
-            onClick={() => handleContextMenuItemClick(() => setIsCopyDialogOpen(true))}
+            onClick={() =>
+              handleContextMenuItemClick(() => setIsCopyDialogOpen(true))
+            }
           >
             <Copy className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
             {t("clinic:visit.contextMenu.copyToShift")}
@@ -427,21 +450,33 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
               <Loader2 className="ltr:ml-auto rtl:mr-auto h-3 w-3 animate-spin" />
             )}
           </ContextMenuItem>
-            {/* NEW CONTEXT MENU ITEM */}
-            <ContextMenuItem onClick={() => handleContextMenuItemClick(() => setIsCreateNewVisitDialogOpen(true))}>
+          {/* NEW CONTEXT MENU ITEM */}
+          <ContextMenuItem
+            onClick={() =>
+              handleContextMenuItemClick(() =>
+                setIsCreateNewVisitDialogOpen(true)
+              )
+            }
+          >
             <UserPlus className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-            {t('clinic:visit.contextMenu.createNewVisitForPatient')}
-            {isLoadingShiftsForNewVisit && <Loader2 className="ltr:ml-auto rtl:mr-auto h-3 w-3 animate-spin" />}
+            {t("clinic:visit.contextMenu.createNewVisitForPatient")}
+            {isLoadingShiftsForNewVisit && (
+              <Loader2 className="ltr:ml-auto rtl:mr-auto h-3 w-3 animate-spin" />
+            )}
           </ContextMenuItem>
-          <ContextMenuItem 
-            onClick={() => handleContextMenuItemClick(() => setIsWhatsAppDialogOpen(true))}
+          <ContextMenuItem
+            onClick={() =>
+              handleContextMenuItemClick(() => setIsWhatsAppDialogOpen(true))
+            }
           >
             <MessageSquare className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
             {t("clinic:visit.contextMenu.sendWhatsApp")}
           </ContextMenuItem>
           <ContextMenuSeparator />
-          <ContextMenuItem 
-            onClick={() => handleContextMenuItemClick(() => setIsHistoryDialogOpen(true))}
+          <ContextMenuItem
+            onClick={() =>
+              handleContextMenuItemClick(() => setIsHistoryDialogOpen(true))
+            }
           >
             <History className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
             {t("clinic:visit.contextMenu.showHistory")}
@@ -451,14 +486,16 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
 
       <CopyVisitToShiftDialog
         isOpen={isCopyDialogOpen}
-        onOpenChange={(open) => handleDialogOpenChange(open, setIsCopyDialogOpen)}
+        onOpenChange={(open) =>
+          handleDialogOpenChange(open, setIsCopyDialogOpen)
+        }
         visitToCopy={visit}
         targetShiftOptions={targetShiftOptions}
         isLoadingTargetShifts={isLoadingShifts}
         onSuccess={handleCopyToShiftSuccess}
       />
-          {/* NEW Dialog for Creating a New Visit based on current patient */}
-          <CreateNewVisitForPatientDialog
+      {/* NEW Dialog for Creating a New Visit based on current patient */}
+      <CreateNewVisitForPatientDialog
         isOpen={isCreateNewVisitDialogOpen}
         onOpenChange={setIsCreateNewVisitDialogOpen}
         sourcePatient={visit.patient} // Pass the patient data to be copied
@@ -469,14 +506,18 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
 
       <SendWhatsAppDialog
         isOpen={isWhatsAppDialogOpen}
-        onOpenChange={(open) => handleDialogOpenChange(open, setIsWhatsAppDialogOpen)}
+        onOpenChange={(open) =>
+          handleDialogOpenChange(open, setIsWhatsAppDialogOpen)
+        }
         patient={visit.patient}
         visitId={visit.id}
         onMessageSent={handleWhatsAppSent}
       />
       <PatientVisitHistoryDialog
         isOpen={isHistoryDialogOpen}
-        onOpenChange={(open) => handleDialogOpenChange(open, setIsHistoryDialogOpen)}
+        onOpenChange={(open) =>
+          handleDialogOpenChange(open, setIsHistoryDialogOpen)
+        }
         patientId={visit.patient.id}
       />
     </>

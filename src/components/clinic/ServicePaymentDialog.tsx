@@ -52,11 +52,11 @@ const ServicePaymentDialog: React.FC<ServicePaymentDialogProps> = ({
 }) => {
   const { t } = useTranslation(['payments', 'common']);
   
-  const { data: patient, isLoading: isLoadingPatient } = useQuery<Patient, Error>({
-    queryKey: ['patientDetailsForPaymentDialog', visitId],
-    queryFn: () => getPatientById(visitId),
-    enabled: isOpen && !!visitId,
-  });
+  // const { data: patient, isLoading: isLoadingPatient } = useQuery<Patient, Error>({
+  //   queryKey: ['patientDetailsForPaymentDialog', visitId],
+  //   queryFn: () => getPatientById(visitId),
+  //   enabled: isOpen && !!visitId,
+  // });
 
   const isCompanyPatient = useMemo(() => !!visit?.patient?.company_id, [visit?.patient?.company_id]);
 
@@ -101,7 +101,7 @@ const ServicePaymentDialog: React.FC<ServicePaymentDialogProps> = ({
         fullNetPrice: amountAfterDiscount // Price after discount, before endurance or payment
     };
 
-  }, [requestedService, isCompanyPatient, patient]); // Added patient
+  }, [requestedService, isCompanyPatient]); 
 
   const form = useForm<PaymentFormValues>({
     defaultValues: { 
@@ -156,7 +156,7 @@ const ServicePaymentDialog: React.FC<ServicePaymentDialogProps> = ({
         });
         setValue("amount", defaultAmount);
     }
-  }, [isOpen, requestedService, calculatedPaymentDefault, form, patient, setValue]);
+  }, [isOpen, requestedService, calculatedPaymentDefault, form, setValue]);
 
   const mutation = useMutation({
     mutationFn: (data: PaymentFormValues) => 
@@ -214,7 +214,7 @@ const ServicePaymentDialog: React.FC<ServicePaymentDialogProps> = ({
     }
   }, [isOpen, handleKeyPress]);
 
-  if (!isOpen || (isLoadingPatient && !patient && visitId)) {
+  if (!isOpen || (!visit?.patient && visitId)) {
     return isOpen ? <Dialog open={isOpen} onOpenChange={onOpenChange}><DialogContent><div className="p-6 text-center"><Loader2 className="h-6 w-6 animate-spin"/></div></DialogContent></Dialog> : null;
   }
 

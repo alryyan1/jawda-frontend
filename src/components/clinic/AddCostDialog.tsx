@@ -61,21 +61,12 @@ const getCostFormSchema = (t: Function) =>
         }),
       })
       .max(255),
-    amount: z
-      .string()
-      .refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0.009, {
-        message: t("common:validation.positiveNumberMin", { min: 0.01 }),
-      }),
-    is_bank_payment: z
-      .string()
-      .min(1, {
-        message: t("common:validation.required", {
-          field: t("finances:costs.paymentMethodLabel"),
-        }),
-      }), // "0" or "1"
+   // "0" or "1"
     cost_category_id: z.string().optional().nullable(),
     doctor_shift_id: z.string().optional().nullable(),
     comment: z.string().max(255).optional().nullable(),
+    amount_cash_input: z.string().optional().nullable(),
+    amount_bank_input: z.string().optional().nullable(),
   });
 type CostFormValues = z.infer<ReturnType<typeof getCostFormSchema>>;
 
@@ -93,8 +84,8 @@ const AddCostDialog: React.FC<AddCostDialogProps> = ({
     resolver: zodResolver(costFormSchema),
     defaultValues: {
       description: "",
-      amount: "",
-      is_bank_payment: "0",
+      amount_cash_input: "",
+      amount_bank_input: "",
       comment: "",
     },
   });
@@ -199,10 +190,10 @@ const AddCostDialog: React.FC<AddCostDialogProps> = ({
               />
               <FormField
                 control={form.control}
-                name="amount"
+                name="amount_cash_input"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("finances:costs.amountLabel")}</FormLabel>
+                    <FormLabel>{t("finances:costs.amountCashLabel")}</FormLabel>
                     <FormControl>
                       <Input type="number" step="0.01" {...field} />
                     </FormControl>
@@ -210,43 +201,20 @@ const AddCostDialog: React.FC<AddCostDialogProps> = ({
                   </FormItem>
                 )}
               />
-              <FormField
+             <FormField
                 control={form.control}
-                name="is_bank_payment"
+                name="amount_bank_input"
                 render={({ field }) => (
-                  <FormItem className="space-y-1.5">
-                    <FormLabel className="text-xs">
-                      {t("finances:costs.paymentMethodLabel")}
-                    </FormLabel>
+                  <FormItem>
+                    <FormLabel>{t("finances:costs.amountBankLabel")}</FormLabel>
                     <FormControl>
-                      <RadioGroup
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        className="flex gap-4"
-                        dir={i18n.dir()}
-                      >
-                        <FormItem className="flex items-center space-x-2 rtl:space-x-reverse">
-                          <FormControl>
-                            <RadioGroupItem value="0" />
-                          </FormControl>
-                          <FormLabel className="font-normal text-sm">
-                            {t("finances:costs.cash")}
-                          </FormLabel>
-                        </FormItem>
-                        <FormItem className="flex items-center space-x-2 rtl:space-x-reverse">
-                          <FormControl>
-                            <RadioGroupItem value="1" />
-                          </FormControl>
-                          <FormLabel className="font-normal text-sm">
-                            {t("finances:costs.bank")}
-                          </FormLabel>
-                        </FormItem>
-                      </RadioGroup>
+                      <Input type="number" step="0.01" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+             
               <FormField
                 control={form.control}
                 name="cost_category_id"

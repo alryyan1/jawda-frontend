@@ -1,3 +1,5 @@
+import type { User } from "./auth";
+
 // src/types/shifts.ts
 export interface Shift {
   id: number;
@@ -14,6 +16,11 @@ export interface Shift {
   updated_at: string;
   // opened_by_user_name?: string;
   // closed_by_user_name?: string;
+    // For who opened/closed
+    user_id?: number; // ID of user who opened (if 'user_id' field on Shift model means this)
+    user_opened?: User | null; 
+    user_id_closed?: number | null;
+    user_closed?: User | null;
 }
 export interface ShiftFinancialSummary {
   shift_id: number;

@@ -195,24 +195,7 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
 
 <Separator className="my-1" />
 
-{currentClinicShift && ( // Show button only if a shift is active/known
-  <Tooltip>
-    <TooltipTrigger asChild>
-      <Button 
-        variant="ghost" 
-        size="icon" 
-        className="w-11 h-11" 
-        onClick={() => setShowShiftSummaryDialog(true)}
-        aria-label={t('clinic:actionsPane.viewShiftSummary')}
-      >
-        <BarChart3 className="h-5 w-5" />
-      </Button>
-    </TooltipTrigger>
-    <TooltipContent side={i18n.dir() === 'rtl' ? 'left' : 'right'} sideOffset={5}>
-      <p>{t('clinic:actionsPane.viewShiftSummary')}</p>
-    </TooltipContent>
-  </Tooltip>
-)}
+
 <Separator className="my-1" />
         
         {/* Button to open the new dialog */}

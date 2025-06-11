@@ -11,6 +11,7 @@ import type { PaginatedResponse } from "@/types/common";
 import ActivePatientCard from "./ActivePatientCard";
 import PatientInfoDialog from "./PatientInfoDialog";
 import i18n from "@/i18n";
+import type { DoctorVisit } from "@/types/visits";
 
 interface ActivePatientsListProps {
   onPatientSelect: (patient: Patient, visitId: number) => void;
@@ -70,7 +71,7 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
     enabled: !!doctorShiftId,
   });
   const [showPatientInfoDialog, setShowPatientInfoDialog] = useState(false);
-  const [patientInfoId, setPatientInfoId] = useState<number | null>(null);
+  const [patientInfoVisit, setPatientInfoVisit] = useState<DoctorVisit | null>(null);
 
   // Reset page to 1 if doctorShiftId changes
   useEffect(() => {
@@ -86,8 +87,8 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
     );
   }
 
-  const handleProfileClickForList = (patientId: number) => {
-    setPatientInfoId(patientId);
+  const handleProfileClickForList = (visit: DoctorVisit) => {
+    setPatientInfoVisit(visit);
     setShowPatientInfoDialog(true);
   };
 
@@ -170,7 +171,7 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
       <PatientInfoDialog 
         isOpen={showPatientInfoDialog}
         onOpenChange={setShowPatientInfoDialog}
-        patientId={patientInfoId}
+        visit={patientInfoVisit}
       />
     </div>
   );

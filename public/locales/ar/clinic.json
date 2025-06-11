@@ -213,7 +213,9 @@
     "noData": "لا توجد بيانات دخل لهذه الوردية حتى الآن.",
     "serviceIncome": "إيرادات الخدمات",
     "totalServiceIncome": "إجمالي إيرادات الخدمات", 
-    "loading": "جارٍ تحميل الملخص..."
+    "loading": "جارٍ تحميل الملخص...",
+    "netCash": "صافي النقد",
+    "netBank": "صافي الشبكة/البنك"
   },
   "requestedServiceCost": {
     "dialogTitle": "إدارة تكاليف {{serviceName}}",
@@ -274,5 +276,8 @@
     "proveInsuranceRevenue": "تأكيد إيرادات التأمين",
     "proveInsuranceEntitlement": "تأكيد مستحقات التأمين",
     "printReclaimsReport": "طباعة التقرير"
-  }
+  },
+  "visitFoundById": "تم العثور على زيارة بالرقم {{visitId}} للمريض {{patientName}}",
+  "visitNotFoundById": "لم يتم العثور على زيارة بالرقم {{visitId}}",
+  "invalidVisitId": "رقم الزيارة غير صالح"
 }

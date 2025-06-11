@@ -96,3 +96,124 @@ export interface MonthlyServiceIncomeReportResponse {
     to: string;
   };
 }
+
+// src/types/reports.ts (or similar)
+
+export interface ServiceCostBreakdownItem {
+  sub_service_cost_id: number;
+  sub_service_cost_name: string;
+  total_amount: number;
+}
+
+export interface ServiceCostBreakdownReportResponse {
+  data: ServiceCostBreakdownItem[];
+  grand_total_cost: number;
+  report_period: {
+    from: string;
+    to: string;
+  };
+}
+
+// src/types/reports.ts
+// ... (existing types) ...
+
+export interface DoctorStatisticItem {
+  doctor_id: number;
+  doctor_name: string;
+  specialist_name: string;
+  patient_count: number;
+  total_income_generated: number; // Total revenue from this doctor's visits
+  cash_entitlement: number;
+  insurance_entitlement: number;
+  total_entitlement: number; // Sum of cash + insurance entitlements (+ static if applicable)
+}
+
+export interface DoctorStatisticsReportResponse {
+  data: DoctorStatisticItem[];
+  report_period: {
+    from: string;
+    to: string;
+  };
+  // Optionally add grand_totals here if backend calculates and returns them separately
+}
+
+// src/types/reports.ts
+// ... (existing types) ...
+
+export interface CompanyPerformanceItem {
+  company_id: number;
+  company_name: string;
+  patient_count: number;
+  total_income_generated: number;    // Gross value of services provided to their patients (after discounts)
+  total_endurance_by_company: number; // Total amount covered by company
+  net_income_from_company_patients: number; // Income - Endurance (what patient paid or clinic received beyond endurance)
+}
+
+export interface CompanyPerformanceReportResponse {
+  data: CompanyPerformanceItem[];
+  report_period: {
+    from: string;
+    to: string;
+  };
+  // Add grand_totals if backend sends them separately for easier frontend display
+  // grand_totals?: {
+  //   total_patient_count: number;
+  //   total_income: number;
+  //   total_endurance: number;
+  //   total_net_income: number;
+  // }
+}
+// src/types/reports.ts
+// ... (existing types) ...
+
+export interface DoctorCompanyEntitlementItem {
+  company_id: number;
+  company_name: string;
+  total_entitlement: number;
+}
+
+export interface DoctorCompanyEntitlementReportResponse {
+  data: DoctorCompanyEntitlementItem[];
+  doctor_name: string;
+  report_period: {
+    from: string;
+    to: string;
+  };
+  grand_total_entitlement: number;
+}
+
+// src/types/reports.ts
+// ... (existing types) ...
+
+export interface MonthlyIncomeDataPoint {
+  month: number; // 1-12 or a string like 'Jan' if backend sends it
+  month_name: string; // Localized month name from backend
+  total_income: number;
+}
+
+export interface YearlyIncomeComparisonResponse {
+  data: MonthlyIncomeDataPoint[];
+  meta: {
+    year: number;
+    total_yearly_income: number;
+    average_monthly_income: number;
+    // month_labels_for_chart?: string[];
+  };
+}
+// src/types/reports.ts
+// ... (existing types) ...
+
+export interface MonthlyPatientCountDataPoint {
+  month: number;
+  month_name: string;
+  patient_count: number;
+}
+
+export interface YearlyPatientFrequencyReportResponse {
+  data: MonthlyPatientCountDataPoint[];
+  meta: {
+    year: number;
+    total_unique_patients_yearly: number;
+    average_monthly_patients: number;
+  };
+}

@@ -1,5 +1,7 @@
 {
     "costs": {
+      "amountCashLabel": "المبلغ النقدي",
+      "amountBankLabel": "المبلغ البنكي",
       "addDialogTitle": "إضافة مصروف جديد",
       "addDialogDescription": "سجل المصروفات التي تمت خلال الوردية الحالية.",
       "addButton": "إضافة مصروف",

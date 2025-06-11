@@ -1,7 +1,7 @@
 // src/pages/ClinicPage.tsx
 import React, { useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { cn } from "@/lib/utils"; // For conditional class names
 
 // Import Child Components (we will create/update these)
@@ -10,7 +10,7 @@ import PatientRegistrationForm from '@/components/clinic/PatientRegistrationForm
 import ActivePatientsList from '@/components/clinic/ActivePatientsList';
 
 import { Input } from '@/components/ui/input';
-import {  Search } from 'lucide-react'; // Icons
+import {   Loader2, Search } from 'lucide-react'; // Icons
 
 import type { Patient } from '@/types/patients'; // Or your more specific ActivePatientListItem
 import type { DoctorShift } from '@/types/doctors'; // Assuming a DoctorShift type for Tabs
@@ -18,18 +18,22 @@ import ActionsPane from './ActionsPane';
 import SelectedPatientWorkspace from './SelectedPatientWorkspace';
 import { useAuth } from '@/contexts/AuthContext';
 import DoctorFinderDialog from './dialogs/DoctorFinderDialog';
+import { toast } from 'sonner';
+import { getDoctorVisitById } from '@/services/visitService';
 
 const ClinicPage: React.FC = () => {
   const { t, i18n } = useTranslation(['clinic', 'common']);
   const queryClient = useQueryClient();
    
-  const {currentClinicShift,isLoadingShift,refetchCurrentClinicShift} = useAuth()
+  // const {currentClinicShift,isLoadingShift,refetchCurrentClinicShift} = useAuth()
   const [showRegistrationForm, setShowRegistrationForm] = useState(true);
   const [selectedPatientVisit, setSelectedPatientVisit] = useState<{ patient: Patient; visitId: number } | null>(null);
   const [activeDoctorShift, setActiveDoctorShift] = useState<DoctorShift | null>(null); // For DoctorsTabs interaction
   const [globalSearchTerm, setGlobalSearchTerm] = useState('');
  // NEW CALLBACK for DoctorFinderDialog
-
+ // NEW: State for Visit ID search
+ const [visitIdSearchTerm, setVisitIdSearchTerm] = useState('');
+ const [isSearchingByVisitId, setIsSearchingByVisitId] = useState(false);
 // NEW: State for DoctorFinderDialog visibility, now controlled by F9 too
 const [isDoctorFinderDialogOpen, setIsDoctorFinderDialogOpen] = useState(false);
 
@@ -91,6 +95,39 @@ useEffect(() => {
   const gridTemplateColumns = showRegistrationForm 
     ? (isRTL ? "60px 380px minmax(350px, 1.5fr) auto" : "auto minmax(350px, 1.5fr) 380px 60px")
     : (isRTL ? "60px 380px auto" : "auto 380px 60px");
+// NEW: Mutation/Handler for searching by Visit ID
+const findVisitByIdMutation = useMutation({
+  mutationFn: (id: number) => getDoctorVisitById(id),
+  onSuccess: (foundVisit) => {
+    if (foundVisit && foundVisit.patient && foundVisit.doctorShift) {
+      toast.success(t('clinic:visitFoundById', { visitId: foundVisit.id, patientName: foundVisit.patient.name }));
+      setActiveDoctorShift(foundVisit.doctorShift); // Update active doctor shift
+      setSelectedPatientVisit({ patient: foundVisit.patient, visitId: foundVisit.id });
+      setShowRegistrationForm(false);
+      handlePatientSelected(foundVisit.patient, foundVisit.id);
+      setGlobalSearchTerm(''); // Clear other search
+      setVisitIdSearchTerm(String(foundVisit.id)); // Keep the ID in input for context
+    } else {
+      toast.error(t('clinic:visitNotFoundById', { visitId: visitIdSearchTerm }));
+    }
+  },
+  onError: (error: any) => {
+    toast.error(error.response?.data?.message || t('common:error.fetchFailed'));
+  },
+  onSettled: () => {
+    setIsSearchingByVisitId(false);
+  }
+});
+
+const handleSearchByVisitId = () => {
+  const id = parseInt(visitIdSearchTerm.trim());
+  if (isNaN(id) || id <= 0) {
+    toast.error(t('clinic:invalidVisitId'));
+    return;
+  }
+  setIsSearchingByVisitId(true);
+  findVisitByIdMutation.mutate(id);
+};
 
 
   return (
@@ -116,6 +153,21 @@ useEffect(() => {
               className="ps-10 rtl:pr-10 h-12 text-base"
             />
           </div>
+                      {/* NEW Visit ID Search Input */}
+                      <div className="relative w-full sm:w-auto sm:min-w-[150px]">
+                <Input
+                    type="number"
+                    placeholder={t('clinic:searchByVisitIdPlaceholder', "Visit ID...")}
+                    value={visitIdSearchTerm}
+                    onChange={(e) => { setVisitIdSearchTerm(e.target.value); setGlobalSearchTerm('');}}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleSearchByVisitId(); }}
+                    className="ps-10 rtl:pr-10 h-9 text-xs"
+                    disabled={isSearchingByVisitId}
+                />
+                <Search className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
+                {isSearchingByVisitId && <Loader2 className="absolute ltr:right-2 rtl:left-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin"/>}
+            </div>
+
         </div>
       </header>
 

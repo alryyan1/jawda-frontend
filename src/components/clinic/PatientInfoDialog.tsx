@@ -32,11 +32,12 @@ import { getPatientById } from "@/services/patientService";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area"; // Corrected import path
 import EditPatientInfoDialog from "./EditPatientInfoDialog"; // NEW IMPORT
+import type { DoctorVisit } from "@/types/visits";
 
 interface PatientInfoDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  patientId: number | null;
+  visit: DoctorVisit | null;
 }
 
 // Reusable DetailRow component (if not already in a shared file)
@@ -81,7 +82,7 @@ const DetailRowDisplay: React.FC<{
 const PatientInfoDialog: React.FC<PatientInfoDialogProps> = ({
   isOpen,
   onOpenChange,
-  patientId,
+  visit,
 }) => {
   const { t, i18n } = useTranslation(["clinic", "common", "patients"]);
   const dateLocale = i18n.language.startsWith("ar") ? arSA : enUS;
@@ -90,7 +91,7 @@ const PatientInfoDialog: React.FC<PatientInfoDialogProps> = ({
   // NEW: State for Edit Dialog
   const [isEditPatientDialogOpen, setIsEditPatientDialogOpen] = useState(false);
 
-  const patientQueryKey = ["patientDetailsForInfoPanel", patientId];
+  const patientQueryKey = ["patientDetailsForInfoPanel", visit?.patient.id];
   const {
     data: patient,
     isLoading,
@@ -98,10 +99,10 @@ const PatientInfoDialog: React.FC<PatientInfoDialogProps> = ({
   } = useQuery<Patient, Error>({
     queryKey: patientQueryKey,
     queryFn: () => {
-      if (!patientId) throw new Error("Patient ID is required.");
-      return getPatientById(patientId);
+      if (!visit?.patient.id) throw new Error("Patient ID is required.");
+      return getPatientById(visit?.patient.id);
     },
-    enabled: !!patientId && isOpen, // Only fetch when main dialog is open and patientId exists
+    enabled: !!visit?.patient.id && isOpen, // Only fetch when main dialog is open and patientId exists
   });
 
   const getAgeString = (p?: Patient | null): string => {
@@ -214,7 +215,7 @@ const PatientInfoDialog: React.FC<PatientInfoDialogProps> = ({
                   <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-0">
                     <DetailRowDisplay
                       label={t("patients:fields.id")}
-                      value={patient.id}
+                      value={visit?.id}
                       icon={IdCard}
                     />
                     <DetailRowDisplay
@@ -301,11 +302,11 @@ const PatientInfoDialog: React.FC<PatientInfoDialogProps> = ({
       </Dialog>
 
       {/* Edit Patient Info Dialog (Conditionally Rendered) */}
-      {patientId && (
+      {visit?.patient.id && (
         <EditPatientInfoDialog
           isOpen={isEditPatientDialogOpen}
           onOpenChange={setIsEditPatientDialogOpen}
-          patientId={patientId}
+          patientId={visit?.patient.id}
           onPatientInfoUpdated={handlePatientInfoUpdated}
         />
       )}

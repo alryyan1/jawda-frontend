@@ -100,8 +100,9 @@
   "form": {
     "fillDetails": "الرجاء ملء التفاصيل أدناه."
   },
-  "pageXOfY": "صفحة {{current}} من {{total}}",
   "error": {
+    "fetchFailedTitle": "فشل في جلب البيانات"
+    ,
     "generic": "حدث خطأ غير متوقع.",
     "loadListsFailed": "فشل تحميل القوائم.",
     "saveFailed": "فشل حفظ {{entity}}.",
@@ -171,6 +172,8 @@
     "active": "نشط",
     "inactive": "غير نشط"
   },
+  "totalIncome":"اجمالي الدخل",
+  "income":" الدخل",
   "print": "طباعة",
   "printReceipt": "طباعة الإيصال",
   "permissions": {
@@ -270,5 +273,11 @@
   "dateRange": "نطاق التاريخ",
   "selectDoctorPlaceholder": "اختر الطبيب",
   "allDoctors": "جميع الأطباء",
-  "download": "تحميل الإيصال"
+  "download": "تحميل الإيصال",
+  "confirmAndClose": "تأكيد وإغلاق",
+  "refresh": "تحديث",
+  "unknownUser": "غير معروف",
+
+  "printPdf": "طباعة PDF",
+  "grandTotal": "المجموع الكلي"
 }

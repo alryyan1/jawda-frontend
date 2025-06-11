@@ -25,6 +25,7 @@ export interface DoctorVisit {
   lab_requests?: LabRequest[];
   company?: Company;
 
+
   patient_id: number;
   patient: Patient; // Full patient object
 
@@ -46,6 +47,7 @@ export interface DoctorVisit {
 
   created_at: string;
   updated_at: string;
+  doctorShift?: DoctorShift;
 }
 
 export interface RequestedServiceSummary {

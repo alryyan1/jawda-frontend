@@ -92,6 +92,20 @@ const UserShiftIncomeDialog: React.FC<UserShiftIncomeDialogProps> = ({ isOpen, o
                      valueClass="text-purple-600 dark:text-purple-400"
                  />
                  <DetailRow 
+                     label={t('clinic:userShiftIncomeDialog.netCash')} 
+                     value={formatNumber(summary.net_cash)}
+                     icon={Coins}
+                     unit={t('dashboard:currencySymbol')}
+                     valueClass="text-purple-600 dark:text-purple-400"
+                 />
+                   <DetailRow 
+                     label={t('clinic:userShiftIncomeDialog.netBank')} 
+                     value={formatNumber(summary.net_bank)}
+                     icon={Landmark}
+                     unit={t('dashboard:currencySymbol')}
+                     valueClass="text-purple-600 dark:text-purple-400"
+                 />
+                 <DetailRow 
                      label={t('clinic:userShiftIncomeDialog.totalIncome')} 
                      value={formatNumber(summary.total_income)}
                      icon={DollarSign}

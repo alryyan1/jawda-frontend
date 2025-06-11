@@ -52,6 +52,12 @@ import AuditRecordPage from "./pages/audit/AuditRecordPage";
 import MonthlyServiceIncomeReportPage from "./pages/reports/MonthlyServiceIncomeReportPage";
 import AnalysisPage from "./pages/anaylsis/AnalysisPage";
 import BulkWhatsAppPage from "./pages/communication/BulkWhatsAppPage";
+import ServiceCostBreakdownReportPage from "./pages/reports/ServiceCostBreakdownReportPage";
+import DoctorStatisticsReportPage from "./pages/reports/DoctorStatisticsReportPage";
+import CompanyPerformanceReportPage from "./pages/reports/CompanyPerformanceReportPage";
+import DoctorCompanyEntitlementReportPage from "./pages/reports/DoctorCompanyEntitlementReportPage";
+import YearlyIncomeComparisonReportPage from "./pages/reports/YearlyIncomeComparisonReportPage";
+import YearlyPatientFrequencyReportPage from "./pages/reports/YearlyPatientFrequencyReportPage";
 // import NotFoundPage from './pages/NotFoundPage'; // Optional: For 404 handling
 
 const AppointmentsPlaceholderPage: React.FC = () => (
@@ -209,7 +215,32 @@ const router = createBrowserRouter([
                 path: 'costs', // Or whatever path you chose for the backend route / allclinicsReportNew
                 element: <CostsReportPage />,
               },
-            
+              {
+                path: 'doctor-statistics',
+                element: <DoctorStatisticsReportPage />,
+              },
+              {
+                path: 'company-performance',
+                element: <CompanyPerformanceReportPage />,
+              },
+              {
+                path:'doctor-company-entitlement',
+                element:<DoctorCompanyEntitlementReportPage/>
+              },
+              {
+                path: 'service-cost-breakdown',
+                element: <ServiceCostBreakdownReportPage />,
+              },
+              {
+                path:'yearly-income-comparison',
+                element:<YearlyIncomeComparisonReportPage/>
+              }
+              ,
+              {
+                path:'yearly-patient-frequency',
+                element:<YearlyPatientFrequencyReportPage/>
+              }
+              
               // Add other report routes here
               // { path: 'patient-visits', element: <PatientVisitsReportPage /> },
             ],

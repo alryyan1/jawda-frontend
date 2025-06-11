@@ -3,7 +3,7 @@ import React from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ListCollapse, FileBarChart2, FileSpreadsheet, BarChartBig } from 'lucide-react'; // Example icons
+import { ListCollapse, FileBarChart2, FileSpreadsheet, BarChartBig, HandCoins, LineChart, UsersRound } from 'lucide-react'; // Example icons
 import { cn } from '@/lib/utils';
 
 const reportNavItems = [
@@ -12,6 +12,13 @@ const reportNavItems = [
   { to: '/reports/clinic-shift-summary', labelKey: 'clinicShiftSummaryReport.titleShort', icon: FileSpreadsheet },
   { to: '/reports/costs', labelKey: 'costsReport.titleShort', icon: FileSpreadsheet },
   { to: '/reports/monthly-service-income', labelKey: 'monthlyServiceIncomeReport.titleShort', icon: BarChartBig }, // NEW
+  { to: '/reports/service-cost-breakdown', labelKey: 'serviceCostBreakdownReport.titleShort', icon: BarChartBig }, // NEW
+  { to: '/reports/doctor-statistics', labelKey: 'doctorStatisticsReport.titleShort', icon: BarChartBig }, // NEW
+  { to: '/reports/company-performance', labelKey: 'companyPerformanceReport.titleShort', icon: BarChartBig }, // NEW
+  { to: '/reports/doctor-company-entitlement', labelKey: 'doctorCompanyEntitlementReport.titleShort', icon: HandCoins },
+  { to: '/reports/yearly-income-comparison', labelKey: 'yearlyIncomeComparisonReport.titleShort', icon: LineChart },
+  { to: '/reports/yearly-patient-frequency', labelKey: 'yearlyPatientFrequencyReport.titleShort', icon: UsersRound },
+
   // Add more reports here:
   // { to: '/reports/patient-visits', labelKey: 'patientVisitsReport.titleShort', icon: Users },
   // { to: '/reports/financial-summary', labelKey: 'financialSummaryReport.titleShort', icon: LineChart },

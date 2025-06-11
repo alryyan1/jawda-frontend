@@ -144,11 +144,76 @@
     "fetchFailedTitle": "فشل في جلب التقرير",
     "generic": "حدث خطأ أثناء جلب التقرير"
   },
+  "doctorStatisticsReport": {
+    "title": "إحصائيات أداء الأطباء",
+    "titleShort": "إحصائيات الأطباء",
+    "table": {
+      "doctorName": "الطبيب",
+      "specialistName": "التخصص",
+      "patientCount": "عدد المرضى",
+      "totalIncomeGenerated": "إجمالي الإيرادات",
+      "cashEntitlement": "المستحقات النقدية",
+      "insuranceEntitlement": "المستحقات التأمينية",
+      "totalEntitlement": "إجمالي المستحقات"
+    }
+  },
+  "companyPerformanceReport": {
+    "title": "تقرير أداء الشركة",
+    "titleShort": "أداء الشركة",
+    "allCompanies": "جميع الشركات",
+    "table": {
+      "companyName": "الشركة",
+      "patientCount": "عدد المرضى",
+      "totalIncomeGenerated": "إجمالي الإيرادات",
+      "totalEndurance": "إجمالي المستحقات",
+      "netIncome": "صافي الإيرادات"
+    }
+  },
   "sidebarTitle": "التقارير",
   "filtersTitle": "عوامل التصفية",
   "applyFiltersButton": "تحديث البيانات",
   "reportForPeriod": "تقرير للفترة: {{from}} إلى {{to}}",
   "reportPreview": "عرض التقرير",
-  "reportPreviewDescription": "عرض التقرير للفترة المحددة"
+  "reportPreviewDescription": "عرض التقرير للفترة المحددة",
+  "serviceCostBreakdownReport": {
+    "title": "تقرير تفاصيل التكلفة",
+    "titleShort": "تفاصيل التكلفة",
+    "filterByCostType": "تصفية بنوع التكلفة",
+    "table": {
+      "costType": "نوع التكلفة / المكون",
+      "totalAmount": "المبلغ الإجمالي"
+    }
+  },
+  "doctorCompanyEntitlementReport": {
+    "title": "تقرير مستحقات الطبيب من الشركات",
+    "titleShort": "مستحقات الطبيب من الشركات",
+    "selectDoctorPrompt": "اختر طبيباً لعرض مستحقاته من الشركات",
+    "selectDoctorPromptDetailed": "الرجاء اختيار الطبيب ونطاق التاريخ لعرض التقرير",
+    "allFiltersRequiredForPdf": "الطبيب ونطاق التاريخ مطلوبان لإنشاء ملف PDF",
+    "doctorRequiredError": "الرجاء اختيار طبيب",
+    "noDataForDoctor": "لم يتم العثور على مستحقات من الشركات لهذا الطبيب في الفترة المحددة",
+    "table": {
+      "companyName": "شركة التأمين",
+      "totalEntitlement": "إجمالي مستحقات الطبيب"
+    }
+  },"yearlyPatientFrequencyReport": {
+  "title": "تقرير التردد الشهري للمرضى",
+  "titleShort": "عدد المرضى الشهري",
+  "reportForYear": "تقرير تردد المرضى للسنة: {{year}}",
+  "chartTitle": "عدد المرضى الشهري",
+  "totalUniquePatients": "إجمالي المرضى الفريدين (للسنة)",
+  "averageMonthlyPatients": "متوسط عدد المرضى شهرياً",
+  "patients": "المرضى",
+  "patientCount": "عدد المرضى"
+},
+  "reportForDoctorAndPeriod": "تقرير مستحقات الطبيب للفترة",
+  "yearlyIncomeComparisonReport": {
+    "title": "تقرير مقارنة الدخل السنوي",
+    "titleShort": "مقارنة الدخل السنوي",
+    "reportForYear": "تقرير للسنة: {{year}}",
+    "totalYearlyIncome": "إجمالي الدخل السنوي",
+    "averageMonthlyIncome": "متوسط الدخل الشهري",
+    "chartTitle": "مقارنة الدخل الشهري"
+  }
 }
 

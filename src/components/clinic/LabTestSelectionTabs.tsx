@@ -1,38 +1,77 @@
-// src/components/clinic/LabTestSelectionTabs.tsx
-import React, { useState, useEffect } from 'react';
+// src/components/clinic/lab_requests/LabTestSelectionTabs.tsx
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Search, Loader2, PlusCircle, Tag } from 'lucide-react'; // Tag for package
-import { cn } from '@/lib/utils';
+
+// MUI Imports
+import Box from '@mui/material/Box';
+import Tabs from '@mui/material/Tabs';
+import Tab from '@mui/material/Tab';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import CardActions from '@mui/material/CardActions'; // Optional for service card
+import TextField from '@mui/material/TextField';
+import Button from '@mui/material/Button'; // MUI Button
+import Checkbox from '@mui/material/Checkbox'; // MUI Checkbox
+import Typography from '@mui/material/Typography';
+import CircularProgress from '@mui/material/CircularProgress'; // MUI Loader
+import IconButton from '@mui/material/IconButton'; // For icon buttons
+
+// MUI Icons
+import SearchIcon from '@mui/icons-material/Search';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import StyleIcon from '@mui/icons-material/Style'; // MUI equivalent for Tag icon
+
+import { cn } from '@/lib/utils'; // Keep cn for other conditional classes if needed
 import type { Package, MainTestStripped } from '@/types/labTests';
 import { getPackagesList } from '@/services/packageService';
 import { getMainTestsListForSelection, findMainTestByIdentifier } from '@/services/mainTestService';
+import { toast } from 'sonner';
 
 interface LabTestSelectionTabsProps {
-  visitId: number; // To exclude already requested tests
-  selectedTestIds: Set<number>; // Set of currently selected test IDs from parent
+  visitId: number;
+  selectedTestIds: Set<number>;
   onTestSelectionChange: (testId: number, isSelected: boolean) => void;
-  onAddById: (test: MainTestStripped) => void; // Callback to add a test found by ID
+  onAddById: (test: MainTestStripped) => void;
 }
 
-const LabTestSelectionTabs: React.FC<LabTestSelectionTabsProps> = ({ 
-    visitId, selectedTestIds, onTestSelectionChange, onAddById 
+interface TabPanelProps {
+  children?: React.ReactNode;
+  index: string; // or number, depends on how you manage tab values
+  value: string;
+}
+
+function TabPanel(props: TabPanelProps) {
+  const { children, value, index, ...other } = props;
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`labtest-tabpanel-${index}`}
+      aria-labelledby={`labtest-tab-${index}`}
+      style={{ height: '100%', overflowY: 'auto' }} // Ensure panel can scroll
+      {...other}
+    >
+      {value === index && (
+        <Box sx={{ p: 0.5, height: '100%' }}> {/* Minimal padding for content */}
+          {children}
+        </Box>
+      )}
+    </div>
+  );
+}
+
+const LabTestSelectionTabs: React.FC<LabTestSelectionTabsProps> = ({
+  visitId, selectedTestIds, onTestSelectionChange, onAddById
 }) => {
   const { t, i18n } = useTranslation(['labTests', 'common']);
-  const [activePackageTab, setActivePackageTab] = useState<string>('all'); // 'all' or package_id as string
+  const [activePackageTab, setActivePackageTab] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [testIdInput, setTestIdInput] = useState('');
   const [isFindingTestById, setIsFindingTestById] = useState(false);
 
-
-  useEffect(() => { // Debounce search
+  useEffect(() => {
     const handler = setTimeout(() => setDebouncedSearchTerm(searchTerm), 300);
     return () => clearTimeout(handler);
   }, [searchTerm]);
@@ -49,108 +88,173 @@ const LabTestSelectionTabs: React.FC<LabTestSelectionTabsProps> = ({
       visit_id_to_exclude_requests: visitId,
       search: debouncedSearchTerm,
     }),
-    enabled: !!visitId, // Only fetch when visitId is present
+    enabled: !!visitId,
   });
-  
+
+  const handleTabChange = (event: React.SyntheticEvent, newValue: string) => {
+    setActivePackageTab(newValue);
+  };
+
   const handleFindTestById = async () => {
     if (!testIdInput.trim()) return;
     setIsFindingTestById(true);
     try {
-        const foundTest = await findMainTestByIdentifier(testIdInput.trim(), visitId);
-        if (foundTest) {
-            onAddById(foundTest); // Parent adds to selected list if not already there
-            setTestIdInput('');
-        }
-        // Error toast handled by service
+      const foundTest = await findMainTestByIdentifier(testIdInput.trim(), visitId);
+      if (foundTest) {
+        onAddById(foundTest);
+        setTestIdInput('');
+      }
     } catch (error) {
-        console.error("Error finding test by ID", error);
-        // toast.error(t('common:error.generic')); // Service might handle specific errors
+      console.error("Error finding test by ID", error);
     } finally {
-        setIsFindingTestById(false);
+      setIsFindingTestById(false);
     }
   };
 
-  const ServiceCard: React.FC<{ test: MainTestStripped }> = ({ test }) => (
-    <Card
-      onClick={() => onTestSelectionChange(test.id, !selectedTestIds.has(test.id))}
-      className={cn(
-        "cursor-pointer hover:shadow-md transition-all text-xs p-2 flex flex-col justify-between h-[70px] sm:h-[80px] relative w-full max-w-[140px] sm:max-w-[160px]",
-        selectedTestIds.has(test.id) ? "ring-2 ring-primary shadow-lg bg-primary/10" : "bg-card"
-      )}
-      title={test.main_test_name}
-    >
-      <div className="flex items-start justify-between">
-        <p className="font-medium leading-tight line-clamp-2 text-xs sm:text-sm">
-          {test.main_test_name}
-        </p>
-        <Checkbox checked={selectedTestIds.has(test.id)} className="h-3.5 w-3.5 shrink-0" />
-      </div>
-      <div className="mt-auto">
-        <p className="font-semibold text-[10px] sm:text-xs">{Number(test.price).toFixed(1)} {t('common:currency')}</p>
-      </div>
-    </Card>
-  );
+  const ServiceCard: React.FC<{ test: MainTestStripped }> = React.memo(({ test }) => {
+    const isSelected = selectedTestIds.has(test.id);
+    return (
+      <Card
+        onClick={() => onTestSelectionChange(test.id, !isSelected)}
+        sx={{
+          cursor: 'pointer',
+          transition: 'all 0.15s ease-in-out',
+          position: 'relative',
+          height: { xs: '70px', sm: '80px' },
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          p: 1, // Padding directly on card
+          border: isSelected ? '2px solid' : '1px solid',
+          borderColor: isSelected ? 'primary.main' : 'divider',
+          backgroundColor: isSelected ? 'primary.lightOpacity' : 'background.paper', // Example for MUI theme
+          '&:hover': { boxShadow: 3 }, // MUI shadow preset
+          maxWidth: { xs: '140px', sm: '160px' }, // Max width control
+        }}
+        role="button"
+        tabIndex={0}
+        aria-pressed={isSelected}
+        aria-label={test.main_test_name}
+      >
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <Typography variant="body2" fontWeight="medium" sx={{ lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+            {test.main_test_name}
+          </Typography>
+          <Checkbox
+            checked={isSelected}
+            size="small"
+            sx={{ p: 0, ml: 0.5 }} // Minimal padding for checkbox
+          />
+        </Box>
+        <Box sx={{ mt: 'auto' }}> {/* Push price to bottom */}
+          <Typography variant="caption" fontWeight="semibold">
+            {Number(test.price).toFixed(1)} {t('common:currency')}
+          </Typography>
+        </Box>
+      </Card>
+    );
+  });
+  ServiceCard.displayName = 'ServiceCard';
+
 
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-2 items-end">
-        <div className="relative">
-          <Input
-            type="search"
-            placeholder={t('labTests:request.searchTestsPlaceholder')}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="ps-10 rtl:pr-10 h-9"
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, height: '100%' }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr' }, gap: 1, alignItems: 'flex-end' }}>
+        <TextField
+          variant="outlined"
+          size="small"
+          fullWidth
+          placeholder={t('labTests:request.searchTestsPlaceholder')}
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <SearchIcon fontSize="small" sx={{ color: 'action.active', mr: 1 }} />
+            ),
+          }}
+        />
+        <Box sx={{ display: 'flex', gap: 1, width: '100%' }}>
+          <TextField
+            variant="outlined"
+            size="small"
+            fullWidth
+            placeholder={t('labTests:request.addByTestIdPlaceholder')}
+            value={testIdInput}
+            onChange={(e) => setTestIdInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleFindTestById();}}}
           />
-          <Search className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        </div>
-        <div className="flex items-end gap-1 w-full md:w-auto">
-            <Input
-                type="text"
-                placeholder={t('labTests:request.addByTestIdPlaceholder')}
-                value={testIdInput}
-                onChange={(e) => setTestIdInput(e.target.value)}
-                className="h-9 flex-grow"
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleFindTestById();}}}
-            />
-            <Button onClick={handleFindTestById} size="icon" className="h-9 w-9 shrink-0" disabled={isFindingTestById || !testIdInput.trim()}>
-                {isFindingTestById ? <Loader2 className="h-4 w-4 animate-spin"/> : <PlusCircle className="h-4 w-4"/>}
-            </Button>
-        </div>
-      </div>
+          <IconButton
+            color="primary"
+            onClick={handleFindTestById}
+            disabled={isFindingTestById || !testIdInput.trim()}
+            size="small"
+            sx={{p: '7px'}} // Adjust padding to match TextField height
+          >
+            {isFindingTestById ? <CircularProgress size={20} /> : <AddCircleOutlineIcon fontSize="small"/>}
+          </IconButton>
+        </Box>
+      </Box>
 
-      {isLoadingPackages ? <div className="py-2"><Loader2 className="h-5 w-5 animate-spin text-primary"/></div> : (
-      <Tabs value={activePackageTab} onValueChange={setActivePackageTab} defaultValue="all" dir={i18n.dir()} className="w-full">
-        <ScrollArea className="w-full whitespace-nowrap border-b">
-          <TabsList className="inline-flex h-auto p-1 bg-muted rounded-lg">
-            {/* <TabsTrigger value="all" className="text-xs px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">{t('common:all')}</TabsTrigger> */}
-            <TabsTrigger value="none" className="text-xs px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">{t('labTests:request.unpackaged')}</TabsTrigger>
+      {isLoadingPackages ? <CircularProgress size={24} sx={{display: 'block', margin: '8px auto'}} /> : (
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', width: '100%' }}>
+          <Tabs
+            value={activePackageTab}
+            onChange={handleTabChange}
+            variant="scrollable"
+            scrollButtons="auto"
+            allowScrollButtonsMobile
+            aria-label="Lab Test Packages"
+            sx={{ 
+              minHeight: '36px', // Ensure tabs list has some height
+              '& .MuiTabs-indicator': { backgroundColor: 'primary.main' },
+              '& .MuiTab-root': { 
+                textTransform: 'none', 
+                fontSize: '0.75rem', 
+                minHeight: '36px',
+                padding: '6px 12px',
+                '&.Mui-selected': { color: 'primary.main', fontWeight: 'bold' }
+              }
+            }}
+          >
+            {/* <Tab label={t('common:all')} value="all" /> */}
+            <Tab label={t('labTests:request.unpackaged')} value="none" icon={<StyleIcon fontSize="inherit" sx={{mr: 0.5}}/>} iconPosition="start" />
             {packages?.map((pkg) => (
-              <TabsTrigger key={pkg.id} value={String(pkg.id)} className="text-xs px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-                <Tag className="h-3 w-3 ltr:mr-1 rtl:ml-1 opacity-70"/> {pkg.name}
-              </TabsTrigger>
+              <Tab 
+                key={pkg.id} 
+                label={pkg.name} 
+                value={String(pkg.id)} 
+                icon={<StyleIcon fontSize="inherit" sx={{mr: 0.5}}/>} 
+                iconPosition="start" 
+              />
             ))}
-          </TabsList>
-        </ScrollArea>
-        
-        <div className="mt-2">
-            {isLoadingTests ? <div className="h-[200px] flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary"/></div> :
-             !testsForTab || testsForTab.length === 0 ? (
-                <div className="h-[200px] flex items-center justify-center text-sm text-muted-foreground p-4 text-center">
-                    {debouncedSearchTerm ? t('common:noResultsFound') : t('labTests:request.noTestsInPackage')}
-                </div>
-             ) : (
-                <ScrollArea className="h-[calc(50vh-220px)] min-h-[150px]"> {/* Adjust height */}
-                    <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-1.5 sm:gap-2 p-0.5">
-                        {testsForTab.map((test) => <ServiceCard key={test.id} test={test} />)}
-                    </div>
-                </ScrollArea>
-             )
-            }
-        </div>
-      </Tabs>
+          </Tabs>
+        </Box>
       )}
-    </div>
+      
+      <Box sx={{ flexGrow: 1, overflow: 'hidden', mt: 0.5 }}> {/* Container for tab content */}
+        {isLoadingTests ? (
+          <Box sx={{ height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <CircularProgress />
+          </Box>
+        ) : !testsForTab || testsForTab.length === 0 ? (
+          <Box sx={{ height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Typography variant="body2" color="text.secondary">
+              {debouncedSearchTerm ? t('common:noResultsFound') : t('labTests:request.noTestsInPackage')}
+            </Typography>
+          </Box>
+        ) : (
+          <TabPanel value={activePackageTab} index={activePackageTab}> {/* Single TabPanel, content changes based on query */}
+             <Box sx={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', // Responsive grid
+                gap: 0.75, // Gap between cards
+              }}>
+                {testsForTab.map((test) => <ServiceCard key={test.id} test={test} />)}
+            </Box>
+          </TabPanel>
+        )}
+      </Box>
+    </Box>
   );
 };
 export default LabTestSelectionTabs;

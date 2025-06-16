@@ -17,7 +17,9 @@
     "servicesConfig": "إعدادات الخدمات",
     "laboratory": "المختبر",
     "companies": "الشركات",
-    "reportHeaderSettings": "ترويسة التقارير"
+    "reportHeaderSettings": "ترويسة التقارير",
+    "shiftDefinitions": "تعريفات الورديات",
+    "holidays": "العطلات الرسمية"
   },
   "companies": "الشركات",
   "laboratory": "المختبر",

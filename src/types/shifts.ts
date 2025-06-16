@@ -21,6 +21,7 @@ export interface Shift {
     user_opened?: User | null; 
     user_id_closed?: number | null;
     user_closed?: User | null;
+    
 }
 export interface ShiftFinancialSummary {
   shift_id: number;

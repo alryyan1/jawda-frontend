@@ -52,7 +52,9 @@
   "status": {
     "paid": "مدفوع",
     "unpaid": "غير مدفوع",
-    "partial": "مدفوع جزئياً"
+    "partial": "مدفوع جزئياً",
+    "pending": "قيد الانتظار"
+
   },
   "dialogTitleLab": "تسديد دفعة للمختبر",
   "netPayable": "المبلغ المستحق للدفع",
@@ -62,6 +64,14 @@
   "pending": "قيد الانتظار",
   "confirmDirectPayLab": "هل أنت متأكد من تسديد جميع المستحقات المخبرية؟",
   "confirmDirectPayLabItem": "هل أنت متأكد من تسديد مستحقات الفحص '{{testName}}'؟",
-  "companyEnduranceTotal": "تحمل الشركة الكلي"
+  "companyEnduranceTotal": "تحمل الشركة الكلي",
+  
+  "summaryLabels": {
+    "grossTotal": "الإجمالي الكلي",
+    "totalDiscount": "إجمالي الخصم",
+    "netPayableByPatient": "الصافي على المريض",
+    "totalPaidByPatient": "المدفوع من المريض",
+    "balanceDueFromPatient": "المتبقي على المريض"
+  }
     
 }

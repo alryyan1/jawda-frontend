@@ -58,6 +58,12 @@ import CompanyPerformanceReportPage from "./pages/reports/CompanyPerformanceRepo
 import DoctorCompanyEntitlementReportPage from "./pages/reports/DoctorCompanyEntitlementReportPage";
 import YearlyIncomeComparisonReportPage from "./pages/reports/YearlyIncomeComparisonReportPage";
 import YearlyPatientFrequencyReportPage from "./pages/reports/YearlyPatientFrequencyReportPage";
+import DailyAttendanceDetailPage from "./pages/reports/attendance/DailyAttendanceDetailPage";
+import PayrollAttendanceReportPage from "./pages/reports/PayrollAttendanceReportPage";
+import MonthlyEmployeeAttendanceSummaryPage from "./pages/reports/attendance/MonthlyEmployeeAttendanceSummaryPage";
+import ShiftDefinitionsPage from "./pages/settings/ShiftDefinitionsPage";
+import AttendanceSheetPage from "./pages/attendance/AttendanceSheetPage";
+import HolidaysPage from "./pages/settings/attendance/HolidaysPage";
 // import NotFoundPage from './pages/NotFoundPage'; // Optional: For 404 handling
 
 const AppointmentsPlaceholderPage: React.FC = () => (
@@ -161,6 +167,17 @@ const router = createBrowserRouter([
               },
             ],
           },
+       
+          {
+            path: "reports",
+            element: <ReportsLayout />,
+            children: [
+              // ... your existing report routes ...
+              { path: "attendance-summary", element: <MonthlyEmployeeAttendanceSummaryPage /> },
+              { path: "attendance-daily", element: <DailyAttendanceDetailPage /> },
+              { path: "attendance-payroll", element: <PayrollAttendanceReportPage /> },
+            ],
+          },
           {
             path: "clinic",
             element: <ClinicPage />,
@@ -253,7 +270,15 @@ const router = createBrowserRouter([
             path: "/patients",
             element: <TodaysPatientsPage />,
           },
-
+  // === NEW: ATTENDANCE MODULE ROUTES ===
+  {
+    path: "attendance", // Base path for main attendance features
+    children: [
+      { index: true, element: <Navigate to="sheet" replace /> }, // Default to sheet
+      { path: "sheet", element: <AttendanceSheetPage /> },
+      // Add other main attendance related pages here if any
+    ],
+  },
           // Settings & Profile (Placeholders)
           {
             path: "settings",
@@ -264,6 +289,14 @@ const router = createBrowserRouter([
               {
                 path: "insurance-audit",
                 element: <InsuranceAuditPage />,
+              },
+              {
+                path: "attendance",
+                element: <Outlet />,
+                children: [
+                  { path: "shift-definitions", element: <ShiftDefinitionsPage /> },
+                  { path: "holidays", element: <HolidaysPage /> },
+                ],
               },
               {
                 path: "insurance-audit/visit/:visitId", // Or use auditRecordId if that's the primary identifier

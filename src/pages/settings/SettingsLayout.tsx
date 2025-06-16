@@ -3,7 +3,9 @@ import React from 'react';
 import { Outlet, NavLink, /* useLocation */ } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { 
-    Settings, Building, FlaskConical, ListOrdered, CreditCard, Printer, Workflow, MessageCircle 
+    Settings, Building, FlaskConical, ListOrdered, CreditCard, Printer, Workflow, MessageCircle, 
+    ClockIcon,
+    PartyPopperIcon
 } from 'lucide-react'; // Added Printer, Workflow, MessageCircle
 import { cn } from '@/lib/utils';
     // import { useAuthorization } from '@/hooks/useAuthorization';
@@ -23,6 +25,9 @@ const settingsNavItems: SettingsNavItem[] = [
   { to: 'services', labelKey: 'tabs.servicesConfig', icon: ListOrdered, permission: 'manage service_settings' },
   { to: '/settings/laboratory/price-list', labelKey: 'laboratoryTestsPriceList', icon: CreditCard, permission: 'manage price_list' },
   { to: 'insurance-audit', labelKey: 'insuranceAudit', icon: CreditCard, permission: 'manage insurance_audit' },
+  // Example settingsNavItems update
+{ to: 'attendance/shift-definitions', labelKey: 'settings:tabs.shiftDefinitions', icon: ClockIcon, permission: 'manage_shift_definitions' },
+{ to: 'attendance/holidays', labelKey: 'settings:tabs.holidays', icon: PartyPopperIcon, permission: 'manage_holidays' },
 ];
 
 const SettingsLayout: React.FC = () => {

@@ -16,7 +16,7 @@ import type { ChildTestWithResult, PatientLabQueueItem } from '@/types/labWorkfl
 import type { Shift } from '@/types/shifts';
 
 // Import Services
-import { getCurrentOpenShift } from '@/services/shiftService';
+import { getCurrentOpenShift, getShiftsList } from '@/services/shiftService';
 import TestSelectionPanel from './TestSelectionPanel';
 import ResultEntryPanel from '@/components/lab/workstation/ResultEntryPanel';
 import LabActionsPane from '@/components/lab/workstation/LabActionsPane';
@@ -51,7 +51,52 @@ const handleChildTestFocus = useCallback((childTest: ChildTestWithResult | null)
     queryFn: getCurrentOpenShift,
     // staleTime: 5 * 60 * 1000, // Example: Cache for 5 minutes
   });
+  const [currentShiftForQueue, setCurrentShiftForQueue] = useState<Shift | null>(currentClinicShift || null);
 
+  // Update currentShiftForQueue when the global currentClinicShift changes (e.g., on app load)
+  useEffect(() => {
+    if (currentClinicShift && (!currentShiftForQueue || currentClinicShift.id !== currentShiftForQueue.id)) {
+      setCurrentShiftForQueue(currentClinicShift);
+    } else if (!currentClinicShift && currentShiftForQueue) {
+      // If global shift closes or becomes null, what to do? Maybe keep last shown or reset.
+      // For now, let's keep the last one shown unless explicitly changed.
+    }
+  }, [currentClinicShift, currentShiftForQueue]);
+  
+  
+  const handleShiftNavigationInQueue = useCallback(async (direction: 'next' | 'prev') => {
+    console.log("Shift navigation requested:", direction, "from shift:", currentShiftForQueue?.id);
+    // This is where you'd call your backend API to get the next/previous shift ID.
+    // For example: const nextShiftId = await getNextShiftId(currentShiftForQueue?.id, direction);
+    // Then: const nextShiftDetails = await getShiftById(nextShiftId); setCurrentShiftForQueue(nextShiftDetails);
+    
+    // Placeholder: Simulating fetching a different shift. Replace with actual API calls.
+    const allShifts = await queryClient.fetchQuery<Shift[]>({ 
+        queryKey: ['allShiftsListForNavigation'], 
+        queryFn: () => getShiftsList({ per_page: 0 }) // Fetch all shifts for demo; optimize in real app
+    });
+  
+    if (allShifts && allShifts.length > 0) {
+      const currentIndex = currentShiftForQueue ? allShifts.findIndex(s => s.id === currentShiftForQueue.id) : -1;
+      let newIndex = -1;
+  
+      if (direction === 'prev') {
+        newIndex = currentIndex > 0 ? currentIndex - 1 : allShifts.length - 1; // Loop to end
+      } else { // next
+        newIndex = currentIndex < allShifts.length - 1 ? currentIndex + 1 : 0; // Loop to start
+      }
+      if (newIndex !== -1 && allShifts[newIndex]) {
+        setCurrentShiftForQueue(allShifts[newIndex]);
+        setSelectedQueueItem(null); // Clear patient selection when shift changes
+        setSelectedLabRequestForEntry(null);
+      } else if (allShifts.length > 0 && !currentShiftForQueue) {
+         // If no current shift, pick first one
+         setCurrentShiftForQueue(allShifts[0]);
+      }
+    } else {
+      toast.info(t('labResults:queueHeader.noOtherShifts'));
+    }
+  }, [queryClient, currentShiftForQueue, t]);
   // Debounce the global search term for PatientQueuePanel
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -89,14 +134,7 @@ const handleChildTestFocus = useCallback((childTest: ChildTestWithResult | null)
     });
   }, [queryClient, t, selectedQueueItem, selectedLabRequestForEntry, currentClinicShift, debouncedGlobalSearch]);
 
-  const handleShiftNavigationInQueue = useCallback((direction: 'next' | 'prev') => {
-    console.log("Shift navigation requested from QueueHeader:", direction);
-    // This is complex: requires backend logic to find prev/next *open* general clinic shifts
-    // and then update `currentClinicShift` state here (likely via another query/mutation).
-    // For now, just refetching the "current open" one if that's what your API does.
-    refetchCurrentShift();
-    toast.info(t('labResults:shiftNavigationNotImplemented'));
-  }, [refetchCurrentShift, t]);
+
 
   const isRTL = i18n.dir() === 'rtl';
 
@@ -123,6 +161,7 @@ const handleChildTestFocus = useCallback((childTest: ChildTestWithResult | null)
         </div>
     );
   }
+  
   // It's possible no shift is open, which is a valid state.
   // currentClinicShift might be null here. PatientQueuePanel should handle this.
 
@@ -216,10 +255,8 @@ const handleChildTestFocus = useCallback((childTest: ChildTestWithResult | null)
                 <StatusAndInfoPanel 
                     key={`info-panel-${selectedQueueItem.visit_id}-${selectedLabRequestForEntry?.id || 'none'}`}
                     patientId={selectedQueueItem.patient_id} 
-                    visitId={selectedQueueItem.visit_id}
                     selectedLabRequest={selectedLabRequestForEntry}
                     focusedChildTest={focusedChildTestForInfo}
-                    
                 />
             ) : (
                  <div className="p-4 text-center text-muted-foreground hidden lg:flex flex-col items-center justify-center h-full">

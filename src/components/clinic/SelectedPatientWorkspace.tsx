@@ -29,12 +29,14 @@ import apiClient from "@/services/api";
 import PdfPreviewDialog from "../common/PdfPreviewDialog";
 
 interface SelectedPatientWorkspaceProps {
+  selectedPatientVisit: DoctorVisit;
   initialPatient: Patient;
   visitId: number;
   onClose?: () => void;
 }
 
 const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
+  selectedPatientVisit,
   initialPatient,
   visitId,
   onClose,
@@ -185,7 +187,7 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
           value="lab" 
           className="flex-grow overflow-y-auto p-3 sm:p-4 focus-visible:ring-0 focus-visible:ring-offset-0"
         >
-          <LabRequestComponent visitId={visit.id} />
+          <LabRequestComponent visitId={visit.id} selectedPatientVisit={selectedPatientVisit}/>
         </TabsContent>
       </Tabs>
       <PdfPreviewDialog

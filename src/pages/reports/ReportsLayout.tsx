@@ -3,7 +3,7 @@ import React from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ListCollapse, FileBarChart2, FileSpreadsheet, BarChartBig, HandCoins, LineChart, UsersRound } from 'lucide-react'; // Example icons
+import { ListCollapse, FileBarChart2, FileSpreadsheet, BarChartBig, HandCoins, LineChart, UsersRound, Users, CalendarCheck2, FileText } from 'lucide-react'; // Example icons
 import { cn } from '@/lib/utils';
 
 const reportNavItems = [
@@ -18,7 +18,9 @@ const reportNavItems = [
   { to: '/reports/doctor-company-entitlement', labelKey: 'doctorCompanyEntitlementReport.titleShort', icon: HandCoins },
   { to: '/reports/yearly-income-comparison', labelKey: 'yearlyIncomeComparisonReport.titleShort', icon: LineChart },
   { to: '/reports/yearly-patient-frequency', labelKey: 'yearlyPatientFrequencyReport.titleShort', icon: UsersRound },
-
+  { to: '/reports/attendance-summary', labelKey: 'reports:attendance.monthlySummaryTitleShort', icon: Users, permission: 'view attendance_reports' },
+  { to: '/reports/attendance-daily', labelKey: 'reports:attendance.dailyDetailTitleShort', icon: CalendarCheck2, permission: 'view attendance_reports' },
+  { to: '/reports/attendance-payroll', labelKey: 'reports:attendance.payrollReportTitleShort', icon: FileText, permission: 'view payroll_attendance_report' },
   // Add more reports here:
   // { to: '/reports/patient-visits', labelKey: 'patientVisitsReport.titleShort', icon: Users },
   // { to: '/reports/financial-summary', labelKey: 'financialSummaryReport.titleShort', icon: LineChart },
@@ -26,7 +28,6 @@ const reportNavItems = [
 
 const ReportsLayout: React.FC = () => {
   const { t, i18n } = useTranslation(['reports', 'common']);
-  const location = useLocation();
 
   return (
     <div className="flex flex-col md:flex-row h-[calc(100vh-4rem)]"> {/* Adjust height based on AppLayout header */}

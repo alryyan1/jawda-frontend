@@ -1,0 +1,130 @@
+{
+    "settings": {
+      "globalTitle": "Global Attendance Settings",
+      "globalDescription": "Configure system-wide attendance parameters.",
+      "numberOfShiftsLabel": "Number of Shifts Per Day",
+      "shiftsCount": "{{count}} Shift",
+      "shiftsCount_plural": "{{count}} Shifts",
+      "updateSuccess": "Attendance settings updated successfully."
+    },
+    "shiftDefinitions": {
+      "pageTitle": "Manage Shift Definitions",
+      "pageDescription": "Define the working shifts for your organization.",
+      "addButton": "Add Shift Definition",
+      "deletedSuccess": "Shift definition deleted successfully.",
+      "updatedSuccess": "Shift definition updated successfully.",
+      "createdSuccess": "Shift definition created successfully.",
+      "noDefinitions": "No shift definitions found. Please add some.",
+      "dialog": {
+        "addTitle": "Add New Shift Definition",
+        "editTitle": "Edit Shift Definition",
+        "nameLabel": "Shift Name",
+        "namePlaceholder": "e.g., Morning Shift, General Duty",
+        "labelLabel": "Shift Label",
+        "labelPlaceholder": "e.g., Shift 1, SH-A",
+        "startTimeLabel": "Start Time",
+        "endTimeLabel": "End Time",
+        "isActiveLabel": "Active"
+      },
+      "validation": {
+        "endTimeAfterStartOrValidOvernight": "End time must be after start time or represent a valid overnight shift."
+      },
+      "table": {
+          "name": "Name",
+          "label": "Label",
+          "startTime": "Start Time",
+          "endTime": "End Time",
+          "duration": "Duration (Hrs)",
+          "status": "Status"
+      }
+    },
+    "holidays": {
+      "pageTitle": "Manage Holidays",
+      "pageDescription": "View, add, edit, or delete official holidays.",
+      "addButton": "Add Holiday",
+      "noHolidaysForYear": "No holidays found for the year {{year}}.",
+      "deletedSuccess": "Holiday deleted successfully.",
+      "updatedSuccess": "Holiday updated successfully.",
+      "createdSuccess": "Holiday created successfully.",
+      "dialog": {
+        "addTitle": "Add New Holiday",
+        "editTitle": "Edit Holiday",
+        "nameLabel": "Holiday Name",
+        "dateLabel": "Date",
+        "recurringLabel": "Recurring Annually",
+        "recurringDescription": "If checked, this holiday will apply to the same date every year.",
+        "descriptionLabel": "Description (Optional)",
+        "descriptionPlaceholder": "Enter any notes about this holiday"
+      },
+      "table": {
+          "name": "Holiday Name",
+          "date": "Date",
+          "recurring": "Recurring",
+          "description": "Description"
+      }
+    },
+    "userSettings": {
+      "defaultShiftsLabel": "Default Shifts",
+      "selectDefaultShifts": "Select default shifts for this user...",
+      "isSupervisorLabel": "Is Supervisor"
+    },
+    "sheet": {
+      "pageTitle": "Monthly Attendance Sheet",
+      "filterByShift": "Filter by Shift",
+      "allShifts": "All Shifts",
+      "shiftSupervisor": "Shift Supervisor",
+      "selectSupervisor": "Select Supervisor",
+      "employee": "Employee",
+      "selectEmployee": "Select Employee",
+      "holiday": "Holiday",
+      "noRecordsFound": "No attendance records found for this day and shift."
+    },
+    "record": {
+      "saveSuccess": "Attendance recorded successfully.",
+      "updateSuccess": "Attendance updated successfully."
+    },
+    "statusEnum": {
+      "present": "Present",
+      "absent": "Absent",
+      "late_present": "Late",
+      "early_leave": "Early Leave",
+      "on_leave": "On Leave",
+      "holiday": "Holiday",
+      "off_day": "Off-Day",
+      "sick_leave": "Sick Leave"
+    },
+    "reports": {
+      "attendance": {
+        "monthlySummaryTitle": "Monthly Employee Attendance",
+        "monthlySummaryTitleShort": "Monthly Emp. Attendance",
+        "dailyDetailTitle": "Daily Attendance Detail",
+        "dailyDetailTitleShort": "Daily Attendance",
+        "payrollReportTitle": "Payroll Attendance Report",
+        "payrollReportTitleShort": "Payroll Attendance",
+        "forMonth": "For {{monthName}}",
+        "totalWorkingDaysInMonth": "Total Working Days in Month",
+        "table": {
+          "employeeId": "Emp. ID",
+          "employeeName": "Employee Name",
+          "payableDays": "Payable",
+          "absentDays": "Absent",
+          "unpaidLeave": "Unpaid Leave",
+          "paidLeave": "Paid Leave",
+          "sickLeave": "Sick Leave",
+          "lateCount": "Late",
+          "earlyLeaveCount": "Early Out",
+          "workedHours": "Worked Hrs",
+          "standardHours": "Std. Hrs",
+          "overtimeHours": "OT Hrs",
+          "status": "Status",
+          "checkIn": "Check-In",
+          "checkOut": "Check-Out",
+          "supervisor": "Supervisor",
+          "notes": "Notes"
+        }
+      }
+    },
+    "dailyReport": {
+      "noRecordsForShift": "No attendance records for this shift on the selected day."
+    }
+  }

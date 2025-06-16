@@ -23,7 +23,15 @@
       "markAsTrailer": "تحديد كملحق (لن يظهر في التقرير الرئيسي)",
       "trailerStatusUpdated": "تم تحديث حالة الملحق للفحص."
     },
+    "deviceNormalRange": {
+      "manageDeviceSpecificRanges": "إدارة النطاقات الخاصة بالجهاز",
+      "dialogTitle": "نطاق الجهاز",
+      "selectDevice": "اختر الجهاز",
+      "devicePlaceholder": "اختر جهازًا...",
+      "applyToCurrentResult": "تطبيق على النتيجة الحالية"
+    },
     "resultEntry": {
+      "enterOrSelectResult": "أدخل أو اختر النتيجة",
       "title": "إدخال نتائج فحص: {{testName}}",
       "childTestName": "المكون",
       "result": "النتيجة",
@@ -42,7 +50,12 @@
       "commentPlaceholder": "أضف تعليق (اختياري)",
       "mainTestComment": "تعليق على الفحص الرئيسي",
       "mainTestCommentPlaceholder": "أضف تعليقاً على الفحص الرئيسي (اختياري)",
-      "noChildTestsForEntry": "لا توجد مكونات فرعية لإدخال النتائج"
+      "noChildTestsForEntry": "لا توجد مكونات فرعية لإدخال النتائج",
+      "clickToEditComment": "انقر لتحرير التعليق",
+      "editMainTestComment": "تحرير تعليق الفحص الرئيسي",
+      "mainTab": "علامة التبويب الرئيسية",
+      "otherTab": "علامة تبويب أخرى",
+      "otherTabContentPlaceholder": "لا توجد نتائج لعرضها"
     },
     "statusInfo": {
       "patientInfoTitle": "بيانات المريض",
@@ -80,6 +93,6 @@
       "noPending": "لا يوجد مرضى في قائمة الانتظار حالياً.",
       "tryDifferentFilters": "حاول تغيير الفلاتر أو تحديد وردية أخرى.",
       "checkDoctorsTabs": " "
-    },
-    "patientDataNotAvailable": "تعذر تحميل بيانات المريض."
+    }
+
 }

@@ -158,15 +158,31 @@
         "addByTestIdPlaceholder": "أو أدخل معرف الفحص مباشرة...",
         "commentPlaceholderOverall": "ملاحظات عامة للطلب...",
         "requestSelectedButton": "طلب {{count}} فحص محدد",
-        "testAddedToSelection": "تمت إضافة '{{testName}}' إلى قائمة التحديد.",
+        "requestSelectedButtonShort": "طلب ({{count}})",
+        "testAddedToSelection": "تمت إضافة '{{name}}' إلى قائمة التحديد",
         "testAlreadySelected": "الفحص '{{testName}}' محدد بالفعل.",
         "addMoreTestsButton": "إضافة فحوصات أخرى",
         "selectTestsTitle": "اختيار الفحوصات المخبرية",
         "selectAndAddDescription": "اختر الفحوصات المطلوبة من القائمة أدناه",
         "searchTestsPlaceholder": "ابحث عن فحص...",
         "removeAllButton": "إلغاء جميع الفحوصات",
+        "removeAllConfirm": "هل أنت متأكد من إلغاء جميع الفحوصات المطلوبة؟",
+        "allPendingRemovedSuccess": "تم إلغاء جميع الفحوصات المطلوبة بنجاح",
         "addedSuccessMultiple": "تم إضافة {{count}} فحص بنجاح!",
-        "cancelConfirmForItem": "هل أنت متأكد من إلغاء طلب الفحص '{{testName}}'؟"
+        "cancelConfirmForItem": "هل أنت متأكد من إلغاء طلب الفحص '{{testName}}'؟",
+        "noTestsSelectedForRequest": "لم يتم اختيار أي فحوصات للطلب",
+        "viewRequestedTests": "عرض الفحوصات المطلوبة",
+        "requestedTestsTitle": "الفحوصات المطلوبة",
+        "financialSummary": "الملخص المالي",
+        "selectionSummary": "ملخص التحديد",
+        "testsSelected": "تم اختيار {{count}} فحص",
+        "commentLength": "عدد الأحرف: {{length}}",
+         "searchOrSelectTests": "ابحث أو اختر التحاليل",
+        "addTestsPlaceholder": "أضف التحاليل هنا...",
+        "addSelectedShort": "إضافة المختارة",
+        "showGrid": "عرض كجدول",
+        "noRequestsToSummarize": "لا توجد طلبات لعرض ملخصها"
+
     },
     "optionsDialog": {
       "title": "إدارة خيارات المكون: {{childTestName}}",
@@ -180,4 +196,5 @@
       "optionDeletedSuccess": "تم حذف الخيار بنجاح!",
       "errorPrefix": "خطأ:"
  }
+
 }

@@ -1,4 +1,5 @@
-{"doctorShiftsReport": {
+{
+  "doctorShiftsReport": {
   "title": "تقرير مناوبات الأطباء",
   "titleShort": "مناوبات الأطباء",
   "description": "عرض وتصفية سجلات مناوبات الأطباء.",
@@ -25,6 +26,27 @@
     "actions": "الإجراءات"
   }
 },
+"attendance": {
+  "monthlySummaryTitleShort": "ملخص شهري مختصر",
+  "dailyDetailTitleShort": "تفاصيل يومية مختصرة",
+  "payrollReportTitleShort": "تقرير رواتب مختصر",
+  "payrollReportTitle": "تقرير الرواتب",
+  "forMonth": "عن شهر",
+  "totalWorkingDaysInMonth": "إجمالي أيام العمل في الشهر",
+  "dailyDetailTitle": "تفاصيل الحضور اليومية",
+  "monthlySummaryTitle": "الملخص الشهري للحضور",
+  "table": {
+    "employeeId": "رقم الموظف",
+    "employeeName": "اسم الموظف",
+    "payableDays": "أيام مستحقة الدفع",
+    "absentDays": "أيام الغياب",
+    "unpaidLeave": "إجازة غير مدفوعة",
+    "sickLeave": "إجازة مرضية",
+    "lateCount": "عدد التأخيرات",
+    "workedHours": "ساعات العمل",
+    "standardHours": "الساعات القياسية",
+    "overtimeHours": "ساعات إضافية"
+  }},
 "clinicReportOldPdf": "تقرير العيادة (PDF قديم)"
 ,
 "doctorShiftFinancialSummary": {

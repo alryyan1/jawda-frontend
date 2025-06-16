@@ -1,5 +1,5 @@
 // src/pages/HomePage.tsx
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -11,7 +11,6 @@ import {
   CardFooter,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,36 +24,28 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   Loader2,
-  Users,
-  Stethoscope,
-  TrendingUp,
-  CalendarCheck2,
   LogIn,
   LogOut,
   RefreshCw,
   Info,
-  Clock,
-  Settings,
-  ShieldCheck, // For roles in quick actions if needed
-  LayoutDashboard, // For quick actions
-  TrendingDown, // For costs stat card
-  ServerCrash, // For error display
+  ShieldCheck,
+  ServerCrash,
 } from "lucide-react";
-import type { Shift } from "@/types/shifts"; // Only Shift is used
+import type { Shift } from "@/types/shifts";
 import type { DashboardSummary } from "@/types/dashboard";
-import type { UserStripped } from "@/types/auth"; // For user names in shift card
+import type { UserStripped } from "@/types/auth";
 import {
   getCurrentOpenShift,
   openNewShift,
-  closeShift, // Using generic closeShift, assuming backend handles direct close
+  closeShift,
+  getCurrentShift,
 } from "@/services/shiftService";
 import { getDashboardSummary } from "@/services/dashboardService";
 import { format, parseISO } from "date-fns";
 import { arSA, enUS } from "date-fns/locale";
 import { Link } from "react-router-dom";
-import { cn, formatNumber } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-// import { Separator } from "@/components/ui/separator"; // Not used in this final layout
 import { Skeleton } from "@/components/ui/skeleton";
 
 // --- Reusable Stat Card Component ---
@@ -71,7 +62,7 @@ interface StatCardProps {
   className?: string;
 }
 
-const StatCard: React.FC<StatCardProps> = ({
+export const StatCard: React.FC<StatCardProps> = ({
   title,
   value,
   icon: Icon,
@@ -169,8 +160,6 @@ const StatCard: React.FC<StatCardProps> = ({
 };
 StatCard.displayName = "StatCard";
 
-export { StatCard };
-
 // --- Quick Action Button component ---
 interface QuickActionProps {
   to: string;
@@ -220,6 +209,7 @@ QuickActionButton.displayName = "QuickActionButton";
 
 // --- Shift Management Component ---
 interface ShiftManagementCardProps {
+  currentShift: Shift | null | undefined;
   currentOpenShift: Shift | null | undefined;
   isLoadingShift: boolean;
   openShiftError?: Error | null;
@@ -234,6 +224,7 @@ interface ShiftManagementCardProps {
 }
 
 const ShiftManagementCard: React.FC<ShiftManagementCardProps> = ({
+  currentShift,
   currentOpenShift,
   isLoadingShift,
   openShiftError,
@@ -296,7 +287,7 @@ const ShiftManagementCard: React.FC<ShiftManagementCardProps> = ({
       </div>
 
       <CardContent className="p-4 md:p-6">
-        {isLoadingShift && currentOpenShift === undefined ? (
+        {isLoadingShift && currentShift === undefined ? (
           <div className="flex items-center justify-center h-20">
             <Skeleton className="h-10 w-3/4" />
           </div>
@@ -308,82 +299,109 @@ const ShiftManagementCard: React.FC<ShiftManagementCardProps> = ({
               {openShiftError.message}
             </span>
           </div>
-        ) : currentOpenShift ? (
+        ) : currentShift ? (
           <div className="space-y-3">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 bg-green-50 dark:bg-green-800/20 border border-green-300 dark:border-green-700/50 rounded-lg shadow-sm">
+            <div className={`flex flex-col sm:flex-row items-center justify-between gap-3 p-3 border rounded-lg shadow-sm ${
+              currentShift.is_closed 
+                ? "bg-red-50 dark:bg-red-800/20 border-red-300 dark:border-red-700/50"
+                : "bg-green-50 dark:bg-green-800/20 border-green-300 dark:border-green-700/50"
+            }`}>
               <div className="text-center sm:text-left">
-                <div className="flex items-center gap-2 text-green-700 dark:text-green-300 justify-center sm:justify-start">
+                <div className={`flex items-center gap-2 justify-center sm:justify-start ${
+                  currentShift.is_closed 
+                    ? "text-red-700 dark:text-red-300"
+                    : "text-green-700 dark:text-green-300"
+                }`}>
                   <ShieldCheck className="h-4 w-4" />
                   <span className="font-semibold text-sm">
-                    {t("currentShiftActive")} (ID: {currentOpenShift.id})
+                    {currentShift.is_closed 
+                      ? t("currentShiftClosed") 
+                      : t("currentShiftActive")
+                    } (ID: {currentShift.id})
                   </span>
                 </div>
               </div>
-              <AlertDialog
-                open={isCloseShiftConfirmOpen}
-                onOpenChange={setIsCloseShiftConfirmOpen}
-              >
-                <AlertDialogTrigger asChild>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="w-full sm:w-auto shadow-sm hover:shadow-md"
-                    onClick={handleCloseShiftTrigger}
-                    disabled={isClosingShift}
-                  >
-                    {isClosingShift ? (
-                      <Loader2 className="ltr:mr-1.5 rtl:ml-1.5 h-4 w-4 animate-spin" />
-                    ) : (
-                      <LogOut className="ltr:mr-1.5 rtl:ml-1.5 h-4 w-4" />
-                    )}
-                    {t("closeCurrentShiftButton")}
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>
-                      {t("closeShiftDialog.confirmTitle")}
-                    </AlertDialogTitle>
-                    <AlertDialogDescription>
-                      {t("closeShiftDialog.confirmDirectCloseDescription")}
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>{t("common:cancel")}</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleDialogConfirmClose}
-                      className="bg-destructive hover:bg-destructive/90"
+              {currentShift.is_closed ? (
+                <Button
+                  onClick={onOpenShift}
+                  disabled={isOpeningShift}
+                  size="sm"
+                  className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 text-white shadow-sm hover:shadow-md"
+                >
+                  {isOpeningShift ? (
+                    <Loader2 className="ltr:mr-1.5 rtl:ml-1.5 h-4 w-4 animate-spin" />
+                  ) : (
+                    <LogIn className="ltr:mr-1.5 rtl:ml-1.5 h-4 w-4" />
+                  )}
+                  {t("openNewShiftButton")}
+                </Button>
+              ) : currentOpenShift && (
+                <AlertDialog
+                  open={isCloseShiftConfirmOpen}
+                  onOpenChange={setIsCloseShiftConfirmOpen}
+                >
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="w-full sm:w-auto shadow-sm hover:shadow-md"
+                      onClick={handleCloseShiftTrigger}
+                      disabled={isClosingShift}
                     >
-                      {t("common:confirmAndClose")}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+                      {isClosingShift ? (
+                        <Loader2 className="ltr:mr-1.5 rtl:ml-1.5 h-4 w-4 animate-spin" />
+                      ) : (
+                        <LogOut className="ltr:mr-1.5 rtl:ml-1.5 h-4 w-4" />
+                      )}
+                      {t("closeCurrentShiftButton")}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>
+                        {t("closeShiftDialog.confirmTitle")}
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        {t("closeShiftDialog.confirmDirectCloseDescription")}
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>{t("common:cancel")}</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleDialogConfirmClose}
+                        className="bg-destructive hover:bg-destructive/90"
+                      >
+                        {t("common:confirmAndClose")}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
             </div>
             <Card className="p-3 text-xs border-dashed bg-slate-50 dark:bg-slate-800/30">
-              {currentOpenShift.created_at && (
+              {currentShift.created_at && (
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">
                     {t("shiftOpenedAtFull")}:
                   </span>
                   <span className="font-medium">
-                    {format(parseISO(currentOpenShift.created_at), "Pp", {
+                    {format(parseISO(currentShift.created_at), "Pp", {
                       locale: dateLocale,
                     })}{" "}
-                    {t("common:by")} {getUserName(currentOpenShift.user_opened)}
+                    {t("common:by")} {getUserName(currentShift.user_opened)}
                   </span>
                 </div>
               )}
-              {currentOpenShift.is_closed && currentOpenShift.closed_at && (
+              {currentShift.is_closed && currentShift.closed_at && (
                 <div className="flex justify-between items-center mt-1 pt-1 border-t border-dashed">
                   <span className="text-muted-foreground">
                     {t("shiftClosedAtFull")}:
                   </span>
                   <span className="font-medium">
-                    {format(parseISO(currentOpenShift.closed_at), "Pp", {
+                    {format(parseISO(currentShift.closed_at), "Pp", {
                       locale: dateLocale,
                     })}{" "}
-                    {t("common:by")} {getUserName(currentOpenShift.user_closed)}
+                    {t("common:by")} {getUserName(currentShift.user_closed)}
                   </span>
                 </div>
               )}
@@ -418,7 +436,7 @@ ShiftManagementCard.displayName = "ShiftManagementCard";
 
 const HomePage: React.FC = () => {
   const { user } = useAuth();
-  const { t } = useTranslation(["dashboard", "common", "navigation", "stats"]); // Added 'stats' namespace
+  const { t } = useTranslation(["dashboard", "common", "navigation", "stats"]);
 
   const openShiftQueryKey = ["currentOpenShift"] as const;
   const {
@@ -433,7 +451,17 @@ const HomePage: React.FC = () => {
     refetchInterval: 1 * 60 * 1000, // Reduced to 1 minute for more responsive shift status
     refetchOnWindowFocus: true,
   });
-
+    const {
+    data: currentShift,
+    isLoading: isLoadingShift,
+    refetch: refetchShift,
+  } = useQuery<Shift | null, Error>({
+    queryKey: ["currentShift"],
+    queryFn: getCurrentShift,
+    refetchInterval: 1 * 60 * 1000, // Reduced to 1 minute for more responsive shift status
+    refetchOnWindowFocus: true,
+  });
+  console.log("currentShift", currentShift);  
   const summaryDate = useMemo(
     () =>
       !currentOpenShift && !isLoadingShiftInitial
@@ -467,6 +495,7 @@ const HomePage: React.FC = () => {
     mutationFn: () => openNewShift({ pharmacy_entry: false }),
     onSuccess: () => {
       refetchOpenShift();
+      refetchShift();
       refetchSummary();
       toast.success(t("common:shiftOpenedSuccessfully"));
     },
@@ -479,6 +508,7 @@ const HomePage: React.FC = () => {
     mutationFn: (shiftId: number) => closeShift(shiftId), // Only pass shiftId
     onSuccess: () => {
       refetchOpenShift();
+      refetchShift();
       refetchSummary();
       toast.success(t("common:shiftClosedSuccessfully"));
     },
@@ -490,17 +520,18 @@ const HomePage: React.FC = () => {
   const handleRefreshAllData = useCallback(() => {
     toast.info(t("common:refreshingData"));
     refetchOpenShift();
+    refetchShift();
     refetchSummary();
-  }, [refetchOpenShift, refetchSummary, t]);
+  }, [refetchOpenShift, refetchShift, refetchSummary, t]);
 
-  const isLoadingOverall =
-    isLoadingShiftInitial || (isLoadingSummaryInitial && !summary);
+
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 md:space-y-8">
       <ShiftManagementCard
+        currentShift={currentShift}
         currentOpenShift={currentOpenShift}
-        isLoadingShift={isLoadingShiftInitial && currentOpenShift === undefined}
+        isLoadingShift={isLoadingShift || (isLoadingShiftInitial && currentShift === undefined)}
         openShiftError={openShiftError}
         isFetchingShift={isFetchingShift}
         isFetchingSummary={isFetchingSummary}
@@ -515,84 +546,12 @@ const HomePage: React.FC = () => {
       {summaryError && !isLoadingSummaryInitial && (
         <Card className="border-destructive/50 bg-destructive/5 dark:bg-destructive/10">
           {/* ... Error Display ... */}
+
         </Card>
       )}
 
-      <div className="grid gap-4 sm:gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {isLoadingOverall ? (
-          Array.from({ length: 5 }).map((_, index) => (
-            <StatCard
-              key={`skel-${index}`}
-              title={t("common:loading")}
-              value=""
-              icon={Loader2}
-              isLoading={true}
-            />
-          ))
-        ) : (
-          <>
-            <StatCard
-              title={t("patientsToday")}
-              value={
-                summary?.patientsToday ??
-                (currentOpenShift || summaryDate ? 0 : "-")
-              }
-              icon={Users}
-              variant="info"
-              description={t("stats:patientsTodayDesc")}
-              actionLink="/clinic"
-            />
-            <StatCard
-              title={t("doctorsOnShift")}
-              value={summary?.doctorsOnShift ?? (currentOpenShift ? 0 : "-")}
-              icon={Stethoscope}
-              description={t("stats:doctorsOnShiftDesc")}
-            />
-            <StatCard
-              title={t("revenueToday")}
-              value={
-                summary
-                  ? formatNumber(summary.revenueToday)
-                  : currentOpenShift || summaryDate
-                  ? "0.00"
-                  : "-"
-              }
-              unit={t("common:currencySymbolShort")}
-              icon={TrendingUp}
-              variant="success"
-              description={t("stats:revenueTodayDesc")}
-            />
-            <StatCard
-              title={t("appointmentsToday")}
-              value={
-                summary?.appointmentsToday ??
-                (currentOpenShift || summaryDate ? 0 : "-")
-              }
-              icon={CalendarCheck2}
-              description={t("stats:appointmentsTodayDesc")}
-              actionLink="/schedules-appointments"
-            />
-            <StatCard
-              title={t("kpi.totalCostsToday")}
-              value={
-                // DashboardSummary does not have totalCostsToday, so fallback to 0 or "-"
-                currentOpenShift || summaryDate ? "0.00" : "-"
-              }
-              unit={t("common:currencySymbolShort")}
-              icon={TrendingDown}
-              variant="warning"
-              description={t("kpi.totalCostsTodayDesc")}
-            />
-          </>
-        )}
-      </div>
 
-      {!currentOpenShift && !isLoadingShiftInitial && !openShiftError && (
-        <Card className="text-center py-6 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800/30 shadow-sm">
-          {/* ... No Shift Open Note ... */}
-          <p>{t("noShiftOpen")}</p>
-        </Card>
-      )}
+      
     </div>
   );
 };

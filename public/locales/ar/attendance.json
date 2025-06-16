@@ -1,0 +1,130 @@
+{
+    "settings": {
+      "globalTitle": "إعدادات الحضور العامة",
+      "globalDescription": "ضبط معلمات الحضور على مستوى النظام.",
+      "numberOfShiftsLabel": "عدد الورديات في اليوم",
+      "shiftsCount": "{{count}} وردية",
+      "shiftsCount_plural": "{{count}} ورديات",
+      "updateSuccess": "تم تحديث إعدادات الحضور بنجاح."
+    },
+    "shiftDefinitions": {
+      "pageTitle": "إدارة تعريفات الورديات",
+      "pageDescription": "حدد ورديات العمل لمؤسستك.",
+      "addButton": "إضافة تعريف وردية",
+      "deletedSuccess": "تم حذف تعريف الوردية بنجاح.",
+      "updatedSuccess": "تم تحديث تعريف الوردية بنجاح.",
+      "createdSuccess": "تم إنشاء تعريف الوردية بنجاح.",
+      "noDefinitions": "لم يتم العثور على تعريفات ورديات. الرجاء إضافة البعض.",
+      "dialog": {
+        "addTitle": "إضافة تعريف وردية جديد",
+        "editTitle": "تعديل تعريف الوردية",
+        "nameLabel": "اسم الوردية",
+        "namePlaceholder": "مثال: وردية صباحية، دوام عام",
+        "labelLabel": "رمز الوردية",
+        "labelPlaceholder": "مثال: وردية 1، و-أ",
+        "startTimeLabel": "وقت البدء",
+        "endTimeLabel": "وقت الإنتهاء",
+        "isActiveLabel": "نشطة"
+      },
+      "validation": {
+        "endTimeAfterStartOrValidOvernight": "يجب أن يكون وقت الانتهاء بعد وقت البدء أو يمثل وردية ليلية صالحة."
+      },
+      "table": {
+          "name": "الاسم",
+          "label": "الرمز",
+          "startTime": "وقت البدء",
+          "endTime": "وقت الإنتهاء",
+          "duration": "المدة (ساعات)",
+          "status": "الحالة"
+      }
+    },
+    "holidays": {
+      "pageTitle": "إدارة العطلات الرسمية",
+      "pageDescription": "عرض، إضافة، تعديل، أو حذف العطلات الرسمية.",
+      "addButton": "إضافة عطلة",
+      "noHolidaysForYear": "لا توجد عطلات مسجلة لعام {{year}}.",
+      "deletedSuccess": "تم حذف العطلة بنجاح.",
+      "updatedSuccess": "تم تحديث العطلة بنجاح.",
+      "createdSuccess": "تم إنشاء العطلة بنجاح.",
+      "dialog": {
+        "addTitle": "إضافة عطلة جديدة",
+        "editTitle": "تعديل العطلة",
+        "nameLabel": "اسم العطلة",
+        "dateLabel": "التاريخ",
+        "recurringLabel": "متكررة سنوياً",
+        "recurringDescription": "إذا تم تحديدها، ستطبق هذه العطلة في نفس التاريخ كل عام.",
+        "descriptionLabel": "الوصف (اختياري)",
+        "descriptionPlaceholder": "أدخل أي ملاحظات حول هذه العطلة"
+      },
+       "table": {
+          "name": "اسم العطلة",
+          "date": "التاريخ",
+          "recurring": "متكررة",
+          "description": "الوصف"
+      }
+    },
+    "userSettings": {
+      "defaultShiftsLabel": "الورديات الافتراضية",
+      "selectDefaultShifts": "اختر الورديات الافتراضية لهذا المستخدم...",
+      "isSupervisorLabel": "مشرف"
+    },
+    "sheet": {
+      "pageTitle": "سجل الحضور الشهري",
+      "filterByShift": "تصفية حسب الوردية",
+      "allShifts": "جميع الورديات",
+      "shiftSupervisor": "مشرف الوردية",
+      "selectSupervisor": "اختر المشرف",
+      "employee": "الموظف",
+      "selectEmployee": "اختر الموظف",
+      "holiday": "عطلة",
+      "noRecordsFound": "لم يتم العثور على سجلات حضور لهذا اليوم وهذه الوردية."
+    },
+    "record": {
+      "saveSuccess": "تم تسجيل الحضور بنجاح.",
+      "updateSuccess": "تم تحديث الحضور بنجاح."
+    },
+    "statusEnum": {
+      "present": "حاضر",
+      "absent": "غائب",
+      "late_present": "حاضر (متأخر)",
+      "early_leave": "مغادرة مبكرة",
+      "on_leave": "إجازة",
+      "holiday": "عطلة رسمية",
+      "off_day": "يوم راحة",
+      "sick_leave": "إجازة مرضية"
+    },
+    "reports": {
+      "attendance": {
+        "monthlySummaryTitle": "ملخص الحضور الشهري للموظفين",
+        "monthlySummaryTitleShort": "ملخص حضور الموظفين",
+        "dailyDetailTitle": "تفاصيل الحضور اليومي",
+        "dailyDetailTitleShort": "الحضور اليومي",
+        "payrollReportTitle": "تقرير الحضور للمرتبات",
+        "payrollReportTitleShort": "تقرير المرتبات",
+        "forMonth": "عن شهر {{monthName}}",
+        "totalWorkingDaysInMonth": "إجمالي أيام العمل في الشهر",
+        "table": {
+          "employeeId": "رقم الموظف",
+          "employeeName": "اسم الموظف",
+          "payableDays": "أيام مستحقة",
+          "absentDays": "غياب",
+          "unpaidLeave": "إجازة غير مدفوعة",
+          "paidLeave": "إجازة مدفوعة",
+          "sickLeave": "إجازة مرضية",
+          "lateCount": "تأخير",
+          "earlyLeaveCount": "انصراف مبكر",
+          "workedHours": "ساعات العمل",
+          "standardHours": "الساعات القياسية",
+          "overtimeHours": "إضافي",
+          "status": "الحالة",
+          "checkIn": "تسجيل الدخول",
+          "checkOut": "تسجيل الخروج",
+          "supervisor": "المشرف",
+          "notes": "ملاحظات"
+        }
+      }
+    },
+    "dailyReport": {
+      "noRecordsForShift": "لا توجد سجلات حضور لهذه الوردية في اليوم المحدد."
+    }
+  }

@@ -13,6 +13,11 @@
   "page": "Page",
   "of": "of",
   "downloadPdf": "Download PDF",
+  "actions": "Actions",
+  "totalAmountNet": "Total Net Amount",
+  "totalPaid": "Total Paid",
+  "totalBalanceDue": "Total Balance Due",
+  "viewDetails": "View Details",
   "table": {
     "actions": "Actions"
   },
@@ -23,15 +28,37 @@
     "somethingWentWrong": "Something Went Wrong",
     "unknownError": "An unexpected error occurred",
     "fetchFailed": "Failed to fetch {{entity}}: {{message}}",
+    "loadFailed": "Failed to load {{entity}}",
+    "requestFailed": "Request failed",
+    "patientDataUnavailable": "Patient data unavailable",
     "noPermissions": "You do not have permission to perform this action"
   },
   "validation": {
-    "required": "{{field}} is required."
+    "required": "{{field}} is required.",
+    "invalidTimeFormat": "Invalid time format. Please use HH:mm format."
   },
+  "pickDate": "Pick a date",
   "actions": {
     "goBack": "Go Back",
     "goHome": "Go to Home",
-    "retry": "Try Again"
+    "retry": "Try Again",
+    "openMenu": "Actions"
+  },
+  "create": "Create",
+  "saveChanges": "Save Changes",
+  "refresh": "Refresh",
+  "noDataAvailableForFilters": "No data available for the selected filters",
+  "loadingData": "Loading data...",
+  "confirmDeleteMessage": "Are you sure you want to delete {{item}}?",
+  "selectDate": "Select a date",
+  "statusEnum": {
+    "active": "Active",
+    "inactive": "Inactive"
+  },
+  "pagination": {
+    "previous": "Previous",
+    "next": "Next",
+    "pageInfo": "Page {{current}} of {{total}}"
   },
   "permissions": {
     "group": {

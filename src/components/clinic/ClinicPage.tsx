@@ -237,6 +237,7 @@ const handleSearchByVisitId = () => {
             )}
           >
             <SelectedPatientWorkspace
+            selectedPatientVisit={selectedPatientVisit}
              
               doctorvisit={selectedPatientVisit}
               visitId={selectedPatientVisit.visitId}

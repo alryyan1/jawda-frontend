@@ -16,6 +16,10 @@ export const getCurrentOpenShift = async (): Promise<Shift | null> => {
     throw error; // Re-throw other errors
   }
 };
+export const getCurrentShift = async (): Promise<Shift | null> => {
+  const response = await apiClient.get<{ data: Shift }>(`${SHIFT_API_URL}/current-shift`);
+  return response.data.data;
+};
 
 export const openNewShift = async (data?: { pharmacy_entry?: boolean; name?: string }): Promise<Shift> => {
   const response = await apiClient.post<{ data: Shift }>(`${SHIFT_API_URL}/open`, data || {});

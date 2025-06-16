@@ -74,8 +74,28 @@
     "pageInfo": "صفحة {{current}} من {{total}}",
     "pageInfoShort": "صفحة {{current}}/{{total}}"
   },
+  "pickDate": "اختر تاريخ",
+  "create": "إنشاء",
+  "saveChanges": "حفظ التغييرات",
+  "refresh": "تحديث",
+  "noDataAvailableForFilters": "لا توجد بيانات متاحة للمرشحات المحددة",
+  "confirmDeleteMessage": "هل أنت متأكد من حذف {{item}}؟",
+  "selectDate": "اختر تاريخ",
+  "statusEnum": {
+    "active": "نشط",
+    "inactive": "غير نشط"
+  },
+  "pagination": {
+    "previous": "السابق",
+    "next": "التالي",
+    "pageInfo": "صفحة {{current}} من {{total}}"
+  },
+  "actions": {
+    "openMenu": "الإجراءات"
+  },
   "validation": {
     "required": "{{field}} مطلوب.",
+    "invalidTimeFormat": "تنسيق الوقت غير صحيح. يرجى استخدام تنسيق HH:mm.",
     "requiredWhen": "هذا الحقل مطلوب عند اختيار {{context}}",
     "mustBeNumber": "يجب أن يكون رقماً.",
     "mustBeInteger": "يجب أن يكون رقماً صحيحاً.",
@@ -118,7 +138,9 @@
     "noPermissions": "ليس لديك الصلاحية لعرض هذا القسم",
     "pdfGeneratedError": "حدث خطأ أثناء إنشاء ملف PDF",
     "saveFailedExt": "فشل في حفظ {{entity}}: {{message}}",
-    "deleteFailedExt": "فشل في حذف {{entity}}: {{message}}"
+    "deleteFailedExt": "فشل في حذف {{entity}}: {{message}}",
+    "loadFailed": "فشل في تحميل {{entity}}",
+    "patientDataUnavailable": "بيانات المريض غير متاحة"
   },
   "save": "حفظ",
   "id": "م",
@@ -151,8 +173,10 @@
   "summary": "الملخص",
   "summaryShort": "ملخص",
   "totalAmount": "المبلغ الإجمالي",
+  "totalAmountNet": "إجمالي المبلغ الصافي",
   "totalDiscount": "إجمالي الخصم",
   "totalPaid": "إجمالي المدفوع",
+  "totalBalanceDue": "إجمالي الرصيد المستحق",
   "amountLeft": "المبلغ المتبقي",
   "pay": "دفع",
   "updatedSuccess": "تم تحديث  بنجاح!",
@@ -222,34 +246,6 @@
     "view_monthly_lab_income_report": "عرض تقرير الدخل الشهري للمختبر",
     "print_monthly_lab_income_report": "طباعة تقرير الدخل الشهري للمختبر"
   },
-  "totalAmountNet": "المبلغ الإجمالي الصافي",
-  "totalBalanceDue": "إجمالي المبلغ المتبقي",
-  "cancelRequest": "إلغاء الطلب",
-  "countTests": "{{count}} فحوصات",
-  "today": "اليوم",
-  "shift": "الوردية",
-  "select": "اختيار",
-  "waitingSince": "في الانتظار منذ",
-  "labRequestId": "رقم طلب المختبر",
-  "closePanel": "إغلاق اللوحة",
-  "queueNumber": "رقم الدور",
-  "queueNumberShort": "رقم",
-  "summaryFinancial": "الملخص المالي",
-  "summaryFinancial_lab": "الملخص المالي للمختبر",
-  "month": "الشهر",
-  "year": "السنة",
-  "generateReport": "إنشاء التقرير",
-  "generatingReport": "جاري إنشاء التقرير...",
-  "months": {
-    "1": "يناير", "2": "فبراير", "3": "مارس", "4": "أبريل",
-    "5": "مايو", "6": "يونيو", "7": "يوليو", "8": "أغسطس",
-    "9": "سبتمبر", "10": "أكتوبر", "11": "نوفمبر", "12": "ديسمبر"
-  },
-  "months_shortInitial": {
-    "1": "ي", "2": "ف", "3": "م", "4": "أ",
-    "5": "م", "6": "ي", "7": "ي", "8": "أ",
-    "9": "س", "10": "أ", "11": "ن", "12": "د"
-  },
   "viewDetails": "عرض التفاصيل",
   "manage": "إدارة",
   "filters": "عوامل التصفية",
@@ -277,7 +273,19 @@
   "confirmAndClose": "تأكيد وإغلاق",
   "refresh": "تحديث",
   "unknownUser": "غير معروف",
-
+  "shiftOpenedSuccessfully": "تم فتح المناوبة بنجاح",
+  "shiftClosedSuccessfully": "تم إغلاق المناوبة بنجاح",
   "printPdf": "طباعة PDF",
-  "grandTotal": "المجموع الكلي"
+  "grandTotal": "المجموع الكلي",
+  "cancelRequest": "إلغاء الطلب",
+  "select": "اختر",
+  "queueNumberShort": "رقم",
+  "queueNumber": "رقم الدور",
+  "financialSummary_lab": "ملخص مالي (المختبر)",
+  "notSet": "غير محدد",
+      "maxLengthShort": "عدد الأحرف تجاوز الحد المسموح",
+      "saveAndClose": "حفظ وإغلاق",
+      "autosaveTooltip": "يتم الحفظ تلقائيًا",
+      "labRequestId": "معرّف طلب التحاليل"
+
 }

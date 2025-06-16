@@ -74,7 +74,14 @@
     "kpi": {
       "totalCostsToday": "إجمالي التكاليف اليوم",
       "totalCostsTodayDesc": "التكاليف التي تم تسجيلها لهذا اليوم"
-    }
+  
+    },
+    "shiftOpenedAtFull": "فتح الوردية",
+      "shiftClosedAtFull": "إغلاق الوردية",
+     
+        "currentShiftClosed": "الوردية المغلقة"
+      
+      
   }
   
   

@@ -2,92 +2,73 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, CalendarDays, Users, RotateCcw } from 'lucide-react'; // Added RotateCcw for refresh
-import { Shift } from '@/types/shifts';
+import { ChevronLeft, ChevronRight, Users, RotateCcw, CalendarDays } from 'lucide-react'; // Keep CalendarDays for shift date display
+import type { Shift } from '@/types/shifts';
 import { format, parseISO } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
-import { DatePickerWithRange } from '@/components/ui/date-range-picker'; // Assuming you create/use this
-import { DateRange } from 'react-day-picker';
+// Remove DatePickerWithRange and DateRange imports
 
 interface QueueHeaderProps {
   currentShift: Shift | null;
   patientCount: number;
-  onShiftChange?: (direction: 'next' | 'prev') => void; // Optional if not implemented yet
-  currentDateRange: DateRange | undefined; // For DateRangePicker
-  onDateRangeChange: (dateRange: DateRange | undefined) => void;
+  onShiftChange: (direction: 'next' | 'prev') => void; // Now mandatory
   onRefreshQueue: () => void;
   isLoading: boolean;
 }
 
-const QueueHeader: React.FC<QueueHeaderProps> = ({ 
-    currentShift, patientCount, onShiftChange, currentDateRange, onDateRangeChange, onRefreshQueue, isLoading 
+const QueueHeader: React.FC<QueueHeaderProps> = ({
+  currentShift, patientCount, onShiftChange, onRefreshQueue, isLoading
 }) => {
   const { t, i18n } = useTranslation(['labResults', 'common']);
   const dateLocale = i18n.language.startsWith('ar') ? arSA : enUS;
 
-  const displayDate = () => {
-    if (currentDateRange?.from && currentDateRange?.to) {
-        if (format(currentDateRange.from, 'yyyy-MM-dd') === format(currentDateRange.to, 'yyyy-MM-dd')) {
-            return format(currentDateRange.from, 'PPP', { locale: dateLocale });
-        }
-        return `${format(currentDateRange.from, 'P', { locale: dateLocale })} - ${format(currentDateRange.to, 'P', { locale: dateLocale })}`;
+  const displayShiftInfo = () => {
+    if (!currentShift) {
+      return t('labResults:queueHeader.noShiftActive');
     }
-    if (currentDateRange?.from) {
-        return format(currentDateRange.from, 'PPP', { locale: dateLocale });
-    }
-    if (currentShift?.created_at) { // Fallback to shift creation date if no date range
-        return format(parseISO(currentShift.created_at), 'PPP', { locale: dateLocale });
-    }
-    return t('common:today');
+    const shiftLabel = currentShift.name || `${t('common:shift')} #${currentShift.id}`;
+    const shiftDate = currentShift.created_at
+      ? format(parseISO(currentShift.created_at), 'PPP', { locale: dateLocale })
+      : t('common:dateUnknown');
+    return `${shiftLabel} (${shiftDate})`;
   };
 
+  const PrevIcon = i18n.dir() === 'rtl' ? ChevronRight : ChevronLeft;
+  const NextIcon = i18n.dir() === 'rtl' ? ChevronLeft : ChevronRight;
+
   return (
-    <div className="p-3 border-b bg-card sticky top-0 z-10">
-      <div className="flex justify-between items-center mb-2">
-        <div>
-          <h3 className="text-sm font-semibold leading-tight">
-            {currentShift ? (currentShift.name || `${t('common:shift')} #${currentShift.id}`) : t('labResults:queueHeader.noShift')}
+    <div className="p-2 sm:p-3 border-b bg-card sticky top-0 z-10">
+      <div className="flex justify-between items-center mb-1.5">
+        <div className="min-w-0"> {/* For truncation */}
+          <h3 className="text-xs sm:text-sm font-semibold leading-tight truncate" title={displayShiftInfo()}>
+            {displayShiftInfo()}
           </h3>
           {currentShift?.created_at && (
-            <p className="text-xs text-muted-foreground leading-tight">
-                {t('common:openedAt')}: {format(parseISO(currentShift.created_at), 'p', { locale: dateLocale })}
+            <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight">
+              {t('common:openedAt')}: {format(parseISO(currentShift.created_at), 'p', { locale: dateLocale })}
             </p>
           )}
         </div>
-        <div className="flex items-center gap-1">
-          {/* Date Range Picker */}
-          <DatePickerWithRange 
-            date={currentDateRange} 
-            onDateChange={onDateRangeChange} 
-            align={i18n.dir() === 'rtl' ? "end" : "start"}
-            buttonSize="xs" // Custom prop for smaller button
-            buttonVariant="ghost"
-            disabled={isLoading}
-          />
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onRefreshQueue} title={t('common:refreshList')} disabled={isLoading}>
-            <RotateCcw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`}/>
+        <div className="flex items-center gap-0.5 sm:gap-1">
+          <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" onClick={() => onShiftChange('prev')} title={t('labResults:queueHeader.prevShift')} disabled={isLoading /* Add logic to disable if no prev shift */}>
+            <PrevIcon className="h-4 w-4 sm:h-5 sm:w-5" />
           </Button>
-          {/* Shift navigation placeholder */}
-          {/* {onShiftChange && (
-            <>
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onShiftChange('prev')} title={t('labResults:queueHeader.prevShift')}>
-              {i18n.dir() === 'rtl' ? <ChevronRight className="h-4 w-4"/> : <ChevronLeft className="h-4 w-4"/>}
-            </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onShiftChange('next')} title={t('labResults:queueHeader.nextShift')}>
-              {i18n.dir() === 'rtl' ? <ChevronLeft className="h-4 w-4"/> : <ChevronRight className="h-4 w-4"/>}
-            </Button>
-            </>
-          )} */}
+          <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" onClick={() => onShiftChange('next')} title={t('labResults:queueHeader.nextShift')} disabled={isLoading /* Add logic to disable if no next shift */}>
+            <NextIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" onClick={onRefreshQueue} title={t('common:refreshList')} disabled={isLoading}>
+            <RotateCcw className={`h-4 w-4 sm:h-4 sm:w-4 ${isLoading ? 'animate-spin' : ''}`} />
+          </Button>
         </div>
       </div>
-      <div className="flex justify-between items-center text-xs text-muted-foreground">
+      <div className="flex justify-between items-center text-[10px] sm:text-xs text-muted-foreground">
         <span className="flex items-center gap-1">
-            <CalendarDays className="h-3.5 w-3.5"/> 
-            {displayDate()}
+          <CalendarDays className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+          {currentShift?.created_at ? format(parseISO(currentShift.created_at), 'PPP', { locale: dateLocale }) : t('common:dateUnknown')}
         </span>
         <span className="flex items-center gap-1">
-            <Users className="h-3.5 w-3.5"/>
-            {t('labResults:queueHeader.patientsInQueue', { count: patientCount })}
+          <Users className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+          {t('labResults:queueHeader.patientsInQueue', { count: patientCount })}
         </span>
       </div>
     </div>

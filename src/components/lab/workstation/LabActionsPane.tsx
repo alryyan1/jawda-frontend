@@ -12,14 +12,12 @@ import { toast } from 'sonner';
 // import { useAuthorization } from '@/hooks/useAuthorization';
 
 interface LabActionsPaneProps {
-  selectedLabRequest: LabRequest | null;
-  selectedVisitId: number | null;
+  onClosePanel?: () => void;
   // Add other props if actions depend on more context
 }
 
 const LabActionsPane: React.FC<LabActionsPaneProps> = ({
-  selectedLabRequest,
-  selectedVisitId,
+  onClosePanel,
 }) => {
   const { t, i18n } = useTranslation(['labResults', 'common']);
   // const { can } = useAuthorization();
@@ -47,6 +45,14 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
   const handlePrintWorklist = () => {
     toast.info(t('common:featureNotImplemented', { feature: t('labResults:labActions.printWorklist') }));
     // TODO: Implement Worklist PDF generation
+  };
+
+  const handlePrintSampleLabels = () => {
+    toast.info(
+      t("common:featureNotImplemented", {
+        feature: t("labResults:actions.printSampleLabels"),
+      })
+    );
   };
 
   return (

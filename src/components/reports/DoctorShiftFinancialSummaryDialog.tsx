@@ -78,7 +78,7 @@ const DoctorShiftFinancialSummaryDialog: React.FC<DoctorShiftFinancialSummaryDia
   ) => {
     setGeneratingFinancialPdfId(ds.id);
     try {
-      const blob = await downloadDoctorShiftFinancialSummaryPdf(ds.id);
+      const blob = await downloadDoctorShiftFinanciaDlSummaryPdf(ds.id);
       // Create URL and trigger download
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");

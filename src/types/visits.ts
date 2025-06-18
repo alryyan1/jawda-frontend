@@ -1,58 +1,188 @@
-// src/types/visits.ts (or where DoctorVisit is defined)
+// src/types/visits.ts
+
 import type { Patient, PatientStripped } from "./patients";
-import type { Doctor, DoctorShift, DoctorStripped } from "./doctors"; // Assuming DoctorShift is here
-import type { User, UserStripped } from "./auth";
+import type { Doctor, DoctorShift, DoctorStripped } from "./doctors";
+import type { User, UserStripped } from "./auth"; // Assuming UserStripped is here or in users.ts
 import type { Shift } from "./shifts";
-import type { RequestedService } from "./services";
-import type { ChildTest, Container } from "./labTests";
+import type { Service, RequestedServiceDeposit } from "./services"; // Assuming RequestedServiceDeposit is here
+import type { ChildTest, MainTest, Container } from "./labTests"; // MainTest now includes childTests
 import type { Company } from "./companies";
-// import { Vital } from './vitals'; // When you add vitals
-// import { ClinicalNote } from './notes'; // When you add notes
 
-export interface DoctorVisit {
-  // This is the detailed visit object
+// --- RequestedResult based on your latest decision to include tracking fields ---
+export interface RequestedResult {
   id: number;
-  visit_date: string;
-  visit_time?: string | null;
-  status: string;
-  visit_type?: string | null;
-  queue_number?: number | null;
-  reason_for_visit?: string | null;
-  visit_notes?: string | null;
-  is_new: boolean;
-  number: number;
-  only_lab: boolean;
-  lab_requests?: LabRequest[];
-  company?: Company;
-
-
+  lab_request_id: number;
   patient_id: number;
-  patient: Patient; // Full patient object
+  main_test_id: number;
+  child_test_id: number;
+  result: string; // Default ''
+  normal_range: string; // Snapshot, NOT NULL
+  unit_id?: number | null; // FK
+  unit_name?: string | null; // For display from eager loaded Unit
 
-  doctor_id: number;
-  doctor?: Pick<Doctor, "id" | "name" | "specialist_name">; // Or full Doctor object
+  // Fields you want to add back
+  flags?: string | null;
+  result_comment?: string | null;
+  entered_by_user_id?: number | null;
+  entered_by_user_name?: string | null; // For display
+  entered_at?: string | null; // ISO Date string
+  authorized_by_user_id?: number | null;
+  authorized_by_user_name?: string | null; // For display
+  authorized_at?: string | null; // ISO Date string
+  
+  created_at?: string;
+  updated_at?: string;
 
-  user_id: number;
-  created_by_user?: Pick<User, "id" | "name" | "username">;
+  // Optional: If you load ChildTest definition with the result
+  childTest?: ChildTest;
+}
 
-  shift_id: number;
-  general_shift_details?: Shift;
+// --- LabRequest ---
+export interface LabRequest {
+  id: number;
+  main_test_id: number;
+  main_test?: MainTest; // Eager loaded with childTests for result entry
+  pid: number; // Patient ID
+  patient_name?: string; // Denormalized for quick display in some lists
+  patient?: PatientStripped; // Eager loaded patient summary
+  doctor_visit_id?: number | null; // Link to the DoctorVisit
 
-  doctor_shift_id?: number | null;
-  doctor_shift_details?: DoctorShift;
+  hidden: boolean;
+  is_lab2lab: boolean;
+  valid: boolean;
+  no_sample: boolean;
 
-  requested_services?: RequestedService[];
-  // vitals?: Vital[];
-  // clinical_notes?: ClinicalNote[];
+  price: number; // string from form, number from API
+  count: number; // Number of times this test is requested (usually 1 for lab)
+  amount_paid: number;
+  discount_per: number; // Percentage
+  is_bankak: boolean; // Payment method for this request
+  comment?: string | null; // Overall comment for this lab request
+
+  user_requested?: number | null; // User ID
+  requesting_user_name?: string;
+  requesting_user?: UserStripped;
+
+  user_deposited?: number | null; // User ID who handled payment
+  deposit_user_name?: string;
+  deposit_user?: UserStripped;
+
+  approve: boolean; // Overall authorization status of the lab request
+  endurance: number; // Amount covered by insurance/company
+  is_paid: boolean;
+
+  sample_id?: string | null;
+  result_status?: 'pending_sample' | 'sample_received' | 'pending_entry' | 'results_partial' | 'results_complete_pending_auth' | 'authorized' | 'cancelled' | string; // Status of results
+  authorized_by_user_id?: number | null; // User who authorized the whole request
+  authorized_by_user_name?: string;
+  authorized_at?: string | null; // Timestamp of LabRequest authorization
+  payment_shift_id?: number | null; // Shift when payment for this request was made
 
   created_at: string;
   updated_at: string;
-  doctorShift?: DoctorShift;
+
+  results?: RequestedResult[]; // Array of results associated with this LabRequest
+  requested_organisms?: RequestedOrganism[]; // For culture tests
 }
 
-export interface RequestedServiceSummary {
-  // For the dialog
+// --- RequestedOrganism (for culture results) ---
+export interface RequestedOrganism {
   id: number;
+  lab_request_id: number;
+  organism: string;
+  sensitive: string; // Could be a comma-separated list or structured JSON
+  resistant: string; // Could be a comma-separated list or structured JSON
+}
+
+
+// --- RequestedService (Clinical Service requested during a visit) ---
+export interface RequestedService {
+  id: number;
+  doctorvisits_id: number; // FK to DoctorVisit
+  service_id: number;
+  service?: Service; // Eager-loaded service details
+  user_id: number; // User who added the service to visit
+  user_name?: string;
+  user_deposited_id?: number | null; // User who handled payment for this service
+  user_deposited_name?: string | null;
+  doctor_id: number; // Doctor who ordered/performed
+  doctor_name?: string;
+
+  price: number; // Price at the time of request (could be from contract or standard)
+  count: number;
+  amount_paid: number; // Total paid specifically for this service instance
+  endurance: number; // Amount company covers for this service instance
+  is_paid: boolean;
+  discount: number; // Fixed discount amount
+  discount_per: number; // Percentage discount
+  bank: boolean; // If the primary/last payment for this service was bank
+
+  doctor_note: string | null;
+  nurse_note: string | null;
+  done: boolean; // If the service was performed
+  approval: boolean; // If this service needed specific approval (e.g., insurance)
+
+  created_at: string;
+  updated_at: string;
+  deposits?: RequestedServiceDeposit[]; // If tracking multiple payments per service
+  // costBreakdown?: RequestedServiceCost[]; // If you have this
+}
+
+// --- DoctorVisit ---
+export interface DoctorVisit {
+  id: number;
+  patient_id: number;
+  patient: Patient; // Full patient object, or PatientStripped if that's enough for most views
+
+  doctor_id: number;
+  doctor?: DoctorStripped; // Or full Doctor object
+
+  user_id: number; // User who created the visit entry (e.g., receptionist)
+  created_by_user?: UserStripped;
+
+  shift_id: number; // General clinic shift ID
+  general_shift_details?: Shift;
+
+  doctor_shift_id?: number | null; // Specific doctor's working session ID
+  doctor_shift?: DoctorShift; // Eager loaded DoctorShift details
+
+  file_id?: number | null; // Medical file number/ID for this encounter sequence
+
+  visit_date: string; // YYYY-MM-DD
+  visit_time?: string | null; // HH:MM:SS
+  status: 'waiting' | 'with_doctor' | 'lab_pending' | 'imaging_pending' | 'payment_pending' | 'completed' | 'cancelled' | 'no_show' | string;
+  visit_type?: string | null; // e.g., New, Follow-up, Emergency
+  queue_number?: number | null;
+  number: number; // The sequential number of this visit for the patient, or within the shift
+  
+  reason_for_visit?: string | null;
+  visit_notes?: string | null; // General notes for the visit by doctor/reception
+
+  is_new: boolean; // Is it a new patient complaint/episode?
+  only_lab: boolean; // Is this visit *only* for lab tests without doctor consultation?
+
+  company?: Company; // Eager loaded if patient is insured
+
+  requested_services?: RequestedService[];
+  lab_requests?: LabRequest[];
+  // vitals?: Vital[];
+  // clinical_notes?: ClinicalNote[];
+  // prescriptions?: Prescription[];
+
+  created_at: string;
+  updated_at: string;
+
+  // For UI convenience in lists, calculated by backend or frontend
+  total_amount?: number;
+  total_paid?: number;
+  balance_due?: number;
+  total_discount?:number;
+  requested_services_count?: number; // Count of services for this visit
+}
+
+// --- For UI Lists (e.g., TodaysPatientsPage) ---
+export interface RequestedServiceSummary {
+  id: number; // requested_service_id
   service_name: string;
   price: number;
   count: number;
@@ -62,95 +192,17 @@ export interface RequestedServiceSummary {
 }
 
 export interface PatientVisitSummary {
-  // Represents the items in the list
   id: number; // Visit ID
   visit_date: string;
   visit_time?: string | null;
   status: string;
-  patient: PatientStripped; // Use stripped patient type
-  doctor?: DoctorStripped; // Use stripped doctor type
+  patient: PatientStripped;
+  doctor?: DoctorStripped;
   total_amount: number;
   total_paid: number;
   total_discount: number;
   balance_due: number;
-  requested_services_summary?: RequestedServiceSummary[]; // For the dialog
-}
-
-// --- RequestedResult Type (ensure this is defined) ---
-export interface RequestedResult {
-  id: number;
-  lab_request_id: number;
-  patient_id: number;
-  main_test_id: number;
-  child_test_id: number;
-  result?: string | null; // Actual result value
-  normal_range?: string | null;
-  unit_name?: string | null;
-  flags?: string | null;
-  result_comment?: string | null;
-  entered_by_user_id?: number | null;
-  entered_at?: string | null;
-  authorized_by_user_id?: number | null;
-  authorized_at?: string | null;
-  // Add other fields from your requested_results table
-}
-
-export interface LabRequest {
-  id: number;
-  main_test_id: number;
-  main_test?: MainTest; // CHANGED: Using full MainTest here as it contains childTests
-  pid: number; // Patient ID
-  patient_name?: string;
-  patient?: PatientStripped;
-  doctor_visit_id?: number | null;
-  visit_id?: number | null; // Added for receipt printing
-
-  hidden: boolean;
-  is_lab2lab: boolean;
-  valid: boolean;
-  no_sample: boolean;
-
-  price: number;
-  amount_paid: number;
-  discount_per: number;
-  is_bankak: boolean;
-  comment?: string | null; // This is the comment for the LabRequest itself
-
-  user_requested?: number | null;
-  requesting_user_name?: string;
-  requesting_user?: UserStripped;
-
-  user_deposited?: number | null;
-  deposit_user_name?: string;
-  deposit_user?: UserStripped;
-
-  approve: boolean;
-  endurance: number;
-  is_paid: boolean;
-
-  sample_id?: string | null;
-  created_at: string;
-  updated_at: string;
-
-  // --- ADD THIS ---
-  results?: RequestedResult[]; // Array of results associated with this LabRequest
-  // This will be populated by the backend when fetching for result entry
-}
-
-// Update MainTest type slightly if not already done, to include childTests for LabRequestResource's eager loading.
-// This might already be in your types/labTests.ts
-export interface MainTest {
-  id: number;
-  main_test_name: string;
-  pack_id?: number | null;
-  pageBreak: boolean;
-  container_id: number;
-  container_name?: string;
-  container?: Container; // Assuming Container type exists
-  price?: number | string | null;
-  divided: boolean;
-  available: boolean;
-  childTests?: ChildTest[]; // <-- Ensure this is here
-  // created_at?: string;
-  // updated_at?: string;
+  requested_services_summary?: RequestedServiceSummary[];
+  // You might add a summary for lab requests too if needed in the dialog
+  // lab_requests_summary?: { test_name: string; price: number; is_paid: boolean }[];
 }

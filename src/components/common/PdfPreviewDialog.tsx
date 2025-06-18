@@ -1,7 +1,7 @@
 // src/components/common/PdfPreviewDialog.tsx
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Loader2, Download, Printer as PrinterIcon } from 'lucide-react'; // Renamed Printer to PrinterIcon
 
@@ -32,10 +32,20 @@ const PdfPreviewDialog: React.FC<PdfPreviewDialogProps> = ({
     }
   };
 
+  // Function to modify PDF URL to fit to width by default
+  const getPdfUrlWithFitToWidth = (url: string | null): string => {
+    if (!url) return '';
+    
+    // Add PDF viewer parameters to fit to width by default
+    // Use multiple parameters for better browser compatibility
+    const separator = url.includes('#') ? '&' : '#';
+    return `${url}${separator}view=FitH&zoom=page-width&toolbar=1&navpanes=0`;
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl h-[90vh] flex flex-col p-0 sm:p-0">
-        <DialogHeader className="p-4 sm:p-6 border-b">
+      <DialogContent className="w-[95vw] max-w-none sm:max-w-none md:max-w-none h-[85vh] flex flex-col p-0 sm:p-0 overflow-hidden">
+        <DialogHeader className="p-3 sm:p-4 border-b flex-row justify-between items-center space-y-0">
           <DialogTitle>{title || t('pdfPreview.title', "Document Preview")}</DialogTitle>
         </DialogHeader>
         
@@ -49,7 +59,7 @@ const PdfPreviewDialog: React.FC<PdfPreviewDialogProps> = ({
           {!isLoading && pdfUrl && (
             <iframe
               id="pdf-preview-iframe"
-              src={pdfUrl}
+              src={getPdfUrlWithFitToWidth(pdfUrl)}
               className="w-full h-full border-0"
               title={title || "PDF Preview"}
             />

@@ -10,12 +10,15 @@
   "refreshList": "تحديث القائمة",
   "companyPrice": "سعر الشركة",
   "requiresApproval": "يتطلب موافقة",
+  "dateUnknown": "تاريخ غير معروف",
   "export": "تصدير",
   "exportPdf": "تصدير PDF",
   "exportExcel": "تصدير Excel",
   "noResultsFound": "لم يتم العثور على نتائج",
   "noDataAvailable": "لا توجد بيانات متاحة",
   "receiptPreviewTitle": "عرض الإيصال",
+  "noItemsFound": "لا يوجد عناصر",
+  "pdfPreview.generating": "جاري إنشاء PDF...",
   "by": "بواسطة",
   "datePicker": {
     "pickDateRange": "اختر نطاق التاريخ",
@@ -24,6 +27,11 @@
     "hours": "الساعة",
     "minutes": "الدقيقة",
     "timezoneNote": "المنطقة الزمنية: {{timezone}}"
+  },
+  "pdfPreview": {
+    "generating": "جاري إنشاء PDF...",
+    "title": "معاينة المستند",
+    "noPdfToDisplay": "لا يوجد ملف PDF لعرضه أو حدث خطأ"
   },
   "openedAt": "تم الفتح في",
   "requestedAt": "تم الطلب في",

@@ -1,30 +1,49 @@
-import React, { useState } from "react";
+// src/components/lab/workstation/StatusAndInfoPanel.tsx
+import React, { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { format, parseISO } from "date-fns";
-import { arSA, enUS } from "date-fns/locale"; // For localized date formatting
-
+import { arSA, enUS } from "date-fns/locale";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import type { DragEndEvent } from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
   Loader2,
   UserCircle,
   FileText,
   Printer,
-  AlertTriangle,
-  Info,
   ClipboardList,
-  Settings2,
   Receipt,
+  ChevronDown,
+  ChevronUp,
+  GripVertical,
+  BarChart3,
+  Palette,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -33,79 +52,194 @@ import type { Patient } from "@/types/patients";
 import type { LabRequest } from "@/types/visits";
 import { getPatientById } from "@/services/patientService";
 import type { ChildTestWithResult } from "@/types/labWorkflow";
-import { downloadThermalReceiptPdf } from "@/services/reportService";
+import {
+  getPanelOrder,
+  savePanelOrder,
+  getPanelCollapsedState,
+  savePanelCollapsedState,
+} from "@/lib/panel-settings-store";
+import type { PanelId } from "@/lib/panel-settings-store";
+import PdfPreviewDialog from "@/components/common/PdfPreviewDialog";
+import apiClient from "@/services/api";
 
 interface StatusAndInfoPanelProps {
   patientId: number | null;
-  // visitId: number | null; // Not directly used for fetching here, but good for context if needed
-  selectedLabRequest: LabRequest | null; // The LabRequest object selected for result entry
-  focusedChildTest: ChildTestWithResult | null; // NEW PROP
+  visitId: number | null;
+  selectedLabRequest: LabRequest | null;
+  focusedChildTest: ChildTestWithResult | null;
 }
 
-// Reusable Detail Row component
+// Reusable Detail Row
 const DetailRowDisplay: React.FC<{
   label: string;
   value?: string | number | React.ReactNode | null;
   icon?: React.ElementType;
   valueClassName?: string;
-  labelClassName?: string;
-  titleValue?: string; // For long values that might be truncated
+  titleValue?: string;
   className?: string;
-}> = ({
-  label,
-  value,
-  icon: Icon,
-  valueClassName,
-  labelClassName,
-  titleValue,
-  className,
-}) => {
+}> = ({ label, value, icon: Icon, valueClassName, titleValue, className }) => {
   const { t } = useTranslation("common");
   return (
     <div
       className={cn(
-        "grid grid-cols-[auto_1fr] items-start gap-x-2 py-1.5",
+        "grid grid-cols-[20px_auto_1fr] items-start gap-x-2 py-1",
         className
       )}
     >
       {Icon ? (
-        <Icon
-          className={cn("h-4 w-4 text-muted-foreground mt-0.5", labelClassName)}
-        />
+        <Icon className="h-3.5 w-3.5 text-muted-foreground mt-0.5" />
       ) : (
-        <div className="w-4" />
+        <div className="w-3.5" />
       )}
-      <div className="min-w-0">
-        {/* For truncation */}
-        <p className={cn("text-xs text-muted-foreground", labelClassName)}>
-          {label}:
-        </p>
-        <div
-          className={cn("text-sm font-medium truncate", valueClassName)}
-          title={
-            titleValue ||
-            (typeof value === "string" || typeof value === "number"
-              ? String(value)
-              : undefined)
-          }
-        >
-          {value === null ||
-          value === undefined ||
-          (typeof value === "string" && value.trim() === "") ? (
-            <span className="text-xs italic text-slate-400 dark:text-slate-500">
-              {t("notAvailable_short", "N/A")}
-            </span>
-          ) : (
-            value
-          )}
-        </div>
+      <p className="text-xs text-muted-foreground min-w-[80px] whitespace-nowrap">
+        {label}:
+      </p>
+      <div
+        className={cn("text-xs font-medium truncate", valueClassName)}
+        title={
+          titleValue ||
+          (typeof value === "string" || typeof value === "number"
+            ? String(value)
+            : undefined)
+        }
+      >
+        {value === null ||
+        value === undefined ||
+        (typeof value === "string" && value.trim() === "") ? (
+          <span className="italic text-slate-400 dark:text-slate-500">
+            {t("notAvailable_short", "N/A")}
+          </span>
+        ) : (
+          value
+        )}
       </div>
     </div>
   );
 };
 
+// --- Sortable Collapsible Card Item ---
+interface SortableInfoCardProps {
+  id: PanelId;
+  title: string;
+  icon: React.ElementType;
+  children: React.ReactNode;
+  isLoading?: boolean;
+  error?: Error | null;
+  defaultCollapsed?: boolean;
+  cardClassName?: string;
+}
+
+const SortableInfoCard: React.FC<SortableInfoCardProps> = ({
+  id,
+  title,
+  icon: Icon,
+  children,
+  isLoading,
+  error,
+  defaultCollapsed = false,
+  cardClassName,
+}) => {
+  const { t } = useTranslation("common");
+  const [isCollapsed, setIsCollapsed] = useState(() =>
+    getPanelCollapsedState(id, defaultCollapsed)
+  );
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.8 : 1,
+    zIndex: isDragging ? 100 : "auto",
+  };
+
+  const handleToggleCollapse = () => {
+    setIsCollapsed((prev) => {
+      savePanelCollapsedState(id, !prev);
+      return !prev;
+    });
+  };
+
+  useEffect(() => {
+    const storedState = getPanelCollapsedState(id, defaultCollapsed);
+    if (storedState !== isCollapsed) {
+      setIsCollapsed(storedState);
+    }
+  }, [id, defaultCollapsed]);
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn("touch-none", cardClassName)}
+    >
+      <Collapsible
+        open={!isCollapsed}
+        onOpenChange={handleToggleCollapse}
+      >
+        <Card
+          className={cn(
+            "shadow-md overflow-hidden",
+            isDragging && "ring-2 ring-primary"
+          )}
+        >
+          <CollapsibleTrigger asChild>
+            <CardHeader className="flex flex-row items-center justify-between py-2 px-3 cursor-pointer hover:bg-muted/50 transition-colors">
+              <div className="flex items-center gap-2">
+                {canDrag && (
+                  <button
+                    {...attributes}
+                    {...listeners}
+                    className="cursor-grab active:cursor-grabbing p-1 -ml-1"
+                  >
+                    <GripVertical className="h-4 w-4 text-muted-foreground" />
+                  </button>
+                )}
+                <Icon className="h-4 w-4 text-primary" />
+                <CardTitle className="text-sm font-semibold">{title}</CardTitle>
+              </div>
+              <Button variant="ghost" size="icon" className="h-6 w-6">
+                {isCollapsed ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronUp className="h-4 w-4" />
+                )}
+              </Button>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="px-3 pt-1 pb-2 text-xs">
+              {isLoading ? (
+                <div className="py-4 text-center">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : error ? (
+                <div className="text-destructive py-2 text-center text-xs">
+                  {t("error.loadFailed")}: {error.message}
+                </div>
+              ) : (
+                children
+              )}
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
+    </div>
+  );
+};
+
+// Global state to enable/disable dragging
+const canDrag = true;
+
 const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
   patientId,
+  visitId,
   selectedLabRequest,
   focusedChildTest,
 }) => {
@@ -117,397 +251,397 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
     "payments",
   ]);
   const dateLocale = i18n.language.startsWith("ar") ? arSA : enUS;
-  const [isPrintingReceipt, setIsPrintingReceipt] = useState(false);
+  const [panelOrder, setPanelOrder] = useState<PanelId[]>(getPanelOrder);
 
-  const handlePrintReceipt = async () => {
-    const visitId = selectedLabRequest?.doctor_visit_id;
-    if (!visitId) {
-      toast.error(t("common:error.noVisitId", "Visit ID is required"));
-      return;
-    }
-    setIsPrintingReceipt(true);
-    try {
-      const blob = await downloadThermalReceiptPdf(visitId);
-      const url = window.URL.createObjectURL(blob);
-      const pdfWindow = window.open(url);
-      if (pdfWindow) {
-        pdfWindow.onload = () => {
-          // Wait for PDF to load in new tab
-          // pdfWindow.print(); // This might trigger print dialog
-          // pdfWindow.onafterprint = () => pdfWindow.close(); // Close after print (might be blocked)
-        };
-      } else {
-        toast.error(t("common:error.popupBlocked", "Popup was blocked"));
-      }
-    } catch (error) {
-      console.error("Failed to generate receipt:", error);
-      toast.error(t("common:error.pdfGeneratedError", "Failed to generate PDF"));
-    } finally {
-      setIsPrintingReceipt(false);
-    }
-  };
-
+  // State for PDF Preview
+  const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [pdfPreviewTitle, setPdfPreviewTitle] = useState('');
+  const [pdfFileName, setPdfFileName] = useState('document.pdf');
   const {
     data: patient,
     isLoading: isLoadingPatient,
     error: patientError,
   } = useQuery<Patient, Error>({
     queryKey: ["patientDetailsForInfoPanel", patientId],
-    queryFn: async () => {
-      if (!patientId)
-        throw new Error(t("patients:validation.patientIdRequired"));
-      return getPatientById(patientId);
-    },
+    queryFn: () =>
+      patientId
+        ? getPatientById(patientId)
+        : Promise.reject(new Error("Patient ID required")),
     enabled: !!patientId,
-    retry: 1,
   });
 
   const isCompanyPatient = !!patient?.company_id;
 
-  const getAgeString = (p?: Patient | null): string => {
-    if (!p) return t("common:notAvailable_short");
-    const parts = [];
-    if (p.age_year !== null && p.age_year !== undefined && p.age_year >= 0)
-      parts.push(`${p.age_year}${t("common:years_shortInitial")}`);
-    if (p.age_month !== null && p.age_month !== undefined && p.age_month >= 0)
-      parts.push(`${p.age_month}${t("common:months_shortInitial")}`);
-    if (p.age_day !== null && p.age_day !== undefined && p.age_day >= 0)
-      parts.push(`${p.age_day}${t("common:days_shortInitial")}`);
-    if (
-      parts.length === 0 &&
-      (p.age_year === 0 || p.age_month === 0 || p.age_day === 0)
-    )
-      return `0${t("common:days_shortInitial")}`; // For newborns
-    return parts.length > 0 ? parts.join(" ") : t("common:notAvailable_short");
+  const getAgeString = useCallback(
+    (p?: Patient | null): string => {
+      if (!p) return t("common:notAvailable_short");
+      const parts = [];
+      if (p.age_year !== null && p.age_year !== undefined && p.age_year >= 0)
+        parts.push(`${p.age_year}${t("common:years_shortInitial")}`);
+      if (p.age_month !== null && p.age_month !== undefined && p.age_month >= 0)
+        parts.push(`${p.age_month}${t("common:months_shortInitial")}`);
+      if (p.age_day !== null && p.age_day !== undefined && p.age_day >= 0)
+        parts.push(`${p.age_day}${t("common:days_shortInitial")}`);
+      if (
+        parts.length === 0 &&
+        (p.age_year === 0 || p.age_month === 0 || p.age_day === 0)
+      )
+        return `0${t("common:days_shortInitial")}`;
+      return parts.length > 0
+        ? parts.join(" ")
+        : t("common:notAvailable_short");
+    },
+    [t]
+  );
+  const generateAndShowPdf = async (
+    title: string,
+    fileNamePrefix: string,
+    fetchFunction: () => Promise<Blob>
+  ) => {
+    setIsGeneratingPdf(true);
+    setPdfUrl(null);
+    setPdfPreviewTitle(title);
+    setIsPdfPreviewOpen(true);
+
+    try {
+      const blob = await fetchFunction();
+      const objectUrl = URL.createObjectURL(blob);
+      setPdfUrl(objectUrl);
+      const patientNameSanitized = patient?.name.replace(/[^A-Za-z0-9\-\_]/g, '_') || 'patient';
+      setPdfFileName(`${fileNamePrefix}_${visitId}_${patientNameSanitized}_${new Date().toISOString().slice(0,10)}.pdf`);
+    } catch (error: any) {
+      console.error(`Error generating ${title}:`, error);
+      toast.error(t('common:error.generatePdfFailed'), {
+        description: error.response?.data?.message || error.message,
+      });
+      setIsPdfPreviewOpen(false); // Close dialog on error
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
 
-  const calculateLabRequestBalance = (lr?: LabRequest | null): number => {
-    if (!lr) return 0;
-    const price = Number(lr.price) || 0;
-    const itemSubTotal = price;
-    const discountAmount =
-      (itemSubTotal * (Number(lr.discount_per) || 0)) / 100;
-    const enduranceAmount = Number(lr.endurance) || 0;
-    const netPrice =
-      itemSubTotal - discountAmount - (isCompanyPatient ? enduranceAmount : 0);
-    return netPrice - (Number(lr.amount_paid) || 0);
+  const handlePrintReceipt = () => {
+    if (!visitId) return;
+    generateAndShowPdf(
+      t('common:printReceiptDialogTitle', { visitId }),
+      'LabReceipt',
+      () => apiClient.get(`/visits/${visitId}/lab-thermal-receipt/pdf`, { responseType: 'blob' }).then(res => res.data)
+    );
   };
 
-  const handlePrintSampleLabels = () =>
-    toast.info(
-      t("common:featureNotImplemented", {
-        feature: t("labResults:statusInfo.printSampleLabels"),
-      })
+  const handlePrintSampleLabels = () => {
+    if (!visitId) return; // Needs visit context for all its lab requests
+    generateAndShowPdf(
+      t('labResults:statusInfo.printSampleLabelsDialogTitle'),
+      'SampleLabels',
+      () => apiClient.get(`/visits/${visitId}/lab-sample-labels/pdf`, { responseType: 'blob' }).then(res => res.data)
     );
-  const handleViewReportPreview = () =>
-    toast.info(
-      t("common:featureNotImplemented", {
-        feature: t("labResults:statusInfo.viewReportPreview"),
-      })
+  };
+
+  const handleViewReportPreview = () => {
+    if (!visitId) return;
+    generateAndShowPdf(
+      t('labResults:statusInfo.viewReportPreviewDialogTitle'),
+      'LabReport',
+      () => apiClient.get(`/visits/${visitId}/lab-report/pdf`, { responseType: 'blob' }).then(res => res.data)
     );
+  };
+
+  const calculateLabRequestBalance = useCallback(
+    (lr?: LabRequest | null): number => {
+      if (!lr) return 0;
+      const price = Number(lr.price) || 0;
+      const count = 1; // LabRequest doesn't have count property, using default
+      const itemSubTotal = price * count;
+      const discountAmount =
+        (itemSubTotal * (Number(lr.discount_per) || 0)) / 100;
+      const enduranceAmount = Number(lr.endurance) || 0;
+      const netPrice =
+        itemSubTotal -
+        discountAmount -
+        (isCompanyPatient ? enduranceAmount * count : 0);
+      return netPrice - (Number(lr.amount_paid) || 0);
+    },
+    [isCompanyPatient]
+  );
+
+  const getPaymentStatusBadge = (lr: LabRequest) => {
+    const balance = calculateLabRequestBalance(lr);
+    if (balance <= 0.09) {
+      return <Badge variant="default" className="bg-green-500 text-white text-xs">Paid</Badge>;
+    } else {
+      return <Badge variant="destructive" className="text-xs">Pending</Badge>;
+    }
+  };
+
+  const getSampleStatusBadge = (lr: LabRequest) => {
+    // Check if sample is collected based on available properties
+    if (lr.sample_id && lr.sample_id.trim() !== "") {
+      return <Badge variant="default" className="bg-blue-500 text-white text-xs">Collected</Badge>;
+    } else {
+      return <Badge variant="outline" className="text-xs">Pending</Badge>;
+    }
+  };
+
+  const getApprovalStatusBadge = (lr: LabRequest) => {
+    if (lr.approve) {
+      return <Badge variant="default" className="bg-purple-500 text-white text-xs">Authorized</Badge>;
+    } else {
+      return <Badge variant="secondary" className="text-xs">Pending</Badge>;
+    }
+  };
+
+ 
+
+ 
+
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setPanelOrder((items) => {
+        const oldIndex = items.indexOf(active.id as PanelId);
+        const newIndex = items.indexOf(over.id as PanelId);
+        const newOrder = arrayMove(items, oldIndex, newIndex);
+        savePanelOrder(newOrder);
+        return newOrder;
+      });
+    }
+  };
+
+  const panelComponents: Record<PanelId, React.ReactNode> = {
+    patientInfo: (
+      <SortableInfoCard
+        id="patientInfo"
+        title={t("labResults:statusInfo.patientInfoTitle")}
+        icon={UserCircle}
+        isLoading={isLoadingPatient && !patient}
+        error={patientError}
+        cardClassName="bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700/40"
+      >
+        {patient ? (
+          <>
+            <DetailRowDisplay
+              label={t("patients:fields.name")}
+              value={patient.name}
+              valueClassName="text-primary font-semibold"
+            />
+            <DetailRowDisplay label={t("common:phone")} value={patient.phone} />
+            <DetailRowDisplay
+              label={t("common:gender")}
+              value={t(`common:genderEnum.${patient.gender}`)}
+            />
+            <DetailRowDisplay
+              label={t("common:age")}
+              value={getAgeString(patient)}
+            />
+            {patient.company && (
+              <DetailRowDisplay
+                label={t("patients:fields.company")}
+                value={patient.company.name}
+              />
+            )}
+            {patient.insurance_no && (
+              <DetailRowDisplay
+                label={t("patients:fields.insuranceNo")}
+                value={patient.insurance_no}
+              />
+            )}
+            <DetailRowDisplay
+              label={t("patients:fields.address")}
+              value={patient.address}
+              titleValue={patient.address || undefined}
+            />
+          </>
+        ) : !isLoadingPatient ? (
+          <p className="text-xs text-muted-foreground py-2 text-center">
+            {t("labResults:patientDataNotAvailable")}
+          </p>
+        ) : null}
+      </SortableInfoCard>
+    ),
+    requestStatus: selectedLabRequest ? (
+      <SortableInfoCard
+        id="requestStatus"
+        title={t("labResults:statusInfo.requestStatusTitle")}
+        icon={ClipboardList}
+        defaultCollapsed={false}
+        cardClassName="bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-700/40"
+      >
+        <p
+          className="text-[11px] text-muted-foreground mb-1 truncate"
+          title={selectedLabRequest.main_test?.main_test_name}
+        >
+          {selectedLabRequest.main_test?.main_test_name || t("common:test")}{" "}
+          (ID: {selectedLabRequest.id})
+        </p>
+        <DetailRowDisplay
+          label={t("labResults:statusInfo.paymentStatus")}
+          value={getPaymentStatusBadge(selectedLabRequest)}
+        />
+        <DetailRowDisplay
+          label={t("labResults:statusInfo.sampleStatus")}
+          value={getSampleStatusBadge(selectedLabRequest)}
+        />
+        <DetailRowDisplay
+          label={t("labResults:statusInfo.approvalStatus")}
+          value={getApprovalStatusBadge(selectedLabRequest)}
+        />
+        <Separator className="my-1" />
+        <DetailRowDisplay
+          label={t("common:price")}
+          value={Number(selectedLabRequest.price).toFixed(1)}
+        />
+        {isCompanyPatient && (
+          <DetailRowDisplay
+            label={t("labTests:table.endurance")}
+            value={Number(selectedLabRequest.endurance || 0).toFixed(1)}
+          />
+        )}
+        <DetailRowDisplay
+          label={t("labTests:table.discountPercentageShort")}
+          value={`${selectedLabRequest.discount_per || 0}%`}
+        />
+        <DetailRowDisplay
+          label={t("payments:amountPaid")}
+          value={Number(selectedLabRequest.amount_paid).toFixed(1)}
+          valueClassName="text-green-600 dark:text-green-400 font-semibold"
+        />
+        <DetailRowDisplay
+          label={t("payments:balanceDue")}
+          value={calculateLabRequestBalance(selectedLabRequest).toFixed(1)}
+          valueClassName={cn(
+            "font-bold",
+            calculateLabRequestBalance(selectedLabRequest) > 0.09
+              ? "text-red-600 dark:text-red-400"
+              : "text-green-600 dark:text-green-400"
+          )}
+        />
+        {selectedLabRequest.created_at && (
+          <DetailRowDisplay
+            label={t("common:requestedAt")}
+            value={format(parseISO(selectedLabRequest.created_at), "Pp", {
+              locale: dateLocale,
+            })}
+          />
+        )}
+      </SortableInfoCard>
+    ) : null,
+    parameterDetails: focusedChildTest ? (
+      <SortableInfoCard
+        id="parameterDetails"
+        title={`${t("labResults:statusInfo.parameterDetails")}: ${
+          focusedChildTest.child_test_name
+        }`}
+        icon={BarChart3}
+        defaultCollapsed={false}
+        cardClassName="bg-teal-50 dark:bg-teal-900/30 border-teal-200 dark:border-teal-700/40"
+      >
+        <DetailRowDisplay
+          label={t("labTests:childTests.form.normalRangeText")}
+          value={
+            focusedChildTest.normalRange ||
+            (focusedChildTest.low !== null && focusedChildTest.upper !== null
+              ? `${focusedChildTest.low} - ${focusedChildTest.upper}`
+              : t("common:notSet"))
+          }
+        />
+        <DetailRowDisplay
+          label={t("labTests:childTests.form.unit")}
+          value={focusedChildTest.unit?.name || focusedChildTest.unit_name}
+        />
+        {focusedChildTest.defval && (
+          <DetailRowDisplay
+            label={t("labTests:childTests.form.defaultValue")}
+            value={focusedChildTest.defval}
+          />
+        )}
+        {(focusedChildTest.lowest || focusedChildTest.max) && (
+          <Separator className="my-1" />
+        )}
+        {focusedChildTest.lowest && (
+          <DetailRowDisplay
+            label={t("labTests:childTests.form.criticalLow")}
+            value={String(focusedChildTest.lowest)}
+            valueClassName="text-orange-600 font-bold"
+          />
+        )}
+        {focusedChildTest.max && (
+          <DetailRowDisplay
+            label={t("labTests:childTests.form.criticalHigh")}
+            value={String(focusedChildTest.max)}
+            valueClassName="text-red-600 font-bold"
+          />
+        )}
+      </SortableInfoCard>
+    ) : null,
+  };
 
   if (!patientId) {
     return (
-      <div className="h-full flex flex-col items-center justify-center p-6 text-muted-foreground text-center bg-card dark:bg-slate-800/50">
-        <Info size={36} className="mb-3 opacity-40" />
-        <p className="text-sm">{t("labResults:noInfoToShow")}</p>
-        <p className="text-xs">
-          {t("labResults:selectPatientFromQueueToSeeInfo")}
+      <div className="h-full flex items-center justify-center p-4">
+        <p className="text-sm text-muted-foreground text-center">
+          {t("labResults:selectPatientToViewInfo")}
         </p>
       </div>
     );
   }
 
-  const isDataLoading = isLoadingPatient && !patient;
-
   return (
-    <ScrollArea className="h-full bg-card dark:bg-slate-800/50">
-      <div className="p-3 space-y-3">
-        {isDataLoading ? (
-          <div className="flex flex-col items-center justify-center py-10">
-            <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" />
-            <p className="text-sm text-muted-foreground">
-              {t("common:loadingDetails")}
-            </p>
-          </div>
-        ) : patientError ? (
-          <Card className="border-destructive bg-destructive/5">
-            <CardHeader className="pb-2 pt-3 items-center text-center">
-              <AlertTriangle className="h-8 w-8 text-destructive mb-1" />
-              <CardTitle className="text-destructive text-sm font-semibold">
-                {t("common:error.fetchFailed", {
-                  entity: t("patients:entityName"),
-                })}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="text-xs text-destructive text-center pb-3">
-              {patientError.message}
-            </CardContent>
-          </Card>
-        ) : patient ? (
-          <Card className="shadow-sm">
-            <CardHeader className="pb-2 pt-3">
-              <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
-                <UserCircle className="h-4 w-4 text-muted-foreground" />
-                {t("labResults:statusInfo.patientInfoTitle")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="text-xs">
-              <DetailRowDisplay
-                label={t("patients:fields.name")}
-                value={patient.name}
-                valueClassName="text-primary font-semibold"
-              />
-              <DetailRowDisplay
-                label={t("common:phone")}
-                value={patient.phone}
-              />
-              <DetailRowDisplay
-                label={t("common:gender")}
-                value={t(`common:genderEnum.${patient.gender}`)}
-              />
-              <DetailRowDisplay
-                label={t("common:age")}
-                value={getAgeString(patient)}
-              />
-              {patient.company && (
-                <DetailRowDisplay
-                  label={t("patients:fields.company")}
-                  value={patient.company.name}
-                />
-              )}
-              {patient.insurance_no && (
-                <DetailRowDisplay
-                  label={t("patients:fields.insuranceNo")}
-                  value={patient.insurance_no}
-                />
-              )}
-              <DetailRowDisplay
-                label={t("patients:fields.address")}
-                value={patient.address}
-                titleValue={patient.address || undefined}
-              />
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="border-amber-500 bg-amber-50/50 dark:bg-amber-900/20">
-            <CardContent className="text-center py-6 text-amber-700 dark:text-amber-400">
-              <Info className="mx-auto h-8 w-8 mb-2" />
-              <p className="text-sm font-medium">
-                {t("labResults:patientDataNotAvailable")}
-              </p>
-            </CardContent>
-          </Card>
-        )}
-        {focusedChildTest && (
-          <Card className="shadow-sm border-primary/50">
-            <CardHeader className="pb-2 pt-3">
-              <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
-                <Info className="h-4 w-4 text-primary" />
-                {t("labResults:statusInfo.parameterDetails")}:{" "}
-                {focusedChildTest.child_test_name}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="text-xs">
-              <DetailRowDisplay
-                label={t("labTests:childTests.form.normalRangeText")}
-                value={
-                  focusedChildTest.normalRange ||
-                  (focusedChildTest.low !== null &&
-                  focusedChildTest.low !== undefined &&
-                  focusedChildTest.upper !== null &&
-                  focusedChildTest.upper !== undefined
-                    ? `${focusedChildTest.low} - ${focusedChildTest.upper}`
-                    : t("common:notSet"))
-                }
-              />
-              <DetailRowDisplay
-                label={t("labTests:childTests.form.unit")}
-                value={
-                  focusedChildTest.unit?.name || focusedChildTest.unit_name
-                }
-              />
-              {focusedChildTest.defval && (
-                <DetailRowDisplay
-                  label={t("labTests:childTests.form.defaultValue")}
-                  value={focusedChildTest.defval}
-                />
-              )}
-              {/* Add Critical Low/High if available on focusedChildTest */}
-              {(focusedChildTest.lowest || focusedChildTest.max) && (
-                <Separator className="my-1" />
-              )}
-              {focusedChildTest.lowest && (
-                <DetailRowDisplay
-                  label={t("labTests:childTests.form.criticalLow")}
-                  value={String(focusedChildTest.lowest)}
-                  valueClassName="text-orange-600 font-bold"
-                />
-              )}
-              {focusedChildTest.max && (
-                <DetailRowDisplay
-                  label={t("labTests:childTests.form.criticalHigh")}
-                  value={String(focusedChildTest.max)}
-                  valueClassName="text-red-600 font-bold"
-                />
-              )}
-            </CardContent>
-          </Card>
-        )}
-        {/* Lab Request Status Card */}
-        {selectedLabRequest && (
-          <Card className="shadow-sm">
-            <CardHeader className="pb-2 pt-3">
-              <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
-                <ClipboardList className="h-4 w-4 text-muted-foreground" />
-                {t("labResults:statusInfo.requestStatusTitle")}
-              </CardTitle>
-              <CardDescription
-                className="text-xs truncate"
-                title={selectedLabRequest.main_test?.main_test_name}
-              >
-                {selectedLabRequest.main_test?.main_test_name ||
-                  t("common:test")}
-                (ID: {selectedLabRequest.id})
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="text-xs">
-              <DetailRowDisplay
-                label={t("labResults:statusInfo.paymentStatus")}
-                value={
-                  selectedLabRequest.is_paid ? (
-                    <Badge variant="success" className="text-xs px-1.5 py-0.5">
-                      {t("payments:status.paid")}
-                    </Badge>
-                  ) : Number(selectedLabRequest.amount_paid) > 0 ? (
-                    <Badge variant="info" className="text-xs px-1.5 py-0.5">
-                      {t("payments:status.partiallyPaid")}
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-xs px-1.5 py-0.5">
-                      {t("payments:status.unpaid")}
-                    </Badge>
-                  )
-                }
-              />
-              <DetailRowDisplay
-                label={t("labResults:statusInfo.sampleStatus")}
-                value={
-                  selectedLabRequest.no_sample ? (
-                    <Badge
-                      variant="destructive"
-                      className="text-xs px-1.5 py-0.5"
-                    >
-                      {t("labResults:statusInfo.sampleNotCollected")}
-                    </Badge>
-                  ) : selectedLabRequest.sample_id ? (
-                    <Badge variant="info" className="text-xs px-1.5 py-0.5">
-                      {t("labResults:statusInfo.sampleCollectedWithId", {
-                        id: selectedLabRequest.sample_id,
-                      })}
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-xs px-1.5 py-0.5">
-                      {t("labResults:statusInfo.samplePending")}
-                    </Badge>
-                  )
-                }
-              />
-              <DetailRowDisplay
-                label={t("labResults:statusInfo.approvalStatus")}
-                value={
-                  selectedLabRequest.approve ? (
-                    <Badge variant="success" className="text-xs px-1.5 py-0.5">
-                      {t("labResults:statusInfo.approved")}
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-xs px-1.5 py-0.5">
-                      {t("labResults:statusInfo.pendingApproval")}
-                    </Badge>
-                  )
-                }
-              />
-              <Separator className="my-1.5" />
-              <DetailRowDisplay
-                label={t("common:price")}
-                value={Number(selectedLabRequest.price).toFixed(1)}
-              />
-              {isCompanyPatient && (
-                <DetailRowDisplay
-                  label={t("labTests:table.endurance")}
-                  value={Number(selectedLabRequest.endurance).toFixed(1)}
-                />
-              )}
-              <DetailRowDisplay
-                label={t("labTests:table.discountPercentageShort")}
-                value={`${selectedLabRequest.discount_per || 0}%`}
-              />
-              <DetailRowDisplay
-                label={t("payments:amountPaid")}
-                value={Number(selectedLabRequest.amount_paid).toFixed(1)}
-                valueClassName="text-green-600 dark:text-green-400 font-semibold"
-              />
-              <DetailRowDisplay
-                label={t("payments:balanceDue")}
-                value={calculateLabRequestBalance(selectedLabRequest).toFixed(
-                  1
-                )}
-                valueClassName={cn(
-                  "font-bold",
-                  calculateLabRequestBalance(selectedLabRequest) > 0.09
-                    ? "text-red-600 dark:text-red-400"
-                    : "text-green-600 dark:text-green-400"
-                )}
-              />
-              {selectedLabRequest.created_at && (
-                <DetailRowDisplay
-                  label={t("common:requestedAt")}
-                  value={format(parseISO(selectedLabRequest.created_at), "Pp", {
-                    locale: dateLocale,
-                  })}
-                />
-              )}
-            </CardContent>
-          </Card>
-        )}
-        {/* NEW: Focused Child Test Info Card */}
+  <>
+  <ScrollArea className="h-full bg-slate-50 dark:bg-slate-800/30">
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={panelOrder.map(id => id)} strategy={verticalListSortingStrategy}>
+            <div className="p-2 sm:p-3 space-y-2 sm:space-y-3">
+              {panelOrder.map(panelId => panelComponents[panelId]).filter(Boolean)}
+              
+              <Card className="shadow-sm bg-slate-100 dark:bg-slate-900/40">
+                <CardHeader className="pb-2 pt-3">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
+                    <Palette className="h-4 w-4 text-muted-foreground" />
+                    {t("labResults:statusInfo.actionsTitle")}
+                  </CardTitle>
+                </CardHeader>
+                {console.log(visitId,'visitId')}
+                <CardContent className="space-y-1.5">
+                  <Button variant="outline" size="sm" className="w-full justify-start text-xs" onClick={handlePrintReceipt} disabled={!visitId || isGeneratingPdf}>
+                    <Receipt className="ltr:mr-2 rtl:ml-2 h-3.5 w-3.5" /> {t("common:printReceipt", "Print Lab Receipt")}
+                  </Button>
+                  <Button variant="outline" size="sm" className="w-full justify-start text-xs" onClick={handlePrintSampleLabels} disabled={!visitId || isGeneratingPdf}>
+                    <Printer className="ltr:mr-2 rtl:ml-2 h-3.5 w-3.5" />{t("labResults:statusInfo.printSampleLabels")}
+                  </Button>
+                  <Button variant="outline" size="sm" className="w-full justify-start text-xs" onClick={handleViewReportPreview} disabled={!visitId || isGeneratingPdf}>
+                    <FileText className="ltr:mr-2 rtl:ml-2 h-3.5 w-3.5" />{t("labResults:statusInfo.viewReportPreview")}
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </SortableContext>
+        </DndContext>
+      </ScrollArea>
 
-        {/* Actions Card */}
-        <Card className="shadow-sm">
-          <CardHeader className="pb-2 pt-3">
-            <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
-              <Settings2 className="h-4 w-4 text-muted-foreground" />
-              {t("labResults:statusInfo.actionsTitle")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-1.5">
-          <Button variant="outline" size="sm" className="w-full justify-start text-xs" onClick={handlePrintReceipt} disabled={isPrintingReceipt /* || !visitFullyPaid */}>
-            <Receipt className="ltr:mr-2 rtl:ml-2 h-3.5 w-3.5"/> {t('common:printReceipt', "Print Receipt")}
-          </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full justify-start text-xs"
-              onClick={handlePrintSampleLabels}
-              disabled={!selectedLabRequest}
-            >
-              <Printer className="ltr:mr-2 rtl:ml-2 h-3.5 w-3.5" />
-              {t("labResults:statusInfo.printSampleLabels")}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full justify-start text-xs"
-              onClick={handleViewReportPreview}
-              disabled={!selectedLabRequest}
-            >
-              <FileText className="ltr:mr-2 rtl:ml-2 h-3.5 w-3.5" />
-              {t("labResults:statusInfo.viewReportPreview")}
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    </ScrollArea>
+      <PdfPreviewDialog
+        isOpen={isPdfPreviewOpen}
+        onOpenChange={(open) => {
+            setIsPdfPreviewOpen(open);
+            if (!open && pdfUrl) { // Clean up URL when dialog is manually closed
+                URL.revokeObjectURL(pdfUrl);
+                setPdfUrl(null);
+            }
+        }}
+        pdfUrl={pdfUrl}
+        isLoading={isGeneratingPdf && !pdfUrl}
+        title={pdfPreviewTitle}
+        fileName={pdfFileName}
+      />
+    </>
   );
 };
 

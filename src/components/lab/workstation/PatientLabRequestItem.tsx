@@ -22,11 +22,7 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
   const { t } = useTranslation(["labResults", "common"]);
 
   // The sample_id or a generated display ID for the lab work
-  const labIdentifier =
-    item.sample_id ||
-    `${t("labResults:patientLabItem.requestIdShort")}${
-      item.lab_request_ids?.[0] || item.visit_id
-    }`;
+  const labIdentifier = item.lab_number;
 
   const paymentStatusColor =
     allRequestsPaid === undefined // If status is unknown (e.g., not fetched yet)
@@ -48,11 +44,11 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
         item.patient_name
       }, ${labIdentifier}`}
       className={cn(
-        "w-[50px] h-[50px] flex-shrink-0 rounded-md cursor-pointer transition-all duration-150 ease-in-out",
-        "flex flex-col items-center justify-center relative group",
+        "w-[50px] h-[50px] flex-shrink-0   rounded-md cursor-pointer transition-all duration-150 ease-in-out",
+        "flex flex-col items-center justify-center ring-slate-400 relative group",
         isSelected
           ? "ring-2 ring-primary shadow-lg bg-primary/20 dark:bg-primary/30 scale-105"
-          : "bg-card dark:bg-slate-800/70 ring-1 ring-transparent hover:ring-slate-400 dark:hover:ring-slate-600 hover:scale-105"
+          : "bg-card  bg-primary/20 dark:bg-primary/30 dark:bg-slate-800/70 ring-1 ring-transparent  dark:hover:ring-slate-600 hover:scale-105"
       )}
       title={`${item.patient_name}\nID: ${labIdentifier}\nTests: ${item.test_count}`}
     >

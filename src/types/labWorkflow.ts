@@ -3,6 +3,7 @@ import type { ChildGroup, ChildTest, ChildTestOption, Unit } from "./labTests";
 export interface PatientLabQueueItem { // For the leftmost list
   visit_id: number; // DoctorVisit ID
   patient_id: number;
+  lab_number: string;
   patient_name: string;
   sample_id?: string | null; // Or primary LabRequest ID for the visit
   lab_request_ids: number[]; // All labrequest IDs for this patient's visit

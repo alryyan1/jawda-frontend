@@ -1,21 +1,16 @@
 // src/components/lab/workstation/ResultEntryPanel.tsx
 import React, { useEffect, useCallback, useState, useRef } from "react";
-import { useForm, Controller, useWatch } from "react-hook-form";
-import type { FieldPath } from "react-hook-form";
+import {
+  useForm,
+  Controller,
+  useWatch,
+  type FieldPath,
+  type Path,
+} from "react-hook-form";
 import { useTranslation } from "react-i18next";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-// Using a simple debounce implementation to avoid lodash dependency issues
-const debounce = <T extends (...args: unknown[]) => unknown>(
-  func: T,
-  wait: number
-): ((...args: Parameters<T>) => void) => {
-  let timeout: NodeJS.Timeout;
-  return (...args: Parameters<T>) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
-  };
-};
+import { debounce } from "lodash";
 
 // MUI Imports
 import Box from "@mui/material/Box";
@@ -25,8 +20,6 @@ import Tab from "@mui/material/Tab";
 import Typography from "@mui/material/Typography";
 import Tooltip from "@mui/material/Tooltip";
 import IconButton from "@mui/material/IconButton";
-
-// MUI Table for two-column layout
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -39,8 +32,6 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Form } from "@/components/ui/form";
 import {
-  Loader2,
-  AlertTriangle,
   XCircle,
   Settings2 as SettingsIcon,
 } from "lucide-react";
@@ -51,20 +42,18 @@ import type {
   MainTestWithChildrenResults,
   ResultEntryFormValues,
   ChildTestWithResult,
-  ResultEntryItemFormValue,
 } from "@/types/labWorkflow";
 import {
   getLabRequestForEntry,
+  saveSingleChildTestResult,
   saveLabResults,
+  type SingleResultSavePayload,
 } from "@/services/labWorkflowService";
 
-import ChildTestAutocompleteInput from "./ChildTestAutocompleteInput"; // THE PRIMARY INPUT
+import ChildTestAutocompleteInput from "./ChildTestAutocompleteInput";
 import MainCommentEditor from "./MainCommentEditor";
-import FieldStatusIndicator from "./FieldStatusIndicator";
-import type { FieldSaveStatus } from "./FieldStatusIndicator";
+import FieldStatusIndicator, { type FieldSaveStatus } from "./FieldStatusIndicator";
 import ManageDeviceNormalRangeDialog from "./ManageDeviceNormalRangeDialog";
-// OrganismPanel and its imports if using the "Other" tab
-// import OrganismPanel from './OrganismPanel';
 
 const StyledTab = styled(Tab)(({ theme }) => ({
   minHeight: "40px",
@@ -129,164 +118,250 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
   const form = useForm<ResultEntryFormValues>({
     defaultValues: { results: [], main_test_comment: "" },
   });
-  const { control, setValue, reset, getValues } = form;
+  const {
+    control,
+    setValue,
+    reset,
+    getValues,
+  } = form;
 
-  const debouncedSave = useCallback(
-    debounce(
-      async (
-        fieldName: FieldPath<ResultEntryFormValues>,
-        fieldIndex?: number,
-        specificValueToSave?: unknown
-      ) => {
-        const statusKey =
-          typeof fieldIndex === "number"
-            ? `results.${fieldIndex}.result_value`
-            : fieldName; // Simplified statusKey for this iteration
-        setFieldSaveStatus((prev) => ({ ...prev, [statusKey]: "saving" }));
-        try {
-          const currentFullFormData = getValues();
-          let payloadForBackend: ResultEntryFormValues;
+  // --- Individual Result Save Mutation ---
+  const saveSingleResultMutation = useMutation({
+    mutationFn: (params: {
+      labRequestId: number;
+      childTestId: number;
+      payload: SingleResultSavePayload;
+      fieldNameKey: string;
+    }) =>
+      saveSingleChildTestResult(
+        params.labRequestId,
+        params.childTestId,
+        params.payload
+      ),
+    onSuccess: (updatedResultData, variables) => {
+      if (!updatedResultData) return;
+      setFieldSaveStatus((prev) => ({
+        ...prev,
+        [variables.fieldNameKey]: "success",
+      }));
+      toast.success(t("labResults:resultEntry.fieldSavedSuccessShort"));
 
-          if (
-            typeof fieldIndex === "number" &&
-            specificValueToSave !== undefined &&
-            fieldName.startsWith("results.")
-          ) {
-            const resultsKey = fieldName.substring(
-              `results.${fieldIndex}.`.length
-            ) as keyof ResultEntryItemFormValue;
-            if (
-              resultsKey === "result_value" ||
-              resultsKey === "result_flags" ||
-              resultsKey === "result_comment" ||
-              resultsKey === "normal_range_text"
-            ) {
-              // Only autosave these for now
-              const updatedResults = currentFullFormData.results.map(
-                (item, idx) => {
-                  if (idx === fieldIndex) {
-                    return { ...item, [resultsKey]: specificValueToSave };
-                  }
-                  return item;
-                }
-              );
-              payloadForBackend = {
-                ...currentFullFormData,
-                results: updatedResults,
-              };
-            } else {
-              // Not an autosavable field within results array, do nothing for now or log
-              setFieldSaveStatus((prev) => ({ ...prev, [statusKey]: "idle" }));
-              return;
-            }
-          } else if (fieldName === "main_test_comment") {
-            payloadForBackend = {
-              ...currentFullFormData,
-              main_test_comment: specificValueToSave as string,
-            };
-          } else {
-            payloadForBackend = currentFullFormData; // Fallback
+      queryClient
+        .invalidateQueries({
+          queryKey: ["labRequestForEntry", initialLabRequest.id],
+        })
+        .then(() => {
+          const updatedLabRequestData =
+            queryClient.getQueryData<MainTestWithChildrenResults>([
+              "labRequestForEntry",
+              initialLabRequest.id,
+            ]);
+          if (updatedLabRequestData) {
+            onResultsSaved(initialLabRequest);
           }
+        });
 
-          const processedPayload = {
-            ...payloadForBackend,
-            results: payloadForBackend.results.map((resItem) => {
-              // If result_value is an object (from Autocomplete option), extract its name
-              if (
-                typeof resItem.result_value === "object" &&
-                resItem.result_value !== null
-              ) {
-                return {
-                  ...resItem,
-                  result_value: (resItem.result_value as ChildTestOption).name,
-                };
-              }
-              return resItem;
-            }),
-          };
+      setTimeout(
+        () =>
+          setFieldSaveStatus((prev) => ({
+            ...prev,
+            [variables.fieldNameKey]: "idle",
+          })),
+        2000
+      );
+    },
+    onError: (error: Error, variables) => {
+      setFieldSaveStatus((prev) => ({
+        ...prev,
+        [variables.fieldNameKey]: "error",
+      }));
+      toast.error(t("labResults:resultEntry.fieldSavedErrorShort"), {
+        description: error?.message,
+      });
+      setTimeout(
+        () =>
+          setFieldSaveStatus((prev) => ({
+            ...prev,
+            [variables.fieldNameKey]: "idle",
+          })),
+        3000
+      );
+    },
+  });
 
-          const updatedLabRequest = await saveLabResults(
-            initialLabRequest.id,
-            processedPayload
-          );
-          onResultsSaved(updatedLabRequest);
-          queryClient.invalidateQueries({
-            queryKey: ["labRequestForEntry", initialLabRequest.id],
-          });
-          setFieldSaveStatus((prev) => ({ ...prev, [statusKey]: "success" }));
-          setTimeout(
-            () =>
-              setFieldSaveStatus((prev) => ({ ...prev, [statusKey]: "idle" })),
-            2000
-          );
-        } catch {
-          setFieldSaveStatus((prev) => ({ ...prev, [statusKey]: "error" }));
-          toast.error(
-            t("labResults:resultEntry.fieldSavedError", {
-              field: fieldName.split(".").pop(),
-            })
-          );
-          setTimeout(
-            () =>
-              setFieldSaveStatus((prev) => ({ ...prev, [statusKey]: "idle" })),
-            3000
-          );
-        }
+  const debouncedSaveField = useCallback(
+    debounce(
+      (
+        labRequestId: number,
+        childTestId: number,
+        fieldNameKey: string,
+        payload: SingleResultSavePayload
+      ) => {
+        setFieldSaveStatus((prev) => ({ ...prev, [fieldNameKey]: "saving" }));
+        saveSingleResultMutation.mutate({
+          labRequestId,
+          childTestId,
+          payload,
+          fieldNameKey,
+        });
       },
       1500
     ),
-    [getValues, initialLabRequest.id, onResultsSaved, queryClient, t] // Removed testDataForEntry to avoid re-creating debounce too often
+    [saveSingleResultMutation]
+  );
+
+  // --- Main Comment Autosave ---
+  const debouncedSaveMainComment = useCallback(
+    debounce(async (commentValue: string) => {
+      setFieldSaveStatus((prev) => ({
+        ...prev,
+        ["main_test_comment"]: "saving",
+      }));
+      try {
+        const currentFormData = getValues();
+        const payloadForBackend = {
+          ...currentFormData,
+          main_test_comment: commentValue,
+        };
+
+        const processedPayload = {
+          ...payloadForBackend,
+          results: payloadForBackend.results.map((resItem, idx) => {
+            const originalChildTest =
+              testDataForEntry?.child_tests_with_results[idx];
+            if (resItem.is_boolean_result && originalChildTest?.options) {
+              const selectedOptionName =
+                Boolean(resItem.result_value) === true
+                  ? originalChildTest.options.find((o) =>
+                      o.name.match(/positive|present|yes|true/i)
+                    )?.name || "Positive"
+                  : originalChildTest.options.find((o) =>
+                      o.name.match(/negative|absent|no|false/i)
+                    )?.name || "Negative";
+              return { ...resItem, result_value: selectedOptionName };
+            }
+            if (
+              resItem.is_qualitative_with_options &&
+              typeof resItem.result_value === "object" &&
+              resItem.result_value !== null
+            ) {
+              return {
+                ...resItem,
+                result_value: (resItem.result_value as ChildTestOption).name,
+              };
+            }
+            return resItem;
+          }),
+        };
+
+        const updatedLabRequest = await saveLabResults(
+          initialLabRequest.id,
+          processedPayload
+        );
+        onResultsSaved(updatedLabRequest);
+        queryClient.invalidateQueries({
+          queryKey: ["labRequestForEntry", initialLabRequest.id],
+        });
+        setFieldSaveStatus((prev) => ({
+          ...prev,
+          ["main_test_comment"]: "success",
+        }));
+        setTimeout(
+          () =>
+            setFieldSaveStatus((prev) => ({
+              ...prev,
+              ["main_test_comment"]: "idle",
+            })),
+          2000
+        );
+      } catch {
+        setFieldSaveStatus((prev) => ({
+          ...prev,
+          ["main_test_comment"]: "error",
+        }));
+        toast.error(
+          t("labResults:resultEntry.fieldSavedError", {
+            field: t("labResults:resultEntry.mainTestComment"),
+          })
+        );
+        setTimeout(
+          () =>
+            setFieldSaveStatus((prev) => ({
+              ...prev,
+              ["main_test_comment"]: "idle",
+            })),
+          3000
+        );
+      }
+    }, 1500),
+    [
+      getValues,
+      initialLabRequest.id,
+      onResultsSaved,
+      queryClient,
+      t,
+      testDataForEntry,
+    ]
   );
 
   useEffect(() => {
     if (testDataForEntry) {
       const formattedResults = testDataForEntry.child_tests_with_results.map(
-        (ct) => ({
-          child_test_id: ct.id!,
-          child_test_name: ct.child_test_name,
-          unit_name: ct.unit?.name || ct.unit_name,
-          normal_range_text:
-            ct.normalRange ||
-            (ct.low !== null &&
-            ct.low !== undefined &&
-            ct.upper !== null &&
-            ct.upper !== undefined
-              ? `${ct.low} - ${ct.upper}`
-              : ""),
-          options: ct.options || [], // Crucial for Autocomplete
-          // The following flags are informational for the input component, not directly saved unless backend uses them
-          is_qualitative_with_options: !!(ct.options && ct.options.length > 0), // Simplified: if options exist, it's qualitative
-          is_boolean_result: false, // You'd need more specific logic or a field from backend to determine this accurately for *just* autocomplete
-          is_numeric:
-            !(ct.options && ct.options.length > 0) &&
-            (ct.low !== null ||
-              ct.upper !== null ||
-              !String(ct.defval || "").match(/[a-zA-Z]/)),
+        (ct) => {
+          const hasOptions = ct.options && ct.options.length > 0;
+          const isBooleanResult =
+            hasOptions &&
+            ct.options!.length === 2 &&
+            ct.options!.every((opt) =>
+              /^(positive|negative|present|absent|yes|no|true|false)$/i.test(
+                opt.name
+              )
+            );
 
-          result_value:
+          let initialResultValue: string | ChildTestOption | null | boolean =
             ct.result_value !== undefined && ct.result_value !== null
               ? ct.result_value
-              : ct.defval || null,
-          result_flags: ct.result_flags || "",
-          result_comment: ct.result_comment || "",
-        })
-      );
+              : ct.defval || null;
 
-      const processedResults = formattedResults.map((res) => {
-        if (
-          res.is_qualitative_with_options &&
-          typeof res.result_value === "string"
-        ) {
-          const matchedOption = testDataForEntry.child_tests_with_results
-            .find((ct) => ct.id === res.child_test_id)
-            ?.options?.find((opt) => opt.name === res.result_value);
-          if (matchedOption) return { ...res, result_value: matchedOption };
+          if (isBooleanResult && typeof initialResultValue === "string") {
+            const positiveOption = ct.options
+              ?.find((o) => o.name.match(/positive|present|yes|true/i))
+              ?.name.toLowerCase();
+            initialResultValue =
+              initialResultValue.toLowerCase() === "true" ||
+              initialResultValue.toLowerCase() === positiveOption;
+          } else if (
+            hasOptions &&
+            typeof initialResultValue === "string" &&
+            initialResultValue.trim() !== ""
+          ) {
+            const matchedOption = ct.options?.find(
+              (opt) => opt.name === initialResultValue
+            );
+            if (matchedOption) initialResultValue = matchedOption;
+          }
+
+          return {
+            child_test_id: ct.id!,
+            child_test_name: ct.child_test_name,
+            unit_name: ct.unit?.name || ct.unit_name,
+            normal_range_text: ct.normalRange || "N/A",
+            options: ct.options || [],
+            is_qualitative_with_options: hasOptions && !isBooleanResult,
+            is_boolean_result: isBooleanResult,
+            is_numeric:
+              !hasOptions &&
+              (ct.low !== null ||
+                ct.upper !== null ||
+                !String(ct.defval || "").match(/[a-zA-Z]/)),
+            result_value: initialResultValue as string | ChildTestOption | null,
+            result_flags: "",
+            result_comment: "",
+          };
         }
-        return res;
-      });
-
+      );
       reset({
-        results: processedResults,
+        results: formattedResults,
         main_test_comment: initialLabRequest.comment || "",
       });
     } else {
@@ -301,45 +376,107 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
     setChildTestForDeviceRange(ct);
     setIsDeviceRangeDialogOpen(true);
   };
+
   const handleApplyRangeToRHF = (newRange: string, index: number) => {
     const fieldName =
       `results.${index}.normal_range_text` as FieldPath<ResultEntryFormValues>;
     setValue(fieldName, newRange, { shouldDirty: true });
-    // Trigger autosave for the normal_range_text field
-    debouncedSave(fieldName, index, newRange);
+    if (testDataForEntry) {
+      debouncedSaveField(
+        initialLabRequest.id,
+        testDataForEntry.child_tests_with_results[index].id!,
+        fieldName,
+        { normal_range_text: newRange }
+      );
+    }
   };
 
+  // Generate field names for consistent access
+  const getFieldNames = (index: number) => ({
+    resultValueField: `results.${index}.result_value` as Path<ResultEntryFormValues>,
+    normalRangeTextField: `results.${index}.normal_range_text` as Path<ResultEntryFormValues>,
+  });
+
+  // Watch all form values for autosave
+  const watchedValues = useWatch({ control });
+  const prevWatchedValuesRef = useRef(watchedValues);
+
+  useEffect(() => {
+    if (!testDataForEntry) return;
+    // alert('save')
+    // console.log('save')
+    const currentValues = watchedValues as ResultEntryFormValues;
+    const prevValues = prevWatchedValuesRef.current as ResultEntryFormValues;
+    // console.log(currentValues,'currentValues',prevValues,'prevValues')
+    // Check each result field for changes
+    currentValues.results?.forEach((currentResult, index) => {
+      const prevResult = prevValues.results?.[index];
+      const childTest = testDataForEntry.child_tests_with_results[index];
+      // console.log(prevResult,'prevResult',currentResult,'currentResult',childTest,'childTest')
+      if (!prevResult || !childTest?.id) return;
+      // console.log(currentResult.result_value,'currentResult.result_value',prevResult.result_value,'prevResult.result_value')
+      // Check result_value changes
+      if (currentResult.result_value !== prevResult.result_value) {
+        const fieldName = `results.${index}.result_value`;
+        const fieldState = control.getFieldState(fieldName as Path<ResultEntryFormValues>);
+        // console.log(fieldState,'fieldState',fieldName,'fieldName')
+        if (fieldState.isDirty) {
+          // Convert result_value to string format for API
+          let apiValue: string | null = null;
+          if (typeof currentResult.result_value === "string") {
+            apiValue = currentResult.result_value;
+          } else if (typeof currentResult.result_value === "object" && currentResult.result_value !== null) {
+            apiValue = (currentResult.result_value as ChildTestOption).name;
+          } else if (typeof currentResult.result_value === "boolean") {
+            apiValue = currentResult.result_value ? "true" : "false";
+          }
+          
+          debouncedSaveField(
+            initialLabRequest.id,
+            childTest.id,
+            fieldName,
+            { result_value: apiValue }
+          );
+        }
+      }
+
+      // Check normal_range_text changes
+      if (currentResult.normal_range_text !== prevResult.normal_range_text) {
+        const fieldName = `results.${index}.normal_range_text`;
+        const fieldState = control.getFieldState(fieldName as Path<ResultEntryFormValues>);
+        if (fieldState.isDirty) {
+          debouncedSaveField(
+            initialLabRequest.id,
+            childTest.id,
+            fieldName,
+            { normal_range_text: currentResult.normal_range_text }
+          );
+        }
+      }
+    });
+
+    prevWatchedValuesRef.current = watchedValues;
+  }, [watchedValues, testDataForEntry, control, debouncedSaveField, initialLabRequest.id]);
+
   if (isLoading && !testDataForEntry) {
-    return (
-      <div className="flex justify-center items-center h-full">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <div>Loading...</div>;
   }
   if (fetchError) {
-    return (
-      <div className="p-6 text-destructive text-center">
-        <AlertTriangle className="mx-auto h-10 w-10 mb-2" />
-        {fetchError.message}
-      </div>
-    );
+    return <div>Error loading data</div>;
   }
   if (!testDataForEntry) {
-    return (
-      <div className="p-6 text-muted-foreground text-center">
-        {t("common:noDataAvailable")}
-      </div>
-    );
+    return <div>No data available</div>;
   }
 
   return (
     <>
       <div className="h-full flex flex-col p-3 sm:p-4 bg-slate-50 dark:bg-background shadow-inner">
+        {/* Header and Tabs */}
         <div className="flex justify-between items-center mb-2 pb-2 border-b flex-shrink-0">
           <div>
             <h2 className="text-lg font-semibold">
               {t("labResults:resultEntry.title", {
-                testName: testDataForEntry.main_test_name,
+                testName: testDataForEntry?.main_test_name,
               })}
             </h2>
             <p className="text-xs text-muted-foreground">
@@ -402,17 +539,25 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                     <Table
                       size="small"
                       aria-label="child test results table"
-                      sx={{ "& .MuiTableCell-root": { padding: "4px 8px" } }}
+                      sx={{ "& .MuiTableCell-root": { padding: "6px 8px" } }}
                     >
                       <TableHead sx={{ backgroundColor: "action.hover" }}>
                         <TableRow>
                           <TableCell
-                            sx={{ fontWeight: "medium", width: "45%" }}
+                            sx={{
+                              fontWeight: "medium",
+                              width: "45%",
+                              borderBottomColor: "divider",
+                            }}
                           >
                             {t("labResults:resultEntry.childTestName")}
                           </TableCell>
                           <TableCell
-                            sx={{ fontWeight: "medium", width: "55%" }}
+                            sx={{
+                              fontWeight: "medium",
+                              width: "55%",
+                              borderBottomColor: "divider",
+                            }}
                           >
                             {t("labResults:resultEntry.result")}
                           </TableCell>
@@ -421,25 +566,112 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                       <TableBody>
                         {testDataForEntry.child_tests_with_results.map(
                           (ctResult, index) => {
-                            const fieldBaseName = `results.${index}` as const;
-                            const currentNormalRangeText = getValues(
-                              `${fieldBaseName}.normal_range_text`
-                            ) || ""; // Get current RHF value
+                            const { resultValueField, normalRangeTextField } = getFieldNames(index);
 
                             return (
-                              <ResultRow
+                              <TableRow
                                 key={ctResult.id || `new-${index}`}
-                                ctResult={ctResult}
-                                index={index}
-                                fieldBaseName={fieldBaseName}
-                                currentNormalRangeText={currentNormalRangeText}
-                                control={control}
-                                debouncedSave={debouncedSave}
-                                fieldSaveStatus={fieldSaveStatus}
-                                onChildTestFocus={onChildTestFocus}
-                                handleOpenDeviceRangeDialog={handleOpenDeviceRangeDialog}
-                                t={t}
-                              />
+                                sx={{
+                                  "&:last-child td, &:last-child th": {
+                                    border: 0,
+                                  },
+                                }}
+                              >
+                                <TableCell
+                                  component="th"
+                                  scope="row"
+                                  sx={{
+                                    verticalAlign: "top",
+                                    borderBottomColor: "divider",
+                                  }}
+                                >
+                                  <Typography
+                                    variant="body2"
+                                    component="div"
+                                    sx={{
+                                      fontWeight: 500,
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "space-between",
+                                    }}
+                                  >
+                                    {ctResult.child_test_name}
+                                    <FieldStatusIndicator
+                                      status={
+                                        fieldSaveStatus[resultValueField] ||
+                                        "idle"
+                                      }
+                                      size="medium"
+                                    />
+                                  </Typography>
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    component="div"
+                                    sx={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      mt: 0.25,
+                                    }}
+                                  >
+                                    {String(getValues(normalRangeTextField) ||
+                                      ctResult.normalRange ||
+                                      t("common:notSet"))}
+                                    {ctResult.unit_name &&
+                                      ` (${ctResult.unit_name})`}
+                                    <Tooltip
+                                      title={String(
+                                        t(
+                                          "labResults:deviceNormalRange.manageDeviceSpecificRanges"
+                                        )
+                                      )}
+                                    >
+                                      <IconButton
+                                        size="small"
+                                        onClick={() =>
+                                          handleOpenDeviceRangeDialog(ctResult)
+                                        }
+                                        sx={{ p: 0.25, ml: 0.5 }}
+                                      >
+                                        <SettingsIcon
+                                          style={{ fontSize: "0.8rem" }}
+                                        />
+                                      </IconButton>
+                                    </Tooltip>
+                                  </Typography>
+                                </TableCell>
+                                <TableCell
+                                  sx={{
+                                    verticalAlign: "top",
+                                    borderBottomColor: "divider",
+                                  }}
+                                >
+                                  <Controller
+                                    name={resultValueField}
+                                    control={control}
+                                    render={({
+                                      field,
+                                      fieldState: { error },
+                                    }) =>
+                                      
+                                        <ChildTestAutocompleteInput
+                                          value={field.value as string | ChildTestOption | null}
+                                          onChange={field.onChange}
+                                          onBlur={field.onBlur}
+                                          error={!!error}
+                                          helperText={error?.message}
+                                          childTestId={ctResult.id!}
+                                          childTestName={
+                                            ctResult.child_test_name
+                                          }
+                                          parentChildTestModel={ctResult}
+                                          onFocusChange={onChildTestFocus}
+                                        />
+                                      
+                                    }
+                                  />
+                                </TableCell>
+                              </TableRow>
                             );
                           }
                         )}
@@ -451,17 +683,14 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
             </CustomTabPanel>
 
             <CustomTabPanel value={activeTab} index={1}>
-              {/* <OrganismPanel selectedTest={initialLabRequest} ... /> */}
-              <Typography sx={{ p: 2, textAlign: "center" }}>
-                {t("labResults:resultEntry.otherTabContentPlaceholder")}
-              </Typography>
+              {/* Other Tab */}
             </CustomTabPanel>
 
             <div className="mt-3 pt-3 border-t flex-shrink-0">
               <MainCommentEditor
                 control={control}
                 fieldName="main_test_comment"
-                debouncedSave={debouncedSave}
+                debouncedSave={debouncedSaveMainComment}
                 fieldSaveStatus={fieldSaveStatus["main_test_comment"] || "idle"}
                 disabled={isLoading}
               />
@@ -475,7 +704,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
         onOpenChange={setIsDeviceRangeDialogOpen}
         childTest={childTestForDeviceRange}
         currentResultNormalRange={
-          childTestForDeviceRange
+          childTestForDeviceRange && testDataForEntry
             ? getValues(
                 `results.${testDataForEntry.child_tests_with_results.findIndex(
                   (ct) => ct.id === childTestForDeviceRange.id
@@ -484,7 +713,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
             : ""
         }
         onApplyRangeToResultField={(newRange) => {
-          if (childTestForDeviceRange) {
+          if (childTestForDeviceRange && testDataForEntry) {
             const idx = testDataForEntry.child_tests_with_results.findIndex(
               (ct) => ct.id === childTestForDeviceRange.id
             );
@@ -493,138 +722,6 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
         }}
       />
     </>
-  );
-};
-
-// Separate component for each result row to handle hooks properly
-interface ResultRowProps {
-  ctResult: ChildTestWithResult;
-  index: number;
-  fieldBaseName: string;
-  currentNormalRangeText: string;
-  control: any;
-  debouncedSave: (
-    fieldName: FieldPath<ResultEntryFormValues>,
-    fieldIndex?: number,
-    specificValueToSave?: unknown
-  ) => void;
-  fieldSaveStatus: Record<string, FieldSaveStatus>;
-  onChildTestFocus: (childTest: ChildTestWithResult | null) => void;
-  handleOpenDeviceRangeDialog: (ct: ChildTestWithResult) => void;
-  t: (key: string) => string;
-}
-
-const ResultRow: React.FC<ResultRowProps> = ({
-  ctResult,
-  index,
-  fieldBaseName,
-  currentNormalRangeText,
-  control,
-  debouncedSave,
-  fieldSaveStatus,
-  onChildTestFocus,
-  handleOpenDeviceRangeDialog,
-  t,
-}) => {
-  // Watch for autosave on result_value
-  const resultValue = useWatch({
-    control,
-    name: `${fieldBaseName}.result_value`,
-  });
-  const prevResultValueRef = useRef(resultValue);
-  
-  useEffect(() => {
-    const fieldState = control.getFieldState(`${fieldBaseName}.result_value`);
-    if (resultValue !== prevResultValueRef.current && fieldState.isDirty) {
-      debouncedSave(`${fieldBaseName}.result_value`, index, resultValue);
-    }
-    prevResultValueRef.current = resultValue;
-  }, [resultValue, control, debouncedSave, fieldBaseName, index]);
-
-  return (
-    <TableRow
-      sx={{
-        "&:last-child td, &:last-child th": {
-          border: 0,
-        },
-      }}
-    >
-      <TableCell
-        component="th"
-        scope="row"
-        sx={{
-          verticalAlign: "top",
-          borderBottomColor: "divider",
-        }}
-      >
-        <Typography
-          variant="body2"
-          component="div"
-          sx={{
-            fontWeight: 500,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          {ctResult.child_test_name}
-          <FieldStatusIndicator
-            status={
-              fieldSaveStatus[`${fieldBaseName}.result_value`] || "idle"
-            }
-            size="medium"
-          />
-        </Typography>
-        <Typography
-          variant="caption"
-          color="text.secondary"
-          component="div"
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            mt: 0.25,
-          }}
-        >
-          {currentNormalRangeText || t("common:notSet")}
-          {ctResult.unit_name && ` (${ctResult.unit_name})`}
-          <Tooltip
-            title={String(
-              t("labResults:deviceNormalRange.manageDeviceSpecificRanges")
-            )}
-          >
-            <IconButton
-              size="small"
-              onClick={() => handleOpenDeviceRangeDialog(ctResult)}
-              sx={{ p: 0.25, ml: 0.5 }}
-            >
-              <SettingsIcon style={{ fontSize: "0.8rem" }} />
-            </IconButton>
-          </Tooltip>
-        </Typography>
-      </TableCell>
-      <TableCell
-        sx={{
-          verticalAlign: "top",
-          borderBottomColor: "divider",
-        }}
-      >
-        <Controller
-          name={`${fieldBaseName}.result_value`}
-          control={control}
-          render={({ field, fieldState: { error } }) => (
-            <ChildTestAutocompleteInput
-              {...field}
-              error={!!error}
-              helperText={error?.message}
-              childTestId={ctResult.id!}
-              childTestName={ctResult.child_test_name}
-              parentChildTestModel={ctResult}
-              onFocusChange={onChildTestFocus}
-            />
-          )}
-        />
-      </TableCell>
-    </TableRow>
   );
 };
 

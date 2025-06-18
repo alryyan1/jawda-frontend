@@ -6,12 +6,15 @@
       "currentShift": "الوردية الحالية",
       "noShift": "لا توجد وردية محددة",
       "prevShift": "السابقة",
-      "nextShift": "التالية"
+      "nextShift": "التالية",
+      "noPending": "لا يوجد مرضى في قائمة الانتظار حالياً.",
+      "noShiftActive": "لا توجد وردية مفتوحة حالياً."
     },
     "patientLabItem": {
       "sampleId": "عينة #{{id}}",
       "requestId": "طلب #{{id}}"
-    },  
+    },
+  
     "testSelection": {
       "title": "الفحوصات المطلوبة لـ: {{patientName}}",
       "testName": "اسم الفحص",
@@ -55,9 +58,13 @@
       "editMainTestComment": "تحرير تعليق الفحص الرئيسي",
       "mainTab": "علامة التبويب الرئيسية",
       "otherTab": "علامة تبويب أخرى",
-      "otherTabContentPlaceholder": "لا توجد نتائج لعرضها"
+      "otherTabContentPlaceholder": "لا توجد نتائج لعرضها",
+      "optionNameLabel": "اسم الخيار",
+      "addNewOptionTitle": "إضافة خيار جديد",
+      "addNewOption": "إضافة خيار جديد"
     },
     "statusInfo": {
+      "viewReportPreviewDialogTitle": "معاينة التقرير",
       "patientInfoTitle": "بيانات المريض",
       "requestStatusTitle": "حالة الطلب",
       "paymentStatus": "حالة الدفع",

@@ -1,134 +1,125 @@
 // src/components/lab/workstation/PatientQueuePanel.tsx
 import React, { useState, useEffect } from 'react';
-import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { useQuery, keepPreviousData, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Loader2, AlertTriangle, Users } from 'lucide-react';
-import QueueHeader from './QueueHeader';
+import { Button } from '@/components/ui/button'; // shadcn Button
+
+import QueueHeader from './QueueHeader'; // Assumes QueueHeader is updated for shift navigation
 import PatientLabRequestItem from './PatientLabRequestItem';
 import type { Shift } from '@/types/shifts';
 import type { PatientLabQueueItem, PaginatedPatientLabQueueResponse } from '@/types/labWorkflow';
 import { getLabPendingQueue } from '@/services/labWorkflowService';
-import { format } from 'date-fns';
-import { Button } from '@/components/ui/button';
+// format from date-fns no longer needed here if date is not primary filter when shift is present
 
 interface PatientQueuePanelProps {
-  currentShift: Shift | null; // Current general clinic shift
-  onShiftChange: (direction: 'next' | 'prev') => void; // To navigate shifts
+  currentShift: Shift | null; // The shift whose patients we want to display
+  onShiftChange: (direction: 'next' | 'prev') => void;
   onPatientSelect: (queueItem: PatientLabQueueItem) => void;
-  selectedVisitId: number | null; // To highlight selected patient
+  selectedVisitId: number | null;
   globalSearchTerm: string;
-  // selectedDate: string; // YYYY-MM-DD, if date can be changed from header
-  // onDateChange: (date: string) => void;
 }
 
 const PatientQueuePanel: React.FC<PatientQueuePanelProps> = ({
   currentShift, onShiftChange, onPatientSelect, selectedVisitId, globalSearchTerm
 }) => {
   const { t } = useTranslation(['labResults', 'common']);
+  const queryClient = useQueryClient(); // For manual refresh
   const [currentPage, setCurrentPage] = useState(1);
-  // For this panel, date is typically today or tied to currentShift.
-  // If date can be changed independently, manage it here or pass as prop.
-  const [currentDisplayDate, setCurrentDisplayDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [dateRange, setDateRange] = useState<{ from: Date; to: Date } | null>(null);
 
-  // Update dateRange if currentShift changes (e.g., when app loads current open shift)
-  useEffect(() => {
-    if (!dateRange) { // Only update if dateRange is not set
-      if (currentShift?.created_at) {
-        const shiftDate = new Date(currentShift.created_at);
-        setDateRange({ from: shiftDate, to: shiftDate });
-      } else {
-        const today = new Date();
-        setDateRange({ from: today, to: today });
-      }
-    }
-  }, [currentShift, dateRange]);
+  // Query key now primarily depends on currentShift.id if available
+  const queueQueryKey = ['labPendingQueue', currentShift?.id, globalSearchTerm, currentPage] as const;
 
-  const queueQueryKey = ['labPendingQueue', currentDisplayDate, currentShift?.id, globalSearchTerm, currentPage] as const;
-  const { 
-     data: paginatedQueue, 
-     isLoading, 
-     error, 
-     isFetching 
- } = useQuery<PaginatedPatientLabQueueResponse, Error>({
-    queryKey: queueQueryKey,
-    queryFn: () => getLabPendingQueue({
-      date: currentDisplayDate,
-      shift_id: currentShift?.id,
-      search: globalSearchTerm,
-      page: currentPage,
-    }),
+  const {
+    data: paginatedQueue,
+    isLoading,
+    error,
+    isFetching,
+    refetch: refetchQueue
+  } = useQuery<PaginatedPatientLabQueueResponse, Error>({
+    queryKey: ['labPendingQueue', currentShift?.id, globalSearchTerm, currentPage] as const,
+    queryFn: () => {
+      const filters: any = {
+        search: globalSearchTerm,
+        page: currentPage,
+        per_page: 50, // Fetch more items if using flexbox to allow wrapping
+      };
+ 
+        filters.shift_id = currentShift?.id;
+      
+      return getLabPendingQueue(filters);
+    },
     placeholderData: keepPreviousData,
-    // refetchInterval: 30000, // Poll for new requests every 30 seconds
+    enabled: !!currentShift, // Only enable if a shift is selected/available
   });
-  
-  // Reset page if filters change
+
+  // Reset page if filters (shift or search term) change
   useEffect(() => {
-     setCurrentPage(1);
-  }, [currentDisplayDate, currentShift?.id, globalSearchTerm]);
+    setCurrentPage(1);
+  }, [currentShift?.id, globalSearchTerm]);
 
   const queueItems = paginatedQueue?.data || [];
   const meta = paginatedQueue?.meta;
 
+  const handleRefresh = () => {
+      // Invalidate and refetch the queue
+      queryClient.invalidateQueries({ queryKey: ['labPendingQueue', currentShift?.id] });
+      // Or directly call refetch:
+      // refetchQueue();
+  };
+
   return (
     <div className="h-full flex flex-col">
-      <QueueHeader 
+      <QueueHeader
         currentShift={currentShift}
         patientCount={meta?.total || 0}
-        onShiftChange={onShiftChange}
-        currentDate={currentDisplayDate}
-        onDateChange={setCurrentDisplayDate} // Basic date change, might need better date picker
+        onShiftChange={onShiftChange} // Passed from LabWorkstationPage
+        onRefreshQueue={handleRefresh} // Use local refresh handler
+        isLoading={isFetching || isLoading}
       />
-      <div className="flex-grow overflow-hidden relative"> {/* For absolute positioning of loader */}
-        {isLoading && currentPage === 1 && !isFetching && (
-          <div className="absolute inset-0 flex items-center justify-center bg-card/50 z-10">
+      <div className="flex-grow overflow-hidden relative">
+        {(isLoading && currentPage === 1 && !isFetching) && (
+          <div className="absolute inset-0 flex items-center justify-center bg-card/80 dark:bg-background/80 z-10">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         )}
-        {isFetching && queueItems.length > 0 && ( /* Small fetching indicator if list already has items */
-             <div className="p-1 text-xs text-center text-muted-foreground"><Loader2 className="inline h-3 w-3 animate-spin"/> {t('common:updatingList')}</div>
+        {(isFetching && queueItems.length > 0) && (
+            <div className="p-1 text-xs text-center text-muted-foreground border-b">
+                <Loader2 className="inline h-3 w-3 animate-spin"/> {t('common:updatingList')}
+            </div>
         )}
 
-        {error && (
-          <div className="p-4 text-center text-destructive">
-             <AlertTriangle className="mx-auto h-8 w-8 mb-2"/>
-             {t('common:error.fetchFailed', {entity: t('labResults:queue')})}
-             <p className="text-xs mt-1">{error.message}</p>
+        {error && ( /* Error display */
+          <div className="p-2 text-xs text-center text-muted-foreground border-b">
+            <AlertTriangle className="inline h-3 w-3 animate-spin"/> {t('common:errorLoadingList')}
           </div>
         )}
         
-        {!isLoading && queueItems.length === 0 && !error && (
-          <div className="p-6 text-center text-muted-foreground flex-grow flex flex-col justify-center items-center">
-             <Users className="h-12 w-12 text-muted-foreground/30 mb-3"/>
-             {globalSearchTerm ? t('common:noResultsFound') : t('labResults:queue.noPending')}
+        {!isLoading && queueItems.length === 0 && !error && ( /* No items display */
+          <div className="p-2 text-xs text-center text-muted-foreground border-b">
+            {t('common:noItemsFound')}
           </div>
         )}
-        
 
         {queueItems.length > 0 && (
-          <ScrollArea className="h-full"> {/* Ensure ScrollArea takes available space */}
-            <div className="p-2 space-y-1.5">
+          <ScrollArea className="h-full">
+            {/* Flexbox layout for patient squares */}
+            <div className="p-2 flex flex-wrap gap-2 justify-start items-start content-start">
               {queueItems.map((item) => (
                 <PatientLabRequestItem
-                  key={item.visit_id} // Or a more unique key if visit_id can repeat in some edge case
+                  key={item.visit_id + (item.sample_id || '')}
                   item={item}
                   isSelected={selectedVisitId === item.visit_id}
                   onSelect={() => onPatientSelect(item)}
+                  allRequestsPaid={(item as any).all_requests_paid} // Ensure backend provides this
                 />
               ))}
             </div>
           </ScrollArea>
         )}
       </div>
-      {meta && meta.last_page > 1 && (
-        <div className="p-2 border-t flex-shrink-0 flex items-center justify-between">
-          {/* Basic Pagination Buttons */}
-          <Button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={!meta.links?.prev || isFetching} size="sm" variant="outline">{t('common:pagination.previous')}</Button>
-          <span className="text-xs text-muted-foreground">{t('common:pagination.pageInfoShort', {current: meta.current_page, total: meta.last_page})}</span>
-          <Button onClick={() => setCurrentPage(p => Math.min(meta.last_page, p + 1))} disabled={!meta.links?.next || isFetching} size="sm" variant="outline">{t('common:pagination.next')}</Button>
-        </div>
-      )}
+    
     </div>
   );
 };

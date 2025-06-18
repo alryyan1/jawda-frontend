@@ -1,7 +1,8 @@
 // src/components/lab/workstation/ChildTestAutocompleteInput.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useMutation } from "@tanstack/react-query";
+import { debounce } from "lodash";
 import Autocomplete, {
   createFilterOptions,
 } from "@mui/material/Autocomplete";
@@ -73,6 +74,14 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogValue, setDialogValue] = useState("");
   const [isSavingNewOption, setIsSavingNewOption] = useState(false);
+
+  // Debounced onChange to avoid too many API calls on every keystroke
+  const debouncedOnChange = useCallback(
+    debounce((value: string) => {
+      onChange(value);
+    }, 800), // 800ms delay
+    [onChange]
+  );
 
   // Fetch and cache options using localStorage (from your original component)
   useEffect(() => {
@@ -166,6 +175,7 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
         value={value}
         onChange={(_, newValue) => {
           if (typeof newValue === "string") {
+            
             // User typed and pressed Enter for a new value (freeSolo)
             // For numeric fields, we just pass the string. For qualitative, open dialog if not numeric.
             if (!isNumeric(newValue)) {
@@ -190,6 +200,8 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
         onInputChange={(_, newInputValue, reason) => {
           if (reason === "input") {
             setCurrentInputValue(newInputValue);
+            // Trigger debounced onChange for direct text input to enable autosave
+            debouncedOnChange(newInputValue);
           }
         }}
         onFocus={() => onFocusChange(parentChildTestModel)}
@@ -242,15 +254,6 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
             placeholder={t("labResults:resultEntry.enterOrSelectResult")}
             error={error}
             helperText={helperText}
-            sx={{
-              "& .MuiOutlinedInput-root": {
-                fontSize: "0.875rem",
-                py: "1px",
-                backgroundColor: "var(--background)",
-                borderRadius: "var(--radius)",
-              },
-              "& .MuiInputLabel-root": { fontSize: "0.875rem" },
-            }}
             InputProps={{
               ...params.InputProps,
               endAdornment: (

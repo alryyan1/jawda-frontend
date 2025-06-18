@@ -126,6 +126,7 @@
     "doctorFinder": "البحث عن طبيب",
     "findDoctor": "البحث عن طبيب"
   },
+  "searchByVisitIdPlaceholderShort": "ابحث عن زيارة بالرقم",
   "doctorFinder": {
     "title": "البحث عن طبيب",
     "description": "يمكنك العثور على طبيب حسب الاختصاص أو المناوبة الحالية.",

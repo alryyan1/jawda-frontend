@@ -3,7 +3,7 @@ import apiClient from './api';
 
 import type { ChildTestOption } from '../types/labTests';
 import type { ChildTestWithResult, MainTestWithChildrenResults, PaginatedPatientLabQueueResponse, ResultEntryFormValues } from '@/types/labWorkflow';
-import type { LabRequest } from '@/types/visits';
+import type { LabRequest, RequestedResult } from '@/types/visits';
 
 const LABREQUEST_BASE_URL = '/labrequests';
 
@@ -38,4 +38,25 @@ export const saveLabResults = async (labRequestId: number, data: ResultEntryForm
 export const updateLabRequestFlags = async (labRequestId: number, flags: { hidden?: boolean; no_sample?: boolean; valid?: boolean }): Promise<LabRequest> => {
     const response = await apiClient.put<{data: LabRequest}>(`/labrequests/${labRequestId}`, flags); // Assuming your general update can handle this
     return response.data.data;
+};
+
+
+export interface SingleResultSavePayload {
+  result_value?: string | null;
+  result_flags?: string | null;
+  result_comment?: string | null;
+  normal_range_text?: string | null; // If frontend can update this snapshot
+  unit_name?: string | null;         // If frontend can update this snapshot
+}
+
+export const saveSingleChildTestResult = async (
+  labRequestId: number,
+  childTestId: number,
+  payload: SingleResultSavePayload
+): Promise<RequestedResult> => { // Expect the updated RequestedResult back
+  const response = await apiClient.patch<{ data: RequestedResult }>(
+    `/labrequests/${labRequestId}/childtests/${childTestId}/result`,
+    payload
+  );
+  return response.data.data; // Assuming Laravel Resource wrapping
 };

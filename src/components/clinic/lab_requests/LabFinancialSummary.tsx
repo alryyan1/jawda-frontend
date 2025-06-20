@@ -38,7 +38,7 @@ const LabFinancialSummary: React.FC<LabFinancialSummaryProps> = ({
   className,
 }) => {
   const { t, i18n } = useTranslation(['payments', 'common', 'labTests']);
-
+  console.log("requestedTests", requestedTests);
   const labSummary = useMemo(() => {
     if (!requestedTests) return { grossTotal:0, totalDiscount: 0, totalEndurance:0, totalNetPayableByPatient: 0, totalPaid: 0, totalBalanceDue: 0, totalNetPayableOverall: 0 };
 
@@ -82,18 +82,18 @@ const LabFinancialSummary: React.FC<LabFinancialSummaryProps> = ({
     };
   }, [requestedTests, isCompanyPatient]);
 
-  if (!requestedTests || requestedTests.length === 0) {
-    return (
-      <Card className={cn("shadow-sm", className)}>
-        <CardHeader className="py-3">
-          <CardTitle className="text-md font-semibold">{t('common:financialSummary_lab')}</CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm text-center text-muted-foreground py-6">
-          {t('labTests:request.noRequestsToSummarize')}
-        </CardContent>
-      </Card>
-    );
-  }
+  // if (!requestedTests || requestedTests.length === 0) {
+  //   return (
+  //     <Card className={cn("shadow-sm", className)}>
+  //       <CardHeader className="py-3">
+  //         <CardTitle className="text-md font-semibold">{t('common:financialSummary_lab')}</CardTitle>
+  //       </CardHeader>
+  //       <CardContent className="text-sm text-center text-muted-foreground py-6">
+  //         {t('labTests:request.noRequestsToSummarize')}
+  //       </CardContent>
+  //     </Card>
+  //   );
+  // }
 
   return (
     <Card className={cn("shadow-sm", className)} style={{direction: i18n.dir()}}>

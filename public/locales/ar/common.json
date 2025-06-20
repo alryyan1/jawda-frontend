@@ -19,7 +19,9 @@
   "receiptPreviewTitle": "عرض الإيصال",
   "noItemsFound": "لا يوجد عناصر",
   "pdfPreview.generating": "جاري إنشاء PDF...",
+
   "by": "بواسطة",
+  "goBack": "الرجوع",
   "datePicker": {
     "pickDateRange": "اختر نطاق التاريخ",
     "pickDateTime": "اختر التاريخ والوقت",
@@ -63,13 +65,7 @@
     "male": "ذكر",
     "other": "آخر"
   },
-  "actions": {
-    "openMenu": "فتح القائمة",
-    "add": "إضافة",
-    "goBack": "رجوع",
-    "goHome": "الصفحة الرئيسية",
-    "retry": "حاول مرة أخرى"
-  },
+
   "total": "الإجمالي",
   "addCostAndProve": "إضافة التكلفة وإثبات",
   "done": "تم",
@@ -81,27 +77,56 @@
     "next": "التالي",
     "pageInfo": "صفحة {{current}} من {{total}}",
     "pageInfoShort": "صفحة {{current}}/{{total}}"
+    
   },
+  "typeMoreChars": "اكتب مزيدًا من الأحرف للبحث",
+  "remove": "إزالة",
+  "unpay": "غير مدفوع",
   "pickDate": "اختر تاريخ",
   "create": "إنشاء",
-  "saveChanges": "حفظ التغييرات",
-  "refresh": "تحديث",
   "noDataAvailableForFilters": "لا توجد بيانات متاحة للمرشحات المحددة",
   "confirmDeleteMessage": "هل أنت متأكد من حذف {{item}}؟",
   "selectDate": "اختر تاريخ",
   "statusEnum": {
+    "open": "مفتوح",
+    "closed": "مغلق",
     "active": "نشط",
     "inactive": "غير نشط"
   },
-  "pagination": {
-    "previous": "السابق",
-    "next": "التالي",
-    "pageInfo": "صفحة {{current}} من {{total}}"
+  "visitIdShort": "رقم الزيارة",
+  "visitDate": "تاريخ الزيارة",
+  "clearFilters": "مسح الفلاتر",
+  "applyFilters": "تطبيق الفلاتر",
+  "allPackages": "كل الباقات",
+
+  "month": "الشهر",
+  "year": "السنة",
+  "months": {
+    "1": "يناير",
+    "2": "فبراير",
+    "3": "مارس",
+    "4": "أبريل",
+    "5": "مايو",
+    "6": "يونيو",
+    "7": "يوليو",
+    "8": "أغسطس",
+    "9": "سبتمبر",
+    "10": "أكتوبر",
+    "11": "نوفمبر",
+    "12": "ديسمبر"
   },
   "actions": {
-    "openMenu": "الإجراءات"
+    "openMenu": "فتح القائمة",
+    "add": "إضافة",
+    "goBack": "رجوع",
+    "goHome": "الصفحة الرئيسية",
+    "retry": "حاول مرة أخرى"
   },
+  
   "validation": {
+  "maxLengthShort": "عدد الأحرف تجاوز الحد المسموح",
+  "monthRequired": "الشهر مطلوب",
+    "yearRequired": "السنة مطلوبة",
     "required": "{{field}} مطلوب.",
     "invalidTimeFormat": "تنسيق الوقت غير صحيح. يرجى استخدام تنسيق HH:mm.",
     "requiredWhen": "هذا الحقل مطلوب عند اختيار {{context}}",
@@ -190,7 +215,6 @@
   "updatedSuccess": "تم تحديث  بنجاح!",
   "detailsUpdatedSuccess": "تم تحديث التفاصيل بنجاح!",
   "confirmDeleteTitle": "تأكيد الحذف",
-  "confirmDeleteMessage": "هل أنت متأكد أنك تريد حذف {{item}}؟",
   "confirmDeleteButton": "حذف",
   "payTotalAmount": "دفع المبلغ الإجمالي",
   "view": "عرض",
@@ -198,12 +222,7 @@
   "viewProfileFor": "عرض ملف {{name}}",
   "unknown": "غير معروف",
   "pageXOfY": "صفحة {{current}} من {{total}}",
-  "statusEnum": {
-    "open": "مفتوح",
-    "closed": "مغلق",
-    "active": "نشط",
-    "inactive": "غير نشط"
-  },
+
   "totalIncome":"اجمالي الدخل",
   "income":" الدخل",
   "print": "طباعة",

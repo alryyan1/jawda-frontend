@@ -1,6 +1,7 @@
 import type { Company } from "@/types/companies"; // Assuming these types are defined
 import type { Subcompany } from "@/types/companies";
 import type { CompanyRelation } from "@/types/companies";
+import type { DoctorStripped } from "./doctors";
 // import type { Doctor } from "./doctors"; // Assuming this type is defined
 // import { User } from "./index"; // Assuming User type from a general index.ts or auth types
 // import { Country } from './locations'; // If you have a Country type
@@ -103,7 +104,7 @@ export interface Patient {
   age_month?: number | null;
   age_day?: number | null;
   address?: string | null;
-  
+  doctor:DoctorStripped;
   company_id?: number | null;
   company?: Company;
 
@@ -155,4 +156,18 @@ export interface UpdatePatientApiPayload {
   guarantor?: string | null;
   subcompany_id?: number | null;
   company_relation_id?: number | null;
+}
+// src/types/visits.ts (or wherever you keep visit related types)
+
+// ... existing DoctorVisit, LabRequest types ...
+
+export interface RecentDoctorVisitSearchItem {
+  visit_id: number;
+  patient_id: number;
+  patient_name: string;
+  patient_phone?: string | null;
+  doctor_name?: string | null;
+  visit_date?: string | null; // YYYY-MM-DD
+  visit_time?: string | null;
+  autocomplete_label: string; // For Autocomplete display
 }

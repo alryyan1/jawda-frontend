@@ -321,6 +321,7 @@ const ShiftManagementCard: React.FC<ShiftManagementCardProps> = ({
                   </span>
                 </div>
               </div>
+              {console.log("currentShift", currentShift)}
               {currentShift.is_closed ? (
                 <Button
                   onClick={onOpenShift}

@@ -64,6 +64,7 @@ import MonthlyEmployeeAttendanceSummaryPage from "./pages/reports/attendance/Mon
 import ShiftDefinitionsPage from "./pages/settings/ShiftDefinitionsPage";
 import AttendanceSheetPage from "./pages/attendance/AttendanceSheetPage";
 import HolidaysPage from "./pages/settings/attendance/HolidaysPage";
+import MonthlyLabIncomeReportPage from "./pages/reports/MonthlyLabIncomeReportPage";
 // import NotFoundPage from './pages/NotFoundPage'; // Optional: For 404 handling
 
 const AppointmentsPlaceholderPage: React.FC = () => (
@@ -223,6 +224,10 @@ const router = createBrowserRouter([
               {
                 path: 'monthly-service-income',
                 element: <MonthlyServiceIncomeReportPage />,
+              },
+              {
+                path: "monthly-lab-income", // New route path
+                element: <MonthlyLabIncomeReportPage />,
               },
               {
                 path: 'clinic-shift-summary', // Or whatever path you chose for the backend route / allclinicsReportNew

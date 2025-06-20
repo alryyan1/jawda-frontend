@@ -1,7 +1,7 @@
 // src/services/reportService.ts
 import type { PaginatedResponse } from '@/types/common';
 import apiClient from './api';
-import type { DoctorShiftFinancialSummary, DoctorShiftReportItem, MonthlyServiceIncomeReportResponse, ServiceStatisticItem, YearlyPatientFrequencyReportResponse } from '@/types/reports';
+import type { DoctorShiftFinancialSummary, DoctorShiftReportItem, MonthlyServiceIncomeReportResponse, ServiceStatisticItem, YearlyPatientFrequencyReportResponse, MonthlyLabIncomeReportResponse } from '@/types/reports';
 
 export interface DoctorShiftReportFilters {
   page?: number;
@@ -302,6 +302,33 @@ export const getYearlyPatientFrequencyReport = async (
     '/reports/yearly-patient-frequency', 
     { params: filters }
   );
+  return response.data;
+};
+
+// src/services/reportService.ts
+// ... (existing imports and functions) ...
+
+export interface MonthlyLabIncomeFilters {
+  month: number; // 1-12
+  year: number;  // e.g., 2023
+  // user_id_deposited?: number; // Optional filter
+}
+
+export const getMonthlyLabIncome = async (
+  filters: MonthlyLabIncomeFilters
+): Promise<MonthlyLabIncomeReportResponse> => {
+  const response = await apiClient.get<MonthlyLabIncomeReportResponse>(
+    '/reports/monthly-lab-income', // Matches new backend route
+    { params: filters }
+  );
+  return response.data; // Assuming backend directly returns the structure
+};
+
+export const downloadMonthlyLabIncomeReportPdf = async (filters: MonthlyLabIncomeFilters): Promise<Blob> => {
+  const response = await apiClient.get('/reports/monthly-lab-income/pdf', { // Matches new backend PDF route
+    params: filters,
+    responseType: 'blob',
+  });
   return response.data;
 };
 

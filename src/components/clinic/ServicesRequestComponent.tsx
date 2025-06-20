@@ -31,8 +31,8 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ vis
   const { t } = useTranslation(['clinic', 'services', 'common']);
   const queryClient = useQueryClient();
   const { currentClinicShift } = useAuth();
-
-  const [showServiceSelectionGrid, setShowServiceSelectionGrid] = useState(false);
+  console.log(visit,'visit in ServicesRequestComponent');
+  const [showServiceSelectionGrid, setShowServiceSelectionGrid] = useState(visit?.requested_services_count === 0);
    
   const requestedServicesQueryKey = ['requestedServicesForVisit', visitId] as const;
   const patientDetailsQueryKey = ['patientDetailsForServiceSelection', patientId] as const;
@@ -190,7 +190,7 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ vis
             isCompanyPatient={isCompanyPatient} // Pass this down
         />
       ) : (
-        <>
+        <div className="flex flex-wrap gap-1 ">
           <RequestedServicesTable 
             visitId={visitId}
             handlePrintReceipt={handlePrintReceipt}
@@ -205,7 +205,7 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ vis
             visit={visit}
             className="max-w-sm ml-auto mr-auto sm:mr-0 sm:ml-auto"
           />
-        </>
+        </div>
       )}
     </div>
   );

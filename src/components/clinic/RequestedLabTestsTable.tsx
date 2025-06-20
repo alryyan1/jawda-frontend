@@ -29,6 +29,8 @@ import {
   DollarSign,
   Edit,
   Save,
+  Trash,
+  Hand,
 } from "lucide-react";
 
 import type { LabRequest } from "@/types/visits";
@@ -57,6 +59,8 @@ interface RequestedLabTestsTableProps {
   currentClinicShift: Shift | null;
   onAddMoreTests: () => void; // Kept if parent still wants to control a button near this table
   onPayIndividual: (labRequest: LabRequest) => void; // Callback to trigger payment in parent
+  onCancelIndividual: (labRequest: LabRequest) => void; // Callback to trigger cancellation in parent
+  onUnpayIndividual: (labRequest: LabRequest) => void; // Callback to trigger unpayment in parent
 }
 
 interface RowEditData {
@@ -72,6 +76,8 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
   isLoading,
   isFetchingList,
   onPayIndividual,
+  onCancelIndividual,
+  onUnpayIndividual,
 }) => {
   const { t, i18n } = useTranslation(["labTests", "common", "payments"]);
   const queryClient = useQueryClient();
@@ -147,6 +153,7 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
   };
 
   const handleCancelRequest = (lr: LabRequest) => {
+    alert("handleCancelRequest");
     if (
       window.confirm(
         t("labTests:request.cancelConfirmForItem", {
@@ -391,7 +398,7 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
                           </>
                         ) : (
                           <>
-                            {balance > 0.09 && !lr.is_paid && (
+                            {!lr.is_paid ? (
                               <Button
                                 size="icon"
                                 variant="ghost"
@@ -401,6 +408,27 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
                               >
                                 <DollarSign className="h-4 w-4" />
                               </Button>
+                            ) : (
+                             <div className="flex gap-0.5">
+                               <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => onCancelIndividual(lr)}
+                                className="h-7 w-7 text-red-600 hover:text-red-700"
+                                title={t("common:remove")}
+                              >
+                                <Trash className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => onUnpayIndividual(lr)}
+                                className="h-7 w-7 text-green-600 hover:text-green-700"
+                                title={t("common:unpay")}
+                              >
+                                <Hand className="h-4 w-4" />
+                              </Button>
+                             </div>
                             )}
                             <Button
                               size="icon"
@@ -410,26 +438,7 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
-                            {canBeCancelled && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-destructive hover:text-destructive"
-                                onClick={() => handleCancelRequest(lr)}
-                                disabled={
-                                  cancelRequestMutation.isPending &&
-                                  cancelRequestMutation.variables === lr.id
-                                }
-                                title={t("common:cancelRequest")}
-                              >
-                                {cancelRequestMutation.isPending &&
-                                cancelRequestMutation.variables === lr.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <Trash2 className="h-4 w-4" />
-                                )}
-                              </Button>
-                            )}
+                         
                           </>
                         )}
                       </div>

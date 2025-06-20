@@ -217,3 +217,30 @@ export interface YearlyPatientFrequencyReportResponse {
     average_monthly_patients: number;
   };
 }
+
+// src/types/reports.ts
+
+// ... (existing types) ...
+
+export interface DailyLabIncomeData {
+  date: string; // YYYY-MM-DD
+  total_lab_income_paid: number;
+  total_lab_cash_paid: number;
+  total_lab_bank_paid: number;
+}
+
+export interface MonthlyLabIncomeSummary {
+  total_lab_income_paid: number;
+  total_lab_cash_paid: number;
+  total_lab_bank_paid: number;
+}
+
+export interface MonthlyLabIncomeReportResponse {
+  daily_data: DailyLabIncomeData[];
+  summary: MonthlyLabIncomeSummary;
+  report_period: {
+    month_name: string;
+    from: string;
+    to: string;
+  };
+}

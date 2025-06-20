@@ -141,6 +141,7 @@
       }
     },
     "request": {
+      "hideGrid": "إخفاء الجدول",
         "title": "طلب فحوصات مخبرية",
         "selectTests": "اختر الفحوصات المطلوبة",
         "selectTestsPlaceholder": "اختر الفحوصات...",
@@ -184,6 +185,7 @@
         "noRequestsToSummarize": "لا توجد طلبات لعرض ملخصها"
 
     },
+    "hideGrid": "إخفاء الجدول",
     "optionsDialog": {
       "title": "إدارة خيارات المكون: {{childTestName}}",
       "description": "أضف أو عدل الخيارات المتاحة لنتيجة هذا المكون.",

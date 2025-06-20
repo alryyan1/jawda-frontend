@@ -21,6 +21,7 @@ const reportNavItems = [
   { to: '/reports/attendance-summary', labelKey: 'reports:attendance.monthlySummaryTitleShort', icon: Users, permission: 'view attendance_reports' },
   { to: '/reports/attendance-daily', labelKey: 'reports:attendance.dailyDetailTitleShort', icon: CalendarCheck2, permission: 'view attendance_reports' },
   { to: '/reports/attendance-payroll', labelKey: 'reports:attendance.payrollReportTitleShort', icon: FileText, permission: 'view payroll_attendance_report' },
+  { to: '/reports/monthly-lab-income', labelKey: 'monthlyLabIncomeReport.titleShort', icon: BarChartBig },
   // Add more reports here:
   // { to: '/reports/patient-visits', labelKey: 'patientVisitsReport.titleShort', icon: Users },
   // { to: '/reports/financial-summary', labelKey: 'financialSummaryReport.titleShort', icon: LineChart },

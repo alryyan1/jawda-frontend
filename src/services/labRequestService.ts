@@ -90,7 +90,12 @@ export const getLabRequestsForVisit = async (
 };
 
 export const cancelLabRequest = async (labRequestId: number): Promise<void> => {
+  alert("cancelLabRequest");
   await apiClient.delete(`${LABREQUEST_BASE_URL}/${labRequestId}`);
+};
+
+export const unpayLabRequest = async (labRequestId: number): Promise<void> => {
+  await apiClient.post(`${LABREQUEST_BASE_URL}/${labRequestId}/unpay`);
 };
 
 interface RecordLabPaymentPayload {

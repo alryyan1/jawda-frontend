@@ -133,6 +133,7 @@
     "allActiveShiftsTab": "جميع المناوبات النشطة",
     "bySpecialistTab": "حسب الاختصاص"
   },
+  
   "selectedPatientWorkspace": {
     "title": "تفاصيل المريض: {{patientName}}",
     "noPatientSelected": "الرجاء اختيار مريض من القائمة لعرض التفاصيل.",
@@ -216,7 +217,22 @@
     "totalServiceIncome": "إجمالي إيرادات الخدمات", 
     "loading": "جارٍ تحميل الملخص...",
     "netCash": "صافي النقد",
-    "netBank": "صافي الشبكة/البنك"
+    "netBank": "صافي الشبكة/البنك",
+    "descriptionDetailed": "تفاصيل الإيرادات الخاصة بالدوام",
+    "labIncomeSectionTitle": "إيرادات المختبر",
+    "serviceIncomeSectionTitle": "إيرادات الخدمات",
+    "grandTotalsSectionTitle": "إجمالي الإيرادات",
+    "grandTotalIncome": "إجمالي الدخل",
+    "totalCashCollected": "إجمالي النقد المحصل",
+    "totalBankCollected": "إجمالي التحصيل البنكي",
+    "netCashFlow": "صافي التدفق النقدي",
+    "netBankFlow": "صافي التدفق البنكي",
+    "netOverallFlow": "إجمالي التدفق الكلي",
+    "cash": "نقداً",
+    "bank": "بنك",
+    "cashExpenses": "المصروفات النقدية",
+    "bankExpenses": "المصروفات البنكية",
+    "expensesSectionTitle": "المصروفات"
   },
   "requestedServiceCost": {
     "dialogTitle": "إدارة تكاليف {{serviceName}}",
@@ -243,10 +259,12 @@
     "totalEntitlementIs": "إجمالي المستحقات",
     "defaultCostDescription": "مستحقات الطبيب {{doctorName}} للمناوبة رقم {{shiftId}}",
     "recordEntitlementCostTitle": "تسجيل مستحقات المناوبة",
-    "proofingStatusUpdated": "تم تحديث حالة الإثبات بنجاح",
-    "error": {
-      "costExceedsEntitlement": "المبلغ المدخل يتجاوز المستحقات المتبقية"
-    }
+    "proofingStatusUpdated": "تم تحديث حالة الإثبات بنجاح"
+  
+  },
+  "errors": {
+    "noActiveShift": "لا يوجد مناوبات مفتوحة حالياً.",
+    "costExceedsEntitlement": "المبلغ المدخل يتجاوز المستحقات المتبقية"
   },
   "filters": {
     "user": "المستخدم",

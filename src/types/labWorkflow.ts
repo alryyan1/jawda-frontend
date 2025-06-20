@@ -22,7 +22,14 @@ export type PaginatedPatientLabQueueResponse = {
 };
 // src/types/labWorkflow.ts
 // ...
-
+// src/types/labWorkflow.ts (or a new src/types/filters.ts)
+export interface LabQueueFilters {
+  package_id?: number | null | 'all'; // 'all' to clear package filter
+  has_unfinished_results?: boolean | null;
+  main_test_id?: number | null | 'all'; // 'all' to clear main test filter
+  // Existing filters if any (e.g., search term, specific date) can be merged here
+  // For queue, we'll use shift_id or date_range from LabWorkstationPage
+}
 export interface ChildTestWithResult { // Was part of MainTestWithChildrenResults
   id: number; // ChildTest ID
   main_test_id: number;

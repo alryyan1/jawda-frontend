@@ -35,6 +35,18 @@ interface LabRequestDisplayAreaProps {
   directPayItemMutation: DirectPayItemMutationType;
   removeAllPendingMutation: RemoveAllPendingMutationType;
   onOpenBatchPaymentDialog: () => void;
+  cancelLabRequestMutation: UseMutationResult<
+    void,
+    Error,
+    number,
+    unknown
+  >;
+  unpayLabRequestMutation: UseMutationResult<
+    void,
+    Error,
+    number,
+    unknown
+  >;
 }
 
 const LabRequestDisplayArea: React.FC<LabRequestDisplayAreaProps> = ({
@@ -45,6 +57,8 @@ const LabRequestDisplayArea: React.FC<LabRequestDisplayAreaProps> = ({
   isFetchingRequestedTests,
   currentClinicShift,
   directPayItemMutation,
+  cancelLabRequestMutation,
+  unpayLabRequestMutation,
 }) => {
   const { t } = useTranslation(["labTests", "common", "payments"]);
   const isCompanyPatient = !!currentPatient?.company_id;
@@ -93,6 +107,14 @@ const LabRequestDisplayArea: React.FC<LabRequestDisplayAreaProps> = ({
     }
   };
 
+  const handleCancelIndividualItem = (labReq: LabRequest) => {
+    cancelLabRequestMutation.mutate(labReq.id);
+  };
+
+  const handleUnpayIndividualItem = (labReq: LabRequest) => {
+    unpayLabRequestMutation.mutate(labReq.id);
+  };
+
   if (isLoadingRequestedTests && requestedTests.length === 0) {
     return (
       <div className="py-10 text-center">
@@ -119,6 +141,8 @@ const LabRequestDisplayArea: React.FC<LabRequestDisplayAreaProps> = ({
           /* This button is now in parent */
         }}
         onPayIndividual={handleDirectPayIndividualItem}
+        onCancelIndividual={handleCancelIndividualItem}
+        onUnpayIndividual={handleUnpayIndividualItem}
       />
       {/* Summary Card is removed and is now LabFinancialSummary in the parent component */}
     </div>

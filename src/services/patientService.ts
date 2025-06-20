@@ -1,5 +1,5 @@
 import apiClient from './api'; // Your configured Axios instance
-import type { Patient, PatientFormData, PaginatedPatientsResponse, PatientSearchResult } from '../types/patients'; // Your Patient types
+import type { Patient, PatientFormData, PaginatedPatientsResponse, PatientSearchResult, PatientStripped, RecentDoctorVisitSearchItem } from '../types/patients'; // Your Patient types
 import type { DoctorVisit } from '@/types/visits';
 import type { PaginatedResponse } from '@/types/common';
 
@@ -70,7 +70,14 @@ export const getPatients = async (page = 1, filters: Record<string, any> = {}): 
   });
   return response.data; // Assuming Laravel pagination structure is returned directly
 };
-
+export const getPatientsWithRecentLabActivity = async (limit: number = 30): Promise<Array<PatientStripped & { latest_visit_id: number }>> => {
+  // Backend endpoint needs to be created for this
+  const response = await apiClient.get<{ data: Array<PatientStripped & { latest_visit_id: number }> }>(
+    '/patients/recent-lab-activity', 
+    { params: { limit } }
+  );
+  return response.data.data; // Assuming Laravel Resource Collection
+};
 /**
  * Fetches a single patient by their ID.
  * 
@@ -153,6 +160,16 @@ export const createCopiedVisitForNewShift = async (
   const response = await apiClient.post<{ data: DoctorVisit }>(
     `/patients/${sourcePatientId}/copy-to-new-visit`,
     payload
+  );
+  return response.data.data;
+};
+
+export const searchRecentDoctorVisits = async (patientNameSearch: string, limit: number = 15): Promise<RecentDoctorVisitSearchItem[]> => {
+  if (patientNameSearch.length < 2) return []; // Don't search for very short terms
+  
+  const response = await apiClient.get<{ data: RecentDoctorVisitSearchItem[] }>(
+    '/doctor-visits/search-by-patient',
+    { params: { patient_name_search: patientNameSearch, limit } }
   );
   return response.data.data;
 };

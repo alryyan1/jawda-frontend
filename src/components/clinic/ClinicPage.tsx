@@ -142,7 +142,7 @@ const handleSearchByVisitId = () => {
             activeShiftId={activeDoctorShift?.id || null} 
           />
         </div>
-        <div className="w-1/3 h-full flex items-center"> {/* Global Search Area */}
+        <div className="w-1/3 gap-0.5 h-full flex items-center"> {/* Global Search Area */}
           <div className="relative w-full">
             <Search className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input
@@ -154,7 +154,7 @@ const handleSearchByVisitId = () => {
             />
           </div>
                       {/* NEW Visit ID Search Input */}
-                      <div className="relative w-full sm:w-auto sm:min-w-[150px]">
+                      <div className="relative w-full  sm:w-auto sm:min-w-[150px]">
                 <Input
                     type="number"
                     placeholder={t('clinic:searchByVisitIdPlaceholder', "Visit ID...")}

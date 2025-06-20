@@ -24,13 +24,15 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import {
   Loader2,
+  PlusCircle,
   Settings2,
   WandSparkles,
 } from "lucide-react";
-import { FormLabel } from "@/components/ui/form";
+import { Label } from "@/components/ui/label";
 import apiClient from "@/services/api";
 
 import type { ChildTestWithResult } from "@/types/labWorkflow";
+import AddDeviceQuickDialog from "./AddDeviceQuickDialog";
 
 // Define Device type locally since it's not exported from labTests
 interface Device {
@@ -93,8 +95,9 @@ const ManageDeviceNormalRangeDialog: React.FC<
   const queryClient = useQueryClient();
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>("");
   const [normalRangeInput, setNormalRangeInput] = useState<string>("");
+  const [isAddDeviceDialogOpen, setIsAddDeviceDialogOpen] = useState(false); // State for quick add dialog
 
-  const { data: devices = [], isLoading: isLoadingDevices } = useQuery<
+  const { data: devices = [], isLoading: isLoadingDevices, refetch: refetchDevices } = useQuery<
     Device[],
     Error
   >({
@@ -150,14 +153,20 @@ const ManageDeviceNormalRangeDialog: React.FC<
 
   useEffect(() => {
     if (isOpen && devices.length > 0 && !selectedDeviceId) {
-      setSelectedDeviceId(String(devices[0].id));
+      // Don't auto-select if a selection was already made or if dialog just opened
+      // This prevents resetting selection if list refetches.
     }
     if (!isOpen) {
       setSelectedDeviceId("");
       setNormalRangeInput("");
     }
-  }, [isOpen, devices, selectedDeviceId]);
-
+  }, [isOpen]);
+  const handleDeviceAdded = (newDevice: Device) => {
+    refetchDevices().then(() => { // Refetch the devices list
+        setSelectedDeviceId(String(newDevice.id)); // Auto-select the newly added device
+    });
+    setIsAddDeviceDialogOpen(false); // Close the quick add dialog
+  };
   const handleSave = () => {
     if (!childTest?.id || !selectedDeviceId || saveRangeMutation.isPending)
       return;
@@ -188,6 +197,8 @@ const ManageDeviceNormalRangeDialog: React.FC<
     normalRangeInput === (currentResultNormalRange || "");
 
   return (
+    <>
+    
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
@@ -205,44 +216,46 @@ const ManageDeviceNormalRangeDialog: React.FC<
         </DialogHeader>
 
         <div className="py-4 space-y-4">
-          <div>
-            <FormLabel htmlFor="device-select">
-              {t("labResults:deviceNormalRange.selectDevice")}
-            </FormLabel>
-            <Select
-              value={selectedDeviceId}
-              onValueChange={setSelectedDeviceId}
-              disabled={isLoadingDevices || devices.length === 0}
-              dir={i18n.dir()}
-            >
-              <SelectTrigger id="device-select" className="mt-1">
-                <SelectValue
-                  placeholder={
-                    isLoadingDevices
-                      ? t("common:loading")
-                      : t("labResults:deviceNormalRange.devicePlaceholder")
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {devices.map((device) => (
-                  <SelectItem key={device.id} value={String(device.id)}>
-                    {device.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <div>
+                             <Label htmlFor="device-select" className="flex justify-between items-center">
+                 {t('labResults:deviceNormalRange.selectDevice')}
+                 <Button 
+                   type="button" 
+                   variant="ghost" 
+                   size="icon" 
+                   className="h-6 w-6 p-0"
+                   onClick={() => setIsAddDeviceDialogOpen(true)}
+                   title={t('labResults:devices.quickAddTitle')}
+                 >
+                   <PlusCircle className="h-4 w-4 text-primary"/>
+                 </Button>
+               </Label>
+              <Select
+                value={selectedDeviceId}
+                onValueChange={setSelectedDeviceId}
+                disabled={isLoadingDevices || devices.length === 0}
+                dir={i18n.dir()}
+              >
+                <SelectTrigger id="device-select" className="mt-1">
+                  <SelectValue placeholder={isLoadingDevices ? t('common:loading') : t('labResults:deviceNormalRange.devicePlaceholder')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {devices.map((device) => (
+                    <SelectItem key={device.id} value={String(device.id)}>{device.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
           {selectedDeviceId && (
             <div>
-              <FormLabel htmlFor="device-normal-range-input">
+              <Label htmlFor="device-normal-range-input">
                 {t("labResults:deviceNormalRange.normalRangeForDevice", {
                   deviceName:
                     devices.find((d) => String(d.id) === selectedDeviceId)
                       ?.name || "",
                 })}
-              </FormLabel>
+              </Label>
               {isLoadingRange ? (
                 <div className="flex justify-center items-center h-20">
                   <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -297,6 +310,14 @@ const ManageDeviceNormalRangeDialog: React.FC<
         </DialogFooter>
       </DialogContent>
     </Dialog>
+      {/* Render the AddDeviceQuickDialog */}
+      <AddDeviceQuickDialog
+        isOpen={isAddDeviceDialogOpen}
+        onOpenChange={setIsAddDeviceDialogOpen}
+        onDeviceAdded={handleDeviceAdded}
+      />
+    </>
+    
   );
 };
 

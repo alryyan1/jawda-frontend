@@ -19,6 +19,9 @@ import {
   PlusCircle,
   Save,
   LayoutGrid,
+  Delete,
+  Trash,
+  PrinterIcon,
 } from "lucide-react"; // Icons
 
 import type { DoctorVisit, LabRequest } from "@/types/visits";
@@ -29,6 +32,8 @@ import {
   getLabRequestsForVisit,
   clearPendingLabRequestsForVisit,
   recordDirectLabRequestPayment,
+  cancelLabRequest,
+  unpayLabRequest,
 } from "@/services/labRequestService";
 import { getMainTestsListForSelection } from "@/services/mainTestService"; // More generic for fetching all tests for Autocomplete
 import { getPatientById } from "@/services/patientService";
@@ -39,6 +44,9 @@ import LabTestSelectionArea from "./lab_requests/LabTestSelectionArea";
 import LabRequestDisplayArea from "./lab_requests/LabRequestDisplayArea";
 import BatchLabPaymentDialog from "./BatchLabPaymentDialog";
 import LabFinancialSummary from "./lab_requests/LabFinancialSummary"; // New Summary Component
+import { IconButton } from "@mui/material";
+import apiClient from "@/services/api";
+import PdfPreviewDialog from "../common/PdfPreviewDialog";
 
 interface ApiError {
   response?: {
@@ -71,7 +79,12 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
   // UI State
   const [showGridSelection, setShowGridSelection] = useState(false);
   const [showBatchPaymentDialog, setShowBatchPaymentDialog] = useState(false);
-
+  // State for PDF Preview
+  const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [pdfPreviewTitle, setPdfPreviewTitle] = useState('');
+  const [pdfFileName, setPdfFileName] = useState('document.pdf');
   // State for Autocomplete selections
   const [autocompleteSelectedTests, setAutocompleteSelectedTests] = useState<
     MainTestStripped[]
@@ -210,7 +223,22 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
       );
     },
   });
+   
+  const cancelLabRequestMutation = useMutation({
+    mutationFn: (labRequestId: number) => cancelLabRequest(labRequestId),
+    onSuccess: () => {
+      toast.success(t("labTests:request.canceledSuccess"));
+      queryClient.invalidateQueries({ queryKey: requestedTestsQueryKey });
+    },
+  });
 
+  const unpayLabRequestMutation = useMutation({
+    mutationFn: (labRequestId: number) => unpayLabRequest(labRequestId),
+    onSuccess: () => {
+      toast.success(t("labTests:request.unpaidSuccess"));
+      queryClient.invalidateQueries({ queryKey: requestedTestsQueryKey });
+    },
+  });
   // --- Event Handlers ---
   const handleAddFromAutocomplete = () => {
     if (autocompleteSelectedTests.length > 0) {
@@ -256,7 +284,40 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
       </div>
     );
   }
+  const generateAndShowPdf = async (
+    title: string,
+    fileNamePrefix: string,
+    fetchFunction: () => Promise<Blob>
+  ) => {
+    setIsGeneratingPdf(true);
+    setPdfUrl(null);
+    setPdfPreviewTitle(title);
+    setIsPdfPreviewOpen(true);
 
+    try {
+      const blob = await fetchFunction();
+      const objectUrl = URL.createObjectURL(blob);
+      setPdfUrl(objectUrl);
+      const patientNameSanitized = selectedPatientVisit.patient?.name.replace(/[^A-Za-z0-9\-\_]/g, '_') || 'patient';
+      setPdfFileName(`${fileNamePrefix}_${visitId}_${patientNameSanitized}_${new Date().toISOString().slice(0,10)}.pdf`);
+    } catch (error: any) {
+      console.error(`Error generating ${title}:`, error);
+      toast.error(t('common:error.generatePdfFailed'), {
+        description: error.response?.data?.message || error.message,
+      });
+      setIsPdfPreviewOpen(false); // Close dialog on error
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+  const handlePrintReceipt = () => {
+    if (!visitId) return;
+    generateAndShowPdf(
+      t('common:printReceiptDialogTitle', { visitId }),
+      'LabReceipt',
+      () => apiClient.get(`/visits/${visitId}/lab-thermal-receipt/pdf`, { responseType: 'blob' }).then(res => res.data)
+    );
+  };
   return (
     <div
       className="flex flex-col lg:flex-row gap-4 h-full p-1"
@@ -264,6 +325,14 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
     >
       {/* Left Column: Financial Summary */}
       <div className="lg:w-[320px] xl:w-[360px] flex-shrink-0 space-y-3">
+        <div className="p-2 border-b flex justify-end">
+        <Button onClick={()=>{
+          handlePrintReceipt();
+        }} variant="outline" size="sm" disabled={isGeneratingPdf || !visitId}>
+          {isGeneratingPdf ? <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2"/> : <PrinterIcon className="h-4 w-4 ltr:mr-2 rtl:ml-2"/>}
+          {t('common:printReceipt')}
+        </Button>
+      </div>
         <LabFinancialSummary
           requestedTests={requestedTests}
           currentPatient={currentPatient || null}
@@ -383,6 +452,28 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
             </div>
           </div>
         </Card>
+        {/* Button to add from grid selection */}
+        <div className="mt-2 flex justify-end">
+              <Button
+                onClick={handleAddFromGrid}
+                disabled={
+                  gridSelectedTestIds.size === 0 || addTestsMutation.isPending
+                }
+                size="sm"
+                className="h-9"
+              >
+                {addTestsMutation.isPending && (
+                  <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2" />
+                )}
+                <Save className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                {t("labTests:request.requestSelectedButtonShort", {
+                  count: gridSelectedTestIds.size,
+                })}
+              </Button>
+              <IconButton onClick={()=>{
+                removeAllPendingMutation.mutate();
+              }} disabled={removeAllPendingMutation.isPending}><Trash className="" /></IconButton>
+            </div>
         {/* Conditional Grid Selection Area */}
         {showGridSelection && (
           <div className="flex-shrink-0">
@@ -420,25 +511,7 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
                 }
               }}
             />
-            {/* Button to add from grid selection */}
-            <div className="mt-2 flex justify-end">
-              <Button
-                onClick={handleAddFromGrid}
-                disabled={
-                  gridSelectedTestIds.size === 0 || addTestsMutation.isPending
-                }
-                size="sm"
-                className="h-9"
-              >
-                {addTestsMutation.isPending && (
-                  <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2" />
-                )}
-                <Save className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
-                {t("labTests:request.requestSelectedButtonShort", {
-                  count: gridSelectedTestIds.size,
-                })}
-              </Button>
-            </div>
+            
           </div>
         )}
         {/* Requested Tests Table - takes remaining space */}
@@ -475,6 +548,8 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
               >
             }
             onOpenBatchPaymentDialog={() => setShowBatchPaymentDialog(true)}
+            cancelLabRequestMutation={cancelLabRequestMutation}
+            unpayLabRequestMutation={unpayLabRequestMutation}
           />
         </div>
       </div>
@@ -489,15 +564,30 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
           currentPatient={selectedPatientVisit.patient}
           currentClinicShift={currentClinicShift}
           onBatchPaymentSuccess={(updatedVisitData) => {
-            queryClient.setQueryData(
-              requestedTestsQueryKey,
-              updatedVisitData.lab_requests || []
-            );
+            queryClient.invalidateQueries({ queryKey: requestedTestsQueryKey });
+            // queryClient.setQueryData(
+            //   requestedTestsQueryKey,
+            //   updatedVisitData.lab_requests || []
+            // );
             queryClient.invalidateQueries({ queryKey: ["dashboardSummary"] });
             setShowBatchPaymentDialog(false);
           }}
         />
       )}
+       <PdfPreviewDialog
+        isOpen={isPdfPreviewOpen}
+        onOpenChange={(open) => {
+            setIsPdfPreviewOpen(open);
+            if (!open && pdfUrl) { // Clean up URL when dialog is manually closed
+                URL.revokeObjectURL(pdfUrl);
+                setPdfUrl(null);
+            }
+        }}
+        pdfUrl={pdfUrl}
+        isLoading={isGeneratingPdf && !pdfUrl}
+        title={pdfPreviewTitle}
+        fileName={pdfFileName}
+      />
     </div>
   );
 };

@@ -4,29 +4,58 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
-import { ShieldCheck, Zap, ListFilter, Settings2, Printer } from 'lucide-react'; // Example icons
+import { ShieldCheck, Zap, ListFilter, Settings2, Printer, Loader2, RotateCcw } from 'lucide-react'; // Example icons
 import { cn } from '@/lib/utils';
 
 import type { LabRequest } from '@/types/visits'; // Or types/visits
 import { toast } from 'sonner';
+import { setLabRequestResultsToDefault } from '@/services/labWorkflowService';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 // import { useAuthorization } from '@/hooks/useAuthorization';
 
 interface LabActionsPaneProps {
-  onClosePanel?: () => void;
-  // Add other props if actions depend on more context
+  selectedLabRequest: LabRequest;
+  selectedVisitId: number;
+  onResultsReset: (labRequest: LabRequest) => void;
+    // Add other props if actions depend on more context
 }
 
 const LabActionsPane: React.FC<LabActionsPaneProps> = ({
-  onClosePanel,
+  selectedLabRequest,
+  selectedVisitId,
+  onResultsReset,
 }) => {
   const { t, i18n } = useTranslation(['labResults', 'common']);
   // const { can } = useAuthorization();
+  const queryClient = useQueryClient();
 
   // Placeholder permissions
   const canBatchAuthorize = true; // can('batch_authorize lab_results')
   const canSyncLIS = false; // Example: can('sync_lis') - disabled for now
   const canManageQC = true; // can('manage quality_control')
+  const setDefaultMutation = useMutation({
+    mutationFn: (labRequestId: number) => setLabRequestResultsToDefault(labRequestId),
+    onSuccess: (updatedLabRequest) => {
+        toast.success(t('labResults:labActions.resetToDefaultSuccess'));
+        queryClient.invalidateQueries({ queryKey: ['labRequestForEntry', updatedLabRequest.id] });
+        queryClient.invalidateQueries({ queryKey: ['labRequestsForVisit', selectedVisitId] }); // If visitId is relevant
+        queryClient.invalidateQueries({ queryKey: ['labPendingQueue'] }); // If status changes affect queue
+        if (onResultsReset) {
+            onResultsReset(updatedLabRequest);
+        }
+    },
+    onError: (error: any) => {
+        toast.error(error.response?.data?.message || t('labResults:labActions.resetToDefaultError'));
+    }
+  });
 
+  const handleResetToDefault = () => {
+    if (selectedLabRequest) {
+        if (window.confirm(t('labResults:labActions.confirmResetToDefault', { testName: selectedLabRequest.main_test?.main_test_name }))) {
+            setDefaultMutation.mutate(selectedLabRequest.id);
+        }
+    }
+  };
   const handleBatchAuthorize = () => {
     toast.info(t('common:featureNotImplemented', { feature: t('labResults:labActions.batchAuthorize') }));
     // TODO: Implement batch authorization logic (likely opens a new dialog/page)
@@ -88,7 +117,23 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
                 </TooltipContent>
             </Tooltip>
         )}
-        
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="w-10 h-10"
+                        onClick={handleResetToDefault}
+                        disabled={!selectedLabRequest || setDefaultMutation.isPending}
+                        aria-label={t('labResults:labActions.resetToDefault')}
+                    >
+                        {setDefaultMutation.isPending ? <Loader2 className="h-5 w-5 animate-spin"/> : <RotateCcw className="h-5 w-5" />}
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent side={i18n.dir() === 'rtl' ? 'left' : 'right'} sideOffset={5}>
+                    <p>{t('labResults:labActions.resetToDefault')}</p>
+                </TooltipContent>
+            </Tooltip>
         {/* Placeholder for LIS Sync */}
         <Tooltip>
             <TooltipTrigger asChild>

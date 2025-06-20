@@ -25,7 +25,26 @@
     "openedBy": "فتحت بواسطة",
     "actions": "الإجراءات"
   }
+},  "applyFilters": "تطبيق الفلاتر",
+  "dailyBreakdownFor": "التفصيل اليومي لـ",
+"labIncomeTable": 
+{
+
+  
+    "totalPaidLab": "إجمالي المدفوع للمختبر",
+    "cashPaidLab": "المدفوع نقدًا للمختبر",
+    "bankPaidLab": "المدفوع عبر البنك للمختبر",
+    "monthlyTotalPaidLab": "الإجمالي الشهري المدفوع للمختبر",
+    "monthlyCashPaidLab": "الإجمالي الشهري نقدًا",
+    "monthlyBankPaidLab": "الإجمالي الشهري عبر البنك"
+  
+
 },
+"monthlyLabIncomeReport": {
+    "titleShort": "تقرير الدخل الشهري",
+    "pageTitle": "تقرير الدخل الشهري للمختبر",
+    "pdfTitle": "تقرير PDF للدخل الشهري"
+  },
 "attendance": {
   "monthlySummaryTitleShort": "ملخص شهري مختصر",
   "dailyDetailTitleShort": "تفاصيل يومية مختصرة",

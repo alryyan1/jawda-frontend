@@ -148,7 +148,7 @@ const LabTestSelectionTabs: React.FC<LabTestSelectionTabsProps> = ({
         </Box>
         <Box sx={{ mt: 'auto' }}> {/* Push price to bottom */}
           <Typography variant="caption" fontWeight="semibold">
-            {Number(test.price).toFixed(1)} {t('common:currency')}
+            {Number(test.price).toFixed(1)}
           </Typography>
         </Box>
       </Card>

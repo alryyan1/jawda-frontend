@@ -103,13 +103,13 @@ const TestSelectionPanel: React.FC<TestSelectionPanelProps> = ({
                      className={cn(
                          "p-2 cursor-pointer hover:bg-muted dark:hover:bg-muted/40 transition-colors",
                          selectedLabRequestId === lr.id && "ring-2 ring-primary bg-primary/10 dark:bg-primary/20",
-                         lr.hidden && "opacity-60 hover:opacity-80"
+                         lr.hidden == false && "opacity-60 hover:opacity-80"
                      )}
                      onClick={() => handleSelectTestForEntry(lr)}
                  >
                      <div className="flex items-center justify-between gap-2">
                          <div className="flex-grow min-w-0">
-                             <p className={cn("text-sm font-medium truncate", lr.hidden && "line-through")} title={lr.main_test?.main_test_name}>
+                             <p className={cn("text-sm font-medium truncate", lr.hidden ===  false && "line-through")} title={lr.main_test?.main_test_name}>
                                  {lr.main_test?.main_test_name || t('common:unknownTest')}
                              </p>
                              <p className="text-xs text-muted-foreground">
@@ -120,7 +120,7 @@ const TestSelectionPanel: React.FC<TestSelectionPanelProps> = ({
                          <div className="flex flex-col items-center flex-shrink-0 gap-1">
                              <Checkbox 
                                  id={`trailer-${lr.id}`} 
-                                 checked={lr.hidden} 
+                                 checked={lr.hidden == false} 
                                  onCheckedChange={() => handleTrailerChange(lr.id, lr.hidden)}
                                  onClick={(e) => e.stopPropagation()} // Prevent card click
                                  disabled={updateHiddenFlagMutation.isPending && updateHiddenFlagMutation.variables?.labRequestId === lr.id}

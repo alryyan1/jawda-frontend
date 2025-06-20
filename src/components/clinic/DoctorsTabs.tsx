@@ -183,6 +183,7 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId,
                           <span className="text-xs font-medium " title={shift.doctor_name}>
                             {shift.doctor_name}
                           </span>
+                          {console.log(shift.doctor_name,'shift.doctor_name')}
                         </div>
                         <div className="flex items-center text-[10px] text-muted-foreground gap-1">
                           {shift.patients_count > 0 && (

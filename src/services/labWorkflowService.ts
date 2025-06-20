@@ -60,3 +60,9 @@ export const saveSingleChildTestResult = async (
   );
   return response.data.data; // Assuming Laravel Resource wrapping
 };
+export const setLabRequestResultsToDefault = async (labRequestId: number): Promise<LabRequest> => {
+  const response = await apiClient.post<{ data: LabRequest }>(
+    `/labrequests/${labRequestId}/set-default-results`
+  );
+  return response.data.data; // Assuming Laravel Resource wrapping
+};

@@ -45,6 +45,7 @@
     "endurance": "التحمل"
     
   },
+  "noServicesAvailableTitle": "لا توجد خدمات متاحة",
   "form": {
     "nameLabel": "اسم الخدمة",
     "namePlaceholder": "أدخل اسم الخدمة",

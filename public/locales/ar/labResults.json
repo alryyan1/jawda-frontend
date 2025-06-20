@@ -14,7 +14,7 @@
       "sampleId": "عينة #{{id}}",
       "requestId": "طلب #{{id}}"
     },
-  
+
     "testSelection": {
       "title": "الفحوصات المطلوبة لـ: {{patientName}}",
       "testName": "اسم الفحص",
@@ -26,14 +26,26 @@
       "markAsTrailer": "تحديد كملحق (لن يظهر في التقرير الرئيسي)",
       "trailerStatusUpdated": "تم تحديث حالة الملحق للفحص."
     },
+    "deviceNormalRange.savedSuccess": "تم حفظ النطاق الطبيعي بنجاح!",
+    "deviceNormalRange.saveError": "فشل حفظ النطاق الطبيعي.",
+    "deviceNormalRange.appliedToCurrentResult": "تم تطبيق النطاق الطبيعي على النتيجة الحالية.",
     "deviceNormalRange": {
+      "forTest": "النطاق الطبيعي للفحص {{testName}}",
+      "normalRangeForDevice": "النطاق الطبيعي للجهاز {{deviceName}}",
+      "rangeInputPlaceholder": "أدخل النطاق الطبيعي هنا",
+      "quickAddTitle": "إضافة جهاز جديد",
+      "quickAddDescription": "أدخل اسم الجهاز الجديد هنا",
+      "deviceNameLabel": "اسم الجهاز",
       "manageDeviceSpecificRanges": "إدارة النطاقات الخاصة بالجهاز",
       "dialogTitle": "نطاق الجهاز",
       "selectDevice": "اختر الجهاز",
       "devicePlaceholder": "اختر جهازًا...",
       "applyToCurrentResult": "تطبيق على النتيجة الحالية"
     },
+ 
     "resultEntry": {
+      "fieldSavedSuccessShort": "تم حفظ النطاق الطبيعي بنجاح!",
+      "resultsUpdatedGlobally": "تم حفظ جميع النتائج بنجاح!",
       "enterOrSelectResult": "أدخل أو اختر النتيجة",
       "title": "إدخال نتائج فحص: {{testName}}",
       "childTestName": "المكون",
@@ -63,6 +75,20 @@
       "addNewOptionTitle": "إضافة خيار جديد",
       "addNewOption": "إضافة خيار جديد"
     },
+  
+    "filters": {
+      "dialogTitle": "فلاتر قائمة التحاليل",
+      "dialogDescription": "قم بتحديد المعايير لتصفية قائمة التحاليل",
+      "byPackage": "حسب الباقة",
+      "byMainTest": "حسب التحليل الرئيسي",
+      "selectMainTestPlaceholder": "اختر التحليل الرئيسي",
+      "onlyUnfinishedResults": "النتائج غير المكتملة فقط",
+      "openFilterDialog": "فتح نافذة الفلاتر"
+    },
+    "searchRecentVisitsByPatientLabel": "البحث في زيارات المريض الأخيرة",
+    "searchByVisitIdPlaceholderShort": "ابحث برقم الزيارة",
+    "resetViewTooltip": "إعادة تعيين العرض",
+    "visitOrLabDataNotFound": "لم يتم العثور على بيانات الزيارة أو التحاليل",
     "statusInfo": {
       "viewReportPreviewDialogTitle": "معاينة التقرير",
       "patientInfoTitle": "بيانات المريض",
@@ -85,12 +111,23 @@
       "sampleNotCollected": "لم يتم سحب العينة",
       "samplePending": "بانتظار السحب"
     },
+   
+ 
+    "devices": {
+      "rangeInputPlaceholder": "أدخل النطاق الطبيعي هنا",
+      "quickAddTitle": "إضافة جهاز جديد",
+      "quickAddDescription": "أدخل اسم الجهاز الجديد هنا",
+      "deviceNameLabel": "اسم الجهاز"
+    },
     "labActions": {
       "batchAuthorize": "اعتماد مجمع",
       "lisSync": "مزامنة LIS",
       "qualityControl": "مراقبة الجودة",
       "printWorklist": "طباعة قائمة العمل",
-      "labSettings": "إعدادات المختبر"
+        "labSettings": "إعدادات المختبر",
+      "resetToDefault": "إعادة تعيين إلى القيم الافتراضية",
+      "resetToDefaultSuccess": "تم إعادة تعيين النتائج إلى القيم الافتراضية بنجاح",
+      "resetToDefaultError": "فشل إعادة تعيين النتائج إلى القيم الافتراضية"
     },
     "selectPatientPrompt": "اختر مريضاً من قائمة الانتظار لعرض فحوصاته.",
     "selectTestPrompt": "اختر فحصاً من القائمة أعلاه لبدء إدخال النتائج.",

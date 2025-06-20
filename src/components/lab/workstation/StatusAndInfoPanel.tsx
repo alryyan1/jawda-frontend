@@ -44,6 +44,12 @@ import {
   GripVertical,
   BarChart3,
   Palette,
+  Hash,
+  User,
+  CalendarDays,
+  Briefcase,
+  IdCard,
+  Tags,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -428,11 +434,29 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
       >
         {patient ? (
           <>
+           <DetailRowDisplay 
+              label={t("common:visitIdShort")} 
+              value={visitId} 
+              icon={Hash} 
+              valueClassName="text-lg font-bold text-sky-600 dark:text-sky-400" 
+            />
             <DetailRowDisplay
               label={t("patients:fields.name")}
               value={patient.name}
               valueClassName="text-primary font-semibold"
             />
+             <DetailRowDisplay 
+              label={t("common:visitDate")} 
+              value={patient.created_at ? format(parseISO(patient.created_at as unknown as string), "PPP", { locale: dateLocale }) : 'N/A'}
+              icon={CalendarDays}
+            />
+            {patient.doctor && (
+                <DetailRowDisplay 
+                    label={t("common:doctor")} 
+                    value={patient.doctor.name} 
+                    icon={User} 
+                />
+            )}
             <DetailRowDisplay label={t("common:phone")} value={patient.phone} />
             <DetailRowDisplay
               label={t("common:gender")}
@@ -453,6 +477,45 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
                 label={t("patients:fields.insuranceNo")}
                 value={patient.insurance_no}
               />
+            )}
+               {/* Company Info if applicable */}
+               {isCompanyPatient && patient.company && (
+              <>
+                <Separator className="my-2" />
+                <DetailRowDisplay 
+                    label={t("patients:fields.company")} 
+                    value={patient.company.name} 
+                    icon={Briefcase} 
+                    valueClassName="font-semibold"
+                />
+                {patient.insurance_no && 
+                    <DetailRowDisplay 
+                        label={t("patients:fields.insuranceNo")} 
+                        value={patient.insurance_no} 
+                        icon={IdCard}
+                    />
+                }
+                {patient.subcompany && 
+                    <DetailRowDisplay 
+                        label={t("patients:fields.subCompanyShort")} 
+                        value={patient.subcompany.name} 
+                        icon={Tags}
+                    />
+                }
+                {patient.company_relation && 
+                    <DetailRowDisplay 
+                        label={t("patients:fields.relationShort")} 
+                        value={patient.company_relation.name} 
+                        icon={Tags}
+                    />
+                }
+                {patient.guarantor && 
+                    <DetailRowDisplay 
+                        label={t("patients:fields.guarantor")} 
+                        value={patient.guarantor} 
+                    />
+                }
+                </>
             )}
             <DetailRowDisplay
               label={t("patients:fields.address")}

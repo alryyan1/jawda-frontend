@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'; // shadcn Button
 import QueueHeader from './QueueHeader'; // Assumes QueueHeader is updated for shift navigation
 import PatientLabRequestItem from './PatientLabRequestItem';
 import type { Shift } from '@/types/shifts';
-import type { PatientLabQueueItem, PaginatedPatientLabQueueResponse } from '@/types/labWorkflow';
+import type { PatientLabQueueItem, PaginatedPatientLabQueueResponse, LabQueueFilters } from '@/types/labWorkflow';
 import { getLabPendingQueue } from '@/services/labWorkflowService';
 // format from date-fns no longer needed here if date is not primary filter when shift is present
 
@@ -19,17 +19,18 @@ interface PatientQueuePanelProps {
   onPatientSelect: (queueItem: PatientLabQueueItem) => void;
   selectedVisitId: number | null;
   globalSearchTerm: string;
+  queueFilters?: LabQueueFilters; // Optional filters for the queue
 }
 
 const PatientQueuePanel: React.FC<PatientQueuePanelProps> = ({
-  currentShift, onShiftChange, onPatientSelect, selectedVisitId, globalSearchTerm
+  currentShift, onShiftChange, onPatientSelect, selectedVisitId, globalSearchTerm, queueFilters = {}
 }) => {
   const { t } = useTranslation(['labResults', 'common']);
   const queryClient = useQueryClient(); // For manual refresh
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Query key now primarily depends on currentShift.id if available
-  const queueQueryKey = ['labPendingQueue', currentShift?.id, globalSearchTerm, currentPage] as const;
+  // Query key includes filters so it refetches when filters change
+  const queueQueryKey = ['labPendingQueue', currentShift?.id, globalSearchTerm, queueFilters, currentPage] as const;
 
   const {
     data: paginatedQueue,
@@ -38,15 +39,18 @@ const PatientQueuePanel: React.FC<PatientQueuePanelProps> = ({
     isFetching,
     refetch: refetchQueue
   } = useQuery<PaginatedPatientLabQueueResponse, Error>({
-    queryKey: ['labPendingQueue', currentShift?.id, globalSearchTerm, currentPage] as const,
+    queryKey: queueQueryKey,
     queryFn: () => {
       const filters: any = {
         search: globalSearchTerm,
         page: currentPage,
         per_page: 50, // Fetch more items if using flexbox to allow wrapping
+        shift_id: currentShift?.id,
+        // Include queue filters
+        package_id: queueFilters.package_id,
+        main_test_id: queueFilters.main_test_id,
+        has_unfinished_results: queueFilters.has_unfinished_results,
       };
- 
-        filters.shift_id = currentShift?.id;
       
       return getLabPendingQueue(filters);
     },
@@ -54,10 +58,10 @@ const PatientQueuePanel: React.FC<PatientQueuePanelProps> = ({
     enabled: !!currentShift, // Only enable if a shift is selected/available
   });
 
-  // Reset page if filters (shift or search term) change
+  // Reset page if filters (shift, search term, or queue filters) change
   useEffect(() => {
     setCurrentPage(1);
-  }, [currentShift?.id, globalSearchTerm]);
+  }, [currentShift?.id, globalSearchTerm, queueFilters]);
 
   const queueItems = paginatedQueue?.data || [];
   const meta = paginatedQueue?.meta;

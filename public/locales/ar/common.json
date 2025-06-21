@@ -79,6 +79,7 @@
     "pageInfoShort": "صفحة {{current}}/{{total}}"
     
   },
+  "closedAt": "تم الإغلاق في",
   "typeMoreChars": "اكتب مزيدًا من الأحرف للبحث",
   "remove": "إزالة",
   "unpay": "غير مدفوع",

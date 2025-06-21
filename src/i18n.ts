@@ -24,7 +24,13 @@ export const namespaces = [
   'patients',
   'reports',
   'finances',
-  'analysis'
+    'analysis',
+  'shifts',
+  'labTests',
+  'labResults',
+  'labWorkflow',
+  'labWorkstation',
+  'labQueue',
 ] as const;
 export type Namespace = typeof namespaces[number];
 

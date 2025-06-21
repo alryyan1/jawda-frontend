@@ -4,19 +4,22 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
-import { ShieldCheck, Zap, ListFilter, Settings2, Printer, Loader2, RotateCcw } from 'lucide-react'; // Example icons
+import { ShieldCheck, Zap, ListFilter, Settings2, Printer, Loader2, RotateCcw, Atom } from 'lucide-react'; // Example icons
 import { cn } from '@/lib/utils';
 
 import type { LabRequest } from '@/types/visits'; // Or types/visits
 import { toast } from 'sonner';
 import { setLabRequestResultsToDefault } from '@/services/labWorkflowService';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { populateCbcResults } from '@/services/labRequestService';
 // import { useAuthorization } from '@/hooks/useAuthorization';
 
 interface LabActionsPaneProps {
   selectedLabRequest: LabRequest;
   selectedVisitId: number;
   onResultsReset: (labRequest: LabRequest) => void;
+  onResultsModified: (labRequest: LabRequest) => void;
+  isResultLocked: boolean;
     // Add other props if actions depend on more context
 }
 
@@ -24,6 +27,8 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
   selectedLabRequest,
   selectedVisitId,
   onResultsReset,
+  onResultsModified,
+  isResultLocked,
 }) => {
   const { t, i18n } = useTranslation(['labResults', 'common']);
   // const { can } = useAuthorization();
@@ -56,6 +61,43 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
         }
     }
   };
+  
+  const populateCbcMutation = useMutation({
+    mutationFn: (payload: { labRequestId: number; doctorVisitId: number }) =>
+      populateCbcResults(payload.labRequestId, { doctor_visit_id_for_sysmex: payload.doctorVisitId }),
+    onSuccess: (response) => {
+      if (response.status && response.data) {
+        toast.success(response.message || t('labResults:labActions.cbcPopulateSuccess'));
+        queryClient.invalidateQueries({ queryKey: ['labRequestForEntry', response.data.id] });
+        queryClient.invalidateQueries({ queryKey: ['labRequestsForVisit', selectedVisitId] });
+        queryClient.invalidateQueries({ queryKey: ['labPendingQueue'] });
+        if (onResultsModified && response.data) {
+          onResultsModified(response.data);
+        }
+      } else {
+        toast.error(response.message || t('labResults:labActions.cbcPopulateNoData'));
+      }
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || t('labResults:labActions.cbcPopulateError'));
+    }
+  });
+
+  const handlePopulateCbc = () => {
+    if (selectedLabRequest && selectedVisitId) { // selectedVisitId is the DoctorVisit ID
+      // Check if the selected test is actually a CBC panel.
+      // This might require knowing the MainTest ID for CBC or checking its name.
+      // For simplicity, we'll assume if the button is enabled, it's for a CBC.
+      // You might need a more robust check or pass main_test_id if dynamic.
+      if (window.confirm(t('labResults:labActions.confirmPopulateCbc', { testName: selectedLabRequest.main_test?.main_test_name }))) {
+        populateCbcMutation.mutate({
+          labRequestId: selectedLabRequest.id,
+          doctorVisitId: selectedVisitId
+        });
+      }
+    }
+  };
+  
   const handleBatchAuthorize = () => {
     toast.info(t('common:featureNotImplemented', { feature: t('labResults:labActions.batchAuthorize') }));
     // TODO: Implement batch authorization logic (likely opens a new dialog/page)
@@ -132,6 +174,23 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
                 </TooltipTrigger>
                 <TooltipContent side={i18n.dir() === 'rtl' ? 'left' : 'right'} sideOffset={5}>
                     <p>{t('labResults:labActions.resetToDefault')}</p>
+                </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="w-10 h-10"
+                        onClick={handlePopulateCbc}
+                        disabled={!selectedLabRequest || !selectedVisitId || populateCbcMutation.isPending}
+                        aria-label={t('labResults:labActions.populateCbc')}
+                    >
+                        {populateCbcMutation.isPending ? <Loader2 className="h-5 w-5 animate-spin"/> : <Atom className="h-5 w-5" />}
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent side={i18n.dir() === 'rtl' ? 'left' : 'right'} sideOffset={5}>
+                    <p>{t('labResults:labActions.populateCbc')}</p>
                 </TooltipContent>
             </Tooltip>
         {/* Placeholder for LIS Sync */}

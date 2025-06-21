@@ -1,0 +1,13 @@
+{
+    "shiftFinder": {
+        "dialogTitle": "العنوان الخاص بالحوار",
+        "dialogDescription": "وصف الحوار لعرض المناوبات",
+        "shiftsOnDate": "المناوبات في هذا التاريخ",
+        "noShiftsFoundOnDate": "لم يتم العثور على أي مناوبات في هذا التاريخ",
+        "openDialogTooltip": "فتح نافذة المناوبات"
+    },
+    "status": {
+        "closed": "مغلق",
+        "open": "مفتوح"
+    }
+}

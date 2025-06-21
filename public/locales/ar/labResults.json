@@ -111,8 +111,29 @@
       "sampleNotCollected": "لم يتم سحب العينة",
       "samplePending": "بانتظار السحب"
     },
-   
- 
+    "contextMenu": {
+      "sendPdfToPatient": "إرسال PDF للمريض",
+      "sendPdfToOtherNumber": "إرسال PDF إلى رقم آخر",
+      "lockResults": "قفل النتائج",
+      "sendTextMessage": "إرسال رسالة إلى المريض",
+      "unlockResults": "فتح النتائج",
+      "resultsLockedSuccess": "تم قفل النتائج بنجاح",
+      "resultsUnlockedSuccess": "تم فتح النتائج بنجاح"
+    },
+ "sendDialogTitle": "إرسال رسالة واتساب",
+  "sendTo": "إرسال إلى",
+  "selectTemplate": "اختر قالبًا",
+  "templatePlaceholder": "اختر القالب المناسب",
+  "messageContent": "محتوى الرسالة",
+  "messagePlaceholder": "اكتب الرسالة هنا...",
+  "templates": {
+    "labFollowUpName": "متابعة نتائج المختبر",
+    "labResultsReadyContentSimple": "نتائج التحاليل الخاصة بك جاهزة. الرجاء المراجعة.",
+    "labResultsReadyName": "نتائج المختبر جاهزة"
+
+  },
+   "noTemplate": "لا يوجد قالب محدد",
+  "message": "الرسالة",
     "devices": {
       "rangeInputPlaceholder": "أدخل النطاق الطبيعي هنا",
       "quickAddTitle": "إضافة جهاز جديد",
@@ -120,8 +141,13 @@
       "deviceNameLabel": "اسم الجهاز"
     },
     "labActions": {
+      "populateCbc": "تعبئة CBC تلقائيًا",
       "batchAuthorize": "اعتماد مجمع",
       "lisSync": "مزامنة LIS",
+      "cbcPopulateSuccess": "تم تعبئة نتائج CBC بنجاح",
+      "cbcPopulateNoData": "لم يتم العثور على نتائج CBC لهذا المريض",
+      "cbcPopulateError": "فشل تعبئة نتائج CBC",
+      "confirmPopulateCbc": "هل أنت متأكد من تعبئة نتائج CBC للفحص {{testName}}؟",
       "qualityControl": "مراقبة الجودة",
       "printWorklist": "طباعة قائمة العمل",
         "labSettings": "إعدادات المختبر",

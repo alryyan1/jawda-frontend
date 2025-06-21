@@ -20,10 +20,14 @@ interface PatientQueuePanelProps {
   selectedVisitId: number | null;
   globalSearchTerm: string;
   queueFilters?: LabQueueFilters; // Optional filters for the queue
+  onSendWhatsAppText: (queueItem: PatientLabQueueItem) => void;
+  onSendPdfToPatient: (queueItem: PatientLabQueueItem) => void;
+  onSendPdfToCustomNumber: (queueItem: PatientLabQueueItem) => void;
+  onToggleResultLock: (queueItem: PatientLabQueueItem) => void;
 }
 
 const PatientQueuePanel: React.FC<PatientQueuePanelProps> = ({
-  currentShift, onShiftChange, onPatientSelect, selectedVisitId, globalSearchTerm, queueFilters = {}
+  currentShift, onShiftChange, onPatientSelect, selectedVisitId, globalSearchTerm, queueFilters = {}, onSendWhatsAppText, onSendPdfToPatient, onSendPdfToCustomNumber, onToggleResultLock
 }) => {
   const { t } = useTranslation(['labResults', 'common']);
   const queryClient = useQueryClient(); // For manual refresh
@@ -117,6 +121,10 @@ const PatientQueuePanel: React.FC<PatientQueuePanelProps> = ({
                   isSelected={selectedVisitId === item.visit_id}
                   onSelect={() => onPatientSelect(item)}
                   allRequestsPaid={(item as any).all_requests_paid} // Ensure backend provides this
+                  onSendWhatsAppText={onSendWhatsAppText}
+                  onSendPdfToPatient={onSendPdfToPatient}
+                  onSendPdfToCustomNumber={onSendPdfToCustomNumber}
+                  onToggleResultLock={onToggleResultLock}
                 />
               ))}
             </div>

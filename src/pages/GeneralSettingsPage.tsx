@@ -23,16 +23,15 @@ import type { Setting } from "@/types/settings";
 import type { FinanceAccount } from "@/types/finance";
 import { getSettings, updateSettings } from "@/services/settingService";
 import { getFinanceAccountsList } from "@/services/doctorService";
+import type { AxiosError } from "axios";
 
 // Define the settings schema
 const settingsSchema = z.object({
   phone: z.string(),
   email: z.string(),
-  currency: z.string(),
   is_logo: z.boolean(),
   send_welcome_message: z.boolean(),
   is_header: z.boolean(),
-  print_direct: z.boolean(),
   barcode: z.boolean(),
   show_water_mark: z.boolean(),
   disable_doctor_service_check: z.boolean(),
@@ -111,13 +110,13 @@ const SettingsPage: React.FC = () => {
   const form = useForm<z.infer<typeof settingsSchema>>({
     resolver: zodResolver(settingsSchema),
     defaultValues: {
-      phone: "",
-      email: "",
-      currency: "",
+      phone: "0",
+      email: "a@a.com",
       is_logo: false,
       send_welcome_message: false,
+      vatin: "123",
       is_header: false,
-      print_direct: false,
+      address: "address",
       barcode: false,
       show_water_mark: false,
       disable_doctor_service_check: false,
@@ -129,6 +128,8 @@ const SettingsPage: React.FC = () => {
       clear_auditor_stamp: false,
       clear_manager_stamp: false,
       clear_report_header_logo_base64: false,
+      cr: "123",
+     
     },
   });
 
@@ -138,6 +139,7 @@ const SettingsPage: React.FC = () => {
     if (settings) {
       const formValues = {
         ...settings,
+        phone: settings.phone?.toString() || "0",
         finance_account_id: settings.finance_account_id?.toString() || null,
         bank_id: settings.bank_id?.toString() || null,
         company_account_id: settings.company_account_id?.toString() || null,
@@ -150,6 +152,7 @@ const SettingsPage: React.FC = () => {
         logo_file: null,
         header_image_file: null,
         report_header_logo_file: null,
+        vatin: settings.vatin?.toString() || "123",
         auditor_stamp_file: null,
         manager_stamp_file: null,
         clear_logo_base64: false,
@@ -157,6 +160,9 @@ const SettingsPage: React.FC = () => {
         clear_auditor_stamp: false,
         clear_manager_stamp: false,
         clear_report_header_logo_base64: false,
+        cr: settings.cr?.toString() || "123",
+        email: settings.email || "a@a.com",
+        address: settings.address || "address",
       };
       
       reset(formValues);
@@ -210,8 +216,8 @@ const SettingsPage: React.FC = () => {
       
       reset(formValues);
     },
-    onError: (error: Error) => {
-      toast.error(error.message || t("settings:settingsSaveError"));
+    onError: (error: AxiosError) => {
+      toast.error(error.response?.data?.message || error.message || t("settings:settingsSaveError"));
     },
   });
 

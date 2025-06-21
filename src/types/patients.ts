@@ -107,6 +107,7 @@ export interface Patient {
   doctor:DoctorStripped;
   company_id?: number | null;
   company?: Company;
+  result_is_locked: boolean;
 
   subcompany_id?: number | null;
   subcompany?: Subcompany;

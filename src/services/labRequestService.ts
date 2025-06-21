@@ -128,3 +128,30 @@ export const updateLabRequestFlags = async (
 
 // Optional: Update other details of a lab request
 // export const updateLabRequestDetails = async (labRequestId: number, data: Partial<LabRequest>): Promise<LabRequest> => { ... }
+// src/services/labWorkflowService.ts
+// ... existing imports ...
+
+// ... existing functions ...
+
+interface PopulateCbcPayload {
+  doctor_visit_id_for_sysmex: number; // The DoctorVisit ID that has the Sysmex data
+  // main_test_id is implicit from the labrequest route parameter
+}
+
+interface PopulateCbcResponse { // Define based on your backend response
+    status: boolean;
+    message: string;
+    data?: LabRequest; // The updated LabRequest
+    cbcObj?: any; // Your debug object
+}
+
+export const populateCbcResults = async (
+  labRequestId: number,
+  payload: PopulateCbcPayload
+): Promise<PopulateCbcResponse> => {
+  const response = await apiClient.post<PopulateCbcResponse>(
+    `/labrequests/${labRequestId}/populate-cbc-from-sysmex`,
+    payload
+  );
+  return response.data;
+};

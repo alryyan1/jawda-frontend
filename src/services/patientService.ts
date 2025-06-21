@@ -88,7 +88,12 @@ export const getPatientById = async (patientId: number): Promise<Patient> => {
   const response = await apiClient.get<{ data: Patient }>(`${PATIENTS_API_URL}/${patientId}`);
   return response.data.data;
 };
+// ... existing functions ...
 
+export const togglePatientResultLock = async (patientId: number): Promise<Patient> => {
+  const response = await apiClient.patch<{ data: Patient }>(`/patients/${patientId}/toggle-result-lock`);
+  return response.data.data;
+};
 export const searchExistingPatients = async (term: string): Promise<PatientSearchResult[]> => {
   // Backend returns PatientSearchResultResource::collection which wraps in 'data'
   const response = await apiClient.get<{ data: PatientSearchResult[] }>('/patients/search-existing', { params: { term } });

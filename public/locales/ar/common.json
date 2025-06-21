@@ -85,6 +85,8 @@
   "unpay": "غير مدفوع",
   "pickDate": "اختر تاريخ",
   "create": "إنشاء",
+   "confirmDeleteMessagePermanentWarning": "سيتم حذف هذا العنصر بشكل دائم ولا يمكن التراجع، هل أنت متأكد؟",
+  "deleteConfirm": "تأكيد الحذف",
   "noDataAvailableForFilters": "لا توجد بيانات متاحة للمرشحات المحددة",
   "confirmDeleteMessage": "هل أنت متأكد من حذف {{item}}؟",
   "selectDate": "اختر تاريخ",
@@ -94,6 +96,7 @@
     "active": "نشط",
     "inactive": "غير نشط"
   },
+  "tryDifferentKeywords": "جرّب كلمات مفتاحية مختلفة",
   "visitIdShort": "رقم الزيارة",
   "visitDate": "تاريخ الزيارة",
   "clearFilters": "مسح الفلاتر",
@@ -246,7 +249,8 @@
     "record_visit_service_payment": "تسجيل دفعة خدمة الزيارة",
     "view_reports_section": "عرض قسم التقارير",
     "edit_visit_requested_service_details": "تعديل تفاصيل الخدمة المطلوبة للزيارة",
-    
+    "generatingPdf": "جاري إنشاء PDF...",
+    "edit_main_test_comment": "تعديل تعليق الاختبار الرئيسي",
     "edit_lab_request_flags": "تعديل علامات طلب المختبر",
     "clear_pending_lab_requests": "مسح طلبات المختبر المعلقة",
     "record_batch_lab_payment": "تسجيل دفعة مجمعة للمختبر",

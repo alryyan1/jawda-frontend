@@ -1,0 +1,26 @@
+{
+      "pageTitle": "جمع عينات المختبر",
+  "selectPatientPrompt": "يرجى اختيار مريض للمتابعة",
+  "samplesForVisitTitle": "عينات الزيارة",
+  "samplesForVisitDescription": "فيما يلي قائمة بالعينات المطلوبة لهذه الزيارة",
+  "noSamplesPendingForThisVisit": "لا توجد عينات معلقة لهذه الزيارة",
+  "contextMenu": {
+    "sendPdfToOtherNumber": "إرسال ملف PDF إلى رقم آخر"
+  },
+  "actions": {
+    "markAllCollected": "تحديد جميع العينات كمجمعة",
+    "printAllLabels": "طباعة جميع البطاقات"
+  },
+    "table": {
+      "collectedFull": "تم الجمع بالكامل",
+      "sampleId": "رقم العينة"
+    },
+  "markAsCollected": "وضع علامة تم الجمع",
+  "printThisLabel": "طباعة هذه الملصق",
+    "generateId": "توليد رقم المعرف",
+  "generateIdToPrintLabel": "توليد رقم المعرف لطباعة الملصق",
+  "queue": {
+    "selectShiftPrompt": "يرجى اختيار وردية العمل",
+    "noPendingSamplesForShift": "لا توجد عينات معلقة لهذه الوردية"
+  }
+}

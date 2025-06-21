@@ -15,7 +15,6 @@
   "logout": "تسجيل الخروج",
   "analysis": "التحليلات",
   "bulkWhatsApp": "رسائل واتساب الجماعية",
-  "attendanceSheet": "كشف الحضور"
-  
-
+  "attendanceSheet": "كشف الحضور",
+  "labSampleCollection": "جمع عينات المختبر"
 }

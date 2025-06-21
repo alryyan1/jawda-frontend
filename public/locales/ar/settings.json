@@ -8,6 +8,20 @@
   "loadingSettings": "جارٍ تحميل الإعدادات...",
   "pharmacySectionTitle": "حسابات الصيدلية",
   "uploadImage": "رفع صورة",
+  "serviceGroups": {
+    "nameLabel": "اسم المجموعة",
+    "createTitle": "إنشاء مجموعة خدمات",
+    "pageTitle": "مجموعات الخدمات",
+    "pageDescription": "إدارة مجموعات الخدمات وتوزيعها",
+    "entityNamePlural": "مجموعات الخدمات",
+    "entityName": "مجموعة خدمات",
+    "addButton": "إضافة مجموعة",
+    "servicesCount": "عدد الخدمات",
+    "deleteWarningServices": "سيتم حذف جميع الخدمات المرتبطة بهذه المجموعة. هل أنت متأكد؟",
+      "editTitle": "تعديل مجموعة الخدمات",
+    "createdSuccess": "تم إنشاء المجموعة بنجاح"
+  },
+  "tabs.serviceGroups": "مجموعات الخدمات",
   "tabs": {
     "general": "عام",
     "print": "الطباعة",
@@ -19,7 +33,8 @@
     "companies": "الشركات",
     "reportHeaderSettings": "ترويسة التقارير",
     "shiftDefinitions": "تعريفات الورديات",
-    "holidays": "العطلات الرسمية"
+    "holidays": "العطلات الرسمية",
+    "serviceGroups": "مجموعات الخدمات"
   },
   "companies": "الشركات",
   "laboratory": "المختبر",

@@ -36,7 +36,7 @@ const ShiftFinderDialog: React.FC<ShiftFinderDialogProps> = ({
     queryKey: shiftsQueryKey,
     queryFn: () => {
       if (!selectedDate) return Promise.resolve([]);
-      return getShiftsList({ per_page: 0 }); // Fetch all shifts (you may need to add date filtering in the service)
+      return getShiftsList({ per_page: 0 ,date_from: format(selectedDate, 'yyyy-MM-dd'),date_to: format(selectedDate, 'yyyy-MM-dd')}); // Fetch all shifts (you may need to add date filtering in the service)
     },
     enabled: isOpen && !!selectedDate,
   });

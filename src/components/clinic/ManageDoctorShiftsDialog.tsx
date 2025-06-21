@@ -81,7 +81,7 @@ const ManageDoctorShiftsDialog: React.FC<ManageDoctorShiftsDialogProps> = ({ tri
       toast.error(error.response?.data?.message || t('clinic:doctorShifts.closeError'));
     },
   });
-
+ console.log(currentClinicShiftId, "currentClinicShiftId")
   const handleOpenShift = (doctorId: number) => {
     if (!currentClinicShiftId) {
         toast.error(t('clinic:doctorShifts.noClinicShiftSelected')); // Or get current open clinic shift
@@ -158,7 +158,7 @@ const ManageDoctorShiftsDialog: React.FC<ManageDoctorShiftsDialogProps> = ({ tri
                         size="sm"
                         variant="default"
                         onClick={() => handleOpenShift(doc.id)}
-                        disabled={openShiftMutation.isPending && openShiftMutation.variables === doc.id || !currentClinicShiftId}
+                        // disabled={openShiftMutation.isPending && openShiftMutation.variables === doc.id || !currentClinicShiftId}
                       >
                       {openShiftMutation.isPending && openShiftMutation.variables === doc.id 
                         ? <Loader2 className="h-4 w-4 animate-spin ltr:mr-1 rtl:ml-1" /> 

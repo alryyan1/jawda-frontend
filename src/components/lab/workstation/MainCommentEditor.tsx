@@ -1,7 +1,7 @@
 // src/components/lab/workstation/MainCommentEditor.tsx
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useWatch, Controller } from 'react-hook-form';
+import { useWatch, Controller, useFormContext } from 'react-hook-form';
 import type { Control, FieldPath } from 'react-hook-form';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -28,13 +28,17 @@ const MainCommentEditor: React.FC<MainCommentEditorProps> = ({
 }) => {
   const { t } = useTranslation(['labResults', 'common']);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const { setValue } = useFormContext<ResultEntryFormValues>();
 
   // This `watchedValue` reflects the RHF form state, updated by the dialog's save action
-  const mainFormComment = useWatch({ control, name: fieldName });
+  const watchedValue = useWatch({ control, name: fieldName });
+  
+  // Convert the watched value to string for the comment field
+  const mainFormComment = typeof watchedValue === 'string' ? watchedValue : (watchedValue ? String(watchedValue) : '');
 
   // Dialog's local RHF form for isolated dirty checking
   const dialogForm = useForm<{ dialogComment: string }>({
-    defaultValues: { dialogComment: mainFormComment || '' }
+    defaultValues: { dialogComment: mainFormComment }
   });
   const { control: dialogControl, handleSubmit: handleDialogSubmit, reset: resetDialog, formState: { isDirty: isDialogDirty } } = dialogForm;
   
@@ -42,14 +46,14 @@ const MainCommentEditor: React.FC<MainCommentEditorProps> = ({
 
   useEffect(() => {
     if (isDialogOpen) {
-      resetDialog({ dialogComment: mainFormComment || '' });
+      resetDialog({ dialogComment: mainFormComment });
     }
   }, [isDialogOpen, mainFormComment, resetDialog]);
 
   const onDialogSave = () => {
     if (isDialogDirty || dialogCommentValue !== mainFormComment) { // Check if content actually changed
       // Update the parent form's value. This change will be picked up by parent's useWatch/useEffect for debouncedSave.
-      control.setValue(fieldName, dialogCommentValue, { shouldDirty: true, shouldValidate: true });
+      setValue(fieldName, dialogCommentValue, { shouldDirty: true, shouldValidate: true });
       debouncedSave(fieldName, undefined, dialogCommentValue); // Directly trigger the debounced save
     }
     setIsDialogOpen(false);
@@ -96,7 +100,7 @@ const MainCommentEditor: React.FC<MainCommentEditorProps> = ({
             <Controller
                 name="dialogComment"
                 control={dialogControl}
-                defaultValue={mainFormComment || ''}
+                defaultValue={mainFormComment}
                 render={({ field }) => (
                     <Textarea
                         {...field}

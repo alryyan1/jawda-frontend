@@ -89,12 +89,11 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
       // This might require knowing the MainTest ID for CBC or checking its name.
       // For simplicity, we'll assume if the button is enabled, it's for a CBC.
       // You might need a more robust check or pass main_test_id if dynamic.
-      if (window.confirm(t('labResults:labActions.confirmPopulateCbc', { testName: selectedLabRequest.main_test?.main_test_name }))) {
         populateCbcMutation.mutate({
           labRequestId: selectedLabRequest.id,
           doctorVisitId: selectedVisitId
         });
-      }
+      
     }
   };
   

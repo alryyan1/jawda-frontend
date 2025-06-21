@@ -47,6 +47,7 @@ import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AxiosError } from "axios";
 
 // --- Reusable Stat Card Component ---
 interface StatCardProps {
@@ -513,8 +514,8 @@ const HomePage: React.FC = () => {
       refetchSummary();
       toast.success(t("common:shiftClosedSuccessfully"));
     },
-    onError: () => {
-      toast.error(t("common:shiftCloseFailed"));
+    onError: (error:AxiosError) => {
+      toast.error(error.response?.data?.message || t("common:shiftCloseFailed"));
     },
   });
 

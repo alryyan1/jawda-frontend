@@ -141,6 +141,9 @@
       "deviceNameLabel": "اسم الجهاز"
     },
     "labActions": {
+    "confirmResetToDefault": "هل أنت متأكد من إعادة تعيين النتائج إلى القيم الافتراضية؟",
+    "confirmResetToDefaultSuccess": "تم إعادة تعيين النتائج إلى القيم الافتراضية بنجاح",
+    "confirmResetToDefaultError": "فشل إعادة تعيين النتائج إلى القيم الافتراضية",
       "populateCbc": "تعبئة CBC تلقائيًا",
       "batchAuthorize": "اعتماد مجمع",
       "lisSync": "مزامنة LIS",

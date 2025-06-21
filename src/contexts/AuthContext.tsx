@@ -60,7 +60,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     queryKey: currentOpenShiftQueryKey,
     queryFn: apiGetCurrentOpenShift,
     enabled: !!token && !!user, // Only fetch if authenticated
-    staleTime: 5 * 60 * 1000,
+    // staleTime: 5 * 60 * 1000,p
     refetchOnWindowFocus: true,
     retry: (failureCount, error: any) => {
       // Don't retry excessively if it's a 404 (no shift open)

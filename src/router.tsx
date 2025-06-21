@@ -65,6 +65,8 @@ import ShiftDefinitionsPage from "./pages/settings/ShiftDefinitionsPage";
 import AttendanceSheetPage from "./pages/attendance/AttendanceSheetPage";
 import HolidaysPage from "./pages/settings/attendance/HolidaysPage";
 import MonthlyLabIncomeReportPage from "./pages/reports/MonthlyLabIncomeReportPage";
+import ServiceGroupsPage from "./pages/settings/ServiceGroupsPage";
+import SampleCollectionPage from "./pages/lab/SampleCollectionPage";
 // import NotFoundPage from './pages/NotFoundPage'; // Optional: For 404 handling
 
 const AppointmentsPlaceholderPage: React.FC = () => (
@@ -105,6 +107,10 @@ const router = createBrowserRouter([
           {
             index: true, // Default route for '/' after login
             element: <HomePage />,
+          },
+          {
+            path: "lab-sample-collection",
+            element: <SampleCollectionPage />,
           },
            {
             path: "analysis", // Or "/reports/analysis" if under reports
@@ -296,6 +302,10 @@ const router = createBrowserRouter([
                 element: <InsuranceAuditPage />,
               },
               {
+                path: "service-groups",
+                element: <ServiceGroupsPage />,
+              },
+              {
                 path: "attendance",
                 element: <Outlet />,
                 children: [
@@ -400,6 +410,7 @@ const router = createBrowserRouter([
                   },
                 ],
               },
+             
             ],
           },
       

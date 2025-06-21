@@ -31,6 +31,7 @@ export const namespaces = [
   'labWorkflow',
   'labWorkstation',
   'labQueue',
+  'labSampleCollection',
 ] as const;
 export type Namespace = typeof namespaces[number];
 

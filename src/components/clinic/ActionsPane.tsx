@@ -18,6 +18,7 @@ import {
   BarChart3,
   FilePieChart,
   UserSearch,
+  Banknote,
 } from "lucide-react"; // UsersRound for manage doctor shifts
 import ManageDoctorShiftsDialog from "./ManageDoctorShiftsDialog";
 import { cn } from "@/lib/utils";
@@ -113,7 +114,7 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
                      onClick={() => setIsIncomeDialogOpen(true)}
                      aria-label={t('clinic:actionsPane.myShiftIncome')}
                  >
-                     <WalletCards className="h-5 w-5" />
+                     <Banknote className="h-5 w-5" />
                  </Button>
              </TooltipTrigger>
              <TooltipContent side={i18n.dir() === 'rtl' ? 'left' : 'right'}>

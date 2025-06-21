@@ -4,10 +4,13 @@
         "dialogDescription": "وصف الحوار لعرض المناوبات",
         "shiftsOnDate": "المناوبات في هذا التاريخ",
         "noShiftsFoundOnDate": "لم يتم العثور على أي مناوبات في هذا التاريخ",
-        "openDialogTooltip": "فتح نافذة المناوبات"
+        "openDialogTooltip": "فتح نافذة المناوبات",
+          "shiftSelected": "تم اختيار المناوبة",
+    "shiftNotFound": "لم يتم العثور على المناوبة"
     },
     "status": {
         "closed": "مغلق",
         "open": "مفتوح"
     }
+  
 }

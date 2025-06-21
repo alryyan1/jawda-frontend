@@ -44,6 +44,7 @@ import {
   FlaskConical,
   MessageCircle,
   ClipboardEditIcon,
+  Syringe,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Toaster } from "sonner";
@@ -75,6 +76,7 @@ const mainNavItems: NavItem[] = [
   { to: '/doctors', labelKey: 'doctors', icon: Stethoscope, permission: 'list doctors' },
   { to: '/analysis', labelKey: 'analysis', icon: FileBarChart2, permission: 'view analysis' },
   { to: '/attendance/sheet', labelKey: 'navigation:attendanceSheet', icon: ClipboardEditIcon, permission: 'record_attendance' },
+  { to: '/lab-sample-collection', labelKey: 'labSampleCollection', icon: Syringe, permission: 'access lab_sample_collection' },
 
   // { to: '/bulk-whatsapp', labelKey: 'bulkWhatsApp', icon: MessageCircle, permission: 'send bulk whatsapp' },
 ];

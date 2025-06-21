@@ -33,5 +33,10 @@
     "labResultsReadyName": "نتائج التحاليل جاهزة",
     "labResultsReadyContent": "عزيزي {{patientName}},\nنتائج التحاليل الخاصة بك للزيارة رقم {{visitId}} جاهزة للاستلام في {{clinicName}}.\nيرجى زيارتنا في أقرب وقت ممكن."
   },
-  "attachmentOptional": "إرفاق ملف (اختياري)"
+  "attachmentOptional": "إرفاق ملف (اختياري)",
+  "validation": {
+    "phoneMin": "رقم الهاتف قصير جدًا",
+    "phoneNumeric": "رقم الهاتف يجب أن يحتوي على أرقام فقط"
+  },
+  "sendPdfToCustomNumberDesc": "أدخل رقم واتساب مختلف لإرسال نتائج التحليل إليه"
 }

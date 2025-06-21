@@ -72,6 +72,9 @@ export interface LabRequest {
   is_paid: boolean;
 
   sample_id?: string | null;
+  sample_collected_at?: string | null; // ISO Date string when sample was collected
+  sample_collected_by_user_id?: number | null; // User who collected the sample
+  sampleCollectedBy?: UserStripped; // Eager loaded user who collected sample
   result_status?: 'pending_sample' | 'sample_received' | 'pending_entry' | 'results_partial' | 'results_complete_pending_auth' | 'authorized' | 'cancelled' | string; // Status of results
   authorized_by_user_id?: number | null; // User who authorized the whole request
   authorized_by_user_name?: string;

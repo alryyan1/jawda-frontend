@@ -5,7 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { 
     Settings, Building, FlaskConical, ListOrdered, CreditCard, Printer, Workflow, MessageCircle, 
     ClockIcon,
-    PartyPopperIcon
+    PartyPopperIcon,
+    Layers
 } from 'lucide-react'; // Added Printer, Workflow, MessageCircle
 import { cn } from '@/lib/utils';
     // import { useAuthorization } from '@/hooks/useAuthorization';
@@ -28,6 +29,8 @@ const settingsNavItems: SettingsNavItem[] = [
   // Example settingsNavItems update
 { to: 'attendance/shift-definitions', labelKey: 'settings:tabs.shiftDefinitions', icon: ClockIcon, permission: 'manage_shift_definitions' },
 { to: 'attendance/holidays', labelKey: 'settings:tabs.holidays', icon: PartyPopperIcon, permission: 'manage_holidays' },
+{ to: 'service-groups', labelKey: 'tabs.serviceGroups', icon: Layers, permission: 'manage service_groups' }, // NEW
+
 ];
 
 const SettingsLayout: React.FC = () => {

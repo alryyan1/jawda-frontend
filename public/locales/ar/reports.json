@@ -4,6 +4,9 @@
   "endTime": "وقت الانتهاء",
   "duration": "المدة",
   "openedBy": "تم الفتح بواسطة",
+  "doctorShiftsReportTitle": "تقرير مناوبات الأطباء",
+ 
+
   "doctorShiftsReport": {
   "title": "تقرير مناوبات الأطباء",
   "titleShort": "مناوبات الأطباء",
@@ -314,7 +317,9 @@
         "status": "الحالة",
         "statusAll": "كل الحالات",
         "statusOpen": "مفتوح",
-        "statusClosed": "مغلق"
+        "statusClosed": "مغلق",
+        "dateFrom": "من تاريخ",
+        "dateTo": "إلى تاريخ"
       }
     , 
       "table": {

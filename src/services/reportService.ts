@@ -11,6 +11,8 @@ export interface DoctorShiftReportFilters {
   doctor_id?: number | string | null;
   status?: string | null; // "0" or "1" or "" for all
   shift_id?: number | string | null; // General clinic shift ID
+  user_id_opened?: number | string | null; // User who opened the DoctorShift
+  doctor_name_search?: string; // Search by doctor name
 }
 export const downloadDoctorShiftsReportPdf = async (filters: Omit<DoctorShiftReportFilters, 'page' | 'per_page'>): Promise<Blob> => {
   const response = await apiClient.get<Blob>('/reports/doctor-shifts/pdf', {

@@ -131,7 +131,7 @@
     "goHome": "الصفحة الرئيسية",
     "retry": "حاول مرة أخرى"
   },
-
+  "noDataAvailableFilters": "لا توجد بيانات متاحة للمرشحات المحددة",
   "exportToPdf": "تصدير إلى PDF",
 
   "validation": {

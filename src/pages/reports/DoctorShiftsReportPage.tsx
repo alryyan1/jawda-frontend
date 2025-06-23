@@ -7,13 +7,13 @@ import {
   keepPreviousData,
 } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { format, parseISO, startOfMonth, endOfMonth } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { arSA, enUS } from "date-fns/locale";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { DatePickerWithRange } from "@/components/ui/date-range-picker";
+
 import {
   Select,
   SelectContent,
@@ -109,8 +109,8 @@ const DoctorShiftsReportPage: React.FC = () => {
   const canUpdateProofing = can("view doctor_shift_financial_summary");
   const canViewFinancialSummary = can("view doctor_shift_financial_summary");
 
-  const defaultDateFrom = format(startOfMonth(new Date()), "yyyy-MM-dd");
-  const defaultDateTo = format(endOfMonth(new Date()), "yyyy-MM-dd");
+  const defaultDateFrom = format(new Date(), "yyyy-MM-dd");
+  const defaultDateTo = format(new Date(), "yyyy-MM-dd");
 
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState<Filters>({
@@ -223,6 +223,11 @@ const DoctorShiftsReportPage: React.FC = () => {
             : "0",
         shift_id:
           filters.generalShiftId === "all" ? undefined : parseInt(filters.generalShiftId),
+        user_id_opened:
+          filters.userIdOpened === "all"
+            ? undefined
+            : parseInt(filters.userIdOpened),
+        doctor_name_search: debouncedSearchDoctorName || undefined,
       }),
     placeholderData: keepPreviousData,
   });
@@ -262,8 +267,8 @@ const proofingFlagsMutation = useMutation({
     });
     // Or, simpler: queryClient.invalidateQueries({ queryKey: reportQueryKey });
   },
-  onError: (error: any) => {
-      const errorMessage = error.response?.data?.message || t('common:error.updateFailed');
+  onError: (error: unknown) => {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       toast.error(t('review.proofingStatusUpdateFailed'), { description: errorMessage });
   },
 });
@@ -346,7 +351,7 @@ const handleProofingAction = (shiftId: number, flagField: ProofingFlagKey, curre
         doctor_id: filters.doctorId === "all" ? undefined : parseInt(filters.doctorId),
         status: filters.status === "all" ? undefined : filters.status === "open" ? "1" : "0",
         shift_id: filters.generalShiftId === "all" ? undefined : parseInt(filters.generalShiftId),
-
+        user_id_opened: filters.userIdOpened === "all" ? undefined : parseInt(filters.userIdOpened),
         doctor_name_search: debouncedSearchDoctorName || undefined,
       }),
       t("reports:doctorShiftsReportTitle"),
@@ -486,7 +491,6 @@ const handleProofingAction = (shiftId: number, flagField: ProofingFlagKey, curre
                     handleFilterChange("searchDoctorName", e.target.value)
                   }
                   className="h-9"
-                  disabled={isFetching}
                 />
               </div>
               {/* General Shift Filter */}
@@ -549,24 +553,32 @@ const handleProofingAction = (shiftId: number, flagField: ProofingFlagKey, curre
                   </SelectContent>
                 </Select>
               </div>
-              {/* Date Range Picker */}
-              <div className="min-w-[200px] sm:min-w-[280px] col-span-1 md:col-span-2 lg:col-span-1 xl:col-span-1 self-end">
-                <DatePickerWithRange
-                  date={{
-                    from: parseISO(filters.dateFrom),
-                    to: parseISO(filters.dateTo),
-                  }}
-                  onDateChange={(range) => {
-                    const from = range?.from
-                      ? format(range.from, "yyyy-MM-dd")
-                      : defaultDateFrom;
-                    const to = range?.to
-                      ? format(range.to, "yyyy-MM-dd")
-                      : defaultDateTo;
-                    setFilters((f) => ({ ...f, dateFrom: from, dateTo: to }));
-                  }}
+              {/* Date From Input */}
+              <div className="min-w-[150px]">
+                <Label htmlFor="dsr-date-from" className="text-xs">
+                  {t("reports:filters.dateFrom")}
+                </Label>
+                <Input
+                  id="dsr-date-from"
+                  type="date"
+                  value={filters.dateFrom}
+                  onChange={(e) => handleFilterChange("dateFrom", e.target.value)}
+                  className="h-9"
                   disabled={isFetching}
-                  buttonSize="sm"
+                />
+              </div>
+              {/* Date To Input */}
+              <div className="min-w-[150px]">
+                <Label htmlFor="dsr-date-to" className="text-xs">
+                  {t("reports:filters.dateTo")}
+                </Label>
+                <Input
+                  id="dsr-date-to"
+                  type="date"
+                  value={filters.dateTo}
+                  onChange={(e) => handleFilterChange("dateTo", e.target.value)}
+                  className="h-9"
+                  disabled={isFetching}
                 />
               </div>
             </div>
@@ -598,15 +610,7 @@ const handleProofingAction = (shiftId: number, flagField: ProofingFlagKey, curre
                     <TableHead className="text-center hidden md:table-cell min-w-[110px]">
                       {t("reports:specialist")}
                     </TableHead>
-                    <TableHead className="text-center min-w-[130px]">
-                      {t("reports:startTime")}
-                    </TableHead>
-                    <TableHead className="text-center hidden sm:table-cell min-w-[130px]">
-                      {t("reports:endTime")}
-                    </TableHead>
-                    <TableHead className="text-center hidden lg:table-cell min-w-[90px]">
-                      {t("reports:duration")}
-                    </TableHead>
+                   
                     <TableHead className="text-center min-w-[90px]">
                       {t("reports:totalEntitlement")}
                     </TableHead>
@@ -643,15 +647,7 @@ const handleProofingAction = (shiftId: number, flagField: ProofingFlagKey, curre
                       <TableCell className="hidden md:table-cell text-center">
                         {ds.doctor_specialist_name || "-"}
                       </TableCell>
-                      <TableCell className="text-center">
-                        {ds.formatted_start_time}
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell text-center">
-                        {ds.formatted_end_time}
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell text-center">
-                        {ds.duration || "-"}
-                      </TableCell>
+                    
                       <TableCell className="text-center font-semibold">
                         {formatNumber(ds.total_doctor_entitlement || 0)}
                       </TableCell>

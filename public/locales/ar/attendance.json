@@ -1,11 +1,43 @@
 {
+  "employeeName": "اسم الموظف",
+  "presentDays": "أيام الحضور",
+  "absentDays": "أيام الغياب",
+  "lateDays": "أيام التأخير",
+  "leaveDays": "أيام الإجازة",
+  "sickDays": "أيام المرض",
+
+  "reportTitle": "ملخص الحضور الشهري",
     "settings": {
       "globalTitle": "إعدادات الحضور العامة",
       "globalDescription": "ضبط معلمات الحضور على مستوى النظام.",
       "numberOfShiftsLabel": "عدد الورديات في اليوم",
       "shiftsCount": "{{count}} وردية",
       "shiftsCount_plural": "{{count}} ورديات",
-      "updateSuccess": "تم تحديث إعدادات الحضور بنجاح."
+      "updateSuccess": "تم تحديث إعدادات الحضور بنجاح.",
+      "shiftDefinitions": {
+        "dialogTitle": "تعريف الشيفتات",
+        "dialogDescription": "قم بإدارة الشيفتات الخاصة بالحضور والانصراف.",
+        "addNewButton": "إضافة شيفت جديد",
+        "noDefinitions": "لا توجد شيفتات معرفة.",
+        "validation": {
+          "invalidTime": "الوقت غير صالح.",
+          "endTimeAfterStart": "وقت الانتهاء يجب أن يكون بعد وقت البداية."
+        },
+        "table": {
+          "label": "الوسم",
+          "name": "اسم الشيفت",
+          "startTime": "وقت البداية",
+          "endTime": "وقت الانتهاء",
+          "status": "الحالة"
+        },
+        "form": {
+          "label": "الوسم",
+          "name": "اسم الشيفت",
+          "startTime": "وقت البداية",
+          "endTime": "وقت الانتهاء",
+          "isActive": "نشط"
+        }
+      }
     },
 
     "shiftDefinitions": {
@@ -133,7 +165,13 @@
       "sick_leave": "إجازة مرضية"
     },
     "reports": {
+       "monthlySummary": {
+      "totalWorkingDays": "إجمالي أيام العمل"
+    },
       "attendance": {
+        "monthlySummary": {
+          "pageTitle": "ملخص الحضور الشهري"
+        },
         "monthlySummaryTitle": "ملخص الحضور الشهري للموظفين",
         "monthlySummaryTitleShort": "ملخص حضور الموظفين",
         "dailyDetailTitle": "تفاصيل الحضور اليومي",
@@ -162,6 +200,10 @@
           "notes": "ملاحظات"
         }
       }
+    },
+    "filters": {
+      "shift": "الشيفت",
+      "allShifts": "كل الشيفتات"
     },
     "dailyReport": {
       "noRecordsForShift": "لا توجد سجلات حضور لهذه الوردية في اليوم المحدد."

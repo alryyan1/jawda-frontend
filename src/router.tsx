@@ -67,6 +67,7 @@ import HolidaysPage from "./pages/settings/attendance/HolidaysPage";
 import MonthlyLabIncomeReportPage from "./pages/reports/MonthlyLabIncomeReportPage";
 import ServiceGroupsPage from "./pages/settings/ServiceGroupsPage";
 import SampleCollectionPage from "./pages/lab/SampleCollectionPage";
+import MonthlyAttendanceSummaryPage from "./pages/attendance/MonthlyAttendanceSummaryPage";
 // import NotFoundPage from './pages/NotFoundPage'; // Optional: For 404 handling
 
 const AppointmentsPlaceholderPage: React.FC = () => (
@@ -180,7 +181,7 @@ const router = createBrowserRouter([
             element: <ReportsLayout />,
             children: [
               // ... your existing report routes ...
-              { path: "attendance-summary", element: <MonthlyEmployeeAttendanceSummaryPage /> },
+              { path: "attendance-summary", element: <MonthlyAttendanceSummaryPage /> },
               { path: "attendance-daily", element: <DailyAttendanceDetailPage /> },
               { path: "attendance-payroll", element: <PayrollAttendanceReportPage /> },
             ],
@@ -301,6 +302,12 @@ const router = createBrowserRouter([
                 path: "insurance-audit",
                 element: <InsuranceAuditPage />,
               },
+              // Inside your AppLayout children:
+{
+  path: "attendance-summary", // Or your preferred path
+  element: <MonthlyAttendanceSummaryPage />,
+  // Add permission check if needed for the route
+},
               {
                 path: "service-groups",
                 element: <ServiceGroupsPage />,

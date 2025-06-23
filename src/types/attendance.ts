@@ -119,3 +119,104 @@ export interface ShiftDefinitionFormData {
 }
 
 // ... (Holiday types, AttendanceRecord types etc.) ...
+
+export interface ShiftDefinition {
+  id: number;
+  name: string;
+  shift_label: string;
+  start_time: string; // "HH:mm"
+  end_time: string;   // "HH:mm"
+  is_active: boolean;
+  duration_hours?: number; // Optional, calculated or from backend
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface AttendanceSetting {
+    id: number;
+    number_of_shifts_per_day: 1 | 2 | 3;
+    updated_at?: string;
+}
+
+export interface Holiday {
+    id: number;
+    name: string;
+    holiday_date: string; // "YYYY-MM-DD"
+    is_recurring: boolean;
+    description?: string | null;
+}
+
+// ... other attendance related types will go here ...
+
+// src/types/attendance.ts (add/update)
+
+export interface ShiftDefinition { // (Already defined from previous step)
+  id: number;
+  name: string;
+  shift_label: string;
+  start_time: string; // "HH:mm"
+  end_time: string;   // "HH:mm"
+  is_active: boolean;
+}
+
+export interface UserMonthlyAttendanceSummary {
+  user_id: number;
+  user_name: string;
+  is_supervisor: boolean;
+  default_shift_label?: string | null;
+  total_scheduled_days: number;
+  present_days: number;
+  absent_days: number;
+  late_present_days: number; // Count of days marked as 'late_present'
+  early_leave_days: number; // Count of days marked as 'early_leave'
+  on_leave_days: number;    // Count of days marked as 'on_leave'
+  sick_leave_days: number;  // Count of days marked as 'sick_leave'
+  holidays_on_workdays: number;
+  // Add other relevant counts
+}
+
+export interface MonthlyAttendanceReportData {
+  data: UserMonthlyAttendanceSummary[];
+  meta: {
+    year: number;
+    month: number;
+    month_name: string; // e.g., "October 2023"
+    shift_definition_id?: number | null;
+    shift_name?: string | null;
+    total_working_days_in_month: number; // Business days in the month
+  };
+}
+
+// For daily sheet processing if dedicated summary API is not ready
+export interface DailyAttendanceUserRecord {
+    user_id: number;
+    user_name?: string;
+    status: string; // 'present', 'absent', 'on_leave', etc.
+    supervisor_id?: number | null;
+    attendance_id?: number;
+}
+export interface DailyAttendanceShiftRecord {
+    shift_definition_id: number;
+    shift_label: string;
+    shift_name: string;
+    attended_users: DailyAttendanceUserRecord[];
+    // expected_users?: UserStripped[]; // From getDailySheet
+}
+export interface DailyAttendanceDayRecord {
+    date: string; // "YYYY-MM-DD"
+    day_name: string;
+    is_holiday: boolean;
+    holiday_name?: string | null;
+    shifts: DailyAttendanceShiftRecord[];
+}
+export interface DailySheetResponse {
+    days_data: DailyAttendanceDayRecord[];
+    meta: {
+        month: number;
+        year: number;
+        month_name: string;
+        number_of_shifts_configured: number;
+        defined_shifts_count: number;
+    };
+    // user_options and supervisor_options are not needed for this summary page directly
+}

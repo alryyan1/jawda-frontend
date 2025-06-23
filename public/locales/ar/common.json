@@ -19,7 +19,9 @@
   "receiptPreviewTitle": "عرض الإيصال",
   "noItemsFound": "لا يوجد عناصر",
   "pdfPreview.generating": "جاري إنشاء PDF...",
+  "searchByNameOrPhone": "ابحث بالاسم أو رقم الهاتف",
 
+  "unassigned": "غير معين",
   "by": "بواسطة",
   "goBack": "الرجوع",
   "datePicker": {
@@ -119,14 +121,19 @@
     "11": "نوفمبر",
     "12": "ديسمبر"
   },
+  "generateAndPreviewPdf": "توليد ومعاينة ملف PDF",
+
   "actions": {
+    "title": "الإجراءات",
     "openMenu": "فتح القائمة",
     "add": "إضافة",
     "goBack": "رجوع",
     "goHome": "الصفحة الرئيسية",
     "retry": "حاول مرة أخرى"
   },
-  
+
+  "exportToPdf": "تصدير إلى PDF",
+
   "validation": {
   "maxLengthShort": "عدد الأحرف تجاوز الحد المسموح",
   "monthRequired": "الشهر مطلوب",
@@ -258,12 +265,11 @@
     "batch_authorize_lab_results": "اعتماد مجموعة نتائج المختبر",
     "print_lab_sample_labels": "طباعة ملصقات عينات المختبر",
     "view_lab_report_preview": "عرض معاينة تقرير المختبر",
-    
+    "searchByNameOrPhone": "ابحث بالاسم أو رقم الهاتف",
     "view_patient_vitals": "عرض العلامات الحيوية للمريض",
     "record_patient_vitals": "تسجيل العلامات الحيوية للمريض",
     "edit_patient_vitals": "تعديل العلامات الحيوية للمريض",
     "delete_patient_vitals": "حذف العلامات الحيوية للمريض",
-    
     "view_clinical_notes": "عرض الملاحظات السريرية",
     "create_clinical_notes": "إنشاء الملاحظات السريرية",
     "edit_own_clinical_notes": "تعديل الملاحظات السريرية الخاصة",

@@ -244,3 +244,31 @@ export interface MonthlyLabIncomeReportResponse {
     to: string;
   };
 }
+
+export interface DoctorShiftReportItem {
+  id: number; // DoctorShift ID
+  doctor_id: number; // Added for consistency
+  doctor_name: string;
+  doctor_specialist_name?: string; // NEW: from Doctor model
+  general_shift_id?: number; // NEW: if you want to show general shift ID
+  general_shift_name?: string; // Or just the name
+  formatted_start_time: string;
+  formatted_end_time?: string;
+  duration?: string;
+  status: boolean; // true for open, false for closed
+  status_text: string; // "Open", "Closed"
+  user_id_opened?: number; // NEW: User who opened the DoctorShift
+  user_name_opened?: string; // NEW: Name of the user who opened
+
+  // Financials (ideally from backend, or fetched on demand)
+  total_doctor_entitlement?: number;
+  cash_entitlement?: number;
+  insurance_entitlement?: number;
+  static_wage_applied?: number; // If static wage was part of total entitlement
+
+  // Proofing flags (from DoctorShift model)
+  is_cash_revenue_prooved?: boolean;
+  is_cash_reclaim_prooved?: boolean;
+  is_company_revenue_prooved?: boolean;
+  is_company_reclaim_prooved?: boolean;
+}

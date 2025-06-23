@@ -7,6 +7,7 @@
       "shiftsCount_plural": "{{count}} ورديات",
       "updateSuccess": "تم تحديث إعدادات الحضور بنجاح."
     },
+
     "shiftDefinitions": {
       "pageTitle": "إدارة تعريفات الورديات",
       "pageDescription": "حدد ورديات العمل لمؤسستك.",
@@ -15,16 +16,54 @@
       "updatedSuccess": "تم تحديث تعريف الوردية بنجاح.",
       "createdSuccess": "تم إنشاء تعريف الوردية بنجاح.",
       "noDefinitions": "لم يتم العثور على تعريفات ورديات. الرجاء إضافة البعض.",
+      "entityName": "تعريف وردية",
+      "createTitle": "إنشاء تعريف وردية جديد",
+      "editTitle": "تعديل تعريف وردية",
+
+      "deleteWarning": "قد يؤثر حذف هذا التعريف على بيانات الحضور التاريخية وتخصيصات المستخدمين إذا لم يتم التعامل معه بعناية.",
+      "form": {
+      "labelLabel": "رمز / تسمية الوردية",
+      "nameLabel": "اسم الوردية",
+      "startTimeLabel": "وقت البداية",
+      "endTimeLabel": "وقت النهاية",
+      "durationLabel": "المدة (ساعات)",
+      "statusLabel": "الحالة",
+      "labelPlaceholder": "مثال: SH1، صباحي، EVE",
+      "isActiveLabel": "نشط"
+    },
       "dialog": {
         "addTitle": "إضافة تعريف وردية جديد",
-        "editTitle": "تعديل تعريف الوردية",
         "nameLabel": "اسم الوردية",
         "namePlaceholder": "مثال: وردية صباحية، دوام عام",
         "labelLabel": "رمز الوردية",
         "labelPlaceholder": "مثال: وردية 1، و-أ",
         "startTimeLabel": "وقت البدء",
         "endTimeLabel": "وقت الإنتهاء",
-        "isActiveLabel": "نشطة"
+        "isActiveLabel": "نشطة",
+        "pageTitle": "إدارة تعريفات الورديات",
+        "pageDescription": "حدد الورديات القياسية المستخدمة عبر المؤسسة.",
+        "entityName": "تعريف وردية",
+        "entityNamePlural": "تعريفات الورديات",
+        "addButton": "إضافة تعريف وردية جديد",
+        "form": {
+          "nameLabel": "اسم الوردية",
+          "namePlaceholder": "مثال: الوردية الصباحية، المسائية العامة",
+          "labelLabel": "رمز / تسمية الوردية",
+          "labelPlaceholder": "مثال: SH1، صباحي، EVE",
+          "startTimeLabel": "وقت البداية",
+          "endTimeLabel": "وقت النهاية",
+          "isActiveLabel": "نشط",
+          "statusLabel": "الحالة",
+          "durationLabel": "المدة (ساعات)"
+        },
+        "noDefsFoundTitle": "لا توجد تعريفات ورديات حتى الآن",
+        "noDefsFoundDescription": "قم بإنشاء تعريفات ورديات لإدارة جداول حضور الموظفين.",
+        "createTitle": "إنشاء تعريف وردية جديد",
+        "editTitle": "تعديل تعريف وردية",
+        "createdSuccess": "تم إنشاء تعريف الوردية بنجاح.",
+        "updatedSuccess": "تم تحديث تعريف الوردية بنجاح.",
+        "deletedSuccess": "تم حذف تعريف الوردية بنجاح.",
+        "deleteWarning": "قد يؤثر حذف هذا التعريف على بيانات الحضور التاريخية وتخصيصات المستخدمين إذا لم يتم التعامل معه بعناية."
       },
       "validation": {
         "endTimeAfterStartOrValidOvernight": "يجب أن يكون وقت الانتهاء بعد وقت البدء أو يمثل وردية ليلية صالحة."
@@ -126,5 +165,11 @@
     },
     "dailyReport": {
       "noRecordsForShift": "لا توجد سجلات حضور لهذه الوردية في اليوم المحدد."
+    },
+    "globalSettings": {  },
+   
+
+    "validation": {
+      "invalidTimeFormat": "تنسيق الوقت غير صالح. استخدم HH:mm (مثال: 08:00 أو 16:30)."
     }
   }

@@ -24,6 +24,7 @@
       "bankAmount": "المبلغ البنكي",
       "commentLabelOptional": "ملاحظات (اختياري)"
     },
+
     "costCategories": {
       "entityName": "فئة المصروفات",
       "addButton": "إضافة فئة",
@@ -35,6 +36,8 @@
     },
     "paymentMethods": {
       "cash": "نقداً",
-      "bank": "بنك/شبكة"
+      "bank": "بنك/شبكة",
+      "mixed": "طريقة دفع مختلطة"
+
   }
   }

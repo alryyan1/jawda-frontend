@@ -91,3 +91,31 @@ export interface HolidayFormValues {
 
   // Type alias for consistency with existing code
   export type AttendanceShiftDefinition = ShiftDefinition;
+
+
+  // src/types/attendance.ts
+
+// ... (AttendanceSetting if defined) ...
+
+export interface ShiftDefinition {
+  id: number;
+  name: string; // e.g., "Morning Shift A", "Evening Main"
+  shift_label: string; // e.g., "Shift 1", "Shift 2", "MS1" - User-friendly unique label
+  start_time: string; // "HH:mm" format (e.g., "08:00")
+  end_time: string;   // "HH:mm" format (e.g., "16:00")
+  duration_hours?: number; // Calculated on backend, optional on frontend
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+  // users_count?: number; // If backend provides count of users assigned
+}
+
+export interface ShiftDefinitionFormData {
+  name: string;
+  shift_label: string;
+  start_time: string; // "HH:mm" format expected by form input type="time"
+  end_time: string;   // "HH:mm"
+  is_active?: boolean;
+}
+
+// ... (Holiday types, AttendanceRecord types etc.) ...

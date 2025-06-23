@@ -1,12 +1,19 @@
 // src/pages/reports/DoctorShiftsReportPage.tsx
-import React, { useState } from "react";
-import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import React, { useState, useEffect, useMemo } from "react";
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  keepPreviousData,
+} from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { format } from "date-fns";
-import { useForm } from "react-hook-form";
+import { format, parseISO, startOfMonth, endOfMonth } from "date-fns";
+import { arSA, enUS } from "date-fns/locale";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import {
   Select,
   SelectContent,
@@ -24,420 +31,876 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Loader2,
-  Filter,
   FileBarChart2,
-  BarChart3,
+  MoreHorizontal,
   Download,
-  FileSpreadsheet,
+  Eye,
+  XCircle,
+  CheckCircle,
+  ShieldQuestion,
+  Edit,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Form, FormItem, FormLabel } from "@/components/ui/form";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Label } from "@/components/ui/label";
 
-import type { DoctorStripped } from "@/types/doctors";
+import type {
+  DoctorShiftReportItem,
+} from "@/types/reports";
+import type { Doctor } from "@/types/doctors";
+import type { User } from "@/types/auth";
+import type { Shift as GeneralShiftType } from "@/types/shifts";
+import type { PaginatedResponse } from "@/types/common";
 import {
-  downloadDoctorShiftFinancialSummaryPdf,
-  downloadDoctorShiftsReportPdf,
   getDoctorShiftsReport,
-  type DoctorShiftReportFilters,
+  downloadDoctorShiftsReportPdf,
+  downloadDoctorShiftFinancialSummaryPdf,
 } from "@/services/reportService";
+import {
+  endDoctorShift,
+  updateDoctorShiftProofingFlags,
+} from "@/services/doctorShiftService";
 import { getDoctorsList } from "@/services/doctorService";
-import DoctorShiftFinancialSummaryDialog from "@/components/reports/DoctorShiftFinancialSummaryDialog";
-import type { DoctorShiftReportItem } from "@/types/reports";
-import { toast } from "sonner";
+import { getUsers } from "@/services/userService";
+import { getShiftsList } from "@/services/shiftService";
+import { useAuth } from "@/contexts/AuthContext";
+import { useAuthorization } from "@/hooks/useAuthorization";
+import { formatNumber } from "@/lib/utils";
+import AddDoctorEntitlementCostDialog from "@/components/clinic/dialogs/AddDoctorEntitlementCostDialog";
+import DoctorShiftFinancialReviewDialog from "@/components/clinic/dialogs/DoctorShiftFinancialReviewDialog";
+import PdfPreviewDialog from "@/components/common/PdfPreviewDialog";
 
-interface FilterFormValues {
-  date_from: string;
-  date_to: string;
-  doctor_id: string;
-  status: string;
-  shift_id: string;
+interface Filters {
+  userIdOpened: string;
+  doctorId: string;
+  generalShiftId: string;
+  dateFrom: string;
+  dateTo: string;
+  searchDoctorName: string;
+  status: "all" | "open" | "closed";
 }
 
-// Simple DatePicker if shadcn one is not set up
-const SimpleDatePicker: React.FC<{
-  value?: string;
-  onChange: (dateStr: string) => void;
-  disabled?: boolean;
-}> = ({ value, onChange, disabled }) => (
-  <Input
-    type="date"
-    value={value}
-    onChange={(e) => onChange(e.target.value)}
-    className="h-9"
-    disabled={disabled}
-  />
-);
+type ProofingFlagKey = keyof Pick<
+  DoctorShiftReportItem,
+  | "is_cash_revenue_prooved"
+  | "is_cash_reclaim_prooved"
+  | "is_company_revenue_prooved"
+  | "is_company_reclaim_prooved"
+>;
 
 const DoctorShiftsReportPage: React.FC = () => {
-  const { t, i18n } = useTranslation(["reports", "common"]);
+  const { t, i18n } = useTranslation(["reports", "common", "clinic", "review"]);
+  const dateLocale = i18n.language.startsWith("ar") ? arSA : enUS;
+  const queryClient = useQueryClient();
+  const { user: currentUser } = useAuth();
+  const { can } = useAuthorization();
 
-  const [selectedShiftForSummary, setSelectedShiftForSummary] =
-    useState<DoctorShiftReportItem | null>(null);
-  const initialDateTo = format(new Date(), "yyyy-MM-dd");
-  const initialDateFrom = format(
-    new Date(new Date().setDate(new Date().getDate() - 7)),
-    "yyyy-MM-dd"
-  );
+  const canViewAllUsersShifts = can("list all_doctor_shifts");
+  const canCloseShifts = can("end doctor_shifts");
+  const canRecordEntitlementCost = can("record clinic_costs");
+  const canUpdateProofing = can("view doctor_shift_financial_summary");
+  const canViewFinancialSummary = can("view doctor_shift_financial_summary");
 
-  const form = useForm<FilterFormValues>({
-    defaultValues: {
-      date_from: initialDateFrom,
-      date_to: initialDateTo,
-      doctor_id: "all",
-      status: "all",
-      shift_id: "all",
-    },
-  });
+  const defaultDateFrom = format(startOfMonth(new Date()), "yyyy-MM-dd");
+  const defaultDateTo = format(endOfMonth(new Date()), "yyyy-MM-dd");
 
   const [currentPage, setCurrentPage] = useState(1);
-  const [appliedFilters, setAppliedFilters] =
-    useState<DoctorShiftReportFilters>({
-      date_from: initialDateFrom,
-      date_to: initialDateTo,
-      doctor_id: form.watch("doctor_id"),
-      status: "all",
-      shift_id: "all",
-      // page: 1,
-      // per_page: 10,
-    });
+  const [filters, setFilters] = useState<Filters>({
+    userIdOpened: canViewAllUsersShifts
+      ? "all"
+      : currentUser?.id?.toString() || "all",
+    doctorId: "all",
+    generalShiftId: "all",
+    dateFrom: defaultDateFrom,
+    dateTo: defaultDateTo,
+    searchDoctorName: "",
+    status: "all",
+  });
+  const [debouncedSearchDoctorName, setDebouncedSearchDoctorName] =
+    useState("");
 
-  const { data: doctorsList, isLoading: isLoadingDoctors } = useQuery<
-    DoctorStripped[],
+  const [isFinancialSummaryDialogOpen, setIsFinancialSummaryDialogOpen] =
+    useState(false);
+  const [selectedShiftForSummaryDialog, setSelectedShiftForSummaryDialog] =
+    useState<DoctorShiftReportItem | null>(null);
+
+  const [isAddCostDialogOpen, setIsAddCostDialogOpen] = useState(false);
+  const [selectedShiftForCostAction, setSelectedShiftForCostAction] =
+    useState<DoctorShiftReportItem | null>(null);
+
+  const [isGeneratingListPdf, setIsGeneratingListPdf] = useState(false);
+  const [isGeneratingSummaryPdfId, setIsGeneratingSummaryPdfId] = useState<
+    number | null
+  >(null);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+  const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false);
+  const [pdfPreviewFilename, setPdfPreviewFilename] = useState("report.pdf");
+  const [pdfPreviewTitle, setPdfPreviewTitle] = useState("");
+
+  useEffect(() => {
+    const handler = setTimeout(
+      () => setDebouncedSearchDoctorName(filters.searchDoctorName),
+      500
+    );
+    return () => clearTimeout(handler);
+  }, [filters.searchDoctorName]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters, debouncedSearchDoctorName]);
+
+  useEffect(() => {
+    if (
+      !canViewAllUsersShifts &&
+      filters.userIdOpened === "all" &&
+      currentUser?.id
+    ) {
+      setFilters((f) => ({ ...f, userIdOpened: currentUser.id.toString() }));
+    }
+  }, [canViewAllUsersShifts, currentUser, filters.userIdOpened]);
+
+  const { data: usersForFilterResponse, isLoading: isLoadingUsers } = useQuery<
+    PaginatedResponse<User>,
     Error
   >({
-    queryKey: ["doctorsSimpleListForReport"],
-    queryFn: () => getDoctorsList({ active: true }),
+    queryKey: ["usersListForDSRFilter"],
+    queryFn: () => getUsers(1, { per_page: 200 }),
+    enabled: canViewAllUsersShifts,
   });
-  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const usersForFilter = useMemo(
+    () => usersForFilterResponse?.data || [],
+    [usersForFilterResponse]
+  );
 
-  const handleDownloadPdf = async () => {
-    setIsDownloadingPdf(true);
-    try {
-      // Transform filters the same way as in the report query
-      const transformedFilters = {
-        ...appliedFilters,
-        doctor_id:
-          appliedFilters.doctor_id === "all" ? null : appliedFilters.doctor_id,
-        status: appliedFilters.status === "all" ? null : appliedFilters.status,
-        shift_id:
-          appliedFilters.shift_id === "all" ? null : appliedFilters.shift_id,
-      };
+  const { data: doctorsForFilter, isLoading: isLoadingDoctors } = useQuery<
+    Doctor[],
+    Error
+  >({
+    queryKey: ["doctorsListForDSRFilter"],
+    queryFn: () => getDoctorsList().then((res) => res as Doctor[]),
+  });
 
-      const blob = await downloadDoctorShiftsReportPdf(transformedFilters);
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `doctor_shifts_report_${format(
-        new Date(),
-        "yyyyMMdd_HHmmss"
-      )}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-      toast.success(t("common:downloadComplete"));
-    } catch (error) {
-      console.error("PDF Download error:", error);
-      toast.error(t("common:error.downloadFailed"), {
-        description:
-          error instanceof Error ? error.message : t("common:error.unknown"),
-      });
-    } finally {
-      setIsDownloadingPdf(false);
-    }
-  };
+  const { data: generalShiftsForFilter, isLoading: isLoadingGeneralShifts } =
+    useQuery<GeneralShiftType[], Error>({
+      queryKey: ["generalShiftsListForDSRFilter"],
+      queryFn: () => getShiftsList({ per_page: 100, is_closed: "" }),
+    });
+
+  const reportQueryKey = [
+    "doctorShiftsReport",
+    currentPage,
+    filters,
+    debouncedSearchDoctorName,
+  ] as const;
 
   const {
-    data: reportData,
+    data: paginatedData,
     isLoading,
     error,
     isFetching,
-  } = useQuery({
-    queryKey: ["doctorShiftsReport", currentPage, appliedFilters],
+  } = useQuery<PaginatedResponse<DoctorShiftReportItem>, Error>({
+    queryKey: reportQueryKey,
     queryFn: () =>
       getDoctorShiftsReport({
         page: currentPage,
-        ...appliedFilters,
-        doctor_id:
-          appliedFilters.doctor_id === "all" ? null : appliedFilters.doctor_id,
-        status: appliedFilters.status === "all" ? null : appliedFilters.status,
+        per_page: 15,
+        date_from: filters.dateFrom,
+        date_to: filters.dateTo,
+        doctor_id: filters.doctorId === "all" ? undefined : parseInt(filters.doctorId),
+        status:
+          filters.status === "all"
+            ? undefined
+            : filters.status === "open"
+            ? "1"
+            : "0",
         shift_id:
-          appliedFilters.shift_id === "all" ? null : appliedFilters.shift_id,
+          filters.generalShiftId === "all" ? undefined : parseInt(filters.generalShiftId),
       }),
     placeholderData: keepPreviousData,
   });
 
-  const onSubmit = (values: FilterFormValues) => {
-    setCurrentPage(1);
-    setAppliedFilters(values);
+  // Removed unused financial summary query for now
+
+  const closeShiftMutation = useMutation({
+    mutationFn: (doctorShiftId: number) => endDoctorShift({ doctor_shift_id: doctorShiftId }),
+    onSuccess: () => {
+      toast.success(t("clinic:doctorShifts.shiftClosedSuccess"));
+      queryClient.invalidateQueries({ queryKey: ["doctorShiftsReport"] });
+    },
+    onError: (error: unknown) => {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(t("clinic:doctorShifts.shiftCloseError"), { description: errorMessage });
+    },
+  });
+
+  // Proofing functionality temporarily removed
+// --- Mutation for Updating Proofing Flags ---
+const proofingFlagsMutation = useMutation({
+  mutationFn: (params: { shiftId: number; flags: Partial<Pick<DoctorShiftReportItem, ProofingFlagKey>> }) =>
+    updateDoctorShiftProofingFlags(params.shiftId, params.flags),
+  onSuccess: (updatedDoctorShift, variables) => {
+    toast.success(t('review.proofingStatusUpdated'));
+    // Optimistically update the specific shift in the cache or invalidate the whole list
+    queryClient.setQueryData(reportQueryKey, (oldData: PaginatedResponse<DoctorShiftReportItem> | undefined) => {
+      if (!oldData) return oldData;
+      return {
+        ...oldData,
+        data: oldData.data.map(ds => 
+          ds.id === variables.shiftId 
+          ? { ...ds, ...variables.flags } // Merge the updated flags
+          : ds
+        ),
+      };
+    });
+    // Or, simpler: queryClient.invalidateQueries({ queryKey: reportQueryKey });
+  },
+  onError: (error: any) => {
+      const errorMessage = error.response?.data?.message || t('common:error.updateFailed');
+      toast.error(t('review.proofingStatusUpdateFailed'), { description: errorMessage });
+  },
+});
+
+// --- Handler for Toggling a Proofing Flag ---
+const handleProofingAction = (shiftId: number, flagField: ProofingFlagKey, currentValue?: boolean) => {
+  if (!canUpdateProofing) {
+      toast.error(t('common:error.unauthorizedAction'));
+      return;
+  }
+  if (proofingFlagsMutation.isPending) return; // Prevent multiple rapid clicks
+
+  const flagsToUpdate: Partial<Pick<DoctorShiftReportItem, ProofingFlagKey>> = { [flagField]: !currentValue };
+  
+  // Optional: Confirmation dialog for un-proving
+  // if (currentValue === true) { // If trying to un-prove
+  //   if (!window.confirm(t('review.confirmUnprove', { flagName: t(`review.flagNames.${flagField}`) }))) {
+  //     return;
+  //   }
+  // }
+  
+  proofingFlagsMutation.mutate({ shiftId, flags: flagsToUpdate });
+};
+
+  const handleFilterChange = (filterName: keyof Filters, value: string) => {
+    setFilters((prev) => ({ ...prev, [filterName]: value }));
   };
 
+  const handleViewSummary = (shift: DoctorShiftReportItem) => {
+    if (!canViewFinancialSummary) {
+      toast.error(t("common:error.unauthorizedAction"));
+      return;
+    }
+    setSelectedShiftForSummaryDialog(shift);
+    setIsFinancialSummaryDialogOpen(true);
+  };
+
+  const handleOpenAddCostDialog = (shift: DoctorShiftReportItem) => {
+    if (!canRecordEntitlementCost) {
+      toast.error(t("common:error.unauthorizedAction"));
+      return;
+    }
+    setSelectedShiftForCostAction(shift);
+    setIsAddCostDialogOpen(true);
+  };
+
+  const handleCostAddedAndProved = () => {
+    setIsAddCostDialogOpen(false);
+    setSelectedShiftForCostAction(null);
+  };
+
+  const generatePdf = async (
+    fetchFn: () => Promise<Blob>,
+    title: string,
+    baseFilename: string
+  ) => {
+    try {
+      const blob = await fetchFn();
+      const objectUrl = URL.createObjectURL(blob);
+      setPdfPreviewUrl(objectUrl);
+      setPdfPreviewFilename(baseFilename);
+      setPdfPreviewTitle(title);
+      setIsPdfPreviewOpen(true);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(t("common:error.pdfGeneratedError"), { description: errorMessage });
+    }
+  };
+
+  const handleDownloadListPdf = () => {
+    if (!paginatedData?.data.length) {
+      toast.info(t('common:error.noDataToExport'));
+      return;
+    }
+    setIsGeneratingListPdf(true);
+    generatePdf(
+      () => downloadDoctorShiftsReportPdf({
+        date_from: filters.dateFrom,
+        date_to: filters.dateTo,
+        doctor_id: filters.doctorId === "all" ? undefined : parseInt(filters.doctorId),
+        status: filters.status === "all" ? undefined : filters.status === "open" ? "1" : "0",
+        shift_id: filters.generalShiftId === "all" ? undefined : parseInt(filters.generalShiftId),
+
+        doctor_name_search: debouncedSearchDoctorName || undefined,
+      }),
+      t("reports:doctorShiftsReportTitle"),
+      `Doctor_Shifts_Report_${filters.dateFrom}_to_${filters.dateTo}.pdf`
+    ).finally(() => setIsGeneratingListPdf(false));
+  };
+
+  const handleDownloadSummaryPdf = async (shift: DoctorShiftReportItem) => {
+    setIsGeneratingSummaryPdfId(shift.id);
+    generatePdf(
+      () => downloadDoctorShiftFinancialSummaryPdf(shift.id),
+      t("reports:actions.printFinancialSummary"),
+      `Doctor_Shift_Summary_${shift.id}.pdf`
+    ).finally(() => setIsGeneratingSummaryPdfId(null));
+  };
+
+  const shifts = paginatedData?.data || [];
+  const meta = paginatedData?.meta;
+  const isLoadingUIData =
+    isLoadingUsers || isLoadingDoctors || isLoadingGeneralShifts;
+
+  if (isLoading && !isFetching && shifts.length === 0 && currentPage === 1) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    );
+  }
   if (error)
     return (
-      <p className="text-destructive p-4">
+      <p className="text-destructive p-4 text-center">
         {t("common:error.fetchFailedExt", {
-          entity: t("reports:doctorShiftsReport.title"),
+          entity: t("reports:doctorShiftsReportTitle"),
           message: error.message,
         })}
       </p>
     );
 
-  const doctorShifts = reportData?.data || [];
-  const meta = reportData?.meta;
-
   return (
-    <div className="space-y-6" dir={i18n.dir()}>
-      <div className="flex items-center gap-2">
-        <FileBarChart2 className="h-7 w-7 text-primary" />
-        <h1 className="text-2xl sm:text-3xl font-bold">
-          {t("reports:doctorShiftsReport.title")}
-        </h1>
-        <Button
-          onClick={handleDownloadPdf}
-          variant="outline"
-          size="sm"
-          disabled={
-            isDownloadingPdf ||
-            isLoading ||
-            !doctorShifts ||
-            doctorShifts.length === 0
-          }
-        >
-          {isDownloadingPdf ? (
-            <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2" />
-          ) : (
-            <Download className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
-          )}
-          {t("common:downloadPdf")}
-        </Button>
-      </div>
+    <>
+      <div className="container mx-auto py-4 sm:py-6 lg:py-8 space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
+            <FileBarChart2 className="h-7 w-7 text-primary" />{" "}
+            {t("reports:doctorShiftsReportTitle")}
+          </h1>
+          <Button
+            onClick={handleDownloadListPdf}
+            variant="outline"
+            size="sm"
+            disabled={isGeneratingListPdf || isLoading || shifts.length === 0}
+          >
+            {isGeneratingListPdf ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
+            <span className="ltr:ml-2 rtl:mr-2">{t("common:exportToPdf")}</span>
+          </Button>
+        </div>
 
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">
-                {t("reports:doctorShiftsReport.filters")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent
-              className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 items-end"
-              dir={i18n.dir()}
-            >
-              <FormItem>
-                <FormLabel className="text-xs">
-                  {t("reports:doctorShiftsReport.dateRange")} (
-                  {t("common:from")})
-                </FormLabel>
-                <SimpleDatePicker
-                  value={form.watch("date_from")}
-                  onChange={(val) => form.setValue("date_from", val)}
-                  disabled={isFetching}
-                />
-              </FormItem>
-              <FormItem>
-                <FormLabel className="text-xs">{t("common:to")}</FormLabel>
-                <SimpleDatePicker
-                  value={form.watch("date_to")}
-                  onChange={(val) => form.setValue("date_to", val)}
-                  disabled={isFetching}
-                />
-              </FormItem>
-              <FormItem>
-                <FormLabel className="text-xs">
-                  {t("reports:doctorShiftsReport.doctor")}
-                </FormLabel>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">
+              {t("reports:filters.title")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 items-end">
+              {/* User Opened By Filter */}
+              {canViewAllUsersShifts && (
+                <div className="min-w-[150px]">
+                  <Label htmlFor="dsr-user-filter" className="text-xs">
+                    {t("reports:filters.userOpened")}
+                  </Label>
+                  <Select
+                    value={filters.userIdOpened}
+                    onValueChange={(val) =>
+                      handleFilterChange("userIdOpened", val)
+                    }
+                    dir={i18n.dir()}
+                    disabled={isLoadingUIData || isFetching}
+                  >
+                    <SelectTrigger id="dsr-user-filter" className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">
+                        {t("reports:filters.allUsers")}
+                      </SelectItem>
+                      {usersForFilter?.map((u: User) => (
+                        <SelectItem key={u.id} value={String(u.id)}>
+                          {u.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {/* Doctor Filter */}
+              <div className="min-w-[150px]">
+                <Label htmlFor="dsr-doctor-filter" className="text-xs">
+                  {t("reports:filters.doctor")}
+                </Label>
                 <Select
-                  value={form.watch("doctor_id")}
-                  onValueChange={(val) => form.setValue("doctor_id", val)}
+                  value={filters.doctorId}
+                  onValueChange={(val) => handleFilterChange("doctorId", val)}
                   dir={i18n.dir()}
-                  disabled={isLoadingDoctors || isFetching}
+                  disabled={isLoadingUIData || isFetching}
                 >
-                  <SelectTrigger className="h-9">
+                  <SelectTrigger id="dsr-doctor-filter" className="h-9">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">
-                      {t("reports:doctorShiftsReport.allDoctors")}
+                      {t("reports:filters.allDoctors")}
                     </SelectItem>
-                    {doctorsList?.map((doc) => (
+                    {doctorsForFilter?.map((doc) => (
                       <SelectItem key={doc.id} value={String(doc.id)}>
                         {doc.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-              </FormItem>
-              <FormItem>
-                <FormLabel className="text-xs">
-                  {t("reports:doctorShiftsReport.status")}
-                </FormLabel>
-                <Select
-                  value={form.watch("status")}
-                  onValueChange={(val) => form.setValue("status", val)}
-                  dir={i18n.dir()}
+              </div>
+              {/* Search Doctor Name */}
+              <div className="min-w-[150px]">
+                <Label htmlFor="dsr-search-doc" className="text-xs">
+                  {t("reports:filters.searchDoctorName")}
+                </Label>
+                <Input
+                  id="dsr-search-doc"
+                  type="search"
+                  placeholder={t("reports:filters.searchPlaceholderName")}
+                  value={filters.searchDoctorName}
+                  onChange={(e) =>
+                    handleFilterChange("searchDoctorName", e.target.value)
+                  }
+                  className="h-9"
                   disabled={isFetching}
+                />
+              </div>
+              {/* General Shift Filter */}
+              <div className="min-w-[150px]">
+                <Label htmlFor="dsr-gshift-filter" className="text-xs">
+                  {t("reports:filters.generalShift")}
+                </Label>
+                <Select
+                  value={filters.generalShiftId}
+                  onValueChange={(val) =>
+                    handleFilterChange("generalShiftId", val)
+                  }
+                  dir={i18n.dir()}
+                  disabled={isLoadingUIData || isFetching}
                 >
-                  <SelectTrigger className="h-9">
+                  <SelectTrigger id="dsr-gshift-filter" className="h-9">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">
-                      {t("reports:doctorShiftsReport.allStatuses")}
+                      {t("reports:filters.allShifts")}
                     </SelectItem>
-                    <SelectItem value="1">
-                      {t("reports:doctorShiftsReport.open")}
+                    {generalShiftsForFilter?.map((s) => (
+                      <SelectItem key={s.id} value={String(s.id)}>
+                        {s.name ||
+                          `#${s.id} (${format(parseISO(s.created_at), "PP", {
+                            locale: dateLocale,
+                          })})`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {/* Status Filter */}
+              <div className="min-w-[120px]">
+                <Label htmlFor="dsr-status-filter" className="text-xs">
+                  {t("reports:filters.status")}
+                </Label>
+                <Select
+                  value={filters.status}
+                  onValueChange={(val) =>
+                    handleFilterChange("status", val as Filters["status"])
+                  }
+                  dir={i18n.dir()}
+                  disabled={isFetching}
+                >
+                  <SelectTrigger id="dsr-status-filter" className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">
+                      {t("reports:filters.statusAll")}
                     </SelectItem>
-                    <SelectItem value="0">
-                      {t("reports:doctorShiftsReport.closed")}
+                    <SelectItem value="open">
+                      {t("reports:filters.statusOpen")}
+                    </SelectItem>
+                    <SelectItem value="closed">
+                      {t("reports:filters.statusClosed")}
                     </SelectItem>
                   </SelectContent>
                 </Select>
-              </FormItem>
-              <Button
-                type="submit"
-                className="h-9 self-end"
-                disabled={isFetching || isLoading}
-              >
-                {isFetching ? (
-                  <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2" />
-                ) : (
-                  <Filter className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
-                )}
-                {t("reports:doctorShiftsReport.applyFilters")}
-              </Button>
-            </CardContent>
+              </div>
+              {/* Date Range Picker */}
+              <div className="min-w-[200px] sm:min-w-[280px] col-span-1 md:col-span-2 lg:col-span-1 xl:col-span-1 self-end">
+                <DatePickerWithRange
+                  date={{
+                    from: parseISO(filters.dateFrom),
+                    to: parseISO(filters.dateTo),
+                  }}
+                  onDateChange={(range) => {
+                    const from = range?.from
+                      ? format(range.from, "yyyy-MM-dd")
+                      : defaultDateFrom;
+                    const to = range?.to
+                      ? format(range.to, "yyyy-MM-dd")
+                      : defaultDateTo;
+                    setFilters((f) => ({ ...f, dateFrom: from, dateTo: to }));
+                  }}
+                  disabled={isFetching}
+                  buttonSize="sm"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {isFetching && !isLoading && (
+          <div className="text-sm text-muted-foreground my-2 text-center py-2">
+            <Loader2 className="inline h-4 w-4 animate-spin" />{" "}
+            {t("common:updatingList")}
+          </div>
+        )}
+
+        {!isLoading && shifts.length === 0 && !isFetching && (
+          <Card className="text-center py-10 text-muted-foreground mt-6">
+            <CardContent>{t("common:noDataAvailableFilters")}</CardContent>
           </Card>
-        </form>
-      </Form>
+        )}
 
-      {isLoading && !isFetching && (
-        <div className="text-center py-10">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      )}
-      {!isLoading && !isFetching && doctorShifts.length === 0 && (
-        <Card className="text-center py-10 text-muted-foreground">
-          <CardContent>{t("reports:doctorShiftsReport.noData")}</CardContent>
-        </Card>
-      )}
-
-      {!isLoading && doctorShifts.length > 0 && (
-        <Card>
-          <Table dir={i18n.dir()}>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="text-center">
-                  {t("reports:doctorShiftsReport.table.doctorName")}
-                </TableHead>
-                <TableHead className="hidden sm:table-cell text-center">
-                  {t("reports:doctorShiftsReport.table.generalShift")}
-                </TableHead>
-                <TableHead className="text-center">
-                  {t("reports:doctorShiftsReport.table.startTime")}
-                </TableHead>
-                <TableHead className="hidden md:table-cell text-center">
-                  {t("reports:doctorShiftsReport.table.endTime")}
-                </TableHead>
-                <TableHead className="hidden sm:table-cell text-center">
-                  {t("reports:doctorShiftsReport.table.duration")}
-                </TableHead>
-                <TableHead className="text-center">
-                  {t("reports:doctorShiftsReport.table.status")}
-                </TableHead>
-                <TableHead className="hidden lg:table-cell text-center">
-                  {t("reports:doctorShiftsReport.table.openedBy")}
-                </TableHead>
-                <TableHead className="text-right">
-                  {t("reports:doctorShiftsReport.table.actions")}
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {doctorShifts.map((ds) => (
-                <TableRow key={ds.id}>
-                  <TableCell className="font-medium text-center">
-                    {ds.doctor_name || "-"}
-                  </TableCell>
-                  <TableCell className="hidden sm:table-cell text-center">
-                    {ds.general_shift_name || `Shift #${ds.shift_id}`}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {ds.formatted_start_time}
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell text-center">
-                    {ds.formatted_end_time}
-                  </TableCell>
-                  <TableCell className="hidden sm:table-cell text-center">
-                    {ds.duration || "-"}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Badge variant={ds.status ? "default" : "outline"}>
-                      {ds.status_text}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="hidden lg:table-cell text-center">
-                    {ds.user_name || "-"}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 px-2"
-                      onClick={() => setSelectedShiftForSummary(ds)}
+        {shifts.length > 0 && (
+          <Card className="mt-6 overflow-hidden">
+            <ScrollArea className="max-h-[calc(100vh-480px)] xl:max-h-[calc(100vh-420px)]">
+              <Table className="text-xs" dir={i18n.dir()}>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-center min-w-[140px]">
+                      {t("reports:doctorName")}
+                    </TableHead>
+                    <TableHead className="text-center hidden md:table-cell min-w-[110px]">
+                      {t("reports:specialist")}
+                    </TableHead>
+                    <TableHead className="text-center min-w-[130px]">
+                      {t("reports:startTime")}
+                    </TableHead>
+                    <TableHead className="text-center hidden sm:table-cell min-w-[130px]">
+                      {t("reports:endTime")}
+                    </TableHead>
+                    <TableHead className="text-center hidden lg:table-cell min-w-[90px]">
+                      {t("reports:duration")}
+                    </TableHead>
+                    <TableHead className="text-center min-w-[90px]">
+                      {t("reports:totalEntitlement")}
+                    </TableHead>
+                    <TableHead className="text-center hidden md:table-cell min-w-[90px]">
+                      {t("reports:cashEntitlement")}
+                    </TableHead>
+                    <TableHead className="text-center hidden md:table-cell min-w-[90px]">
+                      {t(
+                        "reports:insuranceEntitlement"
+                      )}
+                    </TableHead>
+                    <TableHead className="text-center min-w-[70px]">
+                      {t("common:status")}
+                    </TableHead>
+                    <TableHead className="text-center min-w-[100px] hidden xl:table-cell">
+                      {t("reports:openedBy")}
+                    </TableHead>
+                    <TableHead className="text-right min-w-[110px] sticky right-0 bg-card z-10">
+                      {t("common:actions.title")}
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {shifts.map((ds: DoctorShiftReportItem) => (
+                    <TableRow
+                      key={ds.id}
+                      className={
+                        ds.status ? "bg-green-50/50 dark:bg-green-900/20" : ""
+                      }
                     >
-                      <BarChart3 className="h-3.5 w-3.5 ltr:mr-1 rtl:ml-1" />
-                      {t("common:summaryShort", "Summary")}
-                    </Button>
-                  
-                    {/* Or put it inside the existing DropdownMenu */}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
-      )}
+                      <TableCell className="font-medium text-center">
+                        {ds.doctor_name}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-center">
+                        {ds.doctor_specialist_name || "-"}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {ds.formatted_start_time}
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell text-center">
+                        {ds.formatted_end_time}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell text-center">
+                        {ds.duration || "-"}
+                      </TableCell>
+                      <TableCell className="text-center font-semibold">
+                        {formatNumber(ds.total_doctor_entitlement || 0)}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-center">
+                        {formatNumber(ds.cash_entitlement || 0)}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-center">
+                        {formatNumber(ds.insurance_entitlement || 0)}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge
+                          variant={ds.status ? "success" : "outline"}
+                          className={
+                            ds.status
+                              ? "border-green-600 bg-green-100 text-green-700 dark:bg-green-800/40 dark:text-green-300 dark:border-green-700"
+                              : ""
+                          }
+                        >
+                          {ds.status_text}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center hidden xl:table-cell">
+                        {ds.user_name_opened || "-"}
+                      </TableCell>
+                      <TableCell className="text-right sticky right-0 bg-card z-10">
+                        <DropdownMenu dir={i18n.dir()}>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-7 w-7 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-56">
+                            {canViewFinancialSummary && (
+                              <DropdownMenuItem
+                                onClick={() => handleViewSummary(ds)}
+                              >
+                                <Eye className="h-3.5 w-3.5 ltr:mr-2 rtl:ml-2" />
+                                {t("reports:actions.viewFinancialSummary")}
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem
+                              onClick={() => handleDownloadSummaryPdf(ds)}
+                              disabled={isGeneratingSummaryPdfId === ds.id}
+                            >
+                              {isGeneratingSummaryPdfId === ds.id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Download className="h-3.5 w-3.5" />
+                              )}
+                              <span className="ltr:ml-2 rtl:mr-2">
+                                {t("reports:actions.printFinancialSummary")}
+                              </span>
+                            </DropdownMenuItem>
+                            {ds.status && canCloseShifts && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    closeShiftMutation.mutate(ds.id)
+                                  }
+                                  disabled={
+                                    closeShiftMutation.isPending &&
+                                    closeShiftMutation.variables === ds.id
+                                  }
+                                  className="text-destructive focus:text-destructive"
+                                >
+                                  {closeShiftMutation.isPending &&
+                                  closeShiftMutation.variables === ds.id ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  ) : (
+                                    <XCircle className="h-3.5 w-3.5" />
+                                  )}
+                                  <span className="ltr:ml-2 rtl:ml-2">
+                                    {t("clinic:doctorShifts.closeShiftButton")}
+                                  </span>
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                            {canRecordEntitlementCost &&
+                              (ds.total_doctor_entitlement ?? 0) > 0 &&
+                              !ds.is_cash_reclaim_prooved &&
+                              !ds.is_company_reclaim_prooved && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => handleOpenAddCostDialog(ds)}
+                                  >
+                                    <Edit className="h-3.5 w-3.5 ltr:mr-2 rtl:ml-2" />
+                                    {t("review.recordEntitlementAsCost")}
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                            {canUpdateProofing && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    handleProofingAction(
+                                      ds.id,
+                                      "is_cash_revenue_prooved",
+                                      ds.is_cash_revenue_prooved
+                                    )
+                                  }
+                                  disabled={proofingFlagsMutation.isPending}
+                                >
+                                  {ds.is_cash_revenue_prooved ? (
+                                    <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                                  ) : (
+                                    <ShieldQuestion className="h-3.5 w-3.5" />
+                                  )}{" "}
+                                  <span className="ltr:ml-2 rtl:mr-2">
+                                    {t("review.toggleCashRevenueProof")}
+                                  </span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    handleProofingAction(
+                                      ds.id,
+                                      "is_cash_reclaim_prooved",
+                                      ds.is_cash_reclaim_prooved
+                                    )
+                                  }
+                                  disabled={proofingFlagsMutation.isPending}
+                                >
+                                  {ds.is_cash_reclaim_prooved ? (
+                                    <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                                  ) : (
+                                    <ShieldQuestion className="h-3.5 w-3.5" />
+                                  )}{" "}
+                                  <span className="ltr:ml-2 rtl:mr-2">
+                                    {t("review.toggleCashEntitlementProof")}
+                                  </span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    handleProofingAction(
+                                      ds.id,
+                                      "is_company_revenue_prooved",
+                                      ds.is_company_revenue_prooved
+                                    )
+                                  }
+                                  disabled={proofingFlagsMutation.isPending}
+                                >
+                                  {ds.is_company_revenue_prooved ? (
+                                    <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                                  ) : (
+                                    <ShieldQuestion className="h-3.5 w-3.5" />
+                                  )}{" "}
+                                  <span className="ltr:ml-2 rtl:mr-2">
+                                    {t("review.toggleInsuranceRevenueProof")}
+                                  </span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    handleProofingAction(
+                                      ds.id,
+                                      "is_company_reclaim_prooved",
+                                      ds.is_company_reclaim_prooved
+                                    )
+                                  }
+                                  disabled={proofingFlagsMutation.isPending}
+                                >
+                                  {ds.is_company_reclaim_prooved ? (
+                                    <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                                  ) : (
+                                    <ShieldQuestion className="h-3.5 w-3.5" />
+                                  )}{" "}
+                                  <span className="ltr:ml-2 rtl:mr-2">
+                                    {t(
+                                      "review.toggleInsuranceEntitlementProof"
+                                    )}
+                                  </span>
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          </Card>
+        )}
 
-      {meta && meta.last_page > 1 && (
-        <div className="flex items-center justify-between mt-3 pt-3 border-t shrink-0">
-          <Button
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage === 1 || isFetching}
-            size="sm"
-            variant="outline"
-          >
-            {t("common:pagination.previous")}
-          </Button>
-          <span className="text-xs text-muted-foreground">
-            {t("common:pagination.pageInfo", {
-              current: meta.current_page,
-              total: meta.last_page,
-            })}
-          </span>
-          <Button
-            onClick={() =>
-              setCurrentPage((p) => Math.min(meta.last_page, p + 1))
-            }
-            disabled={currentPage === meta.last_page || isFetching}
-            size="sm"
-            variant="outline"
-          >
-            {t("common:pagination.next")}
-          </Button>
-        </div>
-      )}
-      {selectedShiftForSummary && (
-        <DoctorShiftFinancialSummaryDialog
-          isOpen={!!selectedShiftForSummary}
-          onOpenChange={(open) => {
-            if (!open) setSelectedShiftForSummary(null);
-          }}
-          doctorShift={selectedShiftForSummary}
+        {meta && meta.last_page > 1 && (
+          <div className="mt-6 flex items-center justify-center px-2 gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1 || isFetching}
+            >
+              {t("common:previous")}
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              {t("common:pageXOfY", {
+                current: meta.current_page,
+                total: meta.last_page,
+              })}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setCurrentPage((p) => Math.min(meta.last_page, p + 1))
+              }
+              disabled={currentPage === meta.last_page || isFetching}
+            >
+              {t("common:next")}
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {selectedShiftForSummaryDialog && (
+        <DoctorShiftFinancialReviewDialog
+          isOpen={isFinancialSummaryDialogOpen}
+          onOpenChange={setIsFinancialSummaryDialogOpen}
         />
       )}
-    </div>
+
+      {selectedShiftForCostAction && (
+        <AddDoctorEntitlementCostDialog
+          isOpen={isAddCostDialogOpen}
+          onOpenChange={setIsAddCostDialogOpen}
+          doctorShift={selectedShiftForCostAction}
+          onCostAddedAndProved={handleCostAddedAndProved}
+        />
+      )}
+
+      <PdfPreviewDialog
+        isOpen={isPdfPreviewOpen}
+        onOpenChange={(open) => {
+          setIsPdfPreviewOpen(open);
+          if (!open && pdfPreviewUrl) {
+            URL.revokeObjectURL(pdfPreviewUrl);
+            setPdfPreviewUrl(null);
+          }
+        }}
+        pdfUrl={pdfPreviewUrl}
+        isLoading={
+          isGeneratingListPdf || (!!isGeneratingSummaryPdfId && !pdfPreviewUrl)
+        }
+        title={pdfPreviewTitle}
+        fileName={pdfPreviewFilename}
+      />
+    </>
   );
 };
 

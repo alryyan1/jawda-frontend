@@ -6,7 +6,17 @@
   "allDoctors": "جميع الأطباء",
   "noVisitsFound": "لم يتم العثور على زيارات لهذا اليوم/الفلاتر.",
   "noVisitsForDate": "لا توجد زيارات مسجلة لهذا التاريخ.",
+  "patients": "المرضى",
+
+  "actions": {
+    "viewServicesShort": "عرض الخدمات",
+    "manageVisit": "إدارة الزيارة"
+  },
   "table": {
+    "visitId": "رقم الزيارة",
+    "discount": "الخصم",
+    "totalPaid": "إجمالي المدفوع",
+    "balanceDue": "المبلغ المتبقي",
     "patientId": "م.مريض",
     "patientName": "اسم المريض",
     "doctorName": "الطبيب",
@@ -19,6 +29,8 @@
     "status": "الحالة",
     "actions": "إجراءات"
   },
+  "noPatientsToday": "لا يوجد مرضى اليوم",
+
   "viewServicesButton": "عرض الخدمات",
   "servicesDialogTitle": "الخدمات المطلوبة للزيارة #{{visitId}}",
   "servicesDialog": {

@@ -1,10 +1,15 @@
 {
+  "doctorName": "اسم الطبيب",
+  "startTime": "وقت البدء",
+  "endTime": "وقت الانتهاء",
+  "duration": "المدة",
+  "openedBy": "تم الفتح بواسطة",
   "doctorShiftsReport": {
   "title": "تقرير مناوبات الأطباء",
   "titleShort": "مناوبات الأطباء",
   "description": "عرض وتصفية سجلات مناوبات الأطباء.",
-  "filters": "عوامل التصفية",
   "dateRange": "الفترة الزمنية",
+  "doctorShiftsReportTitle": "تقرير مناوبات الأطباء",
   "doctor": "الطبيب",
   "status": "الحالة",
   "allDoctors": "جميع الأطباء",
@@ -14,6 +19,20 @@
   "applyFilters": "تطبيق التصفية",
   "noData": "لا توجد مناوبات للعرض",
   "financialSummary": "الملخص المالي",
+  "filters": {
+    "userOpened": "المستخدم الذي فتح المناوبة",
+    "allUsers": "جميع المستخدمين",
+    "doctor": "الطبيب",
+    "allDoctors": "جميع الأطباء",
+    "searchDoctorName": "ابحث باسم الطبيب",
+    "searchPlaceholderName": "الاسم أو البريد الإلكتروني",
+    "generalShift": "مناوبة عامة",
+    "allShifts": "جميع المناوبات",
+    "status": "الحالة",
+    "statusAll": "جميع الحالات",
+    "statusOpen": "مفتوحة",
+    "statusClosed": "مغلقة"
+  },
   "table": {
     "id": "رقم المناوبة",
     "doctorName": "اسم الطبيب",
@@ -41,7 +60,7 @@
 
 },
 "monthlyLabIncomeReport": {
-    "titleShort": "تقرير الدخل الشهري",
+    "titleShort": "تقرير الدخل الشهري للمختبر",
     "pageTitle": "تقرير الدخل الشهري للمختبر",
     "pdfTitle": "تقرير PDF للدخل الشهري"
   },
@@ -143,6 +162,7 @@
   }
 },
 "costsReport": {
+
   "pageTitle": "تقرير المصروفات",
   "titleShort": "المصروفات",
   "description": "عرض وتصفية سجلات المصروفات للعيادة.",
@@ -163,7 +183,9 @@
       "user": "المستخدم",
       "shift": "الوردية",
       "paymentMethod": "طريقة الدفع",
-      "totalAmount": "المبلغ الإجمالي"
+      "totalAmount": "المبلغ الإجمالي",
+          "cashAmount": "المبلغ النقدي",
+    "bankAmount": "المبلغ البنكي"
     },
     "summaryTitle": "ملخص المصروفات (للفترة المحددة)",
     "totalCashPaid": "إجمالي المدفوع نقداً",
@@ -200,10 +222,10 @@
   },
   "companyPerformanceReport": {
     "title": "تقرير أداء الشركة",
-    "titleShort": "أداء الشركة",
+    "titleShort": "كشف مطالبات شركات التامين",
     "allCompanies": "جميع الشركات",
     "table": {
-      "companyName": "الشركة",
+      "companyName": "شركة التأمين",
       "patientCount": "عدد المرضى",
       "totalIncomeGenerated": "إجمالي الإيرادات",
       "totalEndurance": "إجمالي المستحقات",
@@ -255,6 +277,53 @@
     "totalYearlyIncome": "إجمالي الدخل السنوي",
     "averageMonthlyIncome": "متوسط الدخل الشهري",
     "chartTitle": "مقارنة الدخل الشهري"
+  },
+ 
+  "dateRange": "نطاق التاريخ",
+  
+    "actions": {
+      "viewFinancialSummary": "عرض الملخص المالي",
+      "printFinancialSummary": "طباعة الملخص المالي"
+    },
+    "review": {
+      "toggleCashRevenueProof": "إظهار/إخفاء إثبات الإيرادات النقدية",
+      "toggleCashEntitlementProof": "إظهار/إخفاء إثبات الاستحقاق النقدي",
+      "toggleInsuranceRevenueProof": "إظهار/إخفاء إثبات الإيرادات التأمينية",
+      "toggleInsuranceEntitlementProof": "إظهار/إخفاء إثبات الاستحقاق التأميني"
+    },
+    
+     
+        "pageTitle": "تقرير نوبات الأطباء",
+        
+          "specialist": "التخصص",
+          "totalEntitlement": "إجمالي الاستحقاق",
+          "cashEntitlement": "الاستحقاق النقدي",
+          "insuranceEntitlement": "الاستحقاق التأميني",
+        
+      
+      "filters": {
+        "title": "الفلاتر",
+        "userOpened": "المستخدم الذي فتح",
+        "allUsers": "جميع المستخدمين",
+        "doctor": "الطبيب",
+        "allDoctors": "جميع الأطباء",
+        "searchDoctorName": "ابحث باسم الطبيب",
+        "searchPlaceholderName": "أدخل اسم الطبيب",
+        "generalShift": "النوبة العامة",
+        "allShifts": "جميع النوبات",
+        "status": "الحالة",
+        "statusAll": "كل الحالات",
+        "statusOpen": "مفتوح",
+        "statusClosed": "مغلق"
+      }
+    , 
+      "table": {
+        "doctorName": "اسم الطبيب",
+        "startTime": "وقت البدء",
+        "endTime": "وقت الانتهاء",
+        "duration": "المدة",
+        "openedBy": "تم الفتح بواسطة"
+      }
+    
   }
-}
 

@@ -63,8 +63,8 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
   };
   
   const populateCbcMutation = useMutation({
-    mutationFn: (payload: { labRequestId: number; doctorVisitId: number }) =>
-      populateCbcResults(payload.labRequestId, { doctor_visit_id_for_sysmex: payload.doctorVisitId }),
+    mutationFn: (payload: { labRequestId: number; doctorVisitId: number; mainTestId: number }) =>
+      populateCbcResults(payload.labRequestId, { doctor_visit_id_for_sysmex: payload.doctorVisitId,main_test_id: payload.mainTestId }),
     onSuccess: (response) => {
       if (response.status && response.data) {
         toast.success(response.message || t('labResults:labActions.cbcPopulateSuccess'));
@@ -91,7 +91,8 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
       // You might need a more robust check or pass main_test_id if dynamic.
         populateCbcMutation.mutate({
           labRequestId: selectedLabRequest.id,
-          doctorVisitId: selectedVisitId
+          doctorVisitId: selectedVisitId,
+          mainTestId: selectedLabRequest.main_test_id
         });
       
     }

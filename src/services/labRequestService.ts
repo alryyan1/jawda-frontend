@@ -136,6 +136,7 @@ export const updateLabRequestFlags = async (
 interface PopulateCbcPayload {
   doctor_visit_id_for_sysmex: number; // The DoctorVisit ID that has the Sysmex data
   // main_test_id is implicit from the labrequest route parameter
+  main_test_id: number;
 }
 
 interface PopulateCbcResponse { // Define based on your backend response

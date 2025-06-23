@@ -7,6 +7,7 @@
   "errorNoSettings": "لم يتم تهيئة إعدادات النظام بعد. يرجى التواصل مع المسؤول.",
   "loadingSettings": "جارٍ تحميل الإعدادات...",
   "pharmacySectionTitle": "حسابات الصيدلية",
+
   "uploadImage": "رفع صورة",
   "serviceGroups": {
     "nameLabel": "اسم المجموعة",
@@ -36,7 +37,7 @@
     "holidays": "العطلات الرسمية",
     "serviceGroups": "مجموعات الخدمات"
   },
-  "companies": "الشركات",
+  "companies": "شركات التأمين",
   "laboratory": "المختبر",
   "laboratoryTestsPriceList": "قائمة أسعار الفحوصات المخبرية",
   "labSettings": {

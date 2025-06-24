@@ -169,6 +169,21 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
         options={options as OptionType[]} // Use locally managed options (with localStorage caching)
         loading={isLoadingOptions}
         disabled={disabled}
+        sx={{
+          '& .MuiAutocomplete-listbox': {
+            backgroundColor: 'var(--background)',
+            color: 'var(--foreground)',
+          },
+          '& .MuiAutocomplete-option': {
+            color: 'var(--foreground)',
+            '&:hover': {
+              backgroundColor: 'var(--accent)',
+            },
+            '&.Mui-focused': {
+              backgroundColor: 'var(--accent)',
+            },
+          },
+        }}
         getOptionLabel={(option) =>
           typeof option === "string" ? option : option.name
         }
@@ -254,6 +269,35 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
             placeholder={t("labResults:resultEntry.enterOrSelectResult")}
             error={error}
             helperText={helperText}
+            onKeyDown={(event) => {
+              // Prevent form submission when Enter is pressed
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                event.stopPropagation();
+              }
+            }}
+            sx={{
+              // Dark theme styling
+              '& .MuiOutlinedInput-root': {
+                backgroundColor: 'var(--background)',
+                color: 'var(--foreground)',
+                '& fieldset': {
+                  borderColor: 'var(--border)',
+                },
+                '&:hover fieldset': {
+                  borderColor: 'var(--ring)',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: 'var(--ring)',
+                },
+              },
+              '& .MuiInputLabel-root': {
+                color: 'var(--muted-foreground)',
+              },
+              '& .MuiFormHelperText-root': {
+                color: 'var(--muted-foreground)',
+              },
+            }}
             InputProps={{
               ...params.InputProps,
               endAdornment: (
@@ -281,9 +325,16 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
         onClose={handleDialogClose}
         maxWidth="xs"
         fullWidth
+        PaperProps={{
+          sx: {
+            backgroundColor: 'var(--background)',
+            color: 'var(--foreground)',
+            border: '1px solid var(--border)',
+          }
+        }}
       >
         <form onSubmit={handleDialogSubmit}>
-          <DialogTitle>
+          <DialogTitle sx={{ color: 'var(--foreground)' }}>
             {t("labResults:resultEntry.addNewOptionTitle", {
               testName: childTestName,
             })}
@@ -299,6 +350,26 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
               variant="standard"
               value={dialogValue}
               onChange={(event) => setDialogValue(event.target.value)}
+              sx={{
+                '& .MuiInput-root': {
+                  color: 'var(--foreground)',
+                  '&:before': {
+                    borderBottomColor: 'var(--border)',
+                  },
+                  '&:hover:before': {
+                    borderBottomColor: 'var(--ring)',
+                  },
+                  '&.Mui-focused:after': {
+                    borderBottomColor: 'var(--ring)',
+                  },
+                },
+                '& .MuiInputLabel-root': {
+                  color: 'var(--muted-foreground)',
+                  '&.Mui-focused': {
+                    color: 'var(--ring)',
+                  },
+                },
+              }}
             />
           </DialogContent>
           <DialogActions>

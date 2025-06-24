@@ -529,25 +529,39 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                   <TableContainer
                     component={Paper}
                     sx={{
-                      backgroundColor: "transparent",
+                      backgroundColor: "var(--background)",
                       boxShadow: "none",
-                      border: "1px solid",
-                      borderColor: "divider",
+                      border: "1px solid var(--border)",
                       borderRadius: "var(--radius)",
                     }}
                   >
                     <Table
                       size="small"
                       aria-label="child test results table"
-                      sx={{ "& .MuiTableCell-root": { padding: "6px 8px" } }}
+                      sx={{ 
+                        "& .MuiTableCell-root": { 
+                          padding: "6px 8px",
+                          backgroundColor: "var(--background)",
+                          color: "var(--foreground)",
+                          borderBottomColor: "var(--border)",
+                        }
+                      }}
                     >
-                      <TableHead sx={{ backgroundColor: "action.hover" }}>
+                      <TableHead sx={{ 
+                        backgroundColor: "var(--muted)",
+                        "& .MuiTableCell-root": {
+                          backgroundColor: "var(--muted)",
+                          color: "var(--foreground)",
+                        }
+                      }}>
                         <TableRow>
                           <TableCell
                             sx={{
                               fontWeight: "medium",
                               width: "45%",
-                              borderBottomColor: "divider",
+                              borderBottomColor: "var(--border)",
+                              backgroundColor: "var(--muted)",
+                              color: "var(--foreground)",
                             }}
                           >
                             {t("labResults:resultEntry.childTestName")}
@@ -556,7 +570,9 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                             sx={{
                               fontWeight: "medium",
                               width: "55%",
-                              borderBottomColor: "divider",
+                              borderBottomColor: "var(--border)",
+                              backgroundColor: "var(--muted)",
+                              color: "var(--foreground)",
                             }}
                           >
                             {t("labResults:resultEntry.result")}
@@ -575,6 +591,10 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                                   "&:last-child td, &:last-child th": {
                                     border: 0,
                                   },
+                                  "&:hover": {
+                                    backgroundColor: "var(--muted)",
+                                  },
+                                  backgroundColor: "var(--background)",
                                 }}
                               >
                                 <TableCell
@@ -582,7 +602,9 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                                   scope="row"
                                   sx={{
                                     verticalAlign: "top",
-                                    borderBottomColor: "divider",
+                                    borderBottomColor: "var(--border)",
+                                    backgroundColor: "var(--background)",
+                                    color: "var(--foreground)",
                                   }}
                                 >
                                   <Typography
@@ -593,6 +615,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                                       display: "flex",
                                       alignItems: "center",
                                       justifyContent: "space-between",
+                                      color: "var(--foreground)",
                                     }}
                                   >
                                     {ctResult.child_test_name}
@@ -606,12 +629,12 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                                   </Typography>
                                   <Typography
                                     variant="caption"
-                                    color="text.secondary"
                                     component="div"
                                     sx={{
                                       display: "flex",
                                       alignItems: "center",
                                       mt: 0.25,
+                                      color: "var(--muted-foreground)",
                                     }}
                                   >
                                     {String(getValues(normalRangeTextField) ||
@@ -631,7 +654,15 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                                         onClick={() =>
                                           handleOpenDeviceRangeDialog(ctResult)
                                         }
-                                        sx={{ p: 0.25, ml: 0.5 }}
+                                        sx={{ 
+                                          p: 0.25, 
+                                          ml: 0.5,
+                                          color: "var(--muted-foreground)",
+                                          "&:hover": {
+                                            backgroundColor: "var(--accent)",
+                                            color: "var(--foreground)",
+                                          }
+                                        }}
                                       >
                                         <SettingsIcon
                                           style={{ fontSize: "0.8rem" }}
@@ -643,7 +674,9 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                                 <TableCell
                                   sx={{
                                     verticalAlign: "top",
-                                    borderBottomColor: "divider",
+                                    borderBottomColor: "var(--border)",
+                                    backgroundColor: "var(--background)",
+                                    color: "var(--foreground)",
                                   }}
                                 >
                                   <Controller

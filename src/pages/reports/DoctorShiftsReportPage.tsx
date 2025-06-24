@@ -629,6 +629,7 @@ const handleProofingAction = (shiftId: number, flagField: ProofingFlagKey, curre
                       <TableHead className="text-center min-w-[100px] hidden xl:table-cell">
                         {t("reports:openedBy")}
                       </TableHead>
+                      <TableHead className="text-center min-w-[100px] hidden xl:table-cell">{t("reports:createdAt")}</TableHead>
                       <TableHead className="text-right min-w-[110px] sticky right-0 bg-card z-10">
                         {t("common:actions.title")}
                       </TableHead>
@@ -672,6 +673,11 @@ const handleProofingAction = (shiftId: number, flagField: ProofingFlagKey, curre
                         </TableCell>
                         <TableCell className="text-center hidden xl:table-cell">
                           {ds.user_name_opened || "-"}
+                        </TableCell>
+                        <TableCell className="text-center hidden xl:table-cell">
+                          {format(parseISO(ds.created_at), "PP", {
+                            locale: dateLocale,
+                          })}
                         </TableCell>
                         <TableCell className="text-right sticky right-0 bg-card z-10">
                           <DropdownMenu dir={i18n.dir()}>

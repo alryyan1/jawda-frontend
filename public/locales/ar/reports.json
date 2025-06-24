@@ -6,7 +6,7 @@
   "openedBy": "تم الفتح بواسطة",
   "doctorShiftsReportTitle": "تقرير مناوبات الأطباء",
  
-
+  "noDataForPeriod": "لا توجد بيانات للفترة المحددة",
   "doctorShiftsReport": {
   "title": "تقرير مناوبات الأطباء",
   "titleShort": "مناوبات الأطباء",
@@ -281,7 +281,7 @@
     "averageMonthlyIncome": "متوسط الدخل الشهري",
     "chartTitle": "مقارنة الدخل الشهري"
   },
- 
+  "createdAt": "تاريخ الإنشاء",
   "dateRange": "نطاق التاريخ",
   
     "actions": {
@@ -292,7 +292,8 @@
       "toggleCashRevenueProof": "إظهار/إخفاء إثبات الإيرادات النقدية",
       "toggleCashEntitlementProof": "إظهار/إخفاء إثبات الاستحقاق النقدي",
       "toggleInsuranceRevenueProof": "إظهار/إخفاء إثبات الإيرادات التأمينية",
-      "toggleInsuranceEntitlementProof": "إظهار/إخفاء إثبات الاستحقاق التأميني"
+      "toggleInsuranceEntitlementProof": "إظهار/إخفاء إثبات الاستحقاق التأميني",
+      "recordEntitlementAsCost": "تسجيل الاستحقاق كمصروف"
     },
     
      

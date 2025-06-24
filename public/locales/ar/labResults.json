@@ -14,7 +14,7 @@
       "sampleId": "عينة #{{id}}",
       "requestId": "طلب #{{id}}"
     },
-
+    "visitLoaded": "تم تحميل الزيارة بنجاح",
     "testSelection": {
       "title": "الفحوصات المطلوبة لـ: {{patientName}}",
       "testName": "اسم الفحص",

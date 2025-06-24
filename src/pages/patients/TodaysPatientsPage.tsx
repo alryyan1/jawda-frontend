@@ -32,6 +32,7 @@ import type { PatientVisitSummary } from "@/types/visits"; // Ensure this type i
 import { formatNumber } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ViewVisitServicesDialog from "@/components/clinic/patients/ViewVisitServicesDialog";
+import dayjs from "dayjs";
 
 // Update PatientVisitSummary type in src/types/visits.ts if not already done:
 // export interface PatientVisitSummary {
@@ -186,7 +187,7 @@ const TodaysPatientsPage: React.FC = () => {
                   </TableHead>{" "}
                   {/* NEW */}
                   <TableHead className="text-center hidden sm:table-cell">
-                    {t("todaysPatients:table.visitTime")}
+                    {t("todaysPatients:table.createdAt")}
                   </TableHead>{" "}
                   {/* NEW */}
                   <TableHead className="text-center">
@@ -232,7 +233,7 @@ const TodaysPatientsPage: React.FC = () => {
                     </TableCell>{" "}
                     {/* NEW */}
                     <TableCell className="text-center hidden sm:table-cell">
-                      {visit.visit_time_formatted || visit.visit_time || "-"}
+                      {dayjs(visit.created_at).format("DD/MM/YYYY HH:mm")}
                     </TableCell>{" "}
                     {/* NEW */}
                     <TableCell className="text-center">

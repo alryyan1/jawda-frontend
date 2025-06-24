@@ -165,11 +165,11 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
         )}
  <Separator className="my-1" />
 
-{canRecordCosts && (
+{/* {canRecordCosts && (
   <Tooltip>
     <TooltipTrigger asChild>
       <span className="inline-block"> {/* Wrap in span to prevent button nesting */}
-        <AddCostDialog
+    {/*     <AddCostDialog
           currentOpenClinicShift={currentClinicShift}
           triggerButton={
             <Button 
@@ -192,7 +192,8 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
       <p>{t('finances:costs.addButton')}</p>
     </TooltipContent>
   </Tooltip>
-)}
+)} */}
+ 
 
 <Separator className="my-1" />
 

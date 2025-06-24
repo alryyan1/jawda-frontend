@@ -7,12 +7,13 @@
   "noVisitsFound": "لم يتم العثور على زيارات لهذا اليوم/الفلاتر.",
   "noVisitsForDate": "لا توجد زيارات مسجلة لهذا التاريخ.",
   "patients": "المرضى",
-
+  "createdAt": "تاريخ الإنشاء",
   "actions": {
     "viewServicesShort": "عرض الخدمات",
     "manageVisit": "إدارة الزيارة"
   },
   "table": {
+    "createdAt": "تاريخ الإنشاء",
     "visitId": "رقم الزيارة",
     "discount": "الخصم",
     "totalPaid": "إجمالي المدفوع",

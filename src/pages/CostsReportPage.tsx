@@ -241,45 +241,47 @@ const CostsReportPage: React.FC = () => {
 
       {!isLoading && costs.length > 0 && (
         <Card className="mt-6 overflow-hidden">
-          <ScrollArea className="max-h-[calc(100vh-400px)]"> {/* Adjust max-height for table scroll */}
-            <Table dir={i18n.dir()}>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[150px] text-center">{t("reports:costsReport.table.date")}</TableHead>
-                  <TableHead className="min-w-[200px]">{t("reports:costsReport.table.description")}</TableHead>
-                  <TableHead className="hidden md:table-cell text-center min-w-[120px]">{t("reports:costsReport.table.category")}</TableHead>
-                  <TableHead className="hidden sm:table-cell text-center min-w-[120px]">{t("reports:costsReport.table.user")}</TableHead>
-                  <TableHead className="text-center w-[100px]">{t("reports:costsReport.table.paymentMethod")}</TableHead>
-                  <TableHead className="text-center w-[90px]">{t("reports:costsReport.table.cashAmount")}</TableHead>
-                  <TableHead className="text-center w-[90px]">{t("reports:costsReport.table.bankAmount")}</TableHead>
-                  <TableHead className="text-right w-[110px]">{t("reports:costsReport.table.totalAmount")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {costs.map((cost: Cost) => {
-                  const totalCostForRow = cost.amount + cost.amount_bankak;
-                  const paymentMethodDisplay = getPaymentMethodForDisplay(cost);
-                  return (
-                    <TableRow key={cost.id}>
-                      <TableCell className="text-xs text-center">
-                        {cost.created_at ? format(parseISO(cost.created_at), "Pp", { locale: dateLocale }) : "-"}
-                      </TableCell>
-                      <TableCell className="font-medium">{cost.description}</TableCell>
-                      <TableCell className="hidden md:table-cell text-center">{cost.cost_category_name || "-"}</TableCell>
-                      <TableCell className="hidden sm:table-cell text-center">{cost.user_cost_name || "-"}</TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant={paymentMethodDisplay === t("finances:paymentMethods.bank") ? "secondary" : (paymentMethodDisplay === t("finances:paymentMethods.mixed") ? "info" : "outline")} className="text-[10px] px-1.5 py-0.5">
-                          {paymentMethodDisplay}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-center">{formatNumber(cost.amount)}</TableCell>
-                      <TableCell className="text-center">{formatNumber(cost.amount_bankak)}</TableCell>
-                      <TableCell className="text-right font-semibold">{formatNumber(totalCostForRow)}</TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+          <ScrollArea className="h-[500px] w-full">
+            <div className="min-w-[800px]"> {/* Ensure minimum width for horizontal scroll */}
+              <Table dir={i18n.dir()}>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[150px] text-center">{t("reports:costsReport.table.date")}</TableHead>
+                    <TableHead className="min-w-[200px]">{t("reports:costsReport.table.description")}</TableHead>
+                    <TableHead className="hidden md:table-cell text-center min-w-[120px]">{t("reports:costsReport.table.category")}</TableHead>
+                    <TableHead className="hidden sm:table-cell text-center min-w-[120px]">{t("reports:costsReport.table.user")}</TableHead>
+                    <TableHead className="text-center w-[100px]">{t("reports:costsReport.table.paymentMethod")}</TableHead>
+                    <TableHead className="text-center w-[90px]">{t("reports:costsReport.table.cashAmount")}</TableHead>
+                    <TableHead className="text-center w-[90px]">{t("reports:costsReport.table.bankAmount")}</TableHead>
+                    <TableHead className="text-right w-[110px]">{t("reports:costsReport.table.totalAmount")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {costs.map((cost: Cost) => {
+                    const totalCostForRow = cost.amount + cost.amount_bankak;
+                    const paymentMethodDisplay = getPaymentMethodForDisplay(cost);
+                    return (
+                      <TableRow key={cost.id}>
+                        <TableCell className="text-xs text-center">
+                          {cost.created_at ? format(parseISO(cost.created_at), "Pp", { locale: dateLocale }) : "-"}
+                        </TableCell>
+                        <TableCell className="font-medium">{cost.description}</TableCell>
+                        <TableCell className="hidden md:table-cell text-center">{cost.cost_category_name || "-"}</TableCell>
+                        <TableCell className="hidden sm:table-cell text-center">{cost.user_cost_name || "-"}</TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant={paymentMethodDisplay === t("finances:paymentMethods.bank") ? "secondary" : (paymentMethodDisplay === t("finances:paymentMethods.mixed") ? "info" : "outline")} className="text-[10px] px-1.5 py-0.5">
+                            {paymentMethodDisplay}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center">{formatNumber(cost.amount)}</TableCell>
+                        <TableCell className="text-center">{formatNumber(cost.amount_bankak)}</TableCell>
+                        <TableCell className="text-right font-semibold">{formatNumber(totalCostForRow)}</TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
           </ScrollArea>
           {summary && (
             <CardFooter className="flex flex-col items-end gap-1 border-t pt-3 text-sm bg-muted/30 dark:bg-muted/20">

@@ -170,7 +170,7 @@ const MonthlyServiceIncomeReportPage: React.FC = () => {
                   <TableHead className="text-center">{t('reports:monthlyServiceIncomeReport.totalDeposits')}</TableHead>
                   <TableHead className="text-center">{t('reports:monthlyServiceIncomeReport.cashDeposits')}</TableHead>
                   <TableHead className="text-center">{t('reports:monthlyServiceIncomeReport.bankDeposits')}</TableHead>
-                  <TableHead className="text-center">{t('reports:monthlyServiceIncomeReport.totalCosts')}</TableHead>
+                  <TableHead className="text-center">{t('reports:monthlyServiceIncomeReport.doctorEntitlements')}</TableHead>
                   <TableHead className="text-center">{t('reports:monthlyServiceIncomeReport.netCashFlow')}</TableHead>
                   <TableHead className="text-center">{t('reports:monthlyServiceIncomeReport.netBankFlow')}</TableHead>
                   <TableHead className="text-center font-semibold">{t('reports:monthlyServiceIncomeReport.netDailyIncome')}</TableHead>

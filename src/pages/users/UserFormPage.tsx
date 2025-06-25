@@ -1,297 +1,668 @@
 // src/pages/users/UserFormPage.tsx
-import React, { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import React, { useEffect, useState, useMemo } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { useNavigate, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Loader2, Key } from 'lucide-react';
-import { toast } from 'sonner';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Loader2, Key, ArrowLeft, UserPlus, UserCog } from "lucide-react";
+import { toast } from "sonner";
 
-import { type UserFormData, type User, type Role, UserFormMode } from '@/types/users'; // User type might include Doctor if populated
-import { createUser, updateUser, getUserById, getRolesList } from '@/services/userService';
-import { getDoctors } from '@/services/doctorService'; // To select associated doctor
-import type { Doctor } from '@/types/doctors';
-import ChangePasswordDialog from '@/components/users/ChangePasswordDialog';
+import type {
+  UserFormData as UserApiPayload,
+  Role,
+  UserFormMode as UserFormModeEnum,
+  User,
+} from "@/types/users";
+import type { DoctorStripped } from "@/types/doctors";
+import {
+  createUser,
+  updateUser,
+  getUserById,
+  getRolesList,
+} from "@/services/userService";
+import { getDoctorsList as apiGetDoctorsList } from "@/services/doctorService";
+import ChangePasswordDialog from "@/components/users/ChangePasswordDialog";
 
-interface UserFormPageProps { mode: UserFormMode; }
+interface UserFormPageProps {
+  mode: UserFormModeEnum;
+}
 
-const getUserFormSchema = (t: Function, isEditMode: boolean) => z.object({
-  name: z.string().min(1, { message: t('common:validation.required', { field: t('users:form.nameLabel')}) }),
-  username: z.string().min(3, { message: t('users:validation.usernameMinLength', "Username must be at least 3 characters.") }),
-  password: isEditMode 
-    ? z.string().optional() 
-    : z.string().min(8, { message: t('users:validation.passwordMinLength', "Password must be at least 8 characters.") }),
-  password_confirmation: isEditMode 
-    ? z.string().optional() 
-    : z.string(),
-  doctor_id: z.string().optional(),
-  is_nurse: z.boolean(),
-  roles: z.array(z.string()).min(1, { message: t('users:validation.roleRequired', "At least one role is required.") }),
-}).refine((data) => {
-  if (!data.password && !data.password_confirmation) return true;
-  return data.password === data.password_confirmation;
-}, {
-  message: t('users:validation.passwordsDoNotMatch', "Passwords do not match"),
-  path: ["password_confirmation"],
-});
+const getUserFormSchema = (
+  t: (key: string, options?: Record<string, unknown>) => string,
+  isEditMode: boolean
+) =>
+  z
+    .object({
+      name: z
+        .string()
+        .min(1, {
+          message: t("common:validation.required", {
+            field: t("users:form.nameLabel"),
+          }),
+        })
+        .max(255),
+      username: z
+        .string()
+        .min(3, { message: t("users:validation.usernameMinLength") })
+        .max(255),
+      password: isEditMode
+        ? z
+            .string()
+            .optional()
+            .refine((val) => !val || val.length === 0 || val.length >= 8, {
+              message: t("users:validation.passwordMinLengthOptional"),
+            })
+        : z
+            .string()
+            .min(8, { message: t("users:validation.passwordMinLength") }),
+      password_confirmation: isEditMode ? z.string().optional() : z.string(),
+      doctor_id: z.string().optional().nullable(),
+      is_nurse: z.boolean(),
+      is_supervisor: z.boolean(),
+      is_active: z.boolean(),
+      user_money_collector_type: z.enum(["lab", "company", "clinic", "all"]),
+      roles: z
+        .array(z.string())
+        .min(1, { message: t("users:validation.roleRequired") }),
+    })
+    .refine(
+      (data) => {
+        if (data.password && data.password.length > 0) {
+          return data.password === data.password_confirmation;
+        }
+        return true;
+      },
+      {
+        message: t("users:validation.passwordsDoNotMatch"),
+        path: ["password_confirmation"],
+      }
+    );
 
-type FormData = {
-  name: string;
-  username: string;
-  password?: string;
-  password_confirmation?: string;
-  doctor_id?: string;
-  is_nurse: boolean;
-  roles: string[];
-};
+type UserFormSchemaValues = z.infer<ReturnType<typeof getUserFormSchema>>;
 
 const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
-  const { t } = useTranslation(['users', 'common']);
+  const { t, i18n } = useTranslation(["users", "common"]);
   const navigate = useNavigate();
   const { userId } = useParams<{ userId?: string }>();
   const queryClient = useQueryClient();
-  const isEditMode = mode === UserFormMode.EDIT;
+
+  const isEditMode = mode === "edit";
+  const numericUserId = useMemo(
+    () => (userId ? Number(userId) : null),
+    [userId]
+  );
+
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
 
   const userFormSchema = getUserFormSchema(t, isEditMode);
 
-  const { data: userData, isLoading: isLoadingUser, isFetching: isFetchingUser } = useQuery({
-    queryKey: ['user', userId],
-    queryFn: () => getUserById(Number(userId)).then(res => res.data),
-    enabled: isEditMode && !!userId,
+  const form = useForm<UserFormSchemaValues>({
+    resolver: zodResolver(userFormSchema),
+    defaultValues: {
+      name: "",
+      username: "",
+      password: "",
+      password_confirmation: "",
+      doctor_id: undefined,
+      is_nurse: false,
+      is_supervisor: false,
+      is_active: true,
+      roles: [],
+      user_money_collector_type: "all",
+    },
+  });
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { isDirty },
+  } = form;
+
+  const {
+    data: userData,
+    isLoading: isLoadingUser,
+    error: userError,
+  } = useQuery({
+    queryKey: ["user", numericUserId],
+    queryFn: () =>
+      numericUserId
+        ? getUserById(numericUserId).then((res) => res.data)
+        : Promise.resolve(null),
+    enabled: isEditMode && !!numericUserId,
   });
 
-  const { data: rolesList, isLoading: isLoadingRoles } = useQuery<Role[], Error>({
-    queryKey: ['rolesList'],
+  const { data: rolesList = [], isLoading: isLoadingRoles } = useQuery<
+    Role[],
+    Error
+  >({
+    queryKey: ["rolesListForUserForm"],
     queryFn: getRolesList,
   });
 
-  const { data: doctorsList, isLoading: isLoadingDoctors } = useQuery<Doctor[], Error>({
-    queryKey: ['doctorsList'], // Assuming doctorsList is the query key for all doctors
-    queryFn: ()=>{
-        return getDoctors().then(res => res.data);
-    },  // Using the one from doctorService
+  const { data: doctorsList = [], isLoading: isLoadingDoctors } = useQuery<
+    DoctorStripped[],
+    Error
+  >({
+    queryKey: ["doctorsListForUserForm"],
+    queryFn: () => apiGetDoctorsList({ active: true }), // Assuming apiGetDoctorsList returns DoctorStripped[]
   });
-
-  const form = useForm<FormData>({
-    resolver: zodResolver(userFormSchema),
-    defaultValues: {
-      name: '', 
-      username: '', 
-      password: '', 
-      password_confirmation: '',
-      doctor_id: undefined, 
-      is_nurse: false, 
-      roles: [],
-    },
-  });
-  const { control, handleSubmit, reset, setValue, watch } = form;
 
   useEffect(() => {
     if (isEditMode && userData) {
       reset({
-        name: userData.name,
-        username: userData.username,
-        password: '',
-        password_confirmation: '',
+        name: userData.name || "",
+        username: userData.username || "",
+        password: "",
+        password_confirmation: "",
         doctor_id: userData.doctor_id ? String(userData.doctor_id) : undefined,
-        is_nurse: userData.is_nurse,
-        roles: userData.roles?.map(role => role.name) || [],
+        is_nurse: !!userData.is_nurse,
+        is_supervisor: !!userData.is_supervisor,
+        is_active:
+          userData.is_active === undefined ? true : !!userData.is_active,
+        roles: userData.roles?.map((role) => role.name) || [],
+        user_money_collector_type: userData.user_money_collector_type || "all",
+      });
+    } else if (!isEditMode) {
+      reset({
+        name: "",
+        username: "",
+        password: "",
+        password_confirmation: "",
+        doctor_id: undefined,
+        is_nurse: false,
+        is_supervisor: false,
+        is_active: true,
+        roles: [],
+        user_money_collector_type: "all",
       });
     }
   }, [isEditMode, userData, reset]);
 
-  const mutation = useMutation({
-    mutationFn: (data: UserFormData) => 
-        isEditMode && userId ? updateUser(Number(userId), data) : createUser(data),
+  const mutation = useMutation<{ data: User }, Error, UserApiPayload>({
+    mutationFn: (data: UserApiPayload) =>
+      isEditMode && numericUserId
+        ? updateUser(numericUserId, data)
+        : createUser(data),
     onSuccess: () => {
-      toast.success(t('users:form.userSavedSuccess'));
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      if(isEditMode && userId) queryClient.invalidateQueries({ queryKey: ['user', userId] });
-      navigate('/users');
+      toast.success(
+        t(
+          isEditMode
+            ? "users:form.userUpdatedSuccess"
+            : "users:form.userCreatedSuccess"
+        )
+      );
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      if (isEditMode && numericUserId) {
+        queryClient.invalidateQueries({ queryKey: ["user", numericUserId] });
+      }
+      navigate("/users");
     },
-    onError: (error: any) => {
-      let errorMessage = t('users:form.userSaveError');
-      if (error.response?.data?.errors) {
-        const fieldErrors = Object.values(error.response.data.errors).flat().join(' ');
-        errorMessage = `${errorMessage}${fieldErrors ? `: ${fieldErrors}` : ''}`;
-      } else if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
+    onError: (error: Error) => {
+      const errorResponse = error as Error & { 
+        response?: { 
+          data?: { 
+            message?: string; 
+            errors?: Record<string, string[]>;
+          } 
+        } 
+      };
+      let errorMessage = t(
+        isEditMode ? "users:form.userUpdateError" : "users:form.userCreateError"
+      );
+      if (errorResponse.response?.data?.errors) {
+        const fieldErrors = Object.values(errorResponse.response.data.errors)
+          .flat()
+          .join(" ");
+        errorMessage = `${errorMessage}${
+          fieldErrors ? `: ${fieldErrors}` : ""
+        }`;
+      } else if (errorResponse.response?.data?.message) {
+        errorMessage = errorResponse.response.data.message;
       }
       toast.error(errorMessage);
-      console.error("Save user error:", error.response?.data || error.message);
     },
   });
 
-  const onSubmit = (data: FormData) => {
-    const submissionData: UserFormData = {
-      name: data.name,
-      username: data.username,
-      doctor_id: data.doctor_id || undefined,
-      is_nurse: data.is_nurse,
-      roles: data.roles || [],
+  const onSubmit = (formData: UserFormSchemaValues) => {
+    const apiPayload: UserApiPayload = {
+      name: formData.name,
+      username: formData.username,
+      doctor_id: formData.doctor_id ? Number(formData.doctor_id) : undefined,
+      is_nurse: formData.is_nurse,
+      is_supervisor: formData.is_supervisor,
+      is_active: formData.is_active,
+      roles: formData.roles || [],
+      user_money_collector_type: formData.user_money_collector_type,
     };
-    
-    // Only include password fields in create mode
-    if (!isEditMode && data.password) {
-      submissionData.password = data.password;
-      submissionData.password_confirmation = data.password_confirmation;
+
+    // Only include password if it's provided (for create or if edit form allows password change)
+    if (formData.password && formData.password.trim() !== "") {
+      apiPayload.password = formData.password;
+      apiPayload.password_confirmation = formData.password_confirmation;
     }
-    
-    mutation.mutate(submissionData);
+    mutation.mutate(apiPayload);
   };
 
-  const formIsSubmitting = mutation.isPending;
-  const dataIsLoading = isLoadingUser || isFetchingUser || isLoadingRoles || isLoadingDoctors;
+  const dataIsLoading = isLoadingUser || isLoadingRoles || isLoadingDoctors;
 
-  if (isEditMode && isLoadingUser) return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin" /> {t('common:loading')}</div>;
+  if (isEditMode && isLoadingUser && !userData) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />{" "}
+        {t("common:loadingEntity", { entity: t("users:entityName") })}
+      </div>
+    );
+  }
+  if (userError) {
+    return (
+      <div className="p-4 text-center text-destructive">
+        {t("common:error.loadFailedExt", {
+          entity: t("users:entityName"),
+          message: userError.message,
+        })}
+      </div>
+    );
+  }
 
   return (
     <>
-      <Card className="max-w-3xl mx-auto">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <div>
-            <CardTitle>{isEditMode ? t('users:editUserTitle') : t('users:createUserTitle')}</CardTitle>
-            <CardDescription>{t('common:form.fillDetails')}</CardDescription>
-          </div>
-          {isEditMode && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowPasswordDialog(true)}
-              className="flex items-center gap-2"
-            >
-              <Key className="h-4 w-4" />
-              {t('users:changePassword')}
-            </Button>
-          )}
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField control={control} name="name" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t('users:form.nameLabel')}</FormLabel>
-                    <FormControl><Input placeholder={t('users:form.namePlaceholder')} {...field} disabled={dataIsLoading || formIsSubmitting}/></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={control} name="username" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t('users:form.usernameLabel')}</FormLabel>
-                    <FormControl><Input placeholder={t('users:form.usernamePlaceholder')} {...field} disabled={dataIsLoading || formIsSubmitting}/></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-              </div>
+      <div className="container mx-auto py-6 max-w-3xl">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => navigate("/users")}
+          className="mb-4"
+        >
+          <ArrowLeft className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+          {t("common:backToList", { listName: t("users:pageTitle") })}
+        </Button>
 
-              {/* Only show password fields in create mode */}
-              {!isEditMode && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField control={control} name="password" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('users:form.passwordLabel')}</FormLabel>
-                      <FormControl><Input type="password" {...field} disabled={formIsSubmitting}/></FormControl>
-                      <FormDescription>{t('common:validation.passwordMinLengthGeneral')}</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField control={control} name="password_confirmation" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('users:form.confirmPasswordLabel')}</FormLabel>
-                      <FormControl><Input type="password" {...field} disabled={formIsSubmitting}/></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <div className="flex items-center gap-2">
+              {isEditMode ? (
+                <UserCog className="h-6 w-6 text-primary" />
+              ) : (
+                <UserPlus className="h-6 w-6 text-primary" />
               )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField control={control} name="doctor_id" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t('users:form.doctorIdLabel')}</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={dataIsLoading || formIsSubmitting}>
-                      <FormControl><SelectTrigger><SelectValue placeholder={t('users:form.selectDoctor')} /></SelectTrigger></FormControl>
-                      <SelectContent>
-                        <SelectItem value=" ">{t('common:none')}</SelectItem>
-                        {isLoadingDoctors ? <SelectItem value="loading_docs" disabled>{t('common:loading')}</SelectItem> :
-                          doctorsList?.map(doc => <SelectItem key={doc.id} value={String(doc.id)}>{doc.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )} />
+              <div>
+                <CardTitle>
+                  {isEditMode
+                    ? t("users:editUserTitle")
+                    : t("users:createUserTitle")}
+                </CardTitle>
+                <CardDescription>
+                  {isEditMode
+                    ? t("users:form.editDetailsDescription")
+                    : t("users:form.fillDetailsToCreate")}
+                </CardDescription>
               </div>
-
-              <FormField control={control} name="is_nurse" render={({ field }) => (
-                <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4 rtl:space-x-reverse">
-                  <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={dataIsLoading || formIsSubmitting}/></FormControl>
-                  <FormLabel className="font-normal">{t('users:form.isNurseLabel')}</FormLabel>
-                </FormItem>
-              )} />
-
-              <FormField
-                control={control} name="roles"
-                render={() => ( // No 'field' needed here as we manage array directly
-                  <FormItem>
-                    <FormLabel>{t('users:form.rolesLabel')}</FormLabel>
-                    <FormDescription>{t('users:form.selectRoles')}</FormDescription>
-                    {isLoadingRoles ? <Loader2 className="animate-spin"/> : (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-4 gap-y-2 p-2 border rounded-md max-h-60 overflow-y-auto">
-                        {rolesList?.map((role) => (
-                          <FormField
-                            key={role.id} control={control} name="roles"
-                            render={({ field: roleArrayField }) => ( // alias field to avoid conflict
-                              <FormItem className="flex flex-row items-center space-x-2 space-y-0 rtl:space-x-reverse">
-                                <FormControl>
-                                  <Checkbox
-                                    checked={roleArrayField.value?.includes(role.name)}
-                                    disabled={dataIsLoading || formIsSubmitting}
-                                    onCheckedChange={(checked) => {
-                                      const currentRoles = roleArrayField.value || [];
-                                      return checked
-                                        ? roleArrayField.onChange([...currentRoles, role.name])
-                                        : roleArrayField.onChange(currentRoles.filter((name) => name !== role.name));
-                                    }}
-                                  />
-                                </FormControl>
-                                <FormLabel className="font-normal text-sm">{role.name}</FormLabel>
-                              </FormItem>
-                            )}
+            </div>
+            {isEditMode && numericUserId && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowPasswordDialog(true)}
+                className="flex items-center gap-1.5 text-xs"
+              >
+                <Key className="h-3.5 w-3.5" />
+                {t("users:changePassword")}
+              </Button>
+            )}
+          </CardHeader>
+          <CardContent>
+            <Form {...form}>
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("users:form.nameLabel")}</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            disabled={dataIsLoading || mutation.isPending}
                           />
-                        ))}
-                      </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
                     )}
-                    <FormMessage /> {/* For the roles array itself (e.g., min 1 role) */}
-                  </FormItem>
-                )}
-              />
-              
-              <div className="flex justify-end gap-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => navigate('/users')} disabled={formIsSubmitting}>{t('common:cancel')}</Button>
-                <Button type="submit" disabled={dataIsLoading || formIsSubmitting}>
-                  {formIsSubmitting && <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />}
-                  {t('users:form.saveButton')}
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+                  />
+                  <FormField
+                    control={control}
+                    name="username"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("users:form.usernameLabel")}</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            disabled={dataIsLoading || mutation.isPending}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
-      {isEditMode && userId && (
+                {!isEditMode && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("users:form.passwordLabel")}</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="password"
+                              {...field}
+                              disabled={mutation.isPending}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            {t("users:validation.passwordMinLength")}
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name="password_confirmation"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            {t("users:form.confirmPasswordLabel")}
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              type="password"
+                              {...field}
+                              disabled={mutation.isPending}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
+
+                <FormField
+                  control={control}
+                  name="doctor_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("users:form.doctorIdLabel")}</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value || ""}
+                        disabled={dataIsLoading || mutation.isPending}
+                        dir={i18n.dir()}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue
+                              placeholder={t(
+                                "users:form.selectDoctorPlaceholder"
+                              )}
+                            />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="">{t("common:none")}</SelectItem>
+                          {isLoadingDoctors ? (
+                            <SelectItem value="loading_docs" disabled>
+                              {t("common:loading")}
+                            </SelectItem>
+                          ) : (
+                            doctorsList?.map((doc: DoctorStripped) => (
+                              <SelectItem key={doc.id} value={String(doc.id)}>
+                                {doc.name}{" "}
+                                {doc.specialist_name
+                                  ? `(${doc.specialist_name})`
+                                  : ""}
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        {t("users:form.doctorIdDescription")}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <FormField
+                    control={control}
+                    name="is_nurse"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center space-x-3 rtl:space-x-reverse space-y-0 rounded-md border p-3 shadow-sm h-full justify-between">
+                        <FormLabel className="font-normal cursor-pointer">
+                          {t("users:form.isNurseLabel")}
+                        </FormLabel>
+                        <FormControl>
+                          <Checkbox
+                            id="is_nurse_checkbox"
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            disabled={dataIsLoading || mutation.isPending}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={control}
+                    name="is_supervisor"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm h-full">
+                        <FormLabel className="font-normal cursor-pointer">
+                          {t("users:form.isSupervisorLabel")}
+                        </FormLabel>
+                        <FormControl>
+                          <Switch
+                            id="is_supervisor_switch"
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            disabled={dataIsLoading || mutation.isPending}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={control}
+                    name="is_active"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm h-full">
+                        <FormLabel className="font-normal cursor-pointer">
+                          {t("users:form.isActiveLabel")}
+                        </FormLabel>
+                        <FormControl>
+                          <Switch
+                            id="is_active_switch"
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            disabled={dataIsLoading || mutation.isPending}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={control}
+                  name="user_money_collector_type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        {t("users:form.moneyCollectorTypeLabel")}
+                      </FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        disabled={dataIsLoading || mutation.isPending}
+                        dir={i18n.dir()}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="all">
+                            {t("users:moneyCollectorTypes.all")}
+                          </SelectItem>
+                          <SelectItem value="lab">
+                            {t("users:moneyCollectorTypes.lab")}
+                          </SelectItem>
+                          <SelectItem value="company">
+                            {t("users:moneyCollectorTypes.company")}
+                          </SelectItem>
+                          <SelectItem value="clinic">
+                            {t("users:moneyCollectorTypes.clinic")}
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription className="text-xs">
+                        {t("users:form.moneyCollectorTypeDescription")}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={control}
+                  name="roles"
+                  render={() => (
+                    <FormItem>
+                      <FormLabel>{t("users:form.rolesLabel")}</FormLabel>
+                      <FormDescription>
+                        {t("users:form.selectRolesDescription")}
+                      </FormDescription>
+                      {isLoadingRoles ? (
+                        <div className="flex items-center justify-center p-4">
+                          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-4 gap-y-2 p-3 border rounded-md max-h-60 overflow-y-auto">
+                          {rolesList.map((role) => (
+                            <Controller
+                              key={role.id}
+                              control={control}
+                              name="roles"
+                              render={({ field: roleArrayField }) => (
+                                <FormItem className="flex flex-row items-center space-x-2 rtl:space-x-reverse space-y-0">
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={roleArrayField.value?.includes(
+                                        role.name
+                                      )}
+                                      disabled={
+                                        dataIsLoading || mutation.isPending
+                                      }
+                                      onCheckedChange={(checked) => {
+                                        const currentRoles =
+                                          roleArrayField.value || [];
+                                        const newRoles = checked
+                                          ? [...currentRoles, role.name]
+                                          : currentRoles.filter(
+                                              (name) => name !== role.name
+                                            );
+                                        roleArrayField.onChange(newRoles);
+                                      }}
+                                      id={`role-${role.id}`}
+                                    />
+                                  </FormControl>
+                                  <FormLabel
+                                    htmlFor={`role-${role.id}`}
+                                    className="font-normal text-sm cursor-pointer"
+                                  >
+                                    {role.name}
+                                  </FormLabel>
+                                </FormItem>
+                              )}
+                            />
+                          ))}
+                        </div>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => navigate("/users")}
+                    disabled={mutation.isPending}
+                  >
+                    {t("common:cancel")}
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={
+                      dataIsLoading ||
+                      mutation.isPending ||
+                      (!isDirty && isEditMode)
+                    }
+                  >
+                    {mutation.isPending && (
+                      <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />
+                    )}
+                    {isEditMode ? t("common:saveChanges") : t("common:create")}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      </div>
+
+      {isEditMode && numericUserId && (
         <ChangePasswordDialog
-          userId={Number(userId)}
+          userId={numericUserId}
           isOpen={showPasswordDialog}
           onClose={() => setShowPasswordDialog(false)}
         />
@@ -299,5 +670,4 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
     </>
   );
 };
-
 export default UserFormPage;

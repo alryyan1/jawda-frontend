@@ -1,130 +1,405 @@
 // src/pages/users/UsersListPage.tsx
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import { getUsers, deleteUser } from '@/services/userService';
-import { User, PaginatedUsersResponse } from '@/types/users';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Trash2, Edit, Loader2, ShieldCheck, UserCircle } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { toast } from 'sonner';
-import { useTranslation } from 'react-i18next';
-import { useAuth } from '@/contexts/AuthContext'; // To get current user ID
+import React, { useState, useMemo } from "react";
+import { Link } from "react-router-dom";
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  keepPreviousData,
+} from "@tanstack/react-query";
+import { getUsers, deleteUser } from "@/services/userService";
+import type { User, PaginatedUsersResponse } from "@/types/users";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  MoreHorizontal,
+  Trash2,
+  Edit,
+  Loader2,
+  UserPlus,
+  Users as UsersIcon,
+  CheckCircle2,
+  XCircle,
+  UserCheck,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
+import { useAuth } from "@/contexts/AuthContext";
+import { cn } from "@/lib/utils";
 
 export default function UsersListPage() {
-  const { t, i18n } = useTranslation(['users', 'common']);
+  const { t, i18n } = useTranslation(["users", "common"]);
   const queryClient = useQueryClient();
-  const [currentPage, setCurrentPage] = useState(1);
-  const { user: currentUser } = useAuth(); // Get the currently logged-in user
+  const { user: currentUser } = useAuth();
 
-  const { data: paginatedData, isLoading, error, isFetching } = useQuery({
-    queryKey: ['users', currentPage],
-    queryFn: () => getUsers(currentPage),
+  // Placeholder permissions - replace with actual checks
+  const canCreateUsers = true;
+  const canEditUsers = true;
+  const canDeleteUsers = true;
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm] = useState("");
+
+  // Debounce search term if needed, for now direct query
+  const filters = useMemo(() => ({ search: searchTerm }), [searchTerm]);
+
+  const {
+    data: paginatedData,
+    isLoading,
+    error,
+    isFetching,
+  } = useQuery<PaginatedUsersResponse, Error>({
+    queryKey: ["users", currentPage, filters],
+    queryFn: () => getUsers(currentPage, filters),
     placeholderData: keepPreviousData,
   });
 
   const deleteMutation = useMutation({
     mutationFn: deleteUser,
     onSuccess: () => {
-      toast.success(t('users:deletedSuccess'));
-      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success(t("users:deletedSuccess"));
+      queryClient.invalidateQueries({ queryKey: ["users"] });
     },
-    onError: (err: any) => {
-      toast.error(t('users:deleteError'), { description: err.response?.data?.message || err.message || t('common:error.generic') });
+    onError: (err: Error) => {
+      const errorResponse = err as Error & { response?: { data?: { message?: string } } };
+      toast.error(t("users:deleteError"), {
+        description:
+          errorResponse.response?.data?.message ||
+          err.message ||
+          t("common:error.generic"),
+      });
     },
   });
 
-  const handleDelete = (userId: number, username: string) => {
-    if (currentUser && currentUser.id === userId) {
-      toast.error(t('users:errorCannotDeleteSelf', "You cannot delete your own account."));
+  const handleDelete = (userToDelete: User) => {
+    if (currentUser && currentUser.id === userToDelete.id) {
+      toast.error(t("users:errorCannotDeleteSelf"));
       return;
     }
-    if (window.confirm(t('users:deleteConfirmText', { username }))) {
-      deleteMutation.mutate(userId);
+    // Add more checks, e.g., cannot delete last super admin
+    if (
+      userToDelete.roles?.some((role) => role.name === "Super Admin") &&
+      paginatedData?.data.filter((u: User) =>
+        u.roles?.some((r) => r.name === "Super Admin")
+      ).length === 1
+    ) {
+      toast.error(t("users:errorCannotDeleteLastSuperAdmin"));
+      return;
+    }
+
+    if (
+      window.confirm(
+        t("users:deleteConfirmText", { username: userToDelete.name })
+      )
+    ) {
+      deleteMutation.mutate(userToDelete.id);
     }
   };
 
-  if (isLoading && !isFetching) return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin" /> {t('users:loadingUsers')}</div>;
-  if (error) return <p className="text-destructive p-4">{t('users:errorFetchingUsers', { message: error.message })}</p>;
+  if (isLoading && !isFetching && currentPage === 1 && !paginatedData) {
+    // More specific initial loading
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <p className="ml-3 text-muted-foreground">{t("users:loadingUsers")}</p>
+      </div>
+    );
+  }
+  if (error)
+    return (
+      <p className="text-destructive p-6 text-center">
+        {t("common:error.fetchFailedExt", {
+          entity: t("users:pageTitle"),
+          message: error.message,
+        })}
+      </p>
+    );
 
   const users = paginatedData?.data || [];
   const meta = paginatedData?.meta;
 
   return (
-    <div className="container mx-auto py-4 sm:py-6 lg:py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold">{t('users:pageTitle')}</h1>
-        {/* TODO: Add permission check for this button */}
-        <Button asChild size="sm"><Link to="/users/new">{t('users:addUserButton')}</Link></Button>
-      </div>
-      {isFetching && <div className="text-sm text-muted-foreground mb-2">{t('common:updatingList')}</div>}
-      
-      {users.length === 0 && !isLoading ? (
-        <div className="text-center py-10 text-muted-foreground">{t('users:noUsersFound')}</div>
-      ) : (
-        <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[50px] text-center">{t('users:table.id')}</TableHead>
-                <TableHead className="text-center">{t('users:table.name')}</TableHead>
-                <TableHead className="hidden sm:table-cell text-center">{t('users:table.username')}</TableHead>
-                <TableHead className="text-center">{t('users:table.roles')}</TableHead>
-                <TableHead className="text-right">{t('users:table.actions')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell className="text-center">{user.id}</TableCell>
-                  <TableCell className="font-medium text-center">{user.name}</TableCell>
-                  <TableCell className="hidden sm:table-cell text-center">{user.username}</TableCell>
-                  <TableCell className="text-center">
-                    {user.roles?.map(role => (
-                      <Badge key={role.id} variant="outline" className="ltr:mr-1 rtl:ml-1 mb-1">{role.name}</Badge>
-                    ))}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu dir={i18n.dir()}>
-                      <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {/* TODO: Add permission check for edit */}
-                        <DropdownMenuItem asChild><Link to={`/users/${user.id}/edit`} className="flex items-center w-full"><Edit className="rtl:ml-2 ltr:mr-2 h-4 w-4" /> {t('common:edit')}</Link></DropdownMenuItem>
-                        {currentUser && currentUser.id !== user.id && ( // Don't show delete for self
-                          <>
-                            <DropdownMenuSeparator />
-                            {/* TODO: Add permission check for delete */}
-                            <DropdownMenuItem onClick={() => handleDelete(user.id, user.name)} className="text-destructive focus:text-destructive flex items-center w-full" disabled={deleteMutation.isPending && deleteMutation.variables === user.id}>
-                              {deleteMutation.isPending && deleteMutation.variables === user.id ? <Loader2 className="rtl:ml-2 ltr:mr-2 h-4 w-4 animate-spin"/> : <Trash2 className="rtl:ml-2 ltr:mr-2 h-4 w-4" />}
-                              {t('common:delete')}
-                            </DropdownMenuItem>
-                          </>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+    <TooltipProvider delayDuration={100}>
+      <div className="container mx-auto py-4 sm:py-6 lg:py-8">
+        <CardHeader className="px-0 pt-0 mb-4 sm:mb-6">
+          {" "}
+          {/* Use CardHeader for title section */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div className="flex items-center gap-2">
+              <UsersIcon className="h-7 w-7 text-primary" />
+              <CardTitle className="text-2xl sm:text-3xl">
+                {t("users:pageTitle")}
+              </CardTitle>
+            </div>
+            <div className="flex sm:flex-row flex-col w-full sm:w-auto gap-2">
+              {/* Search Input - Consider debouncing if list is very large */}
+              {/* <Input 
+                type="search" 
+                placeholder={t('common:searchPlaceholderNameOrUsername')} 
+                value={searchTerm} 
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="h-9 w-full sm:w-64"
+              /> */}
+              {canCreateUsers && (
+                <Button asChild size="sm" className="h-9 w-full sm:w-auto">
+                  <Link to="/users/new" className="flex items-center gap-1.5">
+                    <UserPlus className="h-4 w-4" /> {t("users:addUserButton")}
+                  </Link>
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+
+        {isFetching && (
+          <div className="text-center text-sm text-muted-foreground mb-2">
+            <Loader2 className="inline h-4 w-4 animate-spin ltr:mr-1 rtl:ml-1" />
+            {t("common:updatingList")}
+          </div>
+        )}
+
+        {users.length === 0 && !isLoading && !isFetching ? (
+          <Card className="text-center py-12">
+            <CardContent className="flex flex-col items-center gap-3 text-muted-foreground">
+              <UsersIcon className="h-16 w-16 text-gray-300 dark:text-gray-600" />
+              <p className="font-medium">
+                {searchTerm
+                  ? t("common:noResultsFound")
+                  : t("users:noUsersFound")}
+              </p>
+              {canCreateUsers && !searchTerm && (
+                <Button asChild size="sm" className="mt-2">
+                  <Link to="/users/new">{t("users:addUserButton")}</Link>
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[50px] text-center hidden sm:table-cell">
+                    {t("users:table.id")}
+                  </TableHead>
+                  <TableHead>{t("users:table.name")}</TableHead>
+                  <TableHead className="hidden md:table-cell text-center">
+                    {t("users:table.username")}
+                  </TableHead>
+                  <TableHead className="text-center">
+                    {t("users:table.roles")}
+                  </TableHead>
+                  <TableHead className="text-center w-[120px]">
+                    {t("users:table.status")}
+                  </TableHead>
+                  <TableHead className="text-right w-[80px]">
+                    {t("users:table.actions")}
+                  </TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
-      )}
-      {meta && meta.last_page > 1 && (
-         <div className="flex items-center justify-between mt-6">
-            <Button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1 || isFetching} size="sm" variant="outline">
-                {t('common:pagination.previous')}
+              </TableHeader>
+              <TableBody>
+                {users.map((user: User) => (
+                  <TableRow
+                    key={user.id}
+                    className={cn(
+                      !user.is_active &&
+                        "opacity-50 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30"
+                    )}
+                    data-testid={`user-row-${user.id}`}
+                  >
+                    <TableCell className="text-center hidden sm:table-cell py-2.5">
+                      {user.id}
+                    </TableCell>
+                    <TableCell className="font-medium py-2.5">
+                      <div className="flex items-center gap-1.5">
+                        <span>{user.name}</span>
+                        {user.is_supervisor && (
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <UserCheck className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{t("users:supervisor")}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                        {currentUser?.id === user.id && (
+                          <Badge
+                            variant="secondary"
+                            className="text-[10px] px-1.5 py-0 h-4 leading-tight"
+                          >
+                            {t("users:you")}
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-center py-2.5">
+                      {user.username}
+                    </TableCell>
+                    <TableCell className="text-center py-2.5">
+                      <div className="flex flex-wrap gap-1 justify-center">
+                        {user.roles?.slice(0, 2).map((role) => (
+                          <Badge
+                            key={role.id}
+                            variant="outline"
+                            className="text-xs px-1.5 py-0.5"
+                          >
+                            {role.name}
+                          </Badge>
+                        ))}
+                        {user.roles && user.roles.length > 2 && (
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Badge
+                                variant="outline"
+                                className="text-xs px-1.5 py-0.5"
+                              >
+                                +{user.roles.length - 2}
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {user.roles
+                                .slice(2)
+                                .map((r) => r.name)
+                                .join(", ")}
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center py-2.5">
+                      {user.is_active ? (
+                        <Badge
+                          variant="success"
+                          className="text-xs px-1.5 py-0.5 font-normal items-center gap-1"
+                        >
+                          <CheckCircle2 className="h-3 w-3" />{" "}
+                          {t("common:statusEnum.active")}
+                        </Badge>
+                      ) : (
+                        <Badge
+                          variant="destructive"
+                          className="text-xs px-1.5 py-0.5 font-normal items-center gap-1"
+                        >
+                          <XCircle className="h-3 w-3" />{" "}
+                          {t("common:statusEnum.inactive")}
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right py-2.5">
+                      <DropdownMenu dir={i18n.dir()}>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            className="h-8 w-8 p-0"
+                            disabled={
+                              deleteMutation.isPending &&
+                              deleteMutation.variables === user.id
+                            }
+                          >
+                            {deleteMutation.isPending &&
+                            deleteMutation.variables === user.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <MoreHorizontal className="h-4 w-4" />
+                            )}
+                            <span className="sr-only">
+                              {t("common:actions.openMenu")}
+                            </span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-40">
+                          {canEditUsers && (
+                            <DropdownMenuItem asChild>
+                              <Link
+                                to={`/users/${user.id}/edit`}
+                                className="flex items-center w-full"
+                              >
+                                <Edit className="rtl:ml-2 ltr:mr-2 h-4 w-4" />{" "}
+                                {t("common:edit")}
+                              </Link>
+                            </DropdownMenuItem>
+                          )}
+
+                          {/* Delete action (conditionally rendered and disabled) */}
+                          {canDeleteUsers &&
+                            currentUser &&
+                            currentUser.id !== user.id && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => handleDelete(user)}
+                                  className="text-destructive focus:text-destructive flex items-center w-full"
+                                  disabled={
+                                    deleteMutation.isPending &&
+                                    deleteMutation.variables === user.id
+                                  }
+                                >
+                                  <Trash2 className="rtl:ml-2 ltr:mr-2 h-4 w-4" />{" "}
+                                  {t("common:delete")}
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
+        )}
+        {meta && meta.last_page > 1 && (
+          <div className="flex items-center justify-center sm:justify-end gap-2 mt-6">
+            <Button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1 || isFetching}
+              size="sm"
+              variant="outline"
+            >
+              {t("common:pagination.previous")}
             </Button>
-            <span className="text-sm text-muted-foreground">
-                {t('common:pagination.pageInfo', { current: meta.current_page, total: meta.last_page })}
+            <span className="text-sm text-muted-foreground px-2">
+              {t("common:pagination.pageInfo", {
+                current: meta.current_page,
+                total: meta.last_page,
+              })}
             </span>
-            <Button onClick={() => setCurrentPage(p => Math.min(meta.last_page, p + 1))} disabled={currentPage === meta.last_page || isFetching} size="sm" variant="outline">
-                {t('common:pagination.next')}
+            <Button
+              onClick={() =>
+                setCurrentPage((p) => Math.min(meta.last_page, p + 1))
+              }
+              disabled={currentPage === meta.last_page || isFetching}
+              size="sm"
+              variant="outline"
+            >
+              {t("common:pagination.next")}
             </Button>
-        </div>
-      )}
-    </div>
+          </div>
+        )}
+      </div>
+    </TooltipProvider>
   );
 }

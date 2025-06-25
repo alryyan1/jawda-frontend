@@ -30,6 +30,9 @@ export interface User {
   username: string;
   doctor_id?: number;
   is_nurse: boolean;
+  is_supervisor?: boolean;
+  is_active?: boolean;
+  user_money_collector_type?: "lab" | "company" | "clinic" | "all";
   roles?: Role[];
   created_at?: string;
   updated_at?: string;
@@ -42,7 +45,24 @@ export interface UserFormData {
   password_confirmation?: string;
   doctor_id?: string | number;
   is_nurse: boolean;
+  is_supervisor?: boolean;
+  is_active?: boolean;
+  user_money_collector_type?: "lab" | "company" | "clinic" | "all";
   roles: string[];
+}
+
+export interface PaginatedUsersResponse {
+  data: User[];
+  meta: {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+    links?: {
+      prev?: string | null;
+      next?: string | null;
+    };
+  };
 }
 
 export enum UserFormMode {

@@ -580,7 +580,18 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {testDataForEntry.child_tests_with_results.map(
+                        {testDataForEntry.child_tests_with_results
+                          .sort((a, b) => {
+                            // First sort by test_order
+                            const orderA = Number(a.test_order) || 0;
+                            const orderB = Number(b.test_order) || 0;
+                            if (orderA !== orderB) {
+                              return orderA - orderB;
+                            }
+                            // If test_order is the same, sort by id
+                            return Number(a.id || 0) - Number(b.id || 0);
+                          })
+                          .map(
                           (ctResult, index) => {
                             const { resultValueField, normalRangeTextField } = getFieldNames(index);
 

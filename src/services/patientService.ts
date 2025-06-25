@@ -90,9 +90,9 @@ export const getPatientById = async (patientId: number): Promise<Patient> => {
 };
 // ... existing functions ...
 
-export const togglePatientResultLock = async (patientId: number): Promise<Patient> => {
-  const response = await apiClient.patch<{ data: Patient }>(`/patients/${patientId}/toggle-result-lock`);
-  return response.data.data;
+export const togglePatientResultLock = async (patientId: number, lock: boolean): Promise<Patient> => {
+  const response = await apiClient.patch<{ data: Patient }>(`/patients/${patientId}/toggle-result-lock`, { lock });
+  return response.data.data; // Assuming backend returns PatientResource wrapped in data
 };
 export const searchExistingPatients = async (term: string): Promise<PatientSearchResult[]> => {
   // Backend returns PatientSearchResultResource::collection which wraps in 'data'

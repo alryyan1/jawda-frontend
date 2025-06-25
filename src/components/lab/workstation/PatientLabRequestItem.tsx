@@ -74,6 +74,7 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
     cleanupBodyPointerEvents();
     action();
   };
+
   return (
     <ContextMenu>
       <ContextMenuTrigger>
@@ -89,15 +90,15 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
             item.patient_name
           }, ${labIdentifier}`}
           className={cn(
-            "w-[50px] h-[50px] flex-shrink-0 rounded-md cursor-pointer transition-all duration-150 ease-in-out",
-            "flex flex-col items-center justify-center relative group",
+            "w-[50px] h-[50px] flex-shrink-0 rounded-md cursor-pointer  transition-all duration-150 bg-blue-800 ease-in-out",
+            "flex flex-col items-center justify-center relative group ",
             isSelected
               ? "ring-2 ring-primary shadow-lg bg-primary/20 dark:bg-primary/30 scale-105"
-              : "bg-card dark:bg-slate-800/70  ring-1 ring-transparent ring-slate-400 dark:hover:ring-slate-600 hover:scale-105"
+              : `bg-card dark:bg-slate-800/70  ring-1 ring-transparent ring-slate-400 dark:hover:ring-slate-600 hover:scale-105 ${item.is_printed &&  'bg-blue-400'} `
           )}
           title={`${item.patient_name}\nID: ${labIdentifier}\nTests: ${item.test_count}`}
         >
-          <span className="text-xs text-black font-bold dark:text-white  ">
+          <span className="text-xs text-black font-bold dark:text-white   ">
             {labIdentifier.length > 6
               ? labIdentifier.substring(0, 5) + "…"
               : labIdentifier}
@@ -113,12 +114,10 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
               {item.test_count}
             </Badge>
           )}
-          {isResultLocked && (
-            <Lock className="absolute -bottom-1 -left-1 h-3 w-3 text-amber-500" />
+          {item.is_result_locked && (
+            <Lock className="absolute bottom-1 -left-1.2 h-3 w-3 text-red-500" />
           )}
-          <span className="absolute -bottom-4 left-1/2 -translate-x-1/2 whitespace-nowrap px-1.5 py-0.5 text-[9px] bg-slate-700 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-20">
-            {item.patient_name}
-          </span>
+      
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent className="w-56">

@@ -4,6 +4,17 @@
     "patientPhoneMissingAdmin": "لم يتم تسجيل رقم هاتف للمريض. يرجى تحديث بيانات المريض أولاً.",
     "patientPhoneMissing": "رقم هاتف المريض غير موجود."
   },
+  "sendReceiptShort": "إرسال الإيصال",
+    "sendReportShort": "إرسال التقرير",
+    "sendDialogTitle": {
+      "receipt": "إرسال الإيصال عبر واتساب",
+      "report": "إرسال التقرير عبر واتساب",
+      "fullReport": "إرسال التقرير الكامل عبر واتساب"
+
+    },
+    "sendDialogDescription": "يرجى تأكيد الرسالة قبل إرسالها عبر واتساب.",
+    "captionOptional": "العنوان (اختياري)",
+    "captionPlaceholder": "أدخل عنوانًا مخصصًا...",
   "message": "الرسالة",
   "noTemplate": "بدون قالب",
   "bulk": {

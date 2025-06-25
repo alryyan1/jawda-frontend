@@ -14,6 +14,7 @@
       "sampleId": "عينة #{{id}}",
       "requestId": "طلب #{{id}}"
     },
+  
     "visitLoaded": "تم تحميل الزيارة بنجاح",
     "testSelection": {
       "title": "الفحوصات المطلوبة لـ: {{patientName}}",
@@ -141,6 +142,13 @@
       "deviceNameLabel": "اسم الجهاز"
     },
     "labActions": {
+      "selectPatientFirst":"اختر مريضاً أولاً",
+      "resultsLockedSuccess": "تم قفل النتائج بنجاح",
+      "resultsUnlockedSuccess": "تم فتح النتائج بنجاح",
+      "lockResults": "قفل النتائج",
+      "unlockResults": "فتح النتائج",
+      "resultsAreLocked": "النتائج مقفلة",
+      "resultsAreUnlocked": "النتائج مفتوحة",
     "confirmResetToDefault": "هل أنت متأكد من إعادة تعيين النتائج إلى القيم الافتراضية؟",
     "confirmResetToDefaultSuccess": "تم إعادة تعيين النتائج إلى القيم الافتراضية بنجاح",
     "confirmResetToDefaultError": "فشل إعادة تعيين النتائج إلى القيم الافتراضية",

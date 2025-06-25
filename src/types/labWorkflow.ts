@@ -5,12 +5,15 @@ export interface PatientLabQueueItem { // For the leftmost list
   patient_id: number;
   lab_number: string;
   patient_name: string;
+  is_printed?: boolean;
   phone : string;
   sample_id?: string | null; // Or primary LabRequest ID for the visit
   lab_request_ids: number[]; // All labrequest IDs for this patient's visit
   oldest_request_time: string;
   test_count: number;
   result_is_locked: boolean;
+  all_requests_paid: boolean;
+  is_result_locked: boolean;
   // status_summary?: string; // e.g. "3 Pending, 1 Complete"
 }
 

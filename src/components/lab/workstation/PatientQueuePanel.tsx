@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button'; // shadcn Button
 import QueueHeader from './QueueHeader'; // Assumes QueueHeader is updated for shift navigation
 import PatientLabRequestItem from './PatientLabRequestItem';
 import type { Shift } from '@/types/shifts';
-import type { PatientLabQueueItem, PaginatedPatientLabQueueResponse, LabQueueFilters } from '@/types/labWorkflow';
+import type { PatientLabQueueItem, PaginatedPatientLabQueueResponse } from '@/types/labWorkflow';
+import type { LabQueueFilters } from './LabQueueFilterDialog';
 import { getLabPendingQueue } from '@/services/labWorkflowService';
 // format from date-fns no longer needed here if date is not primary filter when shift is present
 
@@ -45,15 +46,29 @@ const PatientQueuePanel: React.FC<PatientQueuePanelProps> = ({
   } = useQuery<PaginatedPatientLabQueueResponse, Error>({
     queryKey: queueQueryKey,
     queryFn: () => {
-      const filters: any = {
+      const filters: {
+        search?: string;
+        page?: number;
+        per_page?: number;
+        shift_id?: number;
+        package_id?: string | null;
+        main_test_id?: string | null;
+        result_status_filter?: string;
+        print_status_filter?: string;
+        company_id?: string | null;
+        doctor_id?: string | null;
+      } = {
         search: globalSearchTerm,
         page: currentPage,
-        per_page: 50, // Fetch more items if using flexbox to allow wrapping
+        per_page: 50,
         shift_id: currentShift?.id,
-        // Include queue filters
+        // Include all queue filters
         package_id: queueFilters.package_id,
         main_test_id: queueFilters.main_test_id,
-        has_unfinished_results: queueFilters.has_unfinished_results,
+        result_status_filter: queueFilters.result_status_filter !== 'all' ? queueFilters.result_status_filter : undefined,
+        print_status_filter: queueFilters.print_status_filter !== 'all' ? queueFilters.print_status_filter : undefined,
+        company_id: queueFilters.company_id,
+        doctor_id: queueFilters.doctor_id,
       };
       
       return getLabPendingQueue(filters);
@@ -76,7 +91,7 @@ const PatientQueuePanel: React.FC<PatientQueuePanelProps> = ({
       // Or directly call refetch:
       // refetchQueue();
   };
-
+  
   return (
     <div className="h-full flex flex-col">
       <QueueHeader
@@ -116,11 +131,12 @@ const PatientQueuePanel: React.FC<PatientQueuePanelProps> = ({
             <div className="p-2 flex flex-wrap gap-2 justify-start items-start content-start">
               {queueItems.map((item) => (
                 <PatientLabRequestItem
+                 isResultLocked={item.result_is_locked}
                   key={item.visit_id + (item.sample_id || '')}
                   item={item}
                   isSelected={selectedVisitId === item.visit_id}
                   onSelect={() => onPatientSelect(item)}
-                  allRequestsPaid={(item as any).all_requests_paid} // Ensure backend provides this
+                  allRequestsPaid={(item as unknown as { all_requests_paid?: boolean }).all_requests_paid}
                   onSendWhatsAppText={onSendWhatsAppText}
                   onSendPdfToPatient={onSendPdfToPatient}
                   onSendPdfToCustomNumber={onSendPdfToCustomNumber}

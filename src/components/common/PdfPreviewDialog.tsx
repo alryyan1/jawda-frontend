@@ -39,7 +39,8 @@ const PdfPreviewDialog: React.FC<PdfPreviewDialogProps> = ({
     // Add PDF viewer parameters to fit to width by default
     // Use multiple parameters for better browser compatibility
     const separator = url.includes('#') ? '&' : '#';
-    return `${url}${separator}view=FitH&zoom=page-width&toolbar=1&navpanes=0`;
+    return `${url}${separator}`;
+    // return `${url}${separator}view=FitH&zoom=page-width&toolbar=1&navpanes=0`;
   };
 
   return (

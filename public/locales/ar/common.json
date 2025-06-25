@@ -18,6 +18,7 @@
   "noDataAvailable": "لا توجد بيانات متاحة",
   "receiptPreviewTitle": "عرض الإيصال",
   "noItemsFound": "لا يوجد عناصر",
+  "invalidPhone": "رقم الهاتف غير صالح",
   "pdfPreview.generating": "جاري إنشاء PDF...",
   "searchByNameOrPhone": "ابحث بالاسم أو رقم الهاتف",
    "totalRequests": "إجمالي الطلبات",

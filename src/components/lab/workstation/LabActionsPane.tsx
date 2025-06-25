@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
-import { ShieldCheck, Zap, ListFilter, Settings2, Printer, Loader2, RotateCcw, Atom } from 'lucide-react'; // Example icons
+import { ShieldCheck, Zap, ListFilter, Settings2, Printer, Loader2, RotateCcw, Atom, Lock, Unlock } from 'lucide-react'; // Example icons
 import { cn } from '@/lib/utils';
 
 import type { LabRequest } from '@/types/visits'; // Or types/visits
@@ -12,6 +12,9 @@ import { toast } from 'sonner';
 import { setLabRequestResultsToDefault } from '@/services/labWorkflowService';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { populateCbcResults } from '@/services/labRequestService';
+import { togglePatientResultLock } from '@/services/patientService';
+import type { Patient } from '@/types/patients';
+import type { PatientLabQueueItem } from '@/types/labWorkflow';
 // import { useAuthorization } from '@/hooks/useAuthorization';
 
 interface LabActionsPaneProps {
@@ -20,6 +23,7 @@ interface LabActionsPaneProps {
   onResultsReset: (labRequest: LabRequest) => void;
   onResultsModified: (labRequest: LabRequest) => void;
   isResultLocked: boolean;
+  currentPatientData  : Patient | null;
     // Add other props if actions depend on more context
 }
 
@@ -28,11 +32,88 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
   selectedVisitId,
   onResultsReset,
   onResultsModified,
-  isResultLocked,
+  currentPatientData,
 }) => {
   const { t, i18n } = useTranslation(['labResults', 'common']);
   // const { can } = useAuthorization();
   const queryClient = useQueryClient();
+ console.log(currentPatientData,'currentPatientData')
+  const patientIdForLock =  currentPatientData?.id;
+  const currentLockStatus = currentPatientData?.result_is_locked || false;
+
+  const toggleLockMutation = useMutation({
+    mutationFn: (params: { patientId: number; lock: boolean }) =>
+      togglePatientResultLock(params.patientId, params.lock),
+    onSuccess: (updatedPatient, variables) => {
+      console.log(updatedPatient,'updatedPatient')
+      toast.success(variables.lock ? t('labResults:labActions.resultsLockedSuccess') : t('labResults:labActions.resultsUnlockedSuccess'));
+      
+      // Immediately update the query cache with the response data
+      if (updatedPatient) {
+        // Update the correct patient cache key that feeds currentPatientData
+        queryClient.setQueryData(['patientDetailsForActionPane', variables.patientId], updatedPatient);
+        
+        // Also update other patient detail caches that might exist
+        queryClient.setQueryData(['patientDetailsForInfoPanel', variables.patientId], (old: any) => {
+          if (old?.data) {
+            return {
+              ...old,
+              data: {
+                ...old.data,
+                result_is_locked: updatedPatient.result_is_locked
+              }
+            };
+          }
+          return { data: updatedPatient };
+        });
+
+        queryClient.setQueryData(['patientDetailsForLabDisplay', variables.patientId], (old: any) => {
+          if (old?.data) {
+            return {
+              ...old,
+              data: {
+                ...old.data,
+                result_is_locked: updatedPatient.result_is_locked
+              }
+            };
+          }
+          return { data: updatedPatient };
+        });
+
+        // Update queue items if they exist
+        queryClient.setQueryData(['labPendingQueue'], (old: any) => {
+          if (old?.data) {
+            return {
+              ...old,
+              data: old.data.map((item: any) => 
+                item.patient_id === variables.patientId 
+                  ? { ...item, result_is_locked: updatedPatient.result_is_locked }
+                  : item
+              )
+            };
+          }
+          return old;
+        });
+      }
+      
+      // Invalidate queries to ensure fresh data from server (as backup)
+      queryClient.invalidateQueries({ queryKey: ['patientDetailsForActionPane', variables.patientId] });
+      queryClient.invalidateQueries({ queryKey: ['patientDetailsForInfoPanel', variables.patientId] });
+      queryClient.invalidateQueries({ queryKey: ['patientDetailsForLabDisplay', variables.patientId] });
+      queryClient.invalidateQueries({ queryKey: ['labPendingQueue'] });
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || t('common:error.operationFailed'));
+    }
+  });
+
+  const handleToggleLock = () => {
+    if (!patientIdForLock) {
+      toast.error(t('labResults:labActions.selectPatientFirst'));
+      return;
+    }
+    toggleLockMutation.mutate({ patientId: patientIdForLock, lock: !currentLockStatus });
+  };
 
   // Placeholder permissions
   const canBatchAuthorize = true; // can('batch_authorize lab_results')
@@ -125,7 +206,7 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
       })
     );
   };
-
+ console.log(currentLockStatus,'currentLockStatus')
   return (
     <TooltipProvider delayDuration={100}>
       <aside 
@@ -230,7 +311,29 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
                 <p>{t('labResults:labActions.printWorklist')}</p>
             </TooltipContent>
         </Tooltip>
-
+        <Tooltip>
+                <TooltipTrigger asChild>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="w-10 h-10"
+                    onClick={handleToggleLock}
+                    disabled={toggleLockMutation.isPending}
+                    aria-label={currentLockStatus === false ? t('labResults:labActions.unlockResults') : t('labResults:labActions.lockResults')}
+                >
+                    {toggleLockMutation.isPending ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : currentLockStatus === false ? (
+                        <Unlock className="h-5 w-5 text-green-500" />
+                    ) : (
+                        <Lock className="h-5 w-5 text-red-500" />
+                    )}
+                </Button>
+                </TooltipTrigger>
+                <TooltipContent side={i18n.dir() === 'rtl' ? 'left' : 'right'} sideOffset={5}>
+                <p>{currentLockStatus === false ? t('labResults:labActions.unlockResults') : t('labResults:labActions.lockResults')}</p>
+                </TooltipContent>
+            </Tooltip>
         {/* Spacer to push settings to bottom, or use flex-grow on a container above */}
         <div className="flex-grow"></div> 
 

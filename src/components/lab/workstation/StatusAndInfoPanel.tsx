@@ -57,7 +57,7 @@ import { toast } from "sonner";
 import type { Patient } from "@/types/patients";
 import type { LabRequest } from "@/types/visits";
 import { getPatientById } from "@/services/patientService";
-import type { ChildTestWithResult } from "@/types/labWorkflow";
+import type { ChildTestWithResult, PatientLabQueueItem } from "@/types/labWorkflow";
 import {
   getPanelOrder,
   savePanelOrder,
@@ -67,12 +67,16 @@ import {
 import type { PanelId } from "@/lib/panel-settings-store";
 import PdfPreviewDialog from "@/components/common/PdfPreviewDialog";
 import apiClient from "@/services/api";
+import i18n from "@/i18n";
+import SendReportWhatsAppDialog from "./dialog/SendReportWhatsAppDialog";
+import { WhatsApp } from "@mui/icons-material";
 
 interface StatusAndInfoPanelProps {
   patientId: number | null;
   visitId: number | null;
   selectedLabRequest: LabRequest | null;
   focusedChildTest: ChildTestWithResult | null;
+  patientLabQueueItem: PatientLabQueueItem | null;
 }
 
 // Reusable Detail Row
@@ -179,6 +183,7 @@ const SortableInfoCard: React.FC<SortableInfoCardProps> = ({
     }
   }, [id, defaultCollapsed]);
 
+
   return (
     <div
       ref={setNodeRef}
@@ -190,6 +195,7 @@ const SortableInfoCard: React.FC<SortableInfoCardProps> = ({
         onOpenChange={handleToggleCollapse}
       >
         <Card
+        dir={i18n.dir()}
           className={cn(
             "shadow-md overflow-hidden",
             isDragging && "ring-2 ring-primary"
@@ -248,6 +254,7 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
   visitId,
   selectedLabRequest,
   focusedChildTest,
+  patientLabQueueItem,
 }) => {
   const { t, i18n } = useTranslation([
     "labResults",
@@ -277,6 +284,7 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
         : Promise.reject(new Error("Patient ID required")),
     enabled: !!patientId,
   });
+  const resultsLocked = patient?.result_is_locked || false;
 
   const isCompanyPatient = !!patient?.company_id;
 
@@ -421,7 +429,7 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
       });
     }
   };
-
+  // console.log(patient,'patient')
   const panelComponents: Record<PanelId, React.ReactNode> = {
     patientInfo: (
       <SortableInfoCard
@@ -445,19 +453,22 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
               value={patient.name}
               valueClassName="text-primary font-semibold"
             />
+
              <DetailRowDisplay 
               label={t("common:visitDate")} 
               value={patient.created_at ? format(parseISO(patient.created_at as unknown as string), "PPP", { locale: dateLocale }) : 'N/A'}
               icon={CalendarDays}
             />
-            {patient.doctor && (
+            {patient.primary_doctor && (
                 <DetailRowDisplay 
                     label={t("common:doctor")} 
-                    value={patient.doctor.name} 
+                    value={patient.primary_doctor.name} 
                     icon={User} 
                 />
             )}
+
             <DetailRowDisplay label={t("common:phone")} value={patient.phone} />
+            {/* <DetailRowDisplay label={t("common:doctor")} value={patient.doctor.name} /> */}
             <DetailRowDisplay
               label={t("common:gender")}
               value={t(`common:genderEnum.${patient.gender}`)}
@@ -646,7 +657,19 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
       </SortableInfoCard>
     ) : null,
   };
+  const [isSendWhatsAppDialogOpen, setIsSendWhatsAppDialogOpen] = useState(false);
+  const [reportTypeForWhatsApp, setReportTypeForWhatsApp] = useState<'full_lab_report' | 'thermal_lab_receipt'>('full_lab_report');
 
+  // ... existing functions ...
+
+  const handleOpenWhatsAppDialog = (type: 'full_lab_report' | 'thermal_lab_receipt') => {
+    if (!visitId || !patient) {
+      toast.error("Patient or visit information is missing.");
+      return;
+    }
+    setReportTypeForWhatsApp(type);
+    setIsSendWhatsAppDialogOpen(true);
+  };
   if (!patientId) {
     return (
       <div className="h-full flex items-center justify-center p-4">
@@ -656,10 +679,11 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
       </div>
     );
   }
+  console.log(patientLabQueueItem,'patientLabQueueItem')
 
   return (
   <>
-  <ScrollArea className="h-full bg-slate-50 dark:bg-slate-800/30">
+  <ScrollArea dir={i18n.dir()} className="h-full bg-slate-50 dark:bg-slate-800/30">
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={panelOrder.map(id => id)} strategy={verticalListSortingStrategy}>
             <div className="p-2 sm:p-3 space-y-2 sm:space-y-3">
@@ -672,16 +696,42 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
                     {t("labResults:statusInfo.actionsTitle")}
                   </CardTitle>
                 </CardHeader>
-                {console.log(visitId,'visitId')}
                 <CardContent className="space-y-1.5">
+                    {/* New WhatsApp Buttons */}
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full justify-start text-xs text-green-700 hover:text-green-800 border-green-300 hover:bg-green-50 dark:text-green-400 dark:border-green-600 dark:hover:bg-green-700/20"
+              onClick={() => handleOpenWhatsAppDialog('thermal_lab_receipt')}
+              disabled={!visitId || !patient} // Simple check for now
+            >
+              <WhatsApp className="ltr:mr-2 rtl:ml-2 h-3.5 w-3.5" />
+              {t('whatsapp:sendReceiptShort')}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full justify-start text-xs text-green-700 hover:text-green-800 border-green-300 hover:bg-green-50 dark:text-green-400 dark:border-green-600 dark:hover:bg-green-700/20"
+              onClick={() => handleOpenWhatsAppDialog('full_lab_report')}
+              disabled={!visitId || !patient /* || resultsLocked - if preview implies sendable */}
+            >
+              <WhatsApp className="ltr:mr-2 rtl:ml-2 h-3.5 w-3.5" />
+              {t('whatsapp:sendReportShort')}
+            </Button>
                   <Button variant="outline" size="sm" className="w-full justify-start text-xs" onClick={handlePrintReceipt} disabled={!visitId || isGeneratingPdf}>
                     <Receipt className="ltr:mr-2 rtl:ml-2 h-3.5 w-3.5" /> {t("common:printReceipt", "Print Lab Receipt")}
                   </Button>
                   <Button variant="outline" size="sm" className="w-full justify-start text-xs" onClick={handlePrintSampleLabels} disabled={!visitId || isGeneratingPdf}>
                     <Printer className="ltr:mr-2 rtl:ml-2 h-3.5 w-3.5" />{t("labResults:statusInfo.printSampleLabels")}
                   </Button>
-                  <Button variant="outline" size="sm" className="w-full justify-start text-xs" onClick={handleViewReportPreview} disabled={!visitId || isGeneratingPdf}>
-                    <FileText className="ltr:mr-2 rtl:ml-2 h-3.5 w-3.5" />{t("labResults:statusInfo.viewReportPreview")}
+                  <Button
+                    variant="outline" size="sm" className="w-full justify-start text-xs"
+                    onClick={handleViewReportPreview}
+                    disabled={!visitId || isGeneratingPdf || resultsLocked || patientLabQueueItem?.all_requests_paid === false} // Check resultsLocked
+                    title={resultsLocked ? t('labResults:labActions.resultsAreLocked') : t("labResults:statusInfo.viewReportPreview")}
+                  >
+                    <FileText className="ltr:mr-2 rtl:ml-2 h-3.5 w-3.5" />
+                    {t("labResults:statusInfo.viewReportPreview")}
                   </Button>
                 </CardContent>
               </Card>
@@ -689,7 +739,15 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
           </SortableContext>
         </DndContext>
       </ScrollArea>
-
+      {patient && visitId && (
+        <SendReportWhatsAppDialog
+          isOpen={isSendWhatsAppDialogOpen}
+          onOpenChange={setIsSendWhatsAppDialogOpen}
+          patient={patient}
+          visitId={visitId}
+          reportType={reportTypeForWhatsApp}
+        />
+      )}
       <PdfPreviewDialog
         isOpen={isPdfPreviewOpen}
         onOpenChange={(open) => {

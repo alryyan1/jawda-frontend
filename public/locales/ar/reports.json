@@ -190,7 +190,10 @@
           "cashAmount": "المبلغ النقدي",
     "bankAmount": "المبلغ البنكي"
     },
-    "summaryTitle": "ملخص المصروفات (للفترة المحددة)",
+    "clinicGeneralReport": {
+      "titleShort": "التقرير العام",
+      "summaryTitle": "ملخص المصروفات (للفترة المحددة)"
+    },
     "totalCashPaid": "إجمالي المدفوع نقداً",
     "totalBankPaid": "إجمالي المدفوع بنك/شبكة",
     "grandTotalPaid": "الإجمالي العام للمصروفات"

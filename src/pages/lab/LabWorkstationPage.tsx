@@ -34,7 +34,7 @@ import StatusAndInfoPanel from "@/components/lab/workstation/StatusAndInfoPanel"
 
 import type {
   ChildTestWithResult,
-  LabQueueFilters,
+ 
   PatientLabQueueItem,
 } from "@/types/labWorkflow";
 import type { Shift } from "@/types/shifts";
@@ -50,13 +50,14 @@ import { getCurrentOpenShift, getShiftsList } from "@/services/shiftService";
 import { getDoctorVisitById } from "@/services/visitService";
 import { getPatientById, searchRecentDoctorVisits, togglePatientResultLock } from "@/services/patientService"; // Updated service function
 import apiClient from "@/services/api";
-import LabQueueFilterDialog from "@/components/lab/workstation/LabQueueFilterDialog";
+import LabQueueFilterDialog, { type LabQueueFilters } from "@/components/lab/workstation/LabQueueFilterDialog";
 import ShiftFinderDialog from "@/components/lab/workstation/ShiftFinderDialog";
 import PdfPreviewDialog from "@/components/common/PdfPreviewDialog";
 import SendWhatsAppTextDialog from "@/components/lab/workstation/dialog/SendWhatsAppTextDialog";
 import SendPdfToCustomNumberDialog from "@/components/lab/workstation/dialog/SendPdfToCustomNumberDialog";
 import { sendBackendWhatsAppMedia, type BackendWhatsAppMediaPayload } from "@/services/backendWhatsappService";
 import { fileToBase64 } from "@/services/whatsappService";
+import type { Patient } from "@/types/patients";
 
 const LabWorkstationPage: React.FC = () => {
   const { t, i18n } = useTranslation([
@@ -83,7 +84,17 @@ const LabWorkstationPage: React.FC = () => {
   const [activeQueueFilters, setActiveQueueFilters] = useState<LabQueueFilters>(
     {}
   );
-  
+  const [appliedQueueFilters, setAppliedQueueFilters] = useState<LabQueueFilters>({
+    result_status_filter: 'pending', // Default to show pending results
+    print_status_filter: 'all',
+    // other filters undefined initially
+  });
+  const { data: patientDetailsForActionPane } = useQuery<Patient | null, Error>({
+    queryKey: ['patientDetailsForActionPane', selectedQueueItem?.patient_id],
+    queryFn: () => selectedQueueItem?.patient_id ? getPatientById(selectedQueueItem.patient_id) : Promise.resolve(null),
+    enabled: !!selectedQueueItem?.patient_id, // Fetch when a patient is selected in the queue
+    staleTime: 5 * 60 * 1000, // Cache for 5 mins
+});
   // Global states
   const [globalSearchTerm, setGlobalSearchTerm] = useState('');
   const [debouncedGlobalSearch, setDebouncedGlobalSearch] = useState('');
@@ -410,11 +421,14 @@ const LabWorkstationPage: React.FC = () => {
       </div>
     );
   }
-  // No need for explicit shiftError handling for global shift here, as queue will show "no shift" if currentShiftForQueue is null
+
+  
   const handleApplyQueueFilters = (newFilters: LabQueueFilters) => {
-    setActiveQueueFilters(newFilters);
-    // The PatientQueuePanel's query key will include activeQueueFilters,
-    // so it will refetch automatically when activeQueueFilters changes.
+    setAppliedQueueFilters(newFilters);
+    setActiveQueueFilters(newFilters); // Also update active filters for dialog
+    // PatientQueuePanel will refetch automatically because appliedQueueFilters will be part of its queryKey
+    // Or, if not directly part of queryKey, invalidate here:
+    queryClient.invalidateQueries({ queryKey: ['labPendingQueue'] });
   };
  // --- PDF Preview Logic for Actions Pane ---
  const generateAndShowPdfForActionPane = async (
@@ -447,6 +461,7 @@ const LabWorkstationPage: React.FC = () => {
     setPdfPreviewData(prev => ({...prev, isLoading: false, isOpen: false}));
   }
 };
+console.log(selectedQueueItem,'selectedQueueItem')
   return (
     <div className="flex flex-col h-screen bg-slate-100 dark:bg-slate-900 text-sm overflow-hidden">
       <header className="flex-shrink-0 h-auto p-3 border-b bg-card flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4 shadow-sm dark:border-slate-800">
@@ -630,6 +645,7 @@ const LabWorkstationPage: React.FC = () => {
           )}
         >
        <PatientQueuePanel
+       
               currentShift={currentShiftForQueue}
               onShiftChange={handleShiftNavigationInQueue}
               onPatientSelect={(queueItem) => {
@@ -640,6 +656,7 @@ const LabWorkstationPage: React.FC = () => {
               }}
               selectedVisitId={selectedQueueItem?.visit_id || null}
               globalSearchTerm={debouncedGlobalSearch}
+              queueFilters={appliedQueueFilters}
               // Passing new context menu handlers
               onSendWhatsAppText={handleSendWhatsAppText}
               onSendPdfToPatient={handleSendPdfToPatient}
@@ -722,6 +739,7 @@ const LabWorkstationPage: React.FC = () => {
               visitId={selectedQueueItem.visit_id} // Pass the visit_id (context ID)
               selectedLabRequest={selectedLabRequestForEntry}
               focusedChildTest={focusedChildTestForInfo}
+              patientLabQueueItem={selectedQueueItem || null}
             />
           ) : (
             <div className="p-4 text-center text-muted-foreground hidden lg:flex flex-col items-center justify-center h-full">
@@ -741,8 +759,9 @@ const LabWorkstationPage: React.FC = () => {
           )}
         >
            <LabActionsPane
-              selectedLabRequest={selectedLabRequestForEntry}
+              selectedLabRequest={selectedLabRequestForEntry || null}
               selectedVisitId={selectedQueueItem?.visit_id || null}
+              currentPatientData={patientDetailsForActionPane as Patient | null}
               isResultLocked={isCurrentResultLocked} // Pass lock status
               onPrintReceipt={() => generateAndShowPdfForActionPane('common:printReceiptDialogTitle', 'LabReceipt', `/visits/{visitId}/lab-thermal-receipt/pdf`)}
               onPrintLabels={() => generateAndShowPdfForActionPane('labResults:statusInfo.printSampleLabelsDialogTitle', 'SampleLabels', `/visits/{visitId}/lab-sample-labels/pdf`)}

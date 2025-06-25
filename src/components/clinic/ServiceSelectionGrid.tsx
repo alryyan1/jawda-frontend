@@ -246,7 +246,15 @@ const ServiceSelectionGrid: React.FC<ServiceSelectionGridProps> = ({
             </Button>
         </div>
      
-      
+         {/* Add Selected Button - Positioned at the bottom */}
+         {selectedServiceIds.size > 0 && (
+        <div className="mt-auto flex justify-end flex-shrink-0 border-t"> {/* Ensure it's at the bottom */}
+          <Button onClick={handleAddClick} disabled={isLoading || selectedServiceIds.size === 0} size="sm">
+            {isLoading && <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2" aria-hidden="true" />}
+            {t('common:addSelectedCount', { count: selectedServiceIds.size })}
+          </Button>
+        </div>
+      )}
       
         <Button onClick={onCancel} variant="outline" size="sm" className="w-full sm:w-auto h-9 flex-shrink-0">
           <List className="h-4 w-4 ltr:mr-2 rtl:ml-2" aria-hidden="true" /> {t('common:viewRequested')}
@@ -263,7 +271,7 @@ const ServiceSelectionGrid: React.FC<ServiceSelectionGridProps> = ({
       ) : (
         <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue={activeTab || filteredCatalog[0]?.id.toString()} dir={i18n.dir()} className="w-full flex flex-col flex-grow">
           <ScrollArea type='scroll' className="w-full whitespace-nowrap border-b flex-shrink-0">
-            <TabsList  className="flex h-auto p-1 bg-muted rounded-lg" aria-label={t('services:serviceGroupsNavigation')}>
+            <TabsList  className="flex flex-wrap h-auto p-1 bg-muted rounded-lg" aria-label={t('services:serviceGroupsNavigation')}>
               {filteredCatalog.map((group) => (
                 <TabsTrigger
                   key={group.id}
@@ -299,15 +307,7 @@ const ServiceSelectionGrid: React.FC<ServiceSelectionGridProps> = ({
         </Tabs>
       )}
 
-      {/* Add Selected Button - Positioned at the bottom */}
-      {selectedServiceIds.size > 0 && (
-        <div className="mt-auto pt-3 flex justify-end flex-shrink-0 border-t"> {/* Ensure it's at the bottom */}
-          <Button onClick={handleAddClick} disabled={isLoading || selectedServiceIds.size === 0} size="sm">
-            {isLoading && <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2" aria-hidden="true" />}
-            {t('common:addSelectedCount', { count: selectedServiceIds.size })}
-          </Button>
-        </div>
-      )}
+   
     </div>
   );
 };

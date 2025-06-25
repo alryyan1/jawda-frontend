@@ -26,6 +26,11 @@
       "statusPayment": "حالة الدفع",
       "paymentMethodShort": "طريقة الدفع"
     },
+    "searchTestsPlaceholder": "ابحث عن اختبار",
+   
+    "packageEntityName": "الباقة",
+    "packageEntityNamePlural": "الباقات",
+  
     "form": {
       "nameLabel": "اسم الفحص الرئيسي",
       "namePlaceholder": "مثال: تعداد الدم الكامل (CBC)",
@@ -49,6 +54,7 @@
     "deletedSuccess": "تم حذف الفحص بنجاح!",
     "deleteError": "فشل حذف الفحص.",
     "containers": {
+      "entityNamePlural": "الاختبارات",
        "addDialogTitle": "إضافة وعاء عينة جديد",
        "addDialogDescription": "أدخل اسم وعاء العينة (مثال: أنبوب EDTA، وعاء بول).",
        "nameLabel": "اسم الوعاء",

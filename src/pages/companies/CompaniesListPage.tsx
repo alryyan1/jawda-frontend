@@ -8,7 +8,6 @@ import {
   keepPreviousData,
 } from "@tanstack/react-query";
 import { getCompanies, deleteCompany } from "@/services/companyService";
-import { Company } from "@/types/companies";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -42,7 +41,7 @@ import { useAuthorization } from "@/hooks/useAuthorization"; // For permission c
 export default function CompaniesListPage() {
   const { t, i18n } = useTranslation(["companies", "common"]);
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
+
   const [currentPage, setCurrentPage] = useState(1);
   const { can ,user} = useAuthorization(); // Get permission checking function
     console.log(user,'user')
@@ -287,7 +286,7 @@ export default function CompaniesListPage() {
         <div className="flex items-center justify-between mt-6">
           <Button
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={!meta.links.prev || isFetching}
+            disabled={currentPage <= 1 || isFetching}
             size="sm"
             variant="outline"
           >
@@ -303,7 +302,7 @@ export default function CompaniesListPage() {
             onClick={() =>
               setCurrentPage((p) => Math.min(meta.last_page, p + 1))
             }
-            disabled={!meta.links.next || isFetching}
+            disabled={currentPage >= meta.last_page || isFetching}
             size="sm"
             variant="outline"
           >

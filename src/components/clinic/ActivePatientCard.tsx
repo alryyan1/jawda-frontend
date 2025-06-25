@@ -309,16 +309,17 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
     queryClient.invalidateQueries({ queryKey: ["activePatients"] }); // Refresh patient lists
     toast.success(t("clinic:visit.newVisitForPatientCreatedSuccess"));
   };
+  console.log(visit,'visit in ActivePatientCard');
   return (
     <>
       <ContextMenu>
         <ContextMenuTrigger asChild>
           <Card
             className={cn(
-              "hover:shadow-lg transition-shadow cursor-pointer flex flex-row items-center px-2.5 py-1.5 min-h-[48px]",
+              "hover:shadow-lg transition-shadow   cursor-pointer flex flex-row items-center px-2.5 py-1.5 min-h-[48px]",
               isSelected
-                ? "ring-2 ring-primary shadow-lg bg-primary/10 dark:bg-primary/20"
-                : "bg-card ring-1 ring-transparent hover:ring-slate-300 dark:hover:ring-slate-700"
+                ? "ring-2 ring-primary  shadow-lg bg-primary/10 dark:bg-primary/20"
+                : `bg-card ring-1 ring-transparent hover:ring-slate-300 dark:hover:ring-slate-700 ${visit.company  ? "ring-pink-400" : ""}`
             )}
             onClick={handleCardClick}
             role="button"

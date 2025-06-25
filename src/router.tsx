@@ -68,6 +68,7 @@ import MonthlyLabIncomeReportPage from "./pages/reports/MonthlyLabIncomeReportPa
 import ServiceGroupsPage from "./pages/settings/ServiceGroupsPage";
 import SampleCollectionPage from "./pages/lab/SampleCollectionPage";
 import MonthlyAttendanceSummaryPage from "./pages/attendance/MonthlyAttendanceSummaryPage";
+import LabTestStatisticsReportPage from "./pages/reports/LabTestStatisticsReportPage";
 // import NotFoundPage from './pages/NotFoundPage'; // Optional: For 404 handling
 
 const AppointmentsPlaceholderPage: React.FC = () => (
@@ -227,6 +228,10 @@ const router = createBrowserRouter([
               {
                 path: "service-statistics",
                 element: <ServiceStatisticsReportPage />,
+              },
+              {
+                path: 'lab-test-statistics',
+                element: <LabTestStatisticsReportPage />,
               },
               {
                 path: 'monthly-service-income',

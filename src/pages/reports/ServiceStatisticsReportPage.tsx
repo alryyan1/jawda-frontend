@@ -97,7 +97,7 @@ const ServiceStatisticsReportPage: React.FC = () => {
       
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">{t('reports:doctorShiftsReport.filters')}</CardTitle>
+          <CardTitle className="text-lg">{t('reports:filtersTitle')}</CardTitle>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -107,7 +107,7 @@ const ServiceStatisticsReportPage: React.FC = () => {
                 name="date_from"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs">{t('reports:doctorShiftsReport.dateRange')} ({t('common:from')})</FormLabel>
+                    <FormLabel className="text-xs">{t('reports:dateRange')} ({t('common:from')})</FormLabel>
                     <SimpleDatePicker value={field.value} onChange={field.onChange} disabled={isFetching} />
                   </FormItem>
                 )}
@@ -158,7 +158,7 @@ const ServiceStatisticsReportPage: React.FC = () => {
               />
               <Button type="submit" className="h-9 self-end lg:col-start-4" disabled={isFetching || isLoading}>
                 {isFetching ? <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2"/> : <Filter className="h-4 w-4 ltr:mr-2 rtl:ml-2"/>}
-                {t('reports:doctorShiftsReport.applyFilters')}
+                {t('reports:applyFilters')}
               </Button>
             </form>
           </Form>
@@ -177,32 +177,23 @@ const ServiceStatisticsReportPage: React.FC = () => {
         </Card>
       )}
 
-      { statistics?.data?.length > 0 && (
+      { statistics?.length > 0 && (
         <Card>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead className="text-center">{t('reports:serviceStatisticsReport.table.serviceName')}</TableHead>
-                <TableHead className="hidden sm:table-cell text-center">{t('reports:serviceStatisticsReport.table.groupName')}</TableHead>
                 <TableHead className="text-center hidden md:table-cell">{t('reports:serviceStatisticsReport.table.price')}</TableHead>
                 <TableHead className="text-center">{t('reports:serviceStatisticsReport.table.requestCount')}</TableHead>
-                <TableHead className="text-center hidden md:table-cell">{t('reports:serviceStatisticsReport.table.status')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {statistics?.data.map((stat: ServiceStatisticItem) => (
+              {statistics.map((stat: ServiceStatisticItem) => (
                 <TableRow key={stat.id}>
                   <TableCell className="font-medium text-center">{stat.name}</TableCell>
-                  <TableCell className="hidden sm:table-cell">{stat.service_group_name || '-'}</TableCell>
                   <TableCell className="text-center hidden md:table-cell">{Number(stat.price).toFixed(2)}</TableCell>
                   <TableCell className="text-center font-semibold text-lg">{stat.request_count}</TableCell>
-                  <TableCell className="text-center hidden md:table-cell">
-                    {stat.activate ? (
-                      <CheckCircle2 className="h-5 w-5 text-green-500 mx-auto"/>
-                    ) : (
-                      <XCircle className="h-5 w-5 text-red-500 mx-auto"/>
-                    )}
-                  </TableCell>
+                  
                 </TableRow>
               ))}
             </TableBody>

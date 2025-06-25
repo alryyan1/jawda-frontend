@@ -195,6 +195,15 @@
     "totalBankPaid": "إجمالي المدفوع بنك/شبكة",
     "grandTotalPaid": "الإجمالي العام للمصروفات"
   },
+  "labTestStatistics": {
+    "pageTitle": "إحصائيات اختبارات المختبر",
+    "table": {
+      "requestCount": "عدد الطلبات"
+    }
+  },
+  "labTestStatisticsReport": {
+    "titleShort": "إحصائيات اختبارات المختبر"
+  },
   "monthlyServiceIncomeReport": {
     "title": "تقرير الدخل الشهري للخدمات",
     "titleShort": "الدخل الشهري للخدمات",

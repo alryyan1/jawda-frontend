@@ -20,7 +20,8 @@
   "noItemsFound": "لا يوجد عناصر",
   "pdfPreview.generating": "جاري إنشاء PDF...",
   "searchByNameOrPhone": "ابحث بالاسم أو رقم الهاتف",
-
+   "totalRequests": "إجمالي الطلبات",
+    "allOptions": "كل الخيارات",
   "unassigned": "غير معين",
   "by": "بواسطة",
   "goBack": "الرجوع",

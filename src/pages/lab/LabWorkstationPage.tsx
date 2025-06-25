@@ -487,18 +487,54 @@ const LabWorkstationPage: React.FC = () => {
             size="small"
             sx={{
               width: { xs: "100%", sm: 250, md: 320 },
-              "& .MuiInputLabel-root": { fontSize: "0.8rem" },
+              "& .MuiInputLabel-root": { 
+                fontSize: "0.8rem",
+                color: "var(--muted-foreground)",
+                "&.Mui-focused": {
+                  color: "var(--ring)",
+                },
+              },
               "& .MuiOutlinedInput-root": {
                 fontSize: "0.8rem",
                 backgroundColor: "var(--background)",
+                color: "var(--foreground)",
+                "& fieldset": {
+                  borderColor: "var(--border)",
+                },
+                "&:hover fieldset": {
+                  borderColor: "var(--ring)",
+                },
+                "&.Mui-focused fieldset": {
+                  borderColor: "var(--ring)",
+                },
               },
               "& .MuiAutocomplete-inputRoot": {
                 paddingTop: "2px",
                 paddingBottom: "2px",
               },
+              "& .MuiAutocomplete-listbox": {
+                backgroundColor: "var(--background)",
+                color: "var(--foreground)",
+              },
+              "& .MuiAutocomplete-option": {
+                color: "var(--foreground)",
+                "&:hover": {
+                  backgroundColor: "var(--accent)",
+                },
+                "&.Mui-focused": {
+                  backgroundColor: "var(--accent)",
+                },
+              },
+              "& .MuiAutocomplete-noOptions": {
+                color: "var(--muted-foreground)",
+              },
+              "& .MuiAutocomplete-loading": {
+                color: "var(--muted-foreground)",
+              },
             }}
             renderInput={(params) => (
               <TextField
+              
                 {...params}
                 label={t("labResults:searchRecentVisitsByPatientLabel")}
                 variant="outlined"
@@ -522,8 +558,12 @@ const LabWorkstationPage: React.FC = () => {
             PaperComponent={(props) => (
               <Paper
                 {...props}
-                sx={{ fontSize: "0.8rem" }}
-                className="dark:bg-slate-800 dark:text-slate-100"
+                sx={{ 
+                  fontSize: "0.8rem",
+                  backgroundColor: "var(--background)",
+                  color: "var(--foreground)",
+                  border: "1px solid var(--border)",
+                }}
               />
             )}
             noOptionsText={

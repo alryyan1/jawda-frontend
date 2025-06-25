@@ -15,7 +15,20 @@ export interface DoctorShiftReportItem {
   status_text: string;
   user_name?: string;
 }
+// src/types/reports.ts
+// ... existing types ...
 
+export interface LabTestStatisticItem {
+  main_test_id: number;
+  main_test_name?: string;      // From MainTest model
+  container_name?: string;    // From related Container
+  package_name?: string | null; // From related Package (if applicable)
+  request_count: number;         // Aggregated from LabRequests
+  total_price_generated?: number; // Sum of LabRequest.price * LabRequest.count
+  total_amount_paid?: number;     // Sum of LabRequest.amount_paid
+}
+
+// For paginated response from the API
 export interface PaginatedDoctorShiftReportResponse {
   data: DoctorShiftReportItem[];
   meta: {

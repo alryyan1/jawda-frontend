@@ -1,7 +1,7 @@
 // src/services/reportService.ts
 import type { PaginatedResponse } from '@/types/common';
 import apiClient from './api';
-import type { DoctorShiftFinancialSummary, DoctorShiftReportItem, MonthlyServiceIncomeReportResponse, ServiceStatisticItem, YearlyPatientFrequencyReportResponse, MonthlyLabIncomeReportResponse } from '@/types/reports';
+import type { DoctorShiftFinancialSummary, DoctorShiftReportItem, MonthlyServiceIncomeReportResponse, ServiceStatisticItem, YearlyPatientFrequencyReportResponse, MonthlyLabIncomeReportResponse, LabTestStatisticItem } from '@/types/reports';
 
 export interface DoctorShiftReportFilters {
   page?: number;
@@ -333,5 +333,27 @@ export const downloadMonthlyLabIncomeReportPdf = async (filters: MonthlyLabIncom
   });
   return response.data;
 };
+// src/services/reportService.ts
+// ... existing imports ...
 
+// ... existing service functions ...
+
+export interface LabTestStatisticsFilters {
+  page?: number;
+  per_page?: number;
+  date_from?: string;
+  date_to?: string;
+  search_test_name?: string;
+  container_id?: number | string | null;
+  package_id?: number | string | null;
+  sort_by?: 'main_test_name' | 'request_count' | 'total_price_generated' | 'total_amount_paid';
+  sort_direction?: 'asc' | 'desc';
+}
+
+export const getLabTestStatisticsReport = async (
+  filters: LabTestStatisticsFilters
+): Promise<PaginatedResponse<LabTestStatisticItem>> => {
+  const response = await apiClient.get<PaginatedResponse<LabTestStatisticItem>>('/reports/lab-test-statistics', { params: filters });
+  return response.data; // Backend structures pagination
+};
 // export const downloadYearlyPatientFrequencyPdf = async (filters: YearlyPatientFrequencyFilters): Promise<Blob> => { ... }; // For future PDF

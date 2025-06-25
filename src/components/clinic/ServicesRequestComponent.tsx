@@ -32,8 +32,8 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ vis
   const queryClient = useQueryClient();
   const { currentClinicShift } = useAuth();
   console.log(visit,'visit in ServicesRequestComponent');
-  const [showServiceSelectionGrid, setShowServiceSelectionGrid] = useState(visit?.requested_services_count === 0);
-   
+  const [showServiceSelectionGrid, setShowServiceSelectionGrid] = useState(visit?.requested_services?.length === 0);
+  console.log(showServiceSelectionGrid,'showServiceSelectionGrid in ServicesRequestComponent');
   const requestedServicesQueryKey = ['requestedServicesForVisit', visitId] as const;
   const patientDetailsQueryKey = ['patientDetailsForServiceSelection', patientId] as const;
   
@@ -57,11 +57,7 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ vis
 
   // Remove the automatic showing of grid when no services
   // Let it be controlled only by user action and successful additions
-  useEffect(() => {
-    if (!isLoadingRequested && requestedServices && requestedServices.length > 0) {
-      setShowServiceSelectionGrid(false);
-    }
-  }, [isLoadingRequested, requestedServices]);
+
 
   // Fetch all service groups with their services (standard catalog)
   const { 

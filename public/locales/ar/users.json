@@ -15,6 +15,13 @@
     "actions": "إجراءات"
   },
   "form": {
+    "editDetailsDescription": "قم بتعديل بيانات المستخدم أدناه.",
+    "selectDoctorPlaceholder": "اختر الطبيب المرتبط",
+    "doctorIdDescription": "هذا المستخدم مرتبط بطبيب معين.",
+    "isSupervisorLabel": "هل هو مشرف؟",
+    "isActiveLabel": "نشط",
+    "moneyCollectorTypeDescription": "حدد نوع محصل الأموال إذا لزم.",
+    "selectRolesDescription": "اختر صلاحيات المستخدم",
     "nameLabel": "الاسم الكامل",
     "namePlaceholder": "أدخل الاسم الكامل",
     "usernameLabel": "اسم المستخدم",
@@ -52,6 +59,8 @@
     "all": "الكل"
   },
     "validation": {
+         "passwordMinLengthOptional": "كلمة المرور يجب أن تحتوي على الحد الأدنى من الأحرف (اختياري)",
+    "currentPasswordRequired": "كلمة المرور الحالية مطلوبة",
     "usernameMinLength": "يجب أن يكون اسم المستخدم 3 أحرف على الأقل.",
     "passwordMinLength": "يجب أن تكون كلمة المرور 8 أحرف على الأقل.",
     "roleRequired": "يجب اختيار دور واحد على الأقل.",

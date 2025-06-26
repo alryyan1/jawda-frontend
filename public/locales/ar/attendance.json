@@ -14,7 +14,11 @@
       "shiftsCount": "{{count}} وردية",
       "shiftsCount_plural": "{{count}} ورديات",
       "updateSuccess": "تم تحديث إعدادات الحضور بنجاح.",
+            "noDefsFoundTitle": "لا توجد تعريفات للورديات",
+      "noDefsFoundDescription": "لم يتم العثور على أي تعريفات للورديات. يرجى إنشاء واحدة للبدء.",
       "shiftDefinitions": {
+            "noDefsFoundTitle": "لا توجد تعريفات للورديات",
+    "noDefsFoundDescription": "لم يتم العثور على أي تعريفات للورديات. يرجى إنشاء واحدة للبدء.",
         "dialogTitle": "تعريف الشيفتات",
         "dialogDescription": "قم بإدارة الشيفتات الخاصة بالحضور والانصراف.",
         "addNewButton": "إضافة شيفت جديد",
@@ -41,6 +45,8 @@
     },
 
     "shiftDefinitions": {
+      "noDefsFoundTitle": "لا توجد تعريفات للورديات",
+      "noDefsFoundDescription": "لم يتم العثور على أي تعريفات للورديات. يرجى إنشاء واحدة للبدء.",
       "pageTitle": "إدارة تعريفات الورديات",
       "pageDescription": "حدد ورديات العمل لمؤسستك.",
       "addButton": "إضافة تعريف وردية",

@@ -444,7 +444,7 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">{t("common:none")}</SelectItem>
+                          <SelectItem value=" ">{t("common:none")}</SelectItem>
                           {isLoadingDoctors ? (
                             <SelectItem value="loading_docs" disabled>
                               {t("common:loading")}

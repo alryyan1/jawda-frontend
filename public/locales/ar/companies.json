@@ -5,6 +5,15 @@
   "createCompanyTitle": "إضافة شركة جديدة",
   "loadingCompanies": "جارٍ تحميل الشركات...",
   "manageTestContractsButton": "إدارة عقود الفحوصات",
+  "contracts": {
+    "importPricePreferenceDialog": {
+      "title": "اختر تفضيل سعر الاستيراد",
+      "description": "يرجى اختيار الطريقة التي تريد بها تعيين أسعار الخدمات المستوردة.",
+      "useStandardPriceButton": "استخدام  أسعار الكاش",
+      "setZeroPriceButton": "تعيين السعر كـ 0"
+    },
+    "importAllServicesButton": "استيراد جميع الخدمات"
+  },
   "addSubcompany": "إضافة شركة فرعية",
   "addRelation": "إضافة علاقة",
   "table": {

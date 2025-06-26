@@ -1,6 +1,6 @@
 // src/components/companies/AddCompanyServiceDialog.tsx
 import React, { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useTranslation } from 'react-i18next';
@@ -10,7 +10,6 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter,
   DialogHeader, DialogTitle, DialogTrigger, DialogClose,
@@ -18,9 +17,10 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Loader2, PlusCircle } from 'lucide-react';
 
-import type { CompanyServiceFormData, CompanyServiceContract } from '@/types/companies';
+import type { CompanyServiceFormData } from '@/types/companies';
 import type { Service } from '@/types/services';
 import { getCompanyAvailableServices, addServiceToCompanyContract } from '@/services/companyService';
+import { Autocomplete, CircularProgress, Paper, TextField } from '@mui/material';
 
 interface AddCompanyServiceDialogProps {
   companyId: number;
@@ -29,15 +29,15 @@ interface AddCompanyServiceDialogProps {
   triggerButton?: React.ReactNode;
 }
 
-const getContractFormSchema = (t: Function) => z.object({
+const getContractFormSchema = (t: (key: string, options?: Record<string, unknown>) => string) => z.object({
   service_id: z.string().min(1, { message: t('common:validation.required', { field: t('companies:addServiceContractDialog.serviceLabel') }) }),
   price: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, { message: t('common:validation.positiveNumber') }),
   static_endurance: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, { message: t('common:validation.positiveNumber') }),
   percentage_endurance: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0 && parseFloat(val) <= 100, { message: "0-100" }),
   static_wage: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, { message: t('common:validation.positiveNumber') }),
   percentage_wage: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0 && parseFloat(val) <= 100, { message: "0-100" }),
-  use_static: z.boolean().default(false),
-  approval: z.boolean().default(true), // Default to approved
+  use_static: z.boolean(),
+  approval: z.boolean(),
 });
 
 type ContractFormValues = z.infer<ReturnType<typeof getContractFormSchema>>;
@@ -51,8 +51,14 @@ const AddCompanyServiceDialog: React.FC<AddCompanyServiceDialogProps> = ({ compa
   const form = useForm<ContractFormValues>({
     resolver: zodResolver(contractFormSchema),
     defaultValues: {
-      service_id: undefined, price: '0', static_endurance: '0', percentage_endurance: '0',
-      static_wage: '0', percentage_wage: '0', use_static: false, approval: true,
+      service_id: '', 
+      price: '0', 
+      static_endurance: '0', 
+      percentage_endurance: '0',
+      static_wage: '0', 
+      percentage_wage: '0', 
+      use_static: false, 
+      approval: true,
     },
   });
 
@@ -72,8 +78,9 @@ const AddCompanyServiceDialog: React.FC<AddCompanyServiceDialogProps> = ({ compa
       form.reset();
       setIsOpen(false);
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || t('common:error.saveFailed', { entity: "Contract" }));
+    onError: (error: unknown) => {
+      const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || t('common:error.saveFailed', { entity: "Contract" });
+      toast.error(errorMessage);
     },
   });
 
@@ -93,6 +100,9 @@ const AddCompanyServiceDialog: React.FC<AddCompanyServiceDialogProps> = ({ compa
     }
   }, [isOpen, form, companyId]);
 
+  // Get selected service for display
+  const selectedServiceId = form.watch('service_id');
+  const selectedService = availableServices?.find(service => service.id.toString() === selectedServiceId);
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -111,24 +121,63 @@ const AddCompanyServiceDialog: React.FC<AddCompanyServiceDialogProps> = ({ compa
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2">
-            <FormField
-              control={form.control} name="service_id"
+            <Controller
+              name="service_id"
+              control={form.control}
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('companies:addServiceContractDialog.serviceLabel')}</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={isLoadingServices || mutation.isPending}>
-                    <FormControl><SelectTrigger>
-                      <SelectValue placeholder={t('companies:addServiceContractDialog.selectService')} />
-                    </SelectTrigger></FormControl>
-                    <SelectContent>
-                      {isLoadingServices ? <SelectItem value="loading_srv" disabled>{t('common:loading')}</SelectItem> :
-                       !availableServices || availableServices.length === 0 ? 
-                       <div className="p-4 text-center text-sm text-muted-foreground">{t('companies:addServiceContractDialog.noAvailableServices')}</div> :
-                       availableServices?.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name} {s.service_group?.name ? `(${s.service_group.name})` : ''}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
+                <Autocomplete
+                  fullWidth
+                  options={availableServices ?? []}
+                  loading={isLoadingServices}
+                  value={selectedService || null}
+                  getOptionLabel={(option) => option.name + (option.service_group?.name ? ` (${option.service_group.name})` : '')}
+                  isOptionEqualToValue={(option, value) => option.id === value.id}
+                  onChange={(_, data) => {
+                    field.onChange(data ? data.id.toString() : '');
+                  }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label={t('companies:contracts.serviceName')}
+                      variant="outlined"
+                      size="small"
+                      error={!!form.formState.errors.service_id}
+                      helperText={form.formState.errors.service_id?.message}
+                      InputProps={{
+                        ...params.InputProps,
+                        endAdornment: (
+                          <>
+                            {isLoadingServices ? <CircularProgress color="inherit" size={20} /> : null}
+                            {params.InputProps.endAdornment}
+                          </>
+                        ),
+                      }}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          '& fieldset': {
+                            borderColor: 'hsl(var(--border))',
+                          },
+                          '&:hover fieldset': {
+                            borderColor: 'hsl(var(--border))',
+                          },
+                          '&.Mui-focused fieldset': {
+                            borderColor: 'hsl(var(--ring))',
+                          },
+                          backgroundColor: 'hsl(var(--background))',
+                          color: 'hsl(var(--foreground))',
+                        },
+                        '& .MuiInputLabel-root': {
+                          color: 'hsl(var(--muted-foreground))',
+                          '&.Mui-focused': {
+                            color: 'hsl(var(--ring))',
+                          },
+                        },
+                      }}
+                    />
+                  )}
+               
+                  
+                />
               )}
             />
             <FormField control={form.control} name="price" render={({ field }) => (
@@ -178,3 +227,6 @@ const AddCompanyServiceDialog: React.FC<AddCompanyServiceDialogProps> = ({ compa
   );
 };
 export default AddCompanyServiceDialog;
+
+
+

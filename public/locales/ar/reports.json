@@ -5,7 +5,10 @@
   "duration": "المدة",
   "openedBy": "تم الفتح بواسطة",
   "doctorShiftsReportTitle": "تقرير مناوبات الأطباء",
- 
+  "clinicGeneralReport": {
+    "titleShort": "التقرير العام",
+    "summaryTitle": "ملخص المصروفات (للفترة المحددة)"
+  },
   "noDataForPeriod": "لا توجد بيانات للفترة المحددة",
   "doctorShiftsReport": {
   "title": "تقرير مناوبات الأطباء",
@@ -190,10 +193,7 @@
           "cashAmount": "المبلغ النقدي",
     "bankAmount": "المبلغ البنكي"
     },
-    "clinicGeneralReport": {
-      "titleShort": "التقرير العام",
-      "summaryTitle": "ملخص المصروفات (للفترة المحددة)"
-    },
+   
     "totalCashPaid": "إجمالي المدفوع نقداً",
     "totalBankPaid": "إجمالي المدفوع بنك/شبكة",
     "grandTotalPaid": "الإجمالي العام للمصروفات"

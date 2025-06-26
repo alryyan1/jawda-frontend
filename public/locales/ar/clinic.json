@@ -1,4 +1,13 @@
 {
+  "createNewVisitForPatientDialog": {
+    "title": "إنشاء زيارة جديدة للمريض",
+    "description": "إنشاء زيارة جديدة للمريض {{name}}",
+    "selectTargetShift": "اختر المناوبة المستهدفة",
+    "targetShiftPlaceholder": "اختر مناوبة...",
+    "reasonLabel": "سبب الزيارة",
+    "reasonPlaceholder": "أدخل سبب الزيارة...",
+    "createButton": "إنشاء زيارة"
+  },
   "title": "العيادة",
   "patientRegistration": {
     "title": "تسجيل مريض جديد",
@@ -44,6 +53,7 @@
     "statusUpdateFailed": "فشل تحديث حالة الزيارة.",
     "newVisitForPatientCreatedSuccess": "تم إنشاء زيارة جديدة للمريض بنجاح!",
     "copyDialog": {
+      "noOtherShifts": "لا يوجد مناوبات أخرى لنسخ الزيارة إليها",
       "title": "نسخ تفاصيل الزيارة",
       "description": "سيتم نسخ تفاصيل هذه الزيارة إلى الحافظة",
       "copyButton": "نسخ",

@@ -149,7 +149,7 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
   const targetShiftOptionsForNewVisit = useMemo(() => {
     return (
       availableDoctorShiftsForNewVisit?.filter(
-        (ds) => ds.user_id === currentUser?.id && ds.status === true // Example: any open shift of current user
+        (ds) => true // Example: any open shift of current user
         // Or: ds.status === true // Any open shift if admin
       ) || []
     );
@@ -246,10 +246,10 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
   const targetShiftOptions = useMemo(() => {
     return (
       availableDoctorShifts?.filter(
-        (ds) =>
-          ds.user_id === currentUser?.id &&
-          ds.id !== visit.doctor_shift_id &&
-          ds.status === true
+        (ds) => true
+          // ds.user_id === currentUser?.id &&
+          // ds.id !== visit.doctor_shift_id &&
+          // ds.status === true
       ) || []
     );
   }, [

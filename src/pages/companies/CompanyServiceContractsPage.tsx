@@ -1,5 +1,5 @@
 // src/pages/companies/CompanyServiceContractsPage.tsx
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   useQuery,
@@ -60,6 +60,7 @@ import {
   LibrarySquare,
   Printer,
   Copy,
+  File,
 } from "lucide-react"; // ArrowRightLeft can be for "Back" in RTL
 
 import type {
@@ -92,6 +93,8 @@ import {
   type CompanyContractPdfFilters,
 } from "@/services/reportService";
 import CopyCompanyContractDialog from "@/components/companies/CopyCompanyContractDialog";
+import type { PriceImportPreference } from "@/components/companies/dialogs/ImportPricePreferenceDialog";
+import ImportPricePreferenceDialog from "@/components/companies/dialogs/ImportPricePreferenceDialog";
 // import EditCompanyServiceDialog from '@/components/companies/EditCompanyServiceDialog'; // For later
 
 // TODO: Define these permissions in your backend and PermissionName type
@@ -182,6 +185,54 @@ export default function CompanyServiceContractsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [editingRowId, setEditingRowId] = useState<number | null>(null);
   const [isImportAllDialogOpen, setIsImportAllDialogOpen] = useState(false);
+  const [isImportPreferenceDialogOpen, setIsImportPreferenceDialogOpen] = useState(false);
+  const [importAllPayloadOverrides, setImportAllPayloadOverrides] = useState<ImportAllServicesPayload | undefined>(undefined);
+
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+
+
+  useEffect (() => {
+    const handler = setTimeout(() => setDebouncedSearchTerm(searchTerm), 500);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
+
+  useEffect(() => { setCurrentPage(1); }, [debouncedSearchTerm]);
+
+
+
+  const contractedServicesQueryKey = ['companyContractedServices', companyId, currentPage, debouncedSearchTerm] as const; // Make it const
+
+
+  const importAllMutation = useMutation({
+    mutationFn: (payload?: ImportAllServicesPayload) => importAllServicesToCompanyContract(companyId, payload),
+    onSuccess: (data) => {
+        toast.success(data.message || t('companies:contracts.importAllSuccess')); // Assuming backend returns a message
+        queryClient.invalidateQueries({ queryKey: contractedServicesQueryKey });
+        queryClient.invalidateQueries({ queryKey: ['companyAvailableServices', companyId] });
+    },
+    onError: (error: any) => toast.error(error.response?.data?.message || t('companies:contracts.importAllError')),
+  });
+
+  // Modified handler for import all
+  const handleOpenImportPreferenceDialog = () => {
+    // You can pre-fill default endurance/wage from company settings if desired for the payload
+    const defaultCompanyEndurance = company?.service_endurance; // Example
+    setImportAllPayloadOverrides({
+        // default_static_endurance: 0, // Or some default
+        default_percentage_endurance: defaultCompanyEndurance ? parseFloat(String(defaultCompanyEndurance)) : 0,
+        // ... other default overrides for wage, approval, use_static
+    });
+    setIsImportPreferenceDialogOpen(true);
+  };
+
+  const handleConfirmImportPreference = (preference: PriceImportPreference) => {
+    setIsImportPreferenceDialogOpen(false);
+    const payload = {
+        ...importAllPayloadOverrides,
+        price_preference: preference, // Add this to payload for backend
+    };
+    importAllMutation.mutate(payload);
+  };
 
   const inlineEditSchema = getInlineEditSchema(t);
   const inlineEditForm = useForm<InlineEditFormValues>({
@@ -215,27 +266,27 @@ export default function CompanyServiceContractsPage() {
     enabled: !!companyId,
     placeholderData: keepPreviousData,
   });
-  const importAllMutation = useMutation({
-    mutationFn: (payload?: ImportAllServicesPayload) =>
-      importAllServicesToCompanyContract(Number(companyId), payload),
-    onSuccess: (data) => {
-      toast.success(
-        data.message || t("companies:serviceContracts.allImportedSuccess")
-      );
-      queryClient.invalidateQueries({
-        queryKey: ["companyContractedServices", companyId],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["companyAvailableServices", companyId],
-      }); // To update the available list in AddDialog
-    },
-    onError: (error: ApiError) => {
-      toast.error(
-        error.response?.data?.message ||
-          t("companies:serviceContracts.importAllError")
-      );
-    },
-  });
+  // const importAllMutation = useMutation({
+  //   mutationFn: (payload?: ImportAllServicesPayload) =>
+  //     importAllServicesToCompanyContract(Number(companyId), payload),
+  //   onSuccess: (data) => {
+  //     toast.success(
+  //       data.message || t("companies:serviceContracts.allImportedSuccess")
+  //     );
+  //     queryClient.invalidateQueries({
+  //       queryKey: ["companyContractedServices", companyId],
+  //     });
+  //     queryClient.invalidateQueries({
+  //       queryKey: ["companyAvailableServices", companyId],
+  //     }); // To update the available list in AddDialog
+  //   },
+  //   onError: (error: ApiError) => {
+  //     toast.error(
+  //       error.response?.data?.message ||
+  //         t("companies:serviceContracts.importAllError")
+  //     );
+  //   },
+  // });
 
   const handleImportAllServices = () => {
     setIsImportAllDialogOpen(true);
@@ -434,7 +485,15 @@ export default function CompanyServiceContractsPage() {
           <Copy className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
           {t("companies:serviceContracts.copyContractsButton")}
         </Button>
-   
+        <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={handleOpenImportPreferenceDialog} // MODIFIED
+                    disabled={importAllMutation.isPending}
+                >
+                    {importAllMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2"/> : <File className="h-4 w-4 ltr:mr-2 rtl:ml-2"/>}
+                    {t('companies:contracts.importAllServicesButton')}
+                </Button>
         <Button
           onClick={handleGenerateServiceContractPdf}
           variant="outline"
@@ -451,7 +510,7 @@ export default function CompanyServiceContractsPage() {
             {t("common:print")}
           </span>
         </Button>
-        <Button
+        {/* <Button
           onClick={handleImportAllServices}
           variant="outline"
           size="sm"
@@ -463,7 +522,7 @@ export default function CompanyServiceContractsPage() {
             <LibrarySquare className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
           )}
           {t("companies:serviceContracts.importAllButton")}
-        </Button>
+        </Button> */}
         <AddCompanyServiceDialog
           companyId={Number(companyId)}
           companyName={company?.name || ""}
@@ -508,6 +567,7 @@ export default function CompanyServiceContractsPage() {
                 </Button>
               }
             />
+          
           </CardContent>
         </Card>
       ) : (
@@ -839,6 +899,12 @@ export default function CompanyServiceContractsPage() {
             onContractsCopied={handleContractsCopied}
         />
       )}
+           <ImportPricePreferenceDialog
+            isOpen={isImportPreferenceDialogOpen}
+            onOpenChange={setIsImportPreferenceDialogOpen}
+            onConfirm={handleConfirmImportPreference}
+            companyName={company?.name || ''}
+        />
     </div>
   );
 }

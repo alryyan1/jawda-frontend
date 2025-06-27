@@ -178,3 +178,38 @@ export const searchRecentDoctorVisits = async (patientNameSearch: string, limit:
   );
   return response.data.data;
 };
+
+
+
+/**
+ * Creates a new lab-only visit for a patient who already exists in the system.
+ * This is typically triggered from the Lab Reception search results.
+ *
+ * @param patientId - The ID of the existing patient.
+ * @param payload - The data required to create the new visit, primarily the referring doctor's ID.
+ * @returns A promise that resolves to the Patient object, which now includes the newly created DoctorVisit relation.
+ */
+export const createLabVisitForExistingPatient = async (
+  patientId: number,
+  payload: {
+    doctor_id: number;
+    reason_for_visit?: string;
+  }
+): Promise<Patient> => { // The backend returns a PatientResource with the new visit loaded
+  const response = await apiClient.post<{ data: Patient }>(
+    `/patients/${patientId}/create-lab-visit`,
+    payload
+  );
+  return response.data.data;
+};
+
+// ... (other existing functions in the file) ...
+
+
+
+
+export const registerNewPatientFromLab = async (payload: Partial<PatientFormData>): Promise<Patient> => {
+  // CHANGE THIS LINE: from '/patients/register-lab' to just '/patients'
+  const response = await apiClient.post<{ data: Patient }>('/patients', payload);
+  return response.data.data;
+};

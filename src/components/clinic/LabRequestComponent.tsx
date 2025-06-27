@@ -117,6 +117,7 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
     enabled: !!patientId,
   });
 
+   console.log('visitId',visitId)
   const {
     data: requestedTests = [],
     isLoading: isLoadingRequestedTestsInitial,
@@ -127,7 +128,7 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
     queryFn: () => getLabRequestsForVisit(visitId),
     enabled: !!visitId,
   });
-
+  console.log('requestedTests',requestedTests,'requestedError',requestedTestsError)
   // Fetch ALL main tests for the Autocomplete
   // We use getMainTestsListForSelection with specific params to get *all available* tests,
   // excluding those already requested for this visit.

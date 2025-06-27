@@ -2,7 +2,7 @@
 import apiClient from './api';
 
 import type { ChildTestOption } from '../types/labTests';
-import type { ChildTestWithResult, MainTestWithChildrenResults, PaginatedPatientLabQueueResponse, ResultEntryFormValues } from '@/types/labWorkflow';
+import type { ChildTestWithResult, LabQueueFilters, MainTestWithChildrenResults, PaginatedPatientLabQueueResponse, ResultEntryFormValues } from '@/types/labWorkflow';
 import type { LabRequest, RequestedResult } from '@/types/visits';
 
 const LABREQUEST_BASE_URL = '/labrequests';
@@ -16,6 +16,11 @@ export const getLabRequestForEntry = async (labRequestId: number): Promise<MainT
   // It hits LabRequestController@getLabRequestForEntry
   const response = await apiClient.get<{ data: MainTestWithChildrenResults }>(`/labrequests/${labRequestId}/for-result-entry`);
   return response.data.data;
+};
+
+// NEW function for the reception page
+export const getNewlyRegisteredLabPendingQueue = (filters: LabQueueFilters): Promise<PaginatedPatientLabQueueResponse> => {
+  return apiClient.get<PaginatedPatientLabQueueResponse>('/lab/reception-queue', { params: filters }).then(res => res.data);
 };
 
 // If you ALSO need a generic way to get a LabRequest by its ID (using LabRequestController@show):

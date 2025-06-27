@@ -136,7 +136,8 @@
   "noDataAvailableFilters": "لا توجد بيانات متاحة للمرشحات المحددة",
   "exportToPdf": "تصدير إلى PDF",
 
-  "validation": {
+  "validation": {      "invalidNumber": "رقم غير صالح",
+
   "maxLengthShort": "عدد الأحرف تجاوز الحد المسموح",
   "monthRequired": "الشهر مطلوب",
     "yearRequired": "السنة مطلوبة",

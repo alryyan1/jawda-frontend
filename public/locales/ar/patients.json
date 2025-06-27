@@ -9,6 +9,7 @@
     "editDialogDescription": "تعديل المعلومات الشخصية ومعلومات التأمين للمريض",
     "updateSuccess": "تم تحديث بيانات المريض بنجاح"
   },
+
   "fields": {
     "id": "رقم المريض",
     "name": "الاسم",
@@ -29,6 +30,7 @@
     "addressPlaceholder": "أدخل العنوان هنا..."
   },
   "search": {
+    "selectDoctor": "اختر الطبيب",
     "lastVisit": "آخر زيارة",
     "lastDoctor": "آخر طبيب",
     "createVisitFromThis": "إنشاء زيارة لهذا المريض",

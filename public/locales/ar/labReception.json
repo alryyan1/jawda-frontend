@@ -1,0 +1,25 @@
+{
+    "createNewLabVisit": "إنشاء زيارة مخبرية جديدة",
+    "validation": {
+      "doctorRequired": "الرجاء اختيار الطبيب"
+    },
+    "referringDoctor": "الطبيب المُحيل",
+  "common": {
+    "validation": {
+      "invalidNumber": "رقم غير صالح",
+      "selectDoctorFirst": "الرجاء اختيار الطبيب أولاً"
+    },
+    "searching": "جارٍ البحث..."
+  },
+  "patients": {
+    "search": {
+      "selectDoctor": "اختر الطبيب"
+    }
+  },
+  "pageTitle": "استقبال المختبر",
+    "actions": {
+      "viewPatientQueue": "عرض قائمة انتظار المرضى",
+      "myShiftIncome": "إيرادات ورديتي"
+    }
+}
+

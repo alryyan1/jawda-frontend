@@ -141,7 +141,18 @@
       "quickAddDescription": "أدخل اسم الجهاز الجديد هنا",
       "deviceNameLabel": "اسم الجهاز"
     },
+    "appearanceSettings": {
+      "title": "إعدادات مظهر النتيجة",
+      "description": "قم بتخصيص كيفية عرض النتائج في النظام.",
+      "defaultState": "الوضع الافتراضي",
+      "selectedState": "الوضع المحدد",
+      "printedState": "الوضع المطبوع",
+      "otherStyles": "أنماط أخرى",
+      "resetButton": "إعادة الإعدادات"
+    },
     "labActions": {
+      "appearanceSettings": "إعدادات المظهر",
+
       "selectPatientFirst":"اختر مريضاً أولاً",
       "resultsLockedSuccess": "تم قفل النتائج بنجاح",
       "resultsUnlockedSuccess": "تم فتح النتائج بنجاح",

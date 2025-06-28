@@ -12,6 +12,7 @@ import type { Shift } from '@/types/shifts';
 import type { PatientLabQueueItem, PaginatedPatientLabQueueResponse } from '@/types/labWorkflow';
 import type { LabQueueFilters } from './LabQueueFilterDialog';
 import { getLabPendingQueue } from '@/services/labWorkflowService';
+import type { LabAppearanceSettings } from '@/lib/appearance-settings-store';
 // format from date-fns no longer needed here if date is not primary filter when shift is present
 
 interface PatientQueuePanelProps {
@@ -25,9 +26,11 @@ interface PatientQueuePanelProps {
   onSendPdfToPatient: (queueItem: PatientLabQueueItem) => void;
   onSendPdfToCustomNumber: (queueItem: PatientLabQueueItem) => void;
   onToggleResultLock: (queueItem: PatientLabQueueItem) => void;
+  appearanceSettings: LabAppearanceSettings;
 }
 
 const PatientQueuePanel: React.FC<PatientQueuePanelProps> = ({
+  appearanceSettings,
   currentShift, onShiftChange, onPatientSelect, selectedVisitId, globalSearchTerm, queueFilters = {}, onSendWhatsAppText, onSendPdfToPatient, onSendPdfToCustomNumber, onToggleResultLock
 }) => {
   const { t } = useTranslation(['labResults', 'common']);
@@ -131,6 +134,7 @@ const PatientQueuePanel: React.FC<PatientQueuePanelProps> = ({
             <div className="p-2 flex flex-wrap gap-2 justify-start items-start content-start">
               {queueItems.map((item) => (
                 <PatientLabRequestItem
+                  appearanceSettings={appearanceSettings}
                  isResultLocked={item.result_is_locked}
                   key={item.visit_id + (item.sample_id || '')}
                   item={item}

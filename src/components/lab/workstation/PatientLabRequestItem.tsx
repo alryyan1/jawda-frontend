@@ -1,5 +1,5 @@
 // src/components/lab/workstation/PatientLabRequestItem.tsx
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import {
@@ -18,6 +18,7 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import type { ItemState, LabAppearanceSettings } from "@/lib/appearance-settings-store";
 
 interface PatientLabRequestItemProps {
   item: PatientLabQueueItem;
@@ -25,7 +26,7 @@ interface PatientLabRequestItemProps {
   onSelect: () => void;
   allRequestsPaid?: boolean;
   isResultLocked?: boolean;
-
+  appearanceSettings: LabAppearanceSettings;
   // Context Menu Action Callbacks
   onSendWhatsAppText: (queueItem: PatientLabQueueItem) => void;
   onSendPdfToPatient: (queueItem: PatientLabQueueItem) => void;
@@ -34,6 +35,7 @@ interface PatientLabRequestItemProps {
 }
 
 const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
+  appearanceSettings,
   item,
   isSelected,
   onSelect,
@@ -58,6 +60,23 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
       ? "bg-emerald-500 dark:bg-emerald-600" 
       : "bg-red-500 dark:bg-red-600";
   };
+
+  // Determine the current state to apply styles
+  const currentState: ItemState = useMemo(() => {
+    if (isSelected) return 'selected';
+    if (item.is_printed) return 'printed';
+    return 'default';
+  }, [isSelected, item.is_printed]);
+   // Get the style object for the current state
+ const currentStyle = appearanceSettings[currentState];
+ const lockIconColor = appearanceSettings.isLocked.iconColor;
+
+ const paymentStatusBadgeStyle = useMemo(() => {
+   if (allRequestsPaid === undefined) return { backgroundColor: appearanceSettings.default.badgeBackgroundColor, color: appearanceSettings.default.badgeTextColor };
+   return allRequestsPaid
+     ? { backgroundColor: '#10B981', color: '#FFFFFF' } // Hardcode Green for paid
+     : { backgroundColor: '#EF4444', color: '#FFFFFF' }; // Hardcode Red for unpaid
+ }, [allRequestsPaid, appearanceSettings]);
 
   const getCardStyles = () => {
     if (isSelected) {
@@ -91,64 +110,53 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
   return (
     <ContextMenu>
       <ContextMenuTrigger>
-        <div
+      <div
           onClick={onSelect}
           role="button"
           tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") onSelect();
-          }}
-          aria-selected={isSelected}
-          aria-label={`${t("common:select")} ${
-            item.patient_name
-          }, ${labIdentifier}`}
+          // ... onKeyDown, aria attributes ...
+          // APPLY STYLES DYNAMICALLY USING CSS VARIABLES
+          style={{
+            '--bg-color': currentStyle.backgroundColor,
+            '--border-color': currentStyle.borderColor,
+            '--text-color': currentStyle.textColor,
+          } as React.CSSProperties}
           className={cn(
-            "w-[54px] h-[54px] flex-shrink-0 rounded-lg cursor-pointer transition-all duration-200 ease-out",
+            "w-[54px] h-[54px]  flex-shrink-0 rounded-lg cursor-pointer transition-all duration-200 ease-out",
             "flex flex-col items-center justify-center relative group border",
-            "hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
+            "hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2",
             "active:scale-95 transform-gpu",
-            getCardStyles()
+            // Use CSS variables for dynamic styling
+            "bg-[var(--bg-color)] border-[var(--border-color)] text-[var(--text-color)]",
+            currentStyle.isBold ? 'font-semibold' : 'font-normal',
+            isSelected && 'ring-2 ring-[var(--border-color)] shadow-lg'
           )}
-          title={`${item.patient_name}\nID: ${labIdentifier}\nTests: ${item.test_count}`}
+          title={`${item.patient_name}\nID: ${labIdentifier}`}
         >
-          {/* Lab Identifier */}
-          <span className={cn(
-            "text-xs font-semibold leading-tight text-center px-1",
-            isSelected 
-              ? "text-blue-700 dark:text-blue-300" 
-              : item.is_printed
-              ? "text-indigo-700 dark:text-indigo-300"
-              : "text-slate-700 dark:text-slate-300"
-          )}>
-            {labIdentifier.length > 6
-              ? labIdentifier.substring(0, 5) + "…"
-              : labIdentifier}
+          <span className="text-lg leading-tight text-center px-1">
+            {labIdentifier.length > 6 ? labIdentifier.substring(0, 5) + "…" : labIdentifier}
           </span>
-
-          {/* Test Count Badge */}
+          
           {item.test_count > 0 && (
-            <Badge
-              className={cn(
-                "absolute -top-1.5 -right-1.5 h-5 min-w-[20px] px-1.5 text-[10px] font-bold",
-                "leading-tight rounded-full shadow-sm border-2 border-white dark:border-slate-800",
-                getPaymentStatusColor(),
-                "text-white"
-              )}
+            <div
+              style={{
+                backgroundColor: paymentStatusBadgeStyle.backgroundColor,
+                color: paymentStatusBadgeStyle.badgeTextColor,
+              }}
+              className="absolute -top-1.5 -right-1.5 h-5 min-w-[20px] px-1.5 text-[10px] font-bold leading-tight rounded-full shadow-sm border-2 border-[var(--bg-color)] flex items-center justify-center"
             >
               {item.test_count}
-            </Badge>
-          )}
-
-          {/* Lock Status Indicator */}
-          {item.is_result_locked && (
-            <div className="absolute -bottom-1 -left-1 p-0.5 bg-white dark:bg-slate-800 rounded-full shadow-sm border border-slate-200 dark:border-slate-600">
-              <Lock className="h-3 w-3 text-red-500 dark:text-red-400" />
             </div>
           )}
 
-          {/* Printed Status Indicator */}
+          {item.is_result_locked && (
+            <div className="absolute -bottom-1 -left-1 p-0.5 bg-[var(--bg-color)] rounded-full shadow-sm border border-[var(--border-color)]">
+              <Lock className="h-3 w-3" style={{ color: lockIconColor }} />
+            </div>
+          )}
+
           {item.is_printed && (
-            <div className="absolute top-0.5 left-0.5 w-2 h-2 bg-indigo-500 dark:bg-indigo-400 rounded-full shadow-sm"></div>
+             <div className="absolute top-0.5 left-0.5 w-2 h-2 rounded-full shadow-sm" style={{backgroundColor: appearanceSettings.printed.badgeBackgroundColor}}></div>
           )}
         </div>
       </ContextMenuTrigger>

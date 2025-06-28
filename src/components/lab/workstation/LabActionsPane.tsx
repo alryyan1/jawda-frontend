@@ -1,10 +1,10 @@
 // src/components/lab/workstation/LabActionsPane.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
-import { ShieldCheck, Zap, ListFilter, Settings2, Printer, Loader2, RotateCcw, Atom, Lock, Unlock } from 'lucide-react'; // Example icons
+import { ShieldCheck, Zap, ListFilter, Settings2, Printer, Loader2, RotateCcw, Atom, Lock, Unlock, Palette } from 'lucide-react'; // Example icons
 import { cn } from '@/lib/utils';
 
 import type { LabRequest } from '@/types/visits'; // Or types/visits
@@ -15,6 +15,7 @@ import { populateCbcResults } from '@/services/labRequestService';
 import { togglePatientResultLock } from '@/services/patientService';
 import type { Patient } from '@/types/patients';
 import type { PatientLabQueueItem } from '@/types/labWorkflow';
+import LabAppearanceSettingsDialog from './LabAppearanceSettingsDialog';
 // import { useAuthorization } from '@/hooks/useAuthorization';
 
 interface LabActionsPaneProps {
@@ -24,6 +25,7 @@ interface LabActionsPaneProps {
   onResultsModified: (labRequest: LabRequest) => void;
   isResultLocked: boolean;
   currentPatientData  : Patient | null;
+  onAppearanceSettingsChanged: () => void;
     // Add other props if actions depend on more context
 }
 
@@ -33,6 +35,7 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
   onResultsReset,
   onResultsModified,
   currentPatientData,
+  onAppearanceSettingsChanged,
 }) => {
   const { t, i18n } = useTranslation(['labResults', 'common']);
   // const { can } = useAuthorization();
@@ -40,6 +43,7 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
  console.log(currentPatientData,'currentPatientData')
   const patientIdForLock =  currentPatientData?.id;
   const currentLockStatus = currentPatientData?.result_is_locked || false;
+  const [isAppearanceDialogOpen, setIsAppearanceDialogOpen] = useState(false);
 
   const toggleLockMutation = useMutation({
     mutationFn: (params: { patientId: number; lock: boolean }) =>
@@ -311,6 +315,19 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
                 <p>{t('labResults:labActions.printWorklist')}</p>
             </TooltipContent>
         </Tooltip>
+        <Separator className="my-2" />
+
+          {/* New Appearance Settings Button */}
+          <Tooltip>
+              <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="w-10 h-10" onClick={() => setIsAppearanceDialogOpen(true)}>
+                      <Palette className="h-5 w-5" />
+                  </Button>
+              </TooltipTrigger>
+              <TooltipContent side={i18n.dir() === 'rtl' ? 'left' : 'right'} sideOffset={5}>
+                  <p>{t('labResults:labActions.appearanceSettings')}</p>
+              </TooltipContent>
+          </Tooltip>
         <Tooltip>
                 <TooltipTrigger asChild>
                 <Button
@@ -348,6 +365,12 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
             </TooltipContent>
         </Tooltip>
 
+      {/* Render the dialog */}
+      <LabAppearanceSettingsDialog
+        isOpen={isAppearanceDialogOpen}
+        onOpenChange={setIsAppearanceDialogOpen}
+        onSettingsChanged={onAppearanceSettingsChanged}
+      />
       </aside>
     </TooltipProvider>
   );

@@ -58,6 +58,7 @@ import SendPdfToCustomNumberDialog from "@/components/lab/workstation/dialog/Sen
 import { sendBackendWhatsAppMedia, type BackendWhatsAppMediaPayload } from "@/services/backendWhatsappService";
 import { fileToBase64 } from "@/services/whatsappService";
 import type { Patient } from "@/types/patients";
+import { getAppearanceSettings, type LabAppearanceSettings } from "@/lib/appearance-settings-store";
 
 const LabWorkstationPage: React.FC = () => {
   const { t, i18n } = useTranslation([
@@ -84,6 +85,13 @@ const LabWorkstationPage: React.FC = () => {
   const [activeQueueFilters, setActiveQueueFilters] = useState<LabQueueFilters>(
     {}
   );
+  const [appearanceSettings, setAppearanceSettings] = useState<LabAppearanceSettings>(getAppearanceSettings);
+  
+  // Callback function to force a re-render of this page, which will re-read settings and pass them down
+  const handleAppearanceSettingsChanged = () => {
+    setAppearanceSettings(getAppearanceSettings());
+  };
+
   const [appliedQueueFilters, setAppliedQueueFilters] = useState<LabQueueFilters>({
     result_status_filter: 'pending', // Default to show pending results
     print_status_filter: 'all',
@@ -638,13 +646,14 @@ console.log(selectedQueueItem,'selectedQueueItem')
       <div className="flex-grow flex overflow-hidden">
         <aside
           className={cn(
-            "w-[260px] xl:w-[300px] flex-shrink-0 bg-card dark:bg-slate-800/50 flex flex-col h-full overflow-hidden shadow-lg z-10",
+            "w-[322px] flex-shrink-0 bg-card dark:bg-slate-800/50 flex flex-col h-full overflow-hidden shadow-lg z-10",
             isRTL
               ? "border-l dark:border-slate-700"
               : "border-r dark:border-slate-700"
           )}
         >
        <PatientQueuePanel
+        appearanceSettings={appearanceSettings}
        
               currentShift={currentShiftForQueue}
               onShiftChange={handleShiftNavigationInQueue}
@@ -759,6 +768,7 @@ console.log(selectedQueueItem,'selectedQueueItem')
           )}
         >
            <LabActionsPane
+              onAppearanceSettingsChanged={handleAppearanceSettingsChanged}
               selectedLabRequest={selectedLabRequestForEntry || null}
               selectedVisitId={selectedQueueItem?.visit_id || null}
               currentPatientData={patientDetailsForActionPane as Patient | null}

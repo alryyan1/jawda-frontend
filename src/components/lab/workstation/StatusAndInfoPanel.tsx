@@ -477,18 +477,7 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
               label={t("common:age")}
               value={getAgeString(patient)}
             />
-            {patient.company && (
-              <DetailRowDisplay
-                label={t("patients:fields.company")}
-                value={patient.company.name}
-              />
-            )}
-            {patient.insurance_no && (
-              <DetailRowDisplay
-                label={t("patients:fields.insuranceNo")}
-                value={patient.insurance_no}
-              />
-            )}
+        
                {/* Company Info if applicable */}
                {isCompanyPatient && patient.company && (
               <>

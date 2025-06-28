@@ -69,7 +69,7 @@ const LabPatientQueue: React.FC<LabPatientQueueProps> = ({
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ['labReceptionQueue', currentShift?.id] });
   };
-
+  // console.log(queueItems,'queueItems from queue')
   return (
     <div className="h-full flex flex-col">
       <QueueHeader
@@ -120,7 +120,7 @@ const LabPatientQueue: React.FC<LabPatientQueueProps> = ({
               {queueItems.map((item) => (
                 <PatientLabRequestItem
                   appearanceSettings={appearanceSettings}
-                  key={item.visit_id + (item.sample_id || '')}
+                  key={`${currentShift?.id || 'no-shift'}-${item.visit_id}-${item.sample_id || item.lab_request_ids[0] || 'no-sample'}`}
                   item={item}
                   isSelected={selectedVisitId === item.visit_id}
                   onSelect={() => onPatientSelect(item)}

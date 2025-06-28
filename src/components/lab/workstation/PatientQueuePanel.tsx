@@ -3,8 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, keepPreviousData, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, AlertTriangle, Users } from 'lucide-react';
-import { Button } from '@/components/ui/button'; // shadcn Button
+import { Loader2, AlertTriangle } from 'lucide-react';
 
 import QueueHeader from './QueueHeader'; // Assumes QueueHeader is updated for shift navigation
 import PatientLabRequestItem from './PatientLabRequestItem';
@@ -44,8 +43,7 @@ const PatientQueuePanel: React.FC<PatientQueuePanelProps> = ({
     data: paginatedQueue,
     isLoading,
     error,
-    isFetching,
-    refetch: refetchQueue
+    isFetching
   } = useQuery<PaginatedPatientLabQueueResponse, Error>({
     queryKey: queueQueryKey,
     queryFn: () => {
@@ -87,7 +85,7 @@ const PatientQueuePanel: React.FC<PatientQueuePanelProps> = ({
 
   const queueItems = paginatedQueue?.data || [];
   const meta = paginatedQueue?.meta;
-
+  // console.log(queueItems,'queueItems from queue')
   const handleRefresh = () => {
       // Invalidate and refetch the queue
       queryClient.invalidateQueries({ queryKey: ['labPendingQueue', currentShift?.id] });
@@ -134,9 +132,11 @@ const PatientQueuePanel: React.FC<PatientQueuePanelProps> = ({
             <div className="p-2 flex flex-wrap gap-2 justify-start items-start content-start">
               {queueItems.map((item) => (
                 <PatientLabRequestItem
+                  isLastResultPending={item.is_last_result_pending}
+                  isReadyForPrint={item.is_ready_for_print}
+                  key={`${currentShift?.id || 'no-shift'}-${item.visit_id}-${item.sample_id || item.lab_request_ids[0] || 'no-sample'}`}
                   appearanceSettings={appearanceSettings}
-                 isResultLocked={item.result_is_locked}
-                  key={item.visit_id + (item.sample_id || '')}
+                  isResultLocked={item.result_is_locked}
                   item={item}
                   isSelected={selectedVisitId === item.visit_id}
                   onSelect={() => onPatientSelect(item)}

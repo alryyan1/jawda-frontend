@@ -10,7 +10,7 @@ import {
   Unlock,
 } from "lucide-react";
 import type { PatientLabQueueItem } from "@/types/labWorkflow";
-import { Badge } from "@/components/ui/badge";
+
 import {
   ContextMenu,
   ContextMenuContent,
@@ -27,6 +27,7 @@ interface PatientLabRequestItemProps {
   allRequestsPaid?: boolean;
   isResultLocked?: boolean;
   isLastResultPending?: boolean; 
+  isReadyForPrint?: boolean;
 
   appearanceSettings: LabAppearanceSettings;
   // Context Menu Action Callbacks
@@ -44,6 +45,7 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
   allRequestsPaid,
   isResultLocked,
   isLastResultPending,
+  isReadyForPrint,
   onSendWhatsAppText,
   onSendPdfToPatient,
   onSendPdfToCustomNumber,
@@ -56,13 +58,7 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
       item.lab_request_ids?.[0] || item.visit_id
     }`;
 
-  // Professional Material Design color scheme
-  const getPaymentStatusColor = () => {
-    if (allRequestsPaid === undefined) return "bg-slate-400 dark:bg-slate-500";
-    return allRequestsPaid 
-      ? "bg-emerald-500 dark:bg-emerald-600" 
-      : "bg-red-500 dark:bg-red-600";
-  };
+
 
   // Determine the current state to apply styles
   const currentState: ItemState = useMemo(() => {
@@ -81,17 +77,7 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
      : { backgroundColor: '#EF4444', color: '#FFFFFF' }; // Hardcode Red for unpaid
  }, [allRequestsPaid, appearanceSettings]);
 
-  const getCardStyles = () => {
-    if (isSelected) {
-      return "ring-2 ring-blue-500 dark:ring-blue-400 shadow-lg bg-blue-50 dark:bg-blue-950/50 scale-105 border-blue-200 dark:border-blue-800";
-    }
-    
-    if (item.is_printed) {
-      return "bg-indigo-100 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-200 dark:hover:bg-indigo-900/50";
-    }
-    
-    return "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/70 hover:shadow-md";
-  };
+
 
   // Cleanup function to restore pointer-events
   const cleanupBodyPointerEvents = () => {
@@ -109,7 +95,7 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
     cleanupBodyPointerEvents();
     action();
   };
-
+ console.log(isLastResultPending,'isLastResultPending',isSelected,'isSelected',isReadyForPrint,'isReadyForPrint')
   return (
     <ContextMenu>
       <ContextMenuTrigger>
@@ -130,6 +116,9 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
             "hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2",
             "active:scale-95 transform-gpu",
             isLastResultPending && !isSelected && "animate-heartbeat",
+            isLastResultPending && !isSelected && "animate__animated animate__heartBeat animate__infinite animate__slow",
+            isReadyForPrint && !isSelected && "animate__animated animate__bounce animate__infinite animate__slow",
+
             // Use CSS variables for dynamic styling
             "bg-[var(--bg-color)] border-[var(--border-color)] text-[var(--text-color)]",
             currentStyle.isBold ? 'font-semibold' : 'font-normal',
@@ -145,7 +134,7 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
             <div
               style={{
                 backgroundColor: paymentStatusBadgeStyle.backgroundColor,
-                color: paymentStatusBadgeStyle.badgeTextColor,
+                color: paymentStatusBadgeStyle.color,
               }}
               className="absolute -top-1.5 -right-1.5 h-5 min-w-[20px] px-1.5 text-[10px] font-bold leading-tight rounded-full shadow-sm border-2 border-[var(--bg-color)] flex items-center justify-center"
             >

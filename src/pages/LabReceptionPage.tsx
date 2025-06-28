@@ -38,6 +38,7 @@ import type { LabQueueFilters, PatientLabQueueItem } from "@/types/labWorkflow";
 import type { DoctorVisit } from "@/types/visits";
 import LabFilterDialog from "@/components/lab/reception/LabFilterDialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { getAppearanceSettings, type LabAppearanceSettings } from "@/lib/appearance-settings-store";
 
 // Type for the Autocomplete's options
 interface AutocompleteVisitOption {
@@ -67,6 +68,12 @@ const LabReceptionPage: React.FC = () => {
   const [selectedVisitFromAutocomplete, setSelectedVisitFromAutocomplete] =
     useState<AutocompleteVisitOption | null>(null);
   const debouncedAutocompleteSearch = useDebounce(autocompleteInputValue, 500);
+  const [appearanceSettings, setAppearanceSettings] = useState<LabAppearanceSettings>(getAppearanceSettings);
+  
+  // Callback function to force a re-render of this page, which will re-read settings and pass them down
+  const handleAppearanceSettingsChanged = () => {
+    setAppearanceSettings(getAppearanceSettings());
+  };
 
   // --- NEW: State for Filters ---
   const [filters, setFilters] = useState<LabQueueFilters>({
@@ -309,7 +316,9 @@ const LabReceptionPage: React.FC = () => {
         <LabActionsPane
           isFormVisible={!activeVisitId}
           onToggleView={handleToggleToRegistration}
-        />
+          onAppearanceSettingsChanged={handleAppearanceSettingsChanged}
+          appearanceSettings={appearanceSettings}
+          />
 
         {/* Column 2: Form when no active visit, Queue when visit is active */}
         <section
@@ -323,6 +332,7 @@ const LabReceptionPage: React.FC = () => {
           {activeVisitId ? (
             <div className="h-full flex flex-col">
               <LabPatientQueue
+                appearanceSettings={appearanceSettings}
                 labFilters={filters}
                 currentShift={currentClinicShift}
                 onShiftChange={() =>
@@ -359,6 +369,7 @@ const LabReceptionPage: React.FC = () => {
           ) : (
             <div className="h-full flex flex-col">
               <LabPatientQueue
+                appearanceSettings={appearanceSettings}
                 labFilters={filters}
                 currentShift={currentClinicShift}
                 onShiftChange={() =>

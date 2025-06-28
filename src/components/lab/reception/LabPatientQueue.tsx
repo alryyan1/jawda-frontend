@@ -11,6 +11,7 @@ import PatientLabRequestItem from '@/components/lab/workstation/PatientLabReques
 import type { Shift } from '@/types/shifts';
 import type { PatientLabQueueItem, PaginatedPatientLabQueueResponse, LabQueueFilters } from '@/types/labWorkflow';
 import { getNewlyRegisteredLabPendingQueue } from '@/services/labWorkflowService';
+import type { LabAppearanceSettings } from '@/lib/appearance-settings-store';
 
 interface LabPatientQueueProps {
   currentShift: Shift | null;
@@ -20,9 +21,11 @@ interface LabPatientQueueProps {
   globalSearchTerm: string;
   labFilters?: LabQueueFilters;
   filters?: LabQueueFilters; // Alternative prop name for compatibility
+  appearanceSettings: LabAppearanceSettings;
 }
 
 const LabPatientQueue: React.FC<LabPatientQueueProps> = ({
+  appearanceSettings,
   currentShift, onShiftChange, onPatientSelect, selectedVisitId, globalSearchTerm, labFilters, filters
 }) => {
   const { t } = useTranslation(['labResults', 'common', 'labReception']);
@@ -116,6 +119,7 @@ const LabPatientQueue: React.FC<LabPatientQueueProps> = ({
             <div className="p-2 flex flex-wrap gap-2 justify-start items-start content-start">
               {queueItems.map((item) => (
                 <PatientLabRequestItem
+                  appearanceSettings={appearanceSettings}
                   key={item.visit_id + (item.sample_id || '')}
                   item={item}
                   isSelected={selectedVisitId === item.visit_id}

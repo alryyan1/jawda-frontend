@@ -14,6 +14,7 @@ export interface PatientLabQueueItem { // For the leftmost list
   result_is_locked: boolean;
   all_requests_paid: boolean;
   is_result_locked: boolean;
+  is_last_result_pending?: boolean; 
   // status_summary?: string; // e.g. "3 Pending, 1 Complete"
 }
 

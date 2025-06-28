@@ -3,23 +3,28 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
-import { UserPlus, LayoutGrid, WalletCards } from 'lucide-react';
+import { UserPlus, LayoutGrid, WalletCards, Palette } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import UserShiftIncomeDialog from '@/components/clinic/UserShiftIncomeDialog';
+import { Separator } from '@/components/ui/separator';
+import LabAppearanceSettingsDialog from '../workstation/LabAppearanceSettingsDialog';
 
 interface LabActionsPaneProps {
   isFormVisible: boolean; // Is the registration form currently shown?
+  onAppearanceSettingsChanged: () => void;
   onToggleView: () => void; // Function to toggle between form and queue
 }
 
 const LabActionsPane: React.FC<LabActionsPaneProps> = ({
   isFormVisible,
   onToggleView,
+  onAppearanceSettingsChanged,
 }) => {
   const { t, i18n } = useTranslation(['labReception', 'common']);
   const { currentClinicShift } = useAuth();
   const [isIncomeDialogOpen, setIsIncomeDialogOpen] = useState(false);
+  const [isAppearanceDialogOpen, setIsAppearanceDialogOpen] = useState(false);
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -77,6 +82,25 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
              </TooltipContent>
          </Tooltip>
         )}
+        <Separator className="my-2" />
+
+          {/* New Appearance Settings Button */}
+          <Tooltip>
+              <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="w-10 h-10" onClick={() => setIsAppearanceDialogOpen(true)}>
+                      <Palette className="h-5 w-5" />
+                  </Button>
+              </TooltipTrigger>
+              <TooltipContent side={i18n.dir() === 'rtl' ? 'left' : 'right'} sideOffset={5}>
+                  <p>{t('labResults:labActions.appearanceSettings')}</p>
+              </TooltipContent>
+          </Tooltip>
+           {/* Render the dialog */}
+      <LabAppearanceSettingsDialog
+        isOpen={isAppearanceDialogOpen}
+        onOpenChange={setIsAppearanceDialogOpen}
+        onSettingsChanged={onAppearanceSettingsChanged}
+      />
       </aside>
 
       {currentClinicShift && (
@@ -87,6 +111,7 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
          />
       )}
     </TooltipProvider>
+
   );
 };
 

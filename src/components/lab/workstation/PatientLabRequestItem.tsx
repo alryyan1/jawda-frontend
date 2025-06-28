@@ -26,6 +26,8 @@ interface PatientLabRequestItemProps {
   onSelect: () => void;
   allRequestsPaid?: boolean;
   isResultLocked?: boolean;
+  isLastResultPending?: boolean; 
+
   appearanceSettings: LabAppearanceSettings;
   // Context Menu Action Callbacks
   onSendWhatsAppText: (queueItem: PatientLabQueueItem) => void;
@@ -41,6 +43,7 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
   onSelect,
   allRequestsPaid,
   isResultLocked,
+  isLastResultPending,
   onSendWhatsAppText,
   onSendPdfToPatient,
   onSendPdfToCustomNumber,
@@ -126,6 +129,7 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
             "flex flex-col items-center justify-center relative group border",
             "hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2",
             "active:scale-95 transform-gpu",
+            isLastResultPending && !isSelected && "animate-heartbeat",
             // Use CSS variables for dynamic styling
             "bg-[var(--bg-color)] border-[var(--border-color)] text-[var(--text-color)]",
             currentStyle.isBold ? 'font-semibold' : 'font-normal',

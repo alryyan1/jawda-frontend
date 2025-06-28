@@ -32,6 +32,14 @@ export interface LabQueueFilters {
   package_id?: number | null | 'all'; // 'all' to clear package filter
   has_unfinished_results?: boolean | null;
   main_test_id?: number | null | 'all'; // 'all' to clear main test filter
+  // Lab Reception specific filters
+  isBankak?: boolean | null;
+  company_id?: number | null;
+  doctor_id?: number | null;
+  specialist?: any | null; // Keep as object for now to match LabFilterDialog
+  // Legacy properties for compatibility
+  company?: number | null;
+  doctor?: number | null;
   // Existing filters if any (e.g., search term, specific date) can be merged here
   // For queue, we'll use shift_id or date_range from LabWorkstationPage
 }

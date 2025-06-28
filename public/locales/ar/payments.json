@@ -16,6 +16,7 @@
   "depositAddedSuccess": "تمت إضافة العربون بنجاح!",
   "depositUpdatedSuccess": "تم تحديث العربون بنجاح!",
   "depositDeletedSuccess": "تم حذف العربون بنجاح!",
+  "companyEndurance": "تحمل الشركة",
   "manageDepositsDialog": {
     "title": "إدارة العربون لـ: {{serviceName}}",
     "description": "إجمالي المدفوع: {{totalPaid}}",

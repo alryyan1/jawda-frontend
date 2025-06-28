@@ -106,7 +106,7 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
     "allMainTestsStrippedForAutocomplete",
     visitId,
   ] as const;
- console.log(selectedPatientVisit,'selectedPatientVisit')
+//  console.log(selectedPatientVisit,'selectedPatientVisit')
   // --- Data Fetching ---
   const { data: currentPatient, isLoading: isLoadingPatient } = useQuery<
     Patient | null,
@@ -117,7 +117,7 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
     enabled: !!patientId,
   });
 
-   console.log('visitId',visitId)
+//    console.log('visitId',visitId)
   const {
     data: requestedTests = [],
     isLoading: isLoadingRequestedTestsInitial,
@@ -128,7 +128,7 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
     queryFn: () => getLabRequestsForVisit(visitId),
     enabled: !!visitId,
   });
-  console.log('requestedTests',requestedTests,'requestedError',requestedTestsError)
+//   console.log('requestedTests',requestedTests,'requestedError',requestedTestsError)
   // Fetch ALL main tests for the Autocomplete
   // We use getMainTestsListForSelection with specific params to get *all available* tests,
   // excluding those already requested for this visit.
@@ -376,10 +376,8 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
                     placeholder={t("labTests:request.addTestsPlaceholder")}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
-                        console.log("enter pressed");
                         //get test from tests using find
                         const enteredId = (e.target as HTMLInputElement).value;
-                        console.log(enteredId, "enteredId");
                         const foundedTest = allAvailableTestsForAutocomplete?.find(
                           (test) => test.id === parseInt(enteredId)
                         );
@@ -554,7 +552,7 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
           />
         </div>
       </div>
-      {console.log(showBatchPaymentDialog, "showBatchPaymentDialog",requestedTests,'requestedTests',selectedPatientVisit.patient,'selectedPatientVisit.patient',currentClinicShift,'currentClinicShift')}
+      {/* {console.log(showBatchPaymentDialog, "showBatchPaymentDialog",requestedTests,'requestedTests',selectedPatientVisit.patient,'selectedPatientVisit.patient',currentClinicShift,'currentClinicShift')} */}
       {/* Batch Payment Dialog */}
       {currentClinicShift && requestedTests && selectedPatientVisit.patient && (
         <BatchLabPaymentDialog

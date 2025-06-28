@@ -4,12 +4,12 @@ import { useQuery, keepPreviousData, useQueryClient } from '@tanstack/react-quer
 import { useTranslation } from 'react-i18next';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Loader2, AlertTriangle, Users } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+
 
 import QueueHeader from '@/components/lab/workstation/QueueHeader'; // Reusable header component
 import PatientLabRequestItem from '@/components/lab/workstation/PatientLabRequestItem'; // Reusable patient square component
 import type { Shift } from '@/types/shifts';
-import type { PatientLabQueueItem, PaginatedPatientLabQueueResponse } from '@/types/labWorkflow';
+import type { PatientLabQueueItem, PaginatedPatientLabQueueResponse, LabQueueFilters } from '@/types/labWorkflow';
 import { getNewlyRegisteredLabPendingQueue } from '@/services/labWorkflowService';
 
 interface LabPatientQueueProps {
@@ -18,22 +18,29 @@ interface LabPatientQueueProps {
   onPatientSelect: (queueItem: PatientLabQueueItem) => void;
   selectedVisitId: number | null;
   globalSearchTerm: string;
+  labFilters?: LabQueueFilters;
+  filters?: LabQueueFilters; // Alternative prop name for compatibility
 }
 
 const LabPatientQueue: React.FC<LabPatientQueueProps> = ({
-  currentShift, onShiftChange, onPatientSelect, selectedVisitId, globalSearchTerm
+  currentShift, onShiftChange, onPatientSelect, selectedVisitId, globalSearchTerm, labFilters, filters
 }) => {
   const { t } = useTranslation(['labResults', 'common', 'labReception']);
   const queryClient = useQueryClient();
   const [currentPage, setCurrentPage] = useState(1);
   
+  // Use either labFilters or filters prop
+  const activeFilters = labFilters || filters || {};
+  console.log(activeFilters,'activeFilters from queue')
+  
   // Use a query key specific to this queue to avoid conflicts with other queues
-  const queueQueryKey = ['labReceptionQueue', currentShift?.id, globalSearchTerm, currentPage] as const;
+  const queueQueryKey = ['labReceptionQueue', currentShift?.id, globalSearchTerm, currentPage, activeFilters] as const;
 
   const { data: paginatedQueue, isLoading, error, isFetching } = useQuery<PaginatedPatientLabQueueResponse, Error>({
     queryKey: queueQueryKey,
     queryFn: () => {
-      const filters: any = {
+      const filters: LabQueueFilters & { search?: string; page?: number; per_page?: number; shift_id?: number } = {
+        ...activeFilters,
         search: globalSearchTerm,
         page: currentPage,
         per_page: 50, // Fetch a good number of items for the flexbox layout
@@ -105,7 +112,7 @@ const LabPatientQueue: React.FC<LabPatientQueueProps> = ({
         )}
 
         {queueItems.length > 0 && (
-          <ScrollArea className="h-full">
+          <ScrollArea className="h-[calc(100vh-200px)] overflow-y-auto ">
             <div className="p-2 flex flex-wrap gap-2 justify-start items-start content-start">
               {queueItems.map((item) => (
                 <PatientLabRequestItem
@@ -113,7 +120,11 @@ const LabPatientQueue: React.FC<LabPatientQueueProps> = ({
                   item={item}
                   isSelected={selectedVisitId === item.visit_id}
                   onSelect={() => onPatientSelect(item)}
-                  allRequestsPaid={(item as any).all_requests_paid} // Backend should provide this
+                  allRequestsPaid={item.all_requests_paid || false}
+                  onSendWhatsAppText={() => {}} // Not needed in reception queue
+                  onSendPdfToPatient={() => {}} // Not needed in reception queue
+                  onSendPdfToCustomNumber={() => {}} // Not needed in reception queue
+                  onToggleResultLock={() => {}} // Not needed in reception queue
                 />
               ))}
             </div>

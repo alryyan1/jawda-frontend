@@ -1,6 +1,6 @@
 // src/pages/LabReceptionPage.tsx
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -34,8 +34,10 @@ import apiClient from "@/services/api";
 
 // Types
 import type { Patient } from "@/types/patients";
-import type { PatientLabQueueItem } from "@/types/labWorkflow";
+import type { LabQueueFilters, PatientLabQueueItem } from "@/types/labWorkflow";
 import type { DoctorVisit } from "@/types/visits";
+import LabFilterDialog from "@/components/lab/reception/LabFilterDialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 // Type for the Autocomplete's options
 interface AutocompleteVisitOption {
@@ -66,6 +68,27 @@ const LabReceptionPage: React.FC = () => {
     useState<AutocompleteVisitOption | null>(null);
   const debouncedAutocompleteSearch = useDebounce(autocompleteInputValue, 500);
 
+  // --- NEW: State for Filters ---
+  const [filters, setFilters] = useState<LabQueueFilters>({
+    isBankak: null,
+    company_id: null,
+    doctor_id: null,
+    specialist: null,
+  });
+
+  const handleApplyFilters = (newFilters: LabQueueFilters) => {
+    console.log(newFilters,'newFilters from lab reception page')
+    setFilters(newFilters);
+  };
+  
+  const handleClearFilters = () => {
+    setFilters({ isBankak: null, company_id: null, doctor_id: null, specialist: null });
+  };
+  
+  // Calculate active filter count for the badge on the button
+  const activeFilterCount = useMemo(() => {
+      return Object.values(filters).filter(value => value !== null && value !== false).length;
+  }, [filters]);
   // --- Data Fetching & Mutations ---
   const { data: recentVisitsData, isLoading: isLoadingRecentVisits } = useQuery<
     AutocompleteVisitOption[],
@@ -255,6 +278,12 @@ const LabReceptionPage: React.FC = () => {
               <Loader2 className="absolute ltr:right-2 rtl:left-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />
             )}
           </div>
+          <LabFilterDialog
+                        currentFilters={filters}
+                        onApplyFilters={handleApplyFilters}
+                        onClearFilters={handleClearFilters}
+                        activeFilterCount={activeFilterCount}
+                    />
           <Button
             variant="ghost"
             size="icon"
@@ -292,15 +321,18 @@ const LabReceptionPage: React.FC = () => {
           )}
         >
           {activeVisitId ? (
-            <LabPatientQueue
-              currentShift={currentClinicShift}
-              onShiftChange={() =>
-                toast.info(t("common:featureNotImplementedShort"))
-              }
-              onPatientSelect={handlePatientSelectedFromQueue}
-              selectedVisitId={activeVisitId}
-              globalSearchTerm={""} // The queue could have its own search if desired
-            />
+            <div className="h-full flex flex-col">
+              <LabPatientQueue
+                labFilters={filters}
+                currentShift={currentClinicShift}
+                onShiftChange={() =>
+                  toast.info(t("common:featureNotImplementedShort"))
+                }
+                onPatientSelect={handlePatientSelectedFromQueue}
+                selectedVisitId={activeVisitId}
+                globalSearchTerm={""} // The queue could have its own search if desired
+              />
+            </div>
           ) : (
             <LabRegistrationForm
               onPatientActivated={handlePatientActivated}
@@ -318,22 +350,25 @@ const LabReceptionPage: React.FC = () => {
               : "bg-card border-border " + (isRTL ? "border-r" : "border-l")
           )}
         >
-          {activeVisitId ? (
+                    {activeVisitId ? (
             <LabPatientWorkspace
               key={activeVisitId}
               activeVisitId={activeVisitId}
               onClose={handleToggleToRegistration}
             />
           ) : (
-            <LabPatientQueue
-              currentShift={currentClinicShift}
-              onShiftChange={() =>
-                toast.info(t("common:featureNotImplementedShort"))
-              }
-              onPatientSelect={handlePatientSelectedFromQueue}
-              selectedVisitId={activeVisitId}
-              globalSearchTerm={""} // The queue could have its own search if desired
-            />
+            <div className="h-full flex flex-col">
+              <LabPatientQueue
+                labFilters={filters}
+                currentShift={currentClinicShift}
+                onShiftChange={() =>
+                  toast.info(t("common:featureNotImplementedShort"))
+                }
+                onPatientSelect={handlePatientSelectedFromQueue}
+                selectedVisitId={activeVisitId}
+                globalSearchTerm={""} // The queue could have its own search if desired
+              />
+            </div>
           )}
         </section>
       </div>

@@ -18,8 +18,22 @@
   },
   "pageTitle": "استقبال المختبر",
     "actions": {
+      "registerNewPatient": "تسجيل مريض جديد",
+      "filter": "تصفية",
+      "clearFilters": "مسح التصفية",
+      "applyFilters": "تطبيق التصفية",
       "viewPatientQueue": "عرض قائمة انتظار المرضى",
       "myShiftIncome": "إيرادات ورديتي"
-    }
+    },
+    "filterDialog": {
+      "title": "خيارات التصفية",
+      "description": "حدد المعايير لتصفية النتائج",
+      "companyLabel": "الشركة",
+      "doctorLabel": "الطبيب",
+      "specialistLabel": "الأخصائي",
+      "bankPaymentOnly": "مدفوعات البنك فقط"
+    },
+    "noPatientsInQueue": "لا يوجد مرضى في الطابور لهذه الوردية.",
+    "useFormToAdd": "استخدم نموذج التسجيل لإضافة مريض جديد."
 }
 

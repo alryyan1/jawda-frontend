@@ -1,4 +1,19 @@
 {
+  "pageTitle": "التخصصات الطبية",
+  "searchPlaceholder": "البحث في التخصصات...",
+  "addButton": "إضافة تخصص",
+  "noResults": "لم يتم العثور على تخصصات",
+  "table": {
+    "id": "الرقم",
+    "name": "اسم التخصص",
+    "doctorsCount": "عدد الأطباء"
+  },
+  "createDialogTitle": "إضافة تخصص جديد",
+  "editDialogTitle": "تحرير التخصص",
+  "dialogDescription": "أدخل تفاصيل التخصص هنا. سيتم تحديث القائمة.",
+  "createSuccess": "تمت إضافة التخصص بنجاح!",
+  "editSuccess": "تم تحديث التخصص بنجاح!",
+  "deleteSuccess": "تم حذف التخصص بنجاح!",
   "addSpecialistButton": "إضافة تخصص",
   "addDialogTitle": "إضافة تخصص جديد",
   "addDialogDescription": "أدخل اسم التخصص الجديد هنا. سيتم تحديث القائمة.",

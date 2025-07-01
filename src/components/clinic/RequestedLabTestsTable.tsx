@@ -137,7 +137,6 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
       is_bankak: lr.is_bankak || false,
     });
   };
-  const handleCancelEdit = () => setEditingRowId(null);
 
   const handleSaveEdit = (labRequestId: number) => {
     const payload: Partial<
@@ -153,7 +152,6 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
   };
 
   const handleCancelRequest = (lr: LabRequest) => {
-    alert("handleCancelRequest");
     if (
       window.confirm(
         t("labTests:request.cancelConfirmForItem", {
@@ -390,10 +388,10 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
                             <Button
                               size="icon"
                               variant="ghost"
-                              onClick={handleCancelEdit}
+                              onClick={() => handleCancelRequest(lr)}
                               className="h-7 w-7"
                             >
-                              <Trash2 className="h-4 w-4 text-slate-500" />
+                              <Trash2 className="h-4 w-4 text-red-600" />
                             </Button>
                           </>
                         ) : (

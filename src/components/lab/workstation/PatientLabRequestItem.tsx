@@ -86,6 +86,7 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
 
   // Cleanup on component unmount
   useEffect(() => {
+    
     return () => {
       cleanupBodyPointerEvents();
     };
@@ -96,6 +97,7 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
     action();
   };
  console.log(isLastResultPending,'isLastResultPending',isSelected,'isSelected',isReadyForPrint,'isReadyForPrint')
+
   return (
     <ContextMenu>
       <ContextMenuTrigger>

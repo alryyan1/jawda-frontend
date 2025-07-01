@@ -4,6 +4,7 @@ import React, { useState, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
+import { useLabUpdates } from '@/hooks/useSocketListener'; // Import the new hook
 
 // MUI Imports
 import Autocomplete from "@mui/material/Autocomplete";
@@ -37,8 +38,8 @@ import type { Patient } from "@/types/patients";
 import type { LabQueueFilters, PatientLabQueueItem } from "@/types/labWorkflow";
 import type { DoctorVisit } from "@/types/visits";
 import LabFilterDialog from "@/components/lab/reception/LabFilterDialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { getAppearanceSettings, type LabAppearanceSettings } from "@/lib/appearance-settings-store";
+import { ConnectionStatusIndicator } from "@/components/common/ConnectionStatusIndicator";
 
 // Type for the Autocomplete's options
 interface AutocompleteVisitOption {
@@ -59,6 +60,8 @@ const LabReceptionPage: React.FC = () => {
   const queryClient = useQueryClient();
   const { currentClinicShift } = useAuth();
 
+  // Call the hook here. It will set up the listener for the lifetime of this page.
+  useLabUpdates();
   // --- State Management ---
   const [activeVisitId, setActiveVisitId] = useState<number | null>(null);
 
@@ -202,6 +205,7 @@ const LabReceptionPage: React.FC = () => {
           <h1 className="text-lg sm:text-xl font-bold text-slate-800 dark:text-slate-100">
             {t("pageTitle", "Lab Reception")}
           </h1>
+          <ConnectionStatusIndicator size="small" />
         </div>
 
         <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto sm:flex-grow justify-end">

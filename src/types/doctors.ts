@@ -12,7 +12,16 @@ export interface FinanceAccount {
   name: string;
   // add other fields if needed by UI
 }
+export interface SpecialistFormData {
+  name: string;
+}
 
+// Ensure Specialist has doctors_count if you use it
+export interface Specialist {
+  id: number;
+  name: string;
+  doctors_count?: number; // From withCount('doctors')
+}
 export interface Doctor {
   id: number;
   name: string;

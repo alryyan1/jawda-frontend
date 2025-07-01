@@ -89,6 +89,7 @@ const utilityNavItems: NavItem[] = [
   { to: '/users', labelKey: 'users', icon: Users, permission: 'list users' },
   { to: '/roles', labelKey: 'roles', icon: ShieldCheck, permission: 'list roles' },
   { to: '/settings/general', labelKey: 'settings', icon: Settings, permission: 'view settings' }, // Points to the default general settings page
+  { to: '/specialists', labelKey: 'specialists', icon: Users, permission: 'list specialists' },
 ];
 
 

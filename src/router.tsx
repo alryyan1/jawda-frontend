@@ -70,6 +70,7 @@ import SampleCollectionPage from "./pages/lab/SampleCollectionPage";
 import MonthlyAttendanceSummaryPage from "./pages/attendance/MonthlyAttendanceSummaryPage";
 import LabTestStatisticsReportPage from "./pages/reports/LabTestStatisticsReportPage";
 import LabReceptionPage from "./pages/LabReceptionPage";
+import SpecialistsPage from "./pages/specialists/SpecialistsPage";
 // import NotFoundPage from './pages/NotFoundPage'; // Optional: For 404 handling
 
 const AppointmentsPlaceholderPage: React.FC = () => (
@@ -118,6 +119,10 @@ const router = createBrowserRouter([
           {
             path: 'lab-reception',
             element: <LabReceptionPage />,
+          },
+          {
+            path: 'specialists',
+            element: <SpecialistsPage />,
           },
            {
             path: "analysis", // Or "/reports/analysis" if under reports

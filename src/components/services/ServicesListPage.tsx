@@ -44,6 +44,7 @@ import {
   Settings2,
   Search,
   Filter as FilterIcon,
+  SlidersHorizontal,
 } from "lucide-react"; // Added Search, FilterIcon
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -57,10 +58,12 @@ import {
   AlertDialogTitle,
   AlertDialogDescription,
 } from "@/components/ui/alert-dialog";
-import type { Service, ServiceGroup } from "@/types/services";
+import type { Service } from "@/types/services";
 import ManageServiceCostsDialog from "./ManageServiceCostsDialog";
 import { useDebounce } from "@/hooks/useDebounce"; // IMPORT
 import { Label } from "../ui/label";
+import { downloadServicesListExcel, downloadServicesWithCostsExcel } from "@/services/reportService";
+import BatchUpdatePricesDialog from "./BatchUpdatePricesDialog";
 
 interface ApiError {
   message?: string;
@@ -87,6 +90,8 @@ export default function ServicesListPage() {
     service_group_id: "all",
   });
   const debouncedSearchTerm = useDebounce(filters.search, 500);
+  const [isExporting, setIsExporting] = useState(false); // State for export button loader
+  const [isExportingCosts, setIsExportingCosts] = useState(false); // NEW state for new button
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [serviceToDelete, setServiceToDelete] = useState<Service | null>(null);
@@ -156,6 +161,64 @@ export default function ServicesListPage() {
     },
   });
 
+  // Handler for the export button
+  const handleExport = async () => {
+    setIsExporting(true);
+    toast.info(t('common:export.starting'));
+    try {
+      const blob = await downloadServicesListExcel(filters); // Pass current filters
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `services_list_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success(t('common:export.success'));
+    } catch (error: unknown) {
+      console.error("Export failed:", error);
+      const errorMessage = error && typeof error === 'object' && 'response' in error 
+        ? (error.response as { data?: { message?: string } })?.data?.message 
+        : error && typeof error === 'object' && 'message' in error
+        ? (error as { message: string }).message
+        : 'Export failed';
+      toast.error(t('common:export.failed'), {
+        description: errorMessage,
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+  // --- NEW HANDLER FOR COST DETAILS EXPORT ---
+  const handleExportWithCosts = async () => {
+    setIsExportingCosts(true);
+    toast.info(t('common:export.starting'));
+    try {
+      const blob = await downloadServicesWithCostsExcel();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `services_with_cost_details_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success(t('common:export.success'));
+    } catch (error: unknown) {
+      console.error("Export with costs failed:", error);
+      const errorMessage = error && typeof error === 'object' && 'response' in error 
+        ? (error.response as { data?: { message?: string } })?.data?.message 
+        : error && typeof error === 'object' && 'message' in error
+        ? (error as { message: string }).message
+        : 'Export failed';
+      toast.error(t('common:export.failed'), {
+        description: errorMessage,
+      });
+    } finally {
+      setIsExportingCosts(false);
+    }
+  };
   const openDeleteDialog = (service: Service) => {
     setServiceToDelete(service);
     setDeleteDialogOpen(true);
@@ -224,11 +287,28 @@ export default function ServicesListPage() {
           <h1 className="text-2xl sm:text-3xl font-bold">
             {t("services:pageTitle")}
           </h1>
+          <Button onClick={handleExport} disabled={isExporting} size="sm">
+            {t("common:export")}
+          </Button>
+          <Button onClick={handleExportWithCosts} disabled={isExportingCosts} size="sm">
+            {t("common:exportWithCosts")}
+          </Button>
           <Button asChild size="sm">
             <Link to="/settings/services/new">
               {t("services:addServiceButton")}
             </Link>
           </Button>
+            {/* --- NEW BATCH UPDATE BUTTON & DIALOG --- */}
+            <BatchUpdatePricesDialog>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9"
+            >
+              <SlidersHorizontal className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+              {t('actions.batchUpdatePrices')}
+            </Button>
+          </BatchUpdatePricesDialog>
         </div>
 
         {/* Filters Section */}

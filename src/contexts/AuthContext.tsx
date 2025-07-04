@@ -82,14 +82,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const response = await apiClient.get<User>("/user");
       setUser(response.data);
       localStorage.setItem("authUser", JSON.stringify(response.data));
-    } catch (error) {
+    } catch (error: any) {
       console.error("AuthContext: Failed to fetch user", error);
-      // Clear everything on auth failure during fetchUser
-      setToken(null);
-      setUser(null);
-      localStorage.removeItem("authToken");
-      localStorage.removeItem("authUser");
-      queryClient.removeQueries({ queryKey: currentOpenShiftQueryKey });
+      // Check if the error is an Unauthenticated error
+      if (
+        error.response?.status === 401 && 
+        error.response?.data?.message === "Unauthenticated."
+      ) {
+        // Clear everything on auth failure during fetchUser
+        setToken(null);
+        setUser(null);
+        localStorage.removeItem("authToken");
+        localStorage.removeItem("authUser");
+        queryClient.removeQueries({ queryKey: currentOpenShiftQueryKey });
+        
+        // Redirect to login page
+        window.location.href = "/login";
+      }
     } finally {
       // This loading state is specifically for the user fetch operation.
       // The initial overall `isAuthLoading` should be set to false after first token check.
@@ -97,7 +106,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [token, queryClient, currentOpenShiftQueryKey]);
 
   useEffect(() => {
+
     const storedToken = localStorage.getItem("authToken");
+    console.log(user,'user in auth context');
     if (storedToken) {
       if (token !== storedToken) setToken(storedToken); // Sync token state if needed
       // If user state is null but token exists, try to fetch user

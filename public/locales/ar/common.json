@@ -10,6 +10,7 @@
   "refreshList": "تحديث القائمة",
   "companyPrice": "سعر الشركة",
   "requiresApproval": "يتطلب موافقة",
+  "exportWithCosts": "تصدير مع التكلفات",
   "dateUnknown": "تاريخ غير معروف",
   "export": "تصدير",
   "exportPdf": "تصدير PDF",
@@ -137,7 +138,7 @@
   "exportToPdf": "تصدير إلى PDF",
 
   "validation": {      "invalidNumber": "رقم غير صالح",
-
+  "exportWithCosts": "تصدير مع التكلفات",
   "maxLengthShort": "عدد الأحرف تجاوز الحد المسموح",
   "monthRequired": "الشهر مطلوب",
     "yearRequired": "السنة مطلوبة",
@@ -187,7 +188,9 @@
     "saveFailedExt": "فشل في حفظ {{entity}}: {{message}}",
     "deleteFailedExt": "فشل في حذف {{entity}}: {{message}}",
     "loadFailed": "فشل في تحميل {{entity}}",
-    "patientDataUnavailable": "بيانات المريض غير متاحة"
+    "patientDataUnavailable": "بيانات المريض غير متاحة",
+    "previewFailed": "فشل في معاينة التغييرات",
+    "updateFailed": "فشل في التحديث"
   },
   "save": "حفظ",
   "id": "م",

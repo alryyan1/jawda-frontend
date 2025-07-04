@@ -12,18 +12,26 @@ export interface ServiceCostApiPayload {
   fixed?: number | null;
 }
 
+export interface ServiceCostsResponse {
+  data: ServiceCost[];
+  meta: {
+    current_page: number;
+    from: number;
+    last_page: number;
+    total: number;
+  };
+}
 
 const SERVICE_BASE_URL = '/services'; // For nested routes like /services/{service}/service-costs
 const SERVICE_COST_BASE_URL = '/service-costs'; // For shallow routes like /service-costs/{service_cost}
 
 /**
  * Fetches all service cost definitions for a specific service.
- * Returns a direct array as per current dialog usage, not paginated.
+ * Returns the full paginated response.
  */
-export const getServiceCostsForService = async (serviceId: number): Promise<ServiceCost[]> => {
-  // Assuming ServiceCostResource::collection wraps in 'data'
-  const response = await apiClient.get<{ data: ServiceCost[] }>(`${SERVICE_BASE_URL}/${serviceId}/service-costs`);
-  return response.data.data;
+export const getServiceCostsForService = async (serviceId: number): Promise<ServiceCostsResponse> => {
+  const response = await apiClient.get<ServiceCostsResponse>(`${SERVICE_BASE_URL}/${serviceId}/service-costs`);
+  return response.data;
 };
 
 /**

@@ -357,3 +357,27 @@ export const getLabTestStatisticsReport = async (
   return response.data; // Backend structures pagination
 };
 // export const downloadYearlyPatientFrequencyPdf = async (filters: YearlyPatientFrequencyFilters): Promise<Blob> => { ... }; // For future PDF
+
+
+
+export interface ServicesExportFilters {
+  search?: string;
+  service_group_id?: number | string | null;
+}
+
+export const downloadServicesListExcel = async (filters: ServicesExportFilters): Promise<Blob> => {
+  const response = await apiClient.get('/reports/services-list/excel', {
+    params: filters,
+    responseType: 'blob', // Important: expect binary data
+  });
+  return response.data;
+};
+
+// NEW FUNCTION
+export const downloadServicesWithCostsExcel = async (): Promise<Blob> => {
+  // This report might not need filters if it always shows all services with costs
+  const response = await apiClient.get('/reports/services-with-costs/excel', {
+    responseType: 'blob',
+  });
+  return response.data;
+};

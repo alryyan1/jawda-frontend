@@ -31,7 +31,9 @@
     "loadFailed": "Failed to load {{entity}}",
     "requestFailed": "Request failed",
     "patientDataUnavailable": "Patient data unavailable",
-    "noPermissions": "You do not have permission to perform this action"
+    "noPermissions": "You do not have permission to perform this action",
+    "previewFailed": "Failed to preview changes",
+    "updateFailed": "Failed to update"
   },
   "validation": {
     "required": "{{field}} is required.",

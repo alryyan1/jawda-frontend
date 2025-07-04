@@ -25,17 +25,22 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Optional: Interceptor to handle 401 errors (e.g., redirect to login)
+// Interceptor to handle 401/Unauthenticated errors
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
-      // Token might be invalid or expired
+    if (
+
+      error.response?.data?.message === "Unauthenticated."
+    ) {
+      // Clear auth data
       localStorage.removeItem('authToken');
       localStorage.removeItem('authUser');
-      // Potentially redirect to login, or emit an event
-      // window.location.href = '/login'; // Simple redirect
-      console.error('Unauthorized, logging out.');
+      
+      // Redirect to login
+      window.location.href = '/login';
+      
+      console.error('Session expired or invalid. Redirecting to login.');
     }
     return Promise.reject(error);
   }

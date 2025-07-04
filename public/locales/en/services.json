@@ -15,5 +15,33 @@
     "selectType": "Select Type",
     "costTypeTotal": "Total",
     "costTypeAfterCost": "After Cost"
+  },
+  "actions": {
+    "batchUpdatePrices": "Batch Update Prices",
+    "batchUpdateDescription": "Update prices for multiple services based on conditions",
+    "step1": "Step 1: Define Update Action",
+    "step2": "Step 2: Define Conditions (Optional)",
+    "increase": "Increase",
+    "decrease": "Decrease",
+    "byPercentage": "By Percentage",
+    "byAmount": "By Amount",
+    "valuePlaceholder": "Value",
+    "addCondition": "Add Condition",
+    "noConditions": "No conditions added. All services will be affected.",
+    "adjustToSeePreview": "Adjust values to see preview",
+    "previewAffects": "This will affect {{count}} services",
+    "noServicesToUpdateWarning": "No services match the current conditions",
+    "confirmBatchUpdate": "Are you sure you want to update {{count}} services?",
+    "updateSuccess": "Prices updated successfully",
+    "executeUpdateButton": "Execute Update",
+    "fields": {
+      "group": "Service Group",
+      "price": "Price",
+      "name": "Name"
+    }
+  },
+  "operators": {
+    "equals": "Equals",
+    "contains": "Contains"
   }
 } 

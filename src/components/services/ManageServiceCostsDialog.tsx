@@ -20,6 +20,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Loader2, PlusCircle, Trash2, Save } from 'lucide-react';
 
 import type { Service, ServiceCost, SubServiceCost } from '@/types/services';
+import type { ServiceCostsResponse } from '@/services/serviceCostService';
 import { 
     getSubServiceCostsList,
 } from '@/services/subServiceCostService';
@@ -77,12 +78,13 @@ const ManageServiceCostsDialog: React.FC<ManageServiceCostsDialogProps> = ({
   const serviceCostsQueryKey = React.useMemo(() => ['serviceCostsForService', service.id] as const, [service.id]);
   const subServiceCostsQueryKey = React.useMemo(() => ['subServiceCostsList'] as const, []);
 
-  const { data: existingServiceCosts = [], isLoading: isLoadingExistingCosts } = useQuery<ServiceCost[], Error>({
+  const { data: response, isLoading: isLoadingExistingCosts } = useQuery<ServiceCostsResponse, Error>({
     queryKey: serviceCostsQueryKey,
     queryFn: () => getServiceCostsForService(service.id),
     enabled: isOpen && !!service.id,
-    staleTime: 1000 * 60 * 1,
   });
+
+  const existingServiceCosts = response?.data || [];
 
   const { data: subServiceCostTypes = [], isLoading: isLoadingSubTypes } = useQuery<SubServiceCost[], Error>({
     queryKey: subServiceCostsQueryKey,
@@ -98,7 +100,7 @@ const ManageServiceCostsDialog: React.FC<ManageServiceCostsDialogProps> = ({
 
   const { control, handleSubmit, reset, getValues, setValue } = form;
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, replace } = useFieldArray({
     control,
     name: "costs",
     keyName: "fieldId"
@@ -106,7 +108,7 @@ const ManageServiceCostsDialog: React.FC<ManageServiceCostsDialogProps> = ({
 
   // Initialize form data only once when costs are loaded
   useEffect(() => {
-    if (isOpen && existingServiceCosts && !isInitialized) {
+    if (isOpen && existingServiceCosts && existingServiceCosts.length > 0 && !isInitialized) {
       const formattedCosts = existingServiceCosts.map(sc => ({
         id: sc.id,
         sub_service_cost_id: String(sc.sub_service_cost_id),
@@ -114,10 +116,10 @@ const ManageServiceCostsDialog: React.FC<ManageServiceCostsDialogProps> = ({
         percentage: sc.percentage !== null ? String(sc.percentage) : '',
         fixed: sc.fixed !== null ? String(sc.fixed) : '',
       }));
-      reset({ costs: formattedCosts });
+      replace(formattedCosts);
       setIsInitialized(true);
     }
-  }, [isOpen, existingServiceCosts, reset, isInitialized]);
+  }, [isOpen, existingServiceCosts, replace, isInitialized]);
 
   // Reset state when dialog closes
   useEffect(() => {

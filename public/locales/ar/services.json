@@ -111,5 +111,33 @@
     "addError": "حدث خطأ أثناء إضافة نوع التكلفة",
     "addedToList": "تمت إضافة {{name}} إلى القائمة"
   },
-  "manageCostsButton": "إدارة التكاليف"
+  "manageCostsButton": "إدارة التكاليف",
+  "actions": {
+    "batchUpdatePrices": "تحديث الأسعار بالجملة",
+    "batchUpdateDescription": "تحديث أسعار خدمات متعددة بناءً على الشروط",
+    "step1": "الخطوة 1: تحديد إجراء التحديث",
+    "step2": "الخطوة 2: تحديد الشروط (اختياري)",
+    "increase": "زيادة",
+    "decrease": "تقليل",
+    "byPercentage": "بالنسبة المئوية",
+    "byAmount": "بالمبلغ",
+    "valuePlaceholder": "القيمة",
+    "addCondition": "إضافة شرط",
+    "noConditions": "لم يتم إضافة شروط. ستتأثر جميع الخدمات.",
+    "adjustToSeePreview": "اضبط القيم لرؤية المعاينة",
+    "previewAffects": "سيؤثر هذا على {{count}} خدمة",
+    "noServicesToUpdateWarning": "لا توجد خدمات تطابق الشروط الحالية",
+    "confirmBatchUpdate": "هل أنت متأكد من أنك تريد تحديث {{count}} خدمة؟",
+    "updateSuccess": "تم تحديث الأسعار بنجاح",
+    "executeUpdateButton": "تنفيذ التحديث",
+    "fields": {
+      "group": "مجموعة الخدمة",
+      "price": "السعر",
+      "name": "الاسم"
+    }
+  },
+  "operators": {
+    "equals": "يساوي",
+    "contains": "يحتوي على"
+  }
 }

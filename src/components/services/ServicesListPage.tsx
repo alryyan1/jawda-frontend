@@ -62,7 +62,7 @@ import type { Service } from "@/types/services";
 import ManageServiceCostsDialog from "./ManageServiceCostsDialog";
 import { useDebounce } from "@/hooks/useDebounce"; // IMPORT
 import { Label } from "../ui/label";
-import { downloadServicesListExcel, downloadServicesWithCostsExcel } from "@/services/reportService";
+import { downloadServicesListExcel, downloadServicesListPdf, downloadServicesWithCostsExcel } from "@/services/reportService";
 import BatchUpdatePricesDialog from "./BatchUpdatePricesDialog";
 
 interface ApiError {
@@ -95,7 +95,7 @@ export default function ServicesListPage() {
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [serviceToDelete, setServiceToDelete] = useState<Service | null>(null);
-
+  const [isExportingPdf, setIsExportingPdf] = useState(false); // State for PDF loader
   const [manageCostsState, setManageCostsState] = useState<{
     isOpen: boolean;
     service: Service | null;
@@ -161,6 +161,41 @@ export default function ServicesListPage() {
     },
   });
 
+  // --- PDF EXPORT HANDLER - OPENS IN NEW TAB ---
+  const handleExportPdf = async () => {
+    setIsExportingPdf(true);
+    
+    try {
+      const blob = await downloadServicesListPdf(filters); // Pass current filters
+      const objectUrl = URL.createObjectURL(blob);
+      
+      // Open PDF in new tab
+      const newWindow = window.open(objectUrl, '_blank');
+      if (!newWindow) {
+        toast.error(t('common:export.failed'), {
+          description: 'Popup blocked. Please allow popups for this site.',
+        });
+      }
+      
+      // Clean up the object URL after a delay to ensure the new tab has loaded it
+      setTimeout(() => {
+        URL.revokeObjectURL(objectUrl);
+      }, 1000);
+      
+    } catch (error: unknown) {
+      console.error("PDF Export failed:", error);
+      const errorMessage = error && typeof error === 'object' && 'response' in error 
+        ? (error.response as { data?: { message?: string } })?.data?.message 
+        : error && typeof error === 'object' && 'message' in error
+        ? (error as { message: string }).message
+        : 'Export failed';
+      toast.error(t('common:export.failed'), {
+        description: errorMessage,
+      });
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
   // Handler for the export button
   const handleExport = async () => {
     setIsExporting(true);
@@ -287,6 +322,11 @@ export default function ServicesListPage() {
           <h1 className="text-2xl sm:text-3xl font-bold">
             {t("services:pageTitle")}
           </h1>
+          <div className="flex items-center gap-2">
+            <Button onClick={handleExportPdf} disabled={isExportingPdf} size="sm">
+              {t("common:exportPdf")}
+            </Button> 
+          </div>
           <Button onClick={handleExport} disabled={isExporting} size="sm">
             {t("common:export")}
           </Button>

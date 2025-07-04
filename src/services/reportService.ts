@@ -381,3 +381,11 @@ export const downloadServicesWithCostsExcel = async (): Promise<Blob> => {
   });
   return response.data;
 };
+
+export const downloadServicesListPdf = async (filters: ServicesExportFilters): Promise<Blob> => {
+  const response = await apiClient.get('/reports/services-list/pdf', {
+    params: filters,
+    responseType: 'blob', // Important: expect binary data
+  });
+  return response.data;
+};

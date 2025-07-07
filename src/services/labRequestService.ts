@@ -90,7 +90,6 @@ export const getLabRequestsForVisit = async (
 };
 
 export const cancelLabRequest = async (labRequestId: number): Promise<void> => {
-  alert("cancelLabRequest");
   await apiClient.delete(`${LABREQUEST_BASE_URL}/${labRequestId}`);
 };
 

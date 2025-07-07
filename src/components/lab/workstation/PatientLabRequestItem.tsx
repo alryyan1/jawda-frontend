@@ -96,7 +96,7 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
     cleanupBodyPointerEvents();
     action();
   };
- console.log(isLastResultPending,'isLastResultPending',isSelected,'isSelected',isReadyForPrint,'isReadyForPrint')
+//  console.log(isLastResultPending,'isLastResultPending',isSelected,'isSelected',isReadyForPrint,'isReadyForPrint')
 
   return (
     <ContextMenu>

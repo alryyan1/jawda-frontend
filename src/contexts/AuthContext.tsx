@@ -89,12 +89,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         error.response?.status === 401 && 
         error.response?.data?.message === "Unauthenticated."
       ) {
-        // Clear everything on auth failure during fetchUser
-        setToken(null);
-        setUser(null);
-        localStorage.removeItem("authToken");
-        localStorage.removeItem("authUser");
-        queryClient.removeQueries({ queryKey: currentOpenShiftQueryKey });
+      // Clear everything on auth failure during fetchUser
+      setToken(null);
+      setUser(null);
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("authUser");
+      queryClient.removeQueries({ queryKey: currentOpenShiftQueryKey });
         
         // Redirect to login page
         window.location.href = "/login";

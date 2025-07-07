@@ -60,91 +60,74 @@ import type {
   Patient,
   PatientSearchResult,
 } from "@/types/patients";
+import type { DoctorVisit } from "@/types/visits";
 import type { DoctorStripped } from "@/types/doctors";
 import type { Company, Subcompany, CompanyRelation } from "@/types/companies";
+import { getDoctorVisitById } from "@/services/visitService";
+import type { PatientLabQueueItem } from "@/types/labWorkflow";
 
 // Zod Schema Definition
 const getLabRegistrationSchema = (t: TFunction, isCompanySelected: boolean) =>
-  z
-    .object({
-      phone: z.string().optional().nullable(),
-      name: z.string().min(1, { message: t("clinic:validation.nameRequired") }),
-      doctor: z.custom<DoctorStripped | null>((val) => val !== null, {
-        message: t("labReception:validation.doctorRequired"),
-      }),
-      gender: z.enum(["male", "female"], {
-        required_error: t("clinic:validation.genderRequired"),
-      }),
-      age_year: z
-        .string()
-        .optional()
-        .nullable()
-        .refine(
-          (val) => !val || /^\d+$/.test(val),
-          t("common:validation.invalidNumber")
-        ),
-      age_month: z
-        .string()
-        .optional()
-        .nullable()
-        .refine(
-          (val) => !val || /^\d+$/.test(val),
-          t("common:validation.invalidNumber")
-        ),
-      age_day: z
-        .string()
-        .optional()
-        .nullable()
-        .refine(
-          (val) => !val || /^\d+$/.test(val),
-          t("common:validation.invalidNumber")
-        ),
-      address: z.string().optional().nullable(),
-      company_id: z.string().optional().nullable(),
-      insurance_no: z.string().optional().nullable(),
-      guarantor: z.string().optional().nullable(),
-      subcompany_id: z.string().optional().nullable(),
-      company_relation_id: z.string().optional().nullable(),
-    })
-    .superRefine((data, ctx) => {
-      if (
-        data.company_id &&
-        data.company_id !== "" &&
-        !data.insurance_no?.trim()
-      ) {
+  z.object({
+    phone: z.string().optional().nullable(),
+    name: z.string().min(1, { message: t("clinic:validation.nameRequired") }),
+    doctor: z.custom<DoctorStripped | null>((val) => val !== null, {
+      message: t("labReception:validation.doctorRequired"),
+    }),
+    gender: z.enum(["male", "female"], {
+      required_error: t("clinic:validation.genderRequired"),
+    }),
+    age_year: z
+      .string()
+      .optional()
+      .nullable()
+      .refine(
+        (val) => !val || /^\d+$/.test(val),
+        t("common:validation.invalidNumber")
+      ),
+    age_month: z
+      .string()
+      .optional()
+      .nullable()
+      .refine(
+        (val) => !val || /^\d+$/.test(val),
+        t("common:validation.invalidNumber")
+      ),
+    age_day: z
+      .string()
+      .optional()
+      .nullable()
+      .refine(
+        (val) => !val || /^\d+$/.test(val),
+        t("common:validation.invalidNumber")
+      ),
+    address: z.string().optional().nullable(),
+    company_id: z.string().optional().nullable(),
+    insurance_no: z.string().optional().nullable().superRefine((val, ctx) => {
+      if (isCompanySelected && !val?.trim()) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: t("common:validation.requiredField", {
             field: t("patients:fields.insuranceNo"),
           }),
-          path: ["insurance_no"],
+          path: [],
         });
       }
-    });
+    }),
+    guarantor: z.string().optional().nullable(),
+    subcompany_id: z.string().optional().nullable(),
+    company_relation_id: z.string().optional().nullable(),
+  });
 
 type LabRegistrationFormValues = z.infer<
   ReturnType<typeof getLabRegistrationSchema>
 >;
 
 // Type for the lab registration submission data
-interface LabRegistrationSubmissionData {
-  name: string;
-  phone?: string | null;
-  gender: "male" | "female";
-  age_year?: number;
-  age_month?: number;
-  age_day?: number;
-  address?: string | null;
-  doctor_id: number;
-  company_id?: number;
-  insurance_no?: string;
-  guarantor?: string;
-  subcompany_id?: number;
-  company_relation_id?: number;
-}
+
 
 interface LabRegistrationFormProps {
-  onPatientActivated: (patientWithVisit: Patient) => void;
+  onPatientActivated: (patientWithVisit: Patient & { doctorVisit?: DoctorVisit }) => void;
   isVisible?: boolean;
 }
 
@@ -165,10 +148,7 @@ const LabRegistrationForm: React.FC<LabRegistrationFormProps> = ({
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
   const [showSearchResults, setShowSearchResults] = useState(false);
-  const [searchAnchor, setSearchAnchor] = useState<HTMLInputElement | null>(
-    null
-  );
-  const [doctorSearchInput, setDoctorSearchInput] = useState("");
+
 
   const [showSubcompanyDialog, setShowSubcompanyDialog] = useState(false);
   const [showRelationDialog, setShowRelationDialog] = useState(false);
@@ -193,7 +173,7 @@ const LabRegistrationForm: React.FC<LabRegistrationFormProps> = ({
   useEffect(() => {
     const newSchema = getLabRegistrationSchema(t, isCompanySelected);
     form.reset(form.getValues(), {
-      // @ts-ignore
+      // @ts-expect-error - Zod schema resolver type mismatch
       resolver: zodResolver(newSchema),
     });
     if (isCompanySelected) {
@@ -253,37 +233,83 @@ const LabRegistrationForm: React.FC<LabRegistrationFormProps> = ({
       if (!data.doctor?.id) throw new Error("Doctor is required.");
       const submissionData = {
         name: data.name,
-        phone: data.phone,
+        phone: data.phone || "",
         gender: data.gender,
         age_year: data.age_year ? parseInt(data.age_year) : undefined,
         age_month: data.age_month ? parseInt(data.age_month) : undefined,
         age_day: data.age_day ? parseInt(data.age_day) : undefined,
-        address: data.address,
         doctor_id: data.doctor.id,
         company_id:
-          isCompanySelected && data.company_id
+          data.company_id && data.company_id !== ""
             ? parseInt(data.company_id)
             : undefined,
-        insurance_no: isCompanySelected ? data.insurance_no : undefined,
-        guarantor: isCompanySelected ? data.guarantor : undefined,
-        subcompany_id:
-          isCompanySelected && data.subcompany_id
-            ? parseInt(data.subcompany_id)
-            : undefined,
-        company_relation_id:
-          isCompanySelected && data.company_relation_id
-            ? parseInt(data.company_relation_id)
-            : undefined,
+        insurance_no: data.insurance_no || undefined,
+        guarantor: data.guarantor || undefined,
+        subcompany_id: data.subcompany_id || undefined,
+        company_relation_id: data.company_relation_id || undefined,
       };
-      return registerNewPatientFromLab(submissionData as Partial<LabRegistrationSubmissionData>);
+      return registerNewPatientFromLab(submissionData);
     },
-    onSuccess: (newPatientWithVisit) => {
+    onSuccess: async (newPatientWithVisit) => {
       toast.success(t("clinic:patientRegistration.registrationSuccess"));
-      // Invalidate the lab patient queue to show the newly added patient
-      queryClient.invalidateQueries({
-        queryKey: ["labReceptionQueue"],
-      });
-      onPatientActivated(newPatientWithVisit);
+       console.log(newPatientWithVisit,'newPatientWithVisit')
+      const patientWithVisit = newPatientWithVisit as Patient & { doctor_visit?: DoctorVisit };
+      const visitId = patientWithVisit.doctor_visit?.id;
+
+      if (!visitId) {
+        console.error("No visit ID returned from registration");
+        return;
+      }
+      console.log(visitId,'visitId',patientWithVisit,'patientwithvisit')
+      try {
+        // Get full visit details first
+        const fullVisit = await getDoctorVisitById(visitId);
+        
+        // Create a queue item for immediate display
+        const newQueueItem: PatientLabQueueItem = {
+          visit_id: visitId,
+          patient_id: patientWithVisit.id,
+          patient_name: patientWithVisit.name,
+          phone: patientWithVisit.phone || "",
+          lab_number: visitId.toString(),
+          oldest_request_time: fullVisit.created_at,
+          lab_request_ids: [],
+          test_count: 0,
+          all_requests_paid: false,
+          result_is_locked: false,
+          is_result_locked: false,
+          is_printed: false,
+          sample_id: null
+        };
+
+        // Update the queue data immediately
+        queryClient.setQueryData<PatientLabQueueItem[]>(["labReceptionQueue"], (oldData) => {
+          if (!oldData) return [newQueueItem];
+          return [newQueueItem, ...oldData];
+        });
+
+        // Then trigger a background refresh of the queue
+        queryClient.invalidateQueries({
+          queryKey: ["labReceptionQueue"],
+        });
+
+        // Activate the patient with full visit details
+        onPatientActivated({
+          ...patientWithVisit,
+          doctorVisit: fullVisit
+        });
+
+      } catch (error) {
+        console.error("Error setting up new patient visit:", error);
+        // Fallback: use basic patient data
+        onPatientActivated(patientWithVisit);
+        
+        // Still invalidate the queue to ensure eventual consistency
+        queryClient.invalidateQueries({
+          queryKey: ["labReceptionQueue"],
+        });
+      }
+
       reset();
       phoneInputRef.current?.focus();
     },
@@ -331,7 +357,6 @@ const LabRegistrationForm: React.FC<LabRegistrationFormProps> = ({
     setSearchQuery(value);
     if (value.length >= 2) {
       setShowSearchResults(true);
-      setSearchAnchor(event.currentTarget);
     } else {
       setShowSearchResults(false);
     }
@@ -412,8 +437,6 @@ const LabRegistrationForm: React.FC<LabRegistrationFormProps> = ({
                             ref={phoneInputRef}
                             onChange={handleSearchInputChange}
                             onFocus={(e) => {
-                              if (e.target.value.length >= 2)
-                                setSearchAnchor(e.currentTarget);
                               setShowSearchResults(e.target.value.length >= 2);
                             }}
                             disabled={currentIsLoading}
@@ -441,8 +464,6 @@ const LabRegistrationForm: React.FC<LabRegistrationFormProps> = ({
                             ref={nameInputRef}
                             onChange={handleSearchInputChange}
                             onFocus={(e) => {
-                              if (e.target.value.length >= 2)
-                                setSearchAnchor(e.currentTarget);
                               setShowSearchResults(e.target.value.length >= 2);
                             }}
                             disabled={currentIsLoading}
@@ -489,9 +510,7 @@ const LabRegistrationForm: React.FC<LabRegistrationFormProps> = ({
                       option.id === value.id
                     }
                     onChange={(_, data) => field.onChange(data)}
-                    onInputChange={(_, newInputValue) =>
-                      setDoctorSearchInput(newInputValue)
-                    }
+                    onInputChange={() => {}}
                     renderInput={(params) => (
                       <TextField
                         {...params}

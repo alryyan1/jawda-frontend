@@ -83,7 +83,7 @@ const BatchUpdatePricesDialog: React.FC<BatchUpdatePricesDialogProps> = ({ child
 
   useEffect(() => {
     if (isOpen && watchedFormValues.update_value && parseFloat(watchedFormValues.update_value) > 0) {
-      debouncedPreview(watchedFormValues);
+    debouncedPreview(watchedFormValues);
     } else if (isOpen && (!watchedFormValues.update_value || parseFloat(watchedFormValues.update_value) <= 0)) {
       setPreviewResult(null);
     }

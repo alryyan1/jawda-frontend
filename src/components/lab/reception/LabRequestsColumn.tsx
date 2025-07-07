@@ -359,7 +359,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
             onClick={handlePrintReceipt}
             variant="outline"
             size="sm"
-            disabled={isGeneratingPdf || !activeVisitId}
+            disabled={isGeneratingPdf ||  visit?.lab_requests?.length === 0  }
           >
             {isGeneratingPdf ? (
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -584,6 +584,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
 
       {/* PDF Preview Dialog */}
       <PdfPreviewDialog
+      widthClass="w-[300px]"
         isOpen={isPdfPreviewOpen}
         onOpenChange={(open) => {
           setIsPdfPreviewOpen(open);

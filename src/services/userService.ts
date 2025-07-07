@@ -1,3 +1,5 @@
+
+
 // src/services/userService.ts
 import apiClient from "./api";
 import type { UserShiftIncomeSummary } from '../types/users'; // Adjust path
@@ -10,7 +12,16 @@ import type {
 
 const API_URL = "/users";
 const ROLES_API_URL = "/roles-list"; // Route to get all roles
+// ... existing types
 
+export interface LabUserShiftIncomeSummary {
+  user_id: number;
+  user_name: string;
+  shift_id: number;
+  total_lab_income: number;
+  total_cash: number;
+  total_bank: number;
+}
 export const getUsers = (
   page = 1,
   filters: Record<string, any> = {}
@@ -61,6 +72,12 @@ export const fetchCurrentUserShiftIncomeSummary = async (shiftId: number): Promi
   // Backend response is { data: UserShiftIncomeSummary }
   const response = await apiClient.get<{ data: UserShiftIncomeSummary }>(`/user/current-shift-income-summary`, {
     params: { shift_id: shiftId }
+  });
+  return response.data.data;
+};
+export const fetchCurrentUserLabIncomeSummary = async (shiftId: number): Promise<LabUserShiftIncomeSummary> => {
+  const response = await apiClient.get<{ data: LabUserShiftIncomeSummary }>(`/user/current-shift-lab-income-summary`, {
+      params: { shift_id: shiftId }
   });
   return response.data.data;
 };

@@ -12,6 +12,10 @@ interface PdfPreviewDialogProps {
   title?: string;
   fileName?: string; // For the download button
   isLoading?: boolean; // If PDF generation is happening before URL is ready
+  /**
+   * Optional Tailwind width class for the dialog (e.g. w-[380px] for thermal printer)
+   */
+  widthClass?: string;
 }
 
 const PdfPreviewDialog: React.FC<PdfPreviewDialogProps> = ({
@@ -20,7 +24,8 @@ const PdfPreviewDialog: React.FC<PdfPreviewDialogProps> = ({
   pdfUrl,
   title,
   fileName = 'document.pdf',
-  isLoading
+  isLoading,
+  widthClass
 }) => {
   const { t } = useTranslation(['common']);
 
@@ -45,7 +50,13 @@ const PdfPreviewDialog: React.FC<PdfPreviewDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] max-w-none sm:max-w-none md:max-w-none h-[85vh] flex flex-col p-0 sm:p-0 overflow-hidden">
+      <DialogContent
+        className={
+          widthClass
+            ? `${widthClass} max-w-none sm:max-w-none md:max-w-none h-[85vh] flex flex-col p-0 sm:p-0 overflow-hidden`
+            : "max-w-none sm:max-w-none md:max-w-none h-[85vh] flex flex-col p-0 sm:p-0 overflow-hidden"
+        }
+      >
         <DialogHeader className="p-3 sm:p-4 border-b flex-row justify-between items-center space-y-0">
           <DialogTitle>{title || t('pdfPreview.title', "Document Preview")}</DialogTitle>
         </DialogHeader>

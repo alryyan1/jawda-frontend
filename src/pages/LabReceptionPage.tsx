@@ -45,6 +45,7 @@ import type { DoctorVisit } from "@/types/visits";
 import type { MainTestStripped } from "@/types/labTests";
 import { getAppearanceSettings, type LabAppearanceSettings } from "@/lib/appearance-settings-store";
 import { ConnectionStatusIndicator } from "@/components/common/ConnectionStatusIndicator";
+import type { DoctorShift } from "@/types/doctors";
 
 // Material Theme
 const materialTheme = createTheme({
@@ -116,6 +117,25 @@ const LabReceptionPage: React.FC = () => {
   
   // Lab Test Selection State - Multiple Selection
   const [selectedTests, setSelectedTests] = useState<MainTestStripped[]>([]);
+  const [isDoctorFinderOpen, setIsDoctorFinderOpen] = useState(false); // State for the dialog
+
+  const handleToggleView = () => {
+      setIsFormVisible(prev => !prev);
+      if (!isFormVisible) {
+          setActiveVisitId(null); // Clear active visit when switching back to the form view
+      }
+  };
+  
+  const handleDoctorFilterSelect = (doctorShift: DoctorShift) => {
+      // Apply the doctor filter and close the dialog
+      setFilters(prev => ({
+          ...prev,
+          doctor: { id: doctorShift.doctor_id, name: doctorShift.doctor_name, specialist_name: doctorShift.doctor_specialist_name },
+          specialist: null, // Clear specialist filter if a specific doctor is chosen
+      }));
+      setIsDoctorFinderOpen(false);
+  };
+
 
   // Filters state
   const [filters] = useState<LabQueueFilters>({

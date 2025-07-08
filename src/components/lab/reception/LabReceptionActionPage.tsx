@@ -103,7 +103,10 @@ const LabReceptionActionPage: React.FC<LabReceptionActionPageProps> = ({
                     variant="ghost" 
                     size="icon" 
                     className="w-11 h-11" 
-                    onClick={onOpenDoctorFinder} 
+                    onClick={() => {
+                        console.log('Eye button clicked');
+                        onOpenDoctorFinder();
+                    }} 
                     aria-label={t('actions.filterByDoctor')}
                 >
                     <Eye className="h-5 w-5" />

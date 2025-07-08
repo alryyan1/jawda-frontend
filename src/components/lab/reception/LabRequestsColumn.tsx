@@ -353,7 +353,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
   return (
     <div className="h-full flex flex-col">
       {/* Header with Print Receipt and Remove All Pending buttons */}
-      <div className="flex items-center justify-between p-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
         <div className="flex items-center gap-2">
           <Button
             onClick={handlePrintReceipt}
@@ -366,7 +366,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
             ) : (
               <PrinterIcon className="h-4 w-4 mr-2" />
             )}
-            {t('common:printReceipt')}
+            <span className="hidden sm:inline">{t('common:printReceipt')}</span>
           </Button>
         </div>
         
@@ -382,7 +382,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
             ) : (
               <Trash2 className="h-4 w-4 mr-2" />
             )}
-            {t("labRequestsColumn.removeAllPending", "Remove All Pending")}
+            <span className="hidden sm:inline">{t("labRequestsColumn.removeAllPending", "Remove All Pending")}</span>
           </Button>
           
           <Button
@@ -392,7 +392,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
             disabled={(visit?.lab_requests?.length ?? 0) === 0}
           >
             <Banknote className="h-4 w-4 mr-2" />
-            {t("labRequestsColumn.batchPayment", "Batch Payment")}
+            <span className="hidden sm:inline">{t("labRequestsColumn.batchPayment", "Batch Payment")}</span>
           </Button>
         </div>
       </div>
@@ -418,14 +418,14 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[200px]">{t("labRequestsColumn.testName", "Test Name")}</TableHead>
-                  <TableHead className="w-[100px]">{t("labRequestsColumn.price", "Price")}</TableHead>
-                  <TableHead className="w-[120px]">{t("labRequestsColumn.discount", "Discount")}</TableHead>
-                  <TableHead className="w-[100px]">{t("labRequestsColumn.amount", "Amount")}</TableHead>
-                  <TableHead className="w-[100px]">{t("labRequestsColumn.paid", "Paid")}</TableHead>
-                  <TableHead className="w-[80px]">{t("labRequestsColumn.bankak", "Bank")}</TableHead>
-                  <TableHead className="w-[100px]">{t("labRequestsColumn.payment", "Payment")}</TableHead>
-                  <TableHead className="w-[80px]">{t("labRequestsColumn.actions", "Actions")}</TableHead>
+                  <TableHead className="min-w-[150px]">{t("labRequestsColumn.testName", "Test Name")}</TableHead>
+                  <TableHead className="min-w-[80px] hidden sm:table-cell">{t("labRequestsColumn.price", "Price")}</TableHead>
+                  <TableHead className="min-w-[100px] hidden md:table-cell">{t("labRequestsColumn.discount", "Discount")}</TableHead>
+                  <TableHead className="min-w-[80px]">{t("labRequestsColumn.amount", "Amount")}</TableHead>
+                  <TableHead className="min-w-[80px] hidden sm:table-cell">{t("labRequestsColumn.paid", "Paid")}</TableHead>
+                  <TableHead className="min-w-[60px] hidden lg:table-cell">{t("labRequestsColumn.bankak", "Bank")}</TableHead>
+                  <TableHead className="min-w-[80px] hidden sm:table-cell">{t("labRequestsColumn.payment", "Payment")}</TableHead>
+                  <TableHead className="min-w-[60px]">{t("labRequestsColumn.actions", "Actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -443,14 +443,37 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                           <span className="text-xs text-slate-500">
                             ID: {request.id}
                           </span>
+                          {/* Mobile-only info */}
+                          <div className="sm:hidden space-y-1 mt-2">
+                            <div className="flex justify-between text-xs">
+                              <span className="text-slate-500">Price:</span>
+                              <span className="font-medium">${request.price.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between text-xs">
+                              <span className="text-slate-500">Amount:</span>
+                              <span className="font-medium">${discountedAmount.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between text-xs">
+                              <span className="text-slate-500">Paid:</span>
+                              <span className={`font-medium ${request.is_paid ? 'text-green-600' : 'text-red-600'}`}>
+                                ${request.amount_paid.toFixed(2)}
+                              </span>
+                            </div>
+                            {!request.is_paid && (
+                              <div className="flex justify-between text-xs">
+                                <span className="text-slate-500">Due:</span>
+                                <span className="font-medium text-red-600">${remainingAmount.toFixed(2)}</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </TableCell>
                       
-                      <TableCell>
+                      <TableCell className="hidden sm:table-cell">
                         <span className="font-medium">${request.price.toFixed(2)}</span>
                       </TableCell>
                       
-                      <TableCell>
+                      <TableCell className="hidden md:table-cell">
                         <Select
                           value={request.discount_per.toString()}
                           onValueChange={(value) => handleDiscountChange(request.id, value)}
@@ -476,7 +499,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                         </div>
                       </TableCell>
                       
-                      <TableCell>
+                      <TableCell className="hidden sm:table-cell">
                         <div className="flex flex-col">
                           <span className="font-medium">${request.amount_paid.toFixed(2)}</span>
                           {request.is_paid ? (
@@ -492,7 +515,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                         </div>
                       </TableCell>
                       
-                      <TableCell>
+                      <TableCell className="hidden lg:table-cell">
                         <div className="flex items-center justify-center">
                           <Checkbox
                             checked={request.is_bankak}
@@ -504,7 +527,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                         </div>
                       </TableCell>
                       
-                      <TableCell>
+                      <TableCell className="hidden sm:table-cell">
                         <div className="flex flex-col gap-1">
                           {!request.is_paid && (
                             <Button
@@ -532,6 +555,32 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            {!request.is_paid && (
+                              <DropdownMenuItem
+                                onClick={() => handleDirectPayItem(request.id, false)}
+                                disabled={directPayItemMutation.isPending}
+                              >
+                                {directPayItemMutation.isPending ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <Banknote className="h-4 w-4 mr-2" />
+                                )}
+                                {t("labRequestsColumn.payCash", "Pay Cash")}
+                              </DropdownMenuItem>
+                            )}
+                            
+                            <DropdownMenuItem
+                              onClick={() => handleToggleBankak(request.id, !request.is_bankak)}
+                              disabled={toggleBankakMutation.isPending}
+                            >
+                              <Checkbox
+                                checked={request.is_bankak}
+                                disabled={toggleBankakMutation.isPending}
+                                className="mr-2"
+                              />
+                              {request.is_bankak ? t("labRequestsColumn.unmarkBankak", "Unmark Bankak") : t("labRequestsColumn.markBankak", "Mark Bankak")}
+                            </DropdownMenuItem>
+                            
                             <DropdownMenuItem
                               onClick={() => handleDeleteRequest(request.id)}
                               className="text-red-600"

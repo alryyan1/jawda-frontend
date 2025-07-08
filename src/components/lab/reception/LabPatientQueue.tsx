@@ -115,7 +115,7 @@ const LabPatientQueue: React.FC<LabPatientQueueProps> = ({
         )}
 
         {queueItems.length > 0 && (
-          <ScrollArea className="h-[calc(100vh-200px)] overflow-y-auto ">
+          <ScrollArea className="h-[calc(100vh-300px)] overflow-y-auto ">
             <div className="p-2 flex flex-wrap gap-2 justify-start items-start content-start">
               {queueItems.map((item) => (
                 <PatientLabRequestItem

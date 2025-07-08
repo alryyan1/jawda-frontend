@@ -6,23 +6,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLabUpdates } from '@/hooks/useSocketListener';
 
 // MUI Imports
-import Autocomplete from "@mui/material/Autocomplete";
-import TextField from "@mui/material/TextField";
-import CircularProgress from "@mui/material/CircularProgress";
-import Paper from "@mui/material/Paper";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 
 // Shadcn & Lucide Imports
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Search,
-  Loader2,
-  ListRestart,
-  Microscope,
-  Plus,
-} from "lucide-react";
 import { toast } from "sonner";
 
 // Custom Components & Services
@@ -31,6 +18,7 @@ import LabPatientQueue from "@/components/lab/reception/LabPatientQueue";
 import LabRequestsColumn from "@/components/lab/reception/LabRequestsColumn";
 import PatientDetailsColumnV1 from "@/components/lab/reception/PatientDetailsColumnV1";
 import LabReceptionActionPage from "@/components/lab/reception/LabReceptionActionPage";
+import LabReceptionHeader from "@/components/lab/reception/LabReceptionHeader";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useAuth } from "@/contexts/AuthContext";
 import { getDoctorVisitById } from "@/services/visitService";
@@ -44,8 +32,8 @@ import type { LabQueueFilters, PatientLabQueueItem } from "@/types/labWorkflow";
 import type { DoctorVisit } from "@/types/visits";
 import type { MainTestStripped } from "@/types/labTests";
 import { getAppearanceSettings, type LabAppearanceSettings } from "@/lib/appearance-settings-store";
-import { ConnectionStatusIndicator } from "@/components/common/ConnectionStatusIndicator";
 import type { DoctorShift } from "@/types/doctors";
+import DoctorFinderDialog from "@/components/clinic/dialogs/DoctorFinderDialog";
 
 // Material Theme
 const materialTheme = createTheme({
@@ -114,36 +102,40 @@ const LabReceptionPage: React.FC = () => {
   const [selectedVisitFromAutocomplete, setSelectedVisitFromAutocomplete] = useState<AutocompleteVisitOption | null>(null);
   const debouncedAutocompleteSearch = useDebounce(autocompleteInputValue, 500);
   const [appearanceSettings] = useState<LabAppearanceSettings>(getAppearanceSettings);
+    // State for the filters that the dialog will update
+    const [filters, setFilters] = useState<LabQueueFilters>({
+      isBankak: null,
+      company: null,
+      doctor: null,
+      specialist: null,
+    });
   
   // Lab Test Selection State - Multiple Selection
   const [selectedTests, setSelectedTests] = useState<MainTestStripped[]>([]);
   const [isDoctorFinderOpen, setIsDoctorFinderOpen] = useState(false); // State for the dialog
 
-  const handleToggleView = () => {
-      setIsFormVisible(prev => !prev);
-      if (!isFormVisible) {
-          setActiveVisitId(null); // Clear active visit when switching back to the form view
-      }
-  };
-  
-  const handleDoctorFilterSelect = (doctorShift: DoctorShift) => {
-      // Apply the doctor filter and close the dialog
-      setFilters(prev => ({
-          ...prev,
-          doctor: { id: doctorShift.doctor_id, name: doctorShift.doctor_name, specialist_name: doctorShift.doctor_specialist_name },
-          specialist: null, // Clear specialist filter if a specific doctor is chosen
-      }));
-      setIsDoctorFinderOpen(false);
-  };
 
 
-  // Filters state
-  const [filters] = useState<LabQueueFilters>({
-    isBankak: null,
-    company_id: null,
-    doctor_id: null,
-    specialist: null,
-  });
+
+  // This function is passed to LabActionsPane to open the dialog
+  const handleOpenDoctorFinder = useCallback(() => {
+    setIsDoctorFinderOpen(true);
+    alert("open doctor finder");
+  }, []);
+
+  // This function is passed to DoctorFinderDialog to handle a selection
+  const handleDoctorFilterSelect = useCallback((doctorShift: DoctorShift) => {
+    setFilters(prev => ({
+      ...prev,
+      doctor: { id: doctorShift.doctor_id, name: doctorShift.doctor_name, specialist_name: doctorShift.doctor_specialist_name },
+      specialist: null, // Clear specialist if specific doctor is chosen
+    }));
+    setIsDoctorFinderOpen(false); // Close the dialog after selection
+    toast.info(t('filterApplied', { filterName: doctorShift.doctor_name }));
+  }, [t]);
+
+
+
 
 
 
@@ -328,165 +320,31 @@ const LabReceptionPage: React.FC = () => {
     <ThemeProvider theme={materialTheme}>
       <div className="flex flex-col min-h-0 h-full bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-slate-900 dark:to-slate-800 overflow-hidden">
         {/* Header */}
-        <header className="flex-shrink-0 h-auto p-4 bg-white dark:bg-slate-800 shadow-lg border-b border-blue-200 dark:border-slate-700">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-3 flex-shrink-0">
-              <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                <Microscope className="h-7 w-7 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">
-                  {t("pageTitle", "Lab Reception")}
-                </h1>
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  Professional Lab Management System
-                </p>
-              </div>
-              <ConnectionStatusIndicator size="small" />
-            </div>
+        <LabReceptionHeader
+          // Test selection props
+          availableTests={availableTests}
+          selectedTests={selectedTests}
+          setSelectedTests={setSelectedTests}
+          isLoadingTests={isLoadingTests}
+          activeVisitId={activeVisitId}
+          addTestsMutation={addTestsMutation}
 
-            {/* Test Selection Autocomplete - Multiple Selection */}
-            <div className="flex items-center gap-3">
-              <Autocomplete
-                multiple
-                options={availableTests}
-                value={selectedTests}
-                onChange={(_, newValue) => setSelectedTests(newValue)}
-                getOptionLabel={(option) => option.main_test_name}
-                isOptionEqualToValue={(option, value) => option.id === value.id}
-                loading={isLoadingTests}
-                size="small"
-                sx={{ width: 400 }}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label={t("selectTestToAdd", "Select Tests to Add")}
-                    variant="outlined"
-                    placeholder={t("addTestsPlaceholder", "Search and select tests...")}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        const enteredId = (e.target as HTMLInputElement).value;
-                        const foundTest = availableTests?.find(
-                          (test) => test.id === parseInt(enteredId)
-                        );
-                        if (foundTest) {
-                          setSelectedTests((prev) => [...prev, foundTest]);
-                        }
-                      }
-                    }}
-                    InputProps={{
-                      ...params.InputProps,
-                      startAdornment: <Search className="h-4 w-4 text-muted-foreground mr-2" />,
-                      endAdornment: (
-                        <>
-                          {isLoadingTests ? <CircularProgress color="inherit" size={20} /> : null}
-                          {params.InputProps.endAdornment}
-                        </>
-                      ),
-                    }}
-                    sx={{
-                      "& .MuiInputLabel-root": { fontSize: "0.875rem" },
-                      "& .MuiOutlinedInput-root": {
-                        backgroundColor: "background.paper",
-                        fontSize: "0.875rem",
-                      },
-                    }}
-                  />
-                )}
-                PaperComponent={(props) => (
-                  <Paper {...props} className="dark:bg-slate-800 dark:text-slate-100" />
-                )}
-                noOptionsText={t("common:noResultsFound")}
-                loadingText={t("common:loading")}
-              />
-              <Button
-                onClick={handleAddTests}
-                disabled={selectedTests.length === 0 || !activeVisitId || addTestsMutation.isPending}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg hover:scale-105"
-              >
-                {addTestsMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : (
-                  <Plus className="h-4 w-4 mr-2" />
-                )}
-                {t("addTest", "Add Test")} {selectedTests.length > 0 && `(${selectedTests.length})`}
-              </Button>
-            </div>
+          // Search props
+          recentVisitsData={recentVisitsData}
+          isLoadingRecentVisits={isLoadingRecentVisits}
+          selectedVisitFromAutocomplete={selectedVisitFromAutocomplete}
+          setSelectedVisitFromAutocomplete={setSelectedVisitFromAutocomplete}
+          autocompleteInputValue={autocompleteInputValue}
+          setAutocompleteInputValue={setAutocompleteInputValue}
+          visitIdSearchTerm={visitIdSearchTerm}
+          setVisitIdSearchTerm={setVisitIdSearchTerm}
+          fetchVisitDetailsMutation={fetchVisitDetailsMutation}
 
-            {/* Search Controls */}
-            <div className="flex items-center gap-3">
-              <Autocomplete
-                options={recentVisitsData || []}
-                value={selectedVisitFromAutocomplete}
-                onChange={(_, newValue) => {
-                  setSelectedVisitFromAutocomplete(newValue);
-                  if (newValue?.visit_id) {
-                    setVisitIdSearchTerm("");
-                    fetchVisitDetailsMutation.mutate(newValue.visit_id);
-                  }
-                }}
-                inputValue={autocompleteInputValue}
-                onInputChange={(_, newInputValue) => setAutocompleteInputValue(newInputValue)}
-                getOptionLabel={(option) => option.autocomplete_label}
-                isOptionEqualToValue={(option, value) => option.visit_id === value.visit_id}
-                loading={isLoadingRecentVisits}
-                size="small"
-                sx={{ width: 250 }}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label={t("searchPatients", "Search Patients")}
-                    variant="outlined"
-                    InputProps={{
-                      ...params.InputProps,
-                      startAdornment: <Search className="h-4 w-4 text-muted-foreground mr-2" />,
-                      endAdornment: (
-                        <>
-                          {isLoadingRecentVisits || fetchVisitDetailsMutation.isPending ? (
-                            <CircularProgress color="inherit" size={18} />
-                          ) : null}
-                          {params.InputProps.endAdornment}
-                        </>
-                      ),
-                    }}
-                  />
-                )}
-                PaperComponent={(props) => (
-                  <Paper {...props} className="dark:bg-slate-800 dark:text-slate-100" />
-                )}
-                noOptionsText={
-                  autocompleteInputValue.length < 2
-                    ? t("common:typeMoreChars")
-                    : t("common:noResultsFound")
-                }
-                loadingText={t("common:loading")}
-              />
-
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-                <Input
-                  type="number"
-                  placeholder={t("visitId", "Visit ID")}
-                  value={visitIdSearchTerm}
-                  onChange={(e) => setVisitIdSearchTerm(e.target.value)}
-                  onKeyDown={handleSearchByVisitIdEnter}
-                  className="pl-10 w-28 h-10 text-sm rounded-lg border-slate-300 focus:border-blue-500 focus:ring-blue-500"
-                  disabled={fetchVisitDetailsMutation.isPending}
-                />
-              </div>
-
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleResetView}
-                title={t("resetView", "Reset View")}
-                className="h-10 w-10 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700"
-              >
-                <ListRestart className="h-5 w-5" />
-              </Button>
-            </div>
-          </div>
-        </header>
+          // Event handlers
+          onResetView={handleResetView}
+          onAddTests={handleAddTests}
+          onSearchByVisitIdEnter={handleSearchByVisitIdEnter}
+        />
 
         {/* Dynamic Layout */}
         <div className="flex-1 min-h-0 flex gap-4 p-4 overflow-hidden">
@@ -494,7 +352,8 @@ const LabReceptionPage: React.FC = () => {
           <div className="flex-shrink-0">
             <LabReceptionActionPage
               isFormVisible={isFormVisible}
-              onToggleForm={handleToggleForm}
+              onToggleView={handleToggleForm}
+              onOpenDoctorFinder={handleOpenDoctorFinder}
             />
           </div>
 
@@ -548,23 +407,32 @@ const LabReceptionPage: React.FC = () => {
           </div>
 
           {/* Patient Info Column - Dynamic Width */}
-          <div className={`transition-all duration-500 ease-in-out ${
-            isFormVisible ? 'w-1/4' : 'w-1/6'
-          } flex-shrink-0`}>
-            <Card className="bg-white dark:bg-slate-800 shadow-lg border-0 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-xl h-full">
-              <CardContent className="p-0 h-full overflow-hidden">
-                <PatientDetailsColumnV1
-                  selectedPatient={selectedPatient}
-                  activeVisitId={activeVisitId}
-                  visit={activeVisit}
-                  isLoading={isVisitLoading}
-                  error={visitError}
-                />
-              </CardContent>
-            </Card>
-          </div>
+          {activeVisitId && (
+            <div className={`transition-all duration-500 ease-in-out ${
+              isFormVisible ? 'w-1/4' : 'w-1/6'
+            } flex-shrink-0`}>
+              <Card className="bg-white dark:bg-slate-800 shadow-lg border-0 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-xl h-full">
+                <CardContent className="p-0 h-full overflow-hidden">
+                  <PatientDetailsColumnV1
+                    selectedPatient={selectedPatient}
+                    activeVisitId={activeVisitId}
+                    visit={activeVisit}
+                    isLoading={isVisitLoading}
+                    error={visitError}
+                  />
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </div>
       </div>
+      {/* === RENDER THE DIALOG HERE === */}
+      {/* It's controlled by the state within this page component */}
+      <DoctorFinderDialog
+          isOpen={isDoctorFinderOpen}
+          onOpenChange={setIsDoctorFinderOpen}
+          onDoctorShiftSelect={handleDoctorFilterSelect}
+      />
     </ThemeProvider>
   );
 };

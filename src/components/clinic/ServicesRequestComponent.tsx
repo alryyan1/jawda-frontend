@@ -186,7 +186,7 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ vis
             isCompanyPatient={isCompanyPatient} // Pass this down
         />
       ) : (
-        <div className="flex flex-wrap gap-1 ">
+        <div className=" gap-1 ">
           <RequestedServicesTable 
             visitId={visitId}
             handlePrintReceipt={handlePrintReceipt}

@@ -1,83 +1,28 @@
-git // src/components/clinic/DoctorsTabs.tsx
-import React, { useEffect, useRef, useState } from 'react';
+// src/components/clinic/DoctorsTabs.tsx
+import React, { useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
-
-// MUI imports
-import { Tabs, Tab, Box, IconButton } from '@mui/material';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
-import { useTheme } from 'next-themes';
-
+import { Loader2 } from 'lucide-react';
 
 import { Badge } from '../ui/badge';
-import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthorization } from '@/hooks/useAuthorization';
 import type { DoctorShift } from '@/types/doctors';
+import type { Patient } from '@/types/patients';
 import { getActiveDoctorShifts } from '@/services/clinicService';
 
 interface DoctorsTabsProps {
   onShiftSelect: (shift: DoctorShift | null) => void;
   activeShiftId: number | null;
-  setSelectedPatientVisit: (visit: { patient: unknown; visitId: number } | null) => void;
+  setSelectedPatientVisit: (visit: { patient: Patient; visitId: number } | null) => void;
 }
 
 const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId }) => {
-  const { t, i18n } = useTranslation(['clinic', 'common']);
-  const isRTL = i18n.dir() === 'rtl';
+  const { t } = useTranslation(['clinic', 'common']);
   const { can } = useAuthorization();
   const { user } = useAuth();
   const { currentClinicShift } = useAuth();
-  const { theme } = useTheme();
-  const tabsContainerRef = useRef<HTMLDivElement>(null);
-  const [showLeftButton, setShowLeftButton] = useState(false);
-  const [showRightButton, setShowRightButton] = useState(false);
-
-  // Create MUI theme that supports dark mode
-  const muiTheme = createTheme({
-    palette: {
-      mode: theme === 'dark' ? 'dark' : 'light',
-      primary: {
-        main: theme === 'dark' ? '#3b82f6' : '#2563eb',
-      },
-      background: {
-        default: theme === 'dark' ? '#0f0f23' : '#ffffff',
-        paper: theme === 'dark' ? '#1a1a2e' : '#ffffff',
-      },
-      text: {
-        primary: theme === 'dark' ? '#e5e7eb' : '#1f2937',
-        secondary: theme === 'dark' ? '#9ca3af' : '#6b7280',
-      },
-    },
-    components: {
-      MuiTabs: {
-        styleOverrides: {
-          root: {
-            minHeight: 'auto',
-            '& .MuiTabs-indicator': {
-              height: '3px',
-            },
-          },
-        },
-      },
-      MuiTab: {
-        styleOverrides: {
-          root: {
-            minHeight: 'auto',
-            padding: '8px 16px',
-            fontSize: '14px',
-            fontWeight: 500,
-            textTransform: 'none',
-            minWidth: 'auto',
-            '&.Mui-selected': {
-              fontWeight: 600,
-            },
-          },
-        },
-      },
-    },
-  });
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const { data: doctorShifts, isLoading, error } = useQuery<DoctorShift[], Error>({
     queryKey: ['activeDoctorShifts', currentClinicShift?.id],
@@ -93,36 +38,7 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId 
     filteredDoctorShifts = doctorShifts?.filter((ds) => ds.user_id === user?.id);
   }
 
-  const checkScrollButtons = () => {
-    if (tabsContainerRef.current) {
-      const container = tabsContainerRef.current;
-      const scrollLeft = container.scrollLeft;
-      const scrollWidth = container.scrollWidth;
-      const clientWidth = container.clientWidth;
-
-      setShowLeftButton(scrollLeft > 0);
-      setShowRightButton(scrollLeft < scrollWidth - clientWidth - 1);
-    }
-  };
-
-  const handleScroll = (direction: 'left' | 'right') => {
-    if (tabsContainerRef.current) {
-      const scrollAmount = 200;
-      tabsContainerRef.current.scrollBy({
-        left: direction === 'left' ? -scrollAmount : scrollAmount,
-        behavior: 'smooth'
-      });
-    }
-  };
-
-  useEffect(() => {
-    checkScrollButtons();
-    const resizeObserver = new ResizeObserver(checkScrollButtons);
-    if (tabsContainerRef.current) {
-      resizeObserver.observe(tabsContainerRef.current);
-    }
-    return () => resizeObserver.disconnect();
-  }, [filteredDoctorShifts]);
+  
 
   useEffect(() => {
     if (!activeShiftId && filteredDoctorShifts && filteredDoctorShifts.length > 0) {
@@ -137,116 +53,126 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId 
     }
   }, [activeShiftId, filteredDoctorShifts, onShiftSelect]);
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    if (newValue === -1) {
-      onShiftSelect(null);
-    } else if (filteredDoctorShifts) {
-      onShiftSelect(filteredDoctorShifts[newValue]);
-    }
-  };
-
   if (isLoading) return (
-    <div className="flex items-center justify-center h-full border rounded-md p-2 bg-background">
+    <div className="flex items-center justify-center h-full border rounded-lg p-4 bg-card">
       <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      <span className="ml-2 text-sm text-muted-foreground">{t('common:loading')}</span>
     </div>
   );
 
   if (error) return (
-    <div className="text-xs text-destructive p-2 border rounded-md bg-background">
-      {t('common:error.fetchFailed', { entity: t('clinic:topNav.activeDoctors') })}
+    <div className="flex items-center justify-center h-full text-sm text-destructive p-4 border rounded-lg bg-card">
+      <div className="text-center">
+        <p className="font-medium">{t('common:error.fetchFailed', { entity: t('clinic:topNav.activeDoctors') })}</p>
+        <p className="text-xs mt-1 text-muted-foreground">{error.message}</p>
+      </div>
     </div>
   );
 
   if (!doctorShifts || doctorShifts.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full text-sm text-muted-foreground border rounded-md p-2 bg-background">
-        {t('clinic:doctorsTabs.noActiveShifts')}
+      <div className="flex items-center justify-center h-full text-sm text-muted-foreground border rounded-lg p-4 bg-card">
+        <div className="text-center">
+          <p className="font-medium">{t('clinic:doctorsTabs.noActiveShifts')}</p>
+          <p className="text-xs mt-1">{t('clinic:doctorsTabs.noActiveShiftsDesc')}</p>
+        </div>
       </div>
     );
   }
 
-  const currentTabIndex = filteredDoctorShifts?.findIndex(ds => ds.id === activeShiftId) ?? 0;
-
   return (
-    <ThemeProvider theme={muiTheme}>
-      <div className="h-full flex flex-col border rounded-lg bg-background shadow-sm overflow-hidden">
-        <div className="relative flex-grow flex items-center">
-          {showLeftButton && (
-            <IconButton
-              onClick={() => handleScroll(isRTL ? 'right' : 'left')}
-              className="absolute left-1 z-10 h-8 w-8 bg-card/80 hover:bg-card shadow-md"
-              size="small"
-            >
-              {isRTL ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
-            </IconButton>
-          )}
-
-          <Box
-            ref={tabsContainerRef}
-            className="flex-1 overflow-x-auto scrollbar-hide"
-            onScroll={checkScrollButtons}
-            sx={{
-              '&::-webkit-scrollbar': { display: 'none' },
-              msOverflowStyle: 'none',
-              scrollbarWidth: 'none',
-            }}
-          >
-            <Tabs
-              value={currentTabIndex}
-              onChange={handleTabChange}
-              variant="scrollable"
-              scrollButtons={false}
-              allowScrollButtonsMobile
-              className="min-h-0"
-            >
-                             {filteredDoctorShifts?.map((shift) => (
-                <Tab
+    <div className="relative h-full bg-card border rounded-lg shadow-sm overflow-hidden">
+            {/* Professional Tab Container */}
+      <div className="relative flex items-center h-full">
+        {/* Scrollable Tabs Container */}
+         <div
+           ref={scrollContainerRef}
+           className="flex-1 custom-scrollbar"
+           style={{
+             overflowX: 'auto',
+             overflowY: 'hidden',
+             paddingLeft: '8px',
+             paddingRight: '8px',
+             paddingBottom: '8px', // Space for scrollbar
+             minWidth: 0, // Important for flex children
+           }}
+         >
+           <div className="flex gap-1 py-2" style={{ minWidth: 'max-content' }}>
+            {filteredDoctorShifts?.map((shift) => {
+              const isActive = activeShiftId === shift.id;
+              const isExamining = shift.is_examining;
+              
+              return (
+                <button
                   key={shift.id}
-                  label={
-                    <div className="flex flex-col items-center">
-                      <div className="flex items-center mb-1">
-                        <span className="text-xs font-medium" title={shift.doctor_name}>
-                          {shift.doctor_name}
-                        </span>
-                      </div>
-                      <div className="flex items-center text-[10px] text-muted-foreground gap-1">
-                        {shift.patients_count > 0 && (
-                          <Badge variant="secondary" className="px-1.5 py-0 text-[9px] h-4 leading-tight">
-                            {shift.patients_count}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  }
-                  className={cn(
-                    "min-w-[120px]",
-                    shift.is_examining ? "border-blue-500" : "border-green-500"
-                  )}
-                  sx={{
-                    border: shift.is_examining ? '1px solid #3b82f6' : '1px solid #10b981',
-                    borderRadius: '6px',
-                    margin: '0 4px',
-                    '&.Mui-selected': {
-                      backgroundColor: shift.is_examining ? 'rgba(59, 130, 246, 0.1)' : 'rgba(16, 185, 129, 0.1)',
-                    },
-                  }}
-                />
-              ))}
-            </Tabs>
-          </Box>
+                  onClick={() => onShiftSelect(shift)}
+                  className={`
+                    group relative flex flex-col items-center justify-center
+                    min-w-[200px] max-w-[200px] h-16 px-4 py-2
+                    rounded-lg border-2 transition-all duration-200
+                    focus:outline-none focus:ring-2 focus:ring-primary/50
+                    ${isActive
+                      ? isExamining
+                        ? 'bg-blue-500 border-blue-600 text-white shadow-lg'
+                        : 'bg-emerald-500 border-emerald-600 text-white shadow-lg'
+                      : isExamining
+                        ? 'bg-blue-50 border-blue-200 hover:bg-blue-100 hover:border-blue-300 text-blue-900 dark:bg-blue-950 dark:border-blue-800 dark:hover:bg-blue-900 dark:text-blue-100'
+                        : 'bg-emerald-50 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 text-emerald-900 dark:bg-emerald-950 dark:border-emerald-800 dark:hover:bg-emerald-900 dark:text-emerald-100'
+                    }
+                  `}
+                >
+                  {/* Doctor Name */}
+                  <div className="flex items-center mb-1">
+                    <span 
+                      className={`text-sm font-semibold truncate max-w-full ${
+                        isActive ? 'text-white' : ''
+                      }`}
+                      title={shift.doctor_name}
+                    >
+                      {shift.doctor_name}
+                    </span>
+                  </div>
 
-          {showRightButton && (
-            <IconButton
-              onClick={() => handleScroll(isRTL ? 'left' : 'right')}
-              className="absolute right-1 z-10 h-8 w-8 bg-card/80 hover:bg-card shadow-md"
-              size="small"
-            >
-              {isRTL ? <ChevronLeft className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
-            </IconButton>
-          )}
+                  {/* Status Indicators */}
+                  <div className="flex items-center gap-2">
+                    {/* Patient Count Badge */}
+                    {shift.patients_count > 0 && (
+                      <Badge 
+                        variant="secondary" 
+                        className={`
+                          px-2 py-0.5 text-xs font-medium h-5
+                          ${isActive 
+                            ? 'bg-white/20 text-white border-white/30' 
+                            : isExamining
+                              ? 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900 dark:text-blue-100'
+                              : 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900 dark:text-emerald-100'
+                          }
+                        `}
+                      >
+                        {shift.patients_count} 
+                      </Badge>
+                    )}
+
+                 
+                  </div>
+
+                  {/* Active Tab Indicator */}
+                  {isActive && (
+                    <div className={`
+                      absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2
+                      w-3 h-3 rotate-45
+                      ${isExamining ? 'bg-blue-500' : 'bg-emerald-500'}
+                    `} />
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
+
+
       </div>
-    </ThemeProvider>
+    </div>
   );
 };
 

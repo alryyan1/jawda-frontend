@@ -17,10 +17,9 @@ interface ActivePatientFilters {
     doctor_id?: number | null;       // If filtering by doctor directly
     search?: string;
     clinic_shift_id?: number | null; // General clinic shift
-    page?: number;
 }
 
-export const getActiveClinicPatients = async (filters: ActivePatientFilters): Promise<PaginatedResponse<ActivePatientVisit>> => {
-  const response = await apiClient.get<PaginatedResponse<ActivePatientVisit>>('/clinic-active-patients', { params: filters });
-  return response.data; // Assuming Laravel pagination structure
+export const getActiveClinicPatients = async (filters: ActivePatientFilters): Promise<ActivePatientVisit[]> => {
+  const response = await apiClient.get<ActivePatientVisit[]>('/clinic-active-patients', { params: filters });
+  return response.data; // Return the array directly since no pagination
 };

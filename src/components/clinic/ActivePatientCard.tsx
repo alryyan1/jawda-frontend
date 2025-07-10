@@ -316,10 +316,10 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
         <ContextMenuTrigger asChild>
           <Card
             className={cn(
-              "hover:shadow-lg transition-shadow   cursor-pointer flex flex-row items-center px-2.5 py-1.5 min-h-[48px]",
+              "hover:shadow-lg transition-shadow cursor-pointer flex flex-row items-center px-3 py-2 h-[82px] w-[300px]",
               isSelected
-                ? "ring-2 ring-primary  shadow-lg bg-primary/10 dark:bg-primary/20"
-                : `bg-card ring-1 ring-transparent hover:ring-slate-300 dark:hover:ring-slate-700 ${visit.company  ? "ring-pink-400" : ""}`
+                ? "ring-2 ring-primary shadow-lg bg-primary/10 dark:bg-primary/20"
+                : `bg-card ring-1 ring-transparent hover:ring-slate-300 dark:hover:ring-slate-700 ${visit.company ? "ring-pink-400" : ""}`
             )}
             onClick={handleCardClick}
             role="button"
@@ -332,42 +332,10 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
               "common:queueNumberShort"
             )}${queueNumberOrVisitId}`}
           >
-            <Badge
-              badgeContent={
-                visit.requested_services_count > 0
-                  ? visit.requested_services_count
-                  : null
-              }
-              color="secondary" // Or "primary", "error"
-              anchorOrigin={{ vertical: "top", horizontal: "left" }} // Adjust badge position
-              sx={{
-                // MUI sx prop for custom styling
-                "& .MuiBadge-badge": {
-                  fontSize: "0.6rem",
-                  height: "14px",
-                  minWidth: "14px",
-                  padding: "0 4px",
-                  // Adjust position if needed relative to the button
-                  // transform: 'scale(0.9) translate(0%, -10%)',
-                },
-              }}
-            >
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 rounded-full flex-shrink-0 ltr:mr-2 rtl:ml-2 p-0"
-                onClick={handleProfileButtonClick}
-                title={t("common:viewProfile")}
-                aria-label={t("common:viewProfileFor", {
-                  name: visit.patient.name,
-                })}
-              >
-                <UserCircle className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
-              </Button>
-            </Badge>
+            {/* Queue number */}
             <div
               className={cn(
-                "flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded text-white text-xs sm:text-sm font-bold ltr:mr-2 rtl:ml-2 shadow",
+                "flex-shrink-0 w-8 h-8 flex items-center justify-center rounded text-white text-sm font-bold shadow ltr:mr-3 rtl:ml-3",
                 getStatusColor(visit.status)
               )}
               title={`${t("common:queueNumber")}: ${queueNumberOrVisitId}`}
@@ -375,6 +343,7 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
               {queueNumberOrVisitId}
             </div>
 
+            {/* Patient info and status */}
             <div className="flex-grow min-w-0 ltr:mr-2 rtl:ml-2">
               <p
                 className="text-sm font-semibold text-slate-800 dark:text-slate-100 leading-tight truncate"
@@ -382,61 +351,96 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
               >
                 {visit.patient.name}
               </p>
-              <div className="flex-shrink-0 w-[120px] sm:w-[130px] relative">
-                <Select
-                  value={visit.status}
-                  onValueChange={handleStatusChange}
-                  dir={i18n.dir()}
-                  disabled={
-                    statusUpdateMutation.isPending &&
-                    statusUpdateMutation.variables?.visitId === visit.id
-                  }
-                >
-                  <SelectTrigger
-                    className={cn(
-                      "h-7 text-xs px-1.5 sm:px-2 py-0 focus:ring-0 focus:ring-offset-0 border-0 focus-visible:ring-offset-0 focus-visible:ring-0 shadow-none bg-transparent hover:bg-muted/50 data-[state=open]:bg-muted",
-                      visit.status === "waiting" &&
-                        "text-amber-700 dark:text-amber-500",
-                      visit.status === "with_doctor" &&
-                        "text-blue-700 dark:text-blue-500",
-                      visit.status === "completed" &&
-                        "text-green-700 dark:text-green-500",
-                      (visit.status === "cancelled" ||
-                        visit.status === "no_show") &&
-                        "text-red-700 dark:text-red-500"
-                    )}
-                    aria-label={t("clinic:workspace.changeStatusFor", {
-                      name: visit.patient.name,
-                    })}
-                    onClick={(e) => e.stopPropagation()}
+              <div className="flex items-center justify-between mt-1">
+                <div className="flex-1 relative">
+                  <Select
+                    value={visit.status}
+                    onValueChange={handleStatusChange}
+                    dir={i18n.dir()}
+                    disabled={
+                      statusUpdateMutation.isPending &&
+                      statusUpdateMutation.variables?.visitId === visit.id
+                    }
                   >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent onCloseAutoFocus={(e) => e.preventDefault()}>
-                    {VISIT_STATUSES_FOR_DROPDOWN.map((statusKey) => (
-                      <SelectItem
-                        key={statusKey}
-                        value={statusKey}
-                        className="text-xs"
-                      >
-                        {t(`clinic:workspace.status.${statusKey}`, statusKey)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {statusUpdateMutation.isPending &&
-                  statusUpdateMutation.variables?.visitId === visit.id && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-background/50 rounded-md">
-                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                    </div>
-                  )}
+                    <SelectTrigger
+                      className={cn(
+                        "h-6 text-xs px-1.5 py-0 focus:ring-0 focus:ring-offset-0 border-0 focus-visible:ring-offset-0 focus-visible:ring-0 shadow-none bg-transparent hover:bg-muted/50 data-[state=open]:bg-muted",
+                        visit.status === "waiting" &&
+                          "text-amber-700 dark:text-amber-500",
+                        visit.status === "with_doctor" &&
+                          "text-blue-700 dark:text-blue-500",
+                        visit.status === "completed" &&
+                          "text-green-700 dark:text-green-500",
+                        (visit.status === "cancelled" ||
+                          visit.status === "no_show") &&
+                          "text-red-700 dark:text-red-500"
+                      )}
+                      aria-label={t("clinic:workspace.changeStatusFor", {
+                        name: visit.patient.name,
+                      })}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent onCloseAutoFocus={(e) => e.preventDefault()}>
+                      {VISIT_STATUSES_FOR_DROPDOWN.map((statusKey) => (
+                        <SelectItem
+                          key={statusKey}
+                          value={statusKey}
+                          className="text-xs"
+                        >
+                          {t(`clinic:workspace.status.${statusKey}`, statusKey)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {statusUpdateMutation.isPending &&
+                    statusUpdateMutation.variables?.visitId === visit.id && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-background/50 rounded-md">
+                        <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                      </div>
+                    )}
+                </div>
+                
+                {visit.company != null && (
+                  <div className="flex-shrink-0 ltr:ml-1 rtl:mr-1">
+                    <Heart className="h-3 w-3 text-pink-500" />
+                  </div>
+                )}
               </div>
             </div>
-            {visit.company != null && (
-              <div className="flex-shrink-0 relative">
-                <Heart className="h-4 w-4 text-pink-500" />
-              </div>
-            )}
+
+            {/* Profile button with badge */}
+            <Badge
+              badgeContent={
+                visit.requested_services_count > 0
+                  ? visit.requested_services_count
+                  : null
+              }
+              color="secondary"
+              anchorOrigin={{ vertical: "top", horizontal: "left" }}
+              sx={{
+                "& .MuiBadge-badge": {
+                  fontSize: "0.5rem",
+                  height: "12px",
+                  minWidth: "12px",
+                  padding: "0 3px",
+                },
+              }}
+            >
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 rounded-full flex-shrink-0 p-0"
+                onClick={handleProfileButtonClick}
+                title={t("common:viewProfile")}
+                aria-label={t("common:viewProfileFor", {
+                  name: visit.patient.name,
+                })}
+              >
+                <UserCircle className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
+              </Button>
+            </Badge>
           </Card>
         </ContextMenuTrigger>
         <ContextMenuContent className="w-56">

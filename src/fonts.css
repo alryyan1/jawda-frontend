@@ -4,4 +4,68 @@
   font-weight: 400;
   font-style: normal;
   font-display: swap;
+}
+
+/* Hide scrollbars for scrollbar-hide class */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* Internet Explorer 10+ */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Safari and Chrome */
+}
+
+/* Custom scrollbar for tabs */
+.custom-scrollbar {
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: #cbd5e1 #f1f5f9; /* Firefox: thumb track */
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  height: 8px; /* Height for horizontal scrollbar */
+  width: 8px;  /* Width for vertical scrollbar */
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f5f9; /* Light gray track */
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1; /* Gray thumb */
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8; /* Darker gray on hover */
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:active {
+  background: #64748b; /* Even darker when dragging */
+}
+
+/* Dark mode scrollbar */
+@media (prefers-color-scheme: dark) {
+  .custom-scrollbar {
+    scrollbar-color: #64748b #1e293b;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: #1e293b;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #64748b;
+    border-color: #475569;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:active {
+    background: #334155;
+  }
 } 

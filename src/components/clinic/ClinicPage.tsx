@@ -16,7 +16,6 @@ import type { Patient } from '@/types/patients'; // Or your more specific Active
 import type { DoctorShift } from '@/types/doctors'; // Assuming a DoctorShift type for Tabs
 import ActionsPane from './ActionsPane';
 import SelectedPatientWorkspace from './SelectedPatientWorkspace';
-import { useAuth } from '@/contexts/AuthContext';
 import DoctorFinderDialog from './dialogs/DoctorFinderDialog';
 import { toast } from 'sonner';
 import { getDoctorVisitById } from '@/services/visitService';
@@ -86,7 +85,7 @@ useEffect(() => {
   };
   
   const isRTL = i18n.dir() === 'rtl';
-  const onShiftSelect = (shift: DoctorShift) => {
+  const onShiftSelect = (shift: DoctorShift | null) => {
     setActiveDoctorShift(shift);
     setSelectedPatientVisit(null); // Clear selected patient
   }
@@ -99,9 +98,9 @@ useEffect(() => {
 const findVisitByIdMutation = useMutation({
   mutationFn: (id: number) => getDoctorVisitById(id),
   onSuccess: (foundVisit) => {
-    if (foundVisit && foundVisit.patient && foundVisit.doctorShift) {
+    if (foundVisit && foundVisit.patient && foundVisit.doctor_shift) {
       toast.success(t('clinic:visitFoundById', { visitId: foundVisit.id, patientName: foundVisit.patient.name }));
-      setActiveDoctorShift(foundVisit.doctorShift); // Update active doctor shift
+      setActiveDoctorShift(foundVisit.doctor_shift); // Update active doctor shift
       setSelectedPatientVisit({ patient: foundVisit.patient, visitId: foundVisit.id });
       setShowRegistrationForm(false);
       handlePatientSelected(foundVisit.patient, foundVisit.id);
@@ -111,8 +110,9 @@ const findVisitByIdMutation = useMutation({
       toast.error(t('clinic:visitNotFoundById', { visitId: visitIdSearchTerm }));
     }
   },
-  onError: (error: any) => {
-    toast.error(error.response?.data?.message || t('common:error.fetchFailed'));
+  onError: (error: unknown) => {
+    const errorMessage = error instanceof Error ? error.message : t('common:error.fetchFailed');
+    toast.error(errorMessage);
   },
   onSettled: () => {
     setIsSearchingByVisitId(false);
@@ -134,7 +134,7 @@ const handleSearchByVisitId = () => {
     <div className="flex flex-col h-screen bg-muted/20 dark:bg-background"> {/* Full screen height */}
       {/* Top Section: Doctors Tabs Only */}
       <header className="flex-shrink-0 h-[100px] p-3 border-b bg-card flex items-center">
-        <div className="flex-grow h-full"> {/* Doctors Tabs Area */}
+        <div style={{width:`${window.innerWidth-140}px`}} className="overflow-hidden">
           <DoctorsTabs 
             setSelectedPatientVisit={setSelectedPatientVisit}
             onShiftSelect={onShiftSelect} 
@@ -158,8 +158,8 @@ const handleSearchByVisitId = () => {
          <ActionsPane 
             showRegistrationForm={showRegistrationForm}
             onToggleRegistrationForm={toggleRegistrationForm}
-            onOpenDoctorFinderDialog={() => setIsDoctorFinderDialogOpen(true)} 
-
+            onOpenDoctorFinderDialog={() => setIsDoctorFinderDialogOpen(true)}
+            onDoctorShiftSelectedFromFinder={handleDoctorShiftSelectedFromFinder}
         />
 
 
@@ -242,9 +242,8 @@ const handleSearchByVisitId = () => {
             )}
           >
             <SelectedPatientWorkspace
-            selectedPatientVisit={selectedPatientVisit}
-             
-              doctorvisit={selectedPatientVisit}
+              selectedPatientVisit={selectedPatientVisit as any}
+              initialPatient={selectedPatientVisit.patient}
               visitId={selectedPatientVisit.visitId}
               onClose={() => setSelectedPatientVisit(null)} // Optional: way to close this panel
             />

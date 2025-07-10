@@ -31,7 +31,6 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
   currentClinicShiftId,
 }) => {
   const { t } = useTranslation(["clinic", "common"]);
-  const [currentPage, setCurrentPage] = useState(1);
   console.log("doctorShiftId", doctorShiftId);
   // Debounce search term for API calls if performance becomes an issue
   const [debouncedSearchTerm, setDebouncedSearchTerm] =
@@ -39,33 +38,35 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearchTerm(globalSearchTerm);
-      setCurrentPage(1); // Reset to page 1 on new search
     }, 300); // 300ms delay
     return () => clearTimeout(handler);
   }, [globalSearchTerm]);
 
   const {
-    data: paginatedVisits,
+    data: visits,
     isLoading,
     isError,
     error,
     isFetching,
-  } = useQuery<PaginatedResponse<ActivePatientVisit>, Error>({
+  } = useQuery<ActivePatientVisit[], Error>({
     queryKey: [
       "activePatients",
       doctorShiftId,
       debouncedSearchTerm,
       currentClinicShiftId,
-      currentPage,
     ],
-    queryFn: async () => {
+    queryFn: async (): Promise<ActivePatientVisit[]> => {
       const response = await getActiveClinicPatients({
         doctor_shift_id: doctorShiftId,
         search: debouncedSearchTerm,
         clinic_shift_id: currentClinicShiftId,
-        page: currentPage,
       });
-      return response;
+      console.log('API Response:', response);
+      // Handle both paginated and non-paginated responses
+      if (response && typeof response === 'object' && 'data' in response) {
+        return (response as any).data;
+      }
+      return (response as ActivePatientVisit[]) || [];
     },
     placeholderData: keepPreviousData,
     enabled: !!doctorShiftId,
@@ -73,12 +74,12 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
   const [showPatientInfoDialog, setShowPatientInfoDialog] = useState(false);
   const [patientInfoVisit, setPatientInfoVisit] = useState<DoctorVisit | null>(null);
 
-  // Reset page to 1 if doctorShiftId changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [doctorShiftId]);
+  const handleProfileClickForList = (visit: DoctorVisit) => {
+    setPatientInfoVisit(visit);
+    setShowPatientInfoDialog(true);
+  };
 
-  if (isLoading && currentPage === 1 && !isFetching) {
+  if (isLoading && !isFetching) {
     // Show main loader only on initial load of new filter/page
     return (
       <div className="flex justify-center items-center h-40 pt-10">
@@ -86,11 +87,6 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
       </div>
     );
   }
-
-  const handleProfileClickForList = (visit: DoctorVisit) => {
-    setPatientInfoVisit(visit);
-    setShowPatientInfoDialog(true);
-  };
 
   if (isError) {
     return (
@@ -103,8 +99,7 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
     );
   }
 
-  const visits = paginatedVisits?.data || [];
-  const meta = paginatedVisits?.meta;
+  const visitsList = Array.isArray(visits) ? visits : [];
 
   return (
     <div className="h-full flex flex-col">
@@ -114,7 +109,7 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
           {t("common:updatingList")}
         </div>
       )}
-      {visits.length === 0 && !isLoading && !isFetching ? (
+      {visitsList.length === 0 && !isLoading && !isFetching ? (
         <div className="flex-grow flex flex-col items-center justify-center text-center text-muted-foreground p-6 border rounded-lg bg-card">
           <Users className="h-16 w-16 text-muted-foreground/30 mb-4" />
           <p>{t("clinic:workspace.noActivePatients")}</p>
@@ -123,8 +118,8 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
       ) : (
         <div className="flex-grow relative">
           <div className="absolute inset-0 overflow-y-auto scrollbar-thin scrollbar-thumb-muted-foreground/20 hover:scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent">
-            <div style={{direction:i18n.dir()}} className="space-y-3 p-1 min-w-[250px]">
-              {visits.map((visit: ActivePatientVisit) => (
+            <div style={{direction:i18n.dir()}} className="grid grid-cols-[repeat(auto-fit,300px)] gap-3 p-3 justify-start">
+              {visitsList.map((visit: ActivePatientVisit) => (
                 <ActivePatientCard
                   key={visit.id}
                   visit={visit}
@@ -136,35 +131,6 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
               ))}
             </div>
           </div>
-        </div>
-      )}
-    
-      {meta && meta.last_page > 1 && (
-        <div className="flex items-center justify-between mt-3 pt-3 border-t shrink-0">
-          <Button
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage === 1 || isFetching}
-            size="sm"
-            variant="outline"
-          >
-            {t("common:pagination.previous")}
-          </Button>
-          <span className="text-xs text-muted-foreground">
-            {t("common:pagination.pageInfo", {
-              current: meta.current_page,
-              total: meta.last_page,
-            })}
-          </span>
-          <Button
-            onClick={() =>
-              setCurrentPage((p) => Math.min(meta.last_page, p + 1))
-            }
-            disabled={currentPage === meta.last_page || isFetching}
-            size="sm"
-            variant="outline"
-          >
-            {t("common:pagination.next")}
-          </Button>
         </div>
       )}
       

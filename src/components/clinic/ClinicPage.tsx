@@ -132,42 +132,14 @@ const handleSearchByVisitId = () => {
 
   return (
     <div className="flex flex-col h-screen bg-muted/20 dark:bg-background"> {/* Full screen height */}
-      {/* Top Section: Doctors Tabs & Global Search */}
-      <header className="flex-shrink-0 h-[100px] p-3 border-b bg-card flex items-center gap-4">
-        <div className="flex-grow w-[200px] h-full"> {/* Doctors Tabs Area */}
-      <DoctorsTabs 
-      setSelectedPatientVisit={setSelectedPatientVisit}
-       
+      {/* Top Section: Doctors Tabs Only */}
+      <header className="flex-shrink-0 h-[100px] p-3 border-b bg-card flex items-center">
+        <div className="flex-grow h-full"> {/* Doctors Tabs Area */}
+          <DoctorsTabs 
+            setSelectedPatientVisit={setSelectedPatientVisit}
             onShiftSelect={onShiftSelect} 
             activeShiftId={activeDoctorShift?.id || null} 
           />
-        </div>
-        <div className="w-1/3 gap-0.5 h-full flex items-center"> {/* Global Search Area */}
-          <div className="relative w-full">
-            <Search className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder={t('clinic:topNav.searchPatientsPlaceholder')}
-              value={globalSearchTerm}
-              onChange={(e) => setGlobalSearchTerm(e.target.value)}
-              className="ps-10 rtl:pr-10 h-12 text-base"
-            />
-          </div>
-                      {/* NEW Visit ID Search Input */}
-                      <div className="relative w-full  sm:w-auto sm:min-w-[150px]">
-                <Input
-                    type="number"
-                    placeholder={t('clinic:searchByVisitIdPlaceholder', "Visit ID...")}
-                    value={visitIdSearchTerm}
-                    onChange={(e) => { setVisitIdSearchTerm(e.target.value); setGlobalSearchTerm('');}}
-                    onKeyDown={(e) => { if (e.key === 'Enter') handleSearchByVisitId(); }}
-                    className="ps-10 rtl:pr-10 h-9 text-xs"
-                    disabled={isSearchingByVisitId}
-                />
-                <Search className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
-                {isSearchingByVisitId && <Loader2 className="absolute ltr:right-2 rtl:left-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin"/>}
-            </div>
-
         </div>
       </header>
 
@@ -216,10 +188,43 @@ const handleSearchByVisitId = () => {
             )}
         >
           <div className="sticky top-0 bg-muted/40 dark:bg-background z-10 pt-1 pb-3 mb-3 -mx-4 px-4 border-b">
-            <h2 className="text-lg font-semibold text-foreground">
-              {t('clinic:workspace.title')}
-            </h2>
+            <div className="flex items-center justify-between gap-4 mb-3">
+              <h2 className="text-lg font-semibold text-foreground">
+                {t('clinic:workspace.title')}
+              </h2>
+              
+              {/* Search Inputs moved here - horizontal layout */}
+              <div className="flex gap-2 flex-1 max-w-md">
+                {/* Patient Search Input */}
+                <div className="relative flex-1">
+                  <Search className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="search"
+                    placeholder={t('clinic:topNav.searchPatientsPlaceholder')}
+                    value={globalSearchTerm}
+                    onChange={(e) => setGlobalSearchTerm(e.target.value)}
+                    className="ps-10 rtl:pr-10 h-9 text-sm"
+                  />
+                </div>
+                
+                {/* Visit ID Search Input */}
+                <div className="relative w-32">
+                  <Input
+                    type="number"
+                    placeholder={t('clinic:searchByVisitIdPlaceholder', "Visit ID...")}
+                    value={visitIdSearchTerm}
+                    onChange={(e) => { setVisitIdSearchTerm(e.target.value); setGlobalSearchTerm('');}}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleSearchByVisitId(); }}
+                    className="ps-10 rtl:pr-10 h-9 text-sm"
+                    disabled={isSearchingByVisitId}
+                  />
+                  <Search className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
+                  {isSearchingByVisitId && <Loader2 className="absolute ltr:right-2 rtl:left-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin"/>}
+                </div>
+              </div>
+            </div>
           </div>
+          
           <ActivePatientsList
             onPatientSelect={handlePatientSelected}
             selectedPatientVisitId={selectedPatientVisit?.visitId || null}

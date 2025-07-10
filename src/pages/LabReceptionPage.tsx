@@ -10,6 +10,8 @@ import { createTheme, ThemeProvider } from "@mui/material/styles";
 
 // Shadcn & Lucide Imports
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
 import { toast } from "sonner";
 
 // Custom Components & Services
@@ -126,27 +128,30 @@ const LabReceptionPage: React.FC = () => {
     setShowPatientHistory(searchResults.length > 0);
   }, [searchResults.length]);
 
-  // Click outside handler for patient history
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (patientHistoryRef.current && !patientHistoryRef.current.contains(event.target as Node)) {
-        setShowPatientHistory(false);
-        setSearchQuery(''); // Also clear search when clicking away
-      }
-    };
+  // Click outside handler for patient history - DISABLED to prevent closing on click away
+  // useEffect(() => {
+  //   const handleClickOutside = (event: MouseEvent) => {
+  //     if (patientHistoryRef.current && !patientHistoryRef.current.contains(event.target as Node)) {
+  //       setShowPatientHistory(false);
+  //       setSearchQuery(''); // Also clear search when clicking away
+  //     }
+  //   };
 
-    if (showPatientHistory) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
+  //   if (showPatientHistory) {
+  //     document.addEventListener('mousedown', handleClickOutside);
+  //   }
 
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showPatientHistory]);
+  //   return () => {
+  //     document.removeEventListener('mousedown', handleClickOutside);
+  //   };
+  // }, [showPatientHistory]);
 
   const createVisitFromHistoryMutation = useMutation({
-    mutationFn: (payload: { patientId: number; doctorId: number }) =>
-      createLabVisitForExistingPatient(payload.patientId, { doctor_id: payload.doctorId }),
+    mutationFn: (payload: { patientId: number; doctorId: number; companyId?: number }) =>
+      createLabVisitForExistingPatient(payload.patientId, { 
+        doctor_id: payload.doctorId,
+        company_id: payload.companyId 
+      }),
     onSuccess: (newPatientWithVisit) => {
       toast.success(t("patients:search.visitCreatedSuccess", { patientName: newPatientWithVisit.name }));
       handlePatientActivated(newPatientWithVisit);
@@ -228,8 +233,8 @@ const LabReceptionPage: React.FC = () => {
     setIsFormVisible(!isFormVisible);
   };
 
-  const handlePatientSelectedFromHistory = (patientId: number, doctorId: number) => {
-    createVisitFromHistoryMutation.mutate({ patientId, doctorId });
+  const handlePatientSelectedFromHistory = (patientId: number, doctorId: number, companyId?: number) => {
+    createVisitFromHistoryMutation.mutate({ patientId, doctorId, companyId });
   };
 
 
@@ -449,12 +454,22 @@ interface AutocompleteVisitOption {
 
           {/* Patient History Dialog - Absolute positioned overlay */}
           {showPatientHistory && (
-            <div className="absolute top-4 left-4 z-50 w-96 max-h-[600px]" ref={patientHistoryRef}>
+            <div className="absolute top-4 left-4 z-50 w-1/2 max-h-[600px]" ref={patientHistoryRef}>
               <Card className="bg-white dark:bg-slate-800 shadow-2xl border-0 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
                 <CardContent className="p-4 h-full overflow-hidden">
-                  <div className="mb-4">
-                    <h3 className="text-lg font-semibold">{t('patientHistory.title')}</h3>
-                    <p className="text-sm text-muted-foreground">{t('patientHistory.description')}</p>
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="text-lg font-semibold">{t('patientHistory.title')}</h3>
+                      <p className="text-sm text-muted-foreground">{t('patientHistory.description')}</p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowPatientHistory(false)}
+                      className="h-8 w-8 p-0"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
                   </div>
                   <PatientHistoryTable
                     searchResults={searchResults}

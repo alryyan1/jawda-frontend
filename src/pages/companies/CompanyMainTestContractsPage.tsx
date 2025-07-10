@@ -258,12 +258,13 @@ const CompanyMainTestContractsPage: React.FC = () => {
                     <TableHead className="w-[120px] text-center">{t('contracts.table.approve')}</TableHead>
                     <TableHead className="w-[150px] text-center">{t('contracts.table.endurancePercentage')}</TableHead>
                     <TableHead className="w-[150px] text-center">{t('contracts.table.enduranceStatic')}</TableHead>
+                    <TableHead className="w-[100px] text-center">{t('contracts.table.useStatic')}</TableHead>
                     <TableHead className="w-[60px] text-right">{t('common:actions.title')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {isLoading && <TableRow><TableCell colSpan={8} className="text-center h-24"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>}
-                  {!isLoading && fields.length === 0 && <TableRow><TableCell colSpan={8} className="text-center h-24 text-muted-foreground">{t('contracts.noContractedTests')}</TableCell></TableRow>}
+                  {isLoading && <TableRow><TableCell colSpan={9} className="text-center h-24"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>}
+                  {!isLoading && fields.length === 0 && <TableRow><TableCell colSpan={9} className="text-center h-24 text-muted-foreground">{t('contracts.noContractedTests')}</TableCell></TableRow>}
                   {fields.map((field, index) => (
                     <TableRow key={field.id}>
                       <TableCell className="text-center font-mono text-sm">{field.main_test_id}</TableCell>
@@ -360,6 +361,11 @@ const CompanyMainTestContractsPage: React.FC = () => {
                              />
                          )} />
                        </TableCell>
+                      <TableCell className="text-center">
+                        <Controller name={`contracts.${index}.use_static`} control={control} render={({ field: f }) => (
+                           <Switch checked={f.value} onCheckedChange={(val) => { f.onChange(val); debouncedUpdate(index, 'use_static'); }} />
+                        )} />
+                      </TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeMutation.mutate(field.main_test_id)} disabled={removeMutation.isPending && removeMutation.variables === field.main_test_id}>
                             {removeMutation.isPending && removeMutation.variables === field.main_test_id ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4" />}

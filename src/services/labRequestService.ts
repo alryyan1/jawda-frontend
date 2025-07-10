@@ -53,6 +53,7 @@ interface UpdateLabRequestPayload {
   is_bankak?: boolean; // If this is saved before payment
   endurance?: number;
   count?: number; // If count is editable
+  comment?: string; // Add comment field
   // Add other editable fields
 }
 export const updateLabRequestDetails = async (labRequestId: number, data: UpdateLabRequestPayload): Promise<LabRequest> => {

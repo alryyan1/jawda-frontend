@@ -26,7 +26,7 @@ interface CompanyFormPageProps { mode: CompanyFormMode; }
 const getCompanyFormSchema = (t: Function) => z.object({
   name: z.string().min(1, { message: t('common:validation.required', { field: t('companies:form.nameLabel')}) }),
   phone: z.string().min(1, { message: t('common:validation.required', { field: t('companies:form.phoneLabel')}) }),
-  email: z.string().min(1,{message:t('common:validation.required',{field:t('companies:form.emailLabel')})}).email({ message: t('common:validation.invalidEmail') }), // Allow empty string or valid email
+  email: z.string().min(1,{message:t('common:validation.required',{field:t('companies:form.emailLabel')})}), // Allow empty string or valid email
   status: z.boolean().default(true),
   lab_endurance: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, { message: t('common:validation.positiveNumber')}),
   service_endurance: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, { message: t('common:validation.positiveNumber')}),
@@ -151,7 +151,7 @@ const CompanyFormPage: React.FC<CompanyFormPageProps> = ({ mode }) => {
                 <FormField control={control} name="email" render={({ field }) => (
                 <FormItem>
                     <FormLabel>{t('companies:form.emailLabel')}</FormLabel>
-                    <FormControl><Input type="email" placeholder={t('companies:form.emailLabel')} {...field} disabled={dataIsLoading || formIsSubmitting}/></FormControl>
+                    <FormControl><Input placeholder={t('companies:form.emailLabel')} {...field} disabled={dataIsLoading || formIsSubmitting}/></FormControl>
                     <FormMessage />
                 </FormItem>
                 )} />

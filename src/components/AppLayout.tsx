@@ -46,6 +46,7 @@ import {
   ClipboardEditIcon,
   Syringe,
   Microscope,
+  Banknote,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Toaster } from "sonner";
@@ -80,7 +81,7 @@ const mainNavItems: NavItem[] = [
   { to: '/doctors', labelKey: 'doctors', icon: Stethoscope, permission: 'list doctors' },
   { to: '/analysis', labelKey: 'analysis', icon: FileBarChart2, permission: 'view analysis' },
   { to: '/schedules-appointments', labelKey: 'schedulesAppointments', icon: CalendarClock, permission: 'view doctor_schedules' }, // Or 'manage appointments'
-  { to: '/cash-reconciliation', labelKey: 'cashReconciliation', icon: Money, permission: 'access cash_reconciliation' },
+  { to: '/cash-reconciliation', labelKey: 'cashReconciliation', icon: Banknote, permission: 'access cash_reconciliation' },
 
   // { to: '/bulk-whatsapp', labelKey: 'bulkWhatsApp', icon: MessageCircle, permission: 'send bulk whatsapp' },
 ];

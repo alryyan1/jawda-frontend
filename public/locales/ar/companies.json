@@ -6,6 +6,7 @@
   "loadingCompanies": "جارٍ تحميل الشركات...",
   "manageTestContractsButton": "إدارة عقود الفحوصات",
   "contracts": {
+  
     "importPricePreferenceDialog": {
       "title": "اختر تفضيل سعر الاستيراد",
       "description": "يرجى اختيار الطريقة التي تريد بها تعيين أسعار الخدمات المستوردة.",
@@ -20,6 +21,8 @@
     "percentageEndurance": "تحمل بنسبة مئوية",
     "staticEndurance": "تحمل ثابت",
     "table": {
+      "useStatic": "استخدام الثابت",
+
       "status": "الحالة",
       "price": "السعر",
       "approve": "موافقة",

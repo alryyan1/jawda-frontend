@@ -7,50 +7,20 @@ import {
   keepPreviousData,
 } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { format, parseISO } from "date-fns";
-import { arSA, enUS } from "date-fns/locale";
+import { format } from "date-fns";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+// MUI imports for Autocomplete
+import { createTheme, ThemeProvider } from "@mui/material";
+import { useTheme } from "next-themes";
 
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Loader2,
-  FileBarChart2,
-  MoreHorizontal,
-  Download,
-  Eye,
-  XCircle,
-  CheckCircle,
-  ShieldQuestion,
-  Edit,
-} from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Label } from "@/components/ui/label";
+import { Loader2 } from "lucide-react";
+
+// Import the new components
+import DoctorShiftsReportHeader from "@/components/reports/DoctorShiftsReportHeader";
+import DoctorShiftsReportFilters from "@/components/reports/DoctorShiftsReportFilters";
+import DoctorShiftsReportTable from "@/components/reports/DoctorShiftsReportTable";
+import DoctorShiftsReportPagination from "@/components/reports/DoctorShiftsReportPagination";
 
 import type {
   DoctorShiftReportItem,
@@ -73,7 +43,6 @@ import { getUsers } from "@/services/userService";
 import { getShiftsList } from "@/services/shiftService";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAuthorization } from "@/hooks/useAuthorization";
-import { formatNumber } from "@/lib/utils";
 import AddDoctorEntitlementCostDialog from "@/components/clinic/dialogs/AddDoctorEntitlementCostDialog";
 import DoctorShiftFinancialReviewDialog from "@/components/clinic/dialogs/DoctorShiftFinancialReviewDialog";
 import PdfPreviewDialog from "@/components/common/PdfPreviewDialog";
@@ -97,17 +66,49 @@ type ProofingFlagKey = keyof Pick<
 >;
 
 const DoctorShiftsReportPage: React.FC = () => {
-  const { t, i18n } = useTranslation(["reports", "common", "clinic", "review"]);
-  const dateLocale = i18n.language.startsWith("ar") ? arSA : enUS;
+  const { t } = useTranslation(["reports", "common", "clinic", "review"]);
   const queryClient = useQueryClient();
   const { user: currentUser } = useAuth();
   const { can } = useAuthorization();
+  const { theme } = useTheme();
+
+  // Create MUI theme that supports dark mode
+  const muiTheme = useMemo(() => createTheme({
+    palette: {
+      mode: theme === 'dark' ? 'dark' : 'light',
+      primary: {
+        main: theme === 'dark' ? '#3b82f6' : '#2563eb',
+      },
+      background: {
+        default: theme === 'dark' ? '#0f0f23' : '#ffffff',
+        paper: theme === 'dark' ? '#1a1a2e' : '#ffffff',
+      },
+      text: {
+        primary: theme === 'dark' ? '#e5e7eb' : '#1f2937',
+        secondary: theme === 'dark' ? '#9ca3af' : '#6b7280',
+      },
+    },
+    components: {
+      MuiAutocomplete: {
+        styleOverrides: {
+          root: {
+            '& .MuiOutlinedInput-root': {
+              height: '40px',
+              fontSize: '16px',
+            },
+            '& .MuiInputLabel-root': {
+              fontSize: '14px',
+            },
+          },
+        },
+      },
+    },
+  }), [theme]);
 
   const canViewAllUsersShifts = can("list all_doctor_shifts");
   const canCloseShifts = can("end doctor_shifts");
   const canRecordEntitlementCost = can("record clinic_costs");
   const canUpdateProofing = can("view doctor_shift_financial_summary");
-  const canViewFinancialSummary = can("view doctor_shift_financial_summary");
 
   const defaultDateFrom = format(new Date(), "yyyy-MM-dd");
   const defaultDateTo = format(new Date(), "yyyy-MM-dd");
@@ -167,10 +168,7 @@ const DoctorShiftsReportPage: React.FC = () => {
     }
   }, [canViewAllUsersShifts, currentUser, filters.userIdOpened]);
 
-  const { data: usersForFilterResponse, isLoading: isLoadingUsers } = useQuery<
-    PaginatedResponse<User>,
-    Error
-  >({
+  const { data: usersForFilterResponse, isLoading: isLoadingUsers } = useQuery({
     queryKey: ["usersListForDSRFilter"],
     queryFn: () => getUsers(1, { per_page: 200 }),
     enabled: canViewAllUsersShifts,
@@ -232,8 +230,6 @@ const DoctorShiftsReportPage: React.FC = () => {
     placeholderData: keepPreviousData,
   });
 
-  // Removed unused financial summary query for now
-
   const closeShiftMutation = useMutation({
     mutationFn: (doctorShiftId: number) => endDoctorShift({ doctor_shift_id: doctorShiftId }),
     onSuccess: () => {
@@ -246,64 +242,42 @@ const DoctorShiftsReportPage: React.FC = () => {
     },
   });
 
-  // Proofing functionality temporarily removed
-// --- Mutation for Updating Proofing Flags ---
-const proofingFlagsMutation = useMutation({
-  mutationFn: (params: { shiftId: number; flags: Partial<Pick<DoctorShiftReportItem, ProofingFlagKey>> }) =>
-    updateDoctorShiftProofingFlags(params.shiftId, params.flags),
-  onSuccess: (updatedDoctorShift, variables) => {
-    toast.success(t('review.proofingStatusUpdated'));
-    // Optimistically update the specific shift in the cache or invalidate the whole list
-    queryClient.setQueryData(reportQueryKey, (oldData: PaginatedResponse<DoctorShiftReportItem> | undefined) => {
-      if (!oldData) return oldData;
-      return {
-        ...oldData,
-        data: oldData.data.map(ds => 
-          ds.id === variables.shiftId 
-          ? { ...ds, ...variables.flags } // Merge the updated flags
-          : ds
-        ),
-      };
-    });
-    // Or, simpler: queryClient.invalidateQueries({ queryKey: reportQueryKey });
-  },
-  onError: (error: unknown) => {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      toast.error(t('review.proofingStatusUpdateFailed'), { description: errorMessage });
-  },
-});
+  const proofingFlagsMutation = useMutation({
+    mutationFn: (params: { shiftId: number; flags: Partial<Pick<DoctorShiftReportItem, ProofingFlagKey>> }) =>
+      updateDoctorShiftProofingFlags(params.shiftId, params.flags),
+    onSuccess: (updatedDoctorShift, variables) => {
+      toast.success(t('review.proofingStatusUpdated'));
+      queryClient.setQueryData(reportQueryKey, (oldData: PaginatedResponse<DoctorShiftReportItem> | undefined) => {
+        if (!oldData) return oldData;
+        return {
+          ...oldData,
+          data: oldData.data.map(ds => 
+            ds.id === variables.shiftId 
+            ? { ...ds, ...variables.flags }
+            : ds
+          ),
+        };
+      });
+    },
+    onError: (error: unknown) => {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        toast.error(t('review.proofingStatusUpdateFailed'), { description: errorMessage });
+    },
+  });
 
-// --- Handler for Toggling a Proofing Flag ---
-const handleProofingAction = (shiftId: number, flagField: ProofingFlagKey, currentValue?: boolean) => {
-  if (!canUpdateProofing) {
-      toast.error(t('common:error.unauthorizedAction'));
-      return;
-  }
-  if (proofingFlagsMutation.isPending) return; // Prevent multiple rapid clicks
+  const handleProofingAction = (shiftId: number, flagField: ProofingFlagKey, currentValue?: boolean) => {
+    if (!canUpdateProofing) {
+        toast.error(t('common:error.unauthorizedAction'));
+        return;
+    }
+    if (proofingFlagsMutation.isPending) return;
 
-  const flagsToUpdate: Partial<Pick<DoctorShiftReportItem, ProofingFlagKey>> = { [flagField]: !currentValue };
-  
-  // Optional: Confirmation dialog for un-proving
-  // if (currentValue === true) { // If trying to un-prove
-  //   if (!window.confirm(t('review.confirmUnprove', { flagName: t(`review.flagNames.${flagField}`) }))) {
-  //     return;
-  //   }
-  // }
-  
-  proofingFlagsMutation.mutate({ shiftId, flags: flagsToUpdate });
-};
+    const flagsToUpdate: Partial<Pick<DoctorShiftReportItem, ProofingFlagKey>> = { [flagField]: !currentValue };
+    proofingFlagsMutation.mutate({ shiftId, flags: flagsToUpdate });
+  };
 
   const handleFilterChange = (filterName: keyof Filters, value: string) => {
     setFilters((prev) => ({ ...prev, [filterName]: value }));
-  };
-
-  const handleViewSummary = (shift: DoctorShiftReportItem) => {
-    if (!canViewFinancialSummary) {
-      toast.error(t("common:error.unauthorizedAction"));
-      return;
-    }
-    setSelectedShiftForSummaryDialog(shift);
-    setIsFinancialSummaryDialogOpen(true);
   };
 
   const handleOpenAddCostDialog = (shift: DoctorShiftReportItem) => {
@@ -373,13 +347,6 @@ const handleProofingAction = (shiftId: number, flagField: ProofingFlagKey, curre
   const isLoadingUIData =
     isLoadingUsers || isLoadingDoctors || isLoadingGeneralShifts;
 
-  if (isLoading && !isFetching && shifts.length === 0 && currentPage === 1) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-      </div>
-    );
-  }
   if (error)
     return (
       <p className="text-destructive p-4 text-center">
@@ -391,199 +358,25 @@ const handleProofingAction = (shiftId: number, flagField: ProofingFlagKey, curre
     );
 
   return (
-    <>
-      <div className="container mx-auto py-4 sm:py-6 lg:py-8 space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
-            <FileBarChart2 className="h-7 w-7 text-primary" />{" "}
-            {t("reports:doctorShiftsReportTitle")}
-          </h1>
-          <Button
-            onClick={handleDownloadListPdf}
-            variant="outline"
-            size="sm"
-            disabled={isGeneratingListPdf || isLoading || shifts.length === 0}
-          >
-            {isGeneratingListPdf ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Download className="h-4 w-4" />
-            )}
-            <span className="ltr:ml-2 rtl:mr-2">{t("common:exportToPdf")}</span>
-          </Button>
-        </div>
+    <ThemeProvider theme={muiTheme}>
+      <div className="container mx-auto py-4 sm:py-6 lg:py-8 space-y-6 text-base">
+        <DoctorShiftsReportHeader
+          isGeneratingListPdf={isGeneratingListPdf}
+          isLoading={isLoading}
+          hasData={shifts.length > 0}
+          onDownloadListPdf={handleDownloadListPdf}
+        />
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">
-              {t("reports:filters.title")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 items-end">
-              {/* User Opened By Filter */}
-              {canViewAllUsersShifts && (
-                <div className="min-w-[150px]">
-                  <Label htmlFor="dsr-user-filter" className="text-xs">
-                    {t("reports:filters.userOpened")}
-                  </Label>
-                  <Select
-                    value={filters.userIdOpened}
-                    onValueChange={(val) =>
-                      handleFilterChange("userIdOpened", val)
-                    }
-                    dir={i18n.dir()}
-                    disabled={isLoadingUIData || isFetching}
-                  >
-                    <SelectTrigger id="dsr-user-filter" className="h-9">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">
-                        {t("reports:filters.allUsers")}
-                      </SelectItem>
-                      {usersForFilter?.map((u: User) => (
-                        <SelectItem key={u.id} value={String(u.id)}>
-                          {u.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              {/* Doctor Filter */}
-              <div className="min-w-[150px]">
-                <Label htmlFor="dsr-doctor-filter" className="text-xs">
-                  {t("reports:filters.doctor")}
-                </Label>
-                <Select
-                  value={filters.doctorId}
-                  onValueChange={(val) => handleFilterChange("doctorId", val)}
-                  dir={i18n.dir()}
-                  disabled={isLoadingUIData || isFetching}
-                >
-                  <SelectTrigger id="dsr-doctor-filter" className="h-9">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">
-                      {t("reports:filters.allDoctors")}
-                    </SelectItem>
-                    {doctorsForFilter?.map((doc) => (
-                      <SelectItem key={doc.id} value={String(doc.id)}>
-                        {doc.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {/* Search Doctor Name */}
-              <div className="min-w-[150px]">
-                <Label htmlFor="dsr-search-doc" className="text-xs">
-                  {t("reports:filters.searchDoctorName")}
-                </Label>
-                <Input
-                  id="dsr-search-doc"
-                  type="search"
-                  placeholder={t("reports:filters.searchPlaceholderName")}
-                  value={filters.searchDoctorName}
-                  onChange={(e) =>
-                    handleFilterChange("searchDoctorName", e.target.value)
-                  }
-                  className="h-9"
-                />
-              </div>
-              {/* General Shift Filter */}
-              <div className="min-w-[150px]">
-                <Label htmlFor="dsr-gshift-filter" className="text-xs">
-                  {t("reports:filters.generalShift")}
-                </Label>
-                <Select
-                  value={filters.generalShiftId}
-                  onValueChange={(val) =>
-                    handleFilterChange("generalShiftId", val)
-                  }
-                  dir={i18n.dir()}
-                  disabled={isLoadingUIData || isFetching}
-                >
-                  <SelectTrigger id="dsr-gshift-filter" className="h-9">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">
-                      {t("reports:filters.allShifts")}
-                    </SelectItem>
-                    {generalShiftsForFilter?.map((s) => (
-                      <SelectItem key={s.id} value={String(s.id)}>
-                        {s.name ||
-                          `#${s.id} (${format(parseISO(s.created_at), "PP", {
-                            locale: dateLocale,
-                          })})`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {/* Status Filter */}
-              <div className="min-w-[120px]">
-                <Label htmlFor="dsr-status-filter" className="text-xs">
-                  {t("reports:filters.status")}
-                </Label>
-                <Select
-                  value={filters.status}
-                  onValueChange={(val) =>
-                    handleFilterChange("status", val as Filters["status"])
-                  }
-                  dir={i18n.dir()}
-                  disabled={isFetching}
-                >
-                  <SelectTrigger id="dsr-status-filter" className="h-9">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">
-                      {t("reports:filters.statusAll")}
-                    </SelectItem>
-                    <SelectItem value="open">
-                      {t("reports:filters.statusOpen")}
-                    </SelectItem>
-                    <SelectItem value="closed">
-                      {t("reports:filters.statusClosed")}
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {/* Date From Input */}
-              <div className="min-w-[150px]">
-                <Label htmlFor="dsr-date-from" className="text-xs">
-                  {t("reports:filters.dateFrom")}
-                </Label>
-                <Input
-                  id="dsr-date-from"
-                  type="date"
-                  value={filters.dateFrom}
-                  onChange={(e) => handleFilterChange("dateFrom", e.target.value)}
-                  className="h-9"
-                  disabled={isFetching}
-                />
-              </div>
-              {/* Date To Input */}
-              <div className="min-w-[150px]">
-                <Label htmlFor="dsr-date-to" className="text-xs">
-                  {t("reports:filters.dateTo")}
-                </Label>
-                <Input
-                  id="dsr-date-to"
-                  type="date"
-                  value={filters.dateTo}
-                  onChange={(e) => handleFilterChange("dateTo", e.target.value)}
-                  className="h-9"
-                  disabled={isFetching}
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <DoctorShiftsReportFilters
+          filters={filters}
+          onFilterChange={handleFilterChange}
+          usersForFilter={usersForFilter}
+          doctorsForFilter={doctorsForFilter}
+          generalShiftsForFilter={generalShiftsForFilter}
+          isLoadingUIData={isLoadingUIData}
+          isFetching={isFetching}
+          canViewAllUsersShifts={canViewAllUsersShifts}
+        />
 
         {isFetching && !isLoading && (
           <div className="text-sm text-muted-foreground my-2 text-center py-2">
@@ -592,284 +385,27 @@ const handleProofingAction = (shiftId: number, flagField: ProofingFlagKey, curre
           </div>
         )}
 
-        {!isLoading && shifts.length === 0 && !isFetching && (
-          <Card className="text-center py-10 text-muted-foreground mt-6">
-            <CardContent>{t("common:noDataAvailableFilters")}</CardContent>
-          </Card>
-        )}
+        <DoctorShiftsReportTable
+          shifts={shifts}
+          isLoading={isLoading}
+          isFetching={isFetching}
+          isGeneratingSummaryPdfId={isGeneratingSummaryPdfId}
+          closeShiftMutation={closeShiftMutation}
+          proofingFlagsMutation={proofingFlagsMutation}
+          canCloseShifts={canCloseShifts}
+          canRecordEntitlementCost={canRecordEntitlementCost}
+          canUpdateProofing={canUpdateProofing}
+          onDownloadSummaryPdf={handleDownloadSummaryPdf}
+          onOpenAddCostDialog={handleOpenAddCostDialog}
+          onProofingAction={handleProofingAction}
+        />
 
-        {shifts.length > 0 && (
-          <Card className="mt-6 overflow-hidden">
-            <ScrollArea className="h-[calc(100vh-420px)] w-full">
-              <div className="min-w-[1200px]">
-                <Table className="text-xs" dir={i18n.dir()}>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-center min-w-[140px]">
-                        {t("reports:doctorName")}
-                      </TableHead>
-                      <TableHead className="text-center hidden md:table-cell min-w-[110px]">
-                        {t("reports:specialist")}
-                      </TableHead>
-                     
-                      <TableHead className="text-center min-w-[90px]">
-                        {t("reports:totalEntitlement")}
-                      </TableHead>
-                      <TableHead className="text-center hidden md:table-cell min-w-[90px]">
-                        {t("reports:cashEntitlement")}
-                      </TableHead>
-                      <TableHead className="text-center hidden md:table-cell min-w-[90px]">
-                        {t(
-                          "reports:insuranceEntitlement"
-                        )}
-                      </TableHead>
-                      <TableHead className="text-center min-w-[70px]">
-                        {t("common:status")}
-                      </TableHead>
-                      <TableHead className="text-center min-w-[100px] hidden xl:table-cell">
-                        {t("reports:openedBy")}
-                      </TableHead>
-                      <TableHead className="text-center min-w-[100px] hidden xl:table-cell">{t("reports:createdAt")}</TableHead>
-                      <TableHead className="text-right min-w-[110px] sticky right-0 bg-card z-10">
-                        {t("common:actions.title")}
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {shifts.map((ds: DoctorShiftReportItem) => (
-                      <TableRow
-                        key={ds.id}
-                        className={
-                          ds.status ? "bg-green-50/50 dark:bg-green-900/20" : ""
-                        }
-                      >
-                        <TableCell className="font-medium text-center">
-                          {ds.doctor_name}
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell text-center">
-                          {ds.doctor_specialist_name || "-"}
-                        </TableCell>
-                      
-                        <TableCell className="text-center font-semibold">
-                          {formatNumber(ds.total_doctor_entitlement || 0)}
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell text-center">
-                          {formatNumber(ds.cash_entitlement || 0)}
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell text-center">
-                          {formatNumber(ds.insurance_entitlement || 0)}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge
-                            variant={ds.status ? "success" : "outline"}
-                            className={
-                              ds.status
-                                ? "border-green-600 bg-green-100 text-green-700 dark:bg-green-800/40 dark:text-green-300 dark:border-green-700"
-                                : ""
-                            }
-                          >
-                            {ds.status_text}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-center hidden xl:table-cell">
-                          {ds.user_name_opened || "-"}
-                        </TableCell>
-                        <TableCell className="text-center hidden xl:table-cell">
-                          {format(parseISO(ds.created_at), "PP", {
-                            locale: dateLocale,
-                          })}
-                        </TableCell>
-                        <TableCell className="text-right sticky right-0 bg-card z-10">
-                          <DropdownMenu dir={i18n.dir()}>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className="h-7 w-7 p-0">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-56">
-                              {canViewFinancialSummary && (
-                                <DropdownMenuItem
-                                  onClick={() => handleViewSummary(ds)}
-                                >
-                                  <Eye className="h-3.5 w-3.5 ltr:mr-2 rtl:ml-2" />
-                                  {t("reports:actions.viewFinancialSummary")}
-                                </DropdownMenuItem>
-                              )}
-                              <DropdownMenuItem
-                                onClick={() => handleDownloadSummaryPdf(ds)}
-                                disabled={isGeneratingSummaryPdfId === ds.id}
-                              >
-                                {isGeneratingSummaryPdfId === ds.id ? (
-                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                ) : (
-                                  <Download className="h-3.5 w-3.5" />
-                                )}
-                                <span className="ltr:ml-2 rtl:mr-2">
-                                  {t("reports:actions.printFinancialSummary")}
-                                </span>
-                              </DropdownMenuItem>
-                              {ds.status && canCloseShifts && (
-                                <>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem
-                                    onClick={() =>
-                                      closeShiftMutation.mutate(ds.id)
-                                    }
-                                    disabled={
-                                      closeShiftMutation.isPending &&
-                                      closeShiftMutation.variables === ds.id
-                                    }
-                                    className="text-destructive focus:text-destructive"
-                                  >
-                                    {closeShiftMutation.isPending &&
-                                    closeShiftMutation.variables === ds.id ? (
-                                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                    ) : (
-                                      <XCircle className="h-3.5 w-3.5" />
-                                    )}
-                                    <span className="ltr:ml-2 rtl:ml-2">
-                                      {t("clinic:doctorShifts.closeShiftButton")}
-                                    </span>
-                                  </DropdownMenuItem>
-                                </>
-                              )}
-                              {canRecordEntitlementCost &&
-                                (ds.total_doctor_entitlement ?? 0) > 0 &&
-                                !ds.is_cash_reclaim_prooved &&
-                                !ds.is_company_reclaim_prooved && (
-                                  <>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                      onClick={() => handleOpenAddCostDialog(ds)}
-                                    >
-                                      <Edit className="h-3.5 w-3.5 ltr:mr-2 rtl:ml-2" />
-                                      {t("review.recordEntitlementAsCost")}
-                                    </DropdownMenuItem>
-                                  </>
-                                )}
-                              {canUpdateProofing && (
-                                <>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem
-                                    onClick={() =>
-                                      handleProofingAction(
-                                        ds.id,
-                                        "is_cash_revenue_prooved",
-                                        ds.is_cash_revenue_prooved
-                                      )
-                                    }
-                                    disabled={proofingFlagsMutation.isPending}
-                                  >
-                                    {ds.is_cash_revenue_prooved ? (
-                                      <CheckCircle className="h-3.5 w-3.5 text-green-500" />
-                                    ) : (
-                                      <ShieldQuestion className="h-3.5 w-3.5" />
-                                    )}{" "}
-                                    <span className="ltr:ml-2 rtl:mr-2">
-                                      {t("review.toggleCashRevenueProof")}
-                                    </span>
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() =>
-                                      handleProofingAction(
-                                        ds.id,
-                                        "is_cash_reclaim_prooved",
-                                        ds.is_cash_reclaim_prooved
-                                      )
-                                    }
-                                    disabled={proofingFlagsMutation.isPending}
-                                  >
-                                    {ds.is_cash_reclaim_prooved ? (
-                                      <CheckCircle className="h-3.5 w-3.5 text-green-500" />
-                                    ) : (
-                                      <ShieldQuestion className="h-3.5 w-3.5" />
-                                    )}{" "}
-                                    <span className="ltr:ml-2 rtl:mr-2">
-                                      {t("review.toggleCashEntitlementProof")}
-                                    </span>
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() =>
-                                      handleProofingAction(
-                                        ds.id,
-                                        "is_company_revenue_prooved",
-                                        ds.is_company_revenue_prooved
-                                      )
-                                    }
-                                    disabled={proofingFlagsMutation.isPending}
-                                  >
-                                    {ds.is_company_revenue_prooved ? (
-                                      <CheckCircle className="h-3.5 w-3.5 text-green-500" />
-                                    ) : (
-                                      <ShieldQuestion className="h-3.5 w-3.5" />
-                                    )}{" "}
-                                    <span className="ltr:ml-2 rtl:mr-2">
-                                      {t("review.toggleInsuranceRevenueProof")}
-                                    </span>
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() =>
-                                      handleProofingAction(
-                                        ds.id,
-                                        "is_company_reclaim_prooved",
-                                        ds.is_company_reclaim_prooved
-                                      )
-                                    }
-                                    disabled={proofingFlagsMutation.isPending}
-                                  >
-                                    {ds.is_company_reclaim_prooved ? (
-                                      <CheckCircle className="h-3.5 w-3.5 text-green-500" />
-                                    ) : (
-                                      <ShieldQuestion className="h-3.5 w-3.5" />
-                                    )}{" "}
-                                    <span className="ltr:ml-2 rtl:mr-2">
-                                      {t(
-                                        "review.toggleInsuranceEntitlementProof"
-                                      )}
-                                    </span>
-                                  </DropdownMenuItem>
-                                </>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </ScrollArea>
-          </Card>
-        )}
-
-        {meta && meta.last_page > 1 && (
-          <div className="mt-6 flex items-center justify-center px-2 gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1 || isFetching}
-            >
-              {t("common:previous")}
-            </Button>
-            <span className="text-sm text-muted-foreground">
-              {t("common:pageXOfY", {
-                current: meta.current_page,
-                total: meta.last_page,
-              })}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                setCurrentPage((p) => Math.min(meta.last_page, p + 1))
-              }
-              disabled={currentPage === meta.last_page || isFetching}
-            >
-              {t("common:next")}
-            </Button>
-          </div>
-        )}
+        <DoctorShiftsReportPagination
+          meta={meta}
+          currentPage={currentPage}
+          isFetching={isFetching}
+          onPageChange={setCurrentPage}
+        />
       </div>
 
       {selectedShiftForSummaryDialog && (
@@ -904,7 +440,7 @@ const handleProofingAction = (shiftId: number, flagField: ProofingFlagKey, curre
         title={pdfPreviewTitle}
         fileName={pdfPreviewFilename}
       />
-    </>
+    </ThemeProvider>
   );
 };
 

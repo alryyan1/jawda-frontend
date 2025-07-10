@@ -186,13 +186,14 @@ export const searchRecentDoctorVisits = async (patientNameSearch: string, limit:
  * This is typically triggered from the Lab Reception search results.
  *
  * @param patientId - The ID of the existing patient.
- * @param payload - The data required to create the new visit, primarily the referring doctor's ID.
+ * @param payload - The data required to create the new visit, including the referring doctor's ID and optional company ID.
  * @returns A promise that resolves to the Patient object, which now includes the newly created DoctorVisit relation.
  */
 export const createLabVisitForExistingPatient = async (
   patientId: number,
   payload: {
     doctor_id: number;
+    company_id?: number;
     reason_for_visit?: string;
   }
 ): Promise<Patient> => { // The backend returns a PatientResource with the new visit loaded

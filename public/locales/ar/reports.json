@@ -298,7 +298,8 @@
   
     "actions": {
       "viewFinancialSummary": "عرض الملخص المالي",
-      "printFinancialSummary": "طباعة الملخص المالي"
+      "printFinancialSummary": "طباعة الملخص المالي",
+      "privateReport": "تقرير خاص"
     },
     "review": {
       "toggleCashRevenueProof": "إظهار/إخفاء إثبات الإيرادات النقدية",
@@ -314,7 +315,7 @@
           "specialist": "التخصص",
           "totalEntitlement": "إجمالي الاستحقاق",
           "cashEntitlement": "الاستحقاق النقدي",
-          "insuranceEntitlement": "الاستحقاق التأميني",
+          "insuranceEntitlement": " استحقاق التأمين",
         
       
       "filters": {

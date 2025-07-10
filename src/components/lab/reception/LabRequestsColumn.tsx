@@ -41,6 +41,7 @@ import {
   CheckCircle2,
   Banknote,
   PrinterIcon,
+  MessageSquare,
 } from "lucide-react";
 
 // Services & Types
@@ -48,13 +49,15 @@ import {
   clearPendingLabRequestsForVisit,
   unpayLabRequest,
   recordDirectLabRequestPayment,
-  updateAllLabRequestsBankak
+  updateAllLabRequestsBankak,
+  updateLabRequestDetails
 } from "@/services/labRequestService";
 import { useAuth } from "@/contexts/AuthContext";
 import apiClient from "@/services/api";
 import type { DoctorVisit } from "@/types/visits";
 import BatchLabPaymentDialog from "@/components/clinic/BatchLabPaymentDialog";
 import PdfPreviewDialog from "@/components/common/PdfPreviewDialog";
+import DiscountCommentDialog from "./DiscountCommentDialog";
 
 interface LabRequestsColumnProps {
   activeVisitId: number | null;
@@ -77,6 +80,8 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
   const [showBatchPaymentDialog, setShowBatchPaymentDialog] = useState(false);
   const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [showDiscountCommentDialog, setShowDiscountCommentDialog] = useState(false);
+  const [selectedLabRequestForComment, setSelectedLabRequestForComment] = useState<number | null>(null);
 
   // Update discount mutation
   const updateDiscountMutation = useMutation({
@@ -243,8 +248,38 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
     },
   });
 
+  // Update lab request comment mutation
+  const updateCommentMutation = useMutation({
+    mutationFn: async ({ requestId, comment }: { requestId: number; comment: string }) => {
+      const response = await updateLabRequestDetails(requestId, { comment });
+      return response;
+    },
+    onSuccess: () => {
+      toast.success(t("labRequestsColumn.commentUpdated", "Comment updated successfully"));
+      queryClient.invalidateQueries({
+        queryKey: ["activeVisitForLabRequests", activeVisitId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["doctorVisit", activeVisitId],
+      });
+    },
+    onError: (error: Error) => {
+      const apiError = error as { response?: { data?: { message?: string } } };
+      toast.error(
+        apiError.response?.data?.message || t("common:error.updateFailed")
+      );
+    },
+  });
+
   const handleDiscountChange = (requestId: number, discount: string) => {
-    updateDiscountMutation.mutate({ requestId, discount: parseInt(discount) });
+    const discountValue = parseInt(discount);
+    updateDiscountMutation.mutate({ requestId, discount: discountValue });
+    
+    // If discount is greater than 0, open comment dialog
+    if (discountValue > 0) {
+      setSelectedLabRequestForComment(requestId);
+      setShowDiscountCommentDialog(true);
+    }
   };
 
   const handleToggleBankak = (requestId: number, isBankak: boolean) => {
@@ -284,6 +319,20 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
   const handleUpdateAllBankak = () => {
     if (window.confirm(t("labRequestsColumn.confirmUpdateAllBankak", "Are you sure you want to mark all lab requests as Bankak?"))) {
       updateAllBankakMutation.mutate(true);
+    }
+  };
+
+  const handleOpenCommentDialog = (requestId: number) => {
+    setSelectedLabRequestForComment(requestId);
+    setShowDiscountCommentDialog(true);
+  };
+
+  const handleSaveComment = (comment: string) => {
+    if (selectedLabRequestForComment) {
+      updateCommentMutation.mutate({ 
+        requestId: selectedLabRequestForComment, 
+        comment 
+      });
     }
   };
 
@@ -442,6 +491,18 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                             {/* Green checkmark if fully paid */}
                             {request.is_paid && (
                               <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                            )}
+                            {/* Comment icon if comment exists */}
+                            {request.comment && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0 text-blue-600 hover:text-blue-800"
+                                onClick={() => handleOpenCommentDialog(request.id)}
+                                title={t("labRequestsColumn.viewComment", "View comment")}
+                              >
+                                <MessageSquare className="h-4 w-4" />
+                              </Button>
                             )}
                           </div>
                           <span className="text-xs text-slate-500">
@@ -647,6 +708,18 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
         title={""}
         fileName={""}
       />
+
+      {/* Discount Comment Dialog */}
+      {selectedLabRequestForComment && (
+        <DiscountCommentDialog
+          isOpen={showDiscountCommentDialog}
+          onOpenChange={setShowDiscountCommentDialog}
+          currentComment={visit?.lab_requests?.find(r => r.id === selectedLabRequestForComment)?.comment}
+          onSave={handleSaveComment}
+          isSaving={updateCommentMutation.isPending}
+          labRequestId={selectedLabRequestForComment}
+        />
+      )}
     </div>
   );
 };

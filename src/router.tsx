@@ -71,6 +71,7 @@ import MonthlyAttendanceSummaryPage from "./pages/attendance/MonthlyAttendanceSu
 import LabTestStatisticsReportPage from "./pages/reports/LabTestStatisticsReportPage";
 import LabReceptionPage from "./pages/LabReceptionPage";
 import SpecialistsPage from "./pages/specialists/SpecialistsPage";
+import CashReconciliationPage from "./pages/CashReconciliationPage";
 // import NotFoundPage from './pages/NotFoundPage'; // Optional: For 404 handling
 
 const AppointmentsPlaceholderPage: React.FC = () => (
@@ -119,6 +120,10 @@ const router = createBrowserRouter([
           {
             path: 'lab-reception',
             element: <LabReceptionPage />,
+          },
+          {
+            path: 'cash-reconciliation',
+            element: <CashReconciliationPage />,
           },
           {
             path: 'specialists',

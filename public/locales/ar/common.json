@@ -13,6 +13,7 @@
   "exportWithCosts": "تصدير مع التكلفات",
   "dateUnknown": "تاريخ غير معروف",
   "export": "تصدير",
+  "autosaveSuccess": "تم الحفظ تلقائياً",
   "exportPdf": "تصدير PDF",
   "exportExcel": "تصدير Excel",
   "noResultsFound": "لم يتم العثور على نتائج",
@@ -27,6 +28,7 @@
   "unassigned": "غير معين",
   "by": "بواسطة",
   "goBack": "الرجوع",
+  "showingResults": "عرض {{from}} إلى {{to}} من {{total}} نتيجة",
   "datePicker": {
     "pickDateRange": "اختر نطاق التاريخ",
     "pickDateTime": "اختر التاريخ والوقت",
@@ -190,7 +192,8 @@
     "loadFailed": "فشل في تحميل {{entity}}",
     "patientDataUnavailable": "بيانات المريض غير متاحة",
     "previewFailed": "فشل في معاينة التغييرات",
-    "updateFailed": "فشل في التحديث"
+    "updateFailed": "فشل في التحديث",
+    "printFailed": "فشل في الطباعة"
   },
   "save": "حفظ",
   "id": "م",
@@ -316,6 +319,9 @@
   "download": "تحميل الإيصال",
   "confirmAndClose": "تأكيد وإغلاق",
   "refresh": "تحديث",
+  "autosaving": "جاري الحفظ التلقائي...",
+  "autosaveSuccess": "تم حفظ التغييرات بنجاح!",
+  "updatingList": "جاري تحديث القائمة...",
   "unknownUser": "غير معروف",
   "shiftOpenedSuccessfully": "تم فتح المناوبة بنجاح",
   "shiftClosedSuccessfully": "تم إغلاق المناوبة بنجاح",

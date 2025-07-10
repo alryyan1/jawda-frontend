@@ -63,12 +63,11 @@ const LabUserShiftSummaryDialog: React.FC<LabUserShiftSummaryDialogProps> = ({ i
       return fetchCurrentUserLabIncomeSummary(currentClinicShiftId);
     },
     enabled: isOpen && !!user && !!currentClinicShiftId, // Fetch only when dialog is open and all IDs are available
-    staleTime: 1000 * 60, // Data is considered fresh for 1 minute
   });
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="!max-w-[300px] !min-w-0 w-full">
         <DialogHeader>
           <DialogTitle>{t('summaryDialog.title', { userName: user?.name || t('common:user') })}</DialogTitle>
           <DialogDescription>

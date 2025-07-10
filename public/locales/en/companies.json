@@ -73,5 +73,29 @@
     "approvalLabel": "Approved?",
     "noAvailableServices": "All available services are already added or no services exist."
   },
-  "noCompaniesFound": "No insurance companies registered."
+  "noCompaniesFound": "No insurance companies registered.",
+  "contracts": {
+    "manageTestContracts": "Manage Test Contracts",
+    "addTestToContract": "Add Test to Contract",
+    "noContractedTests": "No contracted tests for this company.",
+    "removedSuccess": "Test removed from contract successfully.",
+    "percentageEndurance": "Percentage Endurance",
+    "staticEndurance": "Static Endurance",
+    "table": {
+      "status": "Status",
+      "price": "Price",
+      "approve": "Approve",
+      "endurancePercentage": "Endurance %",
+      "enduranceStatic": "Endurance Amount"
+    },
+    "printContract": "Print Contract",
+    "printedSuccess": "Contract printed successfully!",
+    "importAllSuccess": "Services imported successfully!",
+    "importAllError": "Failed to import services.",
+    "importAllServicesButton": "Import All Services"
+  },
+  "serviceContracts": {
+    "copyContractsButton": "Copy Contracts",
+    "copyProcessCompletedRefresh": "Contracts copied successfully. The list will be updated."
+  }
 } 

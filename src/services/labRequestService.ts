@@ -97,6 +97,14 @@ export const unpayLabRequest = async (labRequestId: number): Promise<void> => {
   await apiClient.post(`${LABREQUEST_BASE_URL}/${labRequestId}/unpay`);
 };
 
+export const updateAllLabRequestsBankak = async (visitId: number, isBankak: boolean): Promise<DoctorVisit> => {
+  const response = await apiClient.patch<{ data: DoctorVisit }>(
+    `/doctor-visits/${visitId}/update-all-lab-requests-bankak`,
+    { is_bankak: isBankak }
+  );
+  return response.data.data;
+};
+
 interface RecordLabPaymentPayload {
   amount_to_pay: number;
   is_bankak: boolean; // Or generic is_bank

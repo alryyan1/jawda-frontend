@@ -85,7 +85,29 @@
     "afterDiscount": "After Discount",
     "totalPaid": "Total Paid",
     "totalDue": "Total Due",
-    "payAll": "Pay All"
+    "payAll": "Pay All",
+    "removeAllTests": "Remove All Tests",
+    "markAllAsBankak": "Mark All as Bankak",
+    "confirmUpdateAllBankak": "Are you sure you want to mark all lab requests as Bankak?",
+    "bankakUpdatedAll": "All lab requests marked as Bankak",
+    "bankak": "Bank",
+    "paid": "Paid",
+    "due": "due",
+    "unmarkBankak": "Unmark Bankak",
+    "markBankak": "Mark Bankak",
+    "payCash": "Pay Cash",
+    "unpayLabRequest": "Unpay Request",
+    "delete": "Delete",
+    "confirmDeleteRequest": "Are you sure you want to delete this lab request?",
+    "confirmRemoveAllPending": "Are you sure you want to remove all pending lab requests?",
+    "confirmUnpayLabRequest": "Are you sure you want to unpay this lab request?",
+    "requestDeletedSuccessfully": "Lab request deleted successfully",
+    "discountUpdated": "Discount updated successfully",
+    "bankakUpdated": "Payment method updated successfully",
+    "payableAmount": "Payable Amount",
+    "needApprove": "Need Approve",
+    "approved": "Approved",
+    "pendingApproval": "Pending Approval"
   },
   "patientDetailsColumn": {
     "visitInformation": "Visit Information",
@@ -133,5 +155,32 @@
   "formHint": "Form",
   "queueHint": "Queue",
   "requestsHint": "Requests",
-  "infoHint": "Info"
+  "infoHint": "Info",
+  "patientHistory": {
+    "title": "Patient History",
+    "description": "Select an existing patient to create a new lab visit"
+  },
+  "formTitle": "Patient Registration",
+  "formDescription": "Register a new patient for lab services",
+  "summaryDialog": {
+    "title": "Lab Summary",
+    "labDescription": "Lab requests summary and payment details"
+  },
+  "companyDetails": {
+    "title": "Company Information",
+    "name": "Company",
+    "phone": "Phone",
+    "address": "Address",
+    "contractNumber": "Contract #",
+    "endurance": "Endurance"
+  },
+  "patientCompanyDetails": {
+    "title": "Patient Company Information",
+    "companyName": "Company Name",
+    "cardNumber": "Card Number",
+    "subcompanyName": "Subcompany Name",
+    "insuranceNo": "Insurance Number",
+    "guarantor": "Guarantor",
+    "relationName": "Relation Name"
+  }
 } 

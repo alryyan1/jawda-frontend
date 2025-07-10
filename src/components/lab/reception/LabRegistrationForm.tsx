@@ -32,39 +32,27 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Popover,
-  PopoverAnchor,
-  PopoverContent,
-} from "@/components/ui/popover";
 import { Card, CardDescription } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
-import LabPatientSearchResultDisplay from "./LabPatientSearchResultDisplay";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Loader2, PlusCircle } from "lucide-react";
 import AddSubcompanyDialog from "@/components/clinic/AddSubcompanyDialog";
 import AddCompanyRelationDialog from "@/components/clinic/AddCompanyRelationDialog";
 
 // Services & Types
-import {
-  registerNewPatientFromLab,
-  searchExistingPatients,
-  createLabVisitForExistingPatient,
-} from "@/services/patientService";
+import { registerNewPatientFromLab } from "@/services/patientService";
 import {
   getCompaniesList,
   getSubcompaniesList,
   getCompanyRelationsList,
 } from "@/services/companyService";
 import { getDoctorsList } from "@/services/doctorService";
-import { useDebounce } from "@/hooks/useDebounce";
-import type {
-  Patient,
-  PatientSearchResult,
-} from "@/types/patients";
+import type { Patient } from "@/types/patients";
 import type { DoctorVisit } from "@/types/visits";
 import type { DoctorStripped } from "@/types/doctors";
 import type { Company, Subcompany, CompanyRelation } from "@/types/companies";
-import { getDoctorVisitById } from "@/services/visitService";
-import type { PatientLabQueueItem } from "@/types/labWorkflow";
+import i18n from "@/i18n";
+
+
 
 // Zod Schema Definition
 const getLabRegistrationSchema = (t: TFunction, isCompanySelected: boolean) =>
@@ -77,39 +65,16 @@ const getLabRegistrationSchema = (t: TFunction, isCompanySelected: boolean) =>
     gender: z.enum(["male", "female"], {
       required_error: t("clinic:validation.genderRequired"),
     }),
-    age_year: z
-      .string()
-      .optional()
-      .nullable()
-      .refine(
-        (val) => !val || /^\d+$/.test(val),
-        t("common:validation.invalidNumber")
-      ),
-    age_month: z
-      .string()
-      .optional()
-      .nullable()
-      .refine(
-        (val) => !val || /^\d+$/.test(val),
-        t("common:validation.invalidNumber")
-      ),
-    age_day: z
-      .string()
-      .optional()
-      .nullable()
-      .refine(
-        (val) => !val || /^\d+$/.test(val),
-        t("common:validation.invalidNumber")
-      ),
+    age_year: z.string().optional().nullable().refine((val) => !val || /^\d+$/.test(val), t("common:validation.invalidNumber")),
+    age_month: z.string().optional().nullable().refine((val) => !val || /^\d+$/.test(val), t("common:validation.invalidNumber")),
+    age_day: z.string().optional().nullable().refine((val) => !val || /^\d+$/.test(val), t("common:validation.invalidNumber")),
     address: z.string().optional().nullable(),
     company_id: z.string().optional().nullable(),
     insurance_no: z.string().optional().nullable().superRefine((val, ctx) => {
       if (isCompanySelected && !val?.trim()) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: t("common:validation.requiredField", {
-            field: t("patients:fields.insuranceNo"),
-          }),
+          message: t("common:validation.requiredField", { field: t("patients:fields.insuranceNo") }),
           path: [],
         });
       }
@@ -119,66 +84,51 @@ const getLabRegistrationSchema = (t: TFunction, isCompanySelected: boolean) =>
     company_relation_id: z.string().optional().nullable(),
   });
 
-type LabRegistrationFormValues = z.infer<
-  ReturnType<typeof getLabRegistrationSchema>
->;
-
-// Type for the lab registration submission data
-
+type LabRegistrationFormValues = z.infer<ReturnType<typeof getLabRegistrationSchema>>;
 
 interface LabRegistrationFormProps {
   onPatientActivated: (patientWithVisit: Patient & { doctorVisit?: DoctorVisit }) => void;
   isVisible?: boolean;
+  onSearchChange: (query: string) => void;
+  onDoctorChange: (doctor: DoctorStripped | null) => void;
+  referringDoctor: DoctorStripped | null;
+  setActiveVisitId: (visitId: number) => void;
+  setFormVisible: (visible: boolean) => void;
 }
 
 const LabRegistrationForm: React.FC<LabRegistrationFormProps> = ({
   onPatientActivated,
   isVisible,
+  onSearchChange,
+  onDoctorChange,
+  setActiveVisitId,
+  setFormVisible
 }) => {
-  const { t } = useTranslation([
-    "labReception",
-    "clinic",
-    "common",
-    "patients",
-  ]);
+  const { t } = useTranslation(["labReception", "clinic", "common", "patients"]);
   const phoneInputRef = useRef<HTMLInputElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
-
-  const [searchQuery, setSearchQuery] = useState("");
-  const debouncedSearchQuery = useDebounce(searchQuery, 300);
-  const [showSearchResults, setShowSearchResults] = useState(false);
-
 
   const [showSubcompanyDialog, setShowSubcompanyDialog] = useState(false);
   const [showRelationDialog, setShowRelationDialog] = useState(false);
 
   const form = useForm<LabRegistrationFormValues>({
-    resolver: zodResolver(getLabRegistrationSchema(t, false)), // initial resolver
+    resolver: zodResolver(getLabRegistrationSchema(t, false)),
     defaultValues: {
-      phone: "",
-      name: "",
-      doctor: null,
-      gender: "female",
-      age_year: "",
-      age_month: "",
-      age_day: "",
+      phone: "", name: "", doctor: null, gender: "female",
+      age_year: "", age_month: "", age_day: "",
     },
   });
-  const { control, handleSubmit, reset, setValue, watch, trigger, getValues } = form;
+  const { control, handleSubmit, reset, setValue, watch, trigger } = form;
 
   const companyId = watch("company_id");
   const isCompanySelected = !!companyId && companyId !== "";
 
   useEffect(() => {
     const newSchema = getLabRegistrationSchema(t, isCompanySelected);
-    form.reset(form.getValues(), {
-      // @ts-expect-error - Zod schema resolver type mismatch
-      resolver: zodResolver(newSchema),
-    });
-    if (isCompanySelected) {
-      trigger("insurance_no");
-    }
+    // @ts-expect-error Zod schema resolver type mismatch is a known RHF/Zod integration nuance
+    form.reset(form.getValues(), { resolver: zodResolver(newSchema) });
+    if (isCompanySelected) trigger("insurance_no");
   }, [isCompanySelected, t, form, trigger]);
 
   useEffect(() => {
@@ -187,632 +137,267 @@ const LabRegistrationForm: React.FC<LabRegistrationFormProps> = ({
     }
   }, [isVisible]);
 
-  // Data fetching
-  const { data: searchResults = [], isLoading: isLoadingSearchResults } =
-    useQuery<PatientSearchResult[], Error>({
-      queryKey: ["patientSearchExistingLab", debouncedSearchQuery],
-      queryFn: () =>
-        debouncedSearchQuery.length >= 2
-          ? searchExistingPatients(debouncedSearchQuery)
-          : Promise.resolve([]),
-      enabled: debouncedSearchQuery.length >= 2 && showSearchResults,
-    });
-  const { data: doctorsList = [], isLoading: isLoadingDoctors } = useQuery<
-    DoctorStripped[],
-    Error
-  >({
+  const { data: doctorsList = [], isLoading: isLoadingDoctors } = useQuery<DoctorStripped[], Error>({
     queryKey: ["doctorsListForLabRegistration"],
     queryFn: () => getDoctorsList({ active: true }),
   });
-  const { data: companies = [], isLoading: isLoadingCompanies } = useQuery<
-    Company[],
-    Error
-  >({
+  const { data: companies = [], isLoading: isLoadingCompanies } = useQuery<Company[], Error>({
     queryKey: ["companiesListActive"],
     queryFn: () => getCompaniesList({ status: true }),
   });
-  const { data: subcompanies = [], isLoading: isLoadingSubcompanies } =
-    useQuery<Subcompany[], Error>({
-      queryKey: ["subcompaniesList", companyId],
-      queryFn: () =>
-        companyId
-          ? getSubcompaniesList(Number(companyId))
-          : Promise.resolve([]),
-      enabled: !!companyId,
-    });
-  const { data: companyRelations = [], isLoading: isLoadingRelations } =
-    useQuery<CompanyRelation[], Error>({
-      queryKey: ["companyRelationsList"],
-      queryFn: getCompanyRelationsList,
-      enabled: isCompanySelected,
-    });
+  const { data: subcompanies = [] } = useQuery<Subcompany[], Error>({
+    queryKey: ["subcompaniesList", companyId],
+    queryFn: () => companyId ? getSubcompaniesList(Number(companyId)) : Promise.resolve([]),
+    enabled: !!companyId,
+  });
+  const { data: companyRelations = [] } = useQuery<CompanyRelation[], Error>({
+    queryKey: ["companyRelationsList"],
+    queryFn: getCompanyRelationsList,
+    enabled: isCompanySelected,
+  });
 
-  // Mutations
   const registrationMutation = useMutation({
     mutationFn: (data: LabRegistrationFormValues) => {
       if (!data.doctor?.id) throw new Error("Doctor is required.");
       const submissionData = {
-        name: data.name,
-        phone: data.phone || "",
+        name: data.name, 
+        phone: data.phone || undefined, 
         gender: data.gender,
         age_year: data.age_year ? parseInt(data.age_year) : undefined,
         age_month: data.age_month ? parseInt(data.age_month) : undefined,
         age_day: data.age_day ? parseInt(data.age_day) : undefined,
+        address: data.address || undefined, 
         doctor_id: data.doctor.id,
-        company_id:
-          data.company_id && data.company_id !== ""
-            ? parseInt(data.company_id)
-            : undefined,
-        insurance_no: data.insurance_no || undefined,
-        guarantor: data.guarantor || undefined,
-        subcompany_id: data.subcompany_id || undefined,
-        company_relation_id: data.company_relation_id || undefined,
+        company_id: data.company_id ? parseInt(data.company_id) : undefined,
+        insurance_no: isCompanySelected ? data.insurance_no || undefined : undefined,
+        guarantor: isCompanySelected ? data.guarantor || undefined : undefined,
+        subcompany_id: isCompanySelected && data.subcompany_id ? data.subcompany_id : undefined,
+        company_relation_id: isCompanySelected && data.company_relation_id ? data.company_relation_id : undefined,
       };
       return registerNewPatientFromLab(submissionData);
     },
-    onSuccess: async (newPatientWithVisit) => {
-      toast.success(t("clinic:patientRegistration.registrationSuccess"));
-       console.log(newPatientWithVisit,'newPatientWithVisit')
-      const patientWithVisit = newPatientWithVisit as Patient & { doctor_visit?: DoctorVisit };
-      const visitId = patientWithVisit.doctor_visit?.id;
-
-      if (!visitId) {
-        console.error("No visit ID returned from registration");
-        return;
-      }
-      console.log(visitId,'visitId',patientWithVisit,'patientwithvisit')
-      try {
-        // Get full visit details first
-        const fullVisit = await getDoctorVisitById(visitId);
-        
-        // Create a queue item for immediate display
-        const newQueueItem: PatientLabQueueItem = {
-          visit_id: visitId,
-          patient_id: patientWithVisit.id,
-          patient_name: patientWithVisit.name,
-          phone: patientWithVisit.phone || "",
-          lab_number: visitId.toString(),
-          oldest_request_time: fullVisit.created_at,
-          lab_request_ids: [],
-          test_count: 0,
-          all_requests_paid: false,
-          result_is_locked: false,
-          is_result_locked: false,
-          is_printed: false,
-          sample_id: null
-        };
-
-        // Update the queue data immediately
-        queryClient.setQueryData<PatientLabQueueItem[]>(["labReceptionQueue"], (oldData) => {
-          if (!oldData) return [newQueueItem];
-          return [newQueueItem, ...oldData];
-        });
-
-        // Then trigger a background refresh of the queue
-        queryClient.invalidateQueries({
-          queryKey: ["labReceptionQueue"],
-        });
-
-        // Activate the patient with full visit details
-        onPatientActivated({
-          ...patientWithVisit,
-          doctorVisit: fullVisit
-        });
-
-      } catch (error) {
-        console.error("Error setting up new patient visit:", error);
-        // Fallback: use basic patient data
-        onPatientActivated(patientWithVisit);
-        
-        // Still invalidate the queue to ensure eventual consistency
-        queryClient.invalidateQueries({
-          queryKey: ["labReceptionQueue"],
-        });
-      }
-
-      reset();
-      phoneInputRef.current?.focus();
-    },
-    onError: (error: AxiosError) => {
-      const apiError = error as { response?: { data?: { message?: string } } };
-      toast.error(
-        apiError.response?.data?.message ||
-          t("clinic:patientRegistration.registrationFailed")
-      );
-    },
-  });
-
-  const createVisitFromHistoryMutation = useMutation({
-    mutationFn: (payload: { patientId: number; doctorId: number }) =>
-      createLabVisitForExistingPatient(payload.patientId, {
-        doctor_id: payload.doctorId,
-      }),
     onSuccess: (newPatientWithVisit) => {
-      toast.success(
-        t("patients:search.visitCreatedSuccess", {
-          patientName: newPatientWithVisit.name,
-        })
-      );
+      toast.success(t('clinic:patientRegistration.registrationSuccess'));
+      console.log("newPatientWithVisit", newPatientWithVisit);
       onPatientActivated(newPatientWithVisit);
-      reset();
-      setShowSearchResults(false);
-      setSearchQuery("");
+      reset(); // Reset form for next entry
+      phoneInputRef.current?.focus();
+      setActiveVisitId(newPatientWithVisit?.doctor_visit?.id ?? 0);
+      setFormVisible(false);
     },
     onError: (error: AxiosError) => {
       const apiError = error as { response?: { data?: { message?: string } } };
-      toast.error(
-        apiError.response?.data?.message || t("clinic:errors.visitCreationFailed")
-      );
+      toast.error(apiError.response?.data?.message || t('clinic:patientRegistration.registrationFailed'));
     },
   });
 
-  // Handlers
-  const handleSearchInputChange = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleSearchInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
-    setValue(name as keyof LabRegistrationFormValues, value, {
-      shouldValidate: true,
-    });
-    setSearchQuery(value);
-    if (value.length >= 2) {
-      setShowSearchResults(true);
-    } else {
-      setShowSearchResults(false);
-    }
+    setValue(name as keyof LabRegistrationFormValues, value, { shouldValidate: true });
+    onSearchChange(value);
   };
 
-  const handleSelectPatientFromSearch = (patientId: number) => {
-    const selectedDoctor = getValues("doctor");
-    if (!selectedDoctor?.id) {
-      toast.error(t("labReception:validation.selectDoctorFirst"));
-      return;
-    }
-    setShowSearchResults(false);
-    createVisitFromHistoryMutation.mutate({
-      patientId,
-      doctorId: selectedDoctor.id,
-    });
-  };
-
-  const onSubmit = handleSubmit((data) => {
-    registrationMutation.mutate(data);
-  });
-
+  const onSubmit = handleSubmit((data) => registrationMutation.mutate(data));
   const handleSubcompanyAdded = (newSubcompany: Subcompany) => {
-    queryClient
-      .invalidateQueries({ queryKey: ["subcompaniesList", companyId] })
-      .then(() => {
-        setValue("subcompany_id", String(newSubcompany.id), {
-          shouldValidate: true,
-          shouldDirty: true,
-        });
-      });
+    queryClient.invalidateQueries({ queryKey: ["subcompaniesList", companyId] });
+    setValue("subcompany_id", newSubcompany.id.toString());
     setShowSubcompanyDialog(false);
   };
   const handleRelationAdded = (newRelation: CompanyRelation) => {
-    queryClient
-      .invalidateQueries({ queryKey: ["companyRelationsList"] })
-      .then(() => {
-        setValue("company_relation_id", String(newRelation.id), {
-          shouldValidate: true,
-          shouldDirty: true,
-        });
-      });
+    queryClient.invalidateQueries({ queryKey: ["companyRelationsList"] });
+    setValue("company_relation_id", newRelation.id.toString());
     setShowRelationDialog(false);
   };
 
-  const currentIsLoading =
-    isLoadingDoctors ||
-    registrationMutation.isPending ||
-    createVisitFromHistoryMutation.isPending;
+  const currentIsLoading = isLoadingDoctors || isLoadingCompanies || registrationMutation.isPending;
 
   return (
-    <>
-      <div className="w-full h-full flex flex-col">
-        <Form {...form}>
-          <form onSubmit={onSubmit} className="space-y-4">
-            <Popover
-              open={showSearchResults}
-              onOpenChange={setShowSearchResults}
-            >
-              <PopoverAnchor asChild>
-                <div className="space-y-4">
-                  <FormField
-                    control={control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>
-                          {t("clinic:patientRegistration.phoneLabel")}
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            type="tel"
-                            maxLength={10}
-                            placeholder="0xxxxxxxxx"
-                            autoComplete="off"
-                            {...field}
-                            value={field.value || ""}
-                            ref={phoneInputRef}
-                            onChange={handleSearchInputChange}
-                            onFocus={(e) => {
-                              setShowSearchResults(e.target.value.length >= 2);
-                            }}
-                            disabled={currentIsLoading}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>
-                          {t("clinic:patientRegistration.nameLabel")}
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder={t(
-                              "clinic:patientRegistration.namePlaceholder"
-                            )}
-                            autoComplete="off"
-                            {...field}
-                            ref={nameInputRef}
-                            onChange={handleSearchInputChange}
-                            onFocus={(e) => {
-                              setShowSearchResults(e.target.value.length >= 2);
-                            }}
-                            disabled={currentIsLoading}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </PopoverAnchor>
-              <PopoverContent
-                className="w-[var(--radix-popover-trigger-width)] p-0 shadow-xl"
-                side="bottom"
-                align="start"
-                onOpenAutoFocus={(e) => e.preventDefault()}
-              >
-                <LabPatientSearchResultDisplay
-                  results={searchResults}
-                  onSelectPatient={handleSelectPatientFromSearch}
-                  isLoading={isLoadingSearchResults}
-                />
-              </PopoverContent>
-            </Popover>
-
-            <Controller
-              name="doctor"
-              control={control}
-              render={({ field, fieldState }) => (
+    <div  className="w-full h-full flex flex-col">
+      <div className="mb-4">
+        <h2 className="text-lg font-semibold">{t('formTitle')}</h2>
+        <p className="text-sm text-muted-foreground">{t('formDescription')}</p>
+      </div>
+      <Form  {...form}>
+        <form  onSubmit={onSubmit} className="space-y-4 flex-grow flex flex-col">
+          <ScrollArea className="flex-grow pr-3 -mr-3">
+            <div className="space-y-4">
+              <FormField control={control} name="phone" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("referringDoctor")}</FormLabel>
-                  <Autocomplete
-                    {...field}
-                    options={doctorsList}
-                    loading={isLoadingDoctors}
-                    getOptionLabel={(option) =>
-                      `${option.name} ${
-                        option.specialist_name
-                          ? `(${option.specialist_name})`
-                          : ""
-                      }`
-                    }
-                    isOptionEqualToValue={(option, value) =>
-                      option.id === value.id
-                    }
-                    onChange={(_, data) => field.onChange(data)}
-                    onInputChange={() => {}}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        label=""
-                        placeholder={t("patients:search.selectDoctor")}
-                        variant="outlined"
-                        size="small"
-                        error={!!fieldState.error}
-                        helperText={fieldState.error?.message}
-                        InputProps={{
-                          ...params.InputProps,
-                          endAdornment: (
-                            <>
-                              {isLoadingDoctors ? (
-                                <CircularProgress size={16} />
-                              ) : null}
-                              {params.InputProps.endAdornment}
-                            </>
-                          ),
-                        }}
-                        sx={{
-                          "& .MuiOutlinedInput-root": {
-                            backgroundColor: "var(--background)",
-                            paddingTop: "1px !important",
-                            paddingBottom: "1px !important",
-                          },
-                        }}
-                      />
-                    )}
-                    PaperComponent={(props) => (
-                      <Paper
-                        {...props}
-                        className="dark:bg-slate-800 dark:text-slate-100"
-                      />
-                    )}
-                  />
+                  <FormLabel>{t('clinic:patientRegistration.phoneLabel')}</FormLabel>
+                  <FormControl>
+                    <Input type="tel" maxLength={10} placeholder="0xxxxxxxxx" autoComplete="off" {...field} value={field.value || ""} ref={phoneInputRef} onChange={handleSearchInputChange} disabled={currentIsLoading} />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={control}
-                name="gender"
-                render={({ field }) => (
+              )} />
+              <FormField control={control} name="name" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('clinic:patientRegistration.nameLabel')}</FormLabel>
+                  <FormControl>
+                    <Input placeholder={t('clinic:patientRegistration.namePlaceholder')} autoComplete="off" {...field} ref={nameInputRef} onChange={handleSearchInputChange} disabled={currentIsLoading} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <Controller name="doctor" control={control} render={({ field, fieldState }) => (
                   <FormItem>
-                    <FormLabel>
-                      {t("clinic:patientRegistration.genderLabel")}
-                    </FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                      defaultValue={field.value}
-                      disabled={currentIsLoading}
-                    >
+                    <FormLabel>{t('referringDoctor')}</FormLabel>
+                    <Autocomplete
+                      {...field}
+                      options={doctorsList}
+                      loading={isLoadingDoctors}
+                      getOptionLabel={(option) => `${option.name} ${option.specialist_name ? `(${option.specialist_name})` : ""}`}
+                      isOptionEqualToValue={(option, value) => option.id === value.id}
+                      onChange={(_, data) => {
+                        field.onChange(data);
+                        onDoctorChange(data);
+                      }}
+                      size="small"
+                      renderInput={(params) => ( <TextField {...params} placeholder={t('patients:search.selectDoctor')} variant="outlined" error={!!fieldState.error} helperText={fieldState.error?.message} InputProps={{ ...params.InputProps, endAdornment: (<>{isLoadingDoctors ? <CircularProgress size={16}/> : null}{params.InputProps.endAdornment}</>) }} sx={{ "& .MuiOutlinedInput-root": { backgroundColor: "var(--background)", paddingTop: "1px !important", paddingBottom: "1px !important" } }} /> )}
+                      PaperComponent={(props) => (<Paper {...props} className="dark:bg-slate-800 dark:text-slate-100" />)}
+                    />
+                    <FormMessage />
+                  </FormItem>
+              )} />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField control={control} name="gender" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('clinic:patientRegistration.genderLabel')}</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={currentIsLoading}>
                       <FormControl>
-                        <SelectTrigger className="h-9">
-                          <SelectValue />
+                        <SelectTrigger>
+                          <SelectValue placeholder={t('clinic:patientRegistration.genderPlaceholder')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="female">
-                          {t("clinic:patientRegistration.female")}
-                        </SelectItem>
-                        <SelectItem value="male">
-                          {t("clinic:patientRegistration.male")}
-                        </SelectItem>
+                        <SelectItem value="male">{t('clinic:patientRegistration.male')}</SelectItem>
+                        <SelectItem value="female">{t('clinic:patientRegistration.female')}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
                   </FormItem>
-                )}
-              />
-              <FormField
-                control={control}
-                name="company_id"
-                render={({ field }) => (
+                )} />
+                <FormField control={control} name="company_id" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>
-                      {t("clinic:patientRegistration.companyLabel")}
-                    </FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value || ""}
-                      disabled={isLoadingCompanies || currentIsLoading}
-                    >
+                    <FormLabel>{t('clinic:patientRegistration.companyLabel')}</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || ""} disabled={currentIsLoading}>
                       <FormControl>
-                        <SelectTrigger className="h-9">
-                          <SelectValue
-                            placeholder={t(
-                              "clinic:patientRegistration.selectCompany"
-                            )}
-                          />
+                        <SelectTrigger>
+                          <SelectValue placeholder={t('clinic:patientRegistration.companyPlaceholder')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value=" ">{t("common:none")}</SelectItem>
-                        {companies?.map((comp) => (
-                          <SelectItem key={comp.id} value={String(comp.id)}>
-                            {comp.name}
+                        <SelectItem value=" ">{t('clinic:patientRegistration.noCompany')}</SelectItem>
+                        {companies.map((company) => (
+                          <SelectItem key={company.id} value={company.id.toString()}>
+                            {company.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
                   </FormItem>
-                )}
-              />
-            </div>
-
-            <FormItem>
-              <FormLabel>{t("clinic:patientRegistration.ageLabel")}</FormLabel>
-              <div className="grid grid-cols-3 gap-2">
-                <FormField
-                  control={control}
-                  name="age_year"
-                  render={({ field }) => (
-                    <Input
-                      className="h-9"
-                      type="number"
-                      placeholder={t(
-                        "clinic:patientRegistration.ageYearsPlaceholder"
-                      )}
-                      {...field}
-                      value={field.value || ""}
-                      disabled={currentIsLoading}
-                    />
-                  )}
-                />
-                <FormField
-                  control={control}
-                  name="age_month"
-                  render={({ field }) => (
-                    <Input
-                      className="h-9"
-                      type="number"
-                      placeholder={t(
-                        "clinic:patientRegistration.ageMonthsPlaceholder"
-                      )}
-                      {...field}
-                      value={field.value || ""}
-                      disabled={currentIsLoading}
-                    />
-                  )}
-                />
-                <FormField
-                  control={control}
-                  name="age_day"
-                  render={({ field }) => (
-                    <Input
-                      className="h-9"
-                      type="number"
-                      placeholder={t(
-                        "clinic:patientRegistration.ageDaysPlaceholder"
-                      )}
-                      {...field}
-                      value={field.value || ""}
-                      disabled={currentIsLoading}
-                    />
-                  )}
-                />
+                )} />
               </div>
-              <FormMessage>
-                {form.formState.errors.age_year?.message ||
-                  form.formState.errors.age_month?.message ||
-                  form.formState.errors.age_day?.message}
-              </FormMessage>
-            </FormItem>
-
-            {isCompanySelected && (
-              <Card className="p-3 pt-2 mt-4 border-dashed border-primary/50 bg-primary/5 dark:bg-primary/10">
-                <CardDescription className="text-xs mb-2 text-primary font-medium">
-                  {t("patients:insuranceDetailsSectionTitle")}
-                </CardDescription>
-                <div className="space-y-3">
-                  <FormField
-                    control={control}
-                    name="insurance_no"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs">
-                          {t("patients:fields.insuranceNo")}
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            value={field.value || ""}
-                            className="h-8 text-xs"
-                            disabled={currentIsLoading}
-                          />
-                        </FormControl>
-                        <FormMessage className="text-xs" />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={control}
-                    name="subcompany_id"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs">
-                          {t("patients:fields.subCompany")}
-                        </FormLabel>
-                        <div className="flex items-center gap-1">
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value || ""}
-                            disabled={isLoadingSubcompanies || currentIsLoading}
-                          >
-                            <FormControl>
-                              <SelectTrigger className="h-8 text-xs flex-grow">
-                                <SelectValue
-                                  placeholder={t(
-                                    "patients:fields.selectSubCompany"
-                                  )}
-                                />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value=" ">
-                                {t("common:none")}
-                              </SelectItem>
-                              {subcompanies?.map((sub) => (
-                                <SelectItem key={sub.id} value={String(sub.id)}>
-                                  {sub.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <AddSubcompanyDialog
-                            onSubcompanyAdded={handleSubcompanyAdded}
-                            companyId={companyId ? Number(companyId) : null}
-                          />
-                        </div>
-                        <FormMessage className="text-xs" />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={control}
-                    name="company_relation_id"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs">
-                          {t("patients:fields.relation")}
-                        </FormLabel>
-                        <div className="flex items-center gap-1">
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value || ""}
-                            disabled={isLoadingRelations || currentIsLoading}
-                          >
-                            <FormControl>
-                              <SelectTrigger className="h-8 text-xs flex-grow">
-                                <SelectValue
-                                  placeholder={t(
-                                    "patients:fields.selectRelation"
-                                  )}
-                                />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value=" ">
-                                {t("common:none")}
-                              </SelectItem>
-                              {companyRelations?.map((rel) => (
-                                <SelectItem key={rel.id} value={String(rel.id)}>
-                                  {rel.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <AddCompanyRelationDialog
-                            onCompanyRelationAdded={handleRelationAdded}
-                            companyId={companyId ? Number(companyId) : null}
-                          />
-                        </div>
-                        <FormMessage className="text-xs" />
-                      </FormItem>
-                    )}
-                  />
+              <FormItem>
+                <FormLabel>{t('clinic:patientRegistration.ageLabel')}</FormLabel>
+                <div className="grid grid-cols-3 gap-2">
+                  <FormField control={control} name="age_year" render={({ field }) => ( <Input className="h-9" type="number" placeholder={t("clinic:patientRegistration.ageYearsPlaceholder")} {...field} value={field.value || ""} disabled={currentIsLoading} /> )} />
+                  <FormField control={control} name="age_month" render={({ field }) => ( <Input className="h-9" type="number" placeholder={t("clinic:patientRegistration.ageMonthsPlaceholder")} {...field} value={field.value || ""} disabled={currentIsLoading} /> )} />
+                  <FormField control={control} name="age_day" render={({ field }) => ( <Input className="h-9" type="number" placeholder={t("clinic:patientRegistration.ageDaysPlaceholder")} {...field} value={field.value || ""} disabled={currentIsLoading} /> )} />
                 </div>
-              </Card>
-            )}
-
-            <div className="pt-2">
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={currentIsLoading}
-              >
-                {registrationMutation.isPending && (
-                  <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />
-                )}
-                {t("clinic:patientRegistration.registerButton")}
-              </Button>
+                <FormMessage>{form.formState.errors.age_year?.message || form.formState.errors.age_month?.message || form.formState.errors.age_day?.message}</FormMessage>
+              </FormItem>
+              {isCompanySelected && (
+                <Card className="p-3 pt-2 mt-4 border-dashed">
+                  <CardDescription className="mb-3">{t('clinic:patientRegistration.insuranceDetails')}</CardDescription>
+                  <div className="space-y-3">
+                    <FormField control={control} name="insurance_no" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t('patients:fields.insuranceNo')}</FormLabel>
+                        <FormControl>
+                          <Input placeholder={t('patients:fields.insuranceNoPlaceholder')} {...field} value={field.value || ""} disabled={currentIsLoading} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={control} name="guarantor" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t('patients:fields.guarantor')}</FormLabel>
+                        <FormControl>
+                          <Input placeholder={t('patients:fields.guarantorPlaceholder')} {...field} value={field.value || ""} disabled={currentIsLoading} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <div className="grid grid-cols-1 gap-4">
+                      <FormField control={control} name="subcompany_id" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t('patients:fields.subcompany')}</FormLabel>
+                          <div className="flex gap-2">
+                            <Select onValueChange={field.onChange} value={field.value || ""} disabled={currentIsLoading}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder={t('patients:fields.subcompanyPlaceholder')} />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value=" ">{t('patients:fields.noSubcompany')}</SelectItem>
+                                {subcompanies.map((subcompany) => (
+                                  <SelectItem key={subcompany.id} value={subcompany.id.toString()}>
+                                    {subcompany.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Button type="button" variant="outline" size="icon" onClick={() => setShowSubcompanyDialog(true)} disabled={currentIsLoading}>
+                              <PlusCircle className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+                      <FormField control={control} name="company_relation_id" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t('patients:fields.companyRelation')}</FormLabel>
+                          <div className="flex gap-2">
+                            <Select onValueChange={field.onChange} value={field.value || ""} disabled={currentIsLoading}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder={t('patients:fields.companyRelationPlaceholder')} />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value=" ">{t('patients:fields.noRelation')}</SelectItem>
+                                {companyRelations.map((relation) => (
+                                  <SelectItem key={relation.id} value={relation.id.toString()}>
+                                    {relation.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Button type="button" variant="outline" size="icon" onClick={() => setShowRelationDialog(true)} disabled={currentIsLoading}>
+                              <PlusCircle className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+                    </div>
+                  </div>
+                </Card>
+              )}
             </div>
-          </form>
-        </Form>
-      </div>
-
+          </ScrollArea>
+          <div className="pt-4 flex-shrink-0">
+            <Button type="submit" className="w-full" disabled={currentIsLoading}>
+              {registrationMutation.isPending && <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />}
+              {t('clinic:patientRegistration.registerButton')}
+            </Button>
+          </div>
+        </form>
+      </Form>
+   
       <AddSubcompanyDialog
         companyId={companyId ? Number(companyId) : null}
         open={showSubcompanyDialog}
@@ -825,7 +410,7 @@ const LabRegistrationForm: React.FC<LabRegistrationFormProps> = ({
         onOpenChange={setShowRelationDialog}
         onCompanyRelationAdded={handleRelationAdded}
       />
-    </>
+    </div>
   );
 };
 export default LabRegistrationForm;

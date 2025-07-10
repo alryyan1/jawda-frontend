@@ -2,6 +2,7 @@ import type { Company } from "@/types/companies"; // Assuming these types are de
 import type { Subcompany } from "@/types/companies";
 import type { CompanyRelation } from "@/types/companies";
 import type { DoctorStripped } from "./doctors";
+import type { DoctorVisit } from "./visits";
 // import type { Doctor } from "./doctors"; // Assuming this type is defined
 // import { User } from "./index"; // Assuming User type from a general index.ts or auth types
 // import { Country } from './locations'; // If you have a Country type
@@ -108,6 +109,7 @@ export interface Patient {
   company_id?: number | null;
   company?: Company;
   result_is_locked: boolean;
+  doctor_visit?: DoctorVisit;
 
   subcompany_id?: number | null;
   subcompany?: Subcompany;

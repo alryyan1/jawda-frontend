@@ -12,6 +12,24 @@
       "useStandardPriceButton": "استخدام  أسعار الكاش",
       "setZeroPriceButton": "تعيين السعر كـ 0"
     },
+    "importAllServicesButton": "استيراد جميع الخدمات",
+    "manageTestContracts": "إدارة عقود الفحوصات",
+    "addTestToContract": "إضافة فحص للعقد",
+    "noContractedTests": "لا توجد فحوصات متعاقد عليها لهذه الشركة.",
+    "removedSuccess": "تمت إزالة الفحص من العقد بنجاح.",
+    "percentageEndurance": "تحمل بنسبة مئوية",
+    "staticEndurance": "تحمل ثابت",
+    "table": {
+      "status": "الحالة",
+      "price": "السعر",
+      "approve": "موافقة",
+      "endurancePercentage": "نسبة التحمل %",
+      "enduranceStatic": "مبلغ التحمل"
+    },
+    "printContract": "طباعة العقد",
+    "printedSuccess": "تم طباعة العقد بنجاح!",
+    "importAllSuccess": "تم استيراد الخدمات بنجاح!",
+    "importAllError": "فشل في استيراد الخدمات.",
     "importAllServicesButton": "استيراد جميع الخدمات"
   },
   "addSubcompany": "إضافة شركة فرعية",
@@ -47,6 +65,7 @@
   "manageContractsButton": "إدارة عقود الخدمات",
   "serviceContracts": {
     "title": "عقود الخدمات لشركة: {{companyName}}",
+    "description": "إدارة الخدمات وتسعيرها المحدد المدرجة في عقد هذه الشركة.",
     "addContractButton": "إضافة خدمة للعقد",
     "noContracts": "لا توجد خدمات متعاقد عليها لهذه الشركة.",
     "serviceName": "اسم الخدمة",
@@ -60,7 +79,6 @@
     "removedSuccess": "تمت إزالة الخدمة من العقد.",
     "contractEntityName": "عقد",
     "removeConfirm": "هل أنت متأكد أنك تريد إزالة {{serviceName}} من العقد؟",
-    "description": "إدارة الخدمات وتسعيرها المحدد المدرجة في عقد هذه الشركة.",
     "staticEndurance": "تحمل ثابت",
     "percentageEndurance": "تحمل بالنسبة المئوية",
     "staticWage": "أجر ثابت",
@@ -139,3 +157,4 @@
     "noAvailableTests": "جميع الفحوصات المتاحة مضافة بالفعل أو لا توجد فحوصات."
   }
 }
+

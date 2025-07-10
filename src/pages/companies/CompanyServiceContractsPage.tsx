@@ -1,5 +1,5 @@
 // src/pages/companies/CompanyServiceContractsPage.tsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   useQuery,
@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import _debounce from 'lodash/debounce';
 
 import { Button } from "@/components/ui/button";
 import {
@@ -61,6 +62,7 @@ import {
   Printer,
   Copy,
   File,
+  RefreshCw,
 } from "lucide-react"; // ArrowRightLeft can be for "Back" in RTL
 
 import type {
@@ -82,12 +84,12 @@ import {
 
 import type { PaginatedResponse } from "@/types/common";
 import AddCompanyServiceDialog from "./AddCompanyServiceDialog";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { FormField } from "@/components/ui/form";
+import { Switch } from "@/components/ui/switch";
 import {
   downloadCompanyServiceContractPdf,
   type CompanyContractPdfFilters,
@@ -95,51 +97,34 @@ import {
 import CopyCompanyContractDialog from "@/components/companies/CopyCompanyContractDialog";
 import type { PriceImportPreference } from "@/components/companies/dialogs/ImportPricePreferenceDialog";
 import ImportPricePreferenceDialog from "@/components/companies/dialogs/ImportPricePreferenceDialog";
-// import EditCompanyServiceDialog from '@/components/companies/EditCompanyServiceDialog'; // For later
+import { useDebounce } from '@/hooks/useDebounce';
 
 // TODO: Define these permissions in your backend and PermissionName type
 // import { useAuthorization } from '@/hooks/useAuthorization';
 
-// Zod schema for inline editing form
-const getInlineEditSchema = (t: TFunction) =>
-  z.object({
-    price: z
-      .string()
-      .refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, {
-        message: t("common:validation.positiveNumber"),
-      }),
-    static_endurance: z
-      .string()
-      .refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, {
-        message: t("common:validation.positiveNumber"),
-      }),
-    percentage_endurance: z
-      .string()
-      .refine(
-        (val) =>
-          !isNaN(parseFloat(val)) &&
-          parseFloat(val) >= 0 &&
-          parseFloat(val) <= 100,
-        { message: "0-100" }
-      ),
-    static_wage: z
-      .string()
-      .refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, {
-        message: t("common:validation.positiveNumber"),
-      }),
-    percentage_wage: z
-      .string()
-      .refine(
-        (val) =>
-          !isNaN(parseFloat(val)) &&
-          parseFloat(val) >= 0 &&
-          parseFloat(val) <= 100,
-        { message: "0-100" }
-      ),
-    use_static: z.boolean(),
-    approval: z.boolean(),
-  });
-type InlineEditFormValues = z.infer<ReturnType<typeof getInlineEditSchema>>;
+// Zod schema for the form array
+const contractItemSchema = z.object({
+  // Read-only fields for display
+  service_id: z.number(),
+  service_name: z.string(),
+  service_group_name: z.string().optional(),
+  
+  // Editable fields
+  price: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Price must be a positive number"),
+  static_endurance: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Static endurance must be a positive number"),
+  percentage_endurance: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0 && parseFloat(val) <= 100, "Must be between 0-100"),
+  static_wage: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Static wage must be a positive number"),
+  percentage_wage: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0 && parseFloat(val) <= 100, "Must be between 0-100"),
+  use_static: z.boolean(),
+  approval: z.boolean(),
+});
+
+const formSchema = z.object({
+  contracts: z.array(contractItemSchema),
+});
+
+type FormValues = z.infer<typeof formSchema>;
+type ContractFormItem = FormValues['contracts'][0];
 
 export default function CompanyServiceContractsPage() {
   const { t, i18n } = useTranslation(["companies", "common", "services"]);
@@ -183,25 +168,118 @@ export default function CompanyServiceContractsPage() {
   const queryClient = useQueryClient();
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-  const [editingRowId, setEditingRowId] = useState<number | null>(null);
+  const debouncedSearchTerm = useDebounce(searchTerm, 500);
   const [isImportAllDialogOpen, setIsImportAllDialogOpen] = useState(false);
   const [isImportPreferenceDialogOpen, setIsImportPreferenceDialogOpen] = useState(false);
   const [importAllPayloadOverrides, setImportAllPayloadOverrides] = useState<ImportAllServicesPayload | undefined>(undefined);
 
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-
-
-  useEffect (() => {
-    const handler = setTimeout(() => setDebouncedSearchTerm(searchTerm), 500);
-    return () => clearTimeout(handler);
-  }, [searchTerm]);
+  // --- React Hook Form Setup ---
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: { contracts: [] },
+  });
+  const { control, getValues, formState: { dirtyFields } } = form;
+  const { fields, replace } = useFieldArray({ control, name: "contracts" });
 
   useEffect(() => { setCurrentPage(1); }, [debouncedSearchTerm]);
 
+  const contractedServicesQueryKey = ['companyContractedServices', companyId, currentPage, debouncedSearchTerm] as const;
 
+  // --- Data Fetching ---
+  const { data: company, isLoading: isLoadingCompany } = useQuery<
+    Company,
+    Error
+  >({
+    queryKey: ["company", companyId],
+    queryFn: () => getCompanyById(Number(companyId)).then((res) => res.data),
+    enabled: !!companyId,
+  });
 
-  const contractedServicesQueryKey = ['companyContractedServices', companyId, currentPage, debouncedSearchTerm] as const; // Make it const
+  const {
+    data: paginatedContracts,
+    isLoading: isLoadingContracts,
+    error: contractsError,
+    isFetching: isFetchingContracts,
+  } = useQuery<PaginatedResponse<CompanyServiceContract>, Error>({
+    queryKey: contractedServicesQueryKey,
+    queryFn: () =>
+      getCompanyContractedServices(Number(companyId), currentPage, {
+        search: debouncedSearchTerm,
+      }),
+    enabled: !!companyId,
+    placeholderData: keepPreviousData,
+  });
 
+  // Update form when data changes
+  useEffect(() => {
+    if (paginatedContracts?.data) {
+      const formattedData = paginatedContracts.data.map(c => ({
+        service_id: c.service_id,
+        service_name: c.service_name,
+        service_group_name: c.service_group_name,
+        price: String(c.price),
+        static_endurance: String(c.static_endurance),
+        percentage_endurance: String(c.percentage_endurance),
+        static_wage: String(c.static_wage),
+        percentage_wage: String(c.percentage_wage),
+        use_static: c.use_static,
+        approval: c.approval,
+      }));
+      
+      // Only replace if the data is actually different to prevent unnecessary re-renders
+      const currentValues = getValues('contracts');
+      const hasChanges = formattedData.length !== currentValues.length || 
+        formattedData.some((item, index) => {
+          const current = currentValues[index];
+          return !current || 
+            item.service_id !== current.service_id ||
+            item.price !== current.price ||
+            item.static_endurance !== current.static_endurance ||
+            item.percentage_endurance !== current.percentage_endurance ||
+            item.static_wage !== current.static_wage ||
+            item.percentage_wage !== current.percentage_wage ||
+            item.use_static !== current.use_static ||
+            item.approval !== current.approval;
+        });
+      
+      if (hasChanges) {
+        replace(formattedData);
+      }
+    }
+  }, [paginatedContracts, replace, getValues]);
+
+  // --- Autosave Mutation and Logic ---
+  const updateMutation = useMutation({
+    mutationFn: (params: { serviceId: number, data: Partial<CompanyServiceFormData> }) =>
+      updateCompanyServiceContract(Number(companyId), params.serviceId, params.data),
+    onSuccess: (updatedContract) => {
+      // Don't update the query cache immediately to prevent re-renders that cause focus loss
+      // The form will be updated when the user navigates away or manually refreshes
+      toast.success(t('common:autosaveSuccess'), { id: `autosave-${updatedContract.data.service_id}` });
+    },
+    onError: (error: Error & { response?: { data?: { message?: string } } }) => {
+      toast.error(t('common:error.updateFailed'), { description: error.response?.data?.message });
+      // Only invalidate on error to revert optimistic updates
+      queryClient.invalidateQueries({ queryKey: contractedServicesQueryKey });
+    },
+  });
+  
+  const debouncedUpdate = useCallback(
+    _debounce((index: number, fieldName: keyof ContractFormItem) => {
+      // Check if the specific field was actually changed by the user
+      if (dirtyFields.contracts?.[index]?.[fieldName]) {
+        const fullRowData = getValues(`contracts.${index}`);
+        const payload: Partial<CompanyServiceFormData> = {
+            [fieldName]: fieldName === 'price' || fieldName === 'percentage_endurance' || fieldName === 'static_endurance' || fieldName === 'static_wage' || fieldName === 'percentage_wage'
+                ? parseFloat(fullRowData[fieldName] as string)
+                : fullRowData[fieldName]
+        };
+        toast.info(t('common:autosaving'), { id: `autosave-${fullRowData.service_id}-${fieldName}` });
+        updateMutation.mutate({ serviceId: fullRowData.service_id, data: payload });
+      }
+    }, 200), // 200ms debounce
+  [dirtyFields, getValues, updateMutation, t]
+  );
 
   const importAllMutation = useMutation({
     mutationFn: (payload?: ImportAllServicesPayload) => importAllServicesToCompanyContract(companyId, payload),
@@ -234,69 +312,6 @@ export default function CompanyServiceContractsPage() {
     importAllMutation.mutate(payload);
   };
 
-  const inlineEditSchema = getInlineEditSchema(t);
-  const inlineEditForm = useForm<InlineEditFormValues>({
-    resolver: zodResolver(inlineEditSchema),
-    defaultValues: {
-      /* will be set when editing starts */
-    },
-  });
-
-  // Fetch Company details (mainly for the name in the title)
-  const { data: company, isLoading: isLoadingCompany } = useQuery<
-    Company,
-    Error
-  >({
-    queryKey: ["company", companyId],
-    queryFn: () => getCompanyById(Number(companyId)).then((res) => res.data),
-    enabled: !!companyId,
-  });
-
-  const {
-    data: paginatedContracts,
-    isLoading: isLoadingContracts,
-    error: contractsError,
-    isFetching: isFetchingContracts,
-  } = useQuery<PaginatedResponse<CompanyServiceContract>, Error>({
-    queryKey: ["companyContractedServices", companyId, currentPage, searchTerm], // Add searchTerm to queryKey
-    queryFn: () =>
-      getCompanyContractedServices(Number(companyId), currentPage, {
-        search: searchTerm,
-      }), // Pass searchTerm to service
-    enabled: !!companyId,
-    placeholderData: keepPreviousData,
-  });
-  // const importAllMutation = useMutation({
-  //   mutationFn: (payload?: ImportAllServicesPayload) =>
-  //     importAllServicesToCompanyContract(Number(companyId), payload),
-  //   onSuccess: (data) => {
-  //     toast.success(
-  //       data.message || t("companies:serviceContracts.allImportedSuccess")
-  //     );
-  //     queryClient.invalidateQueries({
-  //       queryKey: ["companyContractedServices", companyId],
-  //     });
-  //     queryClient.invalidateQueries({
-  //       queryKey: ["companyAvailableServices", companyId],
-  //     }); // To update the available list in AddDialog
-  //   },
-  //   onError: (error: ApiError) => {
-  //     toast.error(
-  //       error.response?.data?.message ||
-  //         t("companies:serviceContracts.importAllError")
-  //     );
-  //   },
-  // });
-
-  const handleImportAllServices = () => {
-    setIsImportAllDialogOpen(true);
-  };
-
-  const confirmImportAll = () => {
-    importAllMutation.mutate(undefined);
-    setIsImportAllDialogOpen(false);
-  };
-
   const removeContractMutation = useMutation({
     mutationFn: (params: { companyId: number; serviceId: number }) =>
       removeServiceFromCompanyContract(params.companyId, params.serviceId),
@@ -326,44 +341,41 @@ export default function CompanyServiceContractsPage() {
       );
     },
   });
+
   const handleContractAdded = () => {
     // The dialog already invalidates queries
     // If you want to reset to page 1 after adding:
     // setCurrentPage(1);
   };
-  const updateContractMutation = useMutation({
-    mutationFn: (params: {
-      serviceId: number;
-      data: Partial<InlineEditFormValues>;
-    }) =>
-      updateCompanyServiceContract(
-        Number(companyId),
-        params.serviceId,
-        params.data as Partial<CompanyServiceFormData>
-      ), // Cast might be needed
-    onSuccess: () => {
-      toast.success(
-        t("companies:serviceContracts.updatedSuccess", "Contract updated!")
-      );
-      // Optimistically update the cache or invalidate
-      queryClient.invalidateQueries({
-        queryKey: ["companyContractedServices", companyId],
+
+  const handleRemoveContract = (serviceId: number, serviceName: string) => {
+    if (
+      window.confirm(
+        t("companies:serviceContracts.removeConfirm", { serviceName })
+      )
+    ) {
+      removeContractMutation.mutate({
+        companyId: Number(companyId),
+        serviceId,
       });
-      setEditingRowId(null); // Exit edit mode
-      inlineEditForm.reset();
-    },
-    onError: (error: ApiError) => {
-      toast.error(
-        t("common:error.saveFailed", {
-          entity: t(
-            "companies:serviceContracts.contractEntityName",
-            "Contract"
-          ),
-        }),
-        { description: error.response?.data?.message || error.message }
-      );
-    },
-  });
+    }
+  };
+
+  const handleContractsCopied = () => {
+    setIsCopyContractDialogOpen(false);
+    // Force a refresh of the contracts list
+    queryClient.invalidateQueries({
+      queryKey: ["companyContractedServices", companyId],
+      exact: true
+    });
+    // Reset to first page to ensure we see the new contracts
+    setCurrentPage(1);
+    toast.info(t("companies:serviceContracts.copyProcessCompletedRefresh"));
+  };
+
+  // Determine if the "Copy Contract" button should be enabled
+  const canCopyContracts =
+    (paginatedContracts?.data?.length || 0) === 0 && !isLoadingContracts && !isFetchingContracts;
 
   if (isLoadingCompany || (isLoadingContracts && !isFetchingContracts)) {
     return (
@@ -386,66 +398,6 @@ export default function CompanyServiceContractsPage() {
   const meta = paginatedContracts?.meta;
 
   const BackButtonIcon = i18n.dir() === "rtl" ? ArrowRightLeft : ArrowLeft;
-
-  const startEditing = (contract: CompanyServiceContract) => {
-    setEditingRowId(contract.service_id);
-    inlineEditForm.reset({
-      price: String(contract.price),
-      static_endurance: String(contract.static_endurance),
-      percentage_endurance: String(contract.percentage_endurance),
-      static_wage: String(contract.static_wage),
-      percentage_wage: String(contract.percentage_wage),
-      use_static: contract.use_static,
-      approval: contract.approval,
-    });
-  };
-
-  const cancelEditing = () => {
-    setEditingRowId(null);
-    inlineEditForm.reset();
-  };
-  const handleRemoveContract = (serviceId: number, serviceName: string) => {
-    if (
-      window.confirm(
-        t("companies:serviceContracts.removeConfirm", { serviceName })
-      )
-    ) {
-      removeContractMutation.mutate({
-        companyId: Number(companyId),
-        serviceId,
-      });
-    }
-  };
-
-  const onInlineSave = (serviceId: number) => {
-    inlineEditForm.handleSubmit((data) => {
-      const submissionData: Partial<InlineEditFormValues> = {
-        ...data,
-        price: String(data.price), // Keep as string if service expects that, or parseFloat
-        static_endurance: String(data.static_endurance),
-        percentage_endurance: String(data.percentage_endurance),
-        static_wage: String(data.static_wage),
-        percentage_wage: String(data.percentage_wage),
-      };
-      updateContractMutation.mutate({ serviceId, data: submissionData });
-    })(); // Immediately invoke the handleSubmit result
-  };
-
-  const handleContractsCopied = () => {
-    setIsCopyContractDialogOpen(false);
-    // Force a refresh of the contracts list
-    queryClient.invalidateQueries({
-      queryKey: ["companyContractedServices", companyId],
-      exact: true
-    });
-    // Reset to first page to ensure we see the new contracts
-    setCurrentPage(1);
-    toast.info(t("companies:serviceContracts.copyProcessCompletedRefresh"));
-  };
-
-  // Determine if the "Copy Contract" button should be enabled
-  const canCopyContracts =
-    contracts.length === 0 && !isLoadingContracts && !isFetchingContracts;
 
   return (
     <div className="container mx-auto py-4 sm:py-6 lg:py-8">
@@ -510,19 +462,15 @@ export default function CompanyServiceContractsPage() {
             {t("common:print")}
           </span>
         </Button>
-        {/* <Button
-          onClick={handleImportAllServices}
-          variant="outline"
-          size="sm"
-          disabled={importAllMutation.isPending}
+        <Button 
+          size="sm" 
+          variant="outline" 
+          onClick={() => queryClient.invalidateQueries({ queryKey: contractedServicesQueryKey })}
+          disabled={isLoadingContracts}
         >
-          {importAllMutation.isPending ? (
-            <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2" />
-          ) : (
-            <LibrarySquare className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
-          )}
-          {t("companies:serviceContracts.importAllButton")}
-        </Button> */}
+          <RefreshCw className={`h-4 w-4 ltr:mr-2 rtl:ml-2 ${isLoadingContracts ? 'animate-spin' : ''}`} />
+          {t('common:refresh')}
+        </Button>
         <AddCompanyServiceDialog
           companyId={Number(companyId)}
           companyName={company?.name || ""}
@@ -572,267 +520,247 @@ export default function CompanyServiceContractsPage() {
         </Card>
       ) : (
         <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[200px] text-center">
-                  {t("companies:serviceContracts.serviceName")}
-                </TableHead>
-                <TableHead className="w-[100px] text-center">
-                  {t("companies:serviceContracts.price")}
-                </TableHead>
-                <TableHead className="w-[120px] text-center hidden md:table-cell">
-                  {t("companies:serviceContracts.staticEndurance")}
-                </TableHead>
-                <TableHead className="w-[120px] text-center hidden md:table-cell">
-                  {t("companies:serviceContracts.percentageEndurance")}
-                </TableHead>
-                <TableHead className="w-[120px] text-center hidden lg:table-cell">
-                  {t("companies:serviceContracts.staticWage")}
-                </TableHead>
-                <TableHead className="w-[120px] text-center hidden lg:table-cell">
-                  {t("companies:serviceContracts.percentageWage")}
-                </TableHead>
-                <TableHead className="w-[100px] text-center">
-                  {t("companies:serviceContracts.useStatic")}
-                </TableHead>
-                <TableHead className="w-[100px] text-center">
-                  {t("companies:serviceContracts.approval")}
-                </TableHead>
-                <TableHead className="text-right w-[120px]">
-                  {t("common:actions.openMenu")}
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {contracts.map((contract) => (
-                <TableRow
-                  key={contract.contract_id || contract.service_id}
-                  className={
-                    editingRowId === contract.service_id ? "bg-muted/50" : ""
-                  }
-                >
-                  <TableCell className="font-medium text-center">
-                    {contract.service_name}
-                    {contract.service_group_name && (
-                      <span className="block text-xs text-muted-foreground">
-                        {contract.service_group_name}
-                      </span>
-                    )}
-                  </TableCell>
-
-                  {/* Inline Editable Cells */}
-                  {editingRowId === contract.service_id ? (
-                    <>
-                      <TableCell className="text-center">
-                        <FormField
-                          control={inlineEditForm.control}
-                          name="price"
-                          render={({ field }) => (
-                            <Input
-                              type="number"
-                              step="0.01"
-                              {...field}
-                              className="h-8 text-sm"
-                            />
-                          )}
-                        />
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        <FormField
-                          control={inlineEditForm.control}
-                          name="static_endurance"
-                          render={({ field }) => (
-                            <Input
-                              type="number"
-                              step="0.01"
-                              {...field}
-                              className="h-8 text-sm"
-                            />
-                          )}
-                        />
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        <FormField
-                          control={inlineEditForm.control}
-                          name="percentage_endurance"
-                          render={({ field }) => (
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              max="100"
-                              {...field}
-                              className="h-8 text-sm"
-                            />
-                          )}
-                        />
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell">
-                        <FormField
-                          control={inlineEditForm.control}
-                          name="static_wage"
-                          render={({ field }) => (
-                            <Input
-                              type="number"
-                              step="0.01"
-                              {...field}
-                              className="h-8 text-sm"
-                            />
-                          )}
-                        />
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell">
-                        <FormField
-                          control={inlineEditForm.control}
-                          name="percentage_wage"
-                          render={({ field }) => (
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              max="100"
-                              {...field}
-                              className="h-8 text-sm"
-                            />
-                          )}
-                        />
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <FormField
-                          control={inlineEditForm.control}
-                          name="use_static"
-                          render={({ field }) => (
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          )}
-                        />
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <FormField
-                          control={inlineEditForm.control}
-                          name="approval"
-                          render={({ field }) => (
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          )}
-                        />
-                      </TableCell>
-                    </>
-                  ) : (
-                    <>
-                      <TableCell className="text-center">
-                        {Number(contract.price).toFixed(2)}
-                      </TableCell>
-                      <TableCell className="text-center hidden md:table-cell">
-                        {Number(contract.static_endurance).toFixed(2)}
-                      </TableCell>
-                      <TableCell className="text-center hidden md:table-cell">
-                        {Number(contract.percentage_endurance).toFixed(2)}%
-                      </TableCell>
-                      <TableCell className="text-center hidden lg:table-cell">
-                        {Number(contract.static_wage).toFixed(2)}
-                      </TableCell>
-                      <TableCell className="text-center hidden lg:table-cell">
-                        {Number(contract.percentage_wage).toFixed(2)}%
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {contract.use_static ? (
-                          <CheckCircle2 className="h-5 w-5 text-green-500 mx-auto" />
-                        ) : (
-                          <XCircle className="h-5 w-5 text-slate-400 mx-auto" />
+          <CardContent className="p-0">
+            <form> {/* Form wraps the table */}
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[200px] text-center">
+                      {t("companies:serviceContracts.serviceName")}
+                    </TableHead>
+                    <TableHead className="w-[100px] text-center">
+                      {t("companies:serviceContracts.price")}
+                    </TableHead>
+                    <TableHead className="w-[120px] text-center hidden md:table-cell">
+                      {t("companies:serviceContracts.staticEndurance")}
+                    </TableHead>
+                    <TableHead className="w-[120px] text-center hidden md:table-cell">
+                      {t("companies:serviceContracts.percentageEndurance")}
+                    </TableHead>
+                    <TableHead className="w-[120px] text-center hidden lg:table-cell">
+                      {t("companies:serviceContracts.staticWage")}
+                    </TableHead>
+                    <TableHead className="w-[120px] text-center hidden lg:table-cell">
+                      {t("companies:serviceContracts.percentageWage")}
+                    </TableHead>
+                    <TableHead className="w-[100px] text-center">
+                      {t("companies:serviceContracts.useStatic")}
+                    </TableHead>
+                    <TableHead className="w-[100px] text-center">
+                      {t("companies:serviceContracts.approval")}
+                    </TableHead>
+                    <TableHead className="text-right w-[120px]">
+                      {t("common:actions.openMenu")}
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoadingContracts && <TableRow><TableCell colSpan={8} className="text-center h-24"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>}
+                  {!isLoadingContracts && fields.length === 0 && <TableRow><TableCell colSpan={8} className="text-center h-24 text-muted-foreground">{t("companies:serviceContracts.noContracts")}</TableCell></TableRow>}
+                  {fields.map((field, index) => (
+                    <TableRow key={field.id}>
+                      <TableCell className="font-medium text-center">
+                        {field.service_name}
+                        {field.service_group_name && (
+                          <span className="block text-xs text-muted-foreground">
+                            {field.service_group_name}
+                          </span>
                         )}
                       </TableCell>
-                      <TableCell className="text-center">
-                        <Badge
-                          variant={contract.approval ? "default" : "outline"}
-                          className={
-                            contract.approval
-                              ? "bg-green-500/80 hover:bg-green-600"
-                              : ""
-                          }
-                        >
-                          {contract.approval
-                            ? t("companies:serviceContracts.approved")
-                            : t("companies:serviceContracts.notApproved")}
-                        </Badge>
-                      </TableCell>
-                    </>
-                  )}
 
-                  <TableCell className="text-right">
-                    {editingRowId === contract.service_id ? (
-                      <div className="flex gap-1 justify-end">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => onInlineSave(contract.service_id)}
-                          disabled={updateContractMutation.isPending}
-                        >
-                          {updateContractMutation.isPending ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Save className="h-4 w-4 text-green-600" />
-                          )}
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={cancelEditing}
-                          disabled={updateContractMutation.isPending}
-                        >
-                          <XCircle className="h-4 w-4 text-red-600" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <DropdownMenu dir={i18n.dir()}>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => startEditing(contract)}
-                          >
-                            <Edit className="rtl:ml-2 ltr:mr-2 h-4 w-4" />{" "}
-                            {t("common:edit")}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() =>
-                              handleRemoveContract(
-                                contract.service_id,
-                                contract.service_name
-                              )
-                            }
-                            className="text-destructive focus:text-destructive"
-                            disabled={
-                              removeContractMutation.isPending &&
+                      <TableCell className="text-center">
+                        <Controller name={`contracts.${index}.price`} control={control} render={({ field: f }) => (
+                           <Input 
+                             {...f} 
+                             type="number" 
+                             step="0.01" 
+                             className="h-8 text-center" 
+                             onChange={(e) => { f.onChange(e); debouncedUpdate(index, 'price'); }}
+                             onFocus={(e) => e.target.select()}
+                             onKeyDown={(e) => {
+                               if (e.key === 'Enter') {
+                                 e.preventDefault();
+                                 // Find next price input
+                                 const nextIndex = index + 1;
+                                 if (nextIndex < fields.length) {
+                                   const nextInput = document.querySelector(`input[name="contracts.${nextIndex}.price"]`) as HTMLInputElement;
+                                   if (nextInput) {
+                                     nextInput.focus();
+                                     nextInput.select();
+                                   }
+                                 }
+                               }
+                             }}
+                           />
+                        )} />
+                      </TableCell>
+
+                      <TableCell className="text-center hidden md:table-cell">
+                        <Controller name={`contracts.${index}.static_endurance`} control={control} render={({ field: f }) => (
+                           <Input 
+                             {...f} 
+                             type="number" 
+                             step="0.01" 
+                             className="h-8 text-center" 
+                             onChange={(e) => { f.onChange(e); debouncedUpdate(index, 'static_endurance'); }}
+                             onFocus={(e) => e.target.select()}
+                             onKeyDown={(e) => {
+                               if (e.key === 'Enter') {
+                                 e.preventDefault();
+                                 // Find next static endurance input
+                                 const nextIndex = index + 1;
+                                 if (nextIndex < fields.length) {
+                                   const nextInput = document.querySelector(`input[name="contracts.${nextIndex}.static_endurance"]`) as HTMLInputElement;
+                                   if (nextInput) {
+                                     nextInput.focus();
+                                     nextInput.select();
+                                   }
+                                 }
+                               }
+                             }}
+                           />
+                        )} />
+                      </TableCell>
+
+                      <TableCell className="text-center hidden md:table-cell">
+                        <Controller name={`contracts.${index}.percentage_endurance`} control={control} render={({ field: f }) => (
+                           <Input 
+                             {...f} 
+                             type="number" 
+                             step="0.01" 
+                             min="0" 
+                             max="100" 
+                             className="h-8 text-center" 
+                             placeholder="%" 
+                             onChange={(e) => { f.onChange(e); debouncedUpdate(index, 'percentage_endurance'); }}
+                             onFocus={(e) => e.target.select()}
+                             onKeyDown={(e) => {
+                               if (e.key === 'Enter') {
+                                 e.preventDefault();
+                                 // Find next percentage endurance input
+                                 const nextIndex = index + 1;
+                                 if (nextIndex < fields.length) {
+                                   const nextInput = document.querySelector(`input[name="contracts.${nextIndex}.percentage_endurance"]`) as HTMLInputElement;
+                                   if (nextInput) {
+                                     nextInput.focus();
+                                     nextInput.select();
+                                   }
+                                 }
+                               }
+                             }}
+                           />
+                        )} />
+                      </TableCell>
+
+                      <TableCell className="text-center hidden lg:table-cell">
+                        <Controller name={`contracts.${index}.static_wage`} control={control} render={({ field: f }) => (
+                           <Input 
+                             {...f} 
+                             type="number" 
+                             step="0.01" 
+                             className="h-8 text-center" 
+                             onChange={(e) => { f.onChange(e); debouncedUpdate(index, 'static_wage'); }}
+                             onFocus={(e) => e.target.select()}
+                             onKeyDown={(e) => {
+                               if (e.key === 'Enter') {
+                                 e.preventDefault();
+                                 // Find next static wage input
+                                 const nextIndex = index + 1;
+                                 if (nextIndex < fields.length) {
+                                   const nextInput = document.querySelector(`input[name="contracts.${nextIndex}.static_wage"]`) as HTMLInputElement;
+                                   if (nextInput) {
+                                     nextInput.focus();
+                                     nextInput.select();
+                                   }
+                                 }
+                               }
+                             }}
+                           />
+                        )} />
+                      </TableCell>
+
+                      <TableCell className="text-center hidden lg:table-cell">
+                        <Controller name={`contracts.${index}.percentage_wage`} control={control} render={({ field: f }) => (
+                           <Input 
+                             {...f} 
+                             type="number" 
+                             step="0.01" 
+                             min="0" 
+                             max="100" 
+                             className="h-8 text-center" 
+                             placeholder="%" 
+                             onChange={(e) => { f.onChange(e); debouncedUpdate(index, 'percentage_wage'); }}
+                             onFocus={(e) => e.target.select()}
+                             onKeyDown={(e) => {
+                               if (e.key === 'Enter') {
+                                 e.preventDefault();
+                                 // Find next percentage wage input
+                                 const nextIndex = index + 1;
+                                 if (nextIndex < fields.length) {
+                                   const nextInput = document.querySelector(`input[name="contracts.${nextIndex}.percentage_wage"]`) as HTMLInputElement;
+                                   if (nextInput) {
+                                     nextInput.focus();
+                                     nextInput.select();
+                                   }
+                                 }
+                               }
+                             }}
+                           />
+                        )} />
+                      </TableCell>
+
+                      <TableCell className="text-center">
+                        <Controller name={`contracts.${index}.use_static`} control={control} render={({ field: f }) => (
+                           <Switch checked={f.value} onCheckedChange={(val) => { f.onChange(val); debouncedUpdate(index, 'use_static'); }} />
+                        )} />
+                      </TableCell>
+
+                      <TableCell className="text-center">
+                        <Controller name={`contracts.${index}.approval`} control={control} render={({ field: f }) => (
+                           <Checkbox checked={f.value} onCheckedChange={(val) => { f.onChange(val); debouncedUpdate(index, 'approval'); }} />
+                        )} />
+                      </TableCell>
+
+                      <TableCell className="text-right">
+                        <DropdownMenu dir={i18n.dir()}>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handleRemoveContract(
+                                  field.service_id,
+                                  field.service_name
+                                )
+                              }
+                              className="text-destructive focus:text-destructive"
+                              disabled={
+                                removeContractMutation.isPending &&
+                                removeContractMutation.variables?.serviceId ===
+                                  field.service_id
+                              }
+                            >
+                              {removeContractMutation.isPending &&
                               removeContractMutation.variables?.serviceId ===
-                                contract.service_id
-                            }
-                          >
-                            {removeContractMutation.isPending &&
-                            removeContractMutation.variables?.serviceId ===
-                              contract.service_id ? (
-                              <Loader2 className="rtl:ml-2 ltr:mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                              <Trash2 className="rtl:ml-2 ltr:mr-2 h-4 w-4" />
-                            )}
-                            {t("companies:serviceContracts.removeContract")}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                                field.service_id ? (
+                                <Loader2 className="rtl:ml-2 ltr:mr-2 h-4 w-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="rtl:ml-2 ltr:mr-2 h-4 w-4" />
+                              )}
+                              {t("companies:serviceContracts.removeContract")}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </form>
+          </CardContent>
         </Card>
       )}
 
@@ -878,7 +806,7 @@ export default function CompanyServiceContractsPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>{t("common:cancel")}</AlertDialogCancel>
             <AlertDialogAction
-              onClick={confirmImportAll}
+              onClick={() => importAllMutation.mutate(undefined)}
               disabled={importAllMutation.isPending}
             >
               {importAllMutation.isPending ? (

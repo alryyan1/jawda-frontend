@@ -1,6 +1,6 @@
 // src/pages/LabReceptionPage.tsx
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLabUpdates } from '@/hooks/useSocketListener';
@@ -19,21 +19,25 @@ import LabRequestsColumn from "@/components/lab/reception/LabRequestsColumn";
 import PatientDetailsColumnV1 from "@/components/lab/reception/PatientDetailsColumnV1";
 import LabReceptionActionPage from "@/components/lab/reception/LabReceptionActionPage";
 import LabReceptionHeader from "@/components/lab/reception/LabReceptionHeader";
+import PatientHistoryTable from "@/components/lab/reception/PatientHistoryTable";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useAuth } from "@/contexts/AuthContext";
 import { getDoctorVisitById } from "@/services/visitService";
-import { getMainTestsListForSelection } from "@/services/mainTestService";
-import { addLabTestsToVisit } from "@/services/labRequestService";
-import apiClient from "@/services/api";
 
 // Types
-import type { Patient } from "@/types/patients";
+import type { Patient, PatientSearchResult } from "@/types/patients";
 import type { LabQueueFilters, PatientLabQueueItem } from "@/types/labWorkflow";
 import type { DoctorVisit } from "@/types/visits";
-import type { MainTestStripped } from "@/types/labTests";
-import { getAppearanceSettings, type LabAppearanceSettings } from "@/lib/appearance-settings-store";
-import type { DoctorShift } from "@/types/doctors";
+import { getAppearanceSettings } from "@/lib/appearance-settings-store";
+import type { DoctorShift, DoctorStripped } from "@/types/doctors";
 import DoctorFinderDialog from "@/components/clinic/dialogs/DoctorFinderDialog";
+import type { AxiosError } from "axios";
+import { createLabVisitForExistingPatient, searchExistingPatients } from "@/services/patientService";
+import { getMainTestsListForSelection } from "@/services/mainTestService";
+import type { MainTestStripped } from "@/types/labTests";
+import apiClient from "@/services/api";
+import { addLabTestsToVisit } from "@/services/labRequestService";
+import PdfPreviewDialog from "@/components/common/PdfPreviewDialog";
 
 // Material Theme
 const materialTheme = createTheme({
@@ -70,19 +74,10 @@ const materialTheme = createTheme({
   },
 });
 
-// Type for the Autocomplete's options
-interface AutocompleteVisitOption {
-  visit_id: number;
-  patient_id: number;
-  autocomplete_label: string;
-}
-
 const LabReceptionPage: React.FC = () => {
   const { t } = useTranslation([
     "labReception",
     "common",
-    "labResults",
-    "shifts",
     "clinic",
     "patients",
   ]);
@@ -93,29 +88,75 @@ const LabReceptionPage: React.FC = () => {
 
   // --- State Management ---
   const [activeVisitId, setActiveVisitId] = useState<number | null>(null);
-  const [selectedPatient, setSelectedPatient] = useState<PatientLabQueueItem | null>(null);
   const [isFormVisible, setIsFormVisible] = useState(true);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [pdfPreviewTitle, setPdfPreviewTitle] = useState('');
+  const [pdfFileName, setPdfFileName] = useState('document.pdf');
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false);
 
-  // Header controls state
-  const [visitIdSearchTerm, setVisitIdSearchTerm] = useState("");
-  const [autocompleteInputValue, setAutocompleteInputValue] = useState("");
-  const [selectedVisitFromAutocomplete, setSelectedVisitFromAutocomplete] = useState<AutocompleteVisitOption | null>(null);
-  const debouncedAutocompleteSearch = useDebounce(autocompleteInputValue, 500);
-  const [appearanceSettings] = useState<LabAppearanceSettings>(getAppearanceSettings);
-    // State for the filters that the dialog will update
-    const [filters, setFilters] = useState<LabQueueFilters>({
-      isBankak: null,
-      company: null,
-      doctor: null,
-      specialist: null,
-    });
+  // State for the filters that the dialog will update
+  const [filters, setFilters] = useState<LabQueueFilters>({
+    isBankak: null,
+    company: null,
+    doctor: null,
+    specialist: null, 
+  });
+
+  const [isDoctorFinderOpen, setIsDoctorFinderOpen] = useState(false);
+
+  // State lifted from LabRegistrationForm
+  const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+  const [selectedDoctorForNewVisit, setSelectedDoctorForNewVisit] = useState<DoctorStripped | null>(null);
   
-  // Lab Test Selection State - Multiple Selection
-  const [selectedTests, setSelectedTests] = useState<MainTestStripped[]>([]);
-  const [isDoctorFinderOpen, setIsDoctorFinderOpen] = useState(false); // State for the dialog
+  // Patient history visibility state
+  const [showPatientHistory, setShowPatientHistory] = useState(false);
+  const patientHistoryRef = useRef<HTMLDivElement>(null);
 
+  // --- Data Fetching & Mutations ---
+  const { data: searchResults = [], isLoading: isLoadingSearchResults } = useQuery<PatientSearchResult[], Error>({
+    queryKey: ["patientSearchExistingLab", debouncedSearchQuery],
+    queryFn: () => debouncedSearchQuery.length >= 2 ? searchExistingPatients(debouncedSearchQuery) : Promise.resolve([]),
+    enabled: debouncedSearchQuery.length >= 2 && isFormVisible,
+  });
 
+  // Show patient history when search results are available
+  useEffect(() => {
+    setShowPatientHistory(searchResults.length > 0);
+  }, [searchResults.length]);
 
+  // Click outside handler for patient history
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (patientHistoryRef.current && !patientHistoryRef.current.contains(event.target as Node)) {
+        setShowPatientHistory(false);
+        setSearchQuery(''); // Also clear search when clicking away
+      }
+    };
+
+    if (showPatientHistory) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showPatientHistory]);
+
+  const createVisitFromHistoryMutation = useMutation({
+    mutationFn: (payload: { patientId: number; doctorId: number }) =>
+      createLabVisitForExistingPatient(payload.patientId, { doctor_id: payload.doctorId }),
+    onSuccess: (newPatientWithVisit) => {
+      toast.success(t("patients:search.visitCreatedSuccess", { patientName: newPatientWithVisit.name }));
+      handlePatientActivated(newPatientWithVisit);
+      setSearchQuery(''); // Clear search query after success
+    },
+    onError: (error: AxiosError) => {
+        const apiError = error as { response?: { data?: { message?: string } } };
+        toast.error(apiError.response?.data?.message || t('clinic:errors.visitCreationFailed'));
+    },
+  });
 
   // This function is passed to LabActionsPane to open the dialog
   const handleOpenDoctorFinder = useCallback(() => {
@@ -127,72 +168,70 @@ const LabReceptionPage: React.FC = () => {
   const handleDoctorFilterSelect = useCallback((doctorShift: DoctorShift) => {
     setFilters(prev => ({
       ...prev,
-      doctor: { id: doctorShift.doctor_id, name: doctorShift.doctor_name, specialist_name: doctorShift.doctor_specialist_name },
+      doctor: doctorShift.doctor_id,
       specialist: null, // Clear specialist if specific doctor is chosen
     }));
     setIsDoctorFinderOpen(false); // Close the dialog after selection
     toast.info(t('filterApplied', { filterName: doctorShift.doctor_name }));
   }, [t]);
 
-
-
-
-
-
-  // --- Data Fetching & Mutations ---
-  const { data: recentVisitsData, isLoading: isLoadingRecentVisits } = useQuery<AutocompleteVisitOption[], Error>({
-    queryKey: ["searchPatientVisitsForAutocomplete", debouncedAutocompleteSearch],
-    queryFn: async () => {
-      const response = await apiClient.get("/search/patient-visits", {
-        params: { term: debouncedAutocompleteSearch },
-      });
-      return response.data.data;
-    },
-    enabled: debouncedAutocompleteSearch.length >= 2,
-  });
-
-  const { data: availableTests = [], isLoading: isLoadingTests } = useQuery<MainTestStripped[], Error>({
-    queryKey: ["mainTestsForSelection", activeVisitId],
-    queryFn: () => getMainTestsListForSelection({
-      visit_id_to_exclude_requests: activeVisitId || undefined,
-      pack_id: "all",
-    }),
-  });
-
   // Fetch active visit data once and share with all components
-  const { data: activeVisit, isLoading: isVisitLoading, error: visitError } = useQuery<DoctorVisit, Error>({
+  const { data: activeVisit, isLoading: isVisitLoading } = useQuery<DoctorVisit, Error>({
     queryKey: ["doctorVisit", activeVisitId],
     queryFn: () => getDoctorVisitById(activeVisitId!),
     enabled: !!activeVisitId,
     staleTime: 30 * 1000, // Cache for 30 seconds
   });
+  const [selectedTests, setSelectedTests] = useState<MainTestStripped[]>([]);
 
-  const fetchVisitDetailsMutation = useMutation({
-    mutationFn: (id: number) => getDoctorVisitById(id),
-    onSuccess: (foundVisit) => {
-      if (foundVisit) {
-        setActiveVisitId(foundVisit.id);
+  // --- Event Handlers ---
+  const handlePatientActivated = useCallback(
+    (patientWithVisit: Patient & { doctorVisit?: DoctorVisit }) => {
+      queryClient.invalidateQueries({
+        queryKey: ["labReceptionQueue", currentClinicShift?.id],
+      });
+      
+      if (patientWithVisit.doctorVisit) {
+        setActiveVisitId(patientWithVisit.doctorVisit.id);
+        
+        // Hide the form to show the queue with the selected patient
+        setIsFormVisible(false);
+        
+        // Show success message
         toast.success(
-          t("visitFoundById", {
-            visitId: foundVisit.id,
-            patientName: foundVisit.patient.name,
-          })
-        );
-      } else {
-        toast.error(
-          t("visitNotFoundById", {
-            visitId: visitIdSearchTerm || selectedVisitFromAutocomplete?.visit_id,
+          t("patientRegistration.autoSelected", {
+            patientName: patientWithVisit.name,
+            visitId: patientWithVisit.doctorVisit.id,
           })
         );
       }
     },
-    onError: (error: Error) => {
-      const apiError = error as { response?: { data?: { message?: string } } };
-      toast.error(
-        apiError.response?.data?.message || t("common:error.fetchFailed")
-      );
+    [queryClient, currentClinicShift?.id, t]
+  );
+
+  const handlePatientSelectedFromQueue = useCallback(
+    (queueItem: PatientLabQueueItem) => {
+      setActiveVisitId(queueItem.visit_id);
+      // Hide form when patient is selected
+      setIsFormVisible(false);
     },
-  });
+    []
+  );
+
+  const handleResetView = () => {
+    setActiveVisitId(null);
+    setIsFormVisible(true);
+    toast.info(t("viewReset", "View has been reset."));
+  };
+
+  const handleToggleForm = () => {
+    setIsFormVisible(!isFormVisible);
+  };
+
+  const handlePatientSelectedFromHistory = (patientId: number, doctorId: number) => {
+    createVisitFromHistoryMutation.mutate({ patientId, doctorId });
+  };
+
 
   const addTestsMutation = useMutation({
     mutationFn: async (testIds: number[]) => {
@@ -225,62 +264,77 @@ const LabReceptionPage: React.FC = () => {
       );
     },
   });
+  const { data: availableTests = [], isLoading: isLoadingTests } = useQuery<MainTestStripped[], Error>({
+    queryKey: ["mainTestsForSelection", activeVisitId],
+    queryFn: () => getMainTestsListForSelection({
+      visit_id_to_exclude_requests: activeVisitId || undefined,
+      pack_id: "all",
+    }),
+  });
+  const generateAndShowPdf = async (
+    title: string,
+    fileNamePrefix: string,
+    fetchFunction: () => Promise<Blob>
+  ) => {
+    if (!activeVisitId) return;
+    
+    setIsGeneratingPdf(true);
+    setPdfUrl(null);
+    setPdfPreviewTitle(title);
+    setIsPdfPreviewOpen(true);
 
-  // --- Event Handlers ---
-  const handlePatientActivated = useCallback(
-    (patientWithVisit: Patient & { doctorVisit?: DoctorVisit }) => {
-      queryClient.invalidateQueries({
-        queryKey: ["labReceptionQueue", currentClinicShift?.id],
+    try {
+      const blob = await fetchFunction();
+      const objectUrl = URL.createObjectURL(blob);
+      setPdfUrl(objectUrl);
+      const patientNameSanitized = activeVisit?.patient?.name.replace(/[^A-Za-z0-9\-_]/g, '_') || 'patient';
+      setPdfFileName(`${fileNamePrefix}_${activeVisitId}_${patientNameSanitized}_${new Date().toISOString().slice(0,10)}.pdf`);
+    } catch (error: unknown) {
+      console.error(`Error generating ${title}:`, error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      toast.error(t('common:error.generatePdfFailed'), {
+        description: errorMessage,
       });
-      
-      if (patientWithVisit.doctorVisit) {
-        setActiveVisitId(patientWithVisit.doctorVisit.id);
-        
-        // Create a queue item for the newly registered patient to auto-select it
-        const newQueueItem: PatientLabQueueItem = {
-          visit_id: patientWithVisit.doctorVisit.id,
-          patient_id: patientWithVisit.id,
-          patient_name: patientWithVisit.name,
-          phone: patientWithVisit.phone || '',
-          lab_number: `L${patientWithVisit.doctorVisit.id}`,
-          sample_id: null,
-          lab_request_ids: [],
-          test_count: 0,
-          all_requests_paid: false,
-          result_is_locked: false,
-          is_result_locked: false,
-          is_printed: false,
-          oldest_request_time: patientWithVisit.doctorVisit.created_at || new Date().toISOString(),
-        };
-        
-        // Auto-select the newly registered patient
-        setSelectedPatient(newQueueItem);
-        
-        // Hide the form to show the queue with the selected patient
-        setIsFormVisible(false);
-        
-        // Show success message
-        toast.success(
-          t("patientRegistration.autoSelected", {
-            patientName: patientWithVisit.name,
-            visitId: patientWithVisit.doctorVisit.id,
-          })
-        );
-      }
-    },
-    [queryClient, currentClinicShift?.id, t]
-  );
+      setIsPdfPreviewOpen(false);
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
 
-  const handlePatientSelectedFromQueue = useCallback(
-    (queueItem: PatientLabQueueItem) => {
-      setSelectedPatient(queueItem);
-      fetchVisitDetailsMutation.mutate(queueItem.visit_id);
-      // Hide form when patient is selected
-      setIsFormVisible(false);
-    },
-    [fetchVisitDetailsMutation]
-  );
+  const handlePrintReceipt = () => {
+    console.log("handlePrintReceipt", activeVisitId);
+    if (!activeVisitId) return;
+    console.log("handlePrintReceipt 2", activeVisitId);
+    generateAndShowPdf(
+      t('common:printReceiptDialogTitle', { visitId: activeVisitId }),
+      'LabReceipt',
+      () => apiClient.get(`/visits/${activeVisitId}/lab-thermal-receipt/pdf`, { responseType: 'blob' }).then(res => res.data)
+    );
+  };
 
+  // Debug logging
+  useEffect(() => {
+    console.log('Available tests:', availableTests);
+    console.log('Selected tests:', selectedTests);
+  }, [availableTests, selectedTests]);
+  // Type for the Autocomplete's options
+interface AutocompleteVisitOption {
+  visit_id: number;
+  patient_id: number;
+  autocomplete_label: string;
+}
+  const [visitIdSearchTerm, setVisitIdSearchTerm] = useState("");
+  const [autocompleteInputValue, setAutocompleteInputValue] = useState("");
+  const [selectedVisitFromAutocomplete, setSelectedVisitFromAutocomplete] = useState<AutocompleteVisitOption | null>(null);
+  const debouncedAutocompleteSearch = useDebounce(autocompleteInputValue, 500);
+  const handleAddTests = () => {
+    // alert("add tests");
+    if (selectedTests.length > 0 && activeVisitId) {
+      addTestsMutation.mutate(selectedTests.map(test => test.id));
+    } else {
+      toast.error(t("selectTestAndPatient", "Please select a test and patient first."));
+    }
+  };
   const handleSearchByVisitIdEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && visitIdSearchTerm.trim()) {
       const id = parseInt(visitIdSearchTerm.trim());
@@ -288,34 +342,49 @@ const LabReceptionPage: React.FC = () => {
         setAutocompleteInputValue("");
         setSelectedVisitFromAutocomplete(null);
         fetchVisitDetailsMutation.mutate(id);
+        setIsFormVisible(false);
       } else {
         toast.error(t("invalidVisitId", "Please enter a valid Visit ID."));
       }
     }
   };
-
-  const handleResetView = () => {
-    setActiveVisitId(null);
-    setSelectedPatient(null);
-    setVisitIdSearchTerm("");
-    setAutocompleteInputValue("");
-    setSelectedVisitFromAutocomplete(null);
-    setIsFormVisible(true);
-    toast.info(t("viewReset", "View has been reset."));
-  };
-
-  const handleToggleForm = () => {
-    setIsFormVisible(!isFormVisible);
-  };
-
-  const handleAddTests = () => {
-    if (selectedTests.length > 0 && activeVisitId) {
-      addTestsMutation.mutate(selectedTests.map(test => test.id));
-    } else {
-      toast.error(t("selectTestAndPatient", "Please select a test and patient first."));
-    }
-  };
-
+  const fetchVisitDetailsMutation = useMutation({
+    mutationFn: (id: number) => getDoctorVisitById(id),
+    onSuccess: (foundVisit) => {
+      if (foundVisit) {
+        setActiveVisitId(foundVisit.id);
+        toast.success(
+          t("visitFoundById", {
+            visitId: foundVisit.id,
+            patientName: foundVisit.patient.name,
+          })
+        );
+      } else {
+        toast.error(
+          t("visitNotFoundById", {
+            visitId: visitIdSearchTerm || selectedVisitFromAutocomplete?.visit_id,
+          })
+        );
+      }
+    },
+    onError: (error: Error) => {
+      const apiError = error as { response?: { data?: { message?: string } } };
+      toast.error(
+        apiError.response?.data?.message || t("common:error.fetchFailed")
+      );
+    },
+  });
+    // --- Data Fetching & Mutations ---
+    const { data: recentVisitsData, isLoading: isLoadingRecentVisits } = useQuery<AutocompleteVisitOption[], Error>({
+      queryKey: ["searchPatientVisitsForAutocomplete", debouncedAutocompleteSearch],
+      queryFn: async () => {
+        const response = await apiClient.get("/search/patient-visits", {
+          params: { term: debouncedAutocompleteSearch },
+        });
+        return response.data.data;
+      },
+      enabled: debouncedAutocompleteSearch.length >= 2,
+    });
   return (
     <ThemeProvider theme={materialTheme}>
       <div className="flex flex-col min-h-0 h-full bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-slate-900 dark:to-slate-800 overflow-hidden">
@@ -347,7 +416,7 @@ const LabReceptionPage: React.FC = () => {
         />
 
         {/* Dynamic Layout */}
-        <div className="flex-1 min-h-0 flex gap-4 p-4 overflow-hidden">
+        <div className="flex-1 min-h-0 flex gap-4 p-4 overflow-hidden relative">
           {/* Action Column */}
           <div className="flex-shrink-0">
             <LabReceptionActionPage
@@ -366,19 +435,44 @@ const LabReceptionPage: React.FC = () => {
             <Card className="bg-white dark:bg-slate-800 shadow-lg border-0 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-xl h-full">
               <CardContent className="p-4 h-full overflow-y-auto">
                 <LabRegistrationForm
+                  setActiveVisitId={setActiveVisitId}
+                  setFormVisible={setIsFormVisible}
                   onPatientActivated={handlePatientActivated}
                   isVisible={isFormVisible}
+                  onSearchChange={setSearchQuery}
+                  onDoctorChange={setSelectedDoctorForNewVisit}
+                  referringDoctor={selectedDoctorForNewVisit}
                 />
               </CardContent>
             </Card>
           </div>
+
+          {/* Patient History Dialog - Absolute positioned overlay */}
+          {showPatientHistory && (
+            <div className="absolute top-4 left-4 z-50 w-96 max-h-[600px]" ref={patientHistoryRef}>
+              <Card className="bg-white dark:bg-slate-800 shadow-2xl border-0 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
+                <CardContent className="p-4 h-full overflow-hidden">
+                  <div className="mb-4">
+                    <h3 className="text-lg font-semibold">{t('patientHistory.title')}</h3>
+                    <p className="text-sm text-muted-foreground">{t('patientHistory.description')}</p>
+                  </div>
+                  <PatientHistoryTable
+                    searchResults={searchResults}
+                    isLoading={isLoadingSearchResults}
+                    onSelectPatient={handlePatientSelectedFromHistory}
+                    referringDoctor={selectedDoctorForNewVisit}
+                  />
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
           {/* Patient Queue Column */}
           <div className="w-1/4 flex-shrink-0">
             <Card className="bg-white dark:bg-slate-800 shadow-lg border-0 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-xl h-full">
               <CardContent className="p-0 h-full overflow-hidden">
                 <LabPatientQueue
-                  appearanceSettings={appearanceSettings}
+                  appearanceSettings={getAppearanceSettings()}
                   labFilters={filters}
                   currentShift={currentClinicShift}
                   onShiftChange={() => toast.info(t("common:featureNotImplementedShort"))}
@@ -392,7 +486,7 @@ const LabReceptionPage: React.FC = () => {
 
           {/* Lab Requests Column (takes twice the width when form is hidden) */}
           <div className={`transition-all duration-500 ease-in-out ${
-            isFormVisible ? 'w-1/4' : 'w-1/2'
+            isFormVisible ? 'w-0' : 'w-1/2'
           } flex-shrink-0`}>
             <Card className="bg-white dark:bg-slate-800 shadow-lg border-0 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-xl h-full">
               <CardContent className="p-0 h-full overflow-hidden">
@@ -400,7 +494,7 @@ const LabReceptionPage: React.FC = () => {
                   activeVisitId={activeVisitId}
                   visit={activeVisit}
                   isLoading={isVisitLoading}
-                  error={visitError}
+                  onPrintReceipt={handlePrintReceipt}
                 />
               </CardContent>
             </Card>
@@ -414,17 +508,30 @@ const LabReceptionPage: React.FC = () => {
               <Card className="bg-white dark:bg-slate-800 shadow-lg border-0 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-xl h-full">
                 <CardContent className="p-0 h-full overflow-hidden">
                   <PatientDetailsColumnV1
-                    selectedPatient={selectedPatient}
                     activeVisitId={activeVisitId}
                     visit={activeVisit}
-                    isLoading={isVisitLoading}
-                    error={visitError}
+                    onPrintReceipt={handlePrintReceipt}
                   />
                 </CardContent>
               </Card>
             </div>
           )}
         </div>
+        <PdfPreviewDialog
+        widthClass="w-[350px]"
+        isOpen={isPdfPreviewOpen}
+        onOpenChange={(open) => {
+            setIsPdfPreviewOpen(open);
+            if (!open && pdfUrl) { // Clean up URL when dialog is manually closed
+                URL.revokeObjectURL(pdfUrl);
+                setPdfUrl(null);
+            }
+        }}
+        pdfUrl={pdfUrl}
+        isLoading={isGeneratingPdf && !pdfUrl}
+        title={pdfPreviewTitle}
+        fileName={pdfFileName}
+      />
       </div>
       {/* === RENDER THE DIALOG HERE === */}
       {/* It's controlled by the state within this page component */}
@@ -436,5 +543,4 @@ const LabReceptionPage: React.FC = () => {
     </ThemeProvider>
   );
 };
-
 export default LabReceptionPage;

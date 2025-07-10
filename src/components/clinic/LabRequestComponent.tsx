@@ -80,11 +80,8 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
   const [showGridSelection, setShowGridSelection] = useState(false);
   const [showBatchPaymentDialog, setShowBatchPaymentDialog] = useState(false);
   // State for PDF Preview
-  const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false);
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-  const [pdfPreviewTitle, setPdfPreviewTitle] = useState('');
-  const [pdfFileName, setPdfFileName] = useState('document.pdf');
+
+
   // State for Autocomplete selections
   const [autocompleteSelectedTests, setAutocompleteSelectedTests] = useState<
     MainTestStripped[]
@@ -285,40 +282,7 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
       </div>
     );
   }
-  const generateAndShowPdf = async (
-    title: string,
-    fileNamePrefix: string,
-    fetchFunction: () => Promise<Blob>
-  ) => {
-    setIsGeneratingPdf(true);
-    setPdfUrl(null);
-    setPdfPreviewTitle(title);
-    setIsPdfPreviewOpen(true);
 
-    try {
-      const blob = await fetchFunction();
-      const objectUrl = URL.createObjectURL(blob);
-      setPdfUrl(objectUrl);
-      const patientNameSanitized = selectedPatientVisit.patient?.name.replace(/[^A-Za-z0-9\-\_]/g, '_') || 'patient';
-      setPdfFileName(`${fileNamePrefix}_${visitId}_${patientNameSanitized}_${new Date().toISOString().slice(0,10)}.pdf`);
-    } catch (error: any) {
-      console.error(`Error generating ${title}:`, error);
-      toast.error(t('common:error.generatePdfFailed'), {
-        description: error.response?.data?.message || error.message,
-      });
-      setIsPdfPreviewOpen(false); // Close dialog on error
-    } finally {
-      setIsGeneratingPdf(false);
-    }
-  };
-  const handlePrintReceipt = () => {
-    if (!visitId) return;
-    generateAndShowPdf(
-      t('common:printReceiptDialogTitle', { visitId }),
-      'LabReceipt',
-      () => apiClient.get(`/visits/${visitId}/lab-thermal-receipt/pdf`, { responseType: 'blob' }).then(res => res.data)
-    );
-  };
   return (
     <div
       className="flex flex-col lg:flex-row gap-4 h-full p-1"
@@ -573,20 +537,7 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
           }}
         />
       )}
-       <PdfPreviewDialog
-        isOpen={isPdfPreviewOpen}
-        onOpenChange={(open) => {
-            setIsPdfPreviewOpen(open);
-            if (!open && pdfUrl) { // Clean up URL when dialog is manually closed
-                URL.revokeObjectURL(pdfUrl);
-                setPdfUrl(null);
-            }
-        }}
-        pdfUrl={pdfUrl}
-        isLoading={isGeneratingPdf && !pdfUrl}
-        title={pdfPreviewTitle}
-        fileName={pdfFileName}
-      />
+      
     </div>
   );
 };

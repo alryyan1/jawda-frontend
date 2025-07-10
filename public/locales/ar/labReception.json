@@ -4,6 +4,9 @@
     "title": "تسجيل المرضى",
     "autoSelected": "تم اختيار المريض {{patientName}} (الزيارة رقم {{visitId}}) تلقائياً"
   },
+
+
+
   "patientQueue": "طابور المرضى",
   "labRequests": "طلبات المختبر",
   "patientInfo": "معلومات المريض",
@@ -47,11 +50,11 @@
     "clearFilters": "مسح الفلاتر",
     "viewPatientQueue": "عرض طابور المرضى",
     "registerNewPatient": "تسجيل مريض جديد",
-    "myShiftIncome": "دخل الوردية"
+    "myShiftIncome": "دخل الوردية",
+    "filterByDoctor": "تصفية حسب الطبيب"
   },
   "labRequestsColumn": {
-    "removeAllPending": "إزالة الكل (قيد الانتظار)",
-    "batchPayment": "دفع جماعي",
+    "removeAllTests": "إزالة الكل ",
     "toggleDetails": "إظهار/إخفاء التفاصيل",
     "deleteRequest": "حذف الطلب",
     "requestDeletedSuccessfully": "تم حذف طلب المختبر بنجاح",
@@ -73,7 +76,6 @@
     "amount": "المبلغ",
     "paid": "مدفوع",
     "payment": "الدفع",
-    "actions": "الإجراءات",
     "delete": "حذف",
     "cancelPayment": "إلغاء الدفع",
     "discountUpdated": "تم تحديث الخصم بنجاح",
@@ -100,7 +102,28 @@
     "status": "الحالة",
     "pending": "قيد الانتظار",
     "quickPayment": "دفع سريع",
-    "confirmRemoveAllPending": "هل أنت متأكد من إزالة جميع طلبات المختبر قيد الانتظار؟"
+    "confirmRemoveAllPending": "هل أنت متأكد من إزالة جميع طلبات المختبر قيد الانتظار؟",
+    "markAllAsBankak": "تحديد جميع الفحوصات كبنك",
+    "confirmUpdateAllBankak": "هل أنت متأكد من أنك تريد تحديد جميع طلبات المختبر كبنك؟",
+    "bankakUpdatedAll": "تم تحديد جميع طلبات المختبر كبنك",
+    "bankak": "بنك",
+    "paid": "مدفوع",
+    "due": "مستحق",
+    "unmarkBankak": "إلغاء تحديد البنك",
+    "markBankak": "تحديد كبنك",
+    "payCash": "دفع نقدي",
+    "unpayLabRequest": "إلغاء دفع الطلب",
+    "delete": "حذف",
+    "confirmDeleteRequest": "هل أنت متأكد من أنك تريد حذف طلب المختبر هذا؟",
+    "confirmRemoveAllPending": "هل أنت متأكد من أنك تريد إزالة جميع طلبات المختبر المعلقة؟",
+    "confirmUnpayLabRequest": "هل أنت متأكد من أنك تريد إلغاء دفع طلب المختبر هذا؟",
+    "requestDeletedSuccessfully": "تم حذف طلب المختبر بنجاح",
+    "discountUpdated": "تم تحديث الخصم بنجاح",
+    "bankakUpdated": "تم تحديث طريقة الدفع بنجاح",
+    "payableAmount": "التحمل",
+    "needApprove": "تحتاج موافقة",
+    "approved": "موافق عليه",
+    "pendingApproval": "في انتظار الموافقة"
   },
   "patientDetailsColumn": {
     "visitInformation": "معلومات الزيارة",
@@ -148,5 +171,37 @@
   "requestsHint": "الطلبات",
   "infoHint": "المعلومات",
   "addTestsPlaceholder": "ابحث وحدد التحاليل...",
-  "actions": "الإجراءات"
+
+  "patientHistory": {
+    "title": "سجل المريض",
+    "description": "اختر مريض موجود لإنشاء زيارة مختبر جديدة"
+  },
+  "formTitle": "تسجيل المريض",
+  "formDescription": "تسجيل مريض جديد لخدمات المختبر",
+  "summaryDialog": {
+    "title": "ملخص المختبر",
+    "labDescription": "ملخص طلبات المختبر وتفاصيل الدفع",
+    "loading": "جاري التحميل...",
+    "labIncomeTitle": "إجمالي دخل المختبر",
+    "totalCash": "إجمالي النقد",
+    "totalBank": "إجمالي البنك",
+    "totalIncome": "إجمالي الدخل"
+  },
+  "companyDetails": {
+    "title": "معلومات الشركة",
+    "name": "الشركة",
+    "phone": "الهاتف",
+    "address": "العنوان",
+    "contractNumber": "رقم العقد",
+    "endurance": "التحمل"
+  },
+  "patientCompanyDetails": {
+    "title": "معلومات شركة المريض",
+    "companyName": "اسم الشركة",
+    "cardNumber": "رقم البطاقة",
+    "subcompanyName": "اسم الشركة الفرعية",
+    "insuranceNo": "رقم التأمين",
+    "guarantor": "الضامن",
+    "relationName": "اسم العلاقة"
+  }
 }

@@ -16,6 +16,7 @@ export interface PatientLabQueueItem { // For the leftmost list
   is_result_locked: boolean;
   is_last_result_pending?: boolean; 
   is_ready_for_print?: boolean;
+  company?: any; // Company information from backend
 
   // status_summary?: string; // e.g. "3 Pending, 1 Complete"
 }

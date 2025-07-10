@@ -8,6 +8,7 @@ import {
   SendToBack,
   Lock,
   Unlock,
+  Heart,
 } from "lucide-react";
 import type { PatientLabQueueItem } from "@/types/labWorkflow";
 
@@ -147,6 +148,12 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
           {item.is_result_locked && (
             <div className="absolute -bottom-1 -left-1 p-0.5 bg-[var(--bg-color)] rounded-full shadow-sm border border-[var(--border-color)]">
               <Lock className="h-3 w-3" style={{ color: lockIconColor }} />
+            </div>
+          )}
+
+          {item.company && (
+            <div className="absolute -bottom-1 -right-1 p-0.5 bg-[var(--bg-color)] rounded-full shadow-sm border border-[var(--border-color)]">
+              <Heart className="h-3 w-3 text-red-500 fill-red-500" />
             </div>
           )}
 

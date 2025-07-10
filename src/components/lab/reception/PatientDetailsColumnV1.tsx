@@ -4,15 +4,18 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import apiClient from "@/services/api";
 import type { DoctorVisit } from "@/types/visits";
+import PatientCompanyDetails from "./PatientCompanyDetails";
 
 interface PatientDetailsColumnV1Props {
   activeVisitId: number | null;
   visit?: DoctorVisit;
+  onPrintReceipt: () => void;
 }
 
 const PatientDetailsColumnV1: React.FC<PatientDetailsColumnV1Props> = ({
   activeVisitId,
   visit,
+  onPrintReceipt,
 }) => {
   const { t } = useTranslation(["labReception", "common"]);
   const queryClient = useQueryClient();
@@ -24,12 +27,14 @@ const PatientDetailsColumnV1: React.FC<PatientDetailsColumnV1Props> = ({
     },
     onSuccess: () => {
       toast.success(t("labRequestsColumn.allPaymentsProcessed", "All payments processed successfully"));
+      onPrintReceipt();
       queryClient.invalidateQueries({
         queryKey: ["activeVisitForLabRequests", activeVisitId],
       });
       queryClient.invalidateQueries({
         queryKey: ["doctorVisit", activeVisitId],
       });
+    
     },
     onError: (error: Error) => {
       const apiError = error as { response?: { data?: { message?: string } } };
@@ -87,6 +92,12 @@ const PatientDetailsColumnV1: React.FC<PatientDetailsColumnV1Props> = ({
           </tr>
         </tbody>
       </table>
+
+      {/* Patient Company Details */}
+      {visit?.patient && (
+        <PatientCompanyDetails patient={visit.patient} />
+      )}
+
       {/* Operations Title */}
       <div className="w-full text-center text-gray-700 font-semibold border-b border-gray-200 pb-1 mb-2">
         operations
@@ -118,9 +129,9 @@ const PatientDetailsColumnV1: React.FC<PatientDetailsColumnV1Props> = ({
       {/* Pay Button */}
       {activeVisitId && (
         <button
-          className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold mt-2 hover:bg-blue-700 transition flex items-center justify-center"
+          className={`w-full bg-blue-600 text-white py-2 rounded-lg font-bold mt-2 hover:bg-blue-700 transition flex items-center justify-center ${balance === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
           onClick={() => payAllMutation.mutate()}
-          disabled={payAllMutation.isPending}
+          disabled={payAllMutation.isPending || balance === 0}
         >
           {payAllMutation.isPending ? (
             <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">

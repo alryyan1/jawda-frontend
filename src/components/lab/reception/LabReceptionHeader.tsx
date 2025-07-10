@@ -1,12 +1,12 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { useMutation } from "@tanstack/react-query";
 
 // MUI Imports
 import Autocomplete from "@mui/material/Autocomplete";
 import TextField from "@mui/material/TextField";
 import CircularProgress from "@mui/material/CircularProgress";
 import Paper from "@mui/material/Paper";
+import Chip from "@mui/material/Chip";
 
 // Shadcn & Lucide Imports
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,6 @@ import {
   Microscope,
   Plus,
 } from "lucide-react";
-import { toast } from "sonner";
 
 // Custom Components
 import { ConnectionStatusIndicator } from "@/components/common/ConnectionStatusIndicator";
@@ -39,7 +38,7 @@ interface LabReceptionHeaderProps {
   setSelectedTests: (tests: MainTestStripped[]) => void;
   isLoadingTests: boolean;
   activeVisitId: number | null;
-  addTestsMutation: any;
+  addTestsMutation: { isPending: boolean };
 
   // Search props
   recentVisitsData: AutocompleteVisitOption[] | undefined;
@@ -50,7 +49,7 @@ interface LabReceptionHeaderProps {
   setAutocompleteInputValue: (value: string) => void;
   visitIdSearchTerm: string;
   setVisitIdSearchTerm: (value: string) => void;
-  fetchVisitDetailsMutation: any;
+  fetchVisitDetailsMutation: { isPending: boolean; mutate: (id: number) => void };
 
   // Event handlers
   onResetView: () => void;
@@ -114,9 +113,13 @@ const LabReceptionHeader: React.FC<LabReceptionHeaderProps> = ({
         <div className="flex items-center gap-3">
           <Autocomplete
             multiple
-            options={availableTests}
+            options={availableTests || []}
             value={selectedTests}
-            onChange={(_, newValue) => setSelectedTests(newValue)}
+            onChange={(_, newValue) => {
+              console.log('Autocomplete onChange:', newValue);
+              setSelectedTests(newValue);
+            }}
+            getOptionKey={(option) => option.id}
             getOptionLabel={(option) => option.main_test_name}
             isOptionEqualToValue={(option, value) => option.id === value.id}
             loading={isLoadingTests}
@@ -135,32 +138,16 @@ const LabReceptionHeader: React.FC<LabReceptionHeaderProps> = ({
                       (test) => test.id === parseInt(enteredId)
                     );
                     if (foundTest) {
-                      setSelectedTests((prev) => [...prev, foundTest]);
+                      setSelectedTests([...selectedTests, foundTest]);
                     }
                   }
                 }}
-                InputProps={{
-                  ...params.InputProps,
-                  startAdornment: <Search className="h-4 w-4 text-muted-foreground mr-2" />,
-                  endAdornment: (
-                    <>
-                      {isLoadingTests ? <CircularProgress color="inherit" size={20} /> : null}
-                      {params.InputProps.endAdornment}
-                    </>
-                  ),
-                }}
-                sx={{
-                  "& .MuiInputLabel-root": { fontSize: "0.875rem" },
-                  "& .MuiOutlinedInput-root": {
-                    backgroundColor: "background.paper",
-                    fontSize: "0.875rem",
-                  },
-                }}
+           
+           
               />
             )}
-            PaperComponent={(props) => (
-              <Paper {...props} className="dark:bg-slate-800 dark:text-slate-100" />
-            )}
+      
+        
             noOptionsText={t("common:noResultsFound")}
             loadingText={t("common:loading")}
           />

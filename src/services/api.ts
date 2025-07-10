@@ -1,7 +1,8 @@
 // src/services/api.ts (or your existing axios setup)
+import { host, projectFolder, schema } from '@/pages/constants';
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+const API_BASE_URL = `${schema}://${host}/${projectFolder}/public/api`;
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,

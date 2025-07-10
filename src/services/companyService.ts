@@ -247,3 +247,15 @@ export const getCompanyRelationsList = async (): Promise<CompanyRelation[]> => {
   const response = await apiClient.get<{ data: CompanyRelation[] }>('/company-relations');
   return response.data.data;
 };
+// /reports/company/{company}/test-contracts/pdf
+// --- PDF Generation ---
+export const generateCompanyMainTestContractPdf = async (
+  companyId: number, 
+  search?: string
+): Promise<Blob> => {
+  const response = await apiClient.get(`/reports/company/${companyId}/test-contracts/pdf`, {
+    params: { search },
+    responseType: 'blob'
+  });
+  return response.data;
+};

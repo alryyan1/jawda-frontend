@@ -18,6 +18,7 @@
   "totalPaid": "Total Paid",
   "totalBalanceDue": "Total Balance Due",
   "viewDetails": "View Details",
+  "showingResults": "Showing {{from}} to {{to}} of {{total}} results",
   "table": {
     "actions": "Actions"
   },
@@ -33,7 +34,8 @@
     "patientDataUnavailable": "Patient data unavailable",
     "noPermissions": "You do not have permission to perform this action",
     "previewFailed": "Failed to preview changes",
-    "updateFailed": "Failed to update"
+    "updateFailed": "Failed to update",
+    "printFailed": "Failed to print"
   },
   "validation": {
     "required": "{{field}} is required.",
@@ -49,6 +51,10 @@
   "create": "Create",
   "saveChanges": "Save Changes",
   "refresh": "Refresh",
+  "autosaving": "Auto-saving...",
+  "autosaveSuccess": "Changes saved successfully!",
+  "updatingList": "Updating list...",
+  "print": "Print",
   "noDataAvailableForFilters": "No data available for the selected filters",
   "loadingData": "Loading data...",
   "confirmDeleteMessage": "Are you sure you want to delete {{item}}?",

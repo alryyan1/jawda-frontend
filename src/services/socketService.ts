@@ -29,7 +29,7 @@ class SocketService {
       // Build the socket URL
       const scheme = import.meta.env.VITE_SOCKET_SCHEME || 'http';
       const host = import.meta.env.VITE_SOCKET_HOST || '127.0.0.1';
-      const port = import.meta.env.VITE_SOCKET_PORT || '8080';
+      const port = import.meta.env.VITE_SOCKET_PORT || '8000';
       const socketUrl = `${scheme}://${host}:${port}`;
 
       console.log('Initializing Socket.IO with config:', {

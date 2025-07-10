@@ -1,5 +1,6 @@
 import { Server } from 'socket.io';
 import http from 'http';
+import { host } from './src/pages/constants';
 
 // Create HTTP server
 const server = http.createServer();
@@ -7,7 +8,7 @@ const server = http.createServer();
 // Create Socket.IO server
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:5174", "http://127.0.0.1:5174"],
+    origin: ["http://localhost:5174", "http://127.0.0.1:5174", "http://192.168.100.12:5174","*"],
     methods: ["GET", "POST"],
     credentials: true
   },
@@ -62,9 +63,9 @@ io.on('connection', (socket) => {
 });
 
 // Start server
-const PORT = 8080;
-server.listen(PORT, '127.0.0.1', () => {
-  console.log(`🚀 Socket.IO server running on http://127.0.0.1:${PORT}`);
+const PORT = 8000;
+server.listen(PORT, host, () => {
+  console.log(`🚀 Socket.IO server running on http://${host}:${PORT}`);
   console.log(`📡 Waiting for connections...`);
 });
 

@@ -47,7 +47,8 @@ import {
 import { 
   clearPendingLabRequestsForVisit,
   unpayLabRequest,
-  recordDirectLabRequestPayment
+  recordDirectLabRequestPayment,
+  updateAllLabRequestsBankak
 } from "@/services/labRequestService";
 import { useAuth } from "@/contexts/AuthContext";
 import apiClient from "@/services/api";
@@ -59,12 +60,14 @@ interface LabRequestsColumnProps {
   activeVisitId: number | null;
   visit?: DoctorVisit;
   isLoading?: boolean;
+  onPrintReceipt: () => void;
 }
 
 const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
   activeVisitId,
   visit,
   isLoading,
+  onPrintReceipt,
 }) => {
   const { t } = useTranslation(["labReception", "common", "clinic", "labTests", "payments"]);
   const queryClient = useQueryClient();
@@ -74,9 +77,6 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
   const [showBatchPaymentDialog, setShowBatchPaymentDialog] = useState(false);
   const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-  const [pdfPreviewTitle, setPdfPreviewTitle] = useState('');
-  const [pdfFileName, setPdfFileName] = useState('document.pdf');
 
   // Update discount mutation
   const updateDiscountMutation = useMutation({
@@ -210,8 +210,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
       queryClient.invalidateQueries({
         queryKey: ["activeVisitForLabRequests", activeVisitId],
       });
-      queryClient.invalidateQueries({
-        queryKey: ["dashboardSummary"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboardSummary"] });
       queryClient.invalidateQueries({
         queryKey: ["doctorVisit", activeVisitId],
       });
@@ -220,6 +219,26 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
       const apiError = error as { response?: { data?: { message?: string } } };
       toast.error(
         apiError.response?.data?.message || t("payments:error.paymentFailed")
+      );
+    },
+  });
+
+  // Update all lab requests bankak mutation
+  const updateAllBankakMutation = useMutation({
+    mutationFn: (isBankak: boolean) => updateAllLabRequestsBankak(activeVisitId!, isBankak),
+    onSuccess: () => {
+      toast.success(t("labRequestsColumn.bankakUpdatedAll", "All lab requests marked as Bankak"));
+      queryClient.invalidateQueries({
+        queryKey: ["activeVisitForLabRequests", activeVisitId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["doctorVisit", activeVisitId],
+      });
+    },
+    onError: (error: Error) => {
+      const apiError = error as { response?: { data?: { message?: string } } };
+      toast.error(
+        apiError.response?.data?.message || t("common:error.requestFailed")
       );
     },
   });
@@ -262,43 +281,10 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
     });
   };
 
-  const generateAndShowPdf = async (
-    title: string,
-    fileNamePrefix: string,
-    fetchFunction: () => Promise<Blob>
-  ) => {
-    if (!activeVisitId) return;
-    
-    setIsGeneratingPdf(true);
-    setPdfUrl(null);
-    setPdfPreviewTitle(title);
-    setIsPdfPreviewOpen(true);
-
-    try {
-      const blob = await fetchFunction();
-      const objectUrl = URL.createObjectURL(blob);
-      setPdfUrl(objectUrl);
-      const patientNameSanitized = visit?.patient?.name.replace(/[^A-Za-z0-9\-_]/g, '_') || 'patient';
-      setPdfFileName(`${fileNamePrefix}_${activeVisitId}_${patientNameSanitized}_${new Date().toISOString().slice(0,10)}.pdf`);
-    } catch (error: unknown) {
-      console.error(`Error generating ${title}:`, error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      toast.error(t('common:error.generatePdfFailed'), {
-        description: errorMessage,
-      });
-      setIsPdfPreviewOpen(false);
-    } finally {
-      setIsGeneratingPdf(false);
+  const handleUpdateAllBankak = () => {
+    if (window.confirm(t("labRequestsColumn.confirmUpdateAllBankak", "Are you sure you want to mark all lab requests as Bankak?"))) {
+      updateAllBankakMutation.mutate(true);
     }
-  };
-
-  const handlePrintReceipt = () => {
-    if (!activeVisitId) return;
-    generateAndShowPdf(
-      t('common:printReceiptDialogTitle', { visitId: activeVisitId }),
-      'LabReceipt',
-      () => apiClient.get(`/visits/${activeVisitId}/lab-thermal-receipt/pdf`, { responseType: 'blob' }).then(res => res.data)
-    );
   };
 
   const calculateDiscountedAmount = (price: number, discountPer: number) => {
@@ -306,14 +292,17 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
   };
 
   const generateDiscountOptions = () => {
-    const options = [];
-    for (let i = 0; i <= 100; i += 10) {
+    const options: React.ReactNode[] = [];
+    // Only specific discount values: 10%, 20%, 30%, 40%, 50%, 100%
+    const discountValues = [0,10, 20, 30, 40, 50, 100];
+    
+    discountValues.forEach(value => {
       options.push(
-        <SelectItem key={i} value={i.toString()}>
-          {i}%
+        <SelectItem key={value} value={value.toString()}>
+          {value}%
         </SelectItem>
       );
-    }
+    });
     return options;
   };
 
@@ -356,16 +345,12 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
         <div className="flex items-center gap-2">
           <Button
-            onClick={handlePrintReceipt}
+            onClick={onPrintReceipt}
             variant="outline"
             size="sm"
-            disabled={isGeneratingPdf ||  visit?.lab_requests?.length === 0  }
+            disabled={visit?.lab_requests?.length === 0}
           >
-            {isGeneratingPdf ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <PrinterIcon className="h-4 w-4 mr-2" />
-            )}
+            <PrinterIcon className="h-4 w-4 mr-2" />
             <span className="hidden sm:inline">{t('common:printReceipt')}</span>
           </Button>
         </div>
@@ -373,7 +358,9 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
         <div className="flex items-center gap-2">
           <Button
             onClick={handleRemoveAllPending}
-            variant="destructive"
+
+            //add red border
+            className="  hover:bg-red-600 hover:text-white !border-red-200 !border-2"
             size="sm"
             disabled={removeAllPendingMutation.isPending || (visit?.lab_requests?.length ?? 0) === 0}
           >
@@ -382,17 +369,21 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
             ) : (
               <Trash2 className="h-4 w-4 mr-2" />
             )}
-            <span className="hidden sm:inline">{t("labRequestsColumn.removeAllPending", "Remove All Pending")}</span>
+            <span className="hidden sm:inline">{t("labRequestsColumn.removeAllTests", "Remove All Tests")}</span>
           </Button>
           
           <Button
-            onClick={() => setShowBatchPaymentDialog(true)}
+            onClick={handleUpdateAllBankak}
             variant="outline"
             size="sm"
-            disabled={(visit?.lab_requests?.length ?? 0) === 0}
+            disabled={updateAllBankakMutation.isPending || (visit?.lab_requests?.length ?? 0) === 0}
           >
-            <Banknote className="h-4 w-4 mr-2" />
-            <span className="hidden sm:inline">{t("labRequestsColumn.batchPayment", "Batch Payment")}</span>
+            {updateAllBankakMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <Banknote className="h-4 w-4 mr-2" />
+            )}
+            <span className="hidden sm:inline">{t("labRequestsColumn.markAllAsBankak", "Mark All as Bankak")}</span>
           </Button>
         </div>
       </div>
@@ -420,11 +411,18 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                 <TableRow>
                   <TableHead className="min-w-[150px]">{t("labRequestsColumn.testName", "Test Name")}</TableHead>
                   <TableHead className="min-w-[80px] hidden sm:table-cell">{t("labRequestsColumn.price", "Price")}</TableHead>
-                  <TableHead className="min-w-[100px] hidden md:table-cell">{t("labRequestsColumn.discount", "Discount")}</TableHead>
-                  <TableHead className="min-w-[80px]">{t("labRequestsColumn.amount", "Amount")}</TableHead>
-                  <TableHead className="min-w-[80px] hidden sm:table-cell">{t("labRequestsColumn.paid", "Paid")}</TableHead>
-                  <TableHead className="min-w-[60px] hidden lg:table-cell">{t("labRequestsColumn.bankak", "Bank")}</TableHead>
-                  <TableHead className="min-w-[80px] hidden sm:table-cell">{t("labRequestsColumn.payment", "Payment")}</TableHead>
+                  {!visit?.patient?.company && (
+                    <TableHead className="min-w-[100px] hidden md:table-cell">{t("labRequestsColumn.discount", "Discount")}</TableHead>
+                  )}
+                  {!visit?.patient?.company && (
+                    <TableHead className="min-w-[80px]">{t("labRequestsColumn.amount", "Amount")}</TableHead>
+                  )}
+                  {visit?.patient?.company && (
+                    <TableHead className="min-w-[100px] text-red-600">{t("labRequestsColumn.payableAmount", "التحمل")}</TableHead>
+                  )}
+                  {visit?.patient?.company && (
+                    <TableHead className="min-w-[100px]">{t("labRequestsColumn.needApprove", "Need Approve")}</TableHead>
+                  )}
                   <TableHead className="min-w-[60px]">{t("labRequestsColumn.actions", "Actions")}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -437,12 +435,26 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                     <TableRow key={request.id}>
                       <TableCell className="font-medium">
                         <div className="flex flex-col">
-                          <span className="text-sm font-semibold">
-                            {request.main_test?.main_test_name || "Unknown Test"}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold">
+                              {request.main_test?.main_test_name || "Unknown Test"}
+                            </span>
+                            {/* Green checkmark if fully paid */}
+                            {request.is_paid && (
+                              <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                            )}
+                          </div>
                           <span className="text-xs text-slate-500">
                             ID: {request.id}
                           </span>
+                          {/* Bank badge if is_bankak */}
+                          {request.is_bankak && (
+                            <Badge
+                              className={`mt-1 w-fit ${request.is_paid ? "bg-green-600 text-white" : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"}`}
+                            >
+                              {t("labRequestsColumn.bankak", "Bank")}
+                            </Badge>
+                          )}
                           {/* Mobile-only info */}
                           <div className="sm:hidden space-y-1 mt-2">
                             <div className="flex justify-between text-xs">
@@ -473,80 +485,53 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                         <span className="font-medium">${request.price.toFixed(2)}</span>
                       </TableCell>
                       
-                      <TableCell className="hidden md:table-cell">
-                        <Select
-                          value={request.discount_per.toString()}
-                          onValueChange={(value) => handleDiscountChange(request.id, value)}
-                          disabled={updateDiscountMutation.isPending}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {generateDiscountOptions()}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
+                      {!visit?.patient?.company && (
+                        <TableCell className="hidden md:table-cell">
+                          <Select
+                            value={request.discount_per.toString()}
+                            onValueChange={(value) => handleDiscountChange(request.id, value)}
+                            disabled={updateDiscountMutation.isPending || request.is_paid}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {generateDiscountOptions()}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                      )}
                       
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-medium">${discountedAmount.toFixed(2)}</span>
-                          {request.discount_per > 0 && (
-                            <span className="text-xs text-green-600">
-                              -{request.discount_per}%
-                            </span>
-                          )}
-                        </div>
-                      </TableCell>
+                      {!visit?.patient?.company && (
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-medium">${discountedAmount.toFixed(2)}</span>
+                            {request.discount_per > 0 && (
+                              <span className="text-xs text-green-600">
+                                -{request.discount_per}%
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
+                      )}
                       
-                      <TableCell className="hidden sm:table-cell">
-                        <div className="flex flex-col">
-                          <span className="font-medium">${request.amount_paid.toFixed(2)}</span>
-                          {request.is_paid ? (
-                            <Badge variant="default" className="text-xs w-fit">
-                              <CheckCircle2 className="h-3 w-3 mr-1" />
-                              Paid
-                            </Badge>
-                          ) : (
-                            <Badge variant="destructive" className="text-xs w-fit">
-                              ${remainingAmount.toFixed(2)} due
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
+                      {visit?.patient?.company && (
+                        <TableCell>
+                          <span className="font-medium text-red-600">
+                            ${((request.price || 0) - (request.endurance || 0)).toFixed(2)}
+                          </span>
+                        </TableCell>
+                      )}
                       
-                      <TableCell className="hidden lg:table-cell">
-                        <div className="flex items-center justify-center">
-                          <Checkbox
-                            checked={request.is_bankak}
-                            onCheckedChange={(checked) => 
-                              handleToggleBankak(request.id, checked as boolean)
-                            }
-                            disabled={toggleBankakMutation.isPending}
-                          />
-                        </div>
-                      </TableCell>
+                      {visit?.patient?.company && (
+                        <TableCell>
+                          <Badge variant={request.approve ? "success" : "destructive"}>
+                            {request.approve ? t("labRequestsColumn.approved", "Approved") : t("labRequestsColumn.pendingApproval", "Pending Approval")}
+                          </Badge>
+                        </TableCell>
+                      )}
                       
-                      <TableCell className="hidden sm:table-cell">
-                        <div className="flex flex-col gap-1">
-                          {!request.is_paid && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleDirectPayItem(request.id, false)}
-                              disabled={directPayItemMutation.isPending}
-                              className="w-full text-xs"
-                            >
-                              {directPayItemMutation.isPending ? (
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                              ) : (
-                                "Cash"
-                              )}
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                      
+                      {/* Combined Actions Dropdown */}
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -555,6 +540,33 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            {/* Paid Status */}
+                            <DropdownMenuItem disabled>
+                              {request.is_paid ? (
+                                <Badge variant="default" className="text-xs w-fit mr-2">
+                                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                                  {t('labRequestsColumn.paid', 'Paid')}
+                                </Badge>
+                              ) : (
+                                <Badge variant="destructive" className="text-xs w-fit mr-2">
+                                  ${remainingAmount.toFixed(2)} {t('labRequestsColumn.due', 'due')}
+                                </Badge>
+                              )}
+                              <span>${request.amount_paid.toFixed(2)}</span>
+                            </DropdownMenuItem>
+                            {/* Bankak Toggle */}
+                            <DropdownMenuItem
+                              onClick={() => handleToggleBankak(request.id, !request.is_bankak)}
+                              disabled={toggleBankakMutation.isPending}
+                            >
+                              <Checkbox
+                                checked={request.is_bankak}
+                                disabled={toggleBankakMutation.isPending}
+                                className="mr-2"
+                              />
+                              {request.is_bankak ? t("labRequestsColumn.unmarkBankak", "Unmark Bankak") : t("labRequestsColumn.markBankak", "Mark Bankak")}
+                            </DropdownMenuItem>
+                            {/* Payment Button */}
                             {!request.is_paid && (
                               <DropdownMenuItem
                                 onClick={() => handleDirectPayItem(request.id, false)}
@@ -568,28 +580,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                                 {t("labRequestsColumn.payCash", "Pay Cash")}
                               </DropdownMenuItem>
                             )}
-                            
-                            <DropdownMenuItem
-                              onClick={() => handleToggleBankak(request.id, !request.is_bankak)}
-                              disabled={toggleBankakMutation.isPending}
-                            >
-                              <Checkbox
-                                checked={request.is_bankak}
-                                disabled={toggleBankakMutation.isPending}
-                                className="mr-2"
-                              />
-                              {request.is_bankak ? t("labRequestsColumn.unmarkBankak", "Unmark Bankak") : t("labRequestsColumn.markBankak", "Mark Bankak")}
-                            </DropdownMenuItem>
-                            
-                            <DropdownMenuItem
-                              onClick={() => handleDeleteRequest(request.id)}
-                              className="text-red-600"
-                              disabled={deleteRequestMutation.isPending}
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              {t("labRequestsColumn.delete", "Delete")}
-                            </DropdownMenuItem>
-                            
+                            {/* Unpay Option */}
                             {request.is_paid && (
                               <DropdownMenuItem
                                 onClick={() => handleUnpayLabRequest(request.id)}
@@ -600,6 +591,15 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                                 {t("labRequestsColumn.unpayLabRequest", "Unpay Request")}
                               </DropdownMenuItem>
                             )}
+                            {/* Delete Option */}
+                            <DropdownMenuItem
+                              onClick={() => handleDeleteRequest(request.id)}
+                              className="text-red-600"
+                              disabled={deleteRequestMutation.isPending}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              {t("labRequestsColumn.delete", "Delete")}
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -643,9 +643,9 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
           }
         }}
         pdfUrl={pdfUrl}
-        isLoading={isGeneratingPdf && !pdfUrl}
-        title={pdfPreviewTitle}
-        fileName={pdfFileName}
+        isLoading={false}
+        title={""}
+        fileName={""}
       />
     </div>
   );

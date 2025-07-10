@@ -27,14 +27,24 @@
     "relationName": "اسم العلاقة",
     "labEnduranceShort": "تحمل المختبر",
     "serviceEnduranceShort": "تحمل الخدمة",
-    "addressPlaceholder": "أدخل العنوان هنا..."
+    "addressPlaceholder": "أدخل العنوان هنا...",
+    "insuranceNoPlaceholder": "أدخل رقم التأمين",
+    "guarantorPlaceholder": "أدخل اسم الكفيل",
+    "subcompany": "الشركة الفرعية",
+    "subcompanyPlaceholder": "أدخل اسم الشركة الفرعية",
+    "noSubcompany": "لا توجد شركة فرعية",
+    "companyRelation": "صلة بالشركة",
+    "companyRelationPlaceholder": "اختر العلاقة مع الشركة",
+    "noRelation": "لا توجد علاقة"
   },
   "search": {
+    "patientName": "اسم المريض",
     "selectDoctor": "اختر الطبيب",
     "lastVisit": "آخر زيارة",
     "lastDoctor": "آخر طبيب",
     "createVisitFromThis": "إنشاء زيارة لهذا المريض",
-    "visitCreatedSuccess": "تم إنشاء زيارة جديدة للمريض: {{patientName}} بنجاح."
+    "visitCreatedSuccess": "تم إنشاء زيارة جديدة للمريض: {{patientName}} بنجاح.",
+    "noHistoryFound": "لم يتم العثور على سجل سابق"
   },
   "insuranceDetailsSectionTitle": "تفاصيل التأمين",
   "subcompany": {

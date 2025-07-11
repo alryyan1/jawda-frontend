@@ -193,7 +193,9 @@
     "patientDataUnavailable": "بيانات المريض غير متاحة",
     "previewFailed": "فشل في معاينة التغييرات",
     "updateFailed": "فشل في التحديث",
-    "printFailed": "فشل في الطباعة"
+    "printFailed": "فشل في الطباعة",
+    "pdfGenerationFailed": "فشل في إنشاء ملف PDF",
+    "paymentFailed": "فشل في الدفع"
   },
   "save": "حفظ",
   "id": "م",

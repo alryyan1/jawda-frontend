@@ -35,7 +35,9 @@
     "noPermissions": "You do not have permission to perform this action",
     "previewFailed": "Failed to preview changes",
     "updateFailed": "Failed to update",
-    "printFailed": "Failed to print"
+    "printFailed": "Failed to print",
+    "pdfGenerationFailed": "Failed to generate PDF",
+    "paymentFailed": "Payment failed"
   },
   "validation": {
     "required": "{{field}} is required.",

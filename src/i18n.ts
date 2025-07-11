@@ -14,6 +14,7 @@ export const namespaces = [
   'attendance', // Added attendance
   'settings',   // Added settings
   'filters',
+  
   // Add other namespaces like 'review' if needed
 ] as const;
 export type Namespace = typeof namespaces[number];

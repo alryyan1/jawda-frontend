@@ -12,13 +12,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import {
   Loader2,
@@ -30,6 +23,8 @@ import {
   Save,
   Settings2,
   PackageOpen,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -95,6 +90,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
     discount_per: 0,
     endurance: 0,
   });
+  const [expandedRowId, setExpandedRowId] = useState<number | null>(null);
 
   const [isManageServiceCostsDialogOpen, setIsManageServiceCostsDialogOpen] = useState(false);
   const [selectedRequestedServiceForCosts, setSelectedRequestedServiceForCosts] = useState<RequestedService | null>(null);
@@ -135,7 +131,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
       setCurrentEditData({ count: 1, discount_per: 0, endurance: 0 });
     },
     onError: (error: AxiosError) =>
-      toast.error(error.response?.data?.message || t("common:error.updateFailed")),
+      toast.error((error.response?.data as { message?: string })?.message || t("common:error.updateFailed")),
   });
 
   const removeMutation = useMutation({
@@ -156,7 +152,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
     onError: (error: AxiosError) =>
      {
       console.log(error,'error')
-      toast.error(error.response?.data?.message || t("common:error.requestFailed"))
+      toast.error((error.response?.data as { message?: string })?.message || t("common:error.requestFailed"))
      }
   });
 
@@ -202,7 +198,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
     setSelectedRequestedServiceForCosts(null);
   };
 
-  const discountOptions = Array.from({ length: 11 }, (_, i) => i * 10);
+
 
   const calculateItemBalance = (
     rs: RequestedService,
@@ -271,265 +267,211 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                     {t("services:table.price")}
                   </TableHead>
                   <TableHead className="text-center w-[90px]">
-                    {t("services:table.count")}
-                  </TableHead>
-                  {!isCompanyPatient && (
-                    <TableHead className="text-center w-[130px]">
-                      {t("services:table.discountPercentage")}
-                    </TableHead>
-                  )}
-                  {isCompanyPatient && (
-                    <TableHead className="text-center w-[100px]">
-                      {t("services:table.endurance")}
-                    </TableHead>
-                  )}
-                 
-                    <TableHead className="text-center w-[90px]">
-                      {t("services:table.totalItemPrice")}
-                    </TableHead>
-                  
-                  <TableHead className="text-center w-[90px]">
                     {t("services:table.amountPaid")}
                   </TableHead>
-                  {!isCompanyPatient && (
-                    <TableHead className="text-center w-[90px]">
-                      {t("services:table.balance")}
-                    </TableHead>
-                  )}
-                  <TableHead className="text-right w-[130px]">
-                    {t("common:actions.openMenu")}
+                  <TableHead className="text-center w-[60px]">
+                    {t("payments:pay")}
                   </TableHead>
+                  <TableHead className="text-center w-[40px]"> </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {requestedServices.map((rs) => {
                   const isEditingThisRow = editingRowId === rs.id;
-                  const balance = calculateItemBalance(
-                    rs,
-                    isEditingThisRow ? currentEditData : undefined
-                  );
+                  const isExpanded = expandedRowId === rs.id;
                   const price = Number(rs.price) || 0;
-                  const count = isEditingThisRow
-                    ? currentEditData.count
-                    : Number(rs.count) || 1;
-                  let discountPer = 0;
-                  if (!isCompanyPatient) {
-                    discountPer = isEditingThisRow
-                      ? currentEditData.discount_per
-                      : Number(rs.discount_per) || 0;
-                  }
-                  const fixedDiscount = Number(rs.discount) || 0;
-                  const subTotal = price * count;
-                  const discountAmountFromPercentage =
-                    (subTotal * discountPer) / 100;
-                  const totalItemDiscount =
-                    discountAmountFromPercentage + fixedDiscount;
-                  let endurance = 0;
-                  if (isCompanyPatient) {
-                    endurance =
-                      isEditingThisRow &&
-                      currentEditData.endurance !== undefined
-                        ? currentEditData.endurance
-                        : Number(rs.endurance * rs.count) || 0;
-                  }
-                  const netPrice = subTotal - totalItemDiscount - endurance;
-
                   return (
-                    <TableRow
-                      key={rs.id}
-                      className={
-                        isEditingThisRow ? "bg-muted/30 dark:bg-muted/20" : ""
-                      }
-                    >
-                      <TableCell className="py-2 font-medium text-center">
-                        {rs.service?.name || t("common:unknownService")}
-                        {rs.service?.service_group?.name && (
-                          <span className="block text-muted-foreground text-[10px]">
-                            ({rs.service.service_group.name})
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center py-2">
-                        {formatNumber(price)}
-                      </TableCell>
-                      <TableCell className="text-center py-2">
-                        {isEditingThisRow ? (
-                          <Input
-                            type="number"
-                            min="1"
-                            value={currentEditData.count}
-                            onChange={(e) =>
-                              setCurrentEditData((d) => ({
-                                ...d,
-                                count: parseInt(e.target.value) || 1,
-                              }))
-                            }
-                            className="h-7 w-16 mx-auto text-xs px-1"
-                          />
-                        ) : (
-                          count
-                        )}
-                      </TableCell>
-                      {!isCompanyPatient && (
-                        <TableCell className="text-center py-2">
-                          {isEditingThisRow ? (
-                            <Select
-                              value={String(currentEditData.discount_per)}
-                              onValueChange={(val) =>
-                                setCurrentEditData((d) => ({
-                                  ...d,
-                                  discount_per: parseInt(val),
-                                }))
-                              }
-                              dir={i18n.dir()}
-                            >
-                              <SelectTrigger className="h-7 w-24 mx-auto text-xs px-1">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {discountOptions.map((opt) => (
-                                  <SelectItem key={opt} value={String(opt)}>
-                                    {opt}%
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          ) : (
-                            `${discountPer}%`
+                    <React.Fragment key={rs.id}>
+                      <TableRow
+                        className={isEditingThisRow ? "bg-muted/30 dark:bg-muted/20" : ""}
+                      >
+                        <TableCell className="py-2 font-medium text-center">
+                          {rs.service?.name || t("common:unknownService")}
+                          {rs.service?.service_group?.name && (
+                            <span className="block text-muted-foreground text-[10px]">
+                              ({rs.service.service_group.name})
+                            </span>
                           )}
                         </TableCell>
-                      )}
-                      {isCompanyPatient && (
                         <TableCell className="text-center py-2">
-                          {isEditingThisRow ? (
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={currentEditData.endurance ?? ""}
-                              onChange={(e) =>
-                                setCurrentEditData((d) => ({
-                                  ...d,
-                                  endurance: parseFloat(e.target.value) || 0,
-                                }))
-                              }
-                              className="h-7 w-20 mx-auto text-xs px-1"
-                            />
-                          ) : (
-                            formatNumber(endurance)
-                          )}
+                          {formatNumber(price)}
                         </TableCell>
-                      )}
-                    
-                        <TableCell className="text-center py-2 font-semibold">
-                          {formatNumber(netPrice)}
+                        <TableCell className="text-center py-2 text-green-600 dark:text-green-500">
+                          {formatNumber(rs.amount_paid)}
                         </TableCell>
-                      
-                      <TableCell className="text-center py-2 text-green-600 dark:text-green-500">
-                        {formatNumber(rs.amount_paid)}
-                      </TableCell>
-                      {!isCompanyPatient && (
-                        <TableCell
-                          className={`text-center py-2 font-semibold ${
-                            balance > 0.009
-                              ? "text-red-600 dark:text-red-500"
-                              : "text-green-600 dark:text-green-500"
-                          }`}
-                        >
-                          {formatNumber(balance)}
+                        <TableCell className="text-center py-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setPayingService(rs)}
+                            disabled={!currentClinicShiftId}
+                          >
+                            <DollarSign className="h-3 w-3 ltr:mr-1 rtl:ml-1" />
+                            {t("payments:pay")}
+                          </Button>
                         </TableCell>
-                      )}
-                      <TableCell className="text-right py-2">
-                        <div className="flex gap-0.5 justify-end">
-                          {isEditingThisRow ? (
-                            <>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={() => handleSaveEdit(rs.id)}
-                                disabled={
-                                  updateMutation.isPending &&
-                                  updateMutation.variables?.rsId === rs.id
-                                }
-                                className="h-7 w-7"
-                              >
-                                {updateMutation.isPending &&
-                                updateMutation.variables?.rsId === rs.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <Save className="h-4 w-4 text-green-600" />
+                        <TableCell className="text-center py-2">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => setExpandedRowId(isExpanded ? null : rs.id)}
+                            aria-label={isExpanded ? t("common:collapse") : t("common:expand")}
+                          >
+                            {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                      {isExpanded && (
+                        <TableRow>
+                          <TableCell colSpan={5} className="bg-muted/10 p-3">
+                            <div className="space-y-4">
+                              {/* Details Section */}
+                              <div className="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                  <span className="font-semibold">{t("services:table.count")}:</span> {rs.count}
+                                </div>
+                                {!isCompanyPatient && (
+                                  <div>
+                                    <span className="font-semibold">{t("services:table.discountPercentage")}:</span> {rs.discount_per}%
+                                  </div>
                                 )}
-                              </Button>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={handleCancelEdit}
-                                className="h-7 w-7"
-                              >
-                                <XCircle className="h-4 w-4 text-slate-500" />
-                              </Button>
-                            </>
-                          ) : (
-                            <>
-                              {balance > 0.009 && !rs.done && (
+                                {isCompanyPatient && (
+                                  <div>
+                                    <span className="font-semibold">{t("services:table.endurance")}:</span> {formatNumber(rs.endurance)}
+                                  </div>
+                                )}
+                                <div>
+                                  <span className="font-semibold">{t("services:table.totalItemPrice")}:</span> {formatNumber(Number(rs.price) * Number(rs.count))}
+                                </div>
+                                <div>
+                                  <span className="font-semibold">{t("services:table.balance")}:</span> {formatNumber(calculateItemBalance(rs))}
+                                </div>
+                              </div>
+
+                              {/* Action Buttons */}
+                              <div className="flex flex-wrap gap-2">
+                                {/* Edit Button */}
                                 <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  onClick={() => {
-                                    setPayingService(rs);
-                                    // handlePrintReceipt();
-                                  }}
-                                  className="h-7 w-7 text-green-600 hover:text-green-700"
-                                  title={t("common:pay")}
-                                >
-                                  <DollarSign className="h-4 w-4" />
-                                </Button>
-                              )}
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={() => handleManageServiceCosts(rs)}
-                                className="h-7 w-7"
-                                title={t("services:manageCostsButton")}
-                              >
-                                <Settings2 className="h-4 w-4" />
-                              </Button>
-                              {/* {!rs.is_paid && !rs.done && ( */}
-                              <>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
+                                  size="sm"
+                                  variant="outline"
                                   onClick={() => handleEdit(rs)}
-                                  className="h-7 w-7"
+                                  disabled={editingRowId !== null}
                                 >
-                                  <Edit className="h-4 w-4" />
+                                  <Edit className="h-3 w-3 ltr:mr-1 rtl:ml-1" />
+                                  {t("common:edit")}
                                 </Button>
+
+                                {/* Manage Costs Button */}
                                 <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  onClick={() => setServiceToDelete(rs.id)}
-                                  className="h-7 w-7 text-destructive hover:text-destructive"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleManageServiceCosts(rs)}
                                 >
-                                  <Trash2 className="h-4 w-4" />
+                                  <Settings2 className="h-3 w-3 ltr:mr-1 rtl:ml-1" />
+                                  {t("services:manageCosts")}
                                 </Button>
-                              </>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={() => handleManageDeposits(rs)}
-                                className="h-7 w-7"
-                                title={t(
-                                  "payments:manageDepositsDialog.triggerButtonTooltip"
-                                )}
-                              >
-                                <PackageOpen  className="h-4 w-4 text-blue-600" />{" "}
-                                {/* Example Icon */}
-                              </Button>
-                              {/* )} */}
-                            </>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
+
+                                {/* Manage Deposits Button */}
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleManageDeposits(rs)}
+                                >
+                                  <PackageOpen className="h-3 w-3 ltr:mr-1 rtl:ml-1" />
+                                  {t("services:manageDeposits")}
+                                </Button>
+
+                                {/* Delete Button */}
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => setServiceToDelete(rs.id)}
+                                >
+                                  <Trash2 className="h-3 w-3 ltr:mr-1 rtl:ml-1" />
+                                  {t("common:delete")}
+                                </Button>
+                              </div>
+
+                              {/* Edit Form (when editing) */}
+                              {isEditingThisRow && (
+                                <div className="border rounded-lg p-3 bg-background">
+                                  <div className="grid grid-cols-2 gap-3">
+                                    {/* Count Input */}
+                                    <div>
+                                      <label className="text-xs font-medium">
+                                        {t("services:table.count")}
+                                      </label>
+                                      <Input
+                                        type="number"
+                                        min="1"
+                                        value={currentEditData.count}
+                                        onChange={(e) =>
+                                          setCurrentEditData({
+                                            ...currentEditData,
+                                            count: parseInt(e.target.value) || 1,
+                                          })
+                                        }
+                                        className="h-8 text-xs"
+                                      />
+                                    </div>
+
+                                    {/* Discount/Endurance Input */}
+                                    <div>
+                                      <label className="text-xs font-medium">
+                                        {isCompanyPatient
+                                          ? t("services:table.endurance")
+                                          : t("services:table.discountPercentage")}
+                                      </label>
+                                      <Input
+                                        type="number"
+                                        min="0"
+                                        value={
+                                          isCompanyPatient
+                                            ? currentEditData.endurance
+                                            : currentEditData.discount_per
+                                        }
+                                        onChange={(e) =>
+                                          setCurrentEditData({
+                                            ...currentEditData,
+                                            [isCompanyPatient ? "endurance" : "discount_per"]:
+                                              parseFloat(e.target.value) || 0,
+                                          })
+                                        }
+                                        className="h-8 text-xs"
+                                      />
+                                    </div>
+                                  </div>
+
+                                  {/* Save/Cancel Buttons */}
+                                  <div className="flex gap-2 mt-3">
+                                    <Button
+                                      size="sm"
+                                      onClick={() => handleSaveEdit(rs.id)}
+                                      disabled={updateMutation.isPending}
+                                    >
+                                      {updateMutation.isPending ? (
+                                        <Loader2 className="h-3 w-3 animate-spin ltr:mr-1 rtl:ml-1" />
+                                      ) : (
+                                        <Save className="h-3 w-3 ltr:mr-1 rtl:ml-1" />
+                                      )}
+                                      {t("common:save")}
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={handleCancelEdit}
+                                    >
+                                      <XCircle className="h-3 w-3 ltr:mr-1 rtl:ml-1" />
+                                      {t("common:cancel")}
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </React.Fragment>
                   );
                 })}
               </TableBody>

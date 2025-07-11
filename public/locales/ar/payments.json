@@ -73,6 +73,9 @@
     "netPayableByPatient": "الصافي على المريض",
     "totalPaidByPatient": "المدفوع من المريض",
     "balanceDueFromPatient": "المتبقي على المريض"
-  }
+  },
+  "payAll": "تسديد الكل",
+  "allPaymentsProcessed": "تم تسديد جميع المدفوعات بنجاح",
+  "noUnpaidServices": "لا توجد خدمات غير مدفوعة"
     
 }

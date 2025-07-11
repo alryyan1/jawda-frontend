@@ -61,5 +61,8 @@
   "paid": "Paid",
   "pending": "Pending",
   "confirmDirectPayLab": "Are you sure you want to pay all lab dues?",
-  "confirmDirectPayLabItem": "Are you sure you want to pay for test '{{testName}}'?"
+  "confirmDirectPayLabItem": "Are you sure you want to pay for test '{{testName}}'?",
+  "payAll": "Pay All",
+  "allPaymentsProcessed": "All payments processed successfully",
+  "noUnpaidServices": "No unpaid services found"
 } 

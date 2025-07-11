@@ -16,6 +16,7 @@ import type { Patient } from '@/types/patients'; // Or your more specific Active
 import type { DoctorShift } from '@/types/doctors'; // Assuming a DoctorShift type for Tabs
 import ActionsPane from './ActionsPane';
 import SelectedPatientWorkspace from './SelectedPatientWorkspace';
+import PatientDetailsColumnClinic from './PatientDetailsColumnClinic';
 import DoctorFinderDialog from './dialogs/DoctorFinderDialog';
 import { toast } from 'sonner';
 import { getDoctorVisitById } from '@/services/visitService';
@@ -92,8 +93,8 @@ useEffect(() => {
   // Dynamic grid layout based on visibility states
   // This uses CSS Grid for flexible layout
   const gridTemplateColumns = showRegistrationForm 
-    ? (isRTL ? "60px 380px minmax(350px, 1.5fr) auto" : "auto minmax(350px, 1.5fr) 380px 60px")
-    : (isRTL ? "60px 380px auto" : "auto 380px 60px");
+    ? (isRTL ? "60px 390px minmax(365px, 1fr) minmax(0, 1fr) 320px" : "320px minmax(0, 1fr) minmax(365px, 1fr) minmax(0, 1fr) 60px")
+    : (isRTL ? "60px 390px minmax(0, 1fr) 320px" : "320px minmax(0, 1fr) minmax(0, 1fr) 60px");
 // NEW: Mutation/Handler for searching by Visit ID
 const findVisitByIdMutation = useMutation({
   mutationFn: (id: number) => getDoctorVisitById(id),
@@ -131,10 +132,10 @@ const handleSearchByVisitId = () => {
 
 
   return (
-    <div className="flex flex-col h-screen bg-muted/20 dark:bg-background"> {/* Full screen height */}
+    <div className="flex flex-col bg-muted/20 dark:bg-background w-full max-w-[100vw] overflow-x-hidden">
       {/* Top Section: Doctors Tabs Only */}
       <header className="flex-shrink-0 h-[100px] p-3 border-b bg-card flex items-center">
-        <div style={{width:`${window.innerWidth-140}px`}} className="overflow-hidden">
+        <div className="overflow-hidden w-full">
           <DoctorsTabs 
             setSelectedPatientVisit={setSelectedPatientVisit}
             onShiftSelect={onShiftSelect} 
@@ -142,60 +143,52 @@ const handleSearchByVisitId = () => {
           />
         </div>
       </header>
-
       {/* Main Content Area: Actions, Form, Patient List, Selected Patient Workspace */}
-      {/* Using CSS Grid for layout */}
-      <div 
+      <div
         className={cn(
-            "flex-grow grid gap-0 overflow-hidden",
-            // Base layout for LTR. Adjust fr units as needed.
-            // "grid-cols-[auto_minmax(350px,1.5fr)_2fr_1fr]",
-            // "[column-gap:0px] [row-gap:0px]"
+          "flex-grow h-[calc(100vh-100px)] min-h-0 grid gap-4 overflow-x-hidden overflow-y-hidden w-full max-w-full"
         )}
-        style={{ gridTemplateColumns }}
+        style={{
+          gridTemplateColumns,
+          minWidth: 0,
+        }}
       >
         {/* Section 1: Actions Pane (Fixed width, always visible) */}
-         <ActionsPane 
-            showRegistrationForm={showRegistrationForm}
-            onToggleRegistrationForm={toggleRegistrationForm}
-            onOpenDoctorFinderDialog={() => setIsDoctorFinderDialogOpen(true)}
-            onDoctorShiftSelectedFromFinder={handleDoctorShiftSelectedFromFinder}
+        <ActionsPane
+          showRegistrationForm={showRegistrationForm}
+          onToggleRegistrationForm={toggleRegistrationForm}
+          onOpenDoctorFinderDialog={() => setIsDoctorFinderDialogOpen(true)}
+          onDoctorShiftSelectedFromFinder={handleDoctorShiftSelectedFromFinder}
         />
-
-
         {/* Section 2: Patient Registration Form Panel (Conditional Visibility) */}
         {showRegistrationForm && (
-          <section 
+          <section
             className={cn(
-                "bg-background border-border p-4 overflow-y-auto h-full shadow-lg",
-                isRTL ? "border-l order-2" : "border-r order-1"
+              "bg-background border-border p-4 overflow-y-auto h-full shadow-lg w-full max-w-full min-w-0",
+              isRTL ? "border-l order-2" : "border-r order-1"
             )}
           >
-             <div className="sticky top-0 bg-background z-10 pt-1 pb-3 mb-3 -mx-4 px-4 border-b">
-                <h2 className="text-lg font-semibold text-foreground">
+            <div className="sticky top-0 bg-background z-10 pt-1 pb-3 mb-3 -mx-4 px-4 border-b">
+              <h2 className="text-lg font-semibold text-foreground">
                 {t('clinic:patientRegistration.title')}
-                </h2>
+              </h2>
             </div>
             <PatientRegistrationForm isVisible={showRegistrationForm} activeDoctorShift={activeDoctorShift} onPatientRegistered={handlePatientRegistered} />
           </section>
         )}
-
         {/* Section 3: Active Patients List Panel */}
-        <section 
-            className={cn(
-                "p-4 overflow-y-auto h-full bg-muted/40",
-                isRTL ? (showRegistrationForm ? "order-3" : "order-2") : (showRegistrationForm ? "order-2" : "order-2"),
-            )}
+        <section
+          className={cn(
+            "p-4 overflow-y-auto h-full bg-muted/40 w-full max-w-full min-w-0",
+            isRTL ? (showRegistrationForm ? "order-3" : "order-2") : (showRegistrationForm ? "order-2" : "order-2"),
+          )}
         >
           <div className="sticky top-0 bg-muted/40 dark:bg-background z-10 pt-1 pb-3 mb-3 -mx-4 px-4 border-b">
             <div className="flex items-center justify-between gap-4 mb-3">
               <h2 className="text-lg font-semibold text-foreground">
                 {t('clinic:workspace.title')}
               </h2>
-              
-              {/* Search Inputs moved here - horizontal layout */}
               <div className="flex gap-2 flex-1 max-w-md">
-                {/* Patient Search Input */}
                 <div className="relative flex-1">
                   <Search className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -206,8 +199,6 @@ const handleSearchByVisitId = () => {
                     className="ps-10 rtl:pr-10 h-9 text-sm"
                   />
                 </div>
-                
-                {/* Visit ID Search Input */}
                 <div className="relative w-32">
                   <Input
                     type="number"
@@ -224,39 +215,67 @@ const handleSearchByVisitId = () => {
               </div>
             </div>
           </div>
-          
           <ActivePatientsList
             onPatientSelect={handlePatientSelected}
             selectedPatientVisitId={selectedPatientVisit?.visitId || null}
-            doctorShiftId={activeDoctorShift?.id || null} // Pass active doctor/shift to filter patients
-            globalSearchTerm={globalSearchTerm} // Pass search term
+            doctorShiftId={activeDoctorShift?.id || null}
+            globalSearchTerm={globalSearchTerm}
           />
         </section>
-
         {/* Section 4: Selected Patient Workspace (Conditional Visibility) */}
         {selectedPatientVisit && !showRegistrationForm && (
-          <section 
+          <section
             className={cn(
-                "bg-white dark:bg-card border-border p-4 overflow-y-auto h-full shadow-lg",
-                isRTL ? "border-r order-4" : "border-l order-3"
+              "bg-white dark:bg-card border-border p-4 overflow-y-auto h-full shadow-lg w-full max-w-full min-w-0",
+              isRTL ? "border-r order-4" : "border-l order-3"
             )}
           >
             <SelectedPatientWorkspace
-              selectedPatientVisit={selectedPatientVisit as any}
+              selectedPatientVisit={{
+                id: selectedPatientVisit.visitId,
+                patient_id: selectedPatientVisit.patient.id,
+                doctor_id: activeDoctorShift?.doctor_id || 0,
+                user_id: 0,
+                shift_id: 0,
+                visit_date: new Date().toISOString().split('T')[0],
+                status: 'waiting',
+                number: selectedPatientVisit.visitId,
+                is_new: false,
+                only_lab: false,
+                patient: selectedPatientVisit.patient,
+                doctor: activeDoctorShift ? { id: activeDoctorShift.doctor_id || 0, name: activeDoctorShift.doctor_name || '' } : undefined,
+                requested_services: [],
+                requested_services_count: 0,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              }}
               initialPatient={selectedPatientVisit.patient}
               visitId={selectedPatientVisit.visitId}
-              onClose={() => setSelectedPatientVisit(null)} // Optional: way to close this panel
+              onClose={() => setSelectedPatientVisit(null)}
             />
-      
           </section>
         )}
+        {/* Section 5: Patient Details Column (Always visible) */}
+        <section
+          className={cn(
+            "bg-card border-border overflow-y-auto h-full shadow-lg w-full max-w-full min-w-0",
+            isRTL ? "border-l order-5" : "border-r order-4"
+          )}
+        >
+          <PatientDetailsColumnClinic
+            visitId={selectedPatientVisit?.visitId || null}
+            currentClinicShiftId={activeDoctorShift?.id || null}
+            onPrintReceipt={() => {
+              console.log('Print receipt for visit:', selectedPatientVisit?.visitId);
+            }}
+          />
+        </section>
       </div>
       <DoctorFinderDialog
         isOpen={isDoctorFinderDialogOpen}
         onOpenChange={setIsDoctorFinderDialogOpen}
         onDoctorShiftSelect={handleDoctorShiftSelectedFromFinder}
       />
-      {/* Toaster for notifications */}
     </div>
   );
 };

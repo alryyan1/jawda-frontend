@@ -43,5 +43,18 @@
     "phoneMaxLength": "Phone number must not exceed {{count}} digits.",
     "phoneNumeric": "Phone number must contain only digits.",
     "noDoctorSelectedError": "Please select a doctor from above."
-  }
+  },
+  "selectPatientToViewDetails": "Select a patient to view details",
+  "visitNotFound": "Visit not found",
+  "doctor": "Doctor",
+  "phone": "Phone",
+  "date": "Date",
+  "visitNumber": "Visit #",
+  "registeredBy": "Registered by",
+  "requestedServices": "Requested Services",
+  "total": "Total",
+  "paid": "Paid",
+  "balance": "Balance",
+  "viewReceipt": "View Receipt",
+  "receiptPreview": "Receipt Preview"
 } 

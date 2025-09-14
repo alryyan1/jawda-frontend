@@ -22,7 +22,6 @@ const ClinicPage: React.FC = () => {
   const [showRegistrationForm, setShowRegistrationForm] = useState(true);
   const [selectedPatientVisit, setSelectedPatientVisit] = useState<{ patient: Patient; visitId: number } | null>(null);
   const [activeDoctorShift, setActiveDoctorShift] = useState<DoctorShift | null>(null); // For DoctorsTabs interaction
-  // const [globalSearchTerm, setGlobalSearchTerm] = useState(''); // For patient search - not used yet
  // NEW CALLBACK for DoctorFinderDialog
 // NEW: State for DoctorFinderDialog visibility, now controlled by F9 too
 const [isDoctorFinderDialogOpen, setIsDoctorFinderDialogOpen] = useState(false);
@@ -120,7 +119,6 @@ useEffect(() => {
             onPatientSelect={handlePatientSelected}
             selectedPatientVisitId={selectedPatientVisit?.visitId || null}
             doctorShiftId={activeDoctorShift?.id || null}
-            currentClinicShiftId={activeDoctorShift?.id || null}
           />
         </section>
 

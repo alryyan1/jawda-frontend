@@ -1,10 +1,7 @@
 // src/components/clinic/AddCompanyRelationDialog.tsx
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import type { SubmitHandler } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { useTranslation } from "react-i18next";
+
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -49,11 +46,6 @@ interface CompanyRelationFormValues {
   service_endurance: string;
 }
 
-const relationSchema = z.object({
-  name: z.string().min(1),
-  lab_endurance: z.string().min(1),
-  service_endurance: z.string().min(1),
-}) satisfies z.ZodType<CompanyRelationFormValues>;
 
 const AddCompanyRelationDialog: React.FC<AddCompanyRelationDialogProps> = ({
   companyId,
@@ -64,7 +56,6 @@ const AddCompanyRelationDialog: React.FC<AddCompanyRelationDialogProps> = ({
   open,
   onOpenChange,
 }) => {
-  const { t } = useTranslation(["patients", "common"]);
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -73,7 +64,6 @@ const AddCompanyRelationDialog: React.FC<AddCompanyRelationDialogProps> = ({
   const setDialogOpen = onOpenChange ?? setIsOpen;
 
   const form = useForm<CompanyRelationFormValues>({
-    resolver: zodResolver(relationSchema),
     defaultValues: {
       name: "",
       lab_endurance: "0",
@@ -94,7 +84,7 @@ const AddCompanyRelationDialog: React.FC<AddCompanyRelationDialogProps> = ({
       return result;
     },
     onSuccess: (newRelation) => {
-      toast.success(t("patients:relation.addedSuccess"));
+      toast.success("تم إضافة العلاقة بنجاح");
       queryClient.invalidateQueries({
         queryKey: ["companyRelationsList", companyId],
       });
@@ -105,16 +95,14 @@ const AddCompanyRelationDialog: React.FC<AddCompanyRelationDialogProps> = ({
     onError: (error: Error & { response?: { data?: { message?: string } } }) => {
       toast.error(
         error.response?.data?.message ||
-          t("common:error.saveFailed", {
-            entity: t("patients:fields.companyRelation"),
-          })
+          "فشل في الحفظ"
       );
     },
   });
 
-  const onSubmit: SubmitHandler<CompanyRelationFormValues> = (data) => {
+  const onSubmit = (data: CompanyRelationFormValues) => {
     if (!companyId) {
-      toast.error(t("patients:relation.parentCompanyRequiredError"));
+      toast.error("يرجى تحديد الشركة الأم أولاً");
       return;
     }
     mutation.mutate(data);
@@ -130,12 +118,12 @@ const AddCompanyRelationDialog: React.FC<AddCompanyRelationDialogProps> = ({
       variant="ghost"
       size="icon"
       className="h-7 w-7 shrink-0 disabled:opacity-50"
-      aria-label={t("patients:relation.addButton")}
+      aria-label={"إضافة علاقة"}
       disabled={disabled || !companyId}
       title={
         !companyId
-          ? t("patients:relation.selectParentCompanyFirst")
-          : t("patients:relation.addButton")
+          ? "يرجى تحديد الشركة الأم أولاً"
+          : "إضافة علاقة"
       }
     >
       <PlusCircle className="h-3.5 w-3.5" />
@@ -150,11 +138,11 @@ const AddCompanyRelationDialog: React.FC<AddCompanyRelationDialogProps> = ({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {t("patients:relation.addDialogTitle")}{" "}
+            {"إضافة علاقة جديدة"}{" "}
             {companyName && `(${companyName})`}
           </DialogTitle>
           <DialogDescription>
-            {t("patients:relation.addDialogDescription")}
+            {"أدخل تفاصيل العلاقة الجديدة"}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -167,7 +155,7 @@ const AddCompanyRelationDialog: React.FC<AddCompanyRelationDialogProps> = ({
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("patients:fields.relationName")}</FormLabel>
+                  <FormLabel>{"اسم العلاقة"}</FormLabel>
                   <FormControl>
                     <Input {...field} />
                   </FormControl>
@@ -182,7 +170,7 @@ const AddCompanyRelationDialog: React.FC<AddCompanyRelationDialogProps> = ({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      {t("patients:fields.labEnduranceShort")}
+                      {"تحمل المختبر"}
                     </FormLabel>
                     <FormControl>
                       <Input type="number" step="0.01" {...field} />
@@ -197,7 +185,7 @@ const AddCompanyRelationDialog: React.FC<AddCompanyRelationDialogProps> = ({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      {t("patients:fields.serviceEnduranceShort")}
+                      {"تحمل الخدمة"}
                     </FormLabel>
                     <FormControl>
                       <Input type="number" step="0.01" {...field} />
@@ -214,14 +202,14 @@ const AddCompanyRelationDialog: React.FC<AddCompanyRelationDialogProps> = ({
                   variant="outline"
                   disabled={mutation.isPending}
                 >
-                  {t("common:cancel")}
+                  {"إلغاء"}
                 </Button>
               </DialogClose>
               <Button type="submit" disabled={mutation.isPending || !companyId}>
                 {mutation.isPending && (
                   <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />
                 )}
-                {t("common:add")}
+                {"إضافة"}
               </Button>
             </DialogFooter>
           </form>

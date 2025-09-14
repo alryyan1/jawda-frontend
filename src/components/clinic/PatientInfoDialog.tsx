@@ -1,7 +1,7 @@
 // src/components/clinic/PatientInfoDialog.tsx
 import React, { useState } from "react"; // Added useState
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
+
 import { format, parseISO } from "date-fns";
 import { arSA, enUS } from "date-fns/locale";
 
@@ -47,7 +47,6 @@ const DetailRowDisplay: React.FC<{
   icon?: React.ElementType;
   titleValue?: string;
 }> = ({ label, value, icon: Icon, titleValue }) => {
-  const { t } = useTranslation("common");
   return (
     <div className="grid grid-cols-[24px_1fr] items-start gap-x-3 py-1.5">
       {Icon ? (
@@ -69,8 +68,8 @@ const DetailRowDisplay: React.FC<{
           {value || value === 0 ? (
             value
           ) : (
-            <span className="text-xs italic text-slate-400 dark:text-slate-500">
-              {t("notAvailable_short")}
+            <span className="text-xs italic text-slate-400 ">
+              غير متوفر
             </span>
           )}
         </p>
@@ -84,8 +83,7 @@ const PatientInfoDialog: React.FC<PatientInfoDialogProps> = ({
   onOpenChange,
   visit,
 }) => {
-  const { t, i18n } = useTranslation(["clinic", "common", "patients"]);
-  const dateLocale = i18n.language.startsWith("ar") ? arSA : enUS;
+  const dateLocale = "ar".startsWith("ar") ? arSA : enUS;
   const queryClient = useQueryClient();
 
   // NEW: State for Edit Dialog
@@ -106,20 +104,20 @@ const PatientInfoDialog: React.FC<PatientInfoDialogProps> = ({
   });
 
   const getAgeString = (p?: Patient | null): string => {
-    if (!p) return t("common:notAvailable_short");
+    if (!p) return "غير متوفر";
     const parts = [];
     if (p.age_year !== null && p.age_year !== undefined && p.age_year >= 0)
-      parts.push(`${p.age_year}${t("common:years_shortInitial")}`);
+      parts.push(`${p.age_year} سنة`);
     if (p.age_month !== null && p.age_month !== undefined && p.age_month >= 0)
-      parts.push(`${p.age_month}${t("common:months_shortInitial")}`);
+      parts.push(`${p.age_month} شهر`);
     if (p.age_day !== null && p.age_day !== undefined && p.age_day >= 0)
-      parts.push(`${p.age_day}${t("common:days_shortInitial")}`);
+      parts.push(`${p.age_day} يوم`);
     if (
       parts.length === 0 &&
       (p.age_year === 0 || p.age_month === 0 || p.age_day === 0)
     )
-      return `0${t("common:days_shortInitial")}`;
-    return parts.length > 0 ? parts.join(" ") : t("common:notAvailable_short");
+      return "0 يوم";
+    return parts.length > 0 ? parts.join(" ") : "غير متوفر";
   };
 
   const handlePatientInfoUpdated = (updatedPatient: Patient) => {
@@ -155,7 +153,7 @@ const PatientInfoDialog: React.FC<PatientInfoDialogProps> = ({
                 </div>
                 <div>
                   <DialogTitle className="text-lg font-semibold">
-                    {t("patients:details.title")}
+                    تفاصيل المريض
                   </DialogTitle>
                   {patient && (
                     <DialogDescription className="text-sm text-muted-foreground">
@@ -168,7 +166,7 @@ const PatientInfoDialog: React.FC<PatientInfoDialogProps> = ({
                 !isLoading && ( // Show edit button only if patient data loaded
                   <Button variant="outline" size="sm" onClick={openEditDialog}>
                     <Edit className="ltr:mr-2 rtl:ml-2 h-3.5 w-3.5" />
-                    {t("common:edit")}
+                    تعديل
                   </Button>
                 )}
             </div>
@@ -178,7 +176,7 @@ const PatientInfoDialog: React.FC<PatientInfoDialogProps> = ({
             <div className="flex flex-col items-center justify-center py-12 space-y-3">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
               <p className="text-sm text-muted-foreground">
-                {t("common:loadingDetails")}
+                جاري تحميل التفاصيل...
               </p>
             </div>
           )}
@@ -190,9 +188,7 @@ const PatientInfoDialog: React.FC<PatientInfoDialogProps> = ({
               </div>
               <div>
                 <p className="font-medium text-destructive">
-                  {t("common:error.fetchFailed", {
-                    entity: t("patients:entityName"),
-                  })}
+                  فشل في جلب تفاصيل المريض
                 </p>
                 <p className="text-xs text-muted-foreground mt-1 max-w-md">
                   {error.message}
@@ -205,40 +201,40 @@ const PatientInfoDialog: React.FC<PatientInfoDialogProps> = ({
             <ScrollArea className="pr-3 -mx-6 px-6 max-h-[calc(90vh-200px)]">
               {" "}
               {/* Max height for scroll area */}
-              <div style={{ direction: i18n.dir() }} className="space-y-4 py-2">
+              <div style={{ direction: true }} className="space-y-4 py-2">
                 <Card className="border-none shadow-none">
                   <CardHeader className="pb-2 pt-0">
                     <CardTitle className="text-base font-medium">
-                      {t("patients:details.personalInfo")}
+                      المعلومات الشخصية
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-0">
                     <DetailRowDisplay
-                      label={t("patients:fields.id")}
+                      label="رقم الهوية"
                       value={visit?.id}
                       icon={IdCard}
                     />
                     <DetailRowDisplay
-                      label={t("patients:fields.name")}
+                      label="الاسم"
                       value={patient.name}
                     />
                     <DetailRowDisplay
-                      label={t("common:phone")}
+                      label="الهاتف"
                       value={patient.phone}
                       icon={Phone}
                     />
                     <DetailRowDisplay
-                      label={t("common:gender")}
-                      value={t(`common:genderEnum.${patient.gender}`)}
+                      label="الجنس"
+                      value={patient.gender === 'male' ? 'ذكر' : patient.gender === 'female' ? 'أنثى' : patient.gender}
                       icon={VenusAndMars}
                     />
                     <DetailRowDisplay
-                      label={t("common:age")}
+                      label="العمر"
                       value={getAgeString(patient)}
                       icon={CalendarDays}
                     />
                     <DetailRowDisplay
-                      label={t("patients:fields.address")}
+                      label="العنوان"
                       value={patient.address}
                       icon={MapPin}
                       titleValue={patient.address || undefined}
@@ -250,35 +246,35 @@ const PatientInfoDialog: React.FC<PatientInfoDialogProps> = ({
                   <Card className="border-none shadow-none">
                     <CardHeader className="pb-2 pt-2">
                       <CardTitle className="text-base font-medium">
-                        {t("patients:details.insuranceInfo")}
+                        معلومات التأمين
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-0">
                       <DetailRowDisplay
-                        label={t("patients:fields.company")}
+                        label="الشركة"
                         value={patient.company?.name}
                         icon={Building}
                       />
                       <DetailRowDisplay
-                        label={t("patients:fields.insuranceNo")}
+                        label="رقم التأمين"
                         value={patient.insurance_no}
                       />
                       <DetailRowDisplay
-                        label={t("patients:fields.subCompany")}
+                        label="الشركة الفرعية"
                         value={patient.subcompany?.name}
                       />
                       <DetailRowDisplay
-                        label={t("patients:fields.relation")}
+                        label="العلاقة"
                         value={patient.company_relation?.name}
                       />
                       <DetailRowDisplay
-                        label={t("patients:fields.guarantor")}
+                        label="الضامن"
                         value={patient.guarantor}
                       />
                       {patient.expire_date && (
                         <DetailRowDisplay
-                          label={t("patients:fields.expiryDate")}
-                          value={format(parseISO(patient.expire_date), "P", {
+                          label="تاريخ الانتهاء"
+                          value={format(visit.visit_date, "P", {
                             locale: dateLocale,
                           })}
                           icon={CalendarDays}
@@ -294,7 +290,7 @@ const PatientInfoDialog: React.FC<PatientInfoDialogProps> = ({
           <DialogFooter className="mt-4">
             <DialogClose asChild>
               <Button type="button" variant="outline" className="min-w-[80px]">
-                {t("common:close")}
+                إغلاق
               </Button>
             </DialogClose>
           </DialogFooter>

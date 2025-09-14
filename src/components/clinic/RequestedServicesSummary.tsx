@@ -19,7 +19,6 @@ const RequestedServicesSummary: React.FC<RequestedServicesSummaryProps> = ({
   visit,
   className,
 }) => {
-  const { t, i18n } = useTranslation(['common', 'payments']);
   const isCompanyPatient = !!visit.patient?.company_id;
 
   const summary = useMemo(() => {
@@ -93,43 +92,43 @@ const RequestedServicesSummary: React.FC<RequestedServicesSummaryProps> = ({
   }
 
   return (
-    <Card style={{ direction: i18n.dir() }} className={`mt-4 shadow-sm ${className}`}>
+    <Card style={{ direction: true }} className={`mt-4 shadow-sm ${className}`}>
       <CardHeader className="py-3">
-        <CardTitle className="text-md">{t('common:financialSummary')}</CardTitle>
+        <CardTitle className="text-md">الملخص المالي</CardTitle>
       </CardHeader>
       <CardContent className="text-sm space-y-1.5 pb-4">
         <div className="flex justify-between">
-          <span>{t('common:summaryLabels.grossTotalServices')}:</span>
+          <span>إجمالي الخدمات:</span>
           <span className="font-semibold">{formatNumber(summary.grossTotal)}</span>
         </div>
         {!isCompanyPatient &&  <div className="flex justify-between">
-          <span>{t('common:summaryLabels.totalDiscount')}:</span>
-          <span className="font-semibold text-orange-600 dark:text-orange-400">
+          <span>إجمالي الخصم:</span>
+          <span className="font-semibold text-orange-600 ">
             -{formatNumber(summary.totalDiscountApplied)}
           </span>
         </div>}
         {isCompanyPatient && summary.totalEnduranceApplied > 0 && (
           <div className="flex justify-between">
-            <span>{t('payments:companyEnduranceTotal')}:</span>
-            <span className="font-semibold text-blue-600 dark:text-blue-400">
+            <span>إجمالي تعاون الشركة:</span>
+            <span className="font-semibold text-blue-600 ">
               -{formatNumber(summary.netTotalAfterDiscountsAndEndurance)}
             </span>
           </div>
         )}
         <Separator className="my-2" />
         <div className="flex justify-between font-medium">
-          <span>{t('common:summaryLabels.netPayableByPatient')}:</span>
+          <span>صافي المبلغ المستحق على المريض:</span>
           <span className="font-semibold">{formatNumber(summary.totalEnduranceApplied)}</span>
         </div>
         <div className="flex justify-between">
-          <span>{t('common:summaryLabels.totalPaidByPatient')}:</span>
-          <span className="font-semibold text-green-600 dark:text-green-500">
+          <span>إجمالي المبلغ المدفوع من المريض:</span>
+          <span className="font-semibold text-green-600 ">
             {formatNumber(summary.totalActuallyPaidByPatient)}
           </span>
         </div>
         <Separator className="my-2" />
-        <div className={`flex justify-between font-bold text-md ${summary.totalEnduranceApplied > 0.009 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-500'}`}>
-          <span>{t('common:summaryLabels.patientBalanceDue')}:</span>
+        <div className={`flex justify-between font-bold text-md ${summary.totalEnduranceApplied > 0.009 ? 'text-red-600 ' : 'text-green-600 '}`}>
+          <span>رصيد المريض المستحق:</span>
           <span>{formatNumber(summary.patientBalanceDue)}</span>
         </div>
       </CardContent>

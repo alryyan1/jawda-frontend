@@ -1,9 +1,6 @@
 // src/components/clinic/ManageRequestedServiceCostsDialog.tsx
 import React, { useEffect, useCallback, useMemo } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -33,20 +30,16 @@ interface RequestedServiceCost {
   amount: number;
 }
 
-// Zod schema for a single requested service cost item
-const requestedServiceCostItemSchema = z.object({
-  id: z.number().optional().nullable(),
-  sub_service_cost_id: z.string().min(1, "Cost type is required."),
-  service_cost_id: z.string().min(1, "Cost definition is required."),
-  amount: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, { message: "Amount must be a positive number." }),
-});
+// Form interfaces
+interface RequestedServiceCostFormItemValues {
+  sub_service_cost_id: string;
+  service_cost_id: string;
+  amount: string;
+}
 
-type RequestedServiceCostFormItemValues = z.infer<typeof requestedServiceCostItemSchema>;
-
-const manageReqServiceCostsSchema = z.object({
-  costs: z.array(requestedServiceCostItemSchema),
-});
-type ManageReqServiceCostsFormValues = z.infer<typeof manageReqServiceCostsSchema>;
+interface ManageReqServiceCostsFormValues {
+  costs: RequestedServiceCostFormItemValues[];
+}
 
 interface ManageRequestedServiceCostsDialogProps {
   isOpen: boolean;
@@ -62,7 +55,6 @@ interface ApiError {
 const ManageRequestedServiceCostsDialog: React.FC<ManageRequestedServiceCostsDialogProps> = ({
   isOpen, onOpenChange, requestedService, onCostsUpdated
 }) => {
-  const { t, i18n } = useTranslation(['services', 'common', 'clinic']);
   const queryClient = useQueryClient();
 
   const reqServiceCostsQueryKey = useMemo(() => 
@@ -99,7 +91,6 @@ const ManageRequestedServiceCostsDialog: React.FC<ManageRequestedServiceCostsDia
   });
 
   const form = useForm<ManageReqServiceCostsFormValues>({
-    resolver: zodResolver(manageReqServiceCostsSchema),
     defaultValues: { costs: [] },
   });
   
@@ -160,10 +151,22 @@ const ManageRequestedServiceCostsDialog: React.FC<ManageRequestedServiceCostsDia
           id: null,
           sub_service_cost_id: String(def.sub_service_cost_id),
           service_cost_id: String(def.id),
-          amount: String(calculateAmount(def).toFixed(2)),
+          amount: String(calculateAmount.toFixed(2)),
         }));
 
-    reset({ costs: formattedCosts });
+    reset({
+      costs: existingReqServiceCosts.length > 0 
+        ? existingReqServiceCosts.map(cost => ({
+            sub_service_cost_id: String(cost.sub_service_cost_id),
+            service_cost_id: String(cost.service_cost_id),
+            amount: String(cost.amount),
+          }))
+        : serviceCostDefinitions.map(def => ({
+            sub_service_cost_id: String(def.sub_service_cost_id),
+            service_cost_id: String(def.id),
+            amount: String(calculateAmount.toFixed(2)),
+          }))
+    });
   }, [isOpen, isLoadingExisting, isLoadingDefinitions, existingReqServiceCosts, serviceCostDefinitions, calculateAmount, reset]);
 
   // Handle definition change
@@ -175,7 +178,7 @@ const ManageRequestedServiceCostsDialog: React.FC<ManageRequestedServiceCostsDia
       return;
     }
 
-    const calculatedAmount = calculateAmount(definition);
+    const calculatedAmount = calculateAmount;
     setValue(`costs.${index}.amount`, calculatedAmount.toFixed(2));
     setValue(`costs.${index}.sub_service_cost_id`, String(definition.sub_service_cost_id));
   }, [serviceCostDefinitions, setValue, calculateAmount]);
@@ -187,26 +190,26 @@ const ManageRequestedServiceCostsDialog: React.FC<ManageRequestedServiceCostsDia
           service_cost_id: parseInt(data.service_cost_id), // The ID of the ServiceCost definition
           amount: parseFloat(data.amount),
       };
-      return createOrUpdateRequestedServiceCost(requestedService.id, data.id, payload); // id is optional for create
+      return createOrUpdateRequestedServiceCost(requestedService.id, payload); // id is optional for create
     },
     onSuccess: (updatedItem, variables) => { 
-      toast.success(variables.id ? t('common:updatedSuccess') : t('common:createdSuccess'));
+      toast.success(variables.id ? "تم تحديث التكلفة بنجاح" : "تم إضافة التكلفة بنجاح");
       queryClient.invalidateQueries({ queryKey: reqServiceCostsQueryKey });
       if(onCostsUpdated) onCostsUpdated();
       // Optionally update the specific item in the useFieldArray if backend returns full item
       // update(variables.index, updatedItem); 
     },
-    onError: (err:ApiError) => toast.error(err.response?.data?.message || t('common:error.saveFailed')),
+    onError: (err:ApiError) => toast.error(err.response?.data?.message || "فشل في حفظ التكلفة"),
   });
   
   const deleteReqServiceCostMutation = useMutation<void, ApiError, number>({
     mutationFn: (reqServiceCostId: number) => deleteRequestedServiceCost(reqServiceCostId),
     onSuccess: () => { 
-      toast.success(t('common:deletedSuccess'));
+      toast.success("تم حذف التكلفة بنجاح");
       queryClient.invalidateQueries({ queryKey: reqServiceCostsQueryKey }); 
       if(onCostsUpdated) onCostsUpdated(); 
     },
-    onError: (err:ApiError) => toast.error(err.response?.data?.message || t('common:error.deleteFailed')),
+    onError: (err:ApiError) => toast.error(err.response?.data?.message || "فشل في حذف التكلفة"),
   });
 
   const onSubmit = () => { /* Batch save not primary, save per row */ };
@@ -217,7 +220,7 @@ const ManageRequestedServiceCostsDialog: React.FC<ManageRequestedServiceCostsDia
             const rowData = getValues(`costs.${index}`);
             saveOrUpdateMutation.mutate({ ...rowData, index });
         } else {
-            toast.error(t('common:validation.checkErrorsInRow'));
+            toast.error("يرجى تصحيح الأخطاء في النموذج");
         }
     });
   };
@@ -237,8 +240,8 @@ const ManageRequestedServiceCostsDialog: React.FC<ManageRequestedServiceCostsDia
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="!max-w-3xl max-h-[85vh] flex flex-col"> {/* Adjusted width */}
         <DialogHeader>
-          <DialogTitle>{t('clinic:requestedServiceCost.dialogTitle', { serviceName: requestedService.service?.name || 'Service' })}</DialogTitle>
-          <DialogDescription>{t('clinic:requestedServiceCost.dialogDescription')}</DialogDescription>
+          <DialogTitle>{"إدارة تكاليف الخدمة"}</DialogTitle>
+          <DialogDescription>{"إضافة وتعديل تكاليف الخدمة المطلوبة"}</DialogDescription>
         </DialogHeader>
         
         {isLoadingExisting || isLoadingSubTypes || isLoadingDefinitions ? (
@@ -246,15 +249,15 @@ const ManageRequestedServiceCostsDialog: React.FC<ManageRequestedServiceCostsDia
         ) : (
           <Form {...form}>
             <form onSubmit={handleSubmit(onSubmit)} className="flex-grow flex flex-col overflow-hidden">
-              <ScrollArea style={{direction: i18n.dir()}} className="flex-grow pr-1 -mr-2">
+              <ScrollArea style={{direction: true}} className="flex-grow pr-1 -mr-2">
                 <Table className="text-xs">
                   <TableHeader>
                     <TableRow>
-                      {/* <TableHead className="w-[180px]">{t('clinic:requestedServiceCost.costName')}</TableHead> */}
-                      <TableHead className="w-[200px]">{t('clinic:requestedServiceCost.costDefinition')}</TableHead>
-                      <TableHead className="w-[150px]">{t('clinic:requestedServiceCost.costType')}</TableHead>
-                      <TableHead className="w-[120px] text-center">{t('clinic:requestedServiceCost.calculatedAmount')}</TableHead>
-                      <TableHead className="w-[90px] text-center">{t('common:actions.openMenu')}</TableHead>
+                      {/* <TableHead className="w-[180px]">{"نص"}</TableHead> */}
+                      <TableHead className="w-[200px]">{"نوع التكلفة"}</TableHead>
+                      <TableHead className="w-[150px]">{"التعريف"}</TableHead>
+                      <TableHead className="w-[120px] text-center">{"المبلغ"}</TableHead>
+                      <TableHead className="w-[90px] text-center">{"الإجراءات"}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -262,7 +265,7 @@ const ManageRequestedServiceCostsDialog: React.FC<ManageRequestedServiceCostsDia
                       <TableRow key={fieldItem.id}>
                         {/* <TableCell className="py-1">
                           <FormField control={control} name={`costs.${index}.name`} render={({ field: f }) => (
-                            <Input {...f} className="h-7 text-xs" placeholder={t('clinic:requestedServiceCost.descriptionPlaceholder')} />
+                            <Input {...f} className="h-7 text-xs" placeholder={"اسم التكلفة"} />
                           )}/>
                         </TableCell> */}
                         <TableCell className="py-1">
@@ -273,9 +276,9 @@ const ManageRequestedServiceCostsDialog: React.FC<ManageRequestedServiceCostsDia
                                   f.onChange(value);
                                   handleDefinitionChange(index, value);
                                 }} 
-                                dir={i18n.dir()}
+                                dir={true}
                               >
-                                 <SelectTrigger className="h-7 text-xs"><SelectValue placeholder={t('clinic:requestedServiceCost.selectDefinition')} /></SelectTrigger>
+                                 <SelectTrigger className="h-7 text-xs"><SelectValue placeholder={"اختر التعريف"} /></SelectTrigger>
                                  <SelectContent>
                                     {serviceCostDefinitions.map(def => (
                                        <SelectItem key={def.id} value={String(def.id)}>{def.name} ({def.sub_service_cost?.name || def.sub_service_cost_id})</SelectItem>
@@ -286,9 +289,9 @@ const ManageRequestedServiceCostsDialog: React.FC<ManageRequestedServiceCostsDia
                         </TableCell>
                         <TableCell className="py-1">
                            <FormField control={control} name={`costs.${index}.sub_service_cost_id`} render={({ field: f }) => (
-                              <Select value={f.value || ""} onValueChange={f.onChange} dir={i18n.dir()} disabled>
+                              <Select value={f.value || ""} onValueChange={f.onChange} dir={true} disabled>
                                  <SelectTrigger className="h-7 text-xs bg-muted/50">
-                                    <SelectValue placeholder={t('clinic:requestedServiceCost.costTypeReadOnly')} />
+                                    <SelectValue placeholder={"نوع التكلفة"} />
                                  </SelectTrigger>
                                  <SelectContent>
                                     {subServiceCostTypes.map(type => (
@@ -300,7 +303,7 @@ const ManageRequestedServiceCostsDialog: React.FC<ManageRequestedServiceCostsDia
                         </TableCell>
                         <TableCell className="py-1">
                           <FormField control={control} name={`costs.${index}.amount`} render={({ field: f }) => (
-                            <Input type="number" {...f} value={f.value || ''} className="h-7 text-xs text-center" placeholder={t('common:currencySymbolShort')} />
+                            <Input type="number" {...f} value={f.value || ''} className="h-7 text-xs text-center" placeholder={"المبلغ"} />
                           )}/>
                         </TableCell>
                         <TableCell className="py-1 text-center">
@@ -318,11 +321,11 @@ const ManageRequestedServiceCostsDialog: React.FC<ManageRequestedServiceCostsDia
               </ScrollArea>
               <div className="pt-2 flex justify-start">
                 <Button type="button" variant="outline" size="sm" onClick={addNewCostField} className="text-xs">
-                  <PlusCircle className="h-3.5 w-3.5 ltr:mr-1 rtl:ml-1"/> {t('clinic:requestedServiceCost.addCostEntry')}
+                  <PlusCircle className="h-3.5 w-3.5 ltr:mr-1 rtl:ml-1"/> {"إضافة تكلفة"}
                 </Button>
               </div>
               <DialogFooter className="mt-auto pt-4">
-                <DialogClose asChild><Button type="button" variant="outline">{t('common:close')}</Button></DialogClose>
+                <DialogClose asChild><Button type="button" variant="outline">{"إغلاق"}</Button></DialogClose>
               </DialogFooter>
             </form>
           </Form>

@@ -1,0 +1,288 @@
+/* DoctorsTabs.css */
+.doctors-tabs-container {
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+  direction: rtl;
+}
+
+.doctors-tabs-scroll-container {
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-left: 8px;
+  padding-right: 8px;
+  padding-bottom: 8px;
+  min-width: 0;
+}
+
+.doctors-tabs-scroll-container::-webkit-scrollbar {
+  height: 6px;
+}
+
+.doctors-tabs-scroll-container::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+.doctors-tabs-scroll-container::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.doctors-tabs-flex-container {
+  display: flex;
+  gap: 4px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  min-width: max-content;
+}
+
+.doctors-tabs-flex-wrapper {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+/* Doctor Tab Styles */
+.doctor-tab {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 200px;
+  max-width: 200px;
+  height: 64px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 2px solid;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.doctor-tab:hover {
+  transform: translateY(-1px);
+}
+
+.doctor-tab:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.5);
+}
+
+/* Active Tab Styles */
+.doctor-tab--active-examining {
+  background-color: #1976d2;
+  border-color: #1565c0;
+  color: white;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+}
+
+.doctor-tab--active-not-examining {
+  background-color: #2e7d32;
+  border-color: #1b5e20;
+  color: white;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+}
+
+/* Inactive Tab Styles */
+.doctor-tab--inactive-examining {
+  background-color: #e3f2fd;
+  border-color: #bbdefb;
+  color: #0d47a1;
+}
+
+.doctor-tab--inactive-examining:hover {
+  background-color: #bbdefb;
+  border-color: #90caf9;
+}
+
+.doctor-tab--inactive-not-examining {
+  background-color: #e8f5e8;
+  border-color: #c8e6c9;
+  color: #1b5e20;
+}
+
+.doctor-tab--inactive-not-examining:hover {
+  background-color: #c8e6c9;
+  border-color: #a5d6a7;
+}
+
+/* Doctor Name Styles */
+.doctor-name {
+  font-weight: 600;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+  margin-bottom: 4px;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.doctor-name--active {
+  color: white;
+}
+
+/* Status Indicators Container */
+.status-indicators {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Patient Count Badge Styles */
+.patient-count-badge {
+  height: 20px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 10px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.patient-count-badge--active {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.patient-count-badge--inactive-examining {
+  background-color: #e3f2fd;
+  color: #1565c0;
+  border: 1px solid #bbdefb;
+}
+
+.patient-count-badge--inactive-not-examining {
+  background-color: #e8f5e8;
+  color: #2e7d32;
+  border: 1px solid #c8e6c9;
+}
+
+/* Active Tab Indicator */
+.active-tab-indicator {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.active-tab-indicator--examining {
+  background-color: #1976d2;
+}
+
+.active-tab-indicator--not-examining {
+  background-color: #2e7d32;
+}
+
+/* Loading and Error States */
+.loading-container {
+  padding: 16px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.loading-text {
+  font-size: 0.875rem;
+  color: #666;
+}
+
+.error-container {
+  padding: 16px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.error-content {
+  text-align: center;
+}
+
+.error-title {
+  font-size: 0.875rem;
+  color: #d32f2f;
+  font-weight: 500;
+}
+
+.error-message {
+  font-size: 0.75rem;
+  color: #666;
+  margin-top: 4px;
+  display: block;
+}
+
+.empty-container {
+  padding: 16px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-content {
+  text-align: center;
+}
+
+.empty-title {
+  font-size: 0.875rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.empty-description {
+  font-size: 0.75rem;
+  color: #666;
+  margin-top: 4px;
+  display: block;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .doctor-tab {
+    min-width: 150px;
+    max-width: 150px;
+    height: 56px;
+    padding: 6px 12px;
+  }
+  
+  .doctor-name {
+    font-size: 0.8rem;
+  }
+  
+  .patient-count-badge {
+    height: 18px;
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .doctor-tab {
+    min-width: 120px;
+    max-width: 120px;
+    height: 48px;
+    padding: 4px 8px;
+  }
+  
+  .doctor-name {
+    font-size: 0.75rem;
+    margin-bottom: 2px;
+  }
+  
+  .patient-count-badge {
+    height: 16px;
+    font-size: 0.65rem;
+  }
+}

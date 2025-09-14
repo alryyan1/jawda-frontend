@@ -1,6 +1,5 @@
 // src/components/clinic/SelectedPatientWorkspace.tsx
 import React, { useState } from "react";
-import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 
 import type { Patient } from "@/types/patients";
@@ -17,14 +16,12 @@ import {
   ListOrdered,
   Microscope,
   AlertTriangle,
-  Receipt,
   PrinterIcon,
 } from "lucide-react";
 
 import ServicesRequestComponent from "./ServicesRequestComponent";
 import LabRequestComponent from "./LabRequestComponent";
 import { toast } from "sonner";
-import { downloadThermalReceiptPdf } from "@/services/reportService";
 import apiClient from "@/services/api";
 import PdfPreviewDialog from "../common/PdfPreviewDialog";
 
@@ -41,12 +38,6 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
   visitId,
   onClose,
 }) => {
-  const { t } = useTranslation([
-    "clinic",
-    "common",
-    "services",
-    "patients",
-  ]);
   const visitQueryKey = ["doctorVisit", visitId];
   const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false);
   const {
@@ -73,21 +64,18 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
     setIsPdfPreviewOpen(true); // Open dialog to show loader
 
     try {
-      const response = await apiClient.get(
-        `/visits/${visit.id}/thermal-receipt/pdf`, 
-        { responseType: 'blob' }
-      );
+      const response = await apiClient.get('/api/receipts/print');
       const blob = new Blob([response.data], { type: 'application/pdf' });
       const objectUrl = URL.createObjectURL(blob);
       setPdfUrl(objectUrl);
       // Construct a more descriptive filename
-      const patientNameSanitized = visit.patient.name.replace(/[^A-Za-z0-9\-\_]/g, '_');
+      const patientNameSanitized = visit.patient.name.replace(/[^A-Za-z0-9\-_]/g, '_');
       setPdfFileName(`Receipt_Visit_${visit.id}_${patientNameSanitized}.pdf`);
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error generating PDF receipt:", error);
-      toast.error(t('common:error.generatePdfFailed'), {
-        description: error.response?.data?.message || error.message
+      toast.error('فشل في إنشاء ملف PDF', {
+        description: (error as { response?: { data?: { message?: string } } }).response?.data?.message || (error as Error).message
       });
       setIsPdfPreviewOpen(false); // Close dialog on error
     } finally {
@@ -97,10 +85,10 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
 
   if (isLoading && !visit) {
     return (
-      <div className="flex flex-col h-full items-center justify-center bg-background dark:bg-card p-6">
+      <div className="flex flex-col h-full items-center justify-center bg-background p-6">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
         <p className="text-muted-foreground">
-          {t("common:loadingDetails", "Loading patient details...")}
+          جاري تحميل تفاصيل المريض...
         </p>
       </div>
     );
@@ -108,12 +96,10 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
 
   if (visitError) {
     return (
-      <div className="flex flex-col h-full items-center justify-center bg-background dark:bg-card p-6 text-destructive">
+      <div className="flex flex-col h-full items-center justify-center bg-background p-6 text-destructive">
         <AlertTriangle className="h-12 w-12 mb-4" />
         <p>
-          {t("common:error.fetchFailed", {
-            entity: t("clinic:selectedPatientWorkspace.titleShort", "Visit"),
-          })}
+          فشل في جلب بيانات الزيارة
         </p>
         <p className="text-xs mt-1">{visitError.message}</p>
         {onClose && (
@@ -123,7 +109,7 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
             onClick={onClose}
             className="mt-4"
           >
-            {t("common:close")}
+            إغلاق
           </Button>
         )}
       </div>
@@ -132,8 +118,8 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
 
   if (!visit || !patient) {
     return (
-      <div className="flex flex-col h-full items-center justify-center bg-background dark:bg-card p-6">
-        <p>{t("clinic:selectedPatientWorkspace.noPatientData")}</p>
+      <div className="flex flex-col h-full items-center justify-center bg-background p-6">
+        <p>لا توجد بيانات للمريض</p>
         {onClose && (
           <Button
             variant="outline"
@@ -141,7 +127,7 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
             onClick={onClose}
             className="mt-4"
           >
-            {t("common:close")}
+            إغلاق
           </Button>
         )}
       </div>
@@ -151,7 +137,7 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
  
 
   return (
-    <div className="flex flex-col h-full bg-background dark:bg-card shadow-xl">
+    <div className="flex flex-col h-full bg-background shadow-xl">
       <Tabs
         defaultValue="services"
         className="flex-grow flex flex-col overflow-hidden"
@@ -160,11 +146,11 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
           <TabsList className="mx-3 my-2 grid w-auto grid-flow-col auto-cols-max gap-2 p-1 h-auto">
             <TabsTrigger value="services" className="text-xs px-3 py-1.5">
               <ListOrdered className="h-4 w-4 ltr:mr-1 rtl:ml-1" />
-              {t("clinic:tabs.services")}
+              الخدمات
             </TabsTrigger>
             <TabsTrigger value="lab" className="text-xs px-3 py-1.5">
               <Microscope className="h-4 w-4 ltr:mr-1 rtl:ml-1" />
-              {t("clinic:tabs.lab")}
+              المختبر
             </TabsTrigger>
            
           </TabsList>
@@ -177,7 +163,7 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
             <div className="p-2 border-b flex justify-end">
         <Button onClick={handlePrintReceipt} variant="outline" size="sm" disabled={isGeneratingPdf  || !visit}>
           {isGeneratingPdf ? <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2"/> : <PrinterIcon className="h-4 w-4 ltr:mr-2 rtl:ml-2"/>}
-          {t('common:printReceipt')}
+          طباعة الإيصال
         </Button>
       </div>
           <ServicesRequestComponent handlePrintReceipt={handlePrintReceipt} patientId={patient.id} visit={visit} visitId={visit.id} />
@@ -187,7 +173,7 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
           value="lab" 
           className="flex-grow overflow-y-auto p-3 sm:p-4 focus-visible:ring-0 focus-visible:ring-offset-0"
         >
-          <LabRequestComponent visitId={visit.id} selectedPatientVisit={selectedPatientVisit}/>
+          <LabRequestComponent visitId={visit.id} selectedPatientVisit={selectedPatientVisit} patientId={patient.id}/>
         </TabsContent>
       </Tabs>
       <PdfPreviewDialog
@@ -201,7 +187,7 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
         }}
         pdfUrl={pdfUrl}
         isLoading={isGeneratingPdf && !pdfUrl} // Show loader while generating before URL is ready
-        title={t('common:receiptPreviewTitle', {visitId: visit?.id})}
+        title={`معاينة الإيصال - زيارة ${visit?.id}`}
         fileName={pdfFileName}
       />
     </div>

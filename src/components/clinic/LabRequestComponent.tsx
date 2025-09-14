@@ -1,6 +1,6 @@
 // src/components/clinic/LabRequestComponent.tsx
 import React, { useState, useCallback } from "react";
-import { useTranslation } from "react-i18next";
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { UseMutationResult } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -67,12 +67,6 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
   visitId,
   selectedPatientVisit,
 }) => {
-  const { t, i18n } = useTranslation([
-    "labTests",
-    "clinic",
-    "common",
-    "payments",
-  ]);
   const queryClient = useQueryClient();
   const { currentClinicShift } = useAuth();
 
@@ -148,12 +142,10 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
   // --- Mutations ---
   const addTestsMutation = useMutation({
     mutationFn: (payload: { main_test_ids: number[]; comment?: string }) =>
-      addLabTestsToVisit({ visitId, ...payload }),
+      addLabTestsToVisit(visitId, payload),
     onSuccess: (newlyAddedLabRequests) => {
       toast.success(
-        t("labTests:request.addedSuccessMultiple", {
-          count: newlyAddedLabRequests.length,
-        })
+        `تم إضافة ${newlyAddedLabRequests.length} فحص بنجاح`
       );
       queryClient.invalidateQueries({ queryKey: requestedTestsQueryKey });
       queryClient.invalidateQueries({
@@ -168,7 +160,7 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
       }
     },
     onError: (error: ApiError) => {
-      let errorMessage = t("common:error.requestFailed");
+      let errorMessage = "فشل في الطلب";
       if (error.response?.data?.message)
         errorMessage = error.response.data.message;
       toast.error(errorMessage);
@@ -179,9 +171,7 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
     mutationFn: () => clearPendingLabRequestsForVisit(visitId),
     onSuccess: (result) => {
       toast.success(
-        t("labTests:request.removedAllSuccess", {
-          count: result.deleted_count,
-        })
+        `تم حذف ${result.deleted_count} فحص بنجاح`
       );
       queryClient.invalidateQueries({ queryKey: requestedTestsQueryKey });
       queryClient.invalidateQueries({
@@ -190,7 +180,7 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
     },
     onError: (error: ApiError) => {
       toast.error(
-        error.response?.data?.message || t("common:error.requestFailed")
+        error.response?.data?.message || "فشل في الطلب"
       );
     },
   });
@@ -201,11 +191,9 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
       is_bankak: boolean;
       shift_id: number;
     }) =>
-      recordDirectLabRequestPayment(params.labRequestId, {
-        is_bankak: params.is_bankak,
-      }),
+      recordDirectLabRequestPayment(visitId, payload),
     onSuccess: (updatedLabRequest) => {
-      toast.success(t("payments:paymentRecordedSuccess"));
+      toast.success("تم تسجيل الدفع بنجاح");
       queryClient.setQueryData(
         requestedTestsQueryKey,
         (oldData: LabRequest[] | undefined) =>
@@ -217,7 +205,7 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
     },
     onError: (error: ApiError) => {
       toast.error(
-        error.response?.data?.message || t("payments:error.paymentFailed")
+        error.response?.data?.message || "فشل في الدفع"
       );
     },
   });
@@ -225,7 +213,7 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
   const cancelLabRequestMutation = useMutation({
     mutationFn: (labRequestId: number) => cancelLabRequest(labRequestId),
     onSuccess: () => {
-      toast.success(t("labTests:request.canceledSuccess"));
+      toast.success("تم إلغاء الفحص بنجاح");
       queryClient.invalidateQueries({ queryKey: requestedTestsQueryKey });
     },
   });
@@ -233,7 +221,7 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
   const unpayLabRequestMutation = useMutation({
     mutationFn: (labRequestId: number) => unpayLabRequest(labRequestId),
     onSuccess: () => {
-      toast.success(t("labTests:request.unpaidSuccess"));
+      toast.success("تم إلغاء الدفع بنجاح");
       queryClient.invalidateQueries({ queryKey: requestedTestsQueryKey });
     },
   });
@@ -245,7 +233,7 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
         // comment: commentFromAutocompleteIfAny // If you add a comment field for autocomplete
       });
     } else {
-      toast.info(t("labTests:request.noTestsSelectedForRequest"));
+      toast.info("لم يتم اختيار أي فحوصات للطلب");
     }
   };
 
@@ -256,7 +244,7 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
         comment: commentForGrid.trim() || undefined,
       });
     } else {
-      toast.info(t("labTests:request.noTestsSelectedForRequest"));
+      toast.info("لم يتم اختيار أي فحوصات للطلب");
     }
   }, [gridSelectedTestIds, commentForGrid, addTestsMutation, t]);
 
@@ -277,7 +265,7 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
   ) {
     return (
       <div className="p-6 text-center text-lg text-destructive">
-        {t("common:error.loadFailed")}{" "}
+        فشل في التحميل 
         {requestedTestsError?.message || "Patient data unavailable"}
       </div>
     );
@@ -286,7 +274,7 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
   return (
     <div
       className="flex flex-col lg:flex-row gap-4 h-full p-1"
-      style={{ direction: i18n.dir() }}
+      style={{ direction: true }}
     >
       {/* Left Column: Financial Summary */}
       <div className="lg:w-[320px] xl:w-[360px] flex-shrink-0 space-y-3">
@@ -295,7 +283,7 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
           handlePrintReceipt();
         }} variant="outline" size="sm" disabled={isGeneratingPdf || !visitId}>
           {isGeneratingPdf ? <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2"/> : <PrinterIcon className="h-4 w-4 ltr:mr-2 rtl:ml-2"/>}
-          {t('common:printReceipt')}
+          طباعة الإيصال
         </Button>
       </div>
         <LabFinancialSummary
@@ -303,7 +291,7 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
           currentPatient={currentPatient || null}
           currentClinicShift={currentClinicShift}
           onOpenBatchPaymentDialog={() =>{
-            //  alert("open batch payment dialog");
+            //  aler"open batch payment dialog";
             setShowBatchPaymentDialog(true);
           }}
           isCompanyPatient={isCompanyPatient}
@@ -336,14 +324,14 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
                   <TextField
                     {...params}
                     variant="outlined"
-                    label={t("labTests:request.searchOrSelectTests")}
-                    placeholder={t("labTests:request.addTestsPlaceholder")}
+                    label="البحث أو اختيار الفحوصات"
+                    placeholder="أضف فحوصات..."
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         //get test from tests using find
                         const enteredId = (e.target as HTMLInputElement).value;
                         const foundedTest = allAvailableTestsForAutocomplete?.find(
-                          (test) => test.id === parseInt(enteredId)
+                          (test) => test.id === parseInt(testId)
                         );
   
                         if (foundedTest) {
@@ -376,7 +364,6 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
                 PaperComponent={(props) => (
                   <Paper
                     {...props}
-                    className="dark:bg-slate-800 dark:text-slate-100"
                   />
                 )}
               />
@@ -396,9 +383,7 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
                 ) : (
                   <PlusCircle className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
                 )}
-                {t("labTests:request.addSelectedShort", {
-                  count: autocompleteSelectedTests.length,
-                })}
+                إضافة المحدد ({autocompleteSelectedTests.length})
               </Button>
               <Button
                 variant="outline"
@@ -409,8 +394,8 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
               >
                 <LayoutGrid className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
                 {showGridSelection
-                  ? t("labTests:request.hideGrid")
-                  : t("labTests:request.showGrid")}
+                  ? "إخفاء الشبكة"
+                  : "إظهار الشبكة"}
               </Button>
             </div>
           </div>
@@ -429,9 +414,7 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
                   <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2" />
                 )}
                 <Save className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
-                {t("labTests:request.requestSelectedButtonShort", {
-                  count: gridSelectedTestIds.size,
-                })}
+                طلب المحدد ({gridSelectedTestIds.size})
               </Button>
               <IconButton onClick={()=>{
                 removeAllPendingMutation.mutate();
@@ -461,15 +444,11 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
                 if (!gridSelectedTestIds.has(test.id)) {
                   setGridSelectedTestIds((prev) => new Set(prev).add(test.id));
                   toast.success(
-                    t("labTests:request.testAddedToSelection", {
-                      testName: test.main_test_name,
-                    })
+                    `تم إضافة ${test.main_test_name} إلى الاختيار`
                   );
                 } else {
                   toast.info(
-                    t("labTests:request.testAlreadySelected", {
-                      testName: test.main_test_name,
-                    })
+                    `${test.main_test_name} محدد مسبقاً`
                   );
                 }
               }}

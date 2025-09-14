@@ -1,51 +1,13 @@
 import React, { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import { useNavigate, Link, useLocation } from "react-router-dom";
-import { useTranslation } from "react-i18next";
-import { Eye, EyeOff, AlertCircle, Loader2 } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { Eye, EyeOff, AlertCircle, Loader2, UserCheck, Heart, Shield, Stethoscope } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 
-const getLoginSchema = (t: any) =>
-  z.object({
-    username: z
-      .string()
-      .min(1, {
-        message: t("login:fieldRequired", { field: t("login:usernameLabel") }),
-      }),
-    password: z
-      .string()
-      .min(1, {
-        message: t("login:fieldRequired", { field: t("login:passwordLabel") }),
-      }),
-  });
-
-type LoginFormValues = z.infer<
-  z.ZodObject<{
-    username: z.ZodString;
-    password: z.ZodString;
-  }>
->;
+// Simple form data interface
+interface LoginFormData {
+  username: string;
+  password: string;
+}
 
 const LoginPage: React.FC = () => {
   const { login, isLoading: authIsLoading } = useAuth();
@@ -53,159 +15,191 @@ const LoginPage: React.FC = () => {
   const location = useLocation();
   const [apiError, setApiError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
-
-  const { t } = useTranslation(["login", "common"]);
-  const loginSchema = getLoginSchema(t);
-
-  const form = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      username: "",
-      password: "",
-    },
+  const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [formData, setFormData] = useState<LoginFormData>({
+    username: "",
+    password: "",
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const {
-    handleSubmit,
-    control,
-    formState: { isSubmitting },
-  } = form;
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
 
-  const onSubmit = async (data: LoginFormValues) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setApiError(null);
+    setIsSubmitting(true);
+
+    // Simple validation
+    if (!formData.username.trim()) {
+      setApiError("اسم المستخدم مطلوب");
+      setIsSubmitting(false);
+      return;
+    }
+    if (!formData.password.trim()) {
+      setApiError("كلمة المرور مطلوبة");
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
-      await login(data);
+      await login(formData);
       const from = location.state?.from?.pathname || "/";
       navigate(from, { replace: true });
-    } catch (error: any) {
-      let errorMessage = t("login:loginFailedDefault");
-      if (error.response && error.response.data) {
-        if (error.response.data.errors) {
-          const firstErrorField = Object.keys(error.response.data.errors)[0];
-          if (firstErrorField) {
-            errorMessage = error.response.data.errors[firstErrorField][0];
+    } catch (error: unknown) {
+      let errorMessage = "فشلت المصادقة. يرجى التحقق من بيانات الاعتماد.";
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: { errors?: Record<string, string[]>; message?: string } } };
+        if (axiosError.response?.data) {
+          if (axiosError.response.data.errors) {
+            const firstErrorField = Object.keys(axiosError.response.data.errors)[0];
+            if (firstErrorField) {
+              errorMessage = axiosError.response.data.errors[firstErrorField][0];
+            }
+          } else if (axiosError.response.data.message) {
+            errorMessage = axiosError.response.data.message;
           }
-        } else if (error.response.data.message) {
-          errorMessage = error.response.data.message;
         }
       }
       setApiError(errorMessage);
       console.error("Login error:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const currentIsLoading = authIsLoading || isSubmitting;
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-100 via-slate-200 to-slate-300 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800 p-4 transition-colors">
-      <Card className="w-full max-w-md shadow-xl rounded-2xl border-0">
-        <CardHeader className="space-y-4 text-center">
-          {/* Logo or avatar */}
-          <div className="mx-auto mb-2 flex items-center justify-center">
-            <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center">
-              {/* Replace with your logo if desired */}
-              <span className="text-3xl font-black text-primary">🔒</span>
+    <div className="min-h-screen bg-gradient-to-br from-teal-50 via-cyan-50 to-blue-50 dark:from-slate-900 dark:via-teal-900 dark:to-cyan-900 flex items-center justify-center p-4 transition-all duration-500 relative overflow-hidden" dir="rtl">
+      {/* Medical SVG Background Pattern */}
+   
+      
+    
+      {/* Login Card */}
+      <div className="relative w-full max-w-md">
+        {/* Medical glowing background effect */}
+        <div className="absolute -inset-1 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-3xl blur opacity-20 dark:opacity-30 animate-pulse"></div>
+        
+        <div className="relative bg-white dark:bg-slate-800 backdrop-blur-xl border border-teal-200 dark:border-slate-700 rounded-3xl shadow-2xl p-8 transition-all duration-300">
+          {/* Header */}
+          <div className="text-center mb-8">
+            {/* System Logo */}
+            <div className="mx-auto w-60 h-60 mb-6 transform hover:scale-105 transition-transform duration-300">
+              <img 
+              
+                src="/logo.png" 
+                alt="نظام جوده" 
+                className=" object-contain  "
+              />
             </div>
+            
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-teal-700 to-cyan-600 dark:from-teal-300 dark:to-cyan-300 bg-clip-text text-transparent">
+              بوابة الرعاية الصحية
+            </h1>
+       
           </div>
-          <CardTitle className="text-3xl font-extrabold font-cairo tracking-tight">
-            {t("login:title")}
-          </CardTitle>
-          <CardDescription className="text-base text-muted-foreground">
-            {t("login:description")}
-          </CardDescription>
-        </CardHeader>
 
-        <Form {...form}>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-0">
-            <CardContent className="space-y-5">
-              {apiError && (
-                <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive text-destructive text-sm rounded-md">
-                  <AlertCircle className="w-5 h-5 shrink-0" />
-                  <span>{apiError}</span>
+          {/* Error Alert */}
+          {apiError && (
+            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl flex items-start gap-3 animate-in slide-in-from-top-2 duration-300">
+              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+              <span className="text-red-700 dark:text-red-400 text-sm">{apiError}</span>
+            </div>
+          )}
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Username Field */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-teal-700 dark:text-teal-300">
+                  اسم المستخدم
+              </label>
+              <div className="relative">
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-teal-400 dark:text-teal-500">
+                  <UserCheck className="w-5 h-5" />
                 </div>
-              )}
-              <FormField
-                control={control}
-                name="username"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("login:usernameLabel")}</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="text"
-                        placeholder={t("login:usernamePlaceholder")}
-                        {...field}
-                        autoComplete="username"
-                        disabled={currentIsLoading}
-                        className="bg-white dark:bg-slate-950"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("login:passwordLabel")}</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input
-                          type={showPassword ? "text" : "password"}
-                          placeholder={t("login:passwordPlaceholder")}
-                          {...field}
-                          autoComplete="current-password"
-                          disabled={currentIsLoading}
-                          className="pr-10 bg-white dark:bg-slate-950"
-                        />
-                        <button
-                          type="button"
-                          tabIndex={-1}
-                          onClick={() => setShowPassword((v) => !v)}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary focus:outline-none"
-                        >
-                          {showPassword ? (
-                            <EyeOff className="w-5 h-5" />
-                          ) : (
-                            <Eye className="w-5 h-5" />
-                          )}
-                        </button>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-            <CardFooter className="flex flex-col gap-4">
-              <Button
-                type="submit"
-                className="w-full mt-3 gap-2 font-semibold text-lg transition-all"
-                disabled={currentIsLoading}
-                size="lg"
-              >
-                {currentIsLoading && (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                )}
-                {currentIsLoading
-                  ? t("login:loggingInButton")
-                  : t("login:loginButton")}
-              </Button>
-              <div className="text-center text-sm text-muted-foreground">
-                {t("login:noAccountPrompt")}&nbsp;
-                <Link
-                  to="/register"
-                  className="font-semibold text-primary hover:underline underline-offset-4 transition-colors"
-                >
-                  {t("login:registerLinkText")}
-                </Link>
+                <input
+                  name="username"
+                  type="text"
+                  placeholder="أدخل اسم المستخدم"
+                  autoComplete="username"
+                  disabled={currentIsLoading}
+                  value={formData.username}
+                  onChange={handleInputChange}
+                  onFocus={() => setFocusedField("username")}
+                  onBlur={() => setFocusedField(null)}
+                  className={`w-full pr-11 pl-4 py-3 bg-teal-50 dark:bg-slate-700 border rounded-xl text-slate-900 dark:text-white placeholder-teal-500 dark:placeholder-slate-400 transition-all duration-300 focus:outline-none focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+                    focusedField === "username"
+                      ? 'border-teal-400 dark:border-teal-500 focus:ring-teal-500/20 focus:border-teal-500 shadow-lg bg-teal-100 dark:bg-slate-600'
+                      : 'border-teal-200 dark:border-slate-600 hover:border-teal-300 dark:hover:border-slate-500'
+                  }`}
+                />
               </div>
-            </CardFooter>
+            </div>
+
+            {/* Password Field */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-teal-700 dark:text-teal-300">
+                كلمة المرور الآمنة
+              </label>
+              <div className="relative">
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-teal-400 dark:text-teal-500">
+                  <Shield className="w-5 h-5" />
+                </div>
+                <input
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="أدخل كلمة المرور الآمنة"
+                  autoComplete="current-password"
+                  disabled={currentIsLoading}
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  onFocus={() => setFocusedField("password")}
+                  onBlur={() => setFocusedField(null)}
+                  className={`w-full pr-11 pl-12 py-3 bg-teal-50 dark:bg-slate-700 border rounded-xl text-slate-900 dark:text-white placeholder-teal-500 dark:placeholder-slate-400 transition-all duration-300 focus:outline-none focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+                    focusedField === "password"
+                      ? 'border-teal-400 dark:border-teal-500 focus:ring-teal-500/20 focus:border-teal-500 shadow-lg bg-teal-100 dark:bg-slate-600'
+                      : 'border-teal-200 dark:border-slate-600 hover:border-teal-300 dark:hover:border-slate-500'
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-teal-400 dark:text-teal-500 hover:text-teal-600 dark:hover:text-teal-300 focus:outline-none transition-colors duration-200"
+                  disabled={currentIsLoading}
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={currentIsLoading}
+              className="w-full bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-teal-500/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
+            >
+              {currentIsLoading && (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              )}
+              <span>
+                {currentIsLoading ? "جاري المصادقة..." : "دخول البوابة"}
+              </span>
+            </button>
+
           </form>
-        </Form>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 };

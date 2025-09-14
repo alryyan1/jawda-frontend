@@ -1,9 +1,7 @@
 // src/components/clinic/ManageServiceDepositsDialog.tsx
 import React, { useEffect, useCallback, useMemo } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { useTranslation } from "react-i18next";
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -50,23 +48,17 @@ import {
   getDepositsForRequestedService 
 } from "@/services/requestedServiceDepositService";
 
-// Zod schema for a single deposit item in the form
-const depositItemSchema = z.object({
-  id: z.number().optional().nullable(),
-  amount: z
-    .string()
-    .refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
-      message: "Amount must be a positive number.",
-    }),
-  is_bank: z.boolean(),
-  user_name: z.string().optional(),
-  created_at_formatted: z.string().optional(),
-});
+// Form interfaces
+interface DepositItemFormValues {
+  amount: string;
+  is_bank: boolean;
+  user_name?: string;
+  created_at_formatted?: string;
+}
 
-const manageDepositsSchema = z.object({
-  deposits: z.array(depositItemSchema),
-});
-type ManageDepositsFormValues = z.infer<typeof manageDepositsSchema>;
+interface ManageDepositsFormValues {
+  deposits: DepositItemFormValues[];
+}
 
 interface ManageServiceDepositsDialogProps {
   isOpen: boolean;
@@ -85,13 +77,12 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
   requestedService,
   onAllDepositsUpdated,
 }) => {
-  const { t, i18n } = useTranslation(["payments", "common", "services"]);
   const queryClient = useQueryClient();
   const { currentClinicShift } = useAuth();
   
   const dateLocale = useMemo(() => 
-    i18n.language.startsWith("ar") ? arSA : enUS,
-    [i18n.language]
+    "ar".startsWith("ar") ? arSA : enUS,
+    ["ar"]
   );
 
   const depositsQueryKey = useMemo(() => 
@@ -108,8 +99,7 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
   const defaultValues = useMemo(() => ({ deposits: [] }), []);
   
   const form = useForm<ManageDepositsFormValues>({
-    resolver: zodResolver(manageDepositsSchema),
-    defaultValues,
+    defaultValues: { deposits: [] },
   });
 
   const { control, reset, getValues } = form;
@@ -140,22 +130,24 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
       id: dep.id,
       amount: String(dep.amount),
       is_bank: dep.is_bank,
-      user_name: dep.user?.name || t("common:unknown"),
+      user_name: dep.user?.name || "unknown",
       created_at_formatted: dep.created_at
         ? format(new Date(dep.created_at), "Pp", { locale: dateLocale })
         : "-",
     }));
-  }, [existingDeposits, t, dateLocale]);
+  }, [existingDeposits, dateLocale]);
 
   // Handle form reset when dialog opens/closes or deposits change
   useEffect(() => {
     if (!isOpen) {
-      reset(defaultValues);
+      reset();
       return;
     }
 
     if (formattedDeposits.length > 0) {
-      reset({ deposits: formattedDeposits });
+      reset({
+        deposits: formattedDeposits
+      });
     }
   }, [isOpen, formattedDeposits, reset, defaultValues]);
 
@@ -175,28 +167,28 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
   const createMutation = useMutation<RequestedServiceDeposit, ApiError, Omit<RequestedServiceDepositFormData, "id">>({
     mutationFn: (data) => createRequestedServiceDeposit(requestedService.id, data),
     onSuccess: () => {
-      toast.success(t("payments:depositAddedSuccess"));
+      toast.success("depositAddedSuccess");
       handleQueryInvalidation();
     },
-    onError: (err) => toast.error(err.response?.data?.message || t("common:error.createFailed")),
+    onError: (err) => toast.error(err.response?.data?.message || "error.createFailed"),
   });
 
   const updateMutation = useMutation<RequestedServiceDeposit, ApiError, RequestedServiceDepositFormData>({
     mutationFn: (data) => updateRequestedServiceDeposit(data.id!, data),
     onSuccess: () => {
-      toast.success(t("payments:depositUpdatedSuccess"));
+      toast.success("depositUpdatedSuccess");
       handleQueryInvalidation();
     },
-    onError: (err) => toast.error(err.response?.data?.message || t("common:error.updateFailed")),
+    onError: (err) => toast.error(err.response?.data?.message || "error.updateFailed"),
   });
 
   const deleteMutation = useMutation<void, ApiError, number>({
     mutationFn: (depositId) => deleteRequestedServiceDeposit(depositId),
     onSuccess: () => {
-      toast.success(t("payments:depositDeletedSuccess"));
+      toast.success("depositDeletedSuccess");
       handleQueryInvalidation();
     },
-    onError: (err) => toast.error(err.response?.data?.message || t("common:error.deleteFailed")),
+    onError: (err) => toast.error(err.response?.data?.message || "فشل في الحذف"),
   });
 
   const handleSaveRow = useCallback((index: number) => {
@@ -204,14 +196,14 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
 
     form.trigger(`deposits.${index}`).then((isValid) => {
       if (!isValid) {
-        toast.error(t("common:validation.checkErrorsInRow"));
+        toast.error("validation.checkErrorsInRow");
         return;
       }
 
       const rowData = getValues(`deposits.${index}`);
       
       if (!currentClinicShift?.id && !rowData.id) {
-        toast.error(t("payments:error.noActiveShiftForPayment"));
+        toast.error("error.noActiveShiftForPayment");
         return;
       }
 
@@ -235,10 +227,10 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
     append({
       amount: "0.00",
       is_bank: false,
-      user_name: t("common:newEntry"),
+      user_name: "newEntry",
       created_at_formatted: format(new Date(), "Pp", { locale: dateLocale }),
     });
-  }, [append, t, dateLocale, isOpen]);
+  }, [append, dateLocale, isOpen]);
 
   const handleDelete = useCallback((fieldItem: { id?: number | null }, index: number) => {
     if (!isOpen) return;
@@ -257,14 +249,10 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
       <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
-            {t("payments:manageDepositsDialog.title", {
-              serviceName: requestedService.service?.name || "Service",
-            })}
+            {"manageDepositsDialog.title"}
           </DialogTitle>
           <DialogDescription>
-            {t("payments:manageDepositsDialog.description", {
-              totalPaid: Number(requestedService.amount_paid).toFixed(2),
-            })}
+            {"manageDepositsDialog.description"}
           </DialogDescription>
         </DialogHeader>
 
@@ -279,13 +267,13 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
               className="flex-grow flex flex-col overflow-hidden"
             >
               <ScrollArea
-                style={{ direction: i18n.dir() }}
+                style={{ direction: true }}
                 className="flex-grow pr-1 -mr-2"
               >
                 {fields.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
                     <Info size={24} className="mx-auto mb-2" />
-                    {t("payments:manageDepositsDialog.noDeposits")}
+                    {"manageDepositsDialog.noDeposits"}
                   </div>
                 )}
                 {fields.length > 0 && (
@@ -293,19 +281,19 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-[120px] text-center">
-                          {t("payments:table.amount")}
+                          {"table.amount"}
                         </TableHead>
                         <TableHead className="w-[100px] text-center">
-                          {t("payments:table.method")}
+                          {"table.method"}
                         </TableHead>
                         <TableHead className="hidden sm:table-cell text-center">
-                          {t("payments:table.user")}
+                          {"table.user"}
                         </TableHead>
                         <TableHead className="hidden sm:table-cell text-center">
-                          {t("payments:table.dateTime")}
+                          {"table.dateTime"}
                         </TableHead>
                         <TableHead className="w-[80px] text-center">
-                          {t("common:actions.openMenu")}
+                          {"فتح القائمة"}
                         </TableHead>
                       </TableRow>
                     </TableHeader>
@@ -342,8 +330,8 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
                                     className="text-xs ltr:ml-2 rtl:mr-2"
                                   >
                                     {f.value
-                                      ? t("payments:bankShort")
-                                      : t("payments:cashShort")}
+                                      ? "bankShort"
+                                      : "cashShort"}
                                   </label>
                                 </div>
                               )}
@@ -410,13 +398,13 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
                   className="text-xs"
                 >
                   <PlusCircle className="h-3.5 w-3.5 ltr:mr-1 rtl:ml-1" />{" "}
-                  {t("payments:manageDepositsDialog.addDepositButton")}
+                  {"manageDepositsDialog.addDepositButton"}
                 </Button>
               </div>
               <DialogFooter className="mt-auto pt-4">
                 <DialogClose asChild>
                   <Button type="button" variant="outline">
-                    {t("common:close")}
+                    {"إغلاق"}
                   </Button>
                 </DialogClose>
               </DialogFooter>

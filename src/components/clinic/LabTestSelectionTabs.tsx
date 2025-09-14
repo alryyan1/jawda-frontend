@@ -64,7 +64,6 @@ function TabPanel(props: TabPanelProps) {
 const LabTestSelectionTabs: React.FC<LabTestSelectionTabsProps> = ({
   visitId, selectedTestIds, onTestSelectionChange, onAddById
 }) => {
-  const { t, i18n } = useTranslation(['labTests', 'common']);
   const [activePackageTab, setActivePackageTab] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
@@ -164,7 +163,7 @@ const LabTestSelectionTabs: React.FC<LabTestSelectionTabsProps> = ({
           variant="outlined"
           size="small"
           fullWidth
-          placeholder={t('labTests:request.searchTestsPlaceholder')}
+          placeholder="البحث في الفحوصات..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           InputProps={{
@@ -178,7 +177,7 @@ const LabTestSelectionTabs: React.FC<LabTestSelectionTabsProps> = ({
             variant="outlined"
             size="small"
             fullWidth
-            placeholder={t('labTests:request.addByTestIdPlaceholder')}
+            placeholder="أدخل رقم الفحص..."
             value={testIdInput}
             onChange={(e) => setTestIdInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleFindTestById();}}}
@@ -216,8 +215,8 @@ const LabTestSelectionTabs: React.FC<LabTestSelectionTabsProps> = ({
               }
             }}
           >
-            {/* <Tab label={t('common:all')} value="all" /> */}
-            <Tab label={t('labTests:request.unpackaged')} value="none" icon={<StyleIcon fontSize="inherit" sx={{mr: 0.5}}/>} iconPosition="start" />
+            {/* <Tab label={"نص"} value="all" /> */}
+            <Tab label="غير معبأ" value="none" icon={<StyleIcon fontSize="inherit" sx={{mr: 0.5}}/>} iconPosition="start" />
             {packages?.map((pkg) => (
               <Tab 
                 key={pkg.id} 
@@ -239,14 +238,14 @@ const LabTestSelectionTabs: React.FC<LabTestSelectionTabsProps> = ({
         ) : !testsForTab || testsForTab.length === 0 ? (
           <Box sx={{ height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Typography variant="body2" color="text.secondary">
-              {debouncedSearchTerm ? t('common:noResultsFound') : t('labTests:request.noTestsInPackage')}
+              {debouncedSearchTerm ? "لم يتم العثور على نتائج" : "لا توجد فحوصات في هذه المجموعة"}
             </Typography>
           </Box>
         ) : (
           <TabPanel value={activePackageTab} index={activePackageTab}> {/* Single TabPanel, content changes based on query */}
              <Box sx={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', // Responsive grid
+                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', // Responsive grid
                 gap: 0.75, // Gap between cards
               }}>
                 {testsForTab.map((test) => <ServiceCard key={test.id} test={test} />)}

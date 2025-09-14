@@ -1,9 +1,6 @@
 // src/components/clinic/CreateNewVisitForPatientDialog.tsx
 import React from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { useTranslation } from 'react-i18next';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -27,38 +24,46 @@ interface CreateNewVisitForPatientDialogProps {
   onSuccess: () => void; // Callback on successful creation
 }
 
-const createNewVisitSchema = z.object({
-  target_doctor_shift_id: z.string().min(1, "Target shift is required."),
-  reason_for_visit: z.string().max(1000).optional(),
-});
-type CreateNewVisitFormValues = z.infer<typeof createNewVisitSchema>;
+interface CreateNewVisitFormValues {
+  target_doctor_shift_id: string;
+  reason_for_visit?: string;
+}
 
 const CreateNewVisitForPatientDialog: React.FC<CreateNewVisitForPatientDialogProps> = ({
   isOpen, onOpenChange, sourcePatient, targetShiftOptions, isLoadingTargetShifts, onSuccess
 }) => {
-  const { t, i18n } = useTranslation(['clinic', 'common']);
-
   const form = useForm<CreateNewVisitFormValues>({
-    resolver: zodResolver(createNewVisitSchema),
     defaultValues: { target_doctor_shift_id: '', reason_for_visit: '' },
   });
 
   const mutation = useMutation({
     mutationFn: (data: CreateCopiedVisitPayload) => 
-        createCopiedVisitForNewShift(sourcePatient.id, data),
+        createCopiedVisitForNewShift(data),
     onSuccess: () => {
       onSuccess(); // Parent handles toast and invalidation for the main list
       form.reset();
       // onOpenChange(false); // Parent typically handles closing
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || t('common:error.operationFailed'));
+      toast.error(error.response?.data?.message || "فشل في العملية");
     },
   });
 
   const onSubmit = (data: CreateNewVisitFormValues) => {
+    // Basic validation
+    if (!data.target_doctor_shift_id) {
+      toast.error("النوبة المستهدفة مطلوبة");
+      return;
+    }
+    
+    const targetShiftId = parseInt(data.target_doctor_shift_id);
+    if (isNaN(targetShiftId)) {
+      toast.error("معرف النوبة غير صحيح");
+      return;
+    }
+    
     mutation.mutate({ 
-        target_doctor_shift_id: parseInt(data.target_doctor_shift_id),
+        target_doctor_shift_id: targetShiftId,
         reason_for_visit: data.reason_for_visit
     });
   };
@@ -73,8 +78,8 @@ const CreateNewVisitForPatientDialog: React.FC<CreateNewVisitForPatientDialogPro
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{t('clinic:visit.createNewVisitDialog.title', { patientName: sourcePatient.name })}</DialogTitle>
-          <DialogDescription>{t('clinic:visit.createNewVisitDialog.description')}</DialogDescription>
+          <DialogTitle>إنشاء زيارة جديدة للمريض {sourcePatient.name}</DialogTitle>
+          <DialogDescription>إنشاء زيارة جديدة للمريض في نوبة أخرى</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2">
@@ -83,15 +88,15 @@ const CreateNewVisitForPatientDialog: React.FC<CreateNewVisitForPatientDialogPro
               name="target_doctor_shift_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('clinic:visit.createNewVisitDialog.selectTargetShift')}</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} dir={i18n.dir()} disabled={isLoadingTargetShifts || mutation.isPending}>
-                    <FormControl><SelectTrigger><SelectValue placeholder={t('clinic:visit.createNewVisitDialog.targetShiftPlaceholder')} /></SelectTrigger></FormControl>
+                  <FormLabel>اختر النوبة المستهدفة</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value} dir={true} disabled={isLoadingTargetShifts || mutation.isPending}>
+                    <FormControl><SelectTrigger><SelectValue placeholder="اختر النوبة" /></SelectTrigger></FormControl>
                     <SelectContent>
-                      {isLoadingTargetShifts ? <SelectItem value="loading" disabled>{t('common:loading')}</SelectItem> :
-                       targetShiftOptions.length === 0 ? <div className="p-2 text-xs text-muted-foreground">{t('clinic:visit.copyDialog.noOtherShifts')}</div> :
+                      {isLoadingTargetShifts ? <SelectItem value="loading" disabled>جاري التحميل...</SelectItem> :
+                       targetShiftOptions.length === 0 ? <div className="p-2 text-xs text-muted-foreground">لا توجد نوبات أخرى متاحة</div> :
                        targetShiftOptions.map(ds => (
                         <SelectItem key={ds.id} value={String(ds.id)}>
-                          {ds.doctor_name} ({t('common:shift')} #{ds.id} - {ds.status ? t('common:statusEnum.open') : t('common:statusEnum.closed')})
+                          {ds.doctor_name} (النوبة #{ds.id} - {ds.status ? "مفتوحة" : "مغلقة"})
                         </SelectItem>
                        ))}
                     </SelectContent>
@@ -105,17 +110,17 @@ const CreateNewVisitForPatientDialog: React.FC<CreateNewVisitForPatientDialogPro
               name="reason_for_visit"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('clinic:visit.createNewVisitDialog.reasonLabel')}</FormLabel>
-                  <FormControl><Textarea {...field} placeholder={t('clinic:visit.createNewVisitDialog.reasonPlaceholder')} rows={2} /></FormControl>
+                  <FormLabel>سبب الزيارة</FormLabel>
+                  <FormControl><Textarea {...field} placeholder="اكتب سبب الزيارة..." rows={2} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
             <DialogFooter className="pt-4">
-              <DialogClose asChild><Button type="button" variant="outline" disabled={mutation.isPending}>{t('common:cancel')}</Button></DialogClose>
+              <DialogClose asChild><Button type="button" variant="outline" disabled={mutation.isPending}>إلغاء</Button></DialogClose>
               <Button type="submit" disabled={isLoadingTargetShifts || mutation.isPending || targetShiftOptions.length === 0}>
                 {mutation.isPending && <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />}
-                {t('clinic:visit.createNewVisitDialog.createButton')}
+                إنشاء الزيارة
               </Button>
             </DialogFooter>
           </form>

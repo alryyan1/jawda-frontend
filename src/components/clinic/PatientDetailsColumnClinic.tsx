@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { getDoctorVisitById, recordServicePayment } from "@/services/visitService";
 import { getRequestedServicesForVisit } from "@/services/visitService";
@@ -22,7 +21,6 @@ const PatientDetailsColumnClinic: React.FC<PatientDetailsColumnClinicProps> = ({
   onPrintReceipt,
   currentClinicShiftId,
 }) => {
-  const { t } = useTranslation(["clinic", "common", "payments"]);
   const queryClient = useQueryClient();
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isPdfDialogOpen, setIsPdfDialogOpen] = useState(false);
@@ -56,7 +54,7 @@ const PatientDetailsColumnClinic: React.FC<PatientDetailsColumnClinicProps> = ({
       });
 
       if (unpaidServices.length === 0) {
-        throw new Error(t("payments.noUnpaidServices", "No unpaid services found"));
+        throw new Error("لا توجد خدمات غير مدفوعة");
       }
 
       // Process payments for all unpaid services
@@ -65,8 +63,8 @@ const PatientDetailsColumnClinic: React.FC<PatientDetailsColumnClinicProps> = ({
         return recordServicePayment({
           requested_service_id: service.id,
           amount: balance,
-          is_bank: false, // Default to cash payment
-          shift_id: currentClinicShiftId,
+          is_bank: false,
+          shift_id: currentClinicShiftId
         });
       });
 
@@ -74,7 +72,7 @@ const PatientDetailsColumnClinic: React.FC<PatientDetailsColumnClinicProps> = ({
       return unpaidServices;
     },
     onSuccess: () => {
-      toast.success(t("payments.allPaymentsProcessed", "All payments processed successfully"));
+      toast.success("تم معالجة جميع المدفوعات بنجاح");
       if (onPrintReceipt) {
         onPrintReceipt();
       }
@@ -86,7 +84,7 @@ const PatientDetailsColumnClinic: React.FC<PatientDetailsColumnClinicProps> = ({
       });
     },
     onError: (error: Error) => {
-      toast.error(error.message || t("common:error.paymentFailed"));
+      toast.error(error.message || "فشل في المعالجة");
     },
   });
 
@@ -108,7 +106,7 @@ const PatientDetailsColumnClinic: React.FC<PatientDetailsColumnClinicProps> = ({
       setIsPdfDialogOpen(true);
     },
     onError: (error: Error) => {
-      toast.error(error.message || t("common:error.pdfGenerationFailed"));
+      toast.error(error.message || "فشل في إنشاء ملف PDF");
     },
     onSettled: () => {
       setIsGeneratingPdf(false);
@@ -145,7 +143,7 @@ const PatientDetailsColumnClinic: React.FC<PatientDetailsColumnClinicProps> = ({
     return (
       <div className="flex flex-col h-full w-full items-center justify-center p-4 text-muted-foreground">
         <FileText className="h-12 w-12 mb-2" />
-        <p>{t("clinic:selectPatientToViewDetails", "Select a patient to view details")}</p>
+        <p>اختر مريضاً لعرض التفاصيل</p>
       </div>
     );
   }
@@ -154,7 +152,7 @@ const PatientDetailsColumnClinic: React.FC<PatientDetailsColumnClinicProps> = ({
     return (
       <div className="flex flex-col h-full w-full items-center justify-center p-4">
         <Loader2 className="h-8 w-8 animate-spin mb-2" />
-        <p>{t("common:loading")}</p>
+        <p>جاري التحميل...</p>
       </div>
     );
   }
@@ -163,7 +161,7 @@ const PatientDetailsColumnClinic: React.FC<PatientDetailsColumnClinicProps> = ({
     return (
       <div className="flex flex-col h-full w-full items-center justify-center p-4 text-muted-foreground">
         <FileText className="h-12 w-12 mb-2" />
-        <p>{t("clinic:visitNotFound", "Visit not found")}</p>
+        <p>الزيارة غير موجودة</p>
       </div>
     );
   }
@@ -202,23 +200,23 @@ const PatientDetailsColumnClinic: React.FC<PatientDetailsColumnClinicProps> = ({
         <table className="w-full text-sm mb-4 text-foreground">
           <tbody>
             <tr>
-              <td className="text-right text-muted-foreground py-1">{t("clinic:doctor")}</td>
+              <td className="text-right text-muted-foreground py-1">الطبيب</td>
               <td className="text-left font-medium px-2">{doctorName}</td>
             </tr>
             <tr>
-              <td className="text-right text-muted-foreground py-1">{t("clinic:phone")}</td>
+              <td className="text-right text-muted-foreground py-1">الهاتف</td>
               <td className="text-left font-medium px-2">{phone}</td>
             </tr>
             <tr>
-              <td className="text-right text-muted-foreground py-1">{t("clinic:date")}</td>
+              <td className="text-right text-muted-foreground py-1">التاريخ</td>
               <td className="text-left font-medium px-2">{date}</td>
             </tr>
             <tr>
-              <td className="text-right text-muted-foreground py-1">{t("clinic:visitNumber")}</td>
+              <td className="text-right text-muted-foreground py-1">رقم الزيارة</td>
               <td className="text-left font-medium px-2">{serial}</td>
             </tr>
             <tr>
-              <td className="text-right text-muted-foreground py-1">{t("clinic:registeredBy")}</td>
+              <td className="text-right text-muted-foreground py-1">مسجل بواسطة</td>
               <td className="text-left font-medium px-2">{registeredBy}</td>
             </tr>
           </tbody>
@@ -234,7 +232,7 @@ const PatientDetailsColumnClinic: React.FC<PatientDetailsColumnClinicProps> = ({
         {/* Services Summary */}
         <div className="w-full mb-4">
           <div className="text-center text-muted-foreground font-semibold border-b border-border pb-2 mb-3">
-            {t("clinic:requestedServices", "Requested Services")} ({requestedServices.length})
+            الخدمات المطلوبة ({requestedServices.length})
           </div>
           
           {requestedServices.length > 0 && (
@@ -250,18 +248,18 @@ const PatientDetailsColumnClinic: React.FC<PatientDetailsColumnClinicProps> = ({
         </div>
 
         {/* Financial Summary */}
-        <div className="w-full bg-muted/30 dark:bg-muted/50 rounded-lg border border-border flex flex-col items-center mb-4">
+        <div className="w-full bg-muted/30 rounded-lg border border-border flex flex-col items-center mb-4">
           <div className="flex w-full">
             <div className="flex-1 text-center p-3 border-r border-border">
-              <div className="text-xs text-muted-foreground">{t("clinic:total")}</div>
+              <div className="text-xs text-muted-foreground">المجموع</div>
               <div className="text-lg font-bold text-foreground">{total.toLocaleString()}</div>
             </div>
             <div className="flex-1 text-center p-3 border-r border-border">
-              <div className="text-xs text-muted-foreground">{t("clinic:paid")}</div>
+              <div className="text-xs text-muted-foreground">المدفوع</div>
               <div className="text-lg text-green-600 font-bold">{totalPaid.toLocaleString()}</div>
             </div>
             <div className="flex-1 text-center p-3">
-              <div className="text-xs text-muted-foreground">{t("clinic:balance")}</div>
+              <div className="text-xs text-muted-foreground">المتبقي</div>
               <div className={cn(
                 "text-lg font-bold",
                 totalBalance > 0.009 ? "text-red-600" : "text-green-600"
@@ -286,7 +284,7 @@ const PatientDetailsColumnClinic: React.FC<PatientDetailsColumnClinicProps> = ({
               ) : (
                 <DollarSign className="h-4 w-4 mr-2" />
               )}
-              {t("payments:payAll", "Pay All")}
+              دفع الكل
             </Button>
           )}
 
@@ -302,7 +300,7 @@ const PatientDetailsColumnClinic: React.FC<PatientDetailsColumnClinicProps> = ({
             ) : (
               <FileText className="h-4 w-4 mr-2" />
             )}
-            {t("clinic:viewReceipt", "View Receipt")}
+            عرض الإيصال
           </Button>
         </div>
       </div>
@@ -312,7 +310,7 @@ const PatientDetailsColumnClinic: React.FC<PatientDetailsColumnClinicProps> = ({
         isOpen={isPdfDialogOpen}
         onOpenChange={setIsPdfDialogOpen}
         pdfUrl={pdfUrl}
-        title={t("clinic:receiptPreview", "Receipt Preview")}
+        title="معاينة الإيصال"
         fileName={`receipt-${visitId}.pdf`}
         isLoading={isGeneratingPdf || generatePdfMutation.isPending}
       />

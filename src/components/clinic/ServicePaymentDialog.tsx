@@ -1,10 +1,7 @@
 // src/components/clinic/ServicePaymentDialog.tsx
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useEffect, useMemo, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { useTranslation } from 'react-i18next';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -17,9 +14,7 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Loader2 } from 'lucide-react';
 import type { RequestedService } from '@/types/services';
-import type { Patient } from '@/types/patients';
 import { recordServicePayment } from '@/services/visitService';
-import { getPatientById } from '@/services/patientService';
 import { formatNumber } from '@/lib/utils'; // Assuming you have this
 import type { DoctorVisit } from '@/types/visits';
 
@@ -34,23 +29,16 @@ interface ServicePaymentDialogProps {
   handlePrintReceipt:()=>void;
 }
 
-const paymentSchema = z.object({
-  amount: z.string()
-    .refine(val => !isNaN(parseFloat(val)), { message: 'Must be numeric' })
-    .transform(val => parseFloat(val))
-    .refine(val => val >= 0.01, { message: 'Amount must be at least 0.01' })
-    .refine(val => val <= 999999.99, { message: 'Amount exceeds maximum' }),
-  is_bank: z.string().min(1, { message: 'Payment method is required' }),
-});
-
-type PaymentFormValues = z.infer<typeof paymentSchema>;
+interface PaymentFormValues {
+  amount: string;
+  is_bank: string;
+}
 
 const ServicePaymentDialog: React.FC<ServicePaymentDialogProps> = ({ 
   handlePrintReceipt,
   visit,
   isOpen, onOpenChange, requestedService, visitId, currentClinicShiftId, onPaymentSuccess 
 }) => {
-  const { t } = useTranslation(['payments', 'common']);
   
   // const { data: patient, isLoading: isLoadingPatient } = useQuery<Patient, Error>({
   //   queryKey: ['patientDetailsForPaymentDialog', visitId],
@@ -79,7 +67,6 @@ const ServicePaymentDialog: React.FC<ServicePaymentDialogProps> = ({
     
     let netPayableByPatient: number;
     let paymentDefault: number;
-    console.log(isCompanyPatient,'isCompanyPatient')
     if (isCompanyPatient) {
         // For company patient, what they are expected to pay is the amount *after* company endurance.
         // The 'endurance' field on RequestedService already represents the company's part for this service instance.
@@ -106,42 +93,7 @@ const ServicePaymentDialog: React.FC<ServicePaymentDialogProps> = ({
   const form = useForm<PaymentFormValues>({
     defaultValues: { 
         amount: calculatedPaymentDefault > 0 ? calculatedPaymentDefault.toFixed(1) : '0.00', 
-        is_bank: "0" 
-    },
-    resolver: (values) => {
-      const errors: Record<string, { type: string; message: string }> = {};
-      
-      // Validate amount
-      const amount = parseFloat(values.amount);
-      if (isNaN(amount)) {
-        errors.amount = {
-          type: 'validate',
-          message: t('common:validation.mustBeNumeric')
-        };
-      } else if (displayBalance > 0 && amount < 0.01) {
-        errors.amount = {
-          type: 'validate',
-          message: t('payments:validation.amountMinRequired', { amount: '0.01' })
-        };
-      } else if (amount > displayBalance + 0.009) {
-        errors.amount = {
-          type: 'validate',
-          message: t('payments:validation.amountExceedsBalance', { balance: displayBalance.toFixed(1) })
-        };
-      }
-
-      // Validate payment method
-      if (!values.is_bank) {
-        errors.is_bank = {
-          type: 'validate',
-          message: t('common:validation.required', { field: t('payments:paymentMethod') })
-        };
-      }
-
-      return {
-        values,
-        errors: Object.keys(errors).length > 0 ? errors : {}
-      };
+        is_bank: '0' 
     }
   });
 
@@ -150,49 +102,45 @@ const ServicePaymentDialog: React.FC<ServicePaymentDialogProps> = ({
   useEffect(() => {
     if (isOpen) {
         const defaultAmount = calculatedPaymentDefault > 0 ? calculatedPaymentDefault.toFixed(1) : '0.00';
-        form.reset({ 
-            amount: defaultAmount,
-            is_bank: "0" 
-        });
+        form.reset();
         setValue("amount", defaultAmount);
     }
   }, [isOpen, requestedService, calculatedPaymentDefault, form, setValue]);
 
   const mutation = useMutation({
     mutationFn: (data: PaymentFormValues) => 
-        recordServicePayment({ 
-            requested_service_id: requestedService.id, 
-            amount: parseFloat(data.amount), 
+        recordServicePayment({
+            requested_service_id: requestedService.id,
+            amount: parseFloat(data.amount),
             is_bank: data.is_bank === "1",
             shift_id: currentClinicShiftId
         }),
     onSuccess: () => {
-      toast.success(t('payments:paymentSuccess'));
-    handlePrintReceipt()
-      
+      toast.success("تم الدفع بنجاح");
+      handlePrintReceipt();
       onPaymentSuccess();
     },
     onError: (error: Error & { response?: { data?: { message?: string } } }) => {
-      toast.error(error.response?.data?.message || t('payments:paymentError'));
+      toast.error(error.response?.data?.message || "حدث خطأ في الدفع");
     },
   });
 
-  const onSubmit = (data: PaymentFormValues) => {
+  const onSubmit = useCallback((data: PaymentFormValues) => {
     const amount = parseFloat(data.amount);
     if (displayBalance <= 0 && amount <= 0) {
-        toast.info(t('payments:itemAlreadyPaidOrNoBalance'));
+        toast.info("لا يوجد مبلغ للدفع");
         onOpenChange(false);
         return;
     }
     mutation.mutate(data);
-  };
+  }, [displayBalance, onOpenChange, mutation]);
   
   const handleKeyPress = useCallback((event: KeyboardEvent) => {
     if (!isOpen) return;
 
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
-      const amount = parseFloat(getValues('amount'));
+      const amount = parseFloat(getValues("amount"));
       const displayBalanceCheck = displayBalance <= 0 && amount <= 0;
       const isPendingCheck = mutation.isPending;
 
@@ -222,22 +170,22 @@ const ServicePaymentDialog: React.FC<ServicePaymentDialogProps> = ({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{t('payments:dialogTitle', { serviceName: requestedService.service?.name || 'Service' })}</DialogTitle>
+          <DialogTitle>دفع الخدمة</DialogTitle>
           <DialogDescription>
-            {t('payments:netPriceAfterDiscount')}: <span className="font-semibold">{formatNumber(fullNetPrice)}</span> {t('common:currencySymbolShort')} <br/>
+            المبلغ الإجمالي: <span className="font-semibold">{formatNumber(fullNetPrice)}</span> ريال <br/>
             {isCompanyPatient && requestedService.endurance > 0 && (
                 <span className="text-xs text-muted-foreground">
-                    ({t('payments:companyEnduranceApplied')}: {formatNumber(Number(requestedService.endurance) * (Number(requestedService.count) || 1))} {t('common:currencySymbolShort')}) <br/>
+                    (التأمين: {formatNumber(Number(requestedService.endurance) * (Number(requestedService.count) || 1))} ريال) <br/>
                 </span>
             )}
-            {t('payments:patientPayableBalance')}: <span className="font-semibold">{formatNumber(displayBalance)}</span> {t('common:currencySymbolShort')}
+            المبلغ المتبقي: <span className="font-semibold">{formatNumber(displayBalance)}</span> ريال
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2">
             <FormField control={control} name="amount" render={({ field }) => (
               <FormItem>
-                <FormLabel>{t('payments:amountToPayNow')}</FormLabel>
+                <FormLabel>المبلغ</FormLabel>
                 <FormControl>
                   <Input 
                     type="number" 
@@ -245,7 +193,7 @@ const ServicePaymentDialog: React.FC<ServicePaymentDialogProps> = ({
                     {...field} 
                     onChange={(e) => field.onChange(e.target.value)}
                     value={String(field.value)} // Ensure value is string for input
-                    disabled={mutation.isPending || (displayBalance <= 0 && field.value <= 0) }
+                    disabled={mutation.isPending || (displayBalance <= 0 && parseFloat(field.value) <= 0) }
                   />
                 </FormControl>
                 <FormMessage />
@@ -253,21 +201,21 @@ const ServicePaymentDialog: React.FC<ServicePaymentDialogProps> = ({
             )} />
             <FormField control={control} name="is_bank" render={({ field }) => (
               <FormItem className="space-y-2">
-                <FormLabel>{t('payments:paymentMethod')}</FormLabel>
+                <FormLabel>طريقة الدفع</FormLabel>
                 <FormControl>
                   <RadioGroup
                     onValueChange={field.onChange}
                     defaultValue={field.value}
                     className="flex space-x-4 rtl:space-x-reverse"
-                    disabled={mutation.isPending || (displayBalance <= 0 && getValues("amount") <= 0)}
+                    disabled={mutation.isPending || (displayBalance <= 0 && parseFloat(getValues("amount")) <= 0)}
                   >
                     <FormItem className="flex items-center space-x-2 rtl:space-x-reverse">
                       <FormControl><RadioGroupItem value="0" id={`cash-${requestedService.id}`} /></FormControl>
-                      <FormLabel htmlFor={`cash-${requestedService.id}`} className="font-normal">{t('payments:cash')}</FormLabel>
+                      <FormLabel htmlFor={`cash-${requestedService.id}`} className="font-normal">نقدي</FormLabel>
                     </FormItem>
                     <FormItem className="flex items-center space-x-2 rtl:space-x-reverse">
                       <FormControl><RadioGroupItem value="1" id={`bank-${requestedService.id}`} /></FormControl>
-                      <FormLabel htmlFor={`bank-${requestedService.id}`} className="font-normal">{t('payments:bank')}</FormLabel>
+                      <FormLabel htmlFor={`bank-${requestedService.id}`} className="font-normal">بنكي</FormLabel>
                     </FormItem>
                   </RadioGroup>
                 </FormControl>
@@ -275,10 +223,10 @@ const ServicePaymentDialog: React.FC<ServicePaymentDialogProps> = ({
               </FormItem>
             )} />
             <DialogFooter className="pt-4">
-              <DialogClose asChild><Button type="button" variant="outline" disabled={mutation.isPending}>{t('common:cancel')}</Button></DialogClose>
-              <Button type="submit" disabled={mutation.isPending || (displayBalance <= 0 && getValues("amount") <= 0)}>
+              <DialogClose asChild><Button type="button" variant="outline" disabled={mutation.isPending}>إلغاء</Button></DialogClose>
+              <Button type="submit" disabled={mutation.isPending || (displayBalance <= 0 && parseFloat(getValues("amount")) <= 0)}>
                 {mutation.isPending && <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />}
-                {t('common:pay')}
+                دفع
               </Button>
             </DialogFooter>
           </form>

@@ -2,9 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import type { SubmitHandler } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { useTranslation } from "react-i18next";
+
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -49,11 +47,7 @@ interface SubcompanyFormValues {
   service_endurance: string;
 }
 
-const subcompanySchema = z.object({
-  name: z.string().min(1),
-  lab_endurance: z.string().min(1),
-  service_endurance: z.string().min(1),
-}) satisfies z.ZodType<SubcompanyFormValues>;
+// Removed Zod schema - using manual validation
 
 const AddSubcompanyDialog: React.FC<AddSubcompanyDialogProps> = ({
   companyId,
@@ -64,7 +58,7 @@ const AddSubcompanyDialog: React.FC<AddSubcompanyDialogProps> = ({
   open,
   onOpenChange,
 }) => {
-  const { t } = useTranslation(["patients", "common"]);
+  // Translation hook removed since we're not using translations
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -73,7 +67,6 @@ const AddSubcompanyDialog: React.FC<AddSubcompanyDialogProps> = ({
   const setDialogOpen = onOpenChange ?? setIsOpen;
 
   const form = useForm<SubcompanyFormValues>({
-    resolver: zodResolver(subcompanySchema),
     defaultValues: {
       name: "",
       lab_endurance: "0",
@@ -93,7 +86,7 @@ const AddSubcompanyDialog: React.FC<AddSubcompanyDialogProps> = ({
       return result;
     },
     onSuccess: (newSubcompany) => {
-      toast.success(t("patients:subcompany.addedSuccess"));
+      toast.success("subcompany.addedSuccess");
       queryClient.invalidateQueries({
         queryKey: ["subcompaniesList", companyId],
       });
@@ -104,18 +97,23 @@ const AddSubcompanyDialog: React.FC<AddSubcompanyDialogProps> = ({
     onError: (error: Error & { response?: { data?: { message?: string } } }) => {
       toast.error(
         error.response?.data?.message ||
-          t("common:error.saveFailed", {
-            entity: t("patients:fields.subCompany"),
-          })
+          "error.saveFailed"
       );
     },
   });
 
   const onSubmit: SubmitHandler<SubcompanyFormValues> = (data) => {
-    if (!companyId) {
-      toast.error(t("patients:subcompany.parentCompanyRequiredError"));
+    // Basic validation
+    if (!data.name.trim()) {
+      toast.error("اسم الشركة الفرعية مطلوب");
       return;
     }
+    
+    if (!companyId) {
+      toast.error("معرف الشركة الأم مطلوب");
+      return;
+    }
+    
     mutation.mutate(data);
   };
 
@@ -129,12 +127,12 @@ const AddSubcompanyDialog: React.FC<AddSubcompanyDialogProps> = ({
       variant="ghost"
       size="icon"
       className="h-7 w-7 shrink-0 disabled:opacity-50"
-      aria-label={t("patients:subcompany.addButton")}
+      aria-label={"subcompany.addButton"}
       disabled={disabled || !companyId}
       title={
         !companyId
-          ? t("patients:subcompany.selectParentCompanyFirst")
-          : t("patients:subcompany.addButton")
+          ? "subcompany.selectParentCompanyFirst"
+          : "subcompany.addButton"
       }
     >
       <PlusCircle className="h-3.5 w-3.5" />
@@ -149,11 +147,11 @@ const AddSubcompanyDialog: React.FC<AddSubcompanyDialogProps> = ({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {t("patients:subcompany.addDialogTitle")}{" "}
+            {"subcompany.addDialogTitle"}{" "}
             {companyName && `(${companyName})`}
           </DialogTitle>
           <DialogDescription>
-            {t("patients:subcompany.addDialogDescription")}
+            {"subcompany.addDialogDescription"}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -166,7 +164,7 @@ const AddSubcompanyDialog: React.FC<AddSubcompanyDialogProps> = ({
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("patients:fields.subCompanyName")}</FormLabel>
+                  <FormLabel>{"fields.subCompanyName"}</FormLabel>
                   <FormControl>
                     <Input {...field} />
                   </FormControl>
@@ -181,7 +179,7 @@ const AddSubcompanyDialog: React.FC<AddSubcompanyDialogProps> = ({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      {t("patients:fields.labEnduranceShort")}
+                      {"fields.labEnduranceShort"}
                     </FormLabel>
                     <FormControl>
                       <Input type="number" step="0.01" {...field} />
@@ -196,7 +194,7 @@ const AddSubcompanyDialog: React.FC<AddSubcompanyDialogProps> = ({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      {t("patients:fields.serviceEnduranceShort")}
+                      {"fields.serviceEnduranceShort"}
                     </FormLabel>
                     <FormControl>
                       <Input type="number" step="0.01" {...field} />
@@ -213,14 +211,14 @@ const AddSubcompanyDialog: React.FC<AddSubcompanyDialogProps> = ({
                   variant="outline"
                   disabled={mutation.isPending}
                 >
-                  {t("common:cancel")}
+                  {"إلغاء"}
                 </Button>
               </DialogClose>
               <Button type="submit" disabled={mutation.isPending || !companyId}>
                 {mutation.isPending && (
                   <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />
                 )}
-                {t("common:add")}
+                {"add"}
               </Button>
             </DialogFooter>
           </form>

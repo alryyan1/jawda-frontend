@@ -23,8 +23,7 @@ interface PatientVisitHistoryDialogProps {
 const PatientVisitHistoryDialog: React.FC<PatientVisitHistoryDialogProps> = ({
   isOpen, onOpenChange, patientId
 }) => {
-  const { t, i18n } = useTranslation(['clinic', 'common']);
-  const dateLocale = i18n.language.startsWith('ar') ? arSA : enUS;
+  const dateLocale = "ar".startsWith('ar') ? arSA : enUS;
 
   const { data: response, isLoading, error } = useQuery<PaginatedResponse<DoctorVisit>, Error>({
     queryKey: ['patientVisitHistory', patientId],
@@ -38,12 +37,10 @@ const PatientVisitHistoryDialog: React.FC<PatientVisitHistoryDialogProps> = ({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg md:max-w-2xl max-h-[80vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>{t('clinic:visit.historyDialog.title')}</DialogTitle>
+          <DialogTitle>تاريخ الزيارات</DialogTitle>
           {visitHistory.length > 0 && (
             <DialogDescription>
-              {t('clinic:visit.historyDialog.forPatient', { 
-                name: visitHistory[0]?.patient?.name || '' 
-              })}
+              للمريض: {visitHistory[0]?.patient?.name || ''}
             </DialogDescription>
           )}
         </DialogHeader>
@@ -55,39 +52,39 @@ const PatientVisitHistoryDialog: React.FC<PatientVisitHistoryDialogProps> = ({
             </div>
           ) : error ? (
             <p className="text-destructive text-center py-4">
-              {t('common:error.fetchFailed')}: {error.message}
+              فشل في جلب البيانات: {error.message}
             </p>
           ) : visitHistory.length === 0 ? (
             <p className="text-muted-foreground text-center py-10">
-              {t('clinic:visit.historyDialog.noHistory')}
+              لا يوجد تاريخ زيارات
             </p>
           ) : (
             <Table className="text-xs">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-center">{t('common:date')}</TableHead>
-                  <TableHead className="text-center">{t('common:doctor')}</TableHead>
-                  <TableHead>{t('clinic:visit.historyDialog.reasonOrServices')}</TableHead>
-                  <TableHead className="text-center">{t('common:status')}</TableHead>
+                  <TableHead className="text-center">التاريخ</TableHead>
+                  <TableHead className="text-center">الطبيب</TableHead>
+                  <TableHead>السبب أو الخدمات</TableHead>
+                  <TableHead className="text-center">الحالة</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {visitHistory.map((visit: DoctorVisit) => (
                   <TableRow key={visit.id}>
                     <TableCell className="text-center">
-                      {visit.visit_date ? format(parseISO(visit.visit_date), 'P', {locale: dateLocale}) : '-'} <br/>
+                      {visit.visit_date ? format(visit.visit_date, 'P', {locale: dateLocale}) : '-'} <br/>
                       <span className="text-muted-foreground text-[10px]">
-                        {visit.visit_time ? format(parseISO(`2000-01-01T${visit.visit_time}`), 'p', { locale: dateLocale }) : ''}
+                        {visit.visit_time ? format(visit.visit_time, 'p', { locale: dateLocale }) : ''}
                       </span>
                     </TableCell>
                     <TableCell className="text-center">
-                      {visit.doctor?.name || t('common:unassigned')}
+                      {visit.doctor?.name || "غير محدد"}
                     </TableCell>
                     <TableCell>
                       {visit.reason_for_visit || visit.requested_services?.map((rs: { service?: { name: string } }) => rs.service?.name).join(', ') || '-'}
                     </TableCell>
                     <TableCell className="text-center">
-                      {t(`clinic:workspace.status.${visit.status}`)}
+                      {visit.status === 'open' ? 'مفتوحة' : visit.status === 'in_progress' ? 'قيد التنفيذ' : visit.status === 'completed' ? 'مكتملة' : visit.status === 'cancelled' ? 'ملغية' : visit.status === 'no_show' ? 'لم يحضر' : visit.status}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -98,7 +95,7 @@ const PatientVisitHistoryDialog: React.FC<PatientVisitHistoryDialogProps> = ({
 
         <DialogFooter className="mt-auto pt-4 border-t">
           <DialogClose asChild>
-            <Button type="button" variant="outline">{t('common:close')}</Button>
+            <Button type="button" variant="outline">إغلاق</Button>
           </DialogClose>
         </DialogFooter>
       </DialogContent>

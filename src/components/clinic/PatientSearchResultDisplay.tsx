@@ -16,14 +16,13 @@ interface PatientSearchResultDisplayProps {
 }
 
 const PatientSearchResultDisplay: React.FC<PatientSearchResultDisplayProps> = ({ results, onSelectPatientVisit, isLoading }) => {
-  const { t, i18n } = useTranslation(['clinic', 'common', 'patients']);
-  const dateLocale = i18n.language.startsWith('ar') ? arSA : enUS;
+  const dateLocale = "ar".startsWith('ar') ? arSA : enUS;
 
   if (isLoading) {
-    return <div className="p-4 text-center text-sm text-muted-foreground">{t('common:searching')}</div>;
+    return <div className="p-4 text-center text-sm text-muted-foreground">جاري البحث...</div>;
   }
   if (results.length === 0) {
-    return <div className="p-4 text-center text-sm text-muted-foreground">{t('common:noResultsFound')}</div>;
+    return <div className="p-4 text-center text-sm text-muted-foreground">لا توجد نتائج</div>;
   }
 
   return (
@@ -42,13 +41,13 @@ const PatientSearchResultDisplay: React.FC<PatientSearchResultDisplayProps> = ({
                 {patient.last_visit_date && (
                   <p className="text-xs text-muted-foreground flex items-center gap-1">
                     <Calendar className="h-3 w-3"/>
-                    {t('patients:search.lastVisit')}: {format(parseISO(patient.last_visit_date), 'P', {locale: dateLocale})}
+                    التاريخ: {format(patient.last_visit_date, 'P', {locale: dateLocale})}
                   </p>
                 )}
                 {patient.last_visit_doctor_name && (
                    <p className="text-xs text-muted-foreground flex items-center gap-1">
                      <Stethoscope className="h-3 w-3"/>
-                     {t('patients:search.lastDoctor')}: {patient.last_visit_doctor_name}
+                     {"الطبيب"}: {patient.last_visit_doctor_name}
                    </p>
                 )}
               </div>
@@ -58,7 +57,7 @@ const PatientSearchResultDisplay: React.FC<PatientSearchResultDisplayProps> = ({
                  className="text-xs h-7 px-2"
                  onClick={() => onSelectPatientVisit(patient.id, patient.last_visit_id, patient.last_visit_file_id)}
               >
-                 <SaveAll className="ltr:mr-1 rtl:ml-1 h-3.5 w-3.5"/> {t('patients:search.createVisitFromThis')}
+                 <SaveAll className="ltr:mr-1 rtl:ml-1 h-3.5 w-3.5"/> {"اختيار"}
               </Button>
             </div>
           </Card>

@@ -1,6 +1,5 @@
 // src/components/clinic/ActivePatientCard.tsx
 import React, { useMemo, useState, useEffect } from "react";
-import { useTranslation } from "react-i18next";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -115,6 +114,29 @@ const getStatusColor = (status: VisitStatus): string => {
   }
 };
 
+const getStatusText = (status: VisitStatus): string => {
+  switch (status) {
+    case "waiting":
+      return "في الانتظار";
+    case "with_doctor":
+      return "مع الطبيب";
+    case "lab_pending":
+      return "في انتظار المختبر";
+    case "imaging_pending":
+      return "في انتظار الأشعة";
+    case "payment_pending":
+      return "في انتظار الدفع";
+    case "completed":
+      return "مكتملة";
+    case "cancelled":
+      return "ملغية";
+    case "no_show":
+      return "لم يحضر";
+    default:
+      return status;
+  }
+};
+
 const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
   visit,
   isSelected,
@@ -122,7 +144,6 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
   onProfileClick,
   selectedPatientVisitIdInWorkspace,
 }) => {
-  const { t, i18n } = useTranslation(["clinic", "common"]);
   const queryClient = useQueryClient();
   const { user: currentUser, currentClinicShift } = useAuth();
 
@@ -159,7 +180,7 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
     mutationFn: (params: { visitId: number; status: VisitStatus }) =>
       updateDoctorVisitStatus(params.visitId, params.status),
     onSuccess: (updatedVisitData, variables) => {
-      toast.success(t("clinic:visit.statusUpdateSuccess"));
+      toast.success("تم تحديث حالة الزيارة بنجاح");
 
       // Update all active patients queries that might contain this visit
       queryClient.setQueriesData(
@@ -191,7 +212,7 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
     },
     onError: (error: ApiError) => {
       toast.error(
-        error.response?.data?.message || t("clinic:visit.statusUpdateFailed")
+        error.response?.data?.message || "فشل في تحديث حالة الزيارة"
       );
     },
   });
@@ -222,12 +243,7 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
       currentClinicShift?.id,
     ],
     queryFn: () => {
-      console.log(
-        "Query Function Running with clinic shift:",
-        currentClinicShift?.id
-      );
       if (!currentClinicShift?.id) {
-        console.log("No clinic shift ID available");
         return Promise.resolve([]);
       }
       return getActiveDoctorShifts(currentClinicShift.id);
@@ -262,7 +278,7 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
   const handleCopyToShiftSuccess = () => {
     setIsCopyDialogOpen(false);
     queryClient.invalidateQueries({ queryKey: ["activePatients"] });
-    toast.success(t("clinic:visit.copiedToShiftSuccess"));
+    toast.success("تم نسخ الزيارة إلى النوبة بنجاح");
   };
 
   const handleWhatsAppSent = () => {
@@ -307,9 +323,8 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
   const handleNewVisitCreated = () => {
     setIsCreateNewVisitDialogOpen(false);
     queryClient.invalidateQueries({ queryKey: ["activePatients"] }); // Refresh patient lists
-    toast.success(t("clinic:visit.newVisitForPatientCreatedSuccess"));
+    toast.success("تم إنشاء زيارة جديدة للمريض بنجاح");
   };
-  console.log(visit,'visit in ActivePatientCard');
   return (
     <>
       <ContextMenu>
@@ -318,8 +333,8 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
             className={cn(
               "hover:shadow-lg transition-shadow cursor-pointer flex flex-row items-center px-3 py-2 h-[82px] w-[300px]",
               isSelected
-                ? "ring-2 ring-primary shadow-lg bg-primary/10 dark:bg-primary/20"
-                : `bg-card ring-1 ring-transparent hover:ring-slate-300 dark:hover:ring-slate-700 ${visit.company ? "ring-pink-400" : ""}`
+                ? "ring-2 ring-primary shadow-lg bg-primary/10"
+                : `bg-card ring-1 ring-transparent hover:ring-slate-300 ${visit.company ? "ring-pink-400" : ""}`
             )}
             onClick={handleCardClick}
             role="button"
@@ -328,9 +343,7 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
               if (e.key === "Enter" || e.key === " ") handleCardClick();
             }}
             aria-selected={isSelected}
-            aria-label={`${t("common:select")} ${visit.patient.name}, ${t(
-              "common:queueNumberShort"
-            )}${queueNumberOrVisitId}`}
+            aria-label={`اختيار ${visit.patient.name}, رقم ${queueNumberOrVisitId}`}
           >
             {/* Queue number */}
             <div
@@ -338,7 +351,7 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
                 "flex-shrink-0 w-8 h-8 flex items-center justify-center rounded text-white text-sm font-bold shadow ltr:mr-3 rtl:ml-3",
                 getStatusColor(visit.status)
               )}
-              title={`${t("common:queueNumber")}: ${queueNumberOrVisitId}`}
+              title={`رقم الطابور: ${queueNumberOrVisitId}`}
             >
               {queueNumberOrVisitId}
             </div>
@@ -346,7 +359,7 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
             {/* Patient info and status */}
             <div className="flex-grow min-w-0 ltr:mr-2 rtl:ml-2">
               <p
-                className="text-sm font-semibold text-slate-800 dark:text-slate-100 leading-tight truncate"
+                className="text-sm font-semibold text-slate-800 leading-tight truncate"
                 title={visit.patient.name}
               >
                 {visit.patient.name}
@@ -356,7 +369,7 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
                   <Select
                     value={visit.status}
                     onValueChange={handleStatusChange}
-                    dir={i18n.dir()}
+                    dir="rtl"
                     disabled={
                       statusUpdateMutation.isPending &&
                       statusUpdateMutation.variables?.visitId === visit.id
@@ -366,18 +379,16 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
                       className={cn(
                         "h-6 text-xs px-1.5 py-0 focus:ring-0 focus:ring-offset-0 border-0 focus-visible:ring-offset-0 focus-visible:ring-0 shadow-none bg-transparent hover:bg-muted/50 data-[state=open]:bg-muted",
                         visit.status === "waiting" &&
-                          "text-amber-700 dark:text-amber-500",
+                          "text-amber-700",
                         visit.status === "with_doctor" &&
-                          "text-blue-700 dark:text-blue-500",
+                          "text-blue-700",
                         visit.status === "completed" &&
-                          "text-green-700 dark:text-green-500",
+                          "text-green-700",
                         (visit.status === "cancelled" ||
                           visit.status === "no_show") &&
-                          "text-red-700 dark:text-red-500"
+                          "text-red-700"
                       )}
-                      aria-label={t("clinic:workspace.changeStatusFor", {
-                        name: visit.patient.name,
-                      })}
+                      aria-label={`تغيير حالة ${visit.patient.name}`}
                       onClick={(e) => e.stopPropagation()}
                     >
                       <SelectValue />
@@ -389,7 +400,7 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
                           value={statusKey}
                           className="text-xs"
                         >
-                          {t(`clinic:workspace.status.${statusKey}`, statusKey)}
+                          {getStatusText(status)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -433,10 +444,8 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
                 size="icon"
                 className="h-6 w-6 rounded-full flex-shrink-0 p-0"
                 onClick={handleProfileButtonClick}
-                title={t("common:viewProfile")}
-                aria-label={t("common:viewProfileFor", {
-                  name: visit.patient.name,
-                })}
+                title="عرض الملف الشخصي"
+                aria-label={`عرض الملف الشخصي لـ ${visit.patient.name}`}
               >
                 <UserCircle className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
               </Button>
@@ -450,7 +459,7 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
             }
           >
             <Copy className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-            {t("clinic:visit.contextMenu.copyToShift")}
+            نسخ إلى نوبة
             {isLoadingShifts && (
               <Loader2 className="ltr:ml-auto rtl:mr-auto h-3 w-3 animate-spin" />
             )}
@@ -464,7 +473,7 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
             }
           >
             <UserPlus className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-            {t("clinic:visit.contextMenu.createNewVisitForPatient")}
+            إنشاء زيارة جديدة للمريض
             {isLoadingShiftsForNewVisit && (
               <Loader2 className="ltr:ml-auto rtl:mr-auto h-3 w-3 animate-spin" />
             )}
@@ -475,7 +484,7 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
             }
           >
             <MessageSquare className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-            {t("clinic:visit.contextMenu.sendWhatsApp")}
+            إرسال واتساب
           </ContextMenuItem>
           <ContextMenuSeparator />
           <ContextMenuItem
@@ -484,7 +493,7 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
             }
           >
             <History className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-            {t("clinic:visit.contextMenu.showHistory")}
+            عرض التاريخ
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>

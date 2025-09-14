@@ -1,7 +1,6 @@
 // src/components/clinic/UserShiftIncomeDialog.tsx
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle as UICardTitle } from '@/components/ui/card'; // Renamed CardTitle
@@ -86,18 +85,18 @@ const DetailRow: React.FC<{ label: string; value?: string | number | null; icon?
 
 const IncomeSectionCard: React.FC<{ title: string; icon: React.ElementType; data: { total: number; cash: number; bank: number; }; currencySymbol: string }> = 
 ({ title, icon: Icon, data, currencySymbol }) => {
-    const { t } = useTranslation('clinic');
+    // Using Arabic directly
     return (
-        <Card className="flex-1 min-w-[200px] bg-slate-50 dark:bg-slate-800/30 shadow-sm hover:shadow-md transition-shadow">
+        <Card className="flex-1 min-w-[200px] bg-slate-50  shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="pb-2 pt-3">
-                <UICardTitle className="text-sm font-semibold flex items-center gap-1.5 text-primary dark:text-sky-400">
+                <UICardTitle className="text-sm font-semibold flex items-center gap-1.5 text-primary ">
                     <Icon className="h-4 w-4" /> {title}
                 </UICardTitle>
             </CardHeader>
             <CardContent className="space-y-1 pt-1">
-                <DetailRow label={t('userShiftIncomeDialog.totalIncome')} value={formatNumber(data?.total)} unit={currencySymbol} valueClass="text-green-600 dark:text-green-400"/>
-                <DetailRow label={t('userShiftIncomeDialog.cash')} value={formatNumber(data.cash)} unit={currencySymbol} icon={Coins} />
-                <DetailRow label={t('userShiftIncomeDialog.bank')} value={formatNumber(data.bank)} unit={currencySymbol} icon={Landmark} />
+                <DetailRow label="إجمالي الدخل" value={formatNumber(data?.total)} unit={currencySymbol} valueClass="text-green-600 "/>
+                <DetailRow label="نقداً" value={formatNumber(data.cash)} unit={currencySymbol} icon={Coins} />
+                <DetailRow label="بنك" value={formatNumber(data.bank)} unit={currencySymbol} icon={Landmark} />
             </CardContent>
         </Card>
     );
@@ -105,9 +104,9 @@ const IncomeSectionCard: React.FC<{ title: string; icon: React.ElementType; data
 
 
 const UserShiftIncomeDialog: React.FC<UserShiftIncomeDialogProps> = ({ isOpen, onOpenChange, currentClinicShiftId }) => {
-  const { t } = useTranslation(['clinic', 'common', 'dashboard']);
+  // Using Arabic directly
   const { user } = useAuth();
-  const currencySymbol = t('dashboard:currencySymbolShort');
+  const currencySymbol = "ج.س";
 
   const queryKey = ['userShiftIncomeSummary', user?.id, currentClinicShiftId];
 
@@ -127,10 +126,10 @@ const UserShiftIncomeDialog: React.FC<UserShiftIncomeDialogProps> = ({ isOpen, o
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <WalletCards className="h-6 w-6 text-primary"/>
-            {t('clinic:userShiftIncomeDialog.title', { userName: user?.name || '...' })}
+            ملخص الدخل للمستخدم: {user?.name || '...'}
           </DialogTitle>
           <DialogDescription>
-            {t('clinic:userShiftIncomeDialog.descriptionDetailed', { shiftId: currentClinicShiftId || 'N/A' })}
+            تفاصيل الإيرادات الخاصة بالدوام #{currentClinicShiftId || 'غير محدد'}
           </DialogDescription>
         </DialogHeader>
 
@@ -139,12 +138,12 @@ const UserShiftIncomeDialog: React.FC<UserShiftIncomeDialogProps> = ({ isOpen, o
            {(isLoading || (isFetching && !summary)) && (
               <div className="flex-grow flex items-center justify-center py-10">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="ltr:ml-2 rtl:mr-2 text-muted-foreground">{t('clinic:userShiftIncomeDialog.loading')}</p>
+                <p className="ltr:ml-2 rtl:mr-2 text-muted-foreground">جارٍ تحميل الملخص...</p>
               </div>
             )}
             {error && (
               <div className="flex-grow flex items-center justify-center py-10">
-                <p className="ltr:ml-2 rtl:mr-2 text-muted-foreground">{t('clinic:userShiftIncomeDialog.error')}</p>
+                <p className="ltr:ml-2 rtl:mr-2 text-muted-foreground">حدث خطأ في تحميل البيانات</p>
               </div>
             )}
             
@@ -153,13 +152,13 @@ const UserShiftIncomeDialog: React.FC<UserShiftIncomeDialogProps> = ({ isOpen, o
                 {/* Lab and Services Income Sections */}
                 <div className="flex flex-col sm:flex-row gap-3">
                   <IncomeSectionCard 
-                      title={t('clinic:userShiftIncomeDialog.labIncomeSectionTitle')} 
+                      title="إيرادات المختبر" 
                       icon={FlaskConical} 
                       data={summary?.lab_income}
                       currencySymbol={currencySymbol}
                   />
                   <IncomeSectionCard 
-                      title={t('clinic:userShiftIncomeDialog.serviceIncomeSectionTitle')} 
+                      title="إيرادات الخدمات" 
                       icon={Handshake} // Or BriefcaseMedical
                       data={summary?.service_income}
                       currencySymbol={currencySymbol}
@@ -168,49 +167,49 @@ const UserShiftIncomeDialog: React.FC<UserShiftIncomeDialogProps> = ({ isOpen, o
                 
                 {/* Expenses Section (if applicable) */}
                 {(summary?.expenses.total_cash_expenses > 0 || summary?.expenses.total_bank_expenses > 0) && (
-                   <Card className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700/40">
+                   <Card className="bg-red-50  border-red-200 ">
                       <CardHeader className="pb-2 pt-3">
-                          <UICardTitle className="text-sm font-semibold flex items-center gap-1.5 text-red-700 dark:text-red-400">
-                              <TrendingDown className="h-4 w-4"/> {t('clinic:userShiftIncomeDialog.expensesSectionTitle')}
+                          <UICardTitle className="text-sm font-semibold flex items-center gap-1.5 text-red-700 ">
+                              <TrendingDown className="h-4 w-4"/> المصروفات
                           </UICardTitle>
                       </CardHeader>
                       <CardContent className="space-y-1 pt-1">
-                          <DetailRow label={t('clinic:userShiftIncomeDialog.cashExpenses')} value={formatNumber(summary?.expenses.total_cash_expenses)} unit={currencySymbol} icon={Coins}/>
-                          <DetailRow label={t('clinic:userShiftIncomeDialog.bankExpenses')} value={formatNumber(summary?.expenses.total_bank_expenses)} unit={currencySymbol} icon={Landmark}/>
+                          <DetailRow label="المصروفات النقدية" value={formatNumber(summary?.expenses.total_cash_expenses)} unit={currencySymbol} icon={Coins}/>
+                          <DetailRow label="المصروفات البنكية" value={formatNumber(summary?.expenses.total_bank_expenses)} unit={currencySymbol} icon={Landmark}/>
                       </CardContent>
                    </Card>
                 )}
 
                 {/* Grand Totals Section */}
-                <Card className="mt-3 bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700/40">
+                <Card className="mt-3 bg-green-50  border-green-200 ">
                   <CardHeader className="pb-2 pt-3">
-                      <UICardTitle className="text-sm font-semibold flex items-center gap-1.5 text-green-700 dark:text-green-400">
-                         <DollarSign className="h-4 w-4"/> {t('clinic:userShiftIncomeDialog.grandTotalsSectionTitle')}
+                      <UICardTitle className="text-sm font-semibold flex items-center gap-1.5 text-green-700 ">
+                         <DollarSign className="h-4 w-4"/> إجمالي الإيرادات
                       </UICardTitle>
                   </CardHeader>
                   <CardContent className="space-y-1 pt-1">
-                      <DetailRow label={t('clinic:userShiftIncomeDialog.grandTotalIncome')} value={formatNumber(summary?.total)} unit={currencySymbol} valueClass="font-bold"/>
-                      <DetailRow label={t('clinic:userShiftIncomeDialog.totalCashCollected')} value={formatNumber(summary?.total_cash)} unit={currencySymbol} icon={Coins}/>
-                      <DetailRow label={t('clinic:userShiftIncomeDialog.totalBankCollected')} value={formatNumber(summary?.total_bank)} unit={currencySymbol} icon={Landmark}/>
+                      <DetailRow label="إجمالي الدخل" value={formatNumber(summary?.total)} unit={currencySymbol} valueClass="font-bold"/>
+                      <DetailRow label="إجمالي النقد المحصل" value={formatNumber(summary?.total_cash)} unit={currencySymbol} icon={Coins}/>
+                      <DetailRow label="إجمالي التحصيل البنكي" value={formatNumber(summary?.total_bank)} unit={currencySymbol} icon={Landmark}/>
                     
-                      <Separator className="my-2 bg-green-200 dark:bg-green-700/50"/>
-                      <DetailRow label={t('clinic:userShiftIncomeDialog.netCashFlow')} value={formatNumber(summary?.net_cash)} unit={currencySymbol} valueClass="font-bold text-lg" icon={ArrowLeftRight}/>
-                      <DetailRow label={t('clinic:userShiftIncomeDialog.netBankFlow')} value={formatNumber(summary?.net_bank)} unit={currencySymbol} valueClass="font-bold text-lg" icon={ArrowLeftRight}/>
-                      <Separator className="my-2 bg-green-200 dark:bg-green-700/50"/>
-                      <DetailRow label={t('clinic:userShiftIncomeDialog.netOverallFlow')} value={formatNumber(summary?.net_cash + summary?.net_bank)} unit={currencySymbol} valueClass="font-extrabold text-xl text-green-600 dark:text-green-400"/>
+                      <Separator className="my-2 bg-green-200 "/>
+                      <DetailRow label="صافي التدفق النقدي" value={formatNumber(summary?.net_cash)} unit={currencySymbol} valueClass="font-bold text-lg" icon={ArrowLeftRight}/>
+                      <DetailRow label="صافي التدفق البنكي" value={formatNumber(summary?.net_bank)} unit={currencySymbol} valueClass="font-bold text-lg" icon={ArrowLeftRight}/>
+                      <Separator className="my-2 bg-green-200 "/>
+                      <DetailRow label="إجمالي التدفق الكلي" value={formatNumber(summary?.net_cash + summary?.net_bank)} unit={currencySymbol} valueClass="font-extrabold text-xl text-green-600 "/>
                   </CardContent>
                 </Card>
               </>
             )}
             {!summary && !isLoading && !isFetching && !error && ( /* No data message */ <div className="flex-grow flex items-center justify-center py-10">
-                <p className="ltr:ml-2 rtl:mr-2 text-muted-foreground">{t('clinic:userShiftIncomeDialog.noData')}</p>
+                <p className="ltr:ml-2 rtl:mr-2 text-muted-foreground">لا توجد بيانات دخل لهذه الوردية حتى الآن.</p>
               </div>)}
           </div>
         </ScrollArea>
 
         <DialogFooter>
           <DialogClose asChild>
-            <Button type="button" variant="outline">{t('common:close')}</Button>
+            <Button type="button" variant="outline">إغلاق</Button>
           </DialogClose>
         </DialogFooter>
       </DialogContent>

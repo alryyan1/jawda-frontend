@@ -1,6 +1,5 @@
 // src/components/clinic/ServicesRequestComponent.tsx
-import React, { useState, useMemo, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import ServiceSelectionGrid from './ServiceSelectionGrid';
@@ -14,7 +13,6 @@ import { getPatientById } from '@/services/patientService';
 import { getCompanyContractedServices } from '@/services/companyService';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
-import i18n from '@/i18n';
 import RequestedServicesTable from './RequestedServicesTable';
 import RequestedServicesSummary from './RequestedServicesSummary';
 import { useAuth } from '@/contexts/AuthContext';
@@ -28,12 +26,10 @@ interface ServicesRequestComponentProps {
 }
 
 const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ visitId, patientId, visit, handlePrintReceipt }) => {
-  const { t } = useTranslation(['clinic', 'services', 'common']);
+  // Using Arabic directly
   const queryClient = useQueryClient();
   const { currentClinicShift } = useAuth();
-  console.log(visit,'visit in ServicesRequestComponent');
   const [showServiceSelectionGrid, setShowServiceSelectionGrid] = useState(visit?.requested_services?.length === 0);
-  console.log(showServiceSelectionGrid,'showServiceSelectionGrid in ServicesRequestComponent');
   const requestedServicesQueryKey = ['requestedServicesForVisit', visitId] as const;
   const patientDetailsQueryKey = ['patientDetailsForServiceSelection', patientId] as const;
   
@@ -77,13 +73,12 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ vis
     enabled: isCompanyPatient && !!patient?.company_id && showServiceSelectionGrid,
   });
 
-  console.log(companyContracts,'companyContracts');
   const serviceCatalogForGrid = useMemo(() => {
     if (!baseServiceCatalog) return [];
     if (isCompanyPatient && companyContracts) {
       const contractMap = new Map<number, CompanyServiceContract>();
       companyContracts.forEach(contract => {
-        contractMap.set(contract.service_id, contract);
+        contractMap.set(contract.company_id, contract);
       });
 
       return baseServiceCatalog.map(group => ({
@@ -93,7 +88,7 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ vis
           if (contractDetails) {
             return {
               ...service,
-              contract_price: parseFloat(String(contractDetails.price)),
+              contract_price: parseFloat(contractDetails.price),
               contract_requires_approval: contractDetails.approval,
             };
           }
@@ -104,14 +99,11 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ vis
     return baseServiceCatalog;
   }, [baseServiceCatalog, isCompanyPatient, companyContracts]);
 
-  console.log(serviceCatalogForGrid,'serviceCatalogForGrid in ServicesRequestComponent');
 
   const addMultipleServicesMutation = useMutation({
-    mutationFn: (serviceIds: number[]) => addServicesToVisit({ visitId, service_ids: serviceIds}),
+    mutationFn: (serviceIds: number[]) => addServicesToVisit(visitId, serviceIds),
     onSuccess: (_, serviceIds) => {
-      toast.success(t('clinic:services.multipleAddedSuccess', {
-        count: serviceIds.length
-      }));
+      toast.success(`تمت إضافة ${serviceIds.length} خدمة بنجاح!`);
       // After successful addition, invalidate queries and hide the grid
       queryClient.invalidateQueries({ 
         queryKey: requestedServicesQueryKey,
@@ -125,7 +117,7 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ vis
     },
     onError: (error: unknown) => {
       const apiError = error as { response?: { data?: { message?: string } } };
-      toast.error(apiError.response?.data?.message || t('common:error.requestFailed'));
+      toast.error(apiError.response?.data?.message || 'فشل في تنفيذ الطلب');
     }
   });
 
@@ -140,7 +132,7 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ vis
 
     // Check if service is already requested for this visit
     if (requestedServices.some(rs => rs.service_id === serviceId)) {
-        toast.info(t('services:serviceAlreadyRequested', { serviceName: requestedServices.find(rs=>rs.service_id === serviceId)?.service?.name || `ID ${serviceId}`}));
+        toast.info(`الخدمة ${requestedServices.find(rs=>rs.service_id === serviceId)?.service?.name || `ID ${serviceId}`} مطلوبة بالفعل`);
         return false; // Indicate not added because it's a duplicate
     }
     
@@ -150,7 +142,7 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ vis
       //    but it's good for immediate feedback.
       const serviceDetails = await getServiceById(serviceId).then(res => res.data);
       if (!serviceDetails) {
-        toast.error(t('services:serviceNotFoundWithId', { serviceId }));
+        toast.error(`لم يتم العثور على الخدمة بالمعرف ${serviceId}`);
         return false;
       }
       // 2. Add the single service using the existing mutation
@@ -159,7 +151,7 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ vis
       // The mutation's onSuccess will handle toast, invalidation, and hiding the grid
       return true; // Indicate success
     } catch (error: any) {
-      toast.error(t('common:error.fetchFailed', { entity: t('services:serviceEntityName') }), {
+      toast.error('فشل في جلب الخدمة', {
         description: error.response?.data?.message || error.message,
       });
       return false;
@@ -169,13 +161,13 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ vis
     return <div className="py-4 text-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
   }
 
-  const errorToShow = requestedServicesError || catalogError || (patientId && !patient && !isLoadingPatient ? new Error(t('common:error.patientLoadFailed')) : null);
+  const errorToShow = requestedServicesError || catalogError || (patientId && !patient && !isLoadingPatient ? new Error('فشل تحميل بيانات المريض') : null);
   if (errorToShow) {
-    return <div className="p-4 text-center text-sm text-destructive">{t('common:error.loadFailed')}: {errorToShow.message}</div>;
+    return <div className="p-4 text-center text-sm text-destructive">فشل في التحميل: {errorToShow.message}</div>;
   }
  
   return (
-    <div style={{direction:i18n.dir()}} className="space-y-4">
+    <div className="space-y-4">
       {showServiceSelectionGrid && serviceCatalogForGrid ? (
         <ServiceSelectionGrid 
             onAddSingleServiceById={handleAddSingleServiceById}

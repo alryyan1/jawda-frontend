@@ -1,15 +1,16 @@
 // src/components/clinic/DoctorsTabs.tsx
-import React, { useEffect, useRef } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
-import { Loader2 } from 'lucide-react';
-
-import { Badge } from '../ui/badge';
+import React, { useEffect, useState, useCallback } from 'react';
+import {
+  Box,
+  CircularProgress,
+  Paper,
+  Typography,
+} from '@mui/material';
 import { useAuth } from '@/contexts/AuthContext';
-import { useAuthorization } from '@/hooks/useAuthorization';
 import type { DoctorShift } from '@/types/doctors';
 import type { Patient } from '@/types/patients';
 import { getActiveDoctorShifts } from '@/services/clinicService';
+import './DoctorsTabs.css';
 
 interface DoctorsTabsProps {
   onShiftSelect: (shift: DoctorShift | null) => void;
@@ -18,161 +19,151 @@ interface DoctorsTabsProps {
 }
 
 const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId }) => {
-  const { t } = useTranslation(['clinic', 'common']);
-  const { can } = useAuthorization();
-  const { user } = useAuth();
   const { currentClinicShift } = useAuth();
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  const { data: doctorShifts, isLoading, error } = useQuery<DoctorShift[], Error>({
-    queryKey: ['activeDoctorShifts', currentClinicShift?.id],
-    queryFn: () => getActiveDoctorShifts(currentClinicShift?.id || undefined),
-    refetchInterval: 30000,
-  });
+  // State for managing doctor shifts data
+  const [doctorShifts, setDoctorShifts] = useState<DoctorShift[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
 
-  // Filter doctor shifts to show only the shifts that the user has access to
-  let filteredDoctorShifts: DoctorShift[] | undefined = [];
-  if (can('list all_doctor_shifts')) {
-    filteredDoctorShifts = doctorShifts;
-  } else {
-    filteredDoctorShifts = doctorShifts?.filter((ds) => ds.user_id === user?.id);
-  }
+  // Fetch doctor shifts function
+  const fetchDoctorShifts = useCallback(async () => {
+    if (!currentClinicShift?.id) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const data = await getActiveDoctorShifts(currentClinicShift.id);
+      setDoctorShifts(data);
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('فشل في تحميل نوبات الأطباء'));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentClinicShift?.id]);
+
+  // Initial fetch and refetch interval
+  useEffect(() => {
+    fetchDoctorShifts();
+    
+    // Set up interval for refetching every 30 seconds
+    const interval = setInterval(fetchDoctorShifts, 30000);
+    
+    return () => clearInterval(interval);
+  }, [fetchDoctorShifts]);
+
 
   
 
-  useEffect(() => {
-    if (!activeShiftId && filteredDoctorShifts && filteredDoctorShifts.length > 0) {
-      onShiftSelect(filteredDoctorShifts[0]);
-    } else if (activeShiftId && filteredDoctorShifts) {
-      const currentActive = filteredDoctorShifts.find(ds => ds.id === activeShiftId);
-      if (!currentActive && filteredDoctorShifts.length > 0) {
-        onShiftSelect(filteredDoctorShifts[0]);
-      } else if (!currentActive && filteredDoctorShifts.length === 0) {
-        onShiftSelect(null);
-      }
-    }
-  }, [activeShiftId, filteredDoctorShifts, onShiftSelect]);
 
   if (isLoading) return (
-    <div className="flex items-center justify-center h-full border rounded-lg p-4 bg-card">
-      <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      <span className="ml-2 text-sm text-muted-foreground">{t('common:loading')}</span>
-    </div>
+    <Paper className="loading-container">
+      <Box className="loading-content">
+        <CircularProgress size={24} />
+        <Typography className="loading-text">
+          جاري التحميل...
+        </Typography>
+      </Box>
+    </Paper>
   );
 
   if (error) return (
-    <div className="flex items-center justify-center h-full text-sm text-destructive p-4 border rounded-lg bg-card">
-      <div className="text-center">
-        <p className="font-medium">{t('common:error.fetchFailed', { entity: t('clinic:topNav.activeDoctors') })}</p>
-        <p className="text-xs mt-1 text-muted-foreground">{error.message}</p>
-      </div>
-    </div>
+    <Paper className="error-container">
+      <Box className="error-content">
+        <Typography className="error-title">
+          فشل في تحميل الأطباء النشطين
+        </Typography>
+        <Typography className="error-message">
+          {error.message}
+        </Typography>
+      </Box>
+    </Paper>
   );
 
-  if (!doctorShifts || doctorShifts.length === 0) {
+  if (doctorShifts.length === 0 && !isLoading) {
     return (
-      <div className="flex items-center justify-center h-full text-sm text-muted-foreground border rounded-lg p-4 bg-card">
-        <div className="text-center">
-          <p className="font-medium">{t('clinic:doctorsTabs.noActiveShifts')}</p>
-          <p className="text-xs mt-1">{t('clinic:doctorsTabs.noActiveShiftsDesc')}</p>
-        </div>
-      </div>
+      <Paper className="empty-container">
+        <Box className="empty-content">
+          <Typography className="empty-title">
+            لا توجد نوبات نشطة
+          </Typography>
+          <Typography className="empty-description">
+            لا يوجد أطباء في النوبة حالياً
+          </Typography>
+        </Box>
+      </Paper>
     );
   }
 
   return (
-    <div className="relative h-full bg-card border rounded-lg shadow-sm overflow-hidden">
-            {/* Professional Tab Container */}
-      <div className="relative flex items-center h-full">
-        {/* Scrollable Tabs Container */}
-         <div
-           ref={scrollContainerRef}
-           className="flex-1 custom-scrollbar"
-           style={{
-             overflowX: 'auto',
-             overflowY: 'hidden',
-             paddingLeft: '8px',
-             paddingRight: '8px',
-             paddingBottom: '8px', // Space for scrollbar
-             minWidth: 0, // Important for flex children
-           }}
-         >
-           <div className="flex gap-1 py-2" style={{ minWidth: 'max-content' }}>
-            {filteredDoctorShifts?.map((shift) => {
+      <Box className="doctors-tabs-flex-wrapper">
+    
+          <Box className="doctors-tabs-flex-container">
+            {doctorShifts.map((shift) => {
               const isActive = activeShiftId === shift.id;
               const isExamining = shift.is_examining;
-              
+              // Determine CSS class based on state
+              const getTabClassName = () => {
+                if (isActive) {
+                  return isExamining 
+                    ? 'doctor-tab doctor-tab--active-examining'
+                    : 'doctor-tab doctor-tab--active-not-examining';
+                } else {
+                  return isExamining
+                    ? 'doctor-tab doctor-tab--inactive-examining'
+                    : 'doctor-tab doctor-tab--inactive-not-examining';
+                }
+              };
+
               return (
-                <button
+                <Box
                   key={shift.id}
                   onClick={() => onShiftSelect(shift)}
-                  className={`
-                    group relative flex flex-col items-center justify-center
-                    min-w-[200px] max-w-[200px] h-16 px-4 py-2
-                    rounded-lg border-2 transition-all duration-200
-                    focus:outline-none focus:ring-2 focus:ring-primary/50
-                    ${isActive
-                      ? isExamining
-                        ? 'bg-blue-500 border-blue-600 text-white shadow-lg'
-                        : 'bg-emerald-500 border-emerald-600 text-white shadow-lg'
-                      : isExamining
-                        ? 'bg-blue-50 border-blue-200 hover:bg-blue-100 hover:border-blue-300 text-blue-900 dark:bg-blue-950 dark:border-blue-800 dark:hover:bg-blue-900 dark:text-blue-100'
-                        : 'bg-emerald-50 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 text-emerald-900 dark:bg-emerald-950 dark:border-emerald-800 dark:hover:bg-emerald-900 dark:text-emerald-100'
-                    }
-                  `}
+                  className={getTabClassName()}
                 >
                   {/* Doctor Name */}
-                  <div className="flex items-center mb-1">
-                    <span 
-                      className={`text-sm font-semibold truncate max-w-full ${
-                        isActive ? 'text-white' : ''
-                      }`}
-                      title={shift.doctor_name}
-                    >
-                      {shift.doctor_name}
-                    </span>
-                  </div>
+                  <Typography
+                    variant="body2"
+                    className={`doctor-name ${isActive ? 'doctor-name--active' : ''}`}
+                    title={shift.doctor_name}
+                  >
+                    {shift.doctor_name}
+                  </Typography>
 
                   {/* Status Indicators */}
-                  <div className="flex items-center gap-2">
+                  <Box className="status-indicators">
                     {/* Patient Count Badge */}
                     {shift.patients_count > 0 && (
-                      <Badge 
-                        variant="secondary" 
-                        className={`
-                          px-2 py-0.5 text-xs font-medium h-5
-                          ${isActive 
-                            ? 'bg-white/20 text-white border-white/30' 
+                      <span
+                        className={`patient-count-badge ${
+                          isActive 
+                            ? 'patient-count-badge--active'
                             : isExamining
-                              ? 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900 dark:text-blue-100'
-                              : 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900 dark:text-emerald-100'
-                          }
-                        `}
+                              ? 'patient-count-badge--inactive-examining'
+                              : 'patient-count-badge--inactive-not-examining'
+                        }`}
                       >
-                        {shift.patients_count} 
-                      </Badge>
+                        {shift.patients_count}
+                      </span>
                     )}
-
-                 
-                  </div>
+                  </Box>
 
                   {/* Active Tab Indicator */}
                   {isActive && (
-                    <div className={`
-                      absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2
-                      w-3 h-3 rotate-45
-                      ${isExamining ? 'bg-blue-500' : 'bg-emerald-500'}
-                    `} />
+                    <Box
+                      className={`active-tab-indicator ${
+                        isExamining 
+                          ? 'active-tab-indicator--examining'
+                          : 'active-tab-indicator--not-examining'
+                      }`}
+                    />
                   )}
-                </button>
+                </Box>
               );
             })}
-          </div>
-        </div>
-
-
-      </div>
-    </div>
+          </Box>
+      </Box>
   );
 };
 

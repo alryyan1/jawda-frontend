@@ -1,9 +1,6 @@
 // src/components/clinic/CopyVisitToShiftDialog.tsx
 import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { useTranslation } from 'react-i18next';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -25,18 +22,14 @@ interface CopyVisitToShiftDialogProps {
   onSuccess: () => void;
 }
 
-const copySchema = z.object({
-  target_doctor_shift_id: z.string().min(1, "Target shift is required."),
-});
-type CopyFormValues = z.infer<typeof copySchema>;
+interface CopyFormValues {
+  target_doctor_shift_id: string;
+}
 
 const CopyVisitToShiftDialog: React.FC<CopyVisitToShiftDialogProps> = ({
   isOpen, onOpenChange, visitToCopy, targetShiftOptions, isLoadingTargetShifts, onSuccess
 }) => {
-  const { t, i18n } = useTranslation(['clinic', 'common']);
-
   const form = useForm<CopyFormValues>({
-    resolver: zodResolver(copySchema),
     defaultValues: { target_doctor_shift_id: '' },
   });
 
@@ -56,14 +49,26 @@ const CopyVisitToShiftDialog: React.FC<CopyVisitToShiftDialogProps> = ({
       // onOpenChange(false); // Parent handles closing
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || t('common:error.operationFailed'));
+      toast.error(error.response?.data?.message || "فشل في العملية");
     },
   });
 
   const onSubmit = (data: CopyFormValues) => {
+    // Basic validation
+    if (!data.target_doctor_shift_id) {
+      toast.error("النوبة المستهدفة مطلوبة");
+      return;
+    }
+    
+    const targetShiftId = parseInt(data.target_doctor_shift_id);
+    if (isNaN(targetShiftId)) {
+      toast.error("معرف النوبة غير صحيح");
+      return;
+    }
+    
     mutation.mutate({ 
         visitId: visitToCopy.id, 
-        targetDoctorShiftId: parseInt(data.target_doctor_shift_id) 
+        targetDoctorShiftId: targetShiftId 
     });
   };
 
@@ -83,8 +88,8 @@ const CopyVisitToShiftDialog: React.FC<CopyVisitToShiftDialogProps> = ({
         onPointerDownOutside={() => onOpenChange(false)}
       >
         <DialogHeader>
-          <DialogTitle>{t('clinic:visit.copyDialog.title', { patientName: visitToCopy.patient.name })}</DialogTitle>
-          <DialogDescription>{t('clinic:visit.copyDialog.description')}</DialogDescription>
+          <DialogTitle>نسخ زيارة {visitToCopy.patient.name} إلى نوبة أخرى</DialogTitle>
+          <DialogDescription>اختر النوبة التي تريد نسخ هذه الزيارة إليها</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2">
@@ -93,27 +98,27 @@ const CopyVisitToShiftDialog: React.FC<CopyVisitToShiftDialogProps> = ({
               name="target_doctor_shift_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('clinic:visit.copyDialog.selectTargetShift')}</FormLabel>
+                  <FormLabel>اختر النوبة المستهدفة</FormLabel>
                   <Select 
                     onValueChange={field.onChange} 
                     value={field.value} 
-                    dir={i18n.dir()} 
+                    dir={true} 
                     disabled={isLoadingTargetShifts || mutation.isPending}
                   >
                     <FormControl>
                       <SelectTrigger data-testid="shift-select-trigger">
-                        <SelectValue placeholder={t('clinic:visit.copyDialog.targetShiftPlaceholder')} />
+                        <SelectValue placeholder="اختر النوبة" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       {isLoadingTargetShifts ? (
-                        <SelectItem value="loading" disabled>{t('common:loading')}</SelectItem>
+                        <SelectItem value="loading" disabled>جاري التحميل...</SelectItem>
                       ) : targetShiftOptions.length === 0 ? (
-                        <div className="p-2 text-xs text-muted-foreground">{t('clinic:visit.copyDialog.noOtherShifts')}</div>
+                        <div className="p-2 text-xs text-muted-foreground">لا توجد نوبات أخرى متاحة</div>
                       ) : (
                         targetShiftOptions.map(ds => (
                           <SelectItem key={ds.id} value={String(ds.id)}>
-                            {ds.doctor_name} ({t('common:shift')} #{ds.id} - {ds.status ? t('common:statusEnum.open') : t('common:statusEnum.closed')})
+                            {ds.doctor_name} (النوبة #{ds.id} - {ds.status ? "مفتوحة" : "مغلقة"})
                           </SelectItem>
                         ))
                       )}
@@ -124,10 +129,10 @@ const CopyVisitToShiftDialog: React.FC<CopyVisitToShiftDialogProps> = ({
               )}
             />
             <DialogFooter className="pt-4">
-              <DialogClose asChild><Button type="button" variant="outline" disabled={mutation.isPending}>{t('common:cancel')}</Button></DialogClose>
+              <DialogClose asChild><Button type="button" variant="outline" disabled={mutation.isPending}>إلغاء</Button></DialogClose>
               <Button type="submit" disabled={isLoadingTargetShifts || mutation.isPending || targetShiftOptions.length === 0}>
                 {mutation.isPending && <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />}
-                {t('clinic:visit.copyDialog.copyButton')}
+                نسخ الزيارة
               </Button>
             </DialogFooter>
           </form>

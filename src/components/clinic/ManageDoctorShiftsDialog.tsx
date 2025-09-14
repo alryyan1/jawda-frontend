@@ -1,25 +1,34 @@
 // src/components/clinic/ManageDoctorShiftsDialog.tsx
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
-  Dialog, DialogContent, DialogDescription, DialogFooter,
-  DialogHeader, DialogTitle, DialogTrigger, DialogClose,
-} from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Loader2, Search, LogIn, LogOut } from 'lucide-react';
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  TableContainer,
+  Paper,
+  Chip,
+  Box,
+  CircularProgress,
+  InputAdornment,
+} from '@mui/material';
+import {
+  Search as SearchIcon,
+  Login as LogInIcon,
+  Logout as LogOutIcon,
+} from '@mui/icons-material';
 
-import { DoctorShift } from '@/types/doctors'; // Assuming DoctorShift type now includes basic doctor info + shift status
-// Service functions to get doctors with their shift status, and to open/close shifts
-// These would ideally be in a doctorShiftService.ts
-import { getDoctorsWithShiftStatus, startDoctorShift, endDoctorShift } from '@/services/doctorShiftService'; // Create this service
-import i18n from '@/i18n';
+import { getDoctorsWithShiftStatus, startDoctorShift, endDoctorShift } from '@/services/doctorShiftService';
 
 interface DoctorWithShiftStatus { // Type for the data returned by getDoctorsWithShiftStatus
   id: number; // Doctor ID
@@ -35,12 +44,10 @@ interface ManageDoctorShiftsDialogProps {
 }
 
 const ManageDoctorShiftsDialog: React.FC<ManageDoctorShiftsDialogProps> = ({ triggerButton, currentClinicShiftId }) => {
-  const { t } = useTranslation(['clinic', 'common', 'doctors']);
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-  console.log('currentClinicShiftId', currentClinicShiftId);
   useEffect(() => {
     const handler = setTimeout(() => setDebouncedSearchTerm(searchTerm), 300);
     return () => clearTimeout(handler);
@@ -55,36 +62,37 @@ const ManageDoctorShiftsDialog: React.FC<ManageDoctorShiftsDialogProps> = ({ tri
   });
 
   const openShiftMutation = useMutation({
-    mutationFn: (doctorId: number) => startDoctorShift({ 
-        doctor_id: doctorId, 
-        shift_id: currentClinicShiftId // Pass the general clinic shift ID
-        // Add other necessary parameters for starting a shift if any
-    }),
+    mutationFn: (doctorId: number) => startDoctorShift(doctorId),
     onSuccess: () => {
-      toast.success(t('clinic:doctorShifts.openedSuccess'));
+      toast.success('تم فتح النوبة بنجاح');
       queryClient.invalidateQueries({ queryKey: doctorsQueryKey });
-      queryClient.invalidateQueries({ queryKey: ['activeDoctorShifts'] }); // Invalidate DoctorsTabs query
+      queryClient.invalidateQueries({ queryKey: ['activeDoctorShifts'] });
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || t('clinic:doctorShifts.openError'));
+    onError: (error: unknown) => {
+      const errorMessage = error instanceof Error && 'response' in error 
+        ? (error as { response?: { data?: { message?: string } } }).response?.data?.message 
+        : 'خطأ في فتح النوبة';
+      toast.error(errorMessage);
     },
   });
 
   const closeShiftMutation = useMutation({
-    mutationFn: (doctorShiftId: number) => endDoctorShift({ doctor_shift_id: doctorShiftId }),
+    mutationFn: (doctorShiftId: number) => endDoctorShift(doctorShiftId),
     onSuccess: () => {
-      toast.success(t('clinic:doctorShifts.closedSuccess'));
+      toast.success('تم إغلاق النوبة بنجاح');
       queryClient.invalidateQueries({ queryKey: doctorsQueryKey });
-      queryClient.invalidateQueries({ queryKey: ['activeDoctorShifts'] }); // Invalidate DoctorsTabs query
+      queryClient.invalidateQueries({ queryKey: ['activeDoctorShifts'] });
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || t('clinic:doctorShifts.closeError'));
+    onError: (error: unknown) => {
+      const errorMessage = error instanceof Error && 'response' in error 
+        ? (error as { response?: { data?: { message?: string } } }).response?.data?.message 
+        : 'خطأ في إغلاق النوبة';
+      toast.error(errorMessage);
     },
   });
- console.log(currentClinicShiftId, "currentClinicShiftId")
   const handleOpenShift = (doctorId: number) => {
     if (!currentClinicShiftId) {
-        toast.error(t('clinic:doctorShifts.noClinicShiftSelected')); // Or get current open clinic shift
+        toast.error('لم يتم تحديد نوبة العيادة');
         return;
     }
     openShiftMutation.mutate(doctorId);
@@ -95,98 +103,119 @@ const ManageDoctorShiftsDialog: React.FC<ManageDoctorShiftsDialogProps> = ({ tri
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>{triggerButton}</DialogTrigger>
-      <DialogContent className="sm:max-w-lg md:max-w-xl lg:max-w-2xl max-h-[80vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle>{t('clinic:doctorShifts.manageTitle')}</DialogTitle>
-          <DialogDescription>{t('clinic:doctorShifts.manageDescription')}</DialogDescription>
-        </DialogHeader>
-        
-        <div className="relative my-2">
-          <Input
-            type="search"
-            placeholder={t('common:searchPlaceholder', "Search doctors...")}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="ps-10 rtl:pr-10"
-          />
-          <Search className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        </div>
+    <>
+      <Box onClick={() => setIsOpen(true)}>
+        {triggerButton}
+      </Box>
+      <Dialog 
+        open={isOpen} 
+        onClose={() => setIsOpen(false)}
+        maxWidth="lg"
+        fullWidth
+        sx={{ direction: 'rtl' }}
+      >
+        <DialogTitle>إدارة نوبات الأطباء</DialogTitle>
+        <DialogContent>
+          <Box sx={{ mb: 2 }}>
+            <TextField
+              fullWidth
+              placeholder="البحث عن الأطباء..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Box>
 
-        {(isLoading || isFetching) && !doctorsList && (
-            <div className="flex-grow flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
-        )}
-        {(!isLoading || doctorsList) && (
-            <ScrollArea  className="h-[300px] flex-grow border rounded-md">
-            {doctorsList && doctorsList.length > 0 ? (
-                <Table style={{direction:i18n.dir()}}>
-                <TableHeader>
-                  <TableRow>
-                  <TableHead className="text-center">{t('doctors:table.name')}</TableHead>
-                  <TableHead className="hidden sm:table-cell text-center">{t('doctors:table.specialist')}</TableHead>
-                  <TableHead className="text-center">{t('clinic:doctorShifts.status')}</TableHead>
-                  <TableHead className="text-center">{t('common:actions.openMenu')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {doctorsList?.map((doc) => (
-                  <TableRow key={doc.id}>
-                    <TableCell className="font-medium text-center">{doc.name}</TableCell>
-                    <TableCell className="hidden sm:table-cell text-center">{doc.specialist_name || '-'}</TableCell>
-                    <TableCell className="text-center">
-                    <Badge variant={doc.is_on_shift ? 'success' : 'outline'}>
-                      {doc.is_on_shift ? t('clinic:doctorShifts.onShift') : t('clinic:doctorShifts.offShift')}
-                    </Badge>
-                    </TableCell>
-                    <TableCell className="text-center">
-                    {doc.is_on_shift && doc.current_doctor_shift_id ? (
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => handleCloseShift(doc.current_doctor_shift_id!)}
-                        disabled={closeShiftMutation.isPending && closeShiftMutation.variables === doc.current_doctor_shift_id}
-                      >
-                      {closeShiftMutation.isPending && closeShiftMutation.variables === doc.current_doctor_shift_id 
-                        ? <Loader2 className="h-4 w-4 animate-spin ltr:mr-1 rtl:ml-1" /> 
-                        : <LogOut className="h-4 w-4 ltr:mr-1 rtl:ml-1"/>
-                      }
-                      {t('clinic:doctorShifts.closeShiftButton')}
-                      </Button>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="default"
-                        onClick={() => handleOpenShift(doc.id)}
-                        // disabled={openShiftMutation.isPending && openShiftMutation.variables === doc.id || !currentClinicShiftId}
-                      >
-                      {openShiftMutation.isPending && openShiftMutation.variables === doc.id 
-                        ? <Loader2 className="h-4 w-4 animate-spin ltr:mr-1 rtl:ml-1" /> 
-                        : <LogIn className="h-4 w-4 ltr:mr-1 rtl:ml-1"/>
-                      }
-                      {t('clinic:doctorShifts.openShiftButton')}
-                      </Button>
-                    )}
-                    </TableCell>
-                  </TableRow>
-                  ))}
-                </TableBody>
+          {(isLoading || isFetching) && !doctorsList && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+              <CircularProgress />
+            </Box>
+          )}
+          {(!isLoading || doctorsList) && (
+            <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
+              {doctorsList && doctorsList.length > 0 ? (
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell align="center">الاسم</TableCell>
+                      <TableCell align="center">التخصص</TableCell>
+                      <TableCell align="center">الحالة</TableCell>
+                      <TableCell align="center">الإجراءات</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {doctorsList?.map((doc) => (
+                      <TableRow key={doc.id}>
+                        <TableCell align="center" sx={{ fontWeight: 'medium' }}>
+                          {doc.name}
+                        </TableCell>
+                        <TableCell align="center">
+                          {doc.specialist_name || '-'}
+                        </TableCell>
+                        <TableCell align="center">
+                          <Chip
+                            label={doc.is_on_shift ? 'في النوبة' : 'خارج النوبة'}
+                            color={doc.is_on_shift ? 'success' : 'default'}
+                            variant={doc.is_on_shift ? 'filled' : 'outlined'}
+                          />
+                        </TableCell>
+                        <TableCell align="center">
+                          {doc.is_on_shift && doc.current_doctor_shift_id ? (
+                            <Button
+                              size="small"
+                              color="error"
+                              variant="contained"
+                              onClick={() => handleCloseShift(doc.current_doctor_shift_id!)}
+                              disabled={closeShiftMutation.isPending && closeShiftMutation.variables === doc.current_doctor_shift_id}
+                              startIcon={
+                                closeShiftMutation.isPending && closeShiftMutation.variables === doc.current_doctor_shift_id 
+                                  ? <CircularProgress size={16} />
+                                  : <LogOutIcon />
+                              }
+                            >
+                              إغلاق النوبة
+                            </Button>
+                          ) : (
+                            <Button
+                              size="small"
+                              variant="contained"
+                              onClick={() => handleOpenShift(doc.id)}
+                              disabled={openShiftMutation.isPending && openShiftMutation.variables === doc.id}
+                              startIcon={
+                                openShiftMutation.isPending && openShiftMutation.variables === doc.id 
+                                  ? <CircularProgress size={16} />
+                                  : <LogInIcon />
+                              }
+                            >
+                              فتح النوبة
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
                 </Table>
-            ) : (
-                <div className="text-center py-10 text-muted-foreground">
-                    {searchTerm ? t('common:noResultsFound') : t('doctors:noDoctorsFound')}
-                </div>
-            )}
-            </ScrollArea>
-        )}
-        
-        <DialogFooter className="mt-auto pt-4">
-          <DialogClose asChild>
-            <Button type="button" variant="outline">{t('common:close')}</Button>
-          </DialogClose>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+              ) : (
+                <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
+                  {searchTerm ? 'لا توجد نتائج' : 'لا يوجد أطباء'}
+                </Box>
+              )}
+            </TableContainer>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsOpen(false)} variant="outlined">
+            إغلاق
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 };
 export default ManageDoctorShiftsDialog;

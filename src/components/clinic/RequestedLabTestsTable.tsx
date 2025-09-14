@@ -1,6 +1,6 @@
 // src/components/clinic/lab_requests/RequestedLabTestsTable.tsx
 import React, { useState } from "react";
-import { useTranslation } from "react-i18next";
+
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -79,7 +79,6 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
   onCancelIndividual,
   onUnpayIndividual,
 }) => {
-  const { t, i18n } = useTranslation(["labTests", "common", "payments"]);
   const queryClient = useQueryClient();
 
   const [editingRowId, setEditingRowId] = useState<number | null>(null);
@@ -97,7 +96,7 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
       >;
     }) => updateLabRequestDetails(params.labRequestId, params.data),
     onSuccess: (updatedLabRequest) => {
-      toast.success(t("common:detailsUpdatedSuccess"));
+      toast.success("detailsUpdatedSuccess");
       queryClient.setQueryData(
         requestedTestsQueryKey,
         (oldData: LabRequest[] | undefined) =>
@@ -109,14 +108,14 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
     },
     onError: (error: ApiError) =>
       toast.error(
-        error.response?.data?.message || t("common:error.updateFailed")
+        error.response?.data?.message || "error.updateFailed"
       ),
   });
 
   const cancelRequestMutation = useMutation({
     mutationFn: cancelLabRequest,
     onSuccess: (_, labRequestId) => {
-      toast.success(t("labTests:request.cancelledSuccess"));
+      toast.success("request.cancelledSuccess");
       queryClient.setQueryData(
         requestedTestsQueryKey,
         (oldData: LabRequest[] | undefined) =>
@@ -125,7 +124,7 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
     },
     onError: (error: ApiError) =>
       toast.error(
-        error.response?.data?.message || t("common:error.requestFailed")
+        error.response?.data?.message || "error.requestFailed"
       ),
   });
 
@@ -154,9 +153,7 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
   const handleCancelRequest = (lr: LabRequest) => {
     if (
       window.confirm(
-        t("labTests:request.cancelConfirmForItem", {
-          itemName: lr.main_test?.main_test_name || t("common:test"),
-        })
+        "request.cancelConfirmForItem"
       )
     ) {
       cancelRequestMutation.mutate(lr.id);
@@ -180,13 +177,13 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
       {isFetchingList && (
         <div className="text-xs text-muted-foreground p-1 text-center">
           <Loader2 className="inline h-3 w-3 animate-spin" />{" "}
-          {t("common:updatingList")}
+          {"جاري تحديث القائمة..."}
         </div>
       )}
       {!isLoading && requestedTests.length === 0 && !isFetchingList && (
         <div className="flex-grow flex items-center justify-center">
           <p className="text-sm text-muted-foreground text-center py-6">
-            {t("labTests:request.noRequestsYet")}
+            {"request.noRequestsYet"}
           </p>
         </div>
       )}
@@ -195,7 +192,7 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
         // ScrollArea directly wraps the Table container, and `flex-grow` allows it to expand.
         <ScrollArea
           className="h-[400px] border rounded-md flex-grow"
-          style={{ direction: i18n.dir() }}
+          style={{ direction: "rtl" }}
         >
           <Table className="text-xs min-w-[650px]">
             {" "}
@@ -203,33 +200,33 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
             <TableHeader>
               <TableRow>
                 <TableHead className="min-w-[120px] text-center">
-                  {t("labTests:table.testName")}
+                  {"table.testName"}
                 </TableHead>
                 <TableHead className="text-center w-[60px]">
-                  {t("labTests:table.price")}
+                  {"table.price"}
                 </TableHead>
                 <TableHead className="text-center w-[100px]">
-                  {t("labTests:table.discountPercentageShort")}
+                  {"table.discountPercentageShort"}
                 </TableHead>
                 {isCompanyPatient && (
                   <TableHead className="text-center w-[90px]">
-                    {t("labTests:table.endurance")}
+                    {"table.endurance"}
                   </TableHead>
                 )}
                 <TableHead className="text-center w-[80px]">
-                  {t("labTests:table.netPriceShort")}
+                  {"table.netPriceShort"}
                 </TableHead>
                 <TableHead className="text-center w-[80px]">
-                  {t("labTests:table.amountPaid")}
+                  {"table.amountPaid"}
                 </TableHead>
                 <TableHead className="text-center hidden md:table-cell w-[90px]">
-                  {t("labTests:table.statusPayment")}
+                  {"table.statusPayment"}
                 </TableHead>
                 <TableHead className="text-center w-[80px]">
-                  {t("labTests:table.paymentMethodShort")}
+                  {"table.paymentMethodShort"}
                 </TableHead>
                 <TableHead className="text-right w-[100px]">
-                  {t("common:actions.openMenu")}
+                  {"فتح القائمة"}
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -256,18 +253,18 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
 
                 const netPrice = itemSubTotal - discountAmount - enduranceDisplay;
                 const amountPaid = Number(lr.amount_paid) || 0;
-                const balance = netPrice - amountPaid;
-                const canBeCancelled = !lr.is_paid; // Simple cancellation logic for now
+                // const balance = netPrice - amountPaid;
+                // const canBeCancelled = !lr.is_paid; // Simple cancellation logic for now
 
                 return (
                   <TableRow
                     key={lr.id}
                     className={
-                      isEditingThisRow ? "bg-muted/10 dark:bg-muted/20" : ""
+                      isEditingThisRow ? "bg-muted/10" : ""
                     }
                   >
                     <TableCell className="py-1.5 font-medium text-center">
-                      {lr.main_test?.main_test_name || t("common:loading")}
+                      {lr.main_test?.main_test_name || "جاري التحميل..."}
                       {lr.comment && (
                         <p
                           className="text-[10px] text-muted-foreground italic truncate"
@@ -290,7 +287,7 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
                               discount_per: parseInt(val),
                             }))
                           }
-                          dir={i18n.dir()}
+                          dir="rtl"
                         >
                           <SelectTrigger className="h-7 text-xs px-1 w-20 mx-auto">
                             <SelectValue />
@@ -330,17 +327,17 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
                     <TableCell className="text-center py-1.5 font-semibold">
                       {netPrice.toFixed(1)}
                     </TableCell>
-                    <TableCell className="text-center py-1.5 text-green-600 dark:text-green-400">
+                    <TableCell className="text-center py-1.5 text-green-600">
                       {amountPaid.toFixed(1)}
                     </TableCell>
                     <TableCell className="text-center hidden md:table-cell py-1.5">
                       {lr.is_paid ? (
                         <span className="text-green-600 font-medium">
-                          {t("payments:status.paid")}
+                          {"status.paid"}
                         </span>
                       ) : (
                         <span className="text-amber-600">
-                          {t("payments:status.pending")}
+                          {"status.pending"}
                         </span>
                       )}
                     </TableCell>
@@ -354,12 +351,12 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
                               is_bankak: !!checked,
                             }))
                           }
-                          aria-label={t("payments:paymentMethodBankak")}
+                          aria-label={"paymentMethodBankak"}
                         />
                       ) : lr.is_bankak ? (
-                        t("payments:bankShort")
+                        "bankShort"
                       ) : (
-                        t("payments:cashShort")
+                        "cashShort"
                       )}
                     </TableCell>
                     <TableCell className="text-right py-1.5">
@@ -402,7 +399,7 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
                                 variant="ghost"
                                 onClick={() => onPayIndividual(lr)}
                                 className="h-7 w-7 text-green-600 hover:text-green-700"
-                                title={t("common:pay")}
+                                title={"pay"}
                               >
                                 <DollarSign className="h-4 w-4" />
                               </Button>
@@ -413,7 +410,7 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
                                 variant="ghost"
                                 onClick={() => onCancelIndividual(lr)}
                                 className="h-7 w-7 text-red-600 hover:text-red-700"
-                                title={t("common:remove")}
+                                title={"remove"}
                               >
                                 <Trash className="h-4 w-4" />
                               </Button>
@@ -422,7 +419,7 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
                                 variant="ghost"
                                 onClick={() => onUnpayIndividual(lr)}
                                 className="h-7 w-7 text-green-600 hover:text-green-700"
-                                title={t("common:unpay")}
+                                title={"unpay"}
                               >
                                 <Hand className="h-4 w-4" />
                               </Button>

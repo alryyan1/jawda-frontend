@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useTranslation } from "react-i18next";
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -53,12 +53,8 @@ interface AddCostDialogProps {
 
 const getCostFormSchema = (t: Function) =>
   z.object({
-    description: z
-      .string()
       .min(1, {
-        message: t("common:validation.required", {
-          field: t("finances:costs.descriptionLabel"),
-        }),
+        message: "validation.required",
       })
       .max(255),
    // "0" or "1"
@@ -75,7 +71,6 @@ const AddCostDialog: React.FC<AddCostDialogProps> = ({
   triggerButton,
   onCostAdded,
 }) => {
-  const { t, i18n } = useTranslation(["finances", "common"]);
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -109,7 +104,7 @@ const AddCostDialog: React.FC<AddCostDialogProps> = ({
   const mutation = useMutation({
     mutationFn: addCost,
     onSuccess: (newCost) => {
-      toast.success(t("finances:costs.addedSuccess"));
+      toast.success("costs.addedSuccess");
       // queryClient.invalidateQueries({ queryKey: ['costsList'] }); // If you have a list of costs elsewhere
       queryClient.invalidateQueries({ queryKey: ["dashboardSummary"] }); // Costs affect dashboard
       queryClient.invalidateQueries({ queryKey: ["currentOpenShift"] }); // If shift totals are displayed
@@ -119,14 +114,14 @@ const AddCostDialog: React.FC<AddCostDialogProps> = ({
     },
     onError: (error: any) => {
       toast.error(
-        error.response?.data?.message || t("finances:costs.addError")
+        error.response?.data?.message || "costs.addError"
       );
     },
   });
 
   const onSubmit = (data: CostFormValues) => {
     if (!currentOpenClinicShift) {
-      toast.error(t("finances:costs.noOpenShift"));
+      toast.error("costs.noOpenShift");
       return;
     }
     const submissionData: CostFormData = {
@@ -149,7 +144,7 @@ const AddCostDialog: React.FC<AddCostDialogProps> = ({
             variant="outline"
             size="icon"
             className="w-11 h-11"
-            aria-label={t("finances:costs.addButton")}
+            aria-label={"costs.addButton"}
             disabled={!currentOpenClinicShift}
           >
             <ReceiptText className="h-5 w-5" />
@@ -158,19 +153,19 @@ const AddCostDialog: React.FC<AddCostDialogProps> = ({
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{t("finances:costs.addDialogTitle")}</DialogTitle>
+          <DialogTitle>{"costs.addDialogTitle"}</DialogTitle>
           <DialogDescription>
-            {t("finances:costs.addDialogDescription")}
+            {"costs.addDialogDescription"}
           </DialogDescription>
         </DialogHeader>
         {!currentOpenClinicShift && isOpen ? (
           <div className="py-10 text-center text-muted-foreground">
-            {t("finances:costs.noOpenShift")}
+            {"costs.noOpenShift"}
           </div>
         ) : (
           <Form {...form}>
             <form
-              onSubmit={form.handleSubmit(onSubmit)}
+              onSubmit={form.handleSubmit}
               className="space-y-3 py-2 max-h-[70vh] overflow-y-auto px-1"
             >
               <FormField
@@ -179,7 +174,7 @@ const AddCostDialog: React.FC<AddCostDialogProps> = ({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      {t("finances:costs.descriptionLabel")}
+                      {"costs.descriptionLabel"}
                     </FormLabel>
                     <FormControl>
                       <Input {...field} />
@@ -193,7 +188,7 @@ const AddCostDialog: React.FC<AddCostDialogProps> = ({
                 name="amount_cash_input"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("finances:costs.amountCashLabel")}</FormLabel>
+                    <FormLabel>{"costs.amountCashLabel"}</FormLabel>
                     <FormControl>
                       <Input type="number" step="0.01" {...field} />
                     </FormControl>
@@ -206,7 +201,7 @@ const AddCostDialog: React.FC<AddCostDialogProps> = ({
                 name="amount_bank_input"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("finances:costs.amountBankLabel")}</FormLabel>
+                    <FormLabel>{"costs.amountBankLabel"}</FormLabel>
                     <FormControl>
                       <Input type="number" step="0.01" {...field} />
                     </FormControl>
@@ -220,23 +215,23 @@ const AddCostDialog: React.FC<AddCostDialogProps> = ({
                 name="cost_category_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("finances:costs.categoryLabel")}</FormLabel>
+                    <FormLabel>{"costs.categoryLabel"}</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       value={field.value || ""}
                       defaultValue={field.value || ""}
-                      dir={i18n.dir()}
+                      dir={true}
                       disabled={isLoadingCategories || mutation.isPending}
                     >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue
-                            placeholder={t("finances:costs.selectCategory")}
+                            placeholder={"costs.selectCategory"}
                           />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value=" ">{t("common:none")}</SelectItem>
+                        <SelectItem value=" ">{"none"}</SelectItem>
                         {costCategories?.map((cat) => (
                           <SelectItem key={cat.id} value={String(cat.id)}>
                             {cat.name}
@@ -254,27 +249,27 @@ const AddCostDialog: React.FC<AddCostDialogProps> = ({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      {t("finances:costs.doctorShiftLabel")}
+                      {"costs.doctorShiftLabel"}
                     </FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       value={field.value || ""}
                       defaultValue={field.value || ""}
-                      dir={i18n.dir()}
+                      dir={true}
                       disabled={isLoadingDoctorShifts || mutation.isPending}
                     >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue
-                            placeholder={t("finances:costs.selectDoctorShift")}
+                            placeholder={"costs.selectDoctorShift"}
                           />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value=" ">{t("common:none")}</SelectItem>
+                        <SelectItem value=" ">{"none"}</SelectItem>
                         {activeDoctorShifts?.map((ds) => (
                           <SelectItem key={ds.id} value={String(ds.id)}>
-                            {ds.doctor_name} ({t("common:shift")} #{ds.id})
+                            {ds.doctor_name} ({"shift"} #{ds.id})
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -288,7 +283,7 @@ const AddCostDialog: React.FC<AddCostDialogProps> = ({
                 name="comment"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("finances:costs.commentLabel")}</FormLabel>
+                    <FormLabel>{"costs.commentLabel"}</FormLabel>
                     <FormControl>
                       <Textarea rows={2} {...field} />
                     </FormControl>
@@ -303,7 +298,7 @@ const AddCostDialog: React.FC<AddCostDialogProps> = ({
                     variant="outline"
                     disabled={mutation.isPending}
                   >
-                    {t("common:cancel")}
+                    {"إلغاء"}
                   </Button>
                 </DialogClose>
                 <Button
@@ -313,7 +308,7 @@ const AddCostDialog: React.FC<AddCostDialogProps> = ({
                   {mutation.isPending && (
                     <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />
                   )}
-                  {t("common:add")}
+                  {"add"}
                 </Button>
               </DialogFooter>
             </form>

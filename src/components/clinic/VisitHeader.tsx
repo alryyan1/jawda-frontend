@@ -1,5 +1,4 @@
 import React from 'react';
-import { useTranslation } from 'react-i18next';
 import { format, type Locale } from 'date-fns';
 import { 
   UserCircle, 
@@ -34,20 +33,18 @@ export const VisitHeader: React.FC<VisitHeaderProps> = ({
   onStatusChange,
   statusUpdatePending
 }) => {
-  const { t, i18n } = useTranslation(['common', 'clinic']);
-
   const getAgeString = (p: Patient) => {
     const parts = [];
     if (p.age_year !== null && p.age_year !== undefined) {
-      parts.push(`${p.age_year}${t("common:years_shortInitial", "Y")}`);
+      parts.push(`${p.age_year} سنة`);
     }
     if (p.age_month !== null && p.age_month !== undefined) {
-      parts.push(`${p.age_month}${t("common:months_shortInitial", "M")}`);
+      parts.push(`${p.age_month} شهر`);
     }
     if (p.age_day !== null && p.age_day !== undefined) {
-      parts.push(`${p.age_day}${t("common:days_shortInitial", "D")}`);
+      parts.push(`${p.age_day} يوم`);
     }
-    return parts.length > 0 ? parts.join(" ") : t("common:notAvailable_short", "N/A");
+    return parts.length > 0 ? parts.join(" ") : "غير متوفر";
   };
 
   return (
@@ -63,10 +60,9 @@ export const VisitHeader: React.FC<VisitHeaderProps> = ({
               {patient.name}
             </h2>
             <p className="text-xs text-muted-foreground">
-              {t("common:visitId", "Visit #")}
-              {visit.id} -{" "}
+              زيارة رقم {visit.id} -{" "}
               {visit.visit_date
-                ? format(new Date(visit.visit_date), "PPP", {
+                ? format(visit.visit_date, "PPP", {
                     locale: dateLocale,
                   })
                 : ""}
@@ -87,7 +83,7 @@ export const VisitHeader: React.FC<VisitHeaderProps> = ({
       <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs sm:text-sm text-muted-foreground items-center">
         <span className="flex items-center">
           <VenusAndMars className="ltr:mr-1 rtl:ml-1 h-3.5 w-3.5" />
-          {t(`common:genderEnum.${patient.gender}`, patient.gender)}
+          {patient.gender === 'male' ? 'ذكر' : patient.gender === 'female' ? 'أنثى' : patient.gender}
         </span>
         <span className="flex items-center">
           <CalendarDays className="ltr:mr-1 rtl:ml-1 h-3.5 w-3.5" />
@@ -99,13 +95,13 @@ export const VisitHeader: React.FC<VisitHeaderProps> = ({
         </span>
         <div className="flex items-center gap-1">
           <Label htmlFor={`visit-status-${visit.id}`} className="text-xs">
-            {t("common:status")}:
+            الحالة:
           </Label>
           <Select
             value={visit.status}
             onValueChange={onStatusChange}
             disabled={statusUpdatePending}
-            dir={i18n.dir()}
+            dir={true}
           >
             <SelectTrigger
               id={`visit-status-${visit.id}`}
@@ -114,11 +110,20 @@ export const VisitHeader: React.FC<VisitHeaderProps> = ({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {VISIT_STATUSES.map((statusKey) => (
-                <SelectItem key={statusKey} value={statusKey}>
-                  {t(`clinic:workspace.status.${statusKey}`, statusKey)}
-                </SelectItem>
-              ))}
+              {VISIT_STATUSES.map((statusKey) => {
+                const statusText = {
+                  'open': 'مفتوحة',
+                  'in_progress': 'قيد التنفيذ',
+                  'completed': 'مكتملة',
+                  'cancelled': 'ملغية',
+                  'no_show': 'لم يحضر'
+                }[statusKey] || statusKey;
+                return (
+                  <SelectItem key={statusKey} value={statusKey}>
+                    {statusText}
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
           {statusUpdatePending && (
@@ -128,7 +133,7 @@ export const VisitHeader: React.FC<VisitHeaderProps> = ({
       </div>
       {visit.doctor && (
         <p className="text-xs text-muted-foreground mt-1">
-          {t("common:doctor")}: {visit.doctor.name}
+          الطبيب: {visit.doctor.name}
         </p>
       )}
     </header>

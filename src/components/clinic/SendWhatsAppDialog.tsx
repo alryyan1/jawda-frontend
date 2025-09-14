@@ -1,10 +1,8 @@
 // src/components/clinic/SendWhatsAppDialog.tsx
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useCallback } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { useTranslation } from "react-i18next";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns"; // For placeholder replacement in templates
 import { arSA, enUS } from "date-fns/locale"; // For date formatting locales
@@ -35,7 +33,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Loader2, MessageSquare, Paperclip } from "lucide-react";
+import { Loader2, Paperclip } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 import type { Patient } from "@/types/patients";
@@ -68,38 +66,29 @@ interface SendWhatsAppDialogProps {
   onMessageSent?: () => void;
 }
 
-const getWhatsAppSchema = (t: Function) =>
-  z.object({
-    template_id: z.string().optional(),
-    message_content: z
-      .string()
-      .min(1, {
-        message: t("common:validation.requiredField", {
-          field: t("whatsapp:message"),
-        }),
-      })
-      .max(4096),
-    attachment: z.custom<FileList | null>().optional(),
-  });
-type WhatsAppFormValues = z.infer<ReturnType<typeof getWhatsAppSchema>>;
+interface WhatsAppFormValues {
+  template_id?: string;
+  message_content: string;
+  attachment?: FileList | null;
+}
 
 // This function would generate the templates using the t function for localization
 // In a real app, these might come from your backend API
-const getLocalizedTemplates = (t: Function): AppWhatsAppTemplate[] => [
+const getLocalizedTemplates = (): AppWhatsAppTemplate[] => [
   {
     id: "greeting",
-    nameKey: "whatsapp:templates.greetingName",
-    contentKey: "whatsapp:templates.greetingContent",
+    nameKey: "تحية",
+    contentKey: "مرحباً {patientName}، نأمل أن تكون بخير.",
   },
   {
     id: "appointment_reminder",
-    nameKey: "whatsapp:templates.reminderName",
-    contentKey: "whatsapp:templates.reminderContent",
+    nameKey: "تذكير بالموعد",
+    contentKey: "تذكير: لديك موعد في العيادة رقم {visitId}.",
   },
   {
     id: "lab_results_ready",
-    nameKey: "whatsapp:templates.labResultsReadyName",
-    contentKey: "whatsapp:templates.labResultsReadyContent",
+    nameKey: "نتائج المختبر جاهزة",
+    contentKey: "نتائج فحوصاتك المختبرية جاهزة. يمكنك الحضور لاستلامها.",
   },
   // Add more templates here
 ];
@@ -113,11 +102,10 @@ const SendWhatsAppDialog: React.FC<SendWhatsAppDialogProps> = ({
   initialAttachment,
   onMessageSent,
 }) => {
-  const { t, i18n } = useTranslation(["clinic", "common", "whatsapp"]); // Added 'whatsapp' namespace
-  const dateLocale = i18n.language.startsWith("ar") ? arSA : enUS;
+  // Added 'whatsapp' namespace
+  const dateLocale = "ar".startsWith("ar") ? arSA : enUS;
 
   const form = useForm<WhatsAppFormValues>({
-    resolver: zodResolver(getWhatsAppSchema(t)),
     defaultValues: {
       message_content: initialMessage || "",
       attachment: null, // Handled by useEffect
@@ -126,7 +114,6 @@ const SendWhatsAppDialog: React.FC<SendWhatsAppDialogProps> = ({
   });
   const { watch, setValue, reset, control } = form; // Added control
   const attachmentFile = watch("attachment");
-  const selectedTemplateId = watch("template_id");
 
   // Fetch application settings (e.g., for clinic name in templates)
   const { data: appSettings, isLoading: isLoadingSettings } = useQuery<
@@ -139,12 +126,16 @@ const SendWhatsAppDialog: React.FC<SendWhatsAppDialogProps> = ({
     staleTime: 1000 * 60 * 60,
   });
 
-  const templates = useMemo(() => getLocalizedTemplates(t), [t]);
+  const templates = useMemo(() => getLocalizedTemplates(), []);
+
+  const onSubmit = (data: WhatsAppFormValues) => {
+    sendMutation.mutate(data);
+  };
 
   const sendMutation = useMutation({
     mutationFn: async (data: WhatsAppFormValues) => {
       if (!patient.phone) {
-        throw new Error(t("whatsapp:errors.patientPhoneMissing"));
+        throw new Error("رقم هاتف المريض غير متوفر");
       }
       // The backend WhatsAppController will use instance_id and token from its config/settings
       const file = data.attachment?.[0];
@@ -180,21 +171,22 @@ const SendWhatsAppDialog: React.FC<SendWhatsAppDialogProps> = ({
     },
     onSuccess: (response) => {
       toast.success(
-        response.message || t("clinic:visit.whatsAppDialog.sendSuccess")
+        response.message || "تم إرسال الرسالة بنجاح"
       );
       if (onMessageSent) onMessageSent();
       onOpenChange(false);
     },
-    onError: (error: any) => {
-      toast.error(
-        error.response?.data?.message ||
-          error.message ||
-          t("clinic:visit.whatsAppDialog.sendError")
-      );
+    onError: (error: unknown) => {
+      const errorMessage = error && typeof error === 'object' && 'response' in error 
+        ? (error as { response?: { data?: { message?: string } }; message?: string }).response?.data?.message || (error as { message?: string }).message
+        : error && typeof error === 'object' && 'message' in error
+        ? (error as { message?: string }).message
+        : "فشل في إرسال الرسالة";
+      toast.error(errorMessage);
     },
   });
 
-  const applyTemplateContent = (templateId?: string) => {
+  const applyTemplateContent = useCallback((templateId?: string) => {
     if (!templateId) {
       setValue("message_content", initialMessage || "");
       return;
@@ -204,29 +196,23 @@ const SendWhatsAppDialog: React.FC<SendWhatsAppDialogProps> = ({
       const clinicName =
         appSettings?.hospital_name ||
         appSettings?.lab_name ||
-        t("common:defaultClinicName");
+        "العيادة";
       // Dynamic placeholder replacement
-      const replacedContent = t(selectedTemplate.contentKey, {
-        patientName: patient.name,
-        visitId: visitId || "N/A",
-        date: format(new Date(), "PPP", { locale: dateLocale }), // Example: current date
-        time: format(new Date(), "p", { locale: dateLocale }), // Example: current time
-        clinicName: clinicName,
-        // Add more placeholders as your templates require
-        // e.g., doctorName: visit?.doctor?.name || 'Your Doctor'
-      });
+      const replacedContent = selectedTemplate.contentKey
+        .replace("{patientName}", patient.name)
+        .replace("{visitId}", String(visitId || "N/A"))
+        .replace("{date}", format(new Date(), "PPP", { locale: dateLocale }))
+        .replace("{time}", format(new Date(), "p", { locale: dateLocale }))
+        .replace("{clinicName}", clinicName);
       setValue("message_content", replacedContent);
     }
-  };
+  }, [setValue, initialMessage, templates, appSettings, patient.name, visitId, dateLocale]);
 
   useEffect(() => {
     if (isOpen) {
       const defaultTemplateId = initialMessage ? "" : templates[0]?.id || "";
       reset({
         message_content: initialMessage || "",
-        attachment: initialAttachment
-          ? ({ 0: initialAttachment, length: 1 } as FileList)
-          : null,
         template_id: defaultTemplateId,
       });
       if (defaultTemplateId) {
@@ -248,8 +234,9 @@ const SendWhatsAppDialog: React.FC<SendWhatsAppDialogProps> = ({
     patient.name,
     visitId,
     appSettings,
-    t,
     dateLocale,
+    applyTemplateContent,
+    setValue,
   ]); // Added dependencies
 
   const isPhoneNumberMissing = !patient.phone;
@@ -261,24 +248,20 @@ const SendWhatsAppDialog: React.FC<SendWhatsAppDialogProps> = ({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {t("clinic:visit.whatsAppDialog.titleShort", {
-              patientName: patient.name,
-            })}
+            إرسال واتساب إلى {patient.name}
           </DialogTitle>
           <DialogDescription>
-            {t("clinic:visit.whatsAppDialog.descriptionTo", {
-              phone: patient.phone || t("common:notAvailable_short"),
-            })}
+            إرسال رسالة إلى: {patient.phone || "غير متوفر"}
             {isPhoneNumberMissing && (
               <p className="text-destructive text-xs mt-1">
-                {t("whatsapp:errors.patientPhoneMissingAdmin")}
+                رقم هاتف المريض غير متوفر
               </p>
             )}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form
-            onSubmit={form.handleSubmit(sendMutation.mutate)}
+            onSubmit={form.handleSubmit(onSubmit)}
             className="space-y-3 py-2 max-h-[70vh] overflow-y-auto px-1"
           >
             <FormField
@@ -287,7 +270,7 @@ const SendWhatsAppDialog: React.FC<SendWhatsAppDialogProps> = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    {t("clinic:visit.whatsAppDialog.selectTemplate")}
+                    اختر قالب الرسالة
                   </FormLabel>
                   <Select
                     onValueChange={(val) => {
@@ -300,19 +283,17 @@ const SendWhatsAppDialog: React.FC<SendWhatsAppDialogProps> = ({
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue
-                          placeholder={t(
-                            "clinic:visit.whatsAppDialog.templatePlaceholder"
-                          )}
+                          placeholder="اختر قالب..."
                         />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       <SelectItem value=" ">
-                        {t("whatsapp:noTemplate")}
+                        بدون قالب
                       </SelectItem>
                       {templates.map((tpl) => (
                         <SelectItem key={tpl.id} value={tpl.id}>
-                          {t(tpl.nameKey)}
+                          {tpl.nameKey}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -326,15 +307,13 @@ const SendWhatsAppDialog: React.FC<SendWhatsAppDialogProps> = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    {t("clinic:visit.whatsAppDialog.messageContent")}
+                    محتوى الرسالة
                   </FormLabel>
                   <FormControl>
                     <Textarea
                       {...field}
                       rows={7}
-                      placeholder={t(
-                        "clinic:visit.whatsAppDialog.messagePlaceholder"
-                      )}
+                      placeholder="اكتب رسالتك هنا..."
                     />
                   </FormControl>
                   <FormMessage />
@@ -344,11 +323,11 @@ const SendWhatsAppDialog: React.FC<SendWhatsAppDialogProps> = ({
             <FormField
               control={form.control}
               name="attachment"
-              render={({ field: { onChange, value, ...rest } }) => (
+              render={({ field: { onChange, ...rest } }) => (
                 <FormItem>
                   <FormLabel className="flex items-center gap-1.5">
                     <Paperclip className="h-4 w-4" />
-                    {t("whatsapp:attachmentOptional")}
+                    مرفق (اختياري)
                   </FormLabel>
                   <FormControl>
                     <Input
@@ -358,11 +337,12 @@ const SendWhatsAppDialog: React.FC<SendWhatsAppDialogProps> = ({
                       {...rest}
                       className="text-xs"
                       disabled={sendMutation.isPending}
+                      value=""
                     />
                   </FormControl>
                   {attachmentFile?.[0] && (
                     <p className="text-xs text-muted-foreground mt-1">
-                      {t("common:selectedFile")}: {attachmentFile[0].name}
+                      الملف المحدد: {attachmentFile[0].name}
                     </p>
                   )}
                   <FormMessage />
@@ -376,7 +356,7 @@ const SendWhatsAppDialog: React.FC<SendWhatsAppDialogProps> = ({
                   variant="outline"
                   disabled={sendMutation.isPending}
                 >
-                  {t("common:cancel")}
+                  إلغاء
                 </Button>
               </DialogClose>
               <Button
@@ -390,7 +370,7 @@ const SendWhatsAppDialog: React.FC<SendWhatsAppDialogProps> = ({
                 {sendMutation.isPending && (
                   <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />
                 )}
-                {t("common:send")}
+                إرسال
               </Button>
             </DialogFooter>
           </form>

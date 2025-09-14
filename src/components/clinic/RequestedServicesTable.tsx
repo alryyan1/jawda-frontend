@@ -1,6 +1,6 @@
 // src/components/clinic/RequestedServicesTable.tsx
 import React, { useState } from "react";
-import { useTranslation } from "react-i18next";
+
 import type { RequestedService } from "@/types/services";
 import type { DoctorVisit } from "@/types/visits";
 import {
@@ -75,12 +75,6 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
   onAddMoreServices,
   handlePrintReceipt,
 }) => {
-  const { t, i18n } = useTranslation([
-    "services",
-    "common",
-    "payments",
-    "clinic",
-  ]);
   const queryClient = useQueryClient();
   const [editingRowId, setEditingRowId] = useState<number | null>(null);
   const [serviceToDelete, setServiceToDelete] = useState<number | null>(null);
@@ -123,7 +117,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
       >;
     }) => updateRequestedServiceDetails(visitId, data.rsId, data.payload),
     onSuccess: () => {
-      toast.success(t("common:updatedSuccess"));
+      toast.success("تم التحديث بنجاح");
       queryClient.invalidateQueries({
         queryKey: ["requestedServicesForVisit", visitId],
       });
@@ -131,14 +125,14 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
       setCurrentEditData({ count: 1, discount_per: 0, endurance: 0 });
     },
     onError: (error: AxiosError) =>
-      toast.error((error.response?.data as { message?: string })?.message || t("common:error.updateFailed")),
+      toast.error((error.response?.data as { message?: string })?.message || "فشل في التحديث"),
   });
 
   const removeMutation = useMutation({
     mutationFn: (requestedServiceId: number) =>
       removeRequestedServiceFromVisit(visitId, requestedServiceId),
     onSuccess: () => {
-      toast.success(t("services:removedSuccess"));
+      toast.success("تم الحذف بنجاح");
       queryClient.invalidateQueries({
         queryKey: ["requestedServicesForVisit", visitId],
         exact: true,
@@ -151,8 +145,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
     },
     onError: (error: AxiosError) =>
      {
-      console.log(error,'error')
-      toast.error((error.response?.data as { message?: string })?.message || t("common:error.requestFailed"))
+      toast.error((error.response?.data as { message?: string })?.message || "فشل في الطلب")
      }
   });
 
@@ -169,7 +162,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
 
   const handleSaveEdit = (rsId: number) => {
     if (currentEditData.count < 1) {
-      toast.error(t("services:validation.countMinOne"));
+      toast.error("العدد يجب أن يكون واحد على الأقل");
       return;
     }
     const payload: Partial<
@@ -247,30 +240,30 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
         <div className="flex justify-end">
           <Button onClick={onAddMoreServices} variant="outline" size="sm">
             <PlusCircle className="h-4 w-4 ltr:mr-2 rtl:ml-2" />{" "}
-            {t("services:addMoreServices")}
+            إضافة المزيد من الخدمات
           </Button>
         </div>
         {requestedServices.length === 0 && (
           <p className="text-sm text-muted-foreground text-center py-4">
-            {t("services:noServicesRequestedYet")}
+            لم يتم طلب أي خدمات بعد
           </p>
         )}
         {requestedServices.length > 0 && (
           <Card>
-            <Table style={{ direction: i18n.dir() }} className="text-xs">
+            <Table style={{ direction: 'rtl' }} className="text-xs">
               <TableHeader>
                 <TableRow>
                   <TableHead className="text-center">
-                    {t("services:table.serviceName")}
+                    اسم الخدمة
                   </TableHead>
                   <TableHead className="text-center w-[70px]">
-                    {t("services:table.price")}
+                    السعر
                   </TableHead>
                   <TableHead className="text-center w-[90px]">
-                    {t("services:table.amountPaid")}
+                    المبلغ المدفوع
                   </TableHead>
                   <TableHead className="text-center w-[60px]">
-                    {t("payments:pay")}
+                    دفع
                   </TableHead>
                   <TableHead className="text-center w-[40px]"> </TableHead>
                 </TableRow>
@@ -283,10 +276,10 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                   return (
                     <React.Fragment key={rs.id}>
                       <TableRow
-                        className={isEditingThisRow ? "bg-muted/30 dark:bg-muted/20" : ""}
+                        className={isEditingThisRow ? "bg-muted/30" : ""}
                       >
                         <TableCell className="py-2 font-medium text-center">
-                          {rs.service?.name || t("common:unknownService")}
+                          {rs.service?.name || "خدمة غير معروفة"}
                           {rs.service?.service_group?.name && (
                             <span className="block text-muted-foreground text-[10px]">
                               ({rs.service.service_group.name})
@@ -296,7 +289,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                         <TableCell className="text-center py-2">
                           {formatNumber(price)}
                         </TableCell>
-                        <TableCell className="text-center py-2 text-green-600 dark:text-green-500">
+                        <TableCell className="text-center py-2 text-green-600">
                           {formatNumber(rs.amount_paid)}
                         </TableCell>
                         <TableCell className="text-center py-2">
@@ -307,7 +300,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                             disabled={!currentClinicShiftId}
                           >
                             <DollarSign className="h-3 w-3 ltr:mr-1 rtl:ml-1" />
-                            {t("payments:pay")}
+                            دفع
                           </Button>
                         </TableCell>
                         <TableCell className="text-center py-2">
@@ -315,7 +308,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                             size="icon"
                             variant="ghost"
                             onClick={() => setExpandedRowId(isExpanded ? null : rs.id)}
-                            aria-label={isExpanded ? t("common:collapse") : t("common:expand")}
+                            aria-label={isExpanded ? "طي" : "توسيع"}
                           >
                             {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                           </Button>
@@ -328,23 +321,23 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                               {/* Details Section */}
                               <div className="grid grid-cols-2 gap-4 text-sm">
                                 <div>
-                                  <span className="font-semibold">{t("services:table.count")}:</span> {rs.count}
+                                  <span className="font-semibold">العدد:</span> {rs.count}
                                 </div>
                                 {!isCompanyPatient && (
                                   <div>
-                                    <span className="font-semibold">{t("services:table.discountPercentage")}:</span> {rs.discount_per}%
+                                    <span className="font-semibold">نسبة الخصم:</span> {rs.discount_per}%
                                   </div>
                                 )}
                                 {isCompanyPatient && (
                                   <div>
-                                    <span className="font-semibold">{t("services:table.endurance")}:</span> {formatNumber(rs.endurance)}
+                                    <span className="font-semibold">التعاون:</span> {formatNumber(rs.endurance)}
                                   </div>
                                 )}
                                 <div>
-                                  <span className="font-semibold">{t("services:table.totalItemPrice")}:</span> {formatNumber(Number(rs.price) * Number(rs.count))}
+                                  <span className="font-semibold">إجمالي سعر العنصر:</span> {formatNumber(Number(rs.price) * Number(rs.count))}
                                 </div>
                                 <div>
-                                  <span className="font-semibold">{t("services:table.balance")}:</span> {formatNumber(calculateItemBalance(rs))}
+                                  <span className="font-semibold">الرصيد:</span> {formatNumber(calculateItemBalance(rs))}
                                 </div>
                               </div>
 
@@ -354,11 +347,11 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  onClick={() => handleEdit(rs)}
+                                  onClick={() => handleEdit(service.id)}
                                   disabled={editingRowId !== null}
                                 >
                                   <Edit className="h-3 w-3 ltr:mr-1 rtl:ml-1" />
-                                  {t("common:edit")}
+                                  تعديل
                                 </Button>
 
                                 {/* Manage Costs Button */}
@@ -368,7 +361,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                                   onClick={() => handleManageServiceCosts(rs)}
                                 >
                                   <Settings2 className="h-3 w-3 ltr:mr-1 rtl:ml-1" />
-                                  {t("services:manageCosts")}
+                                  إدارة التكاليف
                                 </Button>
 
                                 {/* Manage Deposits Button */}
@@ -378,7 +371,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                                   onClick={() => handleManageDeposits(rs)}
                                 >
                                   <PackageOpen className="h-3 w-3 ltr:mr-1 rtl:ml-1" />
-                                  {t("services:manageDeposits")}
+                                  إدارة الودائع
                                 </Button>
 
                                 {/* Delete Button */}
@@ -388,7 +381,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                                   onClick={() => setServiceToDelete(rs.id)}
                                 >
                                   <Trash2 className="h-3 w-3 ltr:mr-1 rtl:ml-1" />
-                                  {t("common:delete")}
+                                  حذف
                                 </Button>
                               </div>
 
@@ -399,7 +392,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                                     {/* Count Input */}
                                     <div>
                                       <label className="text-xs font-medium">
-                                        {t("services:table.count")}
+                                        العدد
                                       </label>
                                       <Input
                                         type="number"
@@ -419,8 +412,8 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                                     <div>
                                       <label className="text-xs font-medium">
                                         {isCompanyPatient
-                                          ? t("services:table.endurance")
-                                          : t("services:table.discountPercentage")}
+                                          ? "التعاون"
+                                          : "نسبة الخصم"}
                                       </label>
                                       <Input
                                         type="number"
@@ -446,7 +439,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                                   <div className="flex gap-2 mt-3">
                                     <Button
                                       size="sm"
-                                      onClick={() => handleSaveEdit(rs.id)}
+                                      onClick={() => handleSaveEdit()}
                                       disabled={updateMutation.isPending}
                                     >
                                       {updateMutation.isPending ? (
@@ -454,7 +447,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                                       ) : (
                                         <Save className="h-3 w-3 ltr:mr-1 rtl:ml-1" />
                                       )}
-                                      {t("common:save")}
+                                      حفظ
                                     </Button>
                                     <Button
                                       size="sm"
@@ -462,7 +455,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                                       onClick={handleCancelEdit}
                                     >
                                       <XCircle className="h-3 w-3 ltr:mr-1 rtl:ml-1" />
-                                      {t("common:cancel")}
+                                      إلغاء
                                     </Button>
                                   </div>
                                 </div>
@@ -502,16 +495,14 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>
-                {t("common:confirmDeleteTitle")}
+                تأكيد الحذف
               </AlertDialogTitle>
               <AlertDialogDescription>
-                {t("common:confirmDeleteMessage", {
-                  item: t("services:serviceEntityName"),
-                })}
+                هل أنت متأكد من حذف هذه الخدمة؟
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>{t("common:cancel")}</AlertDialogCancel>
+              <AlertDialogCancel>إلغاء</AlertDialogCancel>
               <AlertDialogAction
                 onClick={() =>
                   serviceToDelete && removeMutation.mutate(serviceToDelete)
@@ -524,7 +515,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                 ) : (
                   <Trash2 className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
                 )}
-                {t("common:delete")}
+                حذف
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

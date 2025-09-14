@@ -1,9 +1,7 @@
 // src/components/clinic/LabPaymentDialog.tsx
 import React, { useEffect, useMemo } from "react";
 import { useForm, type SubmitHandler } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { useTranslation } from "react-i18next";
+
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -46,40 +44,7 @@ type PaymentFormValues = {
   is_bankak: string;
 };
 
-const getLabPaymentSchema = (
-  t: (key: string, options?: Record<string, unknown>) => string,
-  maxAmount: number,
-  minAmount = 0.01
-) =>
-  z.object({
-    amount_to_pay: z
-      .string()
-      .min(1, {
-        message: t("common:validation.required", {
-          field: t("payments:amountToPay"),
-        }),
-      })
-      .refine((val) => !isNaN(parseFloat(val)), {
-        message: t("common:validation.mustBeNumeric"),
-      })
-      .refine((val) => parseFloat(val) >= minAmount, {
-        message: t("payments:validation.amountMinRequired", {
-          amount: minAmount.toFixed(1),
-        }),
-      })
-      .refine((val) => parseFloat(val) <= maxAmount, {
-        message: t("payments:validation.amountExceedsBalance", {
-          balance: maxAmount.toFixed(1),
-        }),
-      }),
-    is_bankak: z
-      .string()
-      .min(1, {
-        message: t("common:validation.required", {
-          field: t("payments:paymentMethod"),
-        }),
-      }),
-  });
+// Removed Zod schema - using manual validation
 
 const LabPaymentDialog: React.FC<LabPaymentDialogProps> = ({
   isOpen,
@@ -88,7 +53,7 @@ const LabPaymentDialog: React.FC<LabPaymentDialogProps> = ({
   onPaymentSuccess,
   currentClinicShiftId,
 }) => {
-  const { t } = useTranslation(["payments", "common", "labTests"]);
+  // Translation hook removed since we're not using translations
 
   const netPayable = useMemo(() => {
     if (!labRequest) return 0;
@@ -104,14 +69,7 @@ const LabPaymentDialog: React.FC<LabPaymentDialogProps> = ({
     return netPayable - (Number(labRequest.amount_paid) || 0);
   }, [netPayable, labRequest]);
 
-  const paymentSchema = getLabPaymentSchema(
-    t,
-    balanceDue > 0 ? balanceDue : 0.01,
-    0.01
-  );
-
   const form = useForm<PaymentFormValues>({
-    resolver: zodResolver(paymentSchema),
     defaultValues: {
       amount_to_pay: balanceDue > 0 ? balanceDue.toFixed(1) : "0.0",
       is_bankak: "0",
@@ -121,7 +79,10 @@ const LabPaymentDialog: React.FC<LabPaymentDialogProps> = ({
   useEffect(() => {
     if (isOpen && labRequest) {
       const defaultAmount = balanceDue > 0 ? balanceDue.toFixed(1) : "0.0";
-      form.reset({ amount_to_pay: defaultAmount, is_bankak: "0" });
+      form.reset({
+        amount_to_pay: defaultAmount,
+        is_bankak: "0",
+      });
     }
   }, [isOpen, labRequest, balanceDue, form]);
 
@@ -131,30 +92,47 @@ const LabPaymentDialog: React.FC<LabPaymentDialogProps> = ({
       if (!currentClinicShiftId)
         throw new Error("Active clinic shift ID is missing.");
       return recordLabRequestPayment(labRequest.id, {
-        amount_to_pay: data.amount_to_pay,
-        is_bankak: data.is_bankak,
-        shift_id: currentClinicShiftId,
+        ...data,
+        shift_id: currentClinicShiftId
       });
     },
     onSuccess: (updatedLabRequest) => {
-      toast.success(t("payments:paymentSuccess"));
+      toast.success("paymentSuccess");
       onPaymentSuccess(updatedLabRequest);
     },
     onError: (error: Error) => {
       toast.error(
         (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message || t("payments:paymentError")
+          ?.message || "paymentError"
       );
     },
   });
 
   const onSubmit: SubmitHandler<PaymentFormValues> = (data) => {
-    if (balanceDue <= 0) {
-      toast.info(t("payments:alreadyPaidOrNoBalance"));
+    // Basic validation
+    const amount = parseFloat(data.amount_to_pay);
+    if (isNaN(amount) || amount <= 0) {
+      toast.error("المبلغ يجب أن يكون رقم صحيح أكبر من الصفر");
       return;
     }
+    
+    if (amount > balanceDue) {
+      toast.error("المبلغ يتجاوز الرصيد المستحق");
+      return;
+    }
+    
+    if (!data.is_bankak) {
+      toast.error("طريقة الدفع مطلوبة");
+      return;
+    }
+    
+    if (balanceDue <= 0) {
+      toast.info("الطلب مدفوع بالفعل أو لا يوجد رصيد مستحق");
+      return;
+    }
+    
     recordPaymentMutation.mutate({
-      amount_to_pay: parseFloat(data.amount_to_pay),
+      amount_to_pay: amount,
       is_bankak: data.is_bankak === "1",
     });
   };
@@ -166,20 +144,16 @@ const LabPaymentDialog: React.FC<LabPaymentDialogProps> = ({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {t("payments:dialogTitleLab", {
-              testName:
-                labRequest.main_test?.main_test_name ||
-                t("labTests:testEntityName"),
-            })}
+            {"dialogTitleLab"}
           </DialogTitle>
           <DialogDescription>
-            {t("payments:balanceDue")}:{" "}
+            {"balanceDue"}:{" "}
             <span className="font-semibold">{balanceDue.toFixed(1)}</span>{" "}
-            {t("common:currency")}
+            {"currency"}
             <br />
-            {t("payments:netPayable")}:{" "}
+            {"netPayable"}:{" "}
             <span className="font-semibold">{netPayable.toFixed(1)}</span>{" "}
-            {t("common:currency")}
+            {"currency"}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -192,7 +166,7 @@ const LabPaymentDialog: React.FC<LabPaymentDialogProps> = ({
               name="amount_to_pay"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("payments:amountToPay")}</FormLabel>
+                  <FormLabel>{"amountToPay"}</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
@@ -214,7 +188,7 @@ const LabPaymentDialog: React.FC<LabPaymentDialogProps> = ({
               name="is_bankak"
               render={({ field }) => (
                 <FormItem className="space-y-2">
-                  <FormLabel>{t("payments:paymentMethod")}</FormLabel>
+                  <FormLabel>{"paymentMethod"}</FormLabel>
                   <FormControl>
                     <RadioGroup
                       onValueChange={field.onChange}
@@ -235,7 +209,7 @@ const LabPaymentDialog: React.FC<LabPaymentDialogProps> = ({
                           htmlFor={`cash-lab-${labRequest.id}`}
                           className="font-normal"
                         >
-                          {t("payments:cash")}
+                          {"cash"}
                         </FormLabel>
                       </FormItem>
                       <FormItem className="flex items-center space-x-2 rtl:space-x-reverse">
@@ -249,7 +223,7 @@ const LabPaymentDialog: React.FC<LabPaymentDialogProps> = ({
                           htmlFor={`bank-lab-${labRequest.id}`}
                           className="font-normal"
                         >
-                          {t("payments:paymentMethodBankak")}
+                          {"paymentMethodBankak"}
                         </FormLabel>
                       </FormItem>
                     </RadioGroup>
@@ -265,7 +239,7 @@ const LabPaymentDialog: React.FC<LabPaymentDialogProps> = ({
                   variant="outline"
                   disabled={recordPaymentMutation.isPending}
                 >
-                  {t("common:cancel")}
+                  {"إلغاء"}
                 </Button>
               </DialogClose>
               <Button
@@ -275,7 +249,7 @@ const LabPaymentDialog: React.FC<LabPaymentDialogProps> = ({
                 {recordPaymentMutation.isPending && (
                   <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />
                 )}
-                {t("common:pay")}
+                {"pay"}
               </Button>
             </DialogFooter>
           </form>

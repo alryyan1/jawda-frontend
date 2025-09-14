@@ -1,8 +1,6 @@
 import React, { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { useTranslation } from "react-i18next";
+
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -46,50 +44,12 @@ interface BatchLabPaymentDialogProps {
   onBatchPaymentSuccess: (updatedVisitData: DoctorVisit) => void;
 }
 
-// Define translation options type
-interface TranslationOptions {
-  amount?: number;
-  balance?: number;
-  field?: string;
-  count?: number;
+// Form values interface
+interface BatchPaymentFormValues {
+  total_payment_amount: string;
+  is_bankak: string;
+  payment_notes?: string | null;
 }
-
-// Zod Schema for the batch payment form
-const getBatchPaymentSchema = (
-  t: (key: string, options?: TranslationOptions) => string,
-  maxAmount: number,
-  minAmount = 0.01
-) =>
-  z.object({
-    total_payment_amount: z
-      .string()
-      .refine((val) => !isNaN(parseFloat(val)), {
-        message: t("common:validation.mustBeNumeric"),
-      })
-      .transform((val) => parseFloat(val))
-      .refine((val) => val >= minAmount, {
-        message: t("payments:validation.amountMinRequired", {
-          amount: minAmount.toFixed(1),
-        }),
-      })
-      .refine((val) => val <= maxAmount + 0.001, {
-        message: t("payments:validation.amountExceedsTotalBalance", {
-          balance: maxAmount.toFixed(1),
-        }),
-      }), // Allow for small float precision
-    is_bankak: z
-      .string()
-      .min(1, {
-        message: t("common:validation.required", {
-          field: t("payments:paymentMethod"),
-        }),
-      }), // "0" cash, "1" bank
-    payment_notes: z
-      .string()
-      .max(255, t("common:validation.maxLengthShort", { count: 255 }))
-      .optional()
-      .nullable(),
-  });
 
 const BatchLabPaymentDialog: React.FC<BatchLabPaymentDialogProps> = ({
   isOpen,
@@ -100,7 +60,6 @@ const BatchLabPaymentDialog: React.FC<BatchLabPaymentDialogProps> = ({
   currentClinicShift,
   onBatchPaymentSuccess,
 }) => {
-  const { t, i18n } = useTranslation(["payments", "common", "labTests"]);
   const isCompanyPatient = !!currentPatient?.company_id;
 
   const calculateItemNetPayable = (lr: LabRequest): number => {
@@ -139,14 +98,7 @@ const BatchLabPaymentDialog: React.FC<BatchLabPaymentDialogProps> = ({
     return { totalNetPayable, totalAlreadyPaid, totalBalanceDue, itemCount };
   }, [requestedTests, isCompanyPatient]);
 
-  const batchPaymentSchema = getBatchPaymentSchema(
-    t,
-    summary.totalBalanceDue > 0 ? summary.totalBalanceDue : 0.01
-  );
-  type BatchPaymentFormValues = z.infer<ReturnType<typeof batchPaymentSchema>>;
-
   const form = useForm<BatchPaymentFormValues>({
-    resolver: zodResolver(batchPaymentSchema),
     defaultValues: {
       total_payment_amount:
         summary.totalBalanceDue > 0
@@ -165,14 +117,14 @@ const BatchLabPaymentDialog: React.FC<BatchLabPaymentDialogProps> = ({
           ? summary.totalBalanceDue.toFixed(1)
           : "0.00";
       form.reset({
-        total_payment_amount: parseFloat(defaultAmount), // Zod expects number after transform
+        total_payment_amount: defaultAmount,
         is_bankak: "0",
         payment_notes: "",
       });
       // For display, keep it as string
       form.setValue("total_payment_amount", defaultAmount);
     }
-  }, [isOpen, summary.totalBalanceDue, form, t]); // Added t to dependencies
+  }, [isOpen, summary.totalBalanceDue, form]);
 
   const mutation = useMutation({
     mutationFn: (data: {
@@ -180,29 +132,44 @@ const BatchLabPaymentDialog: React.FC<BatchLabPaymentDialogProps> = ({
       is_bankak: boolean;
       payment_notes?: string;
     }) =>
-      batchPayLabRequestsForVisit(visitId, {
-        ...data,
-        shift_id: currentClinicShift.id,
-      }),
+      batchPayLabRequestsForVisit(visitId, data),
     onSuccess: (updatedVisitData) => {
-      toast.success(t("payments:batchPaymentSuccess"));
+      toast.success("batchPaymentSuccess");
       onBatchPaymentSuccess(updatedVisitData);
     },
     onError: (error: { response?: { data?: { message?: string } } }) => {
       toast.error(
-        error.response?.data?.message || t("payments:batchPaymentError")
+        error.response?.data?.message || "batchPaymentError"
       );
     },
   });
 
   const onSubmit = (data: BatchPaymentFormValues) => {
-    if (summary.totalBalanceDue <= 0) {
-      toast.info(t("payments:allLabRequestsPaidOrNoBalance"));
-      onOpenChange(false); // Close dialog if nothing to pay
+    // Basic validation
+    const amount = parseFloat(data.total_payment_amount);
+    if (isNaN(amount) || amount <= 0) {
+      toast.error("المبلغ يجب أن يكون رقم صحيح أكبر من الصفر");
       return;
     }
+    
+    if (amount > summary.totalBalanceDue + 0.001) {
+      toast.error("المبلغ يتجاوز الرصيد المستحق");
+      return;
+    }
+    
+    if (!data.is_bankak) {
+      toast.error("طريقة الدفع مطلوبة");
+      return;
+    }
+    
+    if (summary.totalBalanceDue <= 0) {
+      toast.info("جميع طلبات المختبر مدفوعة أو لا يوجد رصيد مستحق");
+      onOpenChange(false);
+      return;
+    }
+    
     mutation.mutate({
-      total_payment_amount: data.total_payment_amount, // Already a number from Zod transform
+      total_payment_amount: amount,
       is_bankak: data.is_bankak === "1",
       payment_notes: data.payment_notes,
     });
@@ -216,34 +183,32 @@ const BatchLabPaymentDialog: React.FC<BatchLabPaymentDialogProps> = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <DollarSign className="h-6 w-6 text-primary" />
-            {t("payments:batchPayDialogTitleLab")}
+            {"batchPayDialogTitleLab"}
           </DialogTitle>
           <DialogDescription>
-            {t("payments:batchPayDialogDescription", {
-              count: summary.itemCount,
-            })}
+            {"batchPayDialogDescription"}
             <br />
-            {t("payments:totalNetPayableIs")}:
+            {"totalNetPayableIs"}:
             <span className="font-semibold">
               {summary.totalNetPayable.toFixed(1)}
             </span>
-            {t("common:currency")} <br />
-            {t("payments:totalAlreadyPaidIs")}:
+            {"currency"} <br />
+            {"totalAlreadyPaidIs"}:
             <span className="font-semibold text-green-600">
               {summary.totalAlreadyPaid.toFixed(1)}
             </span>
-            {t("common:currency")} <br />
-            {t("payments:totalBalanceDueIs")}:
-            <span className="font-semibold text-lg text-red-600 dark:text-red-400">
+            {"currency"} <br />
+            {"totalBalanceDueIs"}:
+            <span className="font-semibold text-lg text-red-600 ">
               {summary.totalBalanceDue.toFixed(1)}
             </span>
-            {t("common:currency")}
+            {"currency"}
           </DialogDescription>
         </DialogHeader>
         <Separator className="my-3" />
         {summary.itemCount === 0 || summary.totalBalanceDue <= 0.009 ? (
           <div className="py-6 text-center text-muted-foreground">
-            {t("payments:allLabRequestsPaidOrNoBalance")}
+            {"allLabRequestsPaidOrNoBalance"}
           </div>
         ) : (
           <Form {...form}>
@@ -256,7 +221,7 @@ const BatchLabPaymentDialog: React.FC<BatchLabPaymentDialogProps> = ({
                 name="total_payment_amount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("payments:totalAmountToPayNow")}</FormLabel>
+                    <FormLabel>{"totalAmountToPayNow"}</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -277,14 +242,14 @@ const BatchLabPaymentDialog: React.FC<BatchLabPaymentDialogProps> = ({
                 render={({ field }) => (
                   <FormItem className="space-y-1.5">
                     <FormLabel className="text-sm">
-                      {t("payments:paymentMethod")}
+                      {"paymentMethod"}
                     </FormLabel>
                     <FormControl>
                       <RadioGroup
                         onValueChange={field.onChange}
                         defaultValue={field.value}
                         className="flex gap-4"
-                        dir={i18n.dir()}
+                        dir={true}
                         disabled={mutation.isPending}
                       >
                         <FormItem className="flex items-center space-x-2 rtl:space-x-reverse">
@@ -292,7 +257,7 @@ const BatchLabPaymentDialog: React.FC<BatchLabPaymentDialogProps> = ({
                             <RadioGroupItem value="0" />
                           </FormControl>
                           <FormLabel className="font-normal text-sm">
-                            {t("payments:cash")}
+                            {"cash"}
                           </FormLabel>
                         </FormItem>
                         <FormItem className="flex items-center space-x-2 rtl:space-x-reverse">
@@ -300,7 +265,7 @@ const BatchLabPaymentDialog: React.FC<BatchLabPaymentDialogProps> = ({
                             <RadioGroupItem value="1" />
                           </FormControl>
                           <FormLabel className="font-normal text-sm">
-                            {t("payments:paymentMethodBankak")}
+                            {"paymentMethodBankak"}
                           </FormLabel>
                         </FormItem>
                       </RadioGroup>
@@ -314,14 +279,14 @@ const BatchLabPaymentDialog: React.FC<BatchLabPaymentDialogProps> = ({
                 name="payment_notes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("payments:paymentNotesOptional")}</FormLabel>
+                    <FormLabel>{"paymentNotesOptional"}</FormLabel>
                     <FormControl>
                       <Textarea
                         rows={2}
                         {...field}
                         value={field.value || ""}
                         disabled={mutation.isPending}
-                        placeholder={t("payments:paymentNotesPlaceholder")}
+                        placeholder={"paymentNotesPlaceholder"}
                       />
                     </FormControl>
                     <FormMessage />
@@ -335,7 +300,7 @@ const BatchLabPaymentDialog: React.FC<BatchLabPaymentDialogProps> = ({
                     variant="outline"
                     disabled={mutation.isPending}
                   >
-                    {t("common:cancel")}
+                    {"إلغاء"}
                   </Button>
                 </DialogClose>
                 <Button
@@ -347,7 +312,7 @@ const BatchLabPaymentDialog: React.FC<BatchLabPaymentDialogProps> = ({
                   {mutation.isPending && (
                     <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />
                   )}
-                  {t("common:payTotalAmount")}
+                  {"payTotalAmount"}
                 </Button>
               </DialogFooter>
             </form>

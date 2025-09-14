@@ -1,9 +1,8 @@
 // src/components/clinic/ShiftSummaryDialog.tsx
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
 import { format, parseISO } from 'date-fns';
-import { arSA, enUS } from 'date-fns/locale'; // Import locales
+import { arSA } from 'date-fns/locale'; // Import Arabic locale
 import {
   Dialog,
   DialogContent,
@@ -65,13 +64,8 @@ const ShiftSummaryDialog: React.FC<ShiftSummaryDialogProps> = ({
   onOpenChange,
   shift,
 }) => {
-  const { t, i18n } = useTranslation([
-    "clinic",
-    "common",
-    "dashboard",
-    "finances",
-  ]);
-  const dateLocale = i18n.language.startsWith('ar') ? arSA : enUS;
+  // Using Arabic directly
+  const dateLocale = arSA;
 
   const {
     data: summary,
@@ -95,7 +89,7 @@ const ShiftSummaryDialog: React.FC<ShiftSummaryDialogProps> = ({
       return (
         <div className="min-h-[400px] py-10 text-center flex flex-col items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
-          <p className="text-sm text-muted-foreground">{t('common:loadingData')}</p>
+          <p className="text-sm text-muted-foreground">جار تحميل البيانات...</p>
         </div>
       );
     }
@@ -103,7 +97,7 @@ const ShiftSummaryDialog: React.FC<ShiftSummaryDialogProps> = ({
       return (
         <div className="min-h-[400px] p-4 text-destructive text-center flex flex-col items-center justify-center">
           <AlertTriangle className="mx-auto h-6 w-6 mb-2" />
-          <p className="font-semibold">{t("common:error.fetchFailed")}</p>
+          <p className="font-semibold">فشل في جلب البيانات</p>
           <p className="text-xs mt-1">{error.message}</p>
         </div>
       );
@@ -111,72 +105,72 @@ const ShiftSummaryDialog: React.FC<ShiftSummaryDialogProps> = ({
     if (summary) {
       return (
         <div className="space-y-3 sm:space-y-4 text-sm">
-          <FinancialSection title={t("clinic:shiftSummary.incomeTitle")} icon={TrendingUp}>
+          <FinancialSection title="الإيرادات" icon={TrendingUp}>
             <DetailRowDisplay
-              label={t("clinic:shiftSummary.totalNetIncome")}
+              label="إجمالي صافي الإيراد"
               value={formatNumber(summary.total_net_income)}
-              unit={t("common:currencySymbolShort")}
-              valueClassName="font-bold text-green-600 dark:text-green-400"
+              unit="ج.س"
+              valueClassName="font-bold text-green-600 "
             />
             <DetailRowDisplay
-              label={t("clinic:shiftSummary.totalDiscount")}
+              label="إجمالي الخصومات"
               value={formatNumber(summary.total_discount_applied)}
-              unit={t("common:currencySymbolShort")}
+              unit="ج.س"
               icon={BadgePercent}
-              valueClassName="text-orange-600 dark:text-orange-400"
+              valueClassName="text-orange-600 "
             />
           </FinancialSection>
 
-          <FinancialSection title={t("clinic:shiftSummary.collectionsTitle")} icon={Receipt}>
+          <FinancialSection title="المحصلات" icon={Receipt}>
             <DetailRowDisplay
-              label={t("clinic:shiftSummary.totalCashCollected")}
+              label="إجمالي المحصل نقداً"
               value={formatNumber(summary.total_cash_collected)}
-              unit={t("common:currencySymbolShort")}
+              unit="ج.س"
               icon={DollarSign}
             />
             <DetailRowDisplay
-              label={t("clinic:shiftSummary.totalBankCollected")}
+              label="إجمالي المحصل بنك/شبكة"
               value={formatNumber(summary.total_bank_collected)}
-              unit={t("common:currencySymbolShort")}
+              unit="ج.س"
               icon={Landmark}
             />
             <Separator className="my-1.5" />
             <DetailRowDisplay
-              label={t("clinic:shiftSummary.totalCollected")}
+              label="إجمالي المحصلات"
               value={formatNumber(summary.total_collected)}
-              unit={t("common:currencySymbolShort")}
+              unit="ج.س"
               valueClassName="font-semibold"
             />
           </FinancialSection>
 
-          <FinancialSection title={t("clinic:shiftSummary.expensesAndNet")} icon={Banknote}>
+          <FinancialSection title="المصروفات والصافي" icon={Banknote}>
             <DetailRowDisplay
-              label={t("clinic:shiftSummary.recordedExpenses")}
+              label="المصروفات المسجلة"
               value={formatNumber(summary.recorded_expenses)}
-              unit={t("common:currencySymbolShort")}
+              unit="ج.س"
               icon={TrendingDown}
-              valueClassName="text-red-600 dark:text-red-400"
+              valueClassName="text-red-600 "
             />
              <Separator className="my-1.5" />
             <DetailRowDisplay
-              label={t("clinic:shiftSummary.expectedCash")}
+              label="النقدية المتوقعة بالدرج"
               value={formatNumber(summary.expected_cash_in_drawer)}
-              unit={t("common:currencySymbolShort")}
+              unit="ج.س"
               valueClassName="font-bold text-lg"
             />
           </FinancialSection>
 
           {summary.is_closed && (
-            <FinancialSection title={t("clinic:shiftSummary.closureValues")} icon={FileText}>
+            <FinancialSection title="قيم الإغلاق (اليدوية)" icon={FileText}>
               <DetailRowDisplay
-                label={t("dashboard:closeShiftDialog.totalLabel")}
+                label="الإجمالي"
                 value={formatNumber(summary.shift_total_recorded || 0)}
-                unit={t("common:currencySymbolShort")}
+                unit="ج.س"
               />
               <DetailRowDisplay
-                label={t("dashboard:closeShiftDialog.bankLabel")}
+                label="البنك"
                 value={formatNumber(summary.shift_bank_recorded || 0)}
-                unit={t("common:currencySymbolShort")}
+                unit="ج.س"
               />
               {/* You could add a discrepancy calculation here if needed */}
             </FinancialSection>
@@ -184,7 +178,7 @@ const ShiftSummaryDialog: React.FC<ShiftSummaryDialogProps> = ({
         </div>
       );
     }
-    return <div className="min-h-[400px] py-10 text-center text-muted-foreground">{t('common:noDataAvailable')}</div>; // Fallback if no summary and no error/loading
+    return <div className="min-h-[400px] py-10 text-center text-muted-foreground">لا توجد بيانات متاحة</div>; // Fallback if no summary and no error/loading
   };
 
   return (
@@ -193,20 +187,14 @@ const ShiftSummaryDialog: React.FC<ShiftSummaryDialogProps> = ({
         <DialogHeader className="px-6 pt-6 pb-4 border-b">
           <DialogTitle className="flex items-center gap-2 text-lg">
             <FileText className="h-5 w-5 text-primary" />
-            {t("clinic:shiftSummary.dialogTitle")} #{shift.id}
+            الملخص المالي للوردية #{shift.id}
           </DialogTitle>
           <DialogDescription>
             {shift.is_closed
-              ? t("clinic:shiftSummary.closedOn", {
-                  date: shift.closed_at
-                    ? format(parseISO(shift.closed_at), 'Pp', { locale: dateLocale })
-                    : "N/A",
-                })
-              : t("clinic:shiftSummary.currentlyOpen", {
-                  openedAt: shift.created_at 
-                    ? format(parseISO(shift.created_at), 'Pp', { locale: dateLocale }) 
-                    : 'N/A'
-                })}
+              ? `أُغلقت في: ${shift.closed_at
+                    ? format(shift.closed_at, 'Pp', { locale: dateLocale })
+                    : "غير متوفر"}`
+              : `هذه الوردية مفتوحة حالياً.`}
           </DialogDescription>
         </DialogHeader>
 
@@ -219,7 +207,7 @@ const ShiftSummaryDialog: React.FC<ShiftSummaryDialogProps> = ({
         <DialogFooter className="px-6 pb-6 pt-4 border-t">
           <DialogClose asChild>
             <Button type="button" variant="outline">
-              {t("common:close")}
+              إغلاق
             </Button>
           </DialogClose>
         </DialogFooter>

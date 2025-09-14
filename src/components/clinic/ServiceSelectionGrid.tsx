@@ -1,6 +1,5 @@
 // src/components/clinic/ServiceSelectionGrid.tsx
 import React, { useState, useMemo, useEffect, useCallback } from 'react'; // Added useCallback
-import { useTranslation } from 'react-i18next';
 import type { ServiceGroupWithServices, Service } from '@/types/services';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from '@/components/ui/card';
@@ -42,7 +41,6 @@ const ServiceSelectionGrid: React.FC<ServiceSelectionGridProps> = ({
   onAddSingleServiceById,
   isCompanyPatient,
 }) => {
-  const { t, i18n } = useTranslation(['services', 'common']);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedServiceIds, setSelectedServiceIds] = useState<Set<number>>(new Set());
 
@@ -59,9 +57,9 @@ const ServiceSelectionGrid: React.FC<ServiceSelectionGridProps> = ({
   const [isFindingServiceById, setIsFindingServiceById] = useState(false); // NEW: 
   // NEW: Handler for adding service by ID input
   const handleAddServiceByIdInput = async () => {
-    const id = parseInt(serviceIdInput.trim());
+    const id = parseInt(serviceIdInput);
     if (isNaN(id) || id <= 0) {
-      toast.error(t('services:validation.invalidServiceId'));
+      toast.error("رقم الخدمة غير صحيح");
       return;
     }
     setIsFindingServiceById(true);
@@ -150,10 +148,10 @@ const ServiceSelectionGrid: React.FC<ServiceSelectionGridProps> = ({
         aria-pressed={isSelected} // ARIA state
         aria-label={service.name}
         className={cn(
-          "cursor-pointer hover:shadow-lg transition-all text-xs p-2 flex flex-col justify-between h-[110px] sm:h-[120px] relative focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 dark:focus:ring-offset-background",
+          "cursor-pointer hover:shadow-lg transition-all text-xs p-2 flex flex-col justify-between h-[110px] sm:h-[120px] relative focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
           isSelected
-            ? "ring-2 ring-primary shadow-lg bg-primary/10 dark:bg-primary/20"
-            : "bg-card dark:bg-card/80 hover:bg-muted/50 dark:hover:bg-muted/30"
+            ? "ring-2 ring-primary shadow-lg bg-primary/10"
+            : "bg-card hover:bg-muted/50"
         )}
       >
         <div className="flex items-start justify-between mb-1">
@@ -167,22 +165,22 @@ const ServiceSelectionGrid: React.FC<ServiceSelectionGridProps> = ({
         <div className="mt-auto space-y-1">
            <div className="flex justify-between items-end">
             <p className="text-muted-foreground text-[10px] truncate" title={service.service_group?.name}>
-              {service.service_group?.name || t('common:notAvailableShort')}
+              {service.service_group?.name || "غير متوفر"}
             </p>
             <p className="font-semibold text-sm">
-              {priceToShow != null ? `${formatNumber(Number(priceToShow))} ${t('common:currencySymbolShort')}` : t('common:priceUnavailable')}
+              {priceToShow != null ? `${formatNumber(Number(priceToShow))} ر.س` : "السعر غير متوفر"}
             </p>
            </div>
           {(isCompanyPatient || needsApproval) && (
             <div className="flex flex-wrap gap-1">
               {isCompanyPatient && (
                 <Badge variant="outline" className="text-[9px] px-1 py-0 leading-tight border-blue-500 text-blue-600">
-                  {t('common:companyPrice')}
+                  سعر الشركة
                 </Badge>
               )}
               {needsApproval && (
                 <Badge variant="destructive" className="text-[9px] px-1 py-0 leading-tight">
-                  {t('common:requiresApproval')}
+                  يتطلب موافقة
                 </Badge>
               )}
             </div>
@@ -198,7 +196,7 @@ const ServiceSelectionGrid: React.FC<ServiceSelectionGridProps> = ({
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-300px)] min-h-[200px]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="mt-2 text-muted-foreground">{t('common:loadingData')}</p>
+        <p className="mt-2 text-muted-foreground">جاري تحميل البيانات...</p>
       </div>
     );
   }
@@ -207,10 +205,10 @@ const ServiceSelectionGrid: React.FC<ServiceSelectionGridProps> = ({
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-300px)] min-h-[200px] text-center">
         <AlertCircle className="h-10 w-10 text-muted-foreground mb-3" />
-        <p className="text-lg font-medium">{t('services:noServicesAvailableTitle')}</p>
-        <p className="text-sm text-muted-foreground">{t('services:noServicesAvailableForSelection')}</p>
+        <p className="text-lg font-medium">لا توجد خدمات متاحة</p>
+        <p className="text-sm text-muted-foreground">لا توجد خدمات متاحة للاختيار</p>
         <Button onClick={onCancel} variant="outline" size="sm" className="mt-4">
-          {t('common:goBack')}
+          العودة
         </Button>
       </div>
     );
@@ -222,8 +220,8 @@ const ServiceSelectionGrid: React.FC<ServiceSelectionGridProps> = ({
         <div className="relative flex-grow w-full sm:w-auto">
           <Input
             type="search"
-            aria-label={t('common:searchPlaceholder', { entity: t('services:servicesEntityNamePlural', "Services")})}
-            placeholder={t('common:searchPlaceholder', { entity: t('services:servicesEntityNamePlural', "Services")})}
+            aria-label="البحث في الخدمات"
+            placeholder="البحث في الخدمات..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="ps-10 rtl:pr-10 h-9"
@@ -234,7 +232,7 @@ const ServiceSelectionGrid: React.FC<ServiceSelectionGridProps> = ({
          <div className="flex items-center gap-1 w-full sm:w-auto md:max-w-xs">
             <Input
                 type="number"
-                placeholder={t('services:addByIdPlaceholder', "Enter Service ID...")}
+                placeholder="أدخل رقم الخدمة..."
                 value={serviceIdInput}
                 onChange={(e) => setServiceIdInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddServiceByIdInput();}}}
@@ -251,13 +249,13 @@ const ServiceSelectionGrid: React.FC<ServiceSelectionGridProps> = ({
         <div className="mt-auto flex justify-end flex-shrink-0 border-t"> {/* Ensure it's at the bottom */}
           <Button onClick={handleAddClick} disabled={isLoading || selectedServiceIds.size === 0} size="sm">
             {isLoading && <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2" aria-hidden="true" />}
-            {t('common:addSelectedCount', { count: selectedServiceIds.size })}
+            إضافة المحدد ({selectedServiceIds.size})
           </Button>
         </div>
       )}
       
         <Button onClick={onCancel} variant="outline" size="sm" className="w-full sm:w-auto h-9 flex-shrink-0">
-          <List className="h-4 w-4 ltr:mr-2 rtl:ml-2" aria-hidden="true" /> {t('common:viewRequested')}
+          <List className="h-4 w-4 ltr:mr-2 rtl:ml-2" aria-hidden="true" /> عرض المطلوب
         </Button>
       </div>
 
@@ -265,13 +263,13 @@ const ServiceSelectionGrid: React.FC<ServiceSelectionGridProps> = ({
       {filteredCatalog.length === 0 && searchTerm ? (
         <div className="flex-grow flex flex-col items-center justify-center text-center py-10 text-muted-foreground">
             <Search className="h-12 w-12 mb-4 text-gray-400" />
-            <p className="text-lg font-semibold">{t('common:noResultsFound')}</p>
-            <p className="text-sm">{t('common:tryDifferentKeywords')}</p>
+            <p className="text-lg font-semibold">لم يتم العثور على نتائج</p>
+            <p className="text-sm">جرب كلمات مختلفة</p>
         </div>
       ) : (
-        <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue={activeTab || filteredCatalog[0]?.id.toString()} dir={i18n.dir()} className="w-full flex flex-col flex-grow">
+        <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue={activeTab || filteredCatalog[0]?.id.toString()} dir={true} className="w-full flex flex-col flex-grow">
           <ScrollArea type='scroll' className="w-full whitespace-nowrap border-b flex-shrink-0">
-            <TabsList  className="flex flex-wrap h-auto p-1 bg-muted rounded-lg" aria-label={t('services:serviceGroupsNavigation')}>
+            <TabsList  className="flex flex-wrap h-auto p-1 bg-muted rounded-lg" aria-label="تنقل مجموعات الخدمات">
               {filteredCatalog.map((group) => (
                 <TabsTrigger
                   key={group.id}
@@ -288,9 +286,9 @@ const ServiceSelectionGrid: React.FC<ServiceSelectionGridProps> = ({
             {filteredCatalog.map((group) => (
               <TabsContent key={group.id} value={group.id.toString()} className="h-full mt-0"> {/* Ensure TabsContent fills height */}
                 {group.services.length === 0 && searchTerm ? (
-                  <div className="text-center py-10 text-muted-foreground">{t('common:noResultsFoundInGroup')}</div>
+                  <div className="text-center py-10 text-muted-foreground">لم يتم العثور على نتائج في هذه المجموعة</div>
                 ) : group.services.length === 0 && !searchTerm ? (
-                  <div className="text-center py-10 text-muted-foreground">{t('services:noServicesInThisGroup')}</div>
+                  <div className="text-center py-10 text-muted-foreground">لا توجد خدمات في هذه المجموعة</div>
                 ): (
                   // Take up remaining height
                   <ScrollArea className="absolute inset-0 pr-1"> {/* Use absolute to fill parent */}

@@ -1,6 +1,6 @@
 // src/pages/settings/attendance/HolidaysPage.tsx
 import React, { useState, useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
+// Removed i18n for visible labels here
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { format, addYears, subYears } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
@@ -30,8 +30,8 @@ interface PaginatedHolidays {
 }
 
 const HolidaysPage: React.FC = () => {
-  const { t, i18n } = useTranslation(['attendance', 'common']);
-  const dateLocale = i18n.language.startsWith('ar') ? arSA : enUS;
+  // const { t, i18n } = useTranslation(['attendance', 'common']);
+  const dateLocale = arSA;
   const queryClient = useQueryClient();
 
   const [isManageHolidayDialogOpen, setIsManageHolidayDialogOpen] = useState(false);
@@ -64,14 +64,14 @@ const HolidaysPage: React.FC = () => {
   const deleteMutation = useMutation({
     mutationFn: (id: number) => apiClient.delete(`/holidays/${id}`),
     onSuccess: () => {
-      toast.success(t('attendance:holidays.deletedSuccess'));
+      toast.success('تم حذف العطلة بنجاح');
       queryClient.invalidateQueries({ queryKey: holidaysQueryKey });
     },
-    onError: (e: any) => toast.error(e.response?.data?.message || t('common:error.deleteFailed')),
+    onError: (e: any) => toast.error(e.response?.data?.message || 'فشل الحذف'),
   });
 
   const handleDeleteHoliday = (id: number, name: string) => {
-    if (window.confirm(t('common:confirmDeleteMessage', { item: name }))) {
+    if (window.confirm(`هل أنت متأكد من حذف "${name}"؟`)) {
       deleteMutation.mutate(id);
     }
   };
@@ -90,9 +90,9 @@ const HolidaysPage: React.FC = () => {
             <div className="space-y-1">
                 <CardTitle className="text-xl sm:text-2xl flex items-center gap-2">
                     <CalendarOff className="h-6 w-6 text-primary"/>
-                    {t('attendance:holidays.pageTitle')}
+                    العطل
                 </CardTitle>
-                <CardDescription>{t('attendance:holidays.pageDescription')}</CardDescription>
+                <CardDescription>إدارة العطل السنوية في النظام</CardDescription>
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
                 <Button variant="outline" size="icon" onClick={() => changeYear(-1)} disabled={isFetching} className="h-9 w-9">
@@ -106,7 +106,7 @@ const HolidaysPage: React.FC = () => {
                 </Button>
                 <Button onClick={handleAddHoliday} size="sm" className="h-9">
                     <PlusCircle className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-                    {t('attendance:holidays.addButton')}
+                    إضافة عطلة
                 </Button>
             </div>
           </div>
@@ -115,13 +115,13 @@ const HolidaysPage: React.FC = () => {
 
       <div className="flex-grow overflow-hidden">
         {isLoading && <div className="h-full flex items-center justify-center"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>}
-        {isFetching && !isLoading && <div className="text-xs text-center text-muted-foreground py-2"><Loader2 className="inline h-4 w-4 animate-spin"/> {t('common:loadingData')}</div>}
+        {isFetching && !isLoading && <div className="text-xs text-center text-muted-foreground py-2"><Loader2 className="inline h-4 w-4 animate-spin"/> جاري تحميل البيانات...</div>}
         {error && (
-          <Alert variant="destructive" className="my-4"><AlertTriangle className="h-5 w-5" /><AlertTitle>{t('common:error.fetchFailed')}</AlertTitle><AlertDescription>{error.message}</AlertDescription></Alert>
+          <Alert variant="destructive" className="my-4"><AlertTriangle className="h-5 w-5" /><AlertTitle>فشل الجلب</AlertTitle><AlertDescription>{error.message}</AlertDescription></Alert>
         )}
         {!isLoading && !error && holidays.length === 0 && (
           <Card className="h-full flex items-center justify-center text-muted-foreground">
-            <CardContent className="text-center py-10">{t('attendance:holidays.noHolidaysForYear', { year: currentYear })}</CardContent>
+            <CardContent className="text-center py-10">لا توجد عطل للسنة {currentYear}</CardContent>
           </Card>
         )}
         {!isLoading && !error && holidays.length > 0 && (
@@ -130,11 +130,11 @@ const HolidaysPage: React.FC = () => {
                 <Table className="text-xs sm:text-sm">
                 <TableHeader>
                     <TableRow>
-                    <TableHead className="text-center">{t('attendance:holidays.dialog.nameLabel')}</TableHead>
-                    <TableHead className="text-center">{t('attendance:holidays.dialog.dateLabel')}</TableHead>
-                    <TableHead className="text-center hidden sm:table-cell">{t('attendance:holidays.dialog.recurringLabel')}</TableHead>
-                    <TableHead className="hidden md:table-cell">{t('attendance:holidays.dialog.descriptionLabel')}</TableHead>
-                    <TableHead className="text-right">{t('common:actions.openMenu')}</TableHead>
+                    <TableHead className="text-center">الإسم</TableHead>
+                    <TableHead className="text-center">التاريخ</TableHead>
+                    <TableHead className="text-center hidden sm:table-cell">متكرر</TableHead>
+                    <TableHead className="hidden md:table-cell">الوصف</TableHead>
+                    <TableHead className="text-right">القائمة</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -152,9 +152,9 @@ const HolidaysPage: React.FC = () => {
             </ScrollArea>
             {paginationMeta && paginationMeta.last_page > 1 && (
                 <div className="p-3 border-t flex items-center justify-center gap-2 flex-shrink-0">
-                    <Button size="sm" variant="outline" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1 || isFetching}>{t('common:pagination.previous')}</Button>
-                    <span className="text-xs text-muted-foreground">{t('common:pagination.pageInfo', { current: currentPage, total: paginationMeta.last_page })}</span>
-                    <Button size="sm" variant="outline" onClick={() => setCurrentPage(p => Math.min(paginationMeta.last_page, p + 1))} disabled={currentPage === paginationMeta.last_page || isFetching}>{t('common:pagination.next')}</Button>
+                    <Button size="sm" variant="outline" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1 || isFetching}>السابق</Button>
+                    <span className="text-xs text-muted-foreground">صفحة {currentPage} من {paginationMeta.last_page}</span>
+                    <Button size="sm" variant="outline" onClick={() => setCurrentPage(p => Math.min(paginationMeta.last_page, p + 1))} disabled={currentPage === paginationMeta.last_page || isFetching}>التالي</Button>
                 </div>
             )}
            </Card>

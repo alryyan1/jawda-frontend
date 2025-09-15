@@ -1,18 +1,11 @@
 // src/pages/services/ServiceFormPage.tsx
 import React, { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Card, CardContent, CardHeader, CardActions, Typography, TextField, FormControlLabel, Checkbox, Button, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -23,22 +16,21 @@ import AddServiceGroupDialog from '@/components/services/AddServiceGroupDialog';
 
 interface ServiceFormPageProps { mode: ServiceFormMode; }
 
-const getServiceFormSchema = (t: Function) => z.object({
-  name: z.string().min(1, { message: t('common:validation.required', { field: t('services:form.nameLabel')}) }),
-  service_group_id: z.string().min(1, { message: t('common:validation.required', { field: t('services:form.groupLabel')}) }),
-  price: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, { message: t('common:validation.positiveNumber')}), // Add positiveNumber to common.json
+const serviceFormSchema = z.object({
+  name: z.string().min(1, { message: 'الإسم مطلوب' }),
+  service_group_id: z.string().min(1, { message: 'المجموعة مطلوبة' }),
+  price: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, { message: 'يجب أن يكون السعر رقمًا موجبًا' }),
   activate: z.boolean().default(false),
-  variable: z.boolean().default(false), // Schema had NOT NULL, so no default unless you change schema or add form default
+  variable: z.boolean().default(false),
 });
 type ServiceFormValues = z.infer<ReturnType<typeof getServiceFormSchema>>;
 
 const ServiceFormPage: React.FC<ServiceFormPageProps> = ({ mode }) => {
-  const { t } = useTranslation(['services', 'common']);
   const navigate = useNavigate();
   const { serviceId } = useParams<{ serviceId?: string }>();
   const queryClient = useQueryClient();
   const isEditMode = mode === ServiceFormMode.EDIT;
-  const serviceFormSchema = getServiceFormSchema(t);
+  
 
   const { data: serviceData, isLoading: isLoadingService } = useQuery({
     queryKey: ['service', serviceId],
@@ -59,7 +51,7 @@ const ServiceFormPage: React.FC<ServiceFormPageProps> = ({ mode }) => {
       variable: false, // Default to not variable
     },
   });
-  const { control, handleSubmit, reset, setValue } = form;
+  const { control, handleSubmit, reset, setValue, formState: { errors } } = form;
 
   useEffect(() => {
     if (isEditMode && serviceData) {
@@ -77,13 +69,13 @@ const ServiceFormPage: React.FC<ServiceFormPageProps> = ({ mode }) => {
     mutationFn: (data: ServiceFormData) => 
         isEditMode && serviceId ? updateService(Number(serviceId), data) : createService(data),
     onSuccess: () => {
-      toast.success(t('services:form.serviceSavedSuccess'));
+      toast.success('تم حفظ الخدمة بنجاح');
       queryClient.invalidateQueries({ queryKey: ['services'] });
       if(isEditMode && serviceId) queryClient.invalidateQueries({ queryKey: ['service', serviceId] });
       navigate('/settings/services');
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || t('services:form.serviceSaveError'));
+      toast.error(error.response?.data?.message || 'فشل حفظ الخدمة');
     },
   });
 
@@ -102,76 +94,110 @@ const ServiceFormPage: React.FC<ServiceFormPageProps> = ({ mode }) => {
   const formIsSubmitting = mutation.isPending;
   const dataIsLoading = isLoadingService || isLoadingServiceGroups;
 
-  if (isEditMode && isLoadingService) return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin" /> {t('common:loading')}</div>;
+  if (isEditMode && isLoadingService) return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin" /> جاري التحميل...</div>;
 
   return (
     <Card className="max-w-2xl mx-auto">
       <CardHeader>
-        <CardTitle>{isEditMode ? t('services:editServiceTitle') : t('services:createServiceTitle')}</CardTitle>
-        <CardDescription>{t('common:form.fillDetails')}</CardDescription>
+        <Typography variant="h6">{isEditMode ? 'تعديل خدمة' : 'إضافة خدمة'}</Typography>
+        <Typography variant="body2" color="text.secondary">يرجى تعبئة البيانات التالية</Typography>
       </CardHeader>
       <CardContent>
-        <Form {...form}>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            <FormField control={control} name="name" render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t('services:form.nameLabel')}</FormLabel>
-                <FormControl><Input placeholder={t('services:form.namePlaceholder')} {...field} disabled={dataIsLoading || formIsSubmitting}/></FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <Controller
+            name="name"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                label="الإسم"
+                placeholder="أدخل اسم الخدمة"
+                fullWidth
+                size="small"
+                disabled={dataIsLoading || formIsSubmitting}
+                error={!!errors.name}
+                helperText={errors.name?.message as string}
+                {...field}
+              />
+            )}
+          />
 
-            <FormField control={control} name="service_group_id" render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t('services:form.groupLabel')}</FormLabel>
-                <div className="flex items-center gap-2">
-                  <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={dataIsLoading || formIsSubmitting}>
-                    <FormControl className="flex-grow"><SelectTrigger>
-                      <SelectValue placeholder={t('services:form.selectGroup')} />
-                    </SelectTrigger></FormControl>
-                    <SelectContent>
-                      {isLoadingServiceGroups ? <SelectItem value="loading" disabled>{t('common:loading')}</SelectItem> :
-                       serviceGroups?.data?.map(sg => <SelectItem key={sg.id} value={String(sg.id)}>{sg.name}</SelectItem>)}
-                    </SelectContent>
+          <div className="flex items-center gap-2">
+            <Controller
+              name="service_group_id"
+              control={control}
+              render={({ field }) => (
+                <FormControl fullWidth size="small">
+                  <InputLabel id="group-label">المجموعة</InputLabel>
+                  <Select
+                    labelId="group-label"
+                    label="المجموعة"
+                    value={field.value || ''}
+                    onChange={(e) => field.onChange(String(e.target.value))}
+                    disabled={dataIsLoading || formIsSubmitting}
+                  >
+                    {isLoadingServiceGroups && (
+                      <MenuItem value="loading" disabled>جاري التحميل...</MenuItem>
+                    )}
+                    {serviceGroups?.data?.map((sg) => (
+                      <MenuItem key={sg.id} value={String(sg.id)}>{sg.name}</MenuItem>
+                    ))}
                   </Select>
-                  <AddServiceGroupDialog onServiceGroupAdded={handleServiceGroupAdded} />
-                </div>
-                <FormMessage />
-              </FormItem>
-            )} />
+                </FormControl>
+              )}
+            />
+            <AddServiceGroupDialog onServiceGroupAdded={handleServiceGroupAdded} />
+          </div>
 
-            <FormField control={control} name="price" render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t('services:form.priceLabel')}</FormLabel>
-                <FormControl><Input type="number" step="0.01" placeholder={t('services:form.pricePlaceholder')} {...field} disabled={dataIsLoading || formIsSubmitting}/></FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
+          <Controller
+            name="price"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                label="السعر"
+                placeholder="0.00"
+                type="number"
+                inputProps={{ step: '0.01' }}
+                fullWidth
+                size="small"
+                disabled={dataIsLoading || formIsSubmitting}
+                error={!!errors.price}
+                helperText={errors.price?.message as string}
+                {...field}
+              />
+            )}
+          />
 
-            <div className="grid grid-cols-2 gap-4">
-                <FormField control={control} name="activate" render={({ field }) => (
-                <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4 rtl:space-x-reverse">
-                    <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={dataIsLoading || formIsSubmitting}/></FormControl>
-                    <FormLabel className="font-normal">{t('services:form.activateLabel')}</FormLabel>
-                </FormItem>
-                )} />
-                <FormField control={control} name="variable" render={({ field }) => (
-                <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4 rtl:space-x-reverse">
-                    <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={dataIsLoading || formIsSubmitting}/></FormControl>
-                    <FormLabel className="font-normal">{t('services:form.variableLabel')}</FormLabel>
-                </FormItem>
-                )} />
-            </div>
-            
-            <div className="flex justify-end gap-2 pt-4">
-              <Button type="button" variant="outline" onClick={() => navigate('/services')} disabled={formIsSubmitting}>{t('common:cancel')}</Button>
-              <Button type="submit" disabled={dataIsLoading || formIsSubmitting}>
-                {formIsSubmitting && <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />}
-                {t('services:form.saveButton')}
-              </Button>
-            </div>
-          </form>
-        </Form>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <Controller
+              name="activate"
+              control={control}
+              render={({ field }) => (
+                <FormControlLabel
+                  control={<Checkbox checked={field.value} onChange={(_, v) => field.onChange(v)} />}
+                  label="نشط"
+                />
+              )}
+            />
+            <Controller
+              name="variable"
+              control={control}
+              render={({ field }) => (
+                <FormControlLabel
+                  control={<Checkbox checked={field.value} onChange={(_, v) => field.onChange(v)} />}
+                  label="سعر متغير"
+                />
+              )}
+            />
+          </div>
+
+          <CardActions className="justify-end gap-2">
+            <Button variant="outlined" onClick={() => navigate('/settings/services')} disabled={formIsSubmitting}>إلغاء</Button>
+            <Button type="submit" variant="contained" disabled={dataIsLoading || formIsSubmitting}>
+              {formIsSubmitting && <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />}
+              حفظ
+            </Button>
+          </CardActions>
+        </form>
       </CardContent>
     </Card>
   );

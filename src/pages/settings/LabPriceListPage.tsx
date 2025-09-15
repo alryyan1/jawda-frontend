@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useTranslation } from 'react-i18next';
+// Removed i18n for visible labels: using direct Arabic where applicable
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -45,7 +45,7 @@ interface ErrorResponse {
 }
 
 const LabPriceListPage: React.FC = () => {
-  const { t } = useTranslation(['labSettings', 'common', 'labTests']);
+  // const { t } = useTranslation(['labSettings', 'common', 'labTests']);
   const queryClient = useQueryClient();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -105,23 +105,23 @@ const LabPriceListPage: React.FC = () => {
   const updatePricesMutation = useMutation({
     mutationFn: batchUpdateTestPrices,
     onSuccess: (data) => {
-      toast.success(data.message || t('labSettings:pricesSavedSuccess'));
+      toast.success(data.message || 'تم حفظ أسعار التحاليل بنجاح');
       queryClient.invalidateQueries({ queryKey: ['allActiveMainTestsForPriceList'] });
       form.reset(getValues(), { keepValues: true, keepDirty: false, keepDefaultValues: false }); // Reset dirty state
     },
-    onError: (error: ErrorResponse) => toast.error(error.response?.data?.message || t('labSettings:pricesSaveError')),
+    onError: (error: ErrorResponse) => toast.error(error.response?.data?.message || 'فشل حفظ الأسعار'),
   });
 
   const deleteMutation = useMutation({
      mutationFn: batchDeleteMainTests,
      onSuccess: (data) => {
-         toast.success(data.message || t('labSettings:massDeleteSuccess', {count: data.deleted_count}));
+         toast.success(data.message || `تم حذف ${data.deleted_count} عنصر/عناصر بنجاح`);
          if (data.errors && data.errors.length > 0) {
              data.errors.forEach(errMsg => toast.warning(errMsg));
          }
          queryClient.invalidateQueries({ queryKey: ['allActiveMainTestsForPriceList'] });
      },
-     onError: (error: ErrorResponse) => toast.error(error.response?.data?.message || t('labSettings:massDeleteError')),
+     onError: (error: ErrorResponse) => toast.error(error.response?.data?.message || 'فشل الحذف الجماعي'),
   });
 
   const onSubmit = (data: PriceListFormValues) => {
@@ -135,17 +135,17 @@ const LabPriceListPage: React.FC = () => {
     if (dirtyTestUpdates.length > 0) {
       updatePricesMutation.mutate(dirtyTestUpdates);
     } else {
-      toast.info(t('common:noChangesToSave'));
+      toast.info('لا توجد تغييرات للحفظ');
     }
   };
 
   const handleDeleteSelected = () => {
      const selectedIds = getValues().tests.filter(t => t.isSelectedForDelete).map(t => t.id);
      if (selectedIds.length === 0) {
-         toast.info(t('common:selectItemsToDeleteFirst'));
+         toast.info('يرجى اختيار عناصر للحذف أولاً');
          return;
      }
-     if (window.confirm(t('labSettings:confirmMassDelete', { count: selectedIds.length }))) {
+     if (window.confirm(`هل أنت متأكد من حذف ${selectedIds.length} عنصرًا؟ هذا الإجراء لا يمكن التراجع عنه.`)) {
          deleteMutation.mutate(selectedIds);
      }
   };
@@ -169,11 +169,11 @@ const LabPriceListPage: React.FC = () => {
         a.click();
         window.URL.revokeObjectURL(url);
         a.remove();
-        toast.success(t('labSettings:pdfGeneratedSuccess', "Price list PDF generated!"));
+        toast.success('تم توليد ملف PDF لقائمة الأسعار بنجاح');
 
     } catch (error: any) {
         console.error("PDF generation error:", error.message);
-        toast.error(t('labSettings:pdfGeneratedError', "Failed to generate price list PDF."), {
+        toast.error('فشل توليد ملف PDF لقائمة الأسعار', {
             description: error.response?.data?.message || error.message
         });
     } finally {
@@ -203,26 +203,26 @@ const LabPriceListPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
         <div className="flex items-center gap-2">
           <FlaskConical className="h-7 w-7 text-primary" />
-          <h1 className="text-2xl sm:text-3xl font-bold">{t('labSettings:priceListPageTitle')}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">قائمة أسعار التحاليل</h1>
         </div>
         <div className="flex gap-2 items-center w-full sm:w-auto">
           <Button onClick={handleGeneratePdf} variant="outline" size="sm" disabled={isGeneratingPdf}>
              {isGeneratingPdf ? <Loader2 className="h-4 w-4 animate-spin"/> : <Printer className="h-4 w-4"/>}
-             <span className="ltr:ml-2 rtl:mr-2 hidden sm:inline">{t('labSettings:generatePriceListPdf')}</span>
+             <span className="ltr:ml-2 rtl:mr-2 hidden sm:inline">توليد قائمة الأسعار PDF</span>
           </Button>
           <Button onClick={handleSubmit(onSubmit)} size="sm" disabled={updatePricesMutation.isPending || !isDirty}>
             {updatePricesMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>}
-            <span className="ltr:ml-2 rtl:mr-2 hidden sm:inline">{t('labSettings:saveAllPricesButton')}</span>
+            <span className="ltr:ml-2 rtl:mr-2 hidden sm:inline">حفظ جميع الأسعار</span>
           </Button>
         </div>
       </div>
-      <CardDescription>{t('labSettings:priceListDescription')}</CardDescription>
+      <CardDescription>تحديث أسعار التحاليل بشكل مجمّع والبحث عن التحاليل</CardDescription>
 
       <div className="flex flex-col sm:flex-row justify-between items-center gap-3 p-4 border bg-card rounded-lg">
          <div className="relative flex-grow w-full sm:max-w-xs">
              <Input
                  type="search"
-                 placeholder={t('labSettings:searchTestsPlaceholder')}
+                 placeholder={'ابحث عن اسم التحليل'}
                  value={searchTerm}
                  onChange={(e) => setSearchTerm(e.target.value)}
                  className="ps-10 rtl:pr-10 h-9"
@@ -236,14 +236,14 @@ const LabPriceListPage: React.FC = () => {
              disabled={deleteMutation.isPending || getValues().tests.filter(t => t.isSelectedForDelete).length === 0}
          >
              <Trash2 className="h-4 w-4 ltr:mr-2 rtl:ml-2"/> 
-             {t('labSettings:deleteSelectedButton', { count: getValues().tests.filter(t => t.isSelectedForDelete).length })}
+             حذف المحدد ({getValues().tests.filter(t => t.isSelectedForDelete).length})
          </Button>
       </div>
 
       {isLoadingTests && testsToDisplay.length === 0 ? <div className="text-center p-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div> : null}
       {!isLoadingTests && testsToDisplay.length === 0 ? (
          <div className="text-center py-10 text-muted-foreground border rounded-lg bg-card">
-             {searchTerm ? t('common:noResultsFound') : t('labSettings:noTestsToList')}
+             {searchTerm ? 'لا توجد نتائج' : 'لا توجد تحاليل للعرض'}
          </div>
       ) : (
          <form onSubmit={handleSubmit(onSubmit)}> {/* Main form for submitting all price changes */}

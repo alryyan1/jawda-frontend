@@ -1,6 +1,6 @@
 // src/pages/settings/attendance/ShiftDefinitionsPage.tsx
 import React, { useState } from "react";
-import { useTranslation } from "react-i18next";
+// Removed i18n for visible labels in this page where feasible
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -59,7 +59,7 @@ const deleteShiftDefinition = async (id: number): Promise<void> => {
 };
 
 const ShiftDefinitionsPage: React.FC = () => {
-  const { t, i18n } = useTranslation(["attendance", "settings", "common"]);
+  // const { t, i18n } = useTranslation(["attendance", "settings", "common"]);
   const queryClient = useQueryClient();
 
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
@@ -83,12 +83,12 @@ const ShiftDefinitionsPage: React.FC = () => {
   const deleteMutation = useMutation({
     mutationFn: (id: number) => deleteShiftDefinition(id),
     onSuccess: () => {
-      toast.success(t("attendance:shiftDefinitions.deletedSuccess"));
+      toast.success('تم حذف المناوبة بنجاح');
       queryClient.invalidateQueries({ queryKey });
       setShiftDefIdToDelete(null);
     },
     onError: (err: unknown) => {
-      const errorMessage = err instanceof Error ? err.message : t("common:error.deleteFailed");
+      const errorMessage = err instanceof Error ? err.message : 'فشل الحذف';
       toast.error(errorMessage);
       setShiftDefIdToDelete(null);
     },
@@ -113,12 +113,7 @@ const ShiftDefinitionsPage: React.FC = () => {
   }
   if (error) {
     return (
-      <p className="text-destructive p-4">
-        {t("common:error.fetchFailedExt", {
-          entity: t("attendance:shiftDefinitions.pageTitle"),
-          message: error.message,
-        })}
-      </p>
+      <p className="text-destructive p-4">فشل جلب البيانات: {error.message}</p>
     );
   }
 
@@ -128,24 +123,20 @@ const ShiftDefinitionsPage: React.FC = () => {
         <div className="flex items-center gap-3">
           <Clock3 className="h-7 w-7 text-primary" />
           <div>
-            <h1 className="text-2xl font-bold">
-              {t("attendance:shiftDefinitions.pageTitle")}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              {t("attendance:shiftDefinitions.pageDescription")}
-            </p>
+            <h1 className="text-2xl font-bold">تعريفات المناوبات</h1>
+            <p className="text-sm text-muted-foreground">إدارة تعريفات المناوبات في النظام</p>
           </div>
         </div>
         {/* Add permission check: can('manage attendance_settings') */}
         <Button onClick={handleOpenCreateDialog} size="sm" className="h-9">
           <PlusCircle className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-          {t("attendance:shiftDefinitions.addButton")}
+          إضافة مناوبة
         </Button>
       </div>
 
       {isFetching && (
         <div className="text-xs text-muted-foreground text-center mb-2">
-          {t("common:updatingList")}
+          جاري تحديث القائمة...
         </div>
       )}
 
@@ -153,15 +144,11 @@ const ShiftDefinitionsPage: React.FC = () => {
         <Card className="text-center py-12 border-dashed">
           <CardContent className="flex flex-col items-center">
             <Clock3 className="mx-auto h-16 w-16 text-muted-foreground/20 mb-4" />
-            <h3 className="text-lg font-semibold mb-1">
-              {t("attendance:shiftDefinitions.noDefsFoundTitle")}
-            </h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              {t("attendance:shiftDefinitions.noDefsFoundDescription")}
-            </p>
+            <h3 className="text-lg font-semibold mb-1">لا توجد تعريفات</h3>
+            <p className="text-sm text-muted-foreground mb-4">أضف أول تعريف مناوبة لبدء الاستخدام</p>
             <Button onClick={handleOpenCreateDialog} size="sm">
               <PlusCircle className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-              {t("attendance:shiftDefinitions.addButton")}
+              إضافة مناوبة
             </Button>
           </CardContent>
         </Card>
@@ -171,25 +158,25 @@ const ShiftDefinitionsPage: React.FC = () => {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[100px] text-center">
-                  {t("attendance:shiftDefinitions.form.labelLabel")}
+                  الرمز
                 </TableHead>
                 <TableHead className="text-center">
-                  {t("attendance:shiftDefinitions.form.nameLabel")}
+                  الإسم
                 </TableHead>
                 <TableHead className="text-center w-[120px]">
-                  {t("attendance:shiftDefinitions.form.startTimeLabel")}
+                  وقت البدء
                 </TableHead>
                 <TableHead className="text-center w-[120px]">
-                  {t("attendance:shiftDefinitions.form.endTimeLabel")}
+                  وقت الانتهاء
                 </TableHead>
                 <TableHead className="text-center w-[100px]">
-                  {t("attendance:shiftDefinitions.form.durationLabel")}
+                  المدة (س)
                 </TableHead>
                 <TableHead className="text-center w-[100px]">
-                  {t("attendance:shiftDefinitions.form.statusLabel")}
+                  الحالة
                 </TableHead>
                 <TableHead className="text-center w-[100px]">
-                  {t("common:table.actions")}
+                  الإجراءات
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -200,9 +187,7 @@ const ShiftDefinitionsPage: React.FC = () => {
                     {def.shift_label}
                   </TableCell>
                   <TableCell
-                    className={
-                      i18n.dir() === "rtl" ? "text-center" : "text-center"
-                    }
+                    className="text-center"
                   >
                     {def.name}
                   </TableCell>
@@ -223,13 +208,11 @@ const ShiftDefinitionsPage: React.FC = () => {
                       ) : (
                         <XCircle className="h-3 w-3 ltr:mr-1 rtl:ml-1" />
                       )}
-                      {def.is_active
-                        ? t("common:statusEnum.active")
-                        : t("common:statusEnum.inactive")}
+                      {def.is_active ? 'نشط' : 'غير نشط'}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-center">
-                    <DropdownMenu dir={i18n.dir()}>
+                    <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" className="h-8 w-8 p-0">
                           <MoreHorizontal className="h-4 w-4" />
@@ -240,7 +223,7 @@ const ShiftDefinitionsPage: React.FC = () => {
                           onClick={() => handleOpenEditDialog(def)}
                         >
                           <Edit className="ltr:mr-2 rtl:ml-2 h-4 w-4" />{" "}
-                          {t("common:edit")}
+                          تعديل
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
@@ -248,7 +231,7 @@ const ShiftDefinitionsPage: React.FC = () => {
                           className="text-destructive focus:text-destructive"
                         >
                           <Trash2 className="ltr:mr-2 rtl:ml-2 h-4 w-4" />{" "}
-                          {t("common:delete")}
+                          حذف
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -274,26 +257,15 @@ const ShiftDefinitionsPage: React.FC = () => {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {t("common:confirmDeleteTitle")}
-            </AlertDialogTitle>
+            <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
             <AlertDialogDescription>
-              {t("common:confirmDeleteMessagePermanentWarning", {
-                item:
-                  t("attendance:shiftDefinitions.entityName") +
-                  ` '${
-                    shiftDefinitions.find((g) => g.id === shiftDefIdToDelete)
-                      ?.name || ""
-                  }'`,
-              })}{" "}
+              هل أنت متأكد من حذف المناوبة '{shiftDefinitions.find((g) => g.id === shiftDefIdToDelete)?.name || ''}'؟ هذا الإجراء لا يمكن التراجع عنه.
               <br />
-              <span className="font-semibold text-destructive">
-                {t("attendance:shiftDefinitions.deleteWarning")}
-              </span>
+              <span className="font-semibold text-destructive">سيتم حذف جميع البيانات المرتبطة بهذه المناوبة.</span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t("common:cancel")}</AlertDialogCancel>
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
             <AlertDialogAction
               onClick={() =>
                 shiftDefIdToDelete && deleteMutation.mutate(shiftDefIdToDelete)
@@ -304,7 +276,7 @@ const ShiftDefinitionsPage: React.FC = () => {
               {deleteMutation.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                t("common:deleteConfirm")
+                'حذف'
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -2,7 +2,7 @@
 // Or if you prefer: src/pages/settings/service-groups/ServiceGroupsListPage.tsx
 
 import React, { useState, useEffect } from "react"; // Added useEffect
-import { useTranslation } from "react-i18next";
+// Removed i18n for visible labels where applicable
 import {
   useQuery,
   useMutation,
@@ -65,7 +65,7 @@ import ManageServiceGroupDialog from "@/components/settings/service_groups/Manag
 import { useDebounce } from "@/hooks/useDebounce"; // Import useDebounce
 
 const ServiceGroupsPage: React.FC = () => {
-  const { t, i18n } = useTranslation(["settings", "common"]);
+  // const { t, i18n } = useTranslation(["settings", "common"]);
   const queryClient = useQueryClient();
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -103,7 +103,7 @@ const ServiceGroupsPage: React.FC = () => {
   const deleteMutation = useMutation({
     mutationFn: deleteServiceGroup,
     onSuccess: () => {
-      toast.success(t("settings:serviceGroups.deletedSuccess"));
+      toast.success('تم حذف المجموعة بنجاح');
       queryClient.invalidateQueries({ queryKey: ["serviceGroupsPaginated"] });
       queryClient.invalidateQueries({ queryKey: ["allServiceGroupsList"] }); // For dropdowns in other forms
       setServiceGroupIdToDelete(null);
@@ -113,7 +113,7 @@ const ServiceGroupsPage: React.FC = () => {
       }
     },
     onError: (err: any) => {
-      toast.error(t("common:error.deleteFailed"), {
+      toast.error('فشل الحذف', {
         description: err.response?.data?.message || err.message,
       });
       setServiceGroupIdToDelete(null);
@@ -145,7 +145,7 @@ const ServiceGroupsPage: React.FC = () => {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="ml-3 text-muted-foreground">{t("common:loadingData")}</p>
+        <p className="ml-3 text-muted-foreground">جاري تحميل البيانات...</p>
       </div>
     );
   }
@@ -154,22 +154,15 @@ const ServiceGroupsPage: React.FC = () => {
     return (
       <Card className="m-4">
         <CardHeader>
-          <CardTitle className="text-destructive">
-            {t("common:error.fetchErrorTitle")}
-          </CardTitle>
+          <CardTitle className="text-destructive">فشل الجلب</CardTitle>
         </CardHeader>
         <CardContent>
-          <p>
-            {t("common:error.fetchFailedExt", {
-              entity: t("settings:serviceGroups.pageTitle"),
-              message: error.message,
-            })}
-          </p>
+          <p>حدث خطأ أثناء جلب البيانات: {error.message}</p>
           <Button
             onClick={() => queryClient.refetchQueries({ queryKey })}
             className="mt-4"
           >
-            {t("common:retry")}
+            إعادة المحاولة
           </Button>
         </CardContent>
       </Card>
@@ -184,22 +177,16 @@ const ServiceGroupsPage: React.FC = () => {
         <div className="flex items-center gap-3">
           <Layers className="h-7 w-7 text-primary hidden sm:block" />
           <div>
-            <h1 className="text-2xl font-bold">
-              {t("settings:serviceGroups.pageTitle")}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              {t("settings:serviceGroups.pageDescription")}
-            </p>
+            <h1 className="text-2xl font-bold">مجموعات الخدمات</h1>
+            <p className="text-sm text-muted-foreground">إدارة مجموعات الخدمات</p>
           </div>
         </div>
         <div className="flex sm:flex-row flex-col w-full sm:w-auto gap-2 self-stretch sm:self-center">
           <div className="relative flex-grow sm:flex-grow-0 sm:w-60">
             <Input
               type="search"
-              aria-label={t("common:searchPlaceholderName", {
-                entity: t("settings:serviceGroups.entityNamePlural"),
-              })}
-              placeholder={t("common:searchPlaceholder")}
+              aria-label={'ابحث باسم المجموعة'}
+              placeholder={'ابحث'}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="ps-10 rtl:pr-10 h-9"
@@ -209,33 +196,23 @@ const ServiceGroupsPage: React.FC = () => {
           {/* Add permission check: can('manage service_groups') */}
           <Button onClick={handleOpenCreateDialog} size="sm" className="h-9">
             <PlusCircle className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-            {t("settings:serviceGroups.addButton")}
+            إضافة مجموعة
           </Button>
         </div>
       </div>
       {isFetching && (
-        <div className="text-xs text-muted-foreground text-center py-1">
-          {t("common:updatingList")}
-        </div>
+        <div className="text-xs text-muted-foreground text-center py-1">جاري تحديث القائمة...</div>
       )}
       {!isLoading && serviceGroups.length === 0 ? (
         <Card className="text-center py-12 border-dashed">
           <CardContent className="flex flex-col items-center">
             <Layers className="mx-auto h-16 w-16 text-muted-foreground/20 mb-4" />
-            <h3 className="text-lg font-semibold mb-1">
-              {debouncedSearchTerm
-                ? t("common:noResultsFound")
-                : t("settings:serviceGroups.noGroupsFoundTitle")}
-            </h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              {debouncedSearchTerm
-                ? t("common:tryDifferentKeywords")
-                : t("settings:serviceGroups.noGroupsFoundDescription")}
-            </p>
+            <h3 className="text-lg font-semibold mb-1">{debouncedSearchTerm ? 'لا توجد نتائج' : 'لا توجد مجموعات'}</h3>
+            <p className="text-sm text-muted-foreground mb-4">{debouncedSearchTerm ? 'جرّب كلمات أخرى' : 'أضف أول مجموعة للبدء'}</p>
             {!debouncedSearchTerm && (
               <Button onClick={handleOpenCreateDialog} size="sm">
                 <PlusCircle className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-                {t("settings:serviceGroups.addButton")}
+                إضافة مجموعة
               </Button>
             )}
           </CardContent>
@@ -247,17 +224,11 @@ const ServiceGroupsPage: React.FC = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[80px] text-center">
-                  {t("common:id")}
-                </TableHead>
-                <TableHead className="text-center">{t("settings:serviceGroups.nameLabel")}</TableHead>
+                <TableHead className="w-[80px] text-center">المعرف</TableHead>
+                <TableHead className="text-center">الإسم</TableHead>
                 {/* Default LTR align */}
-                <TableHead className="text-center hidden sm:table-cell w-[150px]">
-                  {t("settings:serviceGroups.servicesCount")}
-                </TableHead>
-                <TableHead className="text-center w-[100px]">
-                  {t("common:table.actions")}
-                </TableHead>
+                <TableHead className="text-center hidden sm:table-cell w-[150px]">عدد الخدمات</TableHead>
+                <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -266,26 +237,20 @@ const ServiceGroupsPage: React.FC = () => {
                   <TableCell className="font-medium text-center">
                     {group.id}
                   </TableCell>
-                  <TableCell
-                    className={
-                      i18n.dir() === "rtl" ? "text-center" : "text-center"
-                    }
-                  >
+                  <TableCell className="text-center">
                     {group.name}
                   </TableCell>
                   <TableCell className="text-center hidden sm:table-cell">
                     {group.services_count ?? 0}
                   </TableCell>
                   <TableCell className="text-center">
-                    <DropdownMenu dir={i18n.dir()}>
+                    <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
                           variant="ghost"
                           className="h-8 w-8 p-0 data-[state=open]:bg-muted"
                         >
-                          <span className="sr-only">
-                            {t("common:actions.openMenu")}
-                          </span>
+                          <span className="sr-only">فتح القائمة</span>
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -296,7 +261,7 @@ const ServiceGroupsPage: React.FC = () => {
                           className="cursor-pointer"
                         >
                           <Edit className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-                          {t("common:edit")}
+                          تعديل
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
@@ -304,7 +269,7 @@ const ServiceGroupsPage: React.FC = () => {
                           className="text-destructive focus:text-destructive cursor-pointer"
                         >
                           <Trash2 className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-                          {t("common:delete")}
+                          حذف
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -323,13 +288,10 @@ const ServiceGroupsPage: React.FC = () => {
             size="sm"
             variant="outline"
           >
-            {t("common:pagination.previous")}
+            السابق
           </Button>
           <span className="text-sm text-muted-foreground">
-            {t("common:pagination.pageInfo", {
-              current: meta.current_page,
-              total: meta.last_page,
-            })}
+            صفحة {meta.current_page} من {meta.last_page}
           </span>
           <Button
             onClick={() =>
@@ -339,7 +301,7 @@ const ServiceGroupsPage: React.FC = () => {
             size="sm"
             variant="outline"
           >
-            {t("common:pagination.next")}
+            التالي
           </Button>
         </div>
       )}
@@ -355,26 +317,15 @@ const ServiceGroupsPage: React.FC = () => {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {t("common:confirmDeleteTitle")}
-            </AlertDialogTitle>
+            <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
             <AlertDialogDescription>
-              {t("common:confirmDeleteMessagePermanentWarning", {
-                item:
-                  t("settings:serviceGroups.entityName") +
-                  ` '${
-                    serviceGroups.find((g) => g.id === serviceGroupIdToDelete)
-                      ?.name || ""
-                  }'`,
-              })}
+              هل أنت متأكد من حذف المجموعة '{serviceGroups.find((g) => g.id === serviceGroupIdToDelete)?.name || ''}'؟ هذا الإجراء لا يمكن التراجع عنه.
               <br />
-              <span className="font-semibold text-destructive">
-                {t("settings:serviceGroups.deleteWarningServices")}
-              </span>
+              <span className="font-semibold text-destructive">سيتم حذف جميع الخدمات المرتبطة إن وُجدت.</span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t("common:cancel")}</AlertDialogCancel>
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
             <AlertDialogAction
               onClick={() =>
                 serviceGroupIdToDelete &&
@@ -386,7 +337,7 @@ const ServiceGroupsPage: React.FC = () => {
               {deleteMutation.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                t("common:deleteConfirm")
+                'حذف'
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

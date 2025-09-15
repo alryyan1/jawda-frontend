@@ -46,6 +46,7 @@ import {
   Banknote,
 } from "lucide-react";
 import { Toaster } from "sonner";
+import { useQuery } from "@tanstack/react-query";
 import {
   Tooltip,
   TooltipContent,
@@ -54,6 +55,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { getSidebarCollapsedState, setSidebarCollapsedState } from '../lib/sidebar-store';
+import { getCurrentOpenShift } from "@/services/shiftService";
 
 // Define navigation items structure
 export interface NavItem {
@@ -123,6 +125,13 @@ const AppLayout: React.FC = () => {
 
   const [isDesktopSidebarCollapsed, setIsDesktopSidebarCollapsed] = useState<boolean>(getSidebarCollapsedState());
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  // Current general shift status for app-wide indicator
+  const { data: currentOpenShift } = useQuery({
+    queryKey: ['currentOpenShift'],
+    queryFn: getCurrentOpenShift,
+    refetchInterval: 30000,
+  });
 
   // Placeholder for actual permission checking from useAuthorization hook
   const can = (permission?: string): boolean => {
@@ -313,6 +322,21 @@ const AppLayout: React.FC = () => {
                 </div>
                 
                 <div className="flex items-center gap-2 sm:gap-3">
+                  {/* Shift Status Indicator */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="h-3 w-3 rounded-full" aria-label="shift-status">
+                        <div className={cn(
+                          "h-3 w-3 rounded-full",
+                          currentOpenShift ? "bg-green-500" : "bg-red-500"
+                        )} />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{currentOpenShift ? 'الوردية مفتوحة' : 'لا توجد وردية مفتوحة'}</p>
+                    </TooltipContent>
+                  </Tooltip>
+
                   {/* Theme Toggle */}
                   <Tooltip>
                     <TooltipTrigger asChild>

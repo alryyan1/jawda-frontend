@@ -39,23 +39,7 @@ const handleDoctorShiftSelectedFromFinder = useCallback((shift: DoctorShift) => 
   // This depends on desired UX flow after selecting a doctor via F9
 }, [/* showRegistrationForm, setShowRegistrationForm, setSelectedPatientVisit */]);
 
-// NEW: useEffect for F9 keyboard shortcut
-useEffect(() => {
-  const handleKeyDown = (event: KeyboardEvent) => {
-    if (event.key === 'F9') {
-      event.preventDefault(); // Prevent default F9 browser behavior (if any)
-      setIsDoctorFinderDialogOpen(prev => !prev); // Toggle the dialog
-    }
-  };
-
-  // Add event listener when the component mounts
-  document.addEventListener('keydown', handleKeyDown);
-
-  // Clean up event listener when the component unmounts
-  return () => {
-    document.removeEventListener('keydown', handleKeyDown);
-  };
-}, []); // Empty dependency array means this effect runs once on mount and cleans up on unmount
+// Empty dependency array means this effect runs once on mount and cleans up on unmount
   const handlePatientRegistered = useCallback(() => {
     // Trigger remount of ActivePatientsList to refresh data without React Query
     setActivePatientsRefreshKey(prev => prev + 1);
@@ -75,9 +59,10 @@ useEffect(() => {
   
   const onShiftSelect = (shift: DoctorShift | null) => {
     setActiveDoctorShift(shift);
+    setShowRegistrationForm(true);
     setSelectedPatientVisit(null); // Clear selected patient
   }
-
+ console.log(activeDoctorShift,'activeDoctorShift',activePatientsRefreshKey,'activePatientsRefreshKey',selectedPatientVisit,'selectedPatientVisit',showRegistrationForm,'showRegistrationForm')
 
   return (
     <div className="clinic-page-container" dir="rtl">
@@ -95,12 +80,7 @@ useEffect(() => {
       {/* Main Content Area */}
       <div className={`clinic-main-content ${showRegistrationForm ? 'with-registration' : 'without-registration'}`}>
         {/* Section 1: Actions Pane (Fixed width, always visible) */}
-        <ActionsPane
-          showRegistrationForm={showRegistrationForm}
-          onToggleRegistrationForm={toggleRegistrationForm}
-          onOpenDoctorFinderDialog={() => setIsDoctorFinderDialogOpen(true)}
-          onDoctorShiftSelectedFromFinder={handleDoctorShiftSelectedFromFinder}
-        />
+      
 
         {/* Section 2: Patient Registration Form Panel (Conditional Visibility) */}
         {showRegistrationForm && (
@@ -153,7 +133,7 @@ useEffect(() => {
         )}
 
         {/* Section 5: Patient Details Column (Always visible) */}
-        <section className="clinic-panel details">
+       { <section className="clinic-panel details">
           <PatientDetailsColumnClinic
             visitId={selectedPatientVisit?.visitId || null}
             currentClinicShiftId={activeDoctorShift?.id || null}
@@ -161,7 +141,14 @@ useEffect(() => {
               // Print receipt functionality
             }}
           />
-        </section>
+        </section>}
+
+        <ActionsPane
+          showRegistrationForm={showRegistrationForm}
+          onToggleRegistrationForm={toggleRegistrationForm}
+          onOpenDoctorFinderDialog={() => setIsDoctorFinderDialogOpen(true)}
+          onDoctorShiftSelectedFromFinder={handleDoctorShiftSelectedFromFinder}
+        />
       </div>
 
       <DoctorFinderDialog

@@ -2,17 +2,18 @@
 import React from 'react';
 import { Outlet, NavLink, /* useLocation */ } from 'react-router-dom';
 import { 
-    Settings, Building, FlaskConical, ListOrdered, CreditCard, Printer, Workflow, MessageCircle, 
+    Settings, Building, FlaskConical, ListOrdered, CreditCard,
     ClockIcon,
     PartyPopperIcon,
     Layers
-} from 'lucide-react'; // Added Printer, Workflow, MessageCircle
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
+// Removed i18n usage
     // import { useAuthorization } from '@/hooks/useAuthorization';
 
 interface SettingsNavItem {
   to: string;
-  labelKey: string; // e.g., 'tabs.general' from settings.json
+  labelKey: string; // kept for mapping to Arabic labels
   icon: React.ElementType;
   permission?: string;
 }
@@ -63,7 +64,7 @@ const SettingsLayout: React.FC = () => {
       <aside 
         className={cn(
             "w-full md:w-60 border-border bg-card p-3 md:p-4 overflow-y-auto md:h-full shrink-0 print:hidden",
-            i18n.dir() === 'rtl' ? "md:border-l" : "md:border-r"
+            "md:border-l"
         )}
       >
         <h2 className="text-lg font-semibold mb-4 px-2 flex items-center gap-2">

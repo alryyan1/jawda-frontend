@@ -98,12 +98,12 @@ const ServiceFormPage: React.FC<ServiceFormPageProps> = ({ mode }) => {
 
   return (
     <Card className="max-w-2xl mx-auto">
-      <CardHeader>
+      <CardHeader style={{ direction: 'rtl' }}>
         <Typography variant="h6">{isEditMode ? 'تعديل خدمة' : 'إضافة خدمة'}</Typography>
         <Typography variant="body2" color="text.secondary">يرجى تعبئة البيانات التالية</Typography>
       </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <CardContent style={{ direction: 'rtl' }}>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 flex flex-col gap-2" style={{ direction: 'rtl' }}>
           <Controller
             name="name"
             control={control}

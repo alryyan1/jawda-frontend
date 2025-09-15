@@ -1,12 +1,11 @@
 import React from "react";
-import { useTranslation } from "react-i18next";
 
 // MUI Imports
 import Autocomplete from "@mui/material/Autocomplete";
 import TextField from "@mui/material/TextField";
 import CircularProgress from "@mui/material/CircularProgress";
 import Paper from "@mui/material/Paper";
-import Chip from "@mui/material/Chip";
+// import Chip from "@mui/material/Chip";
 
 // Shadcn & Lucide Imports
 import { Input } from "@/components/ui/input";
@@ -82,14 +81,7 @@ const LabReceptionHeader: React.FC<LabReceptionHeaderProps> = ({
   onAddTests,
   onSearchByVisitIdEnter,
 }) => {
-  const { t } = useTranslation([
-    "labReception",
-    "common",
-    "labResults",
-    "shifts",
-    "clinic",
-    "patients",
-  ]);
+  // Translations removed; using direct Arabic strings
 
   return (
     <header className="flex-shrink-0 h-auto p-4 bg-white dark:bg-slate-800 shadow-lg border-b border-blue-200 dark:border-slate-700">
@@ -100,10 +92,10 @@ const LabReceptionHeader: React.FC<LabReceptionHeaderProps> = ({
           </div>
           <div>
             <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">
-              {t("pageTitle", "Lab Reception")}
+              استقبال المختبر
             </h1>
             <p className="text-sm text-slate-600 dark:text-slate-400">
-              Professional Lab Management System
+              نظام إدارة المختبرات الاحترافي
             </p>
           </div>
           {/* Sockets removed: no connection status */}
@@ -128,9 +120,9 @@ const LabReceptionHeader: React.FC<LabReceptionHeaderProps> = ({
             renderInput={(params) => (
               <TextField
                 {...params}
-                label={t("selectTestToAdd", "Select Tests to Add")}
+                label={"اختر الفحوصات لإضافتها"}
                 variant="outlined"
-                placeholder={t("addTestsPlaceholder", "Search and select tests...")}
+                placeholder={"ابحث واختر الفحوصات..."}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     const enteredId = (e.target as HTMLInputElement).value;
@@ -148,8 +140,8 @@ const LabReceptionHeader: React.FC<LabReceptionHeaderProps> = ({
             )}
       
         
-            noOptionsText={t("common:noResultsFound")}
-            loadingText={t("common:loading")}
+            noOptionsText={"لا توجد نتائج"}
+            loadingText={"جاري التحميل"}
           />
           <Button
             onClick={onAddTests}
@@ -161,7 +153,7 @@ const LabReceptionHeader: React.FC<LabReceptionHeaderProps> = ({
             ) : (
               <Plus className="h-4 w-4 mr-2" />
             )}
-            {t("addTest", "Add Test")} {selectedTests.length > 0 && `(${selectedTests.length})`}
+            {"إضافة فحص"} {selectedTests.length > 0 && `(${selectedTests.length})`}
           </Button>
         </div>
 
@@ -187,7 +179,7 @@ const LabReceptionHeader: React.FC<LabReceptionHeaderProps> = ({
             renderInput={(params) => (
               <TextField
                 {...params}
-                label={t("searchPatients", "Search Patients")}
+                label={"ابحث عن المرضى"}
                 variant="outlined"
                 InputProps={{
                   ...params.InputProps,
@@ -208,17 +200,17 @@ const LabReceptionHeader: React.FC<LabReceptionHeaderProps> = ({
             )}
             noOptionsText={
               autocompleteInputValue.length < 2
-                ? t("common:typeMoreChars")
-                : t("common:noResultsFound")
+                ? "اكتب المزيد من الأحرف"
+                : "لا توجد نتائج"
             }
-            loadingText={t("common:loading")}
+            loadingText={"جاري التحميل"}
           />
 
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
             <Input
               type="number"
-              placeholder={t("visitId", "Visit ID")}
+              placeholder={"رقم الزيارة"}
               value={visitIdSearchTerm}
               onChange={(e) => setVisitIdSearchTerm(e.target.value)}
               onKeyDown={onSearchByVisitIdEnter}
@@ -228,10 +220,8 @@ const LabReceptionHeader: React.FC<LabReceptionHeaderProps> = ({
           </div>
 
           <Button
-            variant="ghost"
-            size="icon"
             onClick={onResetView}
-            title={t("resetView", "Reset View")}
+            title={"إعادة التعيين"}
             className="h-10 w-10 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700"
           >
             <ListRestart className="h-5 w-5" />

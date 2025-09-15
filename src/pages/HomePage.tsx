@@ -41,12 +41,12 @@ import {
 } from "@/services/shiftService";
 import { getDashboardSummary } from "@/services/dashboardService";
 import { format, parseISO } from "date-fns";
-import { arSA, enUS } from "date-fns/locale";
+import { arSA } from "date-fns/locale";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AxiosError } from "axios";
+// import { AxiosError } from "axios";
 
 // --- Reusable Stat Card Component ---
 interface StatCardProps {
@@ -146,8 +146,6 @@ export const StatCard: React.FC<StatCardProps> = ({
       {actionLink && !isLoading && (
         <CardFooter className="pt-2 pb-3 px-4 border-t mt-auto">
           <Button
-            variant="link"
-            size="xs"
             asChild
             className="p-0 h-auto text-xs text-muted-foreground hover:text-primary"
           >
@@ -178,7 +176,6 @@ const QuickActionButton: React.FC<QuickActionProps> = ({
   // i18n removed; expect direct Arabic keys passed in
   return (
     <Button
-      variant="outline"
       className={cn(
         "h-auto p-3 sm:p-4 flex flex-col items-start sm:items-center sm:text-center shadow-sm hover:shadow-lg hover:bg-muted/80 dark:hover:bg-muted/50 transition-all duration-300 w-full transform active:scale-95",
         className
@@ -192,11 +189,9 @@ const QuickActionButton: React.FC<QuickActionProps> = ({
           </div>
           <div className="text-left sm:text-center">
             <p className="font-semibold text-sm">{labelKey}</p>
-            {descriptionKey && (
-              <p className="text-xs text-muted-foreground hidden sm:block mt-0.5">
-                {descriptionKey}
-              </p>
-            )}
+            {descriptionKey ? (
+              <p className="text-xs text-muted-foreground hidden sm:block mt-0.5">{descriptionKey}</p>
+            ) : null}
           </div>
         </div>
       </Link>
@@ -235,8 +230,7 @@ const ShiftManagementCard: React.FC<ShiftManagementCardProps> = ({
   isClosingShift,
   userName,
 }) => {
-  const { t, i18n } = useTranslation(["dashboard", "common"]);
-  const dateLocale = i18n.language.startsWith("ar") ? arSA : enUS;
+  const dateLocale = arSA;
   const [isCloseShiftConfirmOpen, setIsCloseShiftConfirmOpen] = useState(false);
 
   const handleCloseShiftTrigger = useCallback(() => {
@@ -252,28 +246,21 @@ const ShiftManagementCard: React.FC<ShiftManagementCardProps> = ({
     setIsCloseShiftConfirmOpen(false);
   }, [currentOpenShift, onConfirmCloseShift]);
 
-  const getUserName = (user?: UserStripped | null) =>
-    user?.name || t("common:unknownUser");
+  const getUserName = (user?: UserStripped | null) => user?.name || 'مستخدم';
 
   return (
     <Card className="overflow-hidden shadow-lg dark:shadow-primary/10">
       <div className="bg-gradient-to-br from-primary to-primary/80 dark:from-primary/90 dark:to-primary/70 p-5 sm:p-6 text-primary-foreground">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
           <div>
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">
-              {t("title")}
-            </h1>
-            <p className="text-sm opacity-90 mt-1">
-              {t("welcomeMessage", { name: userName || t("common:user") })}
-            </p>
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">لوحة التحكم</h1>
+            <p className="text-sm opacity-90 mt-1">{`مرحباً، ${userName || 'مستخدم'}`}</p>
           </div>
           <Button
-            variant="ghost"
-            size="icon"
             onClick={onRefresh}
             disabled={isFetchingShift || isFetchingSummary}
             className="mt-2 sm:mt-0 text-primary-foreground hover:bg-white/20 rounded-full"
-            aria-label={t("common:refresh")}
+            aria-label={'تحديث'}
           >
             {isFetchingShift || isFetchingSummary ? (
               <Loader2 className="h-5 w-5 animate-spin" />
@@ -290,13 +277,7 @@ const ShiftManagementCard: React.FC<ShiftManagementCardProps> = ({
             <Skeleton className="h-10 w-3/4" />
           </div>
         ) : openShiftError ? (
-          <div className="text-sm text-destructive p-3 border border-destructive/30 bg-destructive/10 dark:bg-destructive/20 rounded-md flex items-center gap-2">
-            <ServerCrash className="h-5 w-5 flex-shrink-0" />
-            <span>
-              {t("common:error.loadFailed", { entity: t("currentShift") })}:{" "}
-              {openShiftError.message}
-            </span>
-          </div>
+          <div className="text-sm text-destructive p-3 border border-destructive/30 bg-destructive/10 dark:bg-destructive/20 rounded-md flex items-center gap-2"><ServerCrash className="h-5 w-5 flex-shrink-0" /><span>{'فشل تحميل حالة الوردية الحالية'}:{" "}{openShiftError.message}</span></div>
         ) : currentShift ? (
           <div className="space-y-3">
             <div className={`flex flex-col sm:flex-row items-center justify-between gap-3 p-3 border rounded-lg shadow-sm ${
@@ -311,20 +292,13 @@ const ShiftManagementCard: React.FC<ShiftManagementCardProps> = ({
                     : "text-green-700 dark:text-green-300"
                 }`}>
                   <ShieldCheck className="h-4 w-4" />
-                  <span className="font-semibold text-sm">
-                    {currentShift.is_closed 
-                      ? t("currentShiftClosed") 
-                      : t("currentShiftActive")
-                    } (ID: {currentShift.id})
-                  </span>
+                  <span className="font-semibold text-sm">{currentShift.is_closed ? 'الوردية مغلقة' : 'الوردية فعالة'} (ID: {currentShift.id})</span>
                 </div>
               </div>
-              {console.log("currentShift", currentShift)}
               {currentShift.is_closed ? (
                 <Button
                   onClick={onOpenShift}
                   disabled={isOpeningShift}
-                  size="sm"
                   className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 text-white shadow-sm hover:shadow-md"
                 >
                   {isOpeningShift ? (
@@ -332,7 +306,7 @@ const ShiftManagementCard: React.FC<ShiftManagementCardProps> = ({
                   ) : (
                     <LogIn className="ltr:mr-1.5 rtl:ml-1.5 h-4 w-4" />
                   )}
-                  {t("openNewShiftButton")}
+                  {'فتح وردية جديدة'}
                 </Button>
               ) : currentOpenShift && (
                 <AlertDialog
@@ -341,8 +315,6 @@ const ShiftManagementCard: React.FC<ShiftManagementCardProps> = ({
                 >
                   <AlertDialogTrigger asChild>
                     <Button
-                      variant="destructive"
-                      size="sm"
                       className="w-full sm:w-auto shadow-sm hover:shadow-md"
                       onClick={handleCloseShiftTrigger}
                       disabled={isClosingShift}
@@ -352,25 +324,21 @@ const ShiftManagementCard: React.FC<ShiftManagementCardProps> = ({
                       ) : (
                         <LogOut className="ltr:mr-1.5 rtl:ml-1.5 h-4 w-4" />
                       )}
-                      {t("closeCurrentShiftButton")}
+                      {'إغلاق الوردية الحالية'}
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>
-                        {t("closeShiftDialog.confirmTitle")}
-                      </AlertDialogTitle>
-                      <AlertDialogDescription>
-                        {t("closeShiftDialog.confirmDirectCloseDescription")}
-                      </AlertDialogDescription>
+                      <AlertDialogTitle>تأكيد إغلاق الوردية</AlertDialogTitle>
+                      <AlertDialogDescription>هل أنت متأكد من إغلاق الوردية الحالية؟</AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                      <AlertDialogCancel>{t("common:cancel")}</AlertDialogCancel>
+                      <AlertDialogCancel>{'إلغاء'}</AlertDialogCancel>
                       <AlertDialogAction
                         onClick={handleDialogConfirmClose}
                         className="bg-destructive hover:bg-destructive/90"
                       >
-                        {t("common:confirmAndClose")}
+                        {'تأكيد وإغلاق'}
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
@@ -380,27 +348,23 @@ const ShiftManagementCard: React.FC<ShiftManagementCardProps> = ({
             <Card className="p-3 text-xs border-dashed bg-slate-50 dark:bg-slate-800/30">
               {currentShift.created_at && (
                 <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">
-                    {t("shiftOpenedAtFull")}:
-                  </span>
+                  <span className="text-muted-foreground">{'وقت فتح الوردية'}:</span>
                   <span className="font-medium">
                     {format(parseISO(currentShift.created_at), "Pp", {
                       locale: dateLocale,
                     })}{" "}
-                    {t("common:by")} {getUserName(currentShift.user_opened)}
+                    {'بواسطة'} {getUserName(currentShift.user_opened)}
                   </span>
                 </div>
               )}
               {currentShift.is_closed && currentShift.closed_at && (
                 <div className="flex justify-between items-center mt-1 pt-1 border-t border-dashed">
-                  <span className="text-muted-foreground">
-                    {t("shiftClosedAtFull")}:
-                  </span>
+                  <span className="text-muted-foreground">{'وقت إغلاق الوردية'}:</span>
                   <span className="font-medium">
                     {format(parseISO(currentShift.closed_at), "Pp", {
                       locale: dateLocale,
                     })}{" "}
-                    {t("common:by")} {getUserName(currentShift.user_closed)}
+                    {'بواسطة'} {getUserName(currentShift.user_closed)}
                   </span>
                 </div>
               )}
@@ -410,12 +374,11 @@ const ShiftManagementCard: React.FC<ShiftManagementCardProps> = ({
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 bg-amber-50 dark:bg-amber-800/20 border border-amber-300 dark:border-amber-700/50 rounded-lg shadow-sm">
             <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300 justify-center sm:justify-start">
               <Info className="h-4 w-4" />
-              <span className="font-semibold text-sm">{t("noShiftOpen")}</span>
+              <span className="font-semibold text-sm">{'لا توجد وردية مفتوحة'}</span>
             </div>
             <Button
               onClick={onOpenShift}
               disabled={isOpeningShift}
-              size="sm"
               className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 text-white shadow-sm hover:shadow-md"
             >
               {isOpeningShift ? (
@@ -423,7 +386,7 @@ const ShiftManagementCard: React.FC<ShiftManagementCardProps> = ({
               ) : (
                 <LogIn className="ltr:mr-1.5 rtl:ml-1.5 h-4 w-4" />
               )}
-              {t("openNewShiftButton")}
+              {'فتح وردية جديدة'}
             </Button>
           </div>
         )}
@@ -435,7 +398,6 @@ ShiftManagementCard.displayName = "ShiftManagementCard";
 
 const HomePage: React.FC = () => {
   const { user } = useAuth();
-  const { t } = useTranslation(["dashboard", "common", "navigation", "stats"]);
 
   const openShiftQueryKey = ["currentOpenShift"] as const;
   const {
@@ -460,7 +422,6 @@ const HomePage: React.FC = () => {
     refetchInterval: 1 * 60 * 1000, // Reduced to 1 minute for more responsive shift status
     refetchOnWindowFocus: true,
   });
-  console.log("currentShift", currentShift);  
   const summaryDate = useMemo(
     () =>
       !currentOpenShift && !isLoadingShiftInitial
@@ -475,7 +436,7 @@ const HomePage: React.FC = () => {
   ] as const;
 
   const {
-    data: summary,
+    // data: summary,
     isLoading: isLoadingSummaryInitial, // Renamed for clarity
     isFetching: isFetchingSummary,
     refetch: refetchSummary,
@@ -496,10 +457,10 @@ const HomePage: React.FC = () => {
       refetchOpenShift();
       refetchShift();
       refetchSummary();
-      toast.success(t("common:shiftOpenedSuccessfully"));
+      toast.success('تم فتح الوردية بنجاح');
     },
     onError: () => {
-      toast.error(t("common:shiftOpenFailed"));
+      toast.error('فشل فتح الوردية');
     },
   });
 
@@ -509,19 +470,19 @@ const HomePage: React.FC = () => {
       refetchOpenShift();
       refetchShift();
       refetchSummary();
-      toast.success(t("common:shiftClosedSuccessfully"));
+      toast.success('تم إغلاق الوردية بنجاح');
     },
-    onError: (error:AxiosError) => {
-      toast.error(error.response?.data?.message || t("common:shiftCloseFailed"));
+    onError: () => {
+      toast.error('فشل إغلاق الوردية');
     },
   });
 
   const handleRefreshAllData = useCallback(() => {
-    toast.info(t("common:refreshingData"));
+    toast.info('جاري التحديث');
     refetchOpenShift();
     refetchShift();
     refetchSummary();
-  }, [refetchOpenShift, refetchShift, refetchSummary, t]);
+  }, [refetchOpenShift, refetchShift, refetchSummary]);
 
 
 

@@ -1,14 +1,11 @@
 // src/pages/doctors/DoctorFormPage.tsx
 import React, { useEffect, useState } from "react";
-import { useForm, Controller } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+import { useForm } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -27,21 +24,15 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Loader2, UploadCloud } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-import type {
-  DoctorFormData,
-  Doctor,
-  Specialist,
-  FinanceAccount,
-} from "@/types/doctors";
+import type { DoctorFormData, Specialist, FinanceAccount } from "@/types/doctors";
 import {
   createDoctor,
   updateDoctor,
@@ -52,68 +43,25 @@ import {
 } from "@/services/doctorService";
 import AddSpecialistDialog from "./AddSpecialistDialog";
 
+interface DoctorFormValues {
+  name: string;
+  phone: string;
+  specialist_id?: string;
+  cash_percentage: string;
+  company_percentage: string;
+  static_wage: string;
+  lab_percentage: string;
+  start: string;
+  image_file?: File | null;
+  image?: string | null;
+  finance_account_id?: string;
+  finance_account_id_insurance?: string;
+  calc_insurance: boolean;
+}
+
 interface DoctorFormPageProps {
   mode: DoctorFormMode;
 }
-
-const getDoctorFormSchema = () =>
-  z.object({
-    name: z.string().min(1, {
-      message: 'الاسم مطلوب',
-    }),
-    phone: z.string().min(1, {
-      message: 'رقم الهاتف مطلوب',
-    }),
-    specialist_id: z
-      .string({
-        required_error: 'التخصص مطلوب',
-      })
-      .min(1, {
-        message: 'التخصص مطلوب',
-      }),
-    cash_percentage: z
-      .string()
-      .refine(
-        (val) =>
-          !isNaN(parseFloat(val)) &&
-          parseFloat(val) >= 0 &&
-          parseFloat(val) <= 100,
-        { message: "0-100" }
-      ),
-    company_percentage: z
-      .string()
-      .refine(
-        (val) =>
-          !isNaN(parseFloat(val)) &&
-          parseFloat(val) >= 0 &&
-          parseFloat(val) <= 100,
-        { message: "0-100" }
-      ),
-    static_wage: z
-      .string()
-      .refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, {
-        message: ">= 0",
-      }),
-    lab_percentage: z
-      .string()
-      .refine(
-        (val) =>
-          !isNaN(parseFloat(val)) &&
-          parseFloat(val) >= 0 &&
-          parseFloat(val) <= 100,
-        { message: "0-100" }
-      ),
-    start: z.string().refine((val) => !isNaN(parseInt(val)), {
-      message: 'يجب أن يكون رقمًا',
-    }),
-    image_file: z.any().optional(), // Now fully optional
-    image: z.string().nullable().optional(),
-    finance_account_id: z.string().optional(),
-    finance_account_id_insurance: z.string().optional(),
-    calc_insurance: z.boolean(),
-  });
-
-type DoctorFormValues = z.infer<ReturnType<typeof getDoctorFormSchema>>;
 
 const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
   const navigate = useNavigate();
@@ -122,7 +70,6 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const isEditMode = mode === DoctorFormMode.EDIT;
-  const doctorFormSchema = getDoctorFormSchema();
   const { data: specialists, isLoading: isLoadingSpecialists } = useQuery<
     Specialist[],
     Error
@@ -130,11 +77,7 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
     queryKey: ["specialistsList"],
     queryFn: getSpecialistsList,
   });
-  const {
-    data: doctorData,
-    isLoading: isLoadingDoctor,
-    isFetching: isFetchingDoctor,
-  } = useQuery({
+  const { data: doctorData, isLoading: isLoadingDoctor } = useQuery({
     queryKey: ["doctor", doctorId],
     queryFn: () => getDoctorById(Number(doctorId)).then((res) => res.data),
     enabled: isEditMode && !!doctorId,
@@ -162,7 +105,6 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
     });
 
   const form = useForm<DoctorFormValues>({
-    resolver: zodResolver(doctorFormSchema),
     defaultValues: {
       name: "",
       phone: "",
@@ -239,16 +181,63 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
       queryClient.invalidateQueries({ queryKey: ["doctor", doctorId] }); // Refetch this doctor if editing
       navigate("/doctors"); // Redirect to doctors list
     },
-    onError: (error: any) => {
-      console.error("Save error:", error.response?.data || error.message);
-      toast.error(error.response?.data?.message || 'فشل حفظ بيانات الطبيب');
+    onError: (error: unknown) => {
+      let respMessage: string | undefined;
+      if (typeof error === 'object' && error) {
+        respMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      }
+      const fallback = (error as { message?: string })?.message;
+      toast.error(respMessage || fallback || 'فشل حفظ بيانات الطبيب');
     },
   });
 
   const onSubmit = (data: DoctorFormValues) => {
+    // تحقق بسيط بدلاً من Zod
+    if (!data.name?.trim()) {
+      toast.error('الاسم مطلوب');
+      return;
+    }
+    if (!data.phone?.trim()) {
+      toast.error('رقم الهاتف مطلوب');
+      return;
+    }
+    if (!data.specialist_id || String(data.specialist_id).trim() === '') {
+      toast.error('التخصص مطلوب');
+      return;
+    }
+    const toNum = (v: string) => Number.parseFloat(v);
+    const isValidPercent = (v: string) => {
+      const n = toNum(v);
+      return !Number.isNaN(n) && n >= 0 && n <= 100;
+    };
+    const isValidNonNegative = (v: string) => {
+      const n = toNum(v);
+      return !Number.isNaN(n) && n >= 0;
+    };
+    if (!isValidPercent(data.cash_percentage)) {
+      toast.error('نسبة الكاش يجب أن تكون بين 0 و 100');
+      return;
+    }
+    if (!isValidPercent(data.company_percentage)) {
+      toast.error('نسبة الشركات يجب أن تكون بين 0 و 100');
+      return;
+    }
+    if (!isValidNonNegative(data.static_wage)) {
+      toast.error('الأجر الثابت يجب أن يكون رقمًا ≥ 0');
+      return;
+    }
+    if (!isValidPercent(data.lab_percentage)) {
+      toast.error('نسبة المختبر يجب أن تكون بين 0 و 100');
+      return;
+    }
+    if (!/^\d+$/.test(String(data.start))) {
+      toast.error('بداية الحساب يجب أن تكون رقمًا صحيحًا');
+      return;
+    }
     // Ensure numeric fields are numbers, not strings, if backend expects numbers
     const submissionData: DoctorFormData = {
       ...data,
+      specialist_id: String(data.specialist_id!),
       cash_percentage: String(data.cash_percentage), // Keep as string for FormData
       company_percentage: String(data.company_percentage),
       static_wage: String(data.static_wage),
@@ -256,6 +245,8 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
       start: String(data.start),
       // image_file is already File or undefined
       // specialist_id, finance_account_id, finance_account_id_insurance are already strings
+      finance_account_id: data.finance_account_id ?? undefined,
+      finance_account_id_insurance: data.finance_account_id_insurance ?? "",
     };
     // if (!isEditMode && !data.image_file) {
     //     form.setError("image_file", { type: "manual", message: t('common:validation.required', { field: t('doctors:form.imageLabel')}) });
@@ -278,7 +269,7 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
     isLoadingDoctor ||
     isLoadingSpecialists ||
     isLoadingFinanceAccounts ||
-    mutation.isLoading;
+    mutation.status === 'pending';
 
   if (isEditMode && isLoadingDoctor)
     return (
@@ -337,7 +328,7 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
                 <FormItem>
                   <FormLabel>التخصص</FormLabel>
                   <div className="flex items-center gap-2">
-                    {console.log("Selected specialist_id:", field.value)}
+                    {/* debug removed */}
                     <Select
                       onValueChange={field.onChange}
                       value={field.value ?? ""}
@@ -443,7 +434,7 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
             <FormField
               control={control}
               name="image_file"
-              render={({ field: { onChange, value, ...restField } }) => (
+              render={({ field: { onChange, ...restField } }) => (
                 <FormItem>
                   <FormLabel>صورة الطبيب</FormLabel>
                   <FormControl>
@@ -453,7 +444,10 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
                       onChange={(e) =>
                         onChange(e.target.files ? e.target.files[0] : null)
                       }
-                      {...restField}
+                      // avoid passing value for file input
+                      name={restField.name}
+                      onBlur={restField.onBlur}
+                      ref={restField.ref}
                       className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
                     />
                   </FormControl>
@@ -492,7 +486,7 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
                         ) : (
                           financeAccounts?.map((fa) => (
                             <SelectItem key={fa.id} value={String(fa.id)}>
-                              {fa.name} ({fa.code})
+                              {fa.name}
                             </SelectItem>
                           ))
                         )}
@@ -557,8 +551,8 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
             <div className="flex justify-end gap-2">
               <Button
                 type="button"
-                variant="outline"
                 onClick={() => navigate("/doctors")}
+                className="bg-transparent border text-foreground hover:bg-muted"
               >
                 إلغاء
               </Button>

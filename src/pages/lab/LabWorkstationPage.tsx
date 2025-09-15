@@ -1,6 +1,5 @@
 // src/pages/lab/LabWorkstationPage.tsx
 import React, { useState, useCallback, useEffect } from "react";
-import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input"; // shadcn Input
 import { Button } from "@/components/ui/button"; // shadcn Button
@@ -62,13 +61,23 @@ import { getAppearanceSettings, type LabAppearanceSettings } from "@/lib/appeara
 // Removed socket updates and service imports
 
 const LabWorkstationPage: React.FC = () => {
-  const { t, i18n } = useTranslation([
-    "labResults",
-    "common",
-    "labTests",
-    "patients",
-    "payments",
-  ]);
+  // Direct Arabic labels for this page
+  const AR = {
+    pageTitle: "نتائج المختبر",
+    searchRecentVisitsByPatientLabel: "زيارات حديثة حسب اسم المريض",
+    typeMoreChars: "اكتب مزيدًا من الأحرف",
+    noResultsFound: "لا توجد نتائج",
+    loading: "جاري التحميل",
+    searchByVisitIdPlaceholderShort: "ابحث برقم الزيارة",
+    filters_openFilterDialog: "فتح خيارات التصفية",
+    shifts_openDialogTooltip: "فتح نافذة اختيار الوردية",
+    resetViewTooltip: "إعادة تعيين العرض",
+    loadingShiftInfo: "جاري تحميل معلومات الوردية",
+    selectPatientPrompt: "اختر مريضًا من القائمة",
+    selectTestPrompt: "اختر فحصًا لإدخال النتائج",
+    selectPatientAndTestPrompt: "اختر مريضًا ثم اختر فحصًا",
+    noInfoToShow: "لا توجد معلومات لعرضها",
+  } as const;
   const queryClient = useQueryClient();
 
   // --- Core State ---
@@ -412,7 +421,7 @@ const LabWorkstationPage: React.FC = () => {
     toast.info(t("labResults:viewReset"));
   };
 
-  const isRTL = i18n.dir() === "rtl";
+  const isRTL = true;
   const showTestSelectionPanel = !!selectedQueueItem;
   const showStatusAndInfoPanel = !!selectedQueueItem;
 
@@ -424,9 +433,7 @@ const LabWorkstationPage: React.FC = () => {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="ltr:ml-3 rtl:mr-3 text-muted-foreground">
-          {t("common:loadingShiftInfo")}
-        </p>
+        <p className="ltr:ml-3 rtl:mr-3 text-muted-foreground">{AR.loadingShiftInfo}</p>
       </div>
     );
   }
@@ -477,7 +484,7 @@ console.log(selectedQueueItem,'selectedQueueItem')
         <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
           <FlaskConical className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
           <h1 className="text-lg sm:text-xl font-bold text-slate-800 dark:text-slate-100">
-            {t("labResults:pageTitle")}
+            {AR.pageTitle}
           </h1>
         </div>
 
@@ -560,7 +567,7 @@ console.log(selectedQueueItem,'selectedQueueItem')
               <TextField
               
                 {...params}
-                label={t("labResults:searchRecentVisitsByPatientLabel")}
+                label={AR.searchRecentVisitsByPatientLabel}
                 variant="outlined"
                 InputProps={{
                   ...params.InputProps,
@@ -592,17 +599,17 @@ console.log(selectedQueueItem,'selectedQueueItem')
             )}
             noOptionsText={
               autocompleteInputValue.length < 2
-                ? t("common:typeMoreChars")
-                : t("common:noResultsFound")
+                ? AR.typeMoreChars
+                : AR.noResultsFound
             }
-            loadingText={t("common:loading")}
+            loadingText={AR.loading}
           />
 
           <div className="relative w-full sm:w-auto">
             <Search className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
             <Input
               type="number"
-              placeholder={t("labResults:searchByVisitIdPlaceholderShort")}
+              placeholder={AR.searchByVisitIdPlaceholderShort}
               value={visitIdSearchTerm}
               onChange={(e) => setVisitIdSearchTerm(e.target.value)}
               onKeyDown={handleSearchByVisitIdEnter}
@@ -617,7 +624,7 @@ console.log(selectedQueueItem,'selectedQueueItem')
             variant="outline"
             size="icon"
             onClick={() => setIsFilterDialogOpen(true)}
-            title={t("labResults:filters.openFilterDialog")}
+            title={AR.filters_openFilterDialog}
             className="h-10 w-10"
           >
             <FilterIcon className="h-5 w-5" />
@@ -626,7 +633,7 @@ console.log(selectedQueueItem,'selectedQueueItem')
             variant="outline"
             size="icon"
             onClick={() => setIsShiftFinderDialogOpen(true)}
-            title={t("shifts:shiftFinder.openDialogTooltip")}
+            title={AR.shifts_openDialogTooltip}
             className="h-10 w-10"
           >
             <CalendarSearch className="h-5 w-5" />
@@ -635,7 +642,7 @@ console.log(selectedQueueItem,'selectedQueueItem')
             variant="ghost"
             size="icon"
             onClick={handleResetView}
-            title={t("labResults:resetViewTooltip")}
+            title={AR.resetViewTooltip}
             className="h-10 w-10"
           >
             <ListRestart className="h-5 w-5" />
@@ -699,7 +706,7 @@ console.log(selectedQueueItem,'selectedQueueItem')
             <div className="p-4 text-center text-muted-foreground hidden md:flex flex-col items-center justify-center h-full">
               {" "}
               <Users size={32} className="mb-2 opacity-30" />{" "}
-              <span>{t("labResults:selectPatientPrompt")}</span>{" "}
+              <span>{AR.selectPatientPrompt}</span>{" "}
             </div>
           )}
         </section>
@@ -721,8 +728,8 @@ console.log(selectedQueueItem,'selectedQueueItem')
                 <Microscope size={48} className="mb-4 opacity-50" />{" "}
                 <p>
                   {selectedQueueItem
-                    ? t("labResults:selectTestPrompt")
-                    : t("labResults:selectPatientAndTestPrompt")}
+                    ? AR.selectTestPrompt
+                    : AR.selectPatientAndTestPrompt}
                 </p>{" "}
               </div>{" "}
             </div>
@@ -755,7 +762,7 @@ console.log(selectedQueueItem,'selectedQueueItem')
             <div className="p-4 text-center text-muted-foreground hidden lg:flex flex-col items-center justify-center h-full">
               {" "}
               <Info size={32} className="mb-2 opacity-30" />{" "}
-              <span>{t("labResults:noInfoToShow")}</span>{" "}
+              <span>{AR.noInfoToShow}</span>{" "}
             </div>
           )}
         </aside>

@@ -6,7 +6,6 @@ import {
   useQueryClient,
   keepPreviousData,
 } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
@@ -66,7 +65,7 @@ type ProofingFlagKey = keyof Pick<
 >;
 
 const DoctorShiftsReportPage: React.FC = () => {
-  const { t } = useTranslation(["reports", "common", "clinic", "review"]);
+  // translations removed; using direct Arabic strings
   const queryClient = useQueryClient();
   const { user: currentUser } = useAuth();
   const { can } = useAuthorization();
@@ -282,7 +281,7 @@ const DoctorShiftsReportPage: React.FC = () => {
 
   const handleOpenAddCostDialog = (shift: DoctorShiftReportItem) => {
     if (!canRecordEntitlementCost) {
-      toast.error(t("common:error.unauthorizedAction"));
+      toast.error('هذا الإجراء غير مصرح به');
       return;
     }
     setSelectedShiftForCostAction(shift);

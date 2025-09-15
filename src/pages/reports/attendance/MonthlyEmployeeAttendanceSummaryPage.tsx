@@ -1,9 +1,8 @@
 // src/pages/reports/attendance/MonthlyEmployeeAttendanceSummaryPage.tsx
 import React, { useState, useMemo } from "react";
-import { useTranslation } from "react-i18next";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { format, addMonths, startOfMonth } from "date-fns";
-import { arSA, enUS } from "date-fns/locale";
+import { arSA } from "date-fns/locale";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -62,8 +61,7 @@ interface MonthlySummaryResponse {
 }
 
 const MonthlyEmployeeAttendanceSummaryPage: React.FC = () => {
-  const { t, i18n } = useTranslation(["attendance", "common", "reports"]);
-  const dateLocale = i18n.language.startsWith("ar") ? arSA : enUS;
+  const dateLocale = arSA;
 
   const [currentMonthDate, setCurrentMonthDate] = useState(() =>
     startOfMonth(new Date())
@@ -115,20 +113,16 @@ const MonthlyEmployeeAttendanceSummaryPage: React.FC = () => {
             <div className="space-y-1">
               <CardTitle className="text-xl sm:text-2xl flex items-center gap-2">
                 <FileSpreadsheet className="h-6 w-6 text-primary" />
-                {t("reports:attendance.monthlySummaryTitle")}
+                {"ملخص الحضور الشهري للموظفين"}
               </CardTitle>
               <CardDescription>
                 {reportMeta
-                  ? t("reports:attendance.forMonth", {
-                      monthName: reportMeta.month_name,
-                    })
-                  : t("common:loading")}
+                  ? `لشهر ${reportMeta.month_name}`
+                  : "جارٍ التحميل"}
               </CardDescription>
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <Button
-                variant="outline"
-                size="icon"
                 onClick={() => changeMonth(-1)}
                 disabled={isFetching}
                 className="h-9 w-9"
@@ -139,8 +133,6 @@ const MonthlyEmployeeAttendanceSummaryPage: React.FC = () => {
                 {format(currentMonthDate, "MMMM yyyy", { locale: dateLocale })}
               </div>
               <Button
-                variant="outline"
-                size="icon"
                 onClick={() => changeMonth(1)}
                 disabled={isFetching}
                 className="h-9 w-9"
@@ -166,20 +158,20 @@ const MonthlyEmployeeAttendanceSummaryPage: React.FC = () => {
         {isFetching && !isLoading && (
           <div className="text-xs text-center text-muted-foreground py-2">
             <Loader2 className="inline h-4 w-4 animate-spin" />{" "}
-            {t("common:loadingData")}
+            {"جاري تحميل البيانات"}
           </div>
         )}
         {error && (
           <Alert variant="destructive" className="my-4">
             <AlertTriangle className="h-5 w-5" />
-            <AlertTitle>{t("common:error.fetchFailed")}</AlertTitle>
+            <AlertTitle>{"فشل جلب البيانات"}</AlertTitle>
             <AlertDescription>{error.message}</AlertDescription>
           </Alert>
         )}
         {!isLoading && !error && reportData.length === 0 && (
           <Card className="h-full flex items-center justify-center text-muted-foreground">
             <CardContent className="text-center py-10">
-              {t("common:noDataAvailableForFilters")}
+              {"لا توجد بيانات مطابقة للمرشحات"}
             </CardContent>
           </Card>
         )}
@@ -187,7 +179,7 @@ const MonthlyEmployeeAttendanceSummaryPage: React.FC = () => {
           <Card className="h-full flex flex-col">
             <CardHeader className="py-3 flex-shrink-0">
               <p className="text-xs text-muted-foreground">
-                {t("reports:attendance.totalWorkingDaysInMonth")}:{" "}
+                {"عدد أيام العمل في الشهر"}:{" "}
                 {reportMeta?.total_working_days || "-"}
               </p>
             </CardHeader>
@@ -196,28 +188,28 @@ const MonthlyEmployeeAttendanceSummaryPage: React.FC = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="text-center sticky top-0 bg-card z-10">
-                      {t("reports:attendance.table.employeeName")}
+                      {"اسم الموظف"}
                     </TableHead>
                     <TableHead className="text-center sticky top-0 bg-card z-10">
-                      {t("reports:attendance.table.payableDays")}
+                      {"أيام مستحقة"}
                     </TableHead>
                     <TableHead className="text-center sticky top-0 bg-card z-10">
-                      {t("reports:attendance.table.absentDays")}
+                      {"أيام الغياب"}
                     </TableHead>
                     <TableHead className="text-center sticky top-0 bg-card z-10 hidden md:table-cell">
-                      {t("reports:attendance.table.unpaidLeave")}
+                      {"إجازة غير مدفوعة"}
                     </TableHead>
                     <TableHead className="text-center sticky top-0 bg-card z-10 hidden md:table-cell">
-                      {t("reports:attendance.table.sickLeave")}
+                      {"إجازة مرضية"}
                     </TableHead>
                     <TableHead className="text-center sticky top-0 bg-card z-10 hidden lg:table-cell">
-                      {t("reports:attendance.table.lateCount")}
+                      {"عدد مرات التأخير"}
                     </TableHead>
                     <TableHead className="text-center sticky top-0 bg-card z-10 hidden lg:table-cell">
-                      {t("reports:attendance.table.workedHours")}
+                      {"ساعات العمل"}
                     </TableHead>
                     <TableHead className="text-center sticky top-0 bg-card z-10 hidden lg:table-cell">
-                      {t("reports:attendance.table.standardHours")}
+                      {"الساعات القياسية"}
                     </TableHead>
                   </TableRow>
                 </TableHeader>

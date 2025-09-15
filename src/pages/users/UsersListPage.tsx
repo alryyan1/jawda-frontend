@@ -304,7 +304,7 @@ export default function UsersListPage() {
                       )}
                     </TableCell>
                     <TableCell className="text-right py-2.5">
-                      <DropdownMenu dir={i18n.dir()}>
+                      <DropdownMenu dir={"rtl"}>
                         <DropdownMenuTrigger asChild>
                           <Button
                             variant="ghost"
@@ -376,10 +376,7 @@ export default function UsersListPage() {
             >
               السابق
             </Button>
-            <span className="text-sm text-muted-foreground px-2">
-              {`صفحة ${meta.current_page} من ${meta.last_page}`}
-              })}
-            </span>
+            <span className="text-sm text-muted-foreground px-2">{`صفحة ${meta.current_page} من ${meta.last_page}`}</span>
             <Button
               onClick={() =>
                 setCurrentPage((p) => Math.min(meta.last_page, p + 1))

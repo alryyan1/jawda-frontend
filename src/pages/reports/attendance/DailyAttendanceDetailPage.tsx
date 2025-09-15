@@ -1,9 +1,8 @@
 // src/pages/reports/attendance/DailyAttendanceDetailPage.tsx
 import React, { useState, useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { format, parseISO } from 'date-fns';
-import { arSA, enUS } from 'date-fns/locale';
+import { arSA } from 'date-fns/locale';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -34,8 +33,7 @@ interface DailyDetailResponse {
 }
 
 const DailyAttendanceDetailPage: React.FC = () => {
-  const { t, i18n } = useTranslation(['attendance', 'common', 'reports']);
-  const dateLocale = i18n.language.startsWith('ar') ? arSA : enUS;
+  const dateLocale = arSA;
 
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedShiftDefId, setSelectedShiftDefId] = useState<string>('all');
@@ -68,20 +66,20 @@ const DailyAttendanceDetailPage: React.FC = () => {
             <div className='space-y-1'>
               <CardTitle className="text-xl sm:text-2xl flex items-center gap-2">
                 <CalendarCheck2 className="h-6 w-6 text-primary"/>
-                {t('reports:attendance.dailyDetailTitle')}
+                {'تفاصيل الحضور اليومي'}
               </CardTitle>
               <CardDescription>
-                {reportMeta ? `${reportMeta.day_name}, ${format(parseISO(reportMeta.date), "PPP", {locale: dateLocale})}` : t('common:selectDate')}
+                {reportMeta ? `${reportMeta.day_name}, ${format(parseISO(reportMeta.date), "PPP", {locale: dateLocale})}` : 'اختر التاريخ'}
               </CardDescription>
             </div>
             <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
               <DateTimePicker date={selectedDate} onDateChange={setSelectedDate} />
-              <Select value={selectedShiftDefId} onValueChange={setSelectedShiftDefId} dir={i18n.dir()}>
+              <Select value={selectedShiftDefId} onValueChange={setSelectedShiftDefId} dir="rtl">
                 <SelectTrigger className="w-full sm:w-[200px] h-9 text-xs">
-                  <SelectValue placeholder={t('attendance:sheet.filterByShift')} />
+                  <SelectValue placeholder={'تصفية حسب الوردية'} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">{t('attendance:sheet.allShifts')}</SelectItem>
+                  <SelectItem value="all">{'كل الورديات'}</SelectItem>
                   {shiftDefinitions?.map(sd => (
                     <SelectItem key={sd.id} value={String(sd.id)}>{sd.shift_label} ({sd.name})</SelectItem>
                   ))}
@@ -94,13 +92,13 @@ const DailyAttendanceDetailPage: React.FC = () => {
       
       <div className="flex-grow overflow-hidden">
         {isLoading && <div className="h-full flex items-center justify-center"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>}
-        {isFetching && !isLoading && <div className="text-xs text-center text-muted-foreground py-2"><Loader2 className="inline h-4 w-4 animate-spin"/> {t('common:loadingData')}</div>}
+        {isFetching && !isLoading && <div className="text-xs text-center text-muted-foreground py-2"><Loader2 className="inline h-4 w-4 animate-spin"/> {'جاري تحميل البيانات'}</div>}
         {error && (
-          <Alert variant="destructive" className="my-4"><AlertTriangle className="h-5 w-5" /><AlertTitle>{t('common:error.fetchFailed')}</AlertTitle><AlertDescription>{error.message}</AlertDescription></Alert>
+          <Alert variant="destructive" className="my-4"><AlertTriangle className="h-5 w-5" /><AlertTitle>{'فشل جلب البيانات'}</AlertTitle><AlertDescription>{error.message}</AlertDescription></Alert>
         )}
         {!isLoading && !error && reportData.length === 0 && (
           <Card className="h-full flex items-center justify-center text-muted-foreground">
-            <CardContent className="text-center py-10">{t('common:noDataAvailableForFilters')}</CardContent>
+            <CardContent className="text-center py-10">{'لا توجد بيانات مطابقة للمرشحات'}</CardContent>
           </Card>
         )}
         {!isLoading && !error && reportData.length > 0 && (
@@ -118,17 +116,17 @@ const DailyAttendanceDetailPage: React.FC = () => {
                         </CardHeader>
                         <CardContent className="p-0">
                         {shiftData.records.length === 0 ? (
-                            <p className="text-sm text-muted-foreground px-3 py-6 text-center">{t('attendance:dailyReport.noRecordsForShift')}</p>
-                        ) : (
+                            <p className="text-sm text-muted-foreground px-3 py-6 text-center">{'لا توجد سجلات لهذه الوردية'}</p>
+                         ) : (
                             <Table className="text-xs sm:text-sm">
                             <TableHeader>
                                 <TableRow>
-                                <TableHead className="text-center">{t('reports:attendance.table.employeeName')}</TableHead>
-                                <TableHead className="text-center">{t('reports:attendance.table.status')}</TableHead>
-                                <TableHead className="text-center hidden md:table-cell">{t('reports:attendance.table.checkIn')}</TableHead>
-                                <TableHead className="text-center hidden md:table-cell">{t('reports:attendance.table.checkOut')}</TableHead>
-                                <TableHead className="hidden lg:table-cell text-center">{t('reports:attendance.table.supervisor')}</TableHead>
-                                <TableHead className="hidden lg:table-cell text-center">{t('reports:attendance.table.notes')}</TableHead>
+                                <TableHead className="text-center">{'اسم الموظف'}</TableHead>
+                                <TableHead className="text-center">{'الحالة'}</TableHead>
+                                <TableHead className="text-center hidden md:table-cell">{'دخول'}</TableHead>
+                                <TableHead className="text-center hidden md:table-cell">{'خروج'}</TableHead>
+                                <TableHead className="hidden lg:table-cell text-center">{'المشرف'}</TableHead>
+                                <TableHead className="hidden lg:table-cell text-center">{'ملاحظات'}</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -137,7 +135,7 @@ const DailyAttendanceDetailPage: React.FC = () => {
                                     <TableCell className="font-medium text-center">{rec.user_name}</TableCell>
                                     <TableCell className="text-center">
                                     <Chip
-                                        label={t(`attendance:statusEnum.${rec.status}`, rec.status)}
+                                        label={rec.status === 'present' ? 'حاضر' : rec.status === 'late_present' ? 'حاضر متأخر' : rec.status === 'early_leave' ? 'انصراف مبكر' : rec.status === 'absent' ? 'غائب' : rec.status === 'on_leave' ? 'إجازة' : rec.status === 'sick_leave' ? 'إجازة مرضية' : rec.status === 'holiday' ? 'عطلة' : 'غير معروف'}
                                         size="small"
                                         color={rec.status === 'present' || rec.status === 'late_present' || rec.status === 'early_leave' ? 'success' : rec.status === 'absent' ? 'error' : rec.status === 'on_leave' || rec.status === 'sick_leave' ? 'info' : 'default'}
                                         variant="outlined"

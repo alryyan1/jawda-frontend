@@ -1,10 +1,11 @@
 @import './fonts.css';
+
+@plugin 'tailwindcss-animate';
 @import "tailwindcss";
 @import "tw-animate-css";
 @import 'animate.css'; /* ADD THIS LINE AT THE TOP */
 
 @custom-variant dark (&:is(.dark *));
-
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
@@ -135,7 +136,6 @@
   transform: translate(14px, -9px) scale(0.75) !important; /* Adjust shrink label position */
 }
 
-
 /* Add this new keyframe animation */
 @layer utilities {
   @keyframes heartbeat {
@@ -149,6 +149,15 @@
 
   .animate-heartbeat {
     animation: heartbeat 2.5s ease-in-out infinite;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
   }
 }
 

@@ -1,7 +1,6 @@
 // src/pages/LabReceptionPage.tsx
 
 import React, { useState, useCallback, useEffect, useRef } from "react";
-import { useTranslation } from "react-i18next";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 // Removed socket listener import
 
@@ -77,12 +76,6 @@ const materialTheme = createTheme({
 });
 
 const LabReceptionPage: React.FC = () => {
-  const { t } = useTranslation([
-    "labReception",
-    "common",
-    "clinic",
-    "patients",
-  ]);
   const queryClient = useQueryClient();
   const { currentClinicShift } = useAuth();
 
@@ -153,13 +146,13 @@ const LabReceptionPage: React.FC = () => {
         company_id: payload.companyId 
       }),
     onSuccess: (newPatientWithVisit) => {
-      toast.success(t("patients:search.visitCreatedSuccess", { patientName: newPatientWithVisit.name }));
+      toast.success(`تم إنشاء زيارة للمريض ${newPatientWithVisit.name}`);
       handlePatientActivated(newPatientWithVisit);
       setSearchQuery(''); // Clear search query after success
     },
     onError: (error: AxiosError) => {
         const apiError = error as { response?: { data?: { message?: string } } };
-        toast.error(apiError.response?.data?.message || t('clinic:errors.visitCreationFailed'));
+        toast.error(apiError.response?.data?.message || 'فشل إنشاء الزيارة');
     },
   });
 
@@ -177,8 +170,8 @@ const LabReceptionPage: React.FC = () => {
       specialist: null, // Clear specialist if specific doctor is chosen
     }));
     setIsDoctorFinderOpen(false); // Close the dialog after selection
-    toast.info(t('filterApplied', { filterName: doctorShift.doctor_name }));
-  }, [t]);
+    toast.info(`تم تطبيق الفلتر: ${doctorShift.doctor_name}`);
+  }, []);
 
   // Fetch active visit data once and share with all components
   const { data: activeVisit, isLoading: isVisitLoading } = useQuery<DoctorVisit, Error>({
@@ -203,15 +196,10 @@ const LabReceptionPage: React.FC = () => {
         setIsFormVisible(false);
         
         // Show success message
-        toast.success(
-          t("patientRegistration.autoSelected", {
-            patientName: patientWithVisit.name,
-            visitId: patientWithVisit.doctorVisit.id,
-          })
-        );
+        toast.success(`تم اختيار المريض تلقائياً: ${patientWithVisit.name} (زيارة ${patientWithVisit.doctorVisit.id})`);
       }
     },
-    [queryClient, currentClinicShift?.id, t]
+    [queryClient, currentClinicShift?.id]
   );
 
   const handlePatientSelectedFromQueue = useCallback(
@@ -226,7 +214,7 @@ const LabReceptionPage: React.FC = () => {
   const handleResetView = () => {
     setActiveVisitId(null);
     setIsFormVisible(true);
-    toast.info(t("viewReset", "View has been reset."));
+    toast.info('تمت إعادة التعيين');
   };
 
   const handleToggleForm = () => {
@@ -247,11 +235,7 @@ const LabReceptionPage: React.FC = () => {
       });
     },
     onSuccess: (newlyAddedLabRequests) => {
-      toast.success(
-        t("labTests:request.addedSuccessMultiple", {
-          count: newlyAddedLabRequests.length,
-        })
-      );
+      toast.success(`تمت إضافة ${newlyAddedLabRequests.length} فحوصات`);
       queryClient.invalidateQueries({
         queryKey: ["activeVisitForLabRequests", activeVisitId],
       });
@@ -264,9 +248,7 @@ const LabReceptionPage: React.FC = () => {
     },
     onError: (error: Error) => {
       const apiError = error as { response?: { data?: { message?: string } } };
-      toast.error(
-        apiError.response?.data?.message || t("common:error.addFailed")
-      );
+      toast.error(apiError.response?.data?.message || 'فشل الإضافة');
     },
   });
   const { data: availableTests = [], isLoading: isLoadingTests } = useQuery<MainTestStripped[], Error>({
@@ -297,9 +279,7 @@ const LabReceptionPage: React.FC = () => {
     } catch (error: unknown) {
       console.error(`Error generating ${title}:`, error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      toast.error(t('common:error.generatePdfFailed'), {
-        description: errorMessage,
-      });
+      toast.error('فشل توليد ملف PDF', { description: errorMessage });
       setIsPdfPreviewOpen(false);
     } finally {
       setIsGeneratingPdf(false);
@@ -311,7 +291,7 @@ const LabReceptionPage: React.FC = () => {
     if (!activeVisitId) return;
     console.log("handlePrintReceipt 2", activeVisitId);
     generateAndShowPdf(
-      t('common:printReceiptDialogTitle', { visitId: activeVisitId }),
+      `إيصال الزيارة رقم ${activeVisitId}`,
       'LabReceipt',
       () => apiClient.get(`/visits/${activeVisitId}/lab-thermal-receipt/pdf`, { responseType: 'blob' }).then(res => res.data)
     );
@@ -337,7 +317,7 @@ interface AutocompleteVisitOption {
     if (selectedTests.length > 0 && activeVisitId) {
       addTestsMutation.mutate(selectedTests.map(test => test.id));
     } else {
-      toast.error(t("selectTestAndPatient", "Please select a test and patient first."));
+      toast.error('يرجى اختيار فحص ومريض أولاً');
     }
   };
   const handleSearchByVisitIdEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -349,7 +329,7 @@ interface AutocompleteVisitOption {
         fetchVisitDetailsMutation.mutate(id);
         setIsFormVisible(false);
       } else {
-        toast.error(t("invalidVisitId", "Please enter a valid Visit ID."));
+        toast.error('يرجى إدخال رقم زيارة صحيح');
       }
     }
   };
@@ -358,25 +338,14 @@ interface AutocompleteVisitOption {
     onSuccess: (foundVisit) => {
       if (foundVisit) {
         setActiveVisitId(foundVisit.id);
-        toast.success(
-          t("visitFoundById", {
-            visitId: foundVisit.id,
-            patientName: foundVisit.patient.name,
-          })
-        );
+        toast.success(`تم العثور على الزيارة رقم ${foundVisit.id} للمريض ${foundVisit.patient.name}`);
       } else {
-        toast.error(
-          t("visitNotFoundById", {
-            visitId: visitIdSearchTerm || selectedVisitFromAutocomplete?.visit_id,
-          })
-        );
+        toast.error(`لم يتم العثور على الزيارة برقم ${visitIdSearchTerm || selectedVisitFromAutocomplete?.visit_id}`);
       }
     },
     onError: (error: Error) => {
       const apiError = error as { response?: { data?: { message?: string } } };
-      toast.error(
-        apiError.response?.data?.message || t("common:error.fetchFailed")
-      );
+      toast.error(apiError.response?.data?.message || 'فشل الجلب');
     },
   });
     // --- Data Fetching & Mutations ---
@@ -459,8 +428,8 @@ interface AutocompleteVisitOption {
                 <CardContent className="p-4 h-full overflow-hidden">
                   <div className="flex justify-between items-start mb-4">
                     <div>
-                      <h3 className="text-lg font-semibold">{t('patientHistory.title')}</h3>
-                      <p className="text-sm text-muted-foreground">{t('patientHistory.description')}</p>
+                      <h3 className="text-lg font-semibold">سجل المريض</h3>
+                      <p className="text-sm text-muted-foreground">نتائج البحث عن المريض</p>
                     </div>
                     <Button
                       variant="ghost"
@@ -490,7 +459,7 @@ interface AutocompleteVisitOption {
                   appearanceSettings={getAppearanceSettings()}
                   labFilters={filters}
                   currentShift={currentClinicShift}
-                  onShiftChange={() => toast.info(t("common:featureNotImplementedShort"))}
+                  onShiftChange={() => toast.info('الميزة غير متاحة حالياً')}
                   onPatientSelect={handlePatientSelectedFromQueue}
                   selectedVisitId={activeVisitId}
                   globalSearchTerm=""

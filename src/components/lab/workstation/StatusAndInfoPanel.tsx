@@ -1,9 +1,8 @@
 // src/components/lab/workstation/StatusAndInfoPanel.tsx
 import React, { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
 import { format, parseISO } from "date-fns";
-import { arSA, enUS } from "date-fns/locale";
+import { arSA } from "date-fns/locale";
 import {
   DndContext,
   closestCenter,
@@ -67,9 +66,57 @@ import {
 import type { PanelId } from "@/lib/panel-settings-store";
 import PdfPreviewDialog from "@/components/common/PdfPreviewDialog";
 import apiClient from "@/services/api";
-import i18n from "@/i18n";
+// i18n removed
 import SendReportWhatsAppDialog from "./dialog/SendReportWhatsAppDialog";
 import { WhatsApp } from "@mui/icons-material";
+
+// Direct Arabic labels (translations removed)
+const AR = {
+  notAvailableShort: "غير متوفر",
+  loadFailed: "فشل التحميل",
+  patientInfoTitle: "معلومات المريض",
+  patientDataNotAvailable: "بيانات المريض غير متوفرة",
+  visitIdShort: "رقم الزيارة",
+  name: "الاسم",
+  visitDate: "تاريخ الزيارة",
+  doctor: "الطبيب",
+  phone: "الهاتف",
+  gender: "النوع",
+  age: "العمر",
+  company: "الشركة",
+  insuranceNo: "رقم التأمين",
+  subCompanyShort: "الفرع",
+  relationShort: "القرابة",
+  guarantor: "الضامن",
+  address: "العنوان",
+  requestStatusTitle: "حالة الطلب",
+  paymentStatus: "حالة الدفع",
+  sampleStatus: "حالة العينة",
+  approvalStatus: "حالة الاعتماد",
+  price: "السعر",
+  endurance: "التحمل",
+  discountPercentageShort: "خصم %",
+  amountPaid: "المدفوع",
+  balanceDue: "المتبقي",
+  requestedAt: "تاريخ الطلب",
+  parameterDetails: "تفاصيل التحليل",
+  normalRangeText: "المدى الطبيعي",
+  notSet: "غير محدد",
+  unit: "الوحدة",
+  defaultValue: "القيمة الافتراضية",
+  criticalLow: "حد منخفض خطير",
+  criticalHigh: "حد مرتفع خطير",
+  selectPatientToViewInfo: "اختر مريضاً لعرض المعلومات",
+  actionsTitle: "إجراءات",
+  sendReceiptShort: "إرسال الإيصال في واتساب",
+  sendReportShort: "إرسال التقرير في واتساب",
+  printReceipt: "طباعة إيصال المختبر",
+  printSampleLabels: "طباعة ملصقات العينات",
+  resultsAreLocked: "النتائج مقفلة",
+  viewReportPreview: "معاينة التقرير",
+  test: "فحص",
+  receiptDialogTitle: (visitId: number) => `إيصال الزيارة رقم ${visitId}`,
+};
 
 interface StatusAndInfoPanelProps {
   patientId: number | null;
@@ -88,7 +135,6 @@ const DetailRowDisplay: React.FC<{
   titleValue?: string;
   className?: string;
 }> = ({ label, value, icon: Icon, valueClassName, titleValue, className }) => {
-  const { t } = useTranslation("common");
   return (
     <div
       className={cn(
@@ -117,7 +163,7 @@ const DetailRowDisplay: React.FC<{
         value === undefined ||
         (typeof value === "string" && value.trim() === "") ? (
           <span className="italic text-slate-400 dark:text-slate-500">
-            {t("notAvailable_short", "N/A")}
+            {AR.notAvailableShort}
           </span>
         ) : (
           value
@@ -149,7 +195,7 @@ const SortableInfoCard: React.FC<SortableInfoCardProps> = ({
   defaultCollapsed = false,
   cardClassName,
 }) => {
-  const { t } = useTranslation("common");
+  // using local t shim
   const [isCollapsed, setIsCollapsed] = useState(() =>
     getPanelCollapsedState(id, defaultCollapsed)
   );
@@ -195,7 +241,7 @@ const SortableInfoCard: React.FC<SortableInfoCardProps> = ({
         onOpenChange={handleToggleCollapse}
       >
         <Card
-        dir={i18n.dir()}
+        dir={"rtl"}
           className={cn(
             "shadow-md overflow-hidden",
             isDragging && "ring-2 ring-primary"
@@ -216,7 +262,7 @@ const SortableInfoCard: React.FC<SortableInfoCardProps> = ({
                 <Icon className="h-4 w-4 text-primary" />
                 <CardTitle className="text-sm font-semibold">{title}</CardTitle>
               </div>
-              <Button variant="ghost" size="icon" className="h-6 w-6">
+              <Button className="h-6 w-6">
                 {isCollapsed ? (
                   <ChevronDown className="h-4 w-4" />
                 ) : (
@@ -233,7 +279,7 @@ const SortableInfoCard: React.FC<SortableInfoCardProps> = ({
                 </div>
               ) : error ? (
                 <div className="text-destructive py-2 text-center text-xs">
-                  {t("error.loadFailed")}: {error.message}
+                  {AR.loadFailed}: {error.message}
                 </div>
               ) : (
                 children
@@ -256,14 +302,7 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
   focusedChildTest,
   patientLabQueueItem,
 }) => {
-  const { t, i18n } = useTranslation([
-    "labResults",
-    "common",
-    "patients",
-    "labTests",
-    "payments",
-  ]);
-  const dateLocale = i18n.language.startsWith("ar") ? arSA : enUS;
+  const dateLocale = arSA;
   const [panelOrder, setPanelOrder] = useState<PanelId[]>(getPanelOrder);
 
   // State for PDF Preview
@@ -290,24 +329,24 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
 
   const getAgeString = useCallback(
     (p?: Patient | null): string => {
-      if (!p) return t("common:notAvailable_short");
+      if (!p) return AR.notAvailableShort;
       const parts = [];
       if (p.age_year !== null && p.age_year !== undefined && p.age_year >= 0)
-        parts.push(`${p.age_year}${t("common:years_shortInitial")}`);
+        parts.push(`${p.age_year}س`);
       if (p.age_month !== null && p.age_month !== undefined && p.age_month >= 0)
-        parts.push(`${p.age_month}${t("common:months_shortInitial")}`);
+        parts.push(`${p.age_month}ش`);
       if (p.age_day !== null && p.age_day !== undefined && p.age_day >= 0)
-        parts.push(`${p.age_day}${t("common:days_shortInitial")}`);
+        parts.push(`${p.age_day}ي`);
       if (
         parts.length === 0 &&
         (p.age_year === 0 || p.age_month === 0 || p.age_day === 0)
       )
-        return `0${t("common:days_shortInitial")}`;
+        return `0ي`;
       return parts.length > 0
         ? parts.join(" ")
-        : t("common:notAvailable_short");
+        : AR.notAvailableShort;
     },
-    [t]
+    []
   );
   const generateAndShowPdf = async (
     title: string,
@@ -323,11 +362,11 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
       const blob = await fetchFunction();
       const objectUrl = URL.createObjectURL(blob);
       setPdfUrl(objectUrl);
-      const patientNameSanitized = patient?.name.replace(/[^A-Za-z0-9\-\_]/g, '_') || 'patient';
+      const patientNameSanitized = patient?.name.replace(/[^A-Za-z0-9-_]/g, '_') || 'patient';
       setPdfFileName(`${fileNamePrefix}_${visitId}_${patientNameSanitized}_${new Date().toISOString().slice(0,10)}.pdf`);
     } catch (error: any) {
       console.error(`Error generating ${title}:`, error);
-      toast.error(t('common:error.generatePdfFailed'), {
+      toast.error("حدث خطأ أثناء إنشاء ملف PDF", {
         description: error.response?.data?.message || error.message,
       });
       setIsPdfPreviewOpen(false); // Close dialog on error
@@ -339,7 +378,7 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
   const handlePrintReceipt = () => {
     if (!visitId) return;
     generateAndShowPdf(
-      t('common:printReceiptDialogTitle', { visitId }),
+      AR.receiptDialogTitle(visitId),
       'LabReceipt',
       () => apiClient.get(`/visits/${visitId}/lab-thermal-receipt/pdf`, { responseType: 'blob' }).then(res => res.data)
     );
@@ -348,7 +387,7 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
   const handlePrintSampleLabels = () => {
     if (!visitId) return; // Needs visit context for all its lab requests
     generateAndShowPdf(
-      t('labResults:statusInfo.printSampleLabelsDialogTitle'),
+      "طباعة ملصقات العينات",
       'SampleLabels',
       () => apiClient.get(`/visits/${visitId}/lab-sample-labels/pdf`, { responseType: 'blob' }).then(res => res.data)
     );
@@ -357,7 +396,7 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
   const handleViewReportPreview = () => {
     if (!visitId) return;
     generateAndShowPdf(
-      t('labResults:statusInfo.viewReportPreviewDialogTitle'),
+      "معاينة تقرير المختبر",
       'LabReport',
       () => apiClient.get(`/visits/${visitId}/lab-report/pdf`, { responseType: 'blob' }).then(res => res.data)
     );
@@ -434,7 +473,7 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
     patientInfo: (
       <SortableInfoCard
         id="patientInfo"
-        title={t("labResults:statusInfo.patientInfoTitle")}
+        title={AR.patientInfoTitle}
         icon={UserCircle}
         isLoading={isLoadingPatient && !patient}
         error={patientError}
@@ -443,38 +482,38 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
         {patient ? (
           <>
            <DetailRowDisplay 
-              label={t("common:visitIdShort")} 
+              label={AR.visitIdShort} 
               value={visitId} 
               icon={Hash} 
               valueClassName="text-lg font-bold text-sky-600 dark:text-sky-400" 
             />
             <DetailRowDisplay
-              label={t("patients:fields.name")}
+              label={AR.name}
               value={patient.name}
               valueClassName="text-primary font-semibold"
             />
 
              <DetailRowDisplay 
-              label={t("common:visitDate")} 
+              label={AR.visitDate} 
               value={patient.created_at ? format(parseISO(patient.created_at as unknown as string), "PPP", { locale: dateLocale }) : 'N/A'}
               icon={CalendarDays}
             />
-            {patient.primary_doctor && (
+            {patient.doctor && (
                 <DetailRowDisplay 
-                    label={t("common:doctor")} 
-                    value={patient.primary_doctor.name} 
+                    label={AR.doctor} 
+                    value={patient.doctor.name} 
                     icon={User} 
                 />
             )}
 
-            <DetailRowDisplay label={t("common:phone")} value={patient.phone} />
+            <DetailRowDisplay label={AR.phone} value={patient.phone} />
             {/* <DetailRowDisplay label={t("common:doctor")} value={patient.doctor.name} /> */}
             <DetailRowDisplay
-              label={t("common:gender")}
-              value={t(`common:genderEnum.${patient.gender}`)}
+              label={AR.gender}
+              value={patient.gender === 'male' ? 'ذكر' : patient.gender === 'female' ? 'أنثى' : AR.notAvailableShort}
             />
             <DetailRowDisplay
-              label={t("common:age")}
+              label={AR.age}
               value={getAgeString(patient)}
             />
         
@@ -483,49 +522,49 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
               <>
                 <Separator className="my-2" />
                 <DetailRowDisplay 
-                    label={t("patients:fields.company")} 
+                    label={AR.company} 
                     value={patient.company.name} 
                     icon={Briefcase} 
                     valueClassName="font-semibold"
                 />
                 {patient.insurance_no && 
                     <DetailRowDisplay 
-                        label={t("patients:fields.insuranceNo")} 
+                        label={AR.insuranceNo} 
                         value={patient.insurance_no} 
                         icon={IdCard}
                     />
                 }
                 {patient.subcompany && 
                     <DetailRowDisplay 
-                        label={t("patients:fields.subCompanyShort")} 
+                        label={AR.subCompanyShort} 
                         value={patient.subcompany.name} 
                         icon={Tags}
                     />
                 }
                 {patient.company_relation && 
                     <DetailRowDisplay 
-                        label={t("patients:fields.relationShort")} 
+                        label={AR.relationShort} 
                         value={patient.company_relation.name} 
                         icon={Tags}
                     />
                 }
                 {patient.guarantor && 
                     <DetailRowDisplay 
-                        label={t("patients:fields.guarantor")} 
+                        label={AR.guarantor} 
                         value={patient.guarantor} 
                     />
                 }
                 </>
             )}
             <DetailRowDisplay
-              label={t("patients:fields.address")}
+              label={AR.address}
               value={patient.address}
               titleValue={patient.address || undefined}
             />
           </>
         ) : !isLoadingPatient ? (
           <p className="text-xs text-muted-foreground py-2 text-center">
-            {t("labResults:patientDataNotAvailable")}
+            {AR.patientDataNotAvailable}
           </p>
         ) : null}
       </SortableInfoCard>
@@ -533,7 +572,7 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
     requestStatus: selectedLabRequest ? (
       <SortableInfoCard
         id="requestStatus"
-        title={t("labResults:statusInfo.requestStatusTitle")}
+        title={AR.requestStatusTitle}
         icon={ClipboardList}
         defaultCollapsed={false}
         cardClassName="bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-700/40"
@@ -542,43 +581,43 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
           className="text-[11px] text-muted-foreground mb-1 truncate"
           title={selectedLabRequest.main_test?.main_test_name}
         >
-          {selectedLabRequest.main_test?.main_test_name || t("common:test")}{" "}
+          {selectedLabRequest.main_test?.main_test_name || AR.test}{" "}
           (ID: {selectedLabRequest.id})
         </p>
         <DetailRowDisplay
-          label={t("labResults:statusInfo.paymentStatus")}
+          label={AR.paymentStatus}
           value={getPaymentStatusBadge(selectedLabRequest)}
         />
         <DetailRowDisplay
-          label={t("labResults:statusInfo.sampleStatus")}
+          label={AR.sampleStatus}
           value={getSampleStatusBadge(selectedLabRequest)}
         />
         <DetailRowDisplay
-          label={t("labResults:statusInfo.approvalStatus")}
+          label={AR.approvalStatus}
           value={getApprovalStatusBadge(selectedLabRequest)}
         />
         <Separator className="my-1" />
         <DetailRowDisplay
-          label={t("common:price")}
+          label={AR.price}
           value={Number(selectedLabRequest.price).toFixed(1)}
         />
         {isCompanyPatient && (
           <DetailRowDisplay
-            label={t("labTests:table.endurance")}
+            label={AR.endurance}
             value={Number(selectedLabRequest.endurance || 0).toFixed(1)}
           />
         )}
         <DetailRowDisplay
-          label={t("labTests:table.discountPercentageShort")}
+          label={AR.discountPercentageShort}
           value={`${selectedLabRequest.discount_per || 0}%`}
         />
         <DetailRowDisplay
-          label={t("payments:amountPaid")}
+          label={AR.amountPaid}
           value={Number(selectedLabRequest.amount_paid).toFixed(1)}
           valueClassName="text-green-600 dark:text-green-400 font-semibold"
         />
         <DetailRowDisplay
-          label={t("payments:balanceDue")}
+          label={AR.balanceDue}
           value={calculateLabRequestBalance(selectedLabRequest).toFixed(1)}
           valueClassName={cn(
             "font-bold",
@@ -589,7 +628,7 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
         />
         {selectedLabRequest.created_at && (
           <DetailRowDisplay
-            label={t("common:requestedAt")}
+            label={AR.requestedAt}
             value={format(parseISO(selectedLabRequest.created_at), "Pp", {
               locale: dateLocale,
             })}
@@ -600,29 +639,27 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
     parameterDetails: focusedChildTest ? (
       <SortableInfoCard
         id="parameterDetails"
-        title={`${t("labResults:statusInfo.parameterDetails")}: ${
-          focusedChildTest.child_test_name
-        }`}
+        title={`${AR.parameterDetails}: ${focusedChildTest.child_test_name}`}
         icon={BarChart3}
         defaultCollapsed={false}
         cardClassName="bg-teal-50 dark:bg-teal-900/30 border-teal-200 dark:border-teal-700/40"
       >
         <DetailRowDisplay
-          label={t("labTests:childTests.form.normalRangeText")}
+          label={AR.normalRangeText}
           value={
             focusedChildTest.normalRange ||
             (focusedChildTest.low !== null && focusedChildTest.upper !== null
               ? `${focusedChildTest.low} - ${focusedChildTest.upper}`
-              : t("common:notSet"))
+              : AR.notSet)
           }
         />
         <DetailRowDisplay
-          label={t("labTests:childTests.form.unit")}
+          label={AR.unit}
           value={focusedChildTest.unit?.name || focusedChildTest.unit_name}
         />
         {focusedChildTest.defval && (
           <DetailRowDisplay
-            label={t("labTests:childTests.form.defaultValue")}
+            label={AR.defaultValue}
             value={focusedChildTest.defval}
           />
         )}
@@ -631,14 +668,14 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
         )}
         {focusedChildTest.lowest && (
           <DetailRowDisplay
-            label={t("labTests:childTests.form.criticalLow")}
+            label={AR.criticalLow}
             value={String(focusedChildTest.lowest)}
             valueClassName="text-orange-600 font-bold"
           />
         )}
         {focusedChildTest.max && (
           <DetailRowDisplay
-            label={t("labTests:childTests.form.criticalHigh")}
+            label={AR.criticalHigh}
             value={String(focusedChildTest.max)}
             valueClassName="text-red-600 font-bold"
           />
@@ -663,7 +700,7 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
     return (
       <div className="h-full flex items-center justify-center p-4">
         <p className="text-sm text-muted-foreground text-center">
-          {t("labResults:selectPatientToViewInfo")}
+          {AR.selectPatientToViewInfo}
         </p>
       </div>
     );
@@ -672,7 +709,7 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
 
   return (
   <>
-  <ScrollArea dir={i18n.dir()} className="h-full bg-slate-50 dark:bg-slate-800/30">
+  <ScrollArea dir={"rtl"} className="h-full bg-slate-50 dark:bg-slate-800/30">
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={panelOrder.map(id => id)} strategy={verticalListSortingStrategy}>
             <div className="p-2 sm:p-3 space-y-2 sm:space-y-3">
@@ -682,45 +719,41 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
                 <CardHeader className="pb-2 pt-3">
                   <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
                     <Palette className="h-4 w-4 text-muted-foreground" />
-                    {t("labResults:statusInfo.actionsTitle")}
+                    {AR.actionsTitle}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-1.5">
                     {/* New WhatsApp Buttons */}
             <Button
-              variant="outline"
-              size="sm"
               className="w-full justify-start text-xs text-green-700 hover:text-green-800 border-green-300 hover:bg-green-50 dark:text-green-400 dark:border-green-600 dark:hover:bg-green-700/20"
               onClick={() => handleOpenWhatsAppDialog('thermal_lab_receipt')}
               disabled={!visitId || !patient} // Simple check for now
             >
               <WhatsApp className="ltr:mr-2 rtl:ml-2 h-3.5 w-3.5" />
-              {t('whatsapp:sendReceiptShort')}
+              {AR.sendReceiptShort}
             </Button>
             <Button
-              variant="outline"
-              size="sm"
               className="w-full justify-start text-xs text-green-700 hover:text-green-800 border-green-300 hover:bg-green-50 dark:text-green-400 dark:border-green-600 dark:hover:bg-green-700/20"
               onClick={() => handleOpenWhatsAppDialog('full_lab_report')}
               disabled={!visitId || !patient /* || resultsLocked - if preview implies sendable */}
             >
               <WhatsApp className="ltr:mr-2 rtl:ml-2 h-3.5 w-3.5" />
-              {t('whatsapp:sendReportShort')}
+              {AR.sendReportShort}
             </Button>
-                  <Button variant="outline" size="sm" className="w-full justify-start text-xs" onClick={handlePrintReceipt} disabled={!visitId || isGeneratingPdf}>
-                    <Receipt className="ltr:mr-2 rtl:ml-2 h-3.5 w-3.5" /> {t("common:printReceipt", "Print Lab Receipt")}
+                  <Button className="w-full justify-start text-xs" onClick={handlePrintReceipt} disabled={!visitId || isGeneratingPdf}>
+                    <Receipt className="ltr:mr-2 rtl:ml-2 h-3.5 w-3.5" /> {AR.printReceipt}
                   </Button>
-                  <Button variant="outline" size="sm" className="w-full justify-start text-xs" onClick={handlePrintSampleLabels} disabled={!visitId || isGeneratingPdf}>
-                    <Printer className="ltr:mr-2 rtl:ml-2 h-3.5 w-3.5" />{t("labResults:statusInfo.printSampleLabels")}
+                  <Button className="w-full justify-start text-xs" onClick={handlePrintSampleLabels} disabled={!visitId || isGeneratingPdf}>
+                    <Printer className="ltr:mr-2 rtl:ml-2 h-3.5 w-3.5" />{AR.printSampleLabels}
                   </Button>
                   <Button
-                    variant="outline" size="sm" className="w-full justify-start text-xs"
+                    className="w-full justify-start text-xs"
                     onClick={handleViewReportPreview}
                     disabled={!visitId || isGeneratingPdf || resultsLocked || patientLabQueueItem?.all_requests_paid === false} // Check resultsLocked
-                    title={resultsLocked ? t('labResults:labActions.resultsAreLocked') : t("labResults:statusInfo.viewReportPreview")}
+                    title={resultsLocked ? AR.resultsAreLocked : AR.viewReportPreview}
                   >
                     <FileText className="ltr:mr-2 rtl:ml-2 h-3.5 w-3.5" />
-                    {t("labResults:statusInfo.viewReportPreview")}
+                    {AR.viewReportPreview}
                   </Button>
                 </CardContent>
               </Card>

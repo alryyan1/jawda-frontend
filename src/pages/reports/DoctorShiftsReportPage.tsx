@@ -233,12 +233,12 @@ const DoctorShiftsReportPage: React.FC = () => {
   const closeShiftMutation = useMutation({
     mutationFn: (doctorShiftId: number) => endDoctorShift({ doctor_shift_id: doctorShiftId }),
     onSuccess: () => {
-      toast.success(t("clinic:doctorShifts.shiftClosedSuccess"));
+      toast.success('تم إغلاق المناوبة بنجاح');
       queryClient.invalidateQueries({ queryKey: ["doctorShiftsReport"] });
     },
     onError: (error: unknown) => {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      toast.error(t("clinic:doctorShifts.shiftCloseError"), { description: errorMessage });
+      toast.error('فشل إغلاق المناوبة', { description: errorMessage });
     },
   });
 
@@ -246,7 +246,7 @@ const DoctorShiftsReportPage: React.FC = () => {
     mutationFn: (params: { shiftId: number; flags: Partial<Pick<DoctorShiftReportItem, ProofingFlagKey>> }) =>
       updateDoctorShiftProofingFlags(params.shiftId, params.flags),
     onSuccess: (updatedDoctorShift, variables) => {
-      toast.success(t('review.proofingStatusUpdated'));
+      toast.success('تم تحديث حالة التدقيق');
       queryClient.setQueryData(reportQueryKey, (oldData: PaginatedResponse<DoctorShiftReportItem> | undefined) => {
         if (!oldData) return oldData;
         return {
@@ -261,13 +261,13 @@ const DoctorShiftsReportPage: React.FC = () => {
     },
     onError: (error: unknown) => {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        toast.error(t('review.proofingStatusUpdateFailed'), { description: errorMessage });
+        toast.error('فشل تحديث حالة التدقيق', { description: errorMessage });
     },
   });
 
   const handleProofingAction = (shiftId: number, flagField: ProofingFlagKey, currentValue?: boolean) => {
     if (!canUpdateProofing) {
-        toast.error(t('common:error.unauthorizedAction'));
+        toast.error('هذا الإجراء غير مصرح به');
         return;
     }
     if (proofingFlagsMutation.isPending) return;
@@ -308,13 +308,13 @@ const DoctorShiftsReportPage: React.FC = () => {
       setIsPdfPreviewOpen(true);
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      toast.error(t("common:error.pdfGeneratedError"), { description: errorMessage });
+      toast.error('فشل توليد ملف PDF', { description: errorMessage });
     }
   };
 
   const handleDownloadListPdf = () => {
     if (!paginatedData?.data.length) {
-      toast.info(t('common:error.noDataToExport'));
+      toast.info('لا توجد بيانات للتصدير');
       return;
     }
     setIsGeneratingListPdf(true);
@@ -328,7 +328,7 @@ const DoctorShiftsReportPage: React.FC = () => {
         user_id_opened: filters.userIdOpened === "all" ? undefined : parseInt(filters.userIdOpened),
         doctor_name_search: debouncedSearchDoctorName || undefined,
       }),
-      t("reports:doctorShiftsReportTitle"),
+      'تقرير مناوبات الأطباء',
       `Doctor_Shifts_Report_${filters.dateFrom}_to_${filters.dateTo}.pdf`
     ).finally(() => setIsGeneratingListPdf(false));
   };
@@ -337,7 +337,7 @@ const DoctorShiftsReportPage: React.FC = () => {
     setIsGeneratingSummaryPdfId(shift.id);
     generatePdf(
       () => downloadDoctorShiftFinancialSummaryPdf(shift.id),
-      t("reports:actions.printFinancialSummary"),
+      'طباعة الملخص المالي',
       `Doctor_Shift_Summary_${shift.id}.pdf`
     ).finally(() => setIsGeneratingSummaryPdfId(null));
   };
@@ -350,10 +350,7 @@ const DoctorShiftsReportPage: React.FC = () => {
   if (error)
     return (
       <p className="text-destructive p-4 text-center">
-        {t("common:error.fetchFailedExt", {
-          entity: t("reports:doctorShiftsReportTitle"),
-          message: error.message,
-        })}
+        فشل جلب البيانات: تقرير مناوبات الأطباء: {error.message}
       </p>
     );
 
@@ -381,7 +378,7 @@ const DoctorShiftsReportPage: React.FC = () => {
         {isFetching && !isLoading && (
           <div className="text-sm text-muted-foreground my-2 text-center py-2">
             <Loader2 className="inline h-4 w-4 animate-spin" />{" "}
-            {t("common:updatingList")}
+            جاري تحديث القائمة...
           </div>
         )}
 

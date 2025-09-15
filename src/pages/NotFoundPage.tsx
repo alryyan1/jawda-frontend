@@ -1,7 +1,6 @@
 // src/pages/NotFoundPage.tsx
 import React from 'react';
 import { Link, useRouteError, isRouteErrorResponse, useLocation } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { AlertTriangle, Home } from 'lucide-react';
@@ -17,26 +16,25 @@ const NotFoundPage: React.FC<NotFoundPageProps> = ({
     message: propMessage,
     errorCode: propErrorCode 
 }) => {
-  const { t } = useTranslation(['common', 'errors']); // Assuming an 'errors' namespace for error messages
   const routeError = useRouteError(); // For use as an errorElement
   const location = useLocation(); // To get state if message is passed via navigation
 
-  let displayTitle = propTitle || t('errors:notFound.title', "Page Not Found");
-  let displayMessage = propMessage || t('errors:notFound.defaultMessage', "Sorry, the page you are looking for does not exist or has been moved.");
+  let displayTitle = propTitle || 'الصفحة غير موجودة';
+  let displayMessage = propMessage || 'عذرًا، الصفحة التي تبحث عنها غير موجودة أو تم نقلها.';
   let displayErrorCode: string | number | undefined = propErrorCode;
 
   if (isRouteErrorResponse(routeError)) {
     // This is a response error (e.g., 404, 403, 500) from a loader or action
-    displayTitle = t(`errors:status.${routeError.status}.title`, routeError.statusText || "Error");
-    displayMessage = routeError.data?.message || routeError.data || t(`errors:status.${routeError.status}.message`, "An unexpected error occurred.");
+    displayTitle = routeError.statusText || 'خطأ';
+    displayMessage = routeError.data?.message || routeError.data || 'حدث خطأ غير متوقع.';
     displayErrorCode = routeError.status;
   } else if (routeError instanceof Error) {
     // This is a generic Error object
-    displayTitle = t('errors:generic.title', "An Error Occurred");
-    displayMessage = routeError.message || t('errors:generic.message', "Something went wrong.");
+    displayTitle = 'حدث خطأ';
+    displayMessage = routeError.message || 'حدث خطأ ما.';
     displayErrorCode = "Error";
   } else if (typeof routeError === 'string') {
-    displayTitle = t('errors:generic.title', "An Error Occurred");
+    displayTitle = 'حدث خطأ';
     displayMessage = routeError;
     displayErrorCode = "Error";
   }
@@ -44,7 +42,7 @@ const NotFoundPage: React.FC<NotFoundPageProps> = ({
   // Check for message passed via location state (e.g., from a programmatic navigation)
   if (location.state?.errorMessage) {
     displayMessage = location.state.errorMessage;
-    if (!propTitle && !routeError) displayTitle = t('errors:customError.title', "Information");
+    if (!propTitle && !routeError) displayTitle = 'معلومة';
   }
   if (location.state?.errorTitle) {
     displayTitle = location.state.errorTitle;
@@ -68,7 +66,7 @@ const NotFoundPage: React.FC<NotFoundPageProps> = ({
           <Button asChild className="mt-8">
             <Link to="/">
               <Home className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-              {t('errors:notFound.goHomeButton', "Go to Homepage")}
+              الذهاب للصفحة الرئيسية
             </Link>
           </Button>
         </CardContent>

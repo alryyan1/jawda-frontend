@@ -4,7 +4,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { Button } from '@/components/ui/button';
@@ -22,21 +21,20 @@ import { createRole, updateRole, getRoleById, getPermissionsList } from '@/servi
 export enum RoleFormMode { CREATE = 'create', EDIT = 'edit' }
 interface RoleFormPageProps { mode: RoleFormMode; }
 
-const getRoleFormSchema = (t: (key: string, options?: any) => string) => z.object({
-  name: z.string().min(1, { message: t('common:validation.required', { field: t('roles:form.nameLabel')}) }),
+const roleFormSchema = z.object({
+  name: z.string().min(1, { message: 'الاسم مطلوب' }),
   permissions: z.array(z.string()).optional(), // Array of permission names
 });
 type RoleFormValues = z.infer<ReturnType<typeof getRoleFormSchema>>;
 
 const RoleFormPage: React.FC<RoleFormPageProps> = ({ mode }) => {
-  const { t } = useTranslation(['roles', 'common']);
   const navigate = useNavigate();
   const { roleId } = useParams<{ roleId?: string }>();
   const queryClient = useQueryClient();
   const isEditMode = mode === RoleFormMode.EDIT;
   const [searchTerm, setSearchTerm] = useState('');
 
-  const roleFormSchema = getRoleFormSchema(t);
+  
 
   const { data: roleData, isLoading: isLoadingRole, isFetching: isFetchingRole } = useQuery({
     queryKey: ['role', roleId],
@@ -71,13 +69,13 @@ const RoleFormPage: React.FC<RoleFormPageProps> = ({ mode }) => {
     mutationFn: (data: RoleFormData) => 
         isEditMode && roleId ? updateRole(Number(roleId), data) : createRole(data),
     onSuccess: () => {
-      toast.success(t('roles:form.roleSavedSuccess'));
+      toast.success('تم حفظ الدور بنجاح');
       queryClient.invalidateQueries({ queryKey: ['roles'] });
       if(isEditMode && roleId) queryClient.invalidateQueries({ queryKey: ['role', roleId] });
       navigate('/roles');
     },
     onError: (error: Error & { response?: { data?: { errors?: Record<string, string[]>; message?: string } } }) => {
-      let errorMessage = t('roles:form.roleSaveError');
+      let errorMessage = 'فشل حفظ الدور';
       if (error.response?.data?.errors) {
         const fieldErrors = Object.values(error.response.data.errors).flat().join(' ');
         errorMessage = `${errorMessage}${fieldErrors ? `: ${fieldErrors}` : ''}`;
@@ -145,22 +143,22 @@ const RoleFormPage: React.FC<RoleFormPageProps> = ({ mode }) => {
     return filtered;
   }, [groupedPermissions, searchTerm, t]);
   console.log(groupedPermissions);  
-  if (isEditMode && isLoadingRole) return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin" /> {t('common:loading')}</div>;
+  if (isEditMode && isLoadingRole) return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin" /> جاري التحميل...</div>;
 
 
   return (
     <Card className="max-w-4xl mx-auto">
       <CardHeader>
-        <CardTitle>{isEditMode ? t('roles:editRoleTitle') : t('roles:createRoleTitle')}</CardTitle>
-        <CardDescription>{t('common:form.fillDetails')}</CardDescription>
+        <CardTitle>{isEditMode ? 'تعديل دور' : 'إضافة دور'}</CardTitle>
+        <CardDescription>يرجى تعبئة البيانات التالية</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <FormField control={control} name="name" render={({ field }) => (
               <FormItem>
-                <FormLabel>{t('roles:form.nameLabel')}</FormLabel>
-                <FormControl><Input placeholder={t('roles:form.namePlaceholder')} {...field} disabled={dataIsLoading || formIsSubmitting}/></FormControl>
+                <FormLabel>الإسم</FormLabel>
+                <FormControl><Input placeholder={'أدخل اسم الدور'} {...field} disabled={dataIsLoading || formIsSubmitting}/></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
@@ -169,16 +167,16 @@ const RoleFormPage: React.FC<RoleFormPageProps> = ({ mode }) => {
               control={control} name="permissions"
               render={() => (
                 <FormItem>
-                  <FormLabel>{t('roles:form.permissionsLabel')}</FormLabel>
-                  <FormDescription>{t('roles:form.assignPermissionsDescription')}</FormDescription>
+                  <FormLabel>الصلاحيات</FormLabel>
+                  <FormDescription>قم بتعيين الصلاحيات المناسبة لهذا الدور</FormDescription>
                   {isLoadingPermissions ? <div className="py-4"><Loader2 className="animate-spin h-6 w-6" /></div> : 
                    !groupedPermissions || Object.keys(groupedPermissions).length === 0 ? 
-                   <p className="text-sm text-muted-foreground py-4">{t('roles:form.noPermissionsAvailable')}</p> : (
+                   <p className="text-sm text-muted-foreground py-4">لا توجد صلاحيات متاحة</p> : (
                     <>
                       <div className="relative mb-4">
                         <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input
-                          placeholder={t('roles:form.searchPermissions')}
+                          placeholder={'ابحث عن صلاحية'}
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
                           className="pl-8"
@@ -189,8 +187,7 @@ const RoleFormPage: React.FC<RoleFormPageProps> = ({ mode }) => {
                           {Object.entries(filteredGroupedPermissions || {}).sort(([groupA], [groupB]) => groupA.localeCompare(groupB)).map(([groupName, perms]) => (
                             <div key={groupName}>
                               <h4 className="mb-2 font-medium text-md text-primary border-b pb-1">
-                                {/* Attempt to translate group name if you have keys for them */}
-                                {t(`permissions:group.${groupName.toLowerCase().replace(' ', '_')}`, groupName)}
+                                {groupName}
                               </h4>
                               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2">
                                 {perms.sort((a,b) => a.name.localeCompare(b.name)).map((permission) => (
@@ -211,8 +208,7 @@ const RoleFormPage: React.FC<RoleFormPageProps> = ({ mode }) => {
                                           />
                                         </FormControl>
                                         <FormLabel title={permission.name} className="font-normal text-sm whitespace-nowrap">
-                                          {/* Attempt to translate individual permission names */}
-                                          {t(`permissions:${permission.name.replace(/ /g, '_')}`, permission.name)}
+                                          {permission.name}
                                         </FormLabel>
                                       </FormItem>
                                     )}
@@ -231,10 +227,10 @@ const RoleFormPage: React.FC<RoleFormPageProps> = ({ mode }) => {
             />
             
             <div className="flex justify-end gap-2 pt-4">
-              <Button type="button" variant="outline" onClick={() => navigate('/roles')} disabled={formIsSubmitting}>{t('common:cancel')}</Button>
+              <Button type="button" variant="outline" onClick={() => navigate('/roles')} disabled={formIsSubmitting}>إلغاء</Button>
               <Button type="submit" disabled={dataIsLoading || formIsSubmitting}>
                 {formIsSubmitting && <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />}
-                {t('roles:form.saveButton')}
+                حفظ
               </Button>
             </div>
           </form>

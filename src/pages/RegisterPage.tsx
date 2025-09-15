@@ -3,7 +3,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useNavigate, Link } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,11 +26,11 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 
-// Define the Zod schema using the t function for dynamic validation messages
-const getRegisterSchema = (t: Function) => z.object({
-  name: z.string().min(1, { message: t('register:fieldRequired', { field: t('register:nameLabel') }) }),
-  username: z.string().min(3, { message: t('register:usernameMinLength') }),
-  password: z.string().min(6, { message: t('register:passwordMinLength') }),
+// Define the Zod schema with direct Arabic messages
+const getRegisterSchema = () => z.object({
+  name: z.string().min(1, { message: 'الاسم مطلوب' }),
+  username: z.string().min(3, { message: 'اسم المستخدم يجب أن يكون 3 أحرف على الأقل' }),
+  password: z.string().min(6, { message: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' }),
   password_confirmation: z.string(),
   // Add other fields from your User model that are part of registration
   // For example, if 'user_money_collector_type' is needed:
@@ -39,7 +38,7 @@ const getRegisterSchema = (t: Function) => z.object({
   //   required_error: t('register:fieldRequired', { field: t('register:userTypeLabel') }) 
   // }),
 }).refine((data) => data.password === data.password_confirmation, {
-  message: t('register:passwordsDoNotMatch'),
+  message: 'كلمتا المرور غير متطابقتين',
   path: ["password_confirmation"], // Path of error for password_confirmation field
 });
 
@@ -60,9 +59,7 @@ const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
   const [apiError, setApiError] = useState<string | null>(null);
   
-  const { t } = useTranslation(['register', 'common']);
-
-  const registerSchema = getRegisterSchema(t);
+  const registerSchema = getRegisterSchema();
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -84,13 +81,13 @@ const RegisterPage: React.FC = () => {
       await authRegister(data);
       navigate('/'); // Redirect to dashboard or home page
     } catch (error: any) {
-      let errorMessage = t('register:registrationFailedDefault');
+      let errorMessage = 'فشل التسجيل. حاول لاحقاً.';
       if (error.response && error.response.data) {
           
         if (error.response.data.errors) {
           // Handle Laravel validation errors
           const fieldErrors = Object.entries(error.response.data.errors)
-            .map(([field, messages]) => `${t(`register:${field}Label`, field)}: ${(messages as string[]).join(', ')}`) // Attempt to translate field names
+            .map(([field, messages]) => `${field}: ${(messages as string[]).join(', ')}`)
             .join(' | ');
           errorMessage = fieldErrors || errorMessage;
         } else if (error.response.data.message) {
@@ -108,8 +105,8 @@ const RegisterPage: React.FC = () => {
     <div className="flex items-center justify-center min-h-screen bg-slate-100 dark:bg-slate-900 p-4">
       <Card className="w-full max-w-md"> {/* Made card slightly wider for more fields */}
         <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl font-bold">{t('register:title')}</CardTitle>
-          <CardDescription>{t('register:description')}</CardDescription>
+          <CardTitle className="text-2xl font-bold">تسجيل حساب</CardTitle>
+          <CardDescription>يرجى إدخال بياناتك لإنشاء حساب جديد</CardDescription>
         </CardHeader>
 
         <Form {...form}>
@@ -125,10 +122,10 @@ const RegisterPage: React.FC = () => {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t('register:nameLabel')}</FormLabel>
+                    <FormLabel>الاسم</FormLabel>
                     <FormControl>
                       <Input 
-                        placeholder={t('register:namePlaceholder')} 
+                        placeholder={'الاسم الكامل'} 
                         {...field} 
                         disabled={currentIsLoading} 
                       />
@@ -142,10 +139,10 @@ const RegisterPage: React.FC = () => {
                 name="username"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t('register:usernameLabel')}</FormLabel>
+                    <FormLabel>اسم المستخدم</FormLabel>
                     <FormControl>
                       <Input 
-                        placeholder={t('register:usernamePlaceholder')} 
+                        placeholder={'اسم المستخدم'} 
                         {...field} 
                         disabled={currentIsLoading} 
                       />
@@ -159,11 +156,11 @@ const RegisterPage: React.FC = () => {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t('register:passwordLabel')}</FormLabel>
+                    <FormLabel>كلمة المرور</FormLabel>
                     <FormControl>
                       <Input 
                         type="password" 
-                        placeholder={t('register:passwordPlaceholder')} 
+                        placeholder={'كلمة المرور'} 
                         {...field} 
                         disabled={currentIsLoading} 
                       />
@@ -177,11 +174,11 @@ const RegisterPage: React.FC = () => {
                 name="password_confirmation"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t('register:confirmPasswordLabel')}</FormLabel>
+                    <FormLabel>تأكيد كلمة المرور</FormLabel>
                     <FormControl>
                       <Input 
                         type="password" 
-                        placeholder={t('register:confirmPasswordPlaceholder')} 
+                        placeholder={'تأكيد كلمة المرور'} 
                         {...field} 
                         disabled={currentIsLoading} 
                       />
@@ -219,12 +216,12 @@ const RegisterPage: React.FC = () => {
             <CardFooter className="flex flex-col gap-4">
               <Button type="submit" className="w-full" disabled={currentIsLoading}>
                 {currentIsLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {currentIsLoading ? t('register:registeringButton') : t('register:registerButton')}
+                {currentIsLoading ? 'جاري التسجيل...' : 'تسجيل'}
               </Button>
               <div className="text-center text-sm text-muted-foreground">
-                {t('register:hasAccountPrompt')}{' '}
+                لديك حساب بالفعل؟{' '}
                 <Link to="/login" className="font-medium text-primary hover:underline underline-offset-4">
-                  {t('register:loginLinkText')}
+                  تسجيل الدخول
                 </Link>
               </div>
             </CardFooter>

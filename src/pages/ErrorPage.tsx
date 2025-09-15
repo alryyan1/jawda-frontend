@@ -1,6 +1,5 @@
 import React from 'react';
 import { useRouteError, useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -17,13 +16,12 @@ interface ErrorResponse {
 const ErrorPage: React.FC = () => {
   const error = useRouteError() as ErrorResponse;
   const navigate = useNavigate();
-  const { t } = useTranslation(['common']);
 
   const getErrorMessage = () => {
     if (error.data?.message) return error.data.message;
     if (error.message) return error.message;
     if (error.statusText) return error.statusText;
-    return t('common:error.unknownError');
+    return 'حدث خطأ غير معروف';
   };
 
   const handleGoBack = () => {
@@ -43,8 +41,8 @@ const ErrorPage: React.FC = () => {
         
         <h1 className="text-2xl font-bold mb-2 text-foreground">
           {error.status === 404 
-            ? t('common:error.pageNotFound') 
-            : t('common:error.somethingWentWrong')}
+            ? 'الصفحة غير موجودة' 
+            : 'حدث خطأ ما'}
         </h1>
         
         <p className="text-muted-foreground mb-6">
@@ -57,13 +55,13 @@ const ErrorPage: React.FC = () => {
             onClick={handleGoBack}
             className="flex-1 max-w-[200px] mx-auto"
           >
-            {t('common:actions.goBack')}
+            عودة للخلف
           </Button>
           <Button 
             onClick={handleGoHome}
             className="flex-1 max-w-[200px] mx-auto"
           >
-            {t('common:actions.goHome')}
+            الذهاب للصفحة الرئيسية
           </Button>
         </div>
       </Card>

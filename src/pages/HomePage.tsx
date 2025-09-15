@@ -1,7 +1,6 @@
 // src/pages/HomePage.tsx
 import React, { useState, useMemo, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useTranslation } from "react-i18next";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   Card,
@@ -75,7 +74,7 @@ export const StatCard: React.FC<StatCardProps> = ({
   unit,
   className,
 }) => {
-  const { t } = useTranslation("common");
+  // i18n removed; use direct labels
   const colorClasses = {
     default: "text-primary",
     success: "text-green-600 dark:text-green-400",
@@ -152,7 +151,7 @@ export const StatCard: React.FC<StatCardProps> = ({
             asChild
             className="p-0 h-auto text-xs text-muted-foreground hover:text-primary"
           >
-            <Link to={actionLink}>{t(actionTextKey || "viewDetails")}</Link>
+            <Link to={actionLink}>{actionTextKey || 'عرض التفاصيل'}</Link>
           </Button>
         </CardFooter>
       )}
@@ -176,7 +175,7 @@ const QuickActionButton: React.FC<QuickActionProps> = ({
   descriptionKey,
   className,
 }) => {
-  const { t } = useTranslation(["navigation", "common", "dashboard"]); // Ensure 'dashboard' is used for descriptionKey
+  // i18n removed; expect direct Arabic keys passed in
   return (
     <Button
       variant="outline"
@@ -192,12 +191,10 @@ const QuickActionButton: React.FC<QuickActionProps> = ({
             <Icon className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
           </div>
           <div className="text-left sm:text-center">
-            <p className="font-semibold text-sm">
-              {t(labelKey, { ns: "navigation" })}
-            </p>
+            <p className="font-semibold text-sm">{labelKey}</p>
             {descriptionKey && (
               <p className="text-xs text-muted-foreground hidden sm:block mt-0.5">
-                {t(descriptionKey, { ns: "dashboard" })}
+                {descriptionKey}
               </p>
             )}
           </div>

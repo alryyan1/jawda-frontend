@@ -12,7 +12,7 @@ import createCache from '@emotion/cache';
 import { prefixer } from 'stylis';
 import rtlPlugin from 'stylis-plugin-rtl';
 import './index.css';
-import './i18n';
+// i18n removed
 
 const queryClient = new QueryClient(); // Create a client
 

@@ -35,11 +35,10 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { useTranslation } from "react-i18next";
 import { useAuthorization } from "@/hooks/useAuthorization"; // For permission checks
 
 export default function CompaniesListPage() {
-  const { t, i18n } = useTranslation(["companies", "common"]);
+  // i18n removed
   const queryClient = useQueryClient();
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -66,23 +65,16 @@ export default function CompaniesListPage() {
   const deleteMutation = useMutation({
     mutationFn: deleteCompany,
     onSuccess: () => {
-      toast.success(t("companies:deletedSuccess"));
+      toast.success('تم حذف الشركة بنجاح');
       queryClient.invalidateQueries({ queryKey: ["companies"] });
     },
     onError: (err: any) => {
-      toast.error(
-        t("common:error.deleteFailed", {
-          entity: t("companies:entityName", "Company"),
-        }),
-        { description: err.response?.data?.message || err.message }
-      );
+      toast.error('فشل الحذف', { description: err.response?.data?.message || err.message });
     },
   });
 
   const handleDelete = (companyId: number, companyName: string) => {
-    if (
-      window.confirm(t("companies:deleteConfirmText", { name: companyName }))
-    ) {
+    if (window.confirm(`هل تريد حذف الشركة "${companyName}"؟`)) {
       deleteMutation.mutate(companyId);
     }
   };
@@ -91,17 +83,12 @@ export default function CompaniesListPage() {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin" />{" "}
-        {t("companies:loadingCompanies")}
+        جاري تحميل الشركات...
       </div>
     );
   if (error)
     return (
-      <p className="text-destructive p-4">
-        {t("common:error.fetchFailedExt", {
-          entity: t("companies:entityNamePlural", "Companies"),
-          message: error.message,
-        })}
-      </p>
+      <p className="text-destructive p-4">حدث خطأ أثناء جلب الشركات: {error.message}</p>
     );
 
   const companies = paginatedData?.data || [];
@@ -112,28 +99,22 @@ export default function CompaniesListPage() {
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-2">
           <Building className="h-7 w-7 text-primary" />
-          <h1 className="text-2xl sm:text-3xl font-bold">
-            {t("companies:pageTitle")}
-          </h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">الشركات</h1>
         </div>
         {canCreateCompany && (
           <Button asChild size="sm">
-            <Link to="/settings/companies/new">{t("companies:addCompanyButton")}</Link>
+            <Link to="/settings/companies/new">إضافة شركة</Link>
           </Button>
         )}
       </div>
       {isFetching && (
-        <div className="text-sm text-muted-foreground mb-2">
-          {t("common:updatingList")}
-        </div>
+        <div className="text-sm text-muted-foreground mb-2">جاري تحديث القائمة...</div>
       )}
 
       {companies.length === 0 && !isLoading ? (
         <div className="text-center py-10 text-muted-foreground border rounded-lg bg-card">
           <Building className="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />
-          <p>
-            {t("companies:noCompaniesFound", "No insurance companies found.")}
-          </p>
+          <p>لا توجد شركات للعرض.</p>
           {canCreateCompany && (
             <Button asChild size="sm" className="mt-4">
               <Link to="/settings/companies/new">{t("companies:addCompanyButton")}</Link>
@@ -146,26 +127,26 @@ export default function CompaniesListPage() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[50px] hidden sm:table-cell text-center">
-                  {t("common:id")}
+                  المعرف
                 </TableHead>
-                <TableHead className="text-center">{t("companies:table.name")}</TableHead>
+                <TableHead className="text-center">الإسم</TableHead>
                 <TableHead className="hidden md:table-cell text-center">
-                  {t("companies:table.phone")}
+                  الهاتف
                 </TableHead>
                 <TableHead className="hidden lg:table-cell text-center">
-                  {t("companies:table.service_endurance")}
+                  تحمل الخدمات
                 </TableHead>
                 <TableHead className="hidden lg:table-cell text-center">
-                  {t("companies:table.lab_endurance")}
+                  تحمل المختبر
                 </TableHead>
                 <TableHead className="text-center">
-                  {t("companies:table.status")}
+                  الحالة
                 </TableHead>
                 <TableHead className="hidden sm:table-cell text-center">
-                  {t("companies:table.contracts")}
+                  العقود
                 </TableHead>
                 <TableHead className="text-center">
-                  {t("companies:table.actions")}
+                  الإجراءات
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -207,11 +188,11 @@ export default function CompaniesListPage() {
                       : "-"}
                     </TableCell>
                     <TableCell className="text-right text-center">
-                    <DropdownMenu dir={i18n.dir()}>
+                    <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                       <Button variant="ghost" className="h-8 w-8 p-0">
                         <span className="sr-only">
-                        {t("common:actions.openMenu", "Open menu")}
+                        فتح القائمة
                         </span>
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
@@ -224,7 +205,7 @@ export default function CompaniesListPage() {
                           className="flex items-center w-full"
                         >
                           <FileText className="rtl:ml-2 ltr:mr-2 h-4 w-4" />{" "}
-                          {t("companies:manageContractsButton")}
+                          إدارة عقود الخدمات
                         </Link>
                         </DropdownMenuItem>
                         )}
@@ -235,7 +216,7 @@ export default function CompaniesListPage() {
                           className="flex items-center w-full"
                         >
                           <FileText className="rtl:ml-2 ltr:mr-2 h-4 w-4" />{" "}
-                          {t("companies:manageTestContractsButton")}
+                          إدارة عقود التحاليل
                         </Link>
                         </DropdownMenuItem>
                         )}
@@ -246,7 +227,7 @@ export default function CompaniesListPage() {
                           className="flex items-center w-full"
                         >
                           <Edit className="rtl:ml-2 ltr:mr-2 h-4 w-4" />{" "}
-                          {t("common:edit")}
+                          تعديل
                         </Link>
                         </DropdownMenuItem>
                       )}
@@ -269,7 +250,7 @@ export default function CompaniesListPage() {
                           ) : (
                           <Trash2 className="rtl:ml-2 ltr:mr-2 h-4 w-4" />
                           )}
-                          {t("common:delete")}
+                          حذف
                         </DropdownMenuItem>
                         </>
                       )}
@@ -290,13 +271,10 @@ export default function CompaniesListPage() {
             size="sm"
             variant="outline"
           >
-            {t("common:pagination.previous")}
+            السابق
           </Button>
           <span className="text-sm text-muted-foreground">
-            {t("common:pagination.pageInfo", {
-              current: meta.current_page,
-              total: meta.last_page,
-            })}
+            صفحة {meta.current_page} من {meta.last_page}
           </span>
           <Button
             onClick={() =>
@@ -306,7 +284,7 @@ export default function CompaniesListPage() {
             size="sm"
             variant="outline"
           >
-            {t("common:pagination.next")}
+            التالي
           </Button>
         </div>
       )}

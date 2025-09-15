@@ -4,7 +4,6 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useNavigate, useParams } from "react-router-dom";
-import { useTranslation } from "react-i18next";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
@@ -57,28 +56,20 @@ interface DoctorFormPageProps {
   mode: DoctorFormMode;
 }
 
-const getDoctorFormSchema = (t: Function) =>
+const getDoctorFormSchema = () =>
   z.object({
     name: z.string().min(1, {
-      message: t("common:validation.required", {
-        field: t("doctors:form.nameLabel"),
-      }),
+      message: 'الاسم مطلوب',
     }),
     phone: z.string().min(1, {
-      message: t("common:validation.required", {
-        field: t("doctors:form.phoneLabel"),
-      }),
+      message: 'رقم الهاتف مطلوب',
     }),
     specialist_id: z
       .string({
-        required_error: t("common:validation.required", {
-          field: t("doctors:form.specialistLabel"),
-        }),
+        required_error: 'التخصص مطلوب',
       })
       .min(1, {
-        message: t("common:validation.required", {
-          field: t("doctors:form.specialistLabel"),
-        }),
+        message: 'التخصص مطلوب',
       }),
     cash_percentage: z
       .string()
@@ -113,7 +104,7 @@ const getDoctorFormSchema = (t: Function) =>
         { message: "0-100" }
       ),
     start: z.string().refine((val) => !isNaN(parseInt(val)), {
-      message: t("common:validation.mustBeNumber"),
+      message: 'يجب أن يكون رقمًا',
     }),
     image_file: z.any().optional(), // Now fully optional
     image: z.string().nullable().optional(),
@@ -125,14 +116,13 @@ const getDoctorFormSchema = (t: Function) =>
 type DoctorFormValues = z.infer<ReturnType<typeof getDoctorFormSchema>>;
 
 const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
-  const { t } = useTranslation(["doctors", "common"]);
   const navigate = useNavigate();
   const { doctorId } = useParams<{ doctorId?: string }>();
   const queryClient = useQueryClient();
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const isEditMode = mode === DoctorFormMode.EDIT;
-  const doctorFormSchema = getDoctorFormSchema(t);
+  const doctorFormSchema = getDoctorFormSchema();
   const { data: specialists, isLoading: isLoadingSpecialists } = useQuery<
     Specialist[],
     Error
@@ -251,9 +241,7 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
     },
     onError: (error: any) => {
       console.error("Save error:", error.response?.data || error.message);
-      toast.error(
-        error.response?.data?.message || t("doctors:form.doctorSaveError")
-      );
+      toast.error(error.response?.data?.message || 'فشل حفظ بيانات الطبيب');
     },
   });
 
@@ -295,18 +283,14 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
   if (isEditMode && isLoadingDoctor)
     return (
       <div className="flex justify-center items-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin" /> {t("common:loading")}
+        <Loader2 className="h-8 w-8 animate-spin" /> جاري التحميل...
       </div>
     );
   return (
     <Card className="max-w-3xl mx-auto">
       <CardHeader>
-        <CardTitle>
-          {isEditMode
-            ? t("doctors:editDoctorTitle")
-            : t("doctors:createDoctorTitle")}
-        </CardTitle>
-        <CardDescription>{t("common:form.fillDetails")}</CardDescription>
+        <CardTitle>{isEditMode ? 'تعديل طبيب' : 'إضافة طبيب'}</CardTitle>
+        <CardDescription>يرجى تعبئة البيانات التالية</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -317,10 +301,10 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("doctors:form.nameLabel")}</FormLabel>
+                    <FormLabel>الاسم</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder={t("doctors:form.namePlaceholder")}
+                        placeholder={'اسم الطبيب'}
                         {...field}
                       />
                     </FormControl>
@@ -333,11 +317,11 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("doctors:form.phoneLabel")}</FormLabel>
+                    <FormLabel>الهاتف</FormLabel>
                     <FormControl>
                       <Input
                         type="tel"
-                        placeholder={t("doctors:form.phonePlaceholder")}
+                        placeholder={'رقم الهاتف'}
                         {...field}
                       />
                     </FormControl>
@@ -351,7 +335,7 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
               name="specialist_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("doctors:form.specialistLabel")}</FormLabel>
+                  <FormLabel>التخصص</FormLabel>
                   <div className="flex items-center gap-2">
                     {console.log("Selected specialist_id:", field.value)}
                     <Select
@@ -362,16 +346,12 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
                     >
                       <FormControl className="flex-grow">
                         <SelectTrigger>
-                          <SelectValue
-                            placeholder={t("doctors:form.selectSpecialist")}
-                          />
+                          <SelectValue placeholder={'اختر التخصص'} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {isLoadingSpecialists ? (
-                          <SelectItem value="loading" disabled>
-                            {t("common:loading")}
-                          </SelectItem>
+                          <SelectItem value="loading" disabled>جاري التحميل...</SelectItem>
                         ) : (
                           specialists?.map((s) => (
                             <SelectItem key={s.id} value={String(s.id)}>
@@ -397,9 +377,7 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
                 name="cash_percentage"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>
-                      {t("doctors:form.cashPercentageLabel")}
-                    </FormLabel>
+                    <FormLabel>نسبة الكاش %</FormLabel>
                     <FormControl>
                       <Input type="number" step="0.01" {...field} />
                     </FormControl>
@@ -412,9 +390,7 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
                 name="company_percentage"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>
-                      {t("doctors:form.companyPercentageLabel")}
-                    </FormLabel>
+                    <FormLabel>نسبة الشركات %</FormLabel>
                     <FormControl>
                       <Input type="number" step="0.01" {...field} />
                     </FormControl>
@@ -427,7 +403,7 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
                 name="static_wage"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("doctors:form.staticWageLabel")}</FormLabel>
+                    <FormLabel>الأجر الثابت</FormLabel>
                     <FormControl>
                       <Input type="number" step="0.01" {...field} />
                     </FormControl>
@@ -440,9 +416,7 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
                 name="lab_percentage"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>
-                      {t("doctors:form.labPercentageLabel")}
-                    </FormLabel>
+                    <FormLabel>نسبة المختبر %</FormLabel>
                     <FormControl>
                       <Input type="number" step="0.01" {...field} />
                     </FormControl>
@@ -457,7 +431,7 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
               name="start"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("doctors:form.startLabel")}</FormLabel>
+                  <FormLabel>بداية الحساب (رقم)</FormLabel>
                   <FormControl>
                     <Input type="number" {...field} />
                   </FormControl>
@@ -471,7 +445,7 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
               name="image_file"
               render={({ field: { onChange, value, ...restField } }) => (
                 <FormItem>
-                  <FormLabel>{t("doctors:form.imageLabel")}</FormLabel>
+                  <FormLabel>صورة الطبيب</FormLabel>
                   <FormControl>
                     <Input
                       type="file"
@@ -501,9 +475,7 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
                 name="finance_account_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>
-                      {t("doctors:form.financeAccountLabel")}
-                    </FormLabel>
+                    <FormLabel>حساب مالي (كاش/شركة)</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       value={field.value}
@@ -511,16 +483,12 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue
-                            placeholder={t("doctors:form.selectFinanceAccount")}
-                          />
+                          <SelectValue placeholder={'اختر الحساب'} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {isLoadingFinanceAccounts ? (
-                          <SelectItem value="loading" disabled>
-                            {t("common:loading")}
-                          </SelectItem>
+                          <SelectItem value="loading" disabled>جاري التحميل...</SelectItem>
                         ) : (
                           financeAccounts?.map((fa) => (
                             <SelectItem key={fa.id} value={String(fa.id)}>
@@ -539,9 +507,7 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
                 name="finance_account_id_insurance"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>
-                      {t("doctors:form.financeAccountInsuranceLabel")}
-                    </FormLabel>
+                    <FormLabel>حساب مالي للتأمين</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       value={field.value ?? ""}
@@ -549,16 +515,12 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue
-                            placeholder={t("doctors:form.selectFinanceAccount")}
-                          />
+                          <SelectValue placeholder={'اختر الحساب'} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {isLoadingFinanceAccounts ? (
-                          <SelectItem value="loading" disabled>
-                            {t("common:loading")}
-                          </SelectItem>
+                          <SelectItem value="loading" disabled>جاري التحميل...</SelectItem>
                         ) : (
                           financeAccounts?.map((fa) => (
                             <SelectItem key={fa.id} value={String(fa.id)}>
@@ -586,9 +548,7 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
                     />
                   </FormControl>
                   <div className="space-y-1 leading-none">
-                    <FormLabel>
-                      {t("doctors:form.calcInsuranceLabel")}
-                    </FormLabel>
+                    <FormLabel>حساب التأمين ضمن النسبة؟</FormLabel>
                   </div>
                 </FormItem>
               )}
@@ -600,11 +560,11 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
                 variant="outline"
                 onClick={() => navigate("/doctors")}
               >
-                {t("common:cancel")}
+                إلغاء
               </Button>
               <Button type="submit" disabled={isLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {t("doctors:form.saveButton")}
+                حفظ
               </Button>
             </div>
           </form>

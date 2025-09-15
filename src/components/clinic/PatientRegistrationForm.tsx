@@ -287,7 +287,7 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
         company_relation_id: isCompanySelected && formData.company_relation_id ? parseInt(formData.company_relation_id) : undefined,
       };
 
-      const response = await apiClient.post('/api/patients', submissionData);
+      const response = await apiClient.post('/patients', submissionData);
       const newPatient = response.data.data;
 
       setAlert({ type: 'error', message: 'حدث خطأ' });

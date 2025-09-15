@@ -1,7 +1,6 @@
 // src/pages/settings/SettingsLayout.tsx
 import React from 'react';
 import { Outlet, NavLink, /* useLocation */ } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { 
     Settings, Building, FlaskConical, ListOrdered, CreditCard, Printer, Workflow, MessageCircle, 
     ClockIcon,
@@ -33,8 +32,23 @@ const settingsNavItems: SettingsNavItem[] = [
 
 ];
 
+// Function to get Arabic labels for settings navigation
+const getSettingsLabel = (labelKey: string): string => {
+  const labels: Record<string, string> = {
+    'tabs.general': 'عام',
+    'companies': 'الشركات',
+    'laboratory': 'المختبر',
+    'tabs.servicesConfig': 'إعدادات الخدمات',
+    'laboratoryTestsPriceList': 'قائمة أسعار التحاليل',
+    'insuranceAudit': 'مراجعة التأمين',
+    'settings:tabs.shiftDefinitions': 'تعريفات المناوبات',
+    'settings:tabs.holidays': 'العطل',
+    'tabs.serviceGroups': 'مجموعات الخدمات'
+  };
+  return labels[labelKey] || labelKey;
+};
+
 const SettingsLayout: React.FC = () => {
-  const { t, i18n } = useTranslation(['settings', 'common']);
   // const { can } = useAuthorization(); // Implement actual permission checks
 
   // Placeholder 'can' function for layout demonstration
@@ -54,7 +68,7 @@ const SettingsLayout: React.FC = () => {
       >
         <h2 className="text-lg font-semibold mb-4 px-2 flex items-center gap-2">
           <Settings className="h-5 w-5 text-primary" />
-          {t('settings:pageTitle')}
+          الإعدادات
         </h2>
         <nav className="space-y-1">
           {settingsNavItems.map(item => 
@@ -71,7 +85,7 @@ const SettingsLayout: React.FC = () => {
               end // Important for exact path matching
             >
               <item.icon className="h-4 w-4" />
-              {t(item.labelKey, { ns: 'settings' })}
+              {getSettingsLabel(item.labelKey)}
             </NavLink>
           ))}
         </nav>

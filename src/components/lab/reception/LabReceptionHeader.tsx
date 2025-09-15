@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 
 // Custom Components
-import { ConnectionStatusIndicator } from "@/components/common/ConnectionStatusIndicator";
+// Removed connection status indicator (sockets removed)
 
 // Types
 import type { MainTestStripped } from "@/types/labTests";
@@ -106,7 +106,7 @@ const LabReceptionHeader: React.FC<LabReceptionHeaderProps> = ({
               Professional Lab Management System
             </p>
           </div>
-          <ConnectionStatusIndicator size="small" />
+          {/* Sockets removed: no connection status */}
         </div>
 
         {/* Test Selection Autocomplete - Multiple Selection */}

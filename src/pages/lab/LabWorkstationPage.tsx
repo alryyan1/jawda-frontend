@@ -59,8 +59,7 @@ import { sendBackendWhatsAppMedia, type BackendWhatsAppMediaPayload } from "@/se
 import { fileToBase64 } from "@/services/whatsappService";
 import type { Patient } from "@/types/patients";
 import { getAppearanceSettings, type LabAppearanceSettings } from "@/lib/appearance-settings-store";
-import { useLabUpdates } from "@/hooks/useSocketListener";
-import socketService from "@/services/socketService";
+// Removed socket updates and service imports
 
 const LabWorkstationPage: React.FC = () => {
   const { t, i18n } = useTranslation([
@@ -134,7 +133,7 @@ const LabWorkstationPage: React.FC = () => {
     );
   };
   const [visitIdSearchTerm, setVisitIdSearchTerm] = useState("");
-  useLabUpdates();
+  // Sockets removed: no realtime lab updates listener
   // Fetch global current open clinic shift
   const { data: currentClinicShiftGlobal, isLoading: isLoadingGlobalShift } =
     useQuery<Shift | null, Error>({

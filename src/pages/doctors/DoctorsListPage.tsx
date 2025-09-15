@@ -1,5 +1,5 @@
 // src/pages/doctors/DoctorsListPage.tsx
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { getDoctors, deleteDoctor } from '../../services/doctorService';
@@ -9,12 +9,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, Trash2, Edit, Loader2, Search, ListChecks } from 'lucide-react';
 import { toast } from 'sonner';
-import { useTranslation } from 'react-i18next';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useDebounce } from '@/hooks/useDebounce';
-import i18n from '@/i18n';
 import ManageDoctorServicesDialog from '@/components/doctors/ManageDoctorServicesDialog';
 
 interface ErrorWithMessage {
@@ -22,7 +20,6 @@ interface ErrorWithMessage {
 }
 
 export default function DoctorsListPage() {
-  const { t } = useTranslation(['doctors', 'common']);
   const queryClient = useQueryClient();
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
@@ -68,17 +65,17 @@ export default function DoctorsListPage() {
   const deleteMutation = useMutation({
     mutationFn: deleteDoctor,
     onSuccess: () => {
-      toast.success(t('doctors:deletedSuccess'));
+      toast.success("تم حذف الطبيب بنجاح!");
       queryClient.invalidateQueries({ queryKey: ['doctors'] });
     },
     onError: (err: ErrorWithMessage) => {
-      toast.error(t('doctors:deleteError'), { description: err.message || t('common:error.generic')});
+      toast.error("فشل حذف الطبيب.", { description: err.message || "حدث خطأ غير متوقع."});
     }
   });
 
   const handleDelete = (id: number) => {
     // Use shadcn dialog for confirmation later if desired
-    if (window.confirm(t('doctors:deleteConfirmText'))) {
+    if (window.confirm("هل أنت متأكد من حذف هذا الطبيب؟")) {
       deleteMutation.mutate(id);
     }
   };
@@ -106,8 +103,8 @@ export default function DoctorsListPage() {
   };
 
 
-  if (isLoading && !isFetching) return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin" /> {t('doctors:loadingDoctors')}</div>;
-  if (error) return <p className="text-destructive p-4">{t('doctors:errorFetchingDoctors', { message: error.message })}</p>;
+  if (isLoading && !isFetching) return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin" /> جارٍ تحميل الأطباء...</div>;
+  if (error) return <p className="text-destructive p-4">{`فشل تحميل الأطباء: ${error.message}`}</p>;
 
   const doctors = paginatedData?.data || [];
   const meta = paginatedData?.meta;
@@ -115,9 +112,9 @@ export default function DoctorsListPage() {
   return (
     <div className="container mx-auto py-4 sm:py-6 lg:py-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold">{t('doctors:pageTitle')}</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold">إدارة الأطباء</h1>
         <Button asChild size="sm">
-          <Link to="/doctors/new">{t('doctors:addDoctorButton')}</Link>
+          <Link to="/doctors/new">إضافة طبيب جديد</Link>
         </Button>
       </div>
 
@@ -127,7 +124,7 @@ export default function DoctorsListPage() {
             <Search className="h-4 w-4 text-muted-foreground shrink-0" />
             <Input
               type="text"
-              placeholder={t('common:searchPlaceholder')}
+              placeholder="ابحث بالاسم..."
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
@@ -139,23 +136,23 @@ export default function DoctorsListPage() {
         </div>
       </Card>
 
-      {isFetching && <div className="text-sm text-muted-foreground mb-2">{t('common:updatingList')}</div>}
+      {isFetching && <div className="text-sm text-muted-foreground mb-2">جاري تحديث القائمة...</div>}
       
       {doctors.length === 0 && !isLoading ? (
-        <div className="text-center py-10 text-muted-foreground">{t('doctors:noDoctorsFound')}</div>
+        <div className="text-center py-10 text-muted-foreground">لم يتم العثور على أطباء</div>
       ) : (
         <Card>
             <Table>
                 <TableHeader>
                 <TableRow>
-                    <TableHead className="w-[80px] text-center">{t('doctors:table.image')}</TableHead>
-                    <TableHead className='text-center'>{t('doctors:table.name')}</TableHead>
-                    <TableHead className="hidden md:table-cell text-center">{t('doctors:table.phone')}</TableHead>
-                    <TableHead className="hidden sm:table-cell text-center">{t('doctors:table.specialist')}</TableHead>
-                    <TableHead className="hidden lg:table-cell text-center">{t('doctors:table.cashPercentage')}</TableHead>
-                    <TableHead className="hidden lg:table-cell text-center">{t('doctors:table.companyPercentage')}</TableHead>
-                    <TableHead className="hidden lg:table-cell text-center">{t('doctors:table.staticWage')}</TableHead>
-                    <TableHead className="text-center">{t('doctors:table.actions')}</TableHead>
+                    <TableHead className="w-[80px] text-center">الصورة</TableHead>
+                    <TableHead className='text-center'>الاسم</TableHead>
+                    <TableHead className="hidden md:table-cell text-center">الهاتف</TableHead>
+                    <TableHead className="hidden sm:table-cell text-center">الاختصاص</TableHead>
+                    <TableHead className="hidden lg:table-cell text-center">نسبة النقد</TableHead>
+                    <TableHead className="hidden lg:table-cell text-center">نسبة الشركة</TableHead>
+                    <TableHead className="hidden lg:table-cell text-center">الراتب الثابت</TableHead>
+                    <TableHead className="text-center">إجراءات</TableHead>
                 </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -174,22 +171,22 @@ export default function DoctorsListPage() {
                     <TableCell className="hidden lg:table-cell text-center">{doctor.company_percentage || 'N/A'}</TableCell>
                     <TableCell className="hidden lg:table-cell text-center">{doctor.static_wage || 'N/A'}</TableCell>
                     <TableCell className="text-center">
-                        <DropdownMenu dir={i18n.dir()}>
+                        <DropdownMenu dir="rtl">
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">{t('common:actions.openMenu', 'Open menu')}</span>
+                            <span className="sr-only">فتح القائمة</span>
                             <MoreHorizontal className="h-4 w-4" />
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                             <DropdownMenuItem asChild>
                             <Link to={`/doctors/${doctor.id}/edit`} className="flex items-center w-full">
-                                <Edit className="rtl:ml-2 ltr:mr-2 h-4 w-4" /> {t('common:edit')}
+                                <Edit className="rtl:ml-2 ltr:mr-2 h-4 w-4" /> تعديل
                             </Link>
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => handleManageDoctorServices(doctor)} className="flex items-center w-full">
-      <ListChecks className="rtl:ml-2 ltr:mr-2 h-4 w-4" /> {t('doctors:manageServicesButton')}
+      <ListChecks className="rtl:ml-2 ltr:mr-2 h-4 w-4" /> إدارة الخدمات
     </DropdownMenuItem>
                             <DropdownMenuItem
                             onClick={() => handleDelete(doctor.id)}
@@ -200,7 +197,7 @@ export default function DoctorsListPage() {
                                 ? <Loader2 className="rtl:ml-2 ltr:mr-2 h-4 w-4 animate-spin"/> 
                                 : <Trash2 className="rtl:ml-2 ltr:mr-2 h-4 w-4" />
                             }
-                            {t('common:delete')}
+                            حذف
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                         </DropdownMenu>
@@ -220,10 +217,10 @@ export default function DoctorsListPage() {
             size="sm"
             variant="outline"
           >
-            {t('common:pagination.previous')}
+            السابق
           </Button>
           <span className="text-sm text-muted-foreground">
-            {t('common:pagination.pageInfo', { current: meta.current_page, total: meta.last_page })}
+            {`صفحة ${meta.current_page} من ${meta.last_page}`}
           </span>
           <Button 
             onClick={() => setCurrentPage(p => Math.min(meta.last_page, p + 1))} 
@@ -231,7 +228,7 @@ export default function DoctorsListPage() {
             size="sm"
             variant="outline"
           >
-            {t('common:pagination.next')}
+            التالي
           </Button>
         </div>
       )}

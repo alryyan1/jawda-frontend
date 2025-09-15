@@ -31,10 +31,8 @@ import {
   Stethoscope,
   Settings,
   LogOut,
-  ChevronDown,
   Sun,
   Moon,
-  Languages,
   FileBarChart2,
   ShieldCheck,
   CalendarClock,
@@ -42,13 +40,11 @@ import {
   ChevronsLeft,
   ChevronsRight,
   FlaskConical,
-  MessageCircle,
   ClipboardEditIcon,
   Syringe,
   Microscope,
   Banknote,
 } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import { Toaster } from "sonner";
 import {
   Tooltip,
@@ -58,12 +54,11 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { getSidebarCollapsedState, setSidebarCollapsedState } from '../lib/sidebar-store';
-import { Money } from "@mui/icons-material";
 
 // Define navigation items structure
 export interface NavItem {
   to: string;
-  labelKey: string; // e.g., 'dashboard', 'clinic'
+  label: string; // Direct Arabic text
   icon: React.ElementType;
   permission?: string; // Optional: permission string from your PermissionName type
   children?: NavItem[]; 
@@ -71,28 +66,28 @@ export interface NavItem {
 
 // Main Navigation Items
 const mainNavItems: NavItem[] = [
-  { to: '/', labelKey: 'dashboard', icon: Home, permission: 'view dashboard' },
-  { to: '/clinic', labelKey: 'clinic', icon: BriefcaseMedical, permission: 'access clinic_workspace' },
-  { to: '/lab-reception', labelKey: 'labReception', icon: Microscope, permission: 'access lab_reception' },
-  { to: '/lab-sample-collection', labelKey: 'labSampleCollection', icon: Syringe, permission: 'access lab_sample_collection' },
-  { to: '/lab-workstation', labelKey: 'labWorkstation', icon: FlaskConical, permission: 'access lab_workstation' },
-  { to: '/attendance/sheet', labelKey: 'navigation:attendanceSheet', icon: ClipboardEditIcon, permission: 'record_attendance' },
-  { to: '/patients', labelKey: 'patients', icon: Users, permission: 'list patients' },
-  { to: '/doctors', labelKey: 'doctors', icon: Stethoscope, permission: 'list doctors' },
-  { to: '/analysis', labelKey: 'analysis', icon: FileBarChart2, permission: 'view analysis' },
-  { to: '/schedules-appointments', labelKey: 'schedulesAppointments', icon: CalendarClock, permission: 'view doctor_schedules' }, // Or 'manage appointments'
-  { to: '/cash-reconciliation', labelKey: 'cashReconciliation', icon: Banknote, permission: 'access cash_reconciliation' },
+  { to: '/', label: 'لوحة التحكم', icon: Home, permission: 'view dashboard' },
+  { to: '/clinic', label: 'العيادة', icon: BriefcaseMedical, permission: 'access clinic_workspace' },
+  { to: '/lab-reception', label: 'استقبال المختبر', icon: Microscope, permission: 'access lab_reception' },
+  { to: '/lab-sample-collection', label: 'جمع العينات', icon: Syringe, permission: 'access lab_sample_collection' },
+  { to: '/lab-workstation', label: 'محطة المختبر', icon: FlaskConical, permission: 'access lab_workstation' },
+  { to: '/attendance/sheet', label: 'سجل الحضور', icon: ClipboardEditIcon, permission: 'record_attendance' },
+  { to: '/patients', label: 'المرضى', icon: Users, permission: 'list patients' },
+  { to: '/doctors', label: 'الأطباء', icon: Stethoscope, permission: 'list doctors' },
+  { to: '/analysis', label: 'التحليل', icon: FileBarChart2, permission: 'view analysis' },
+  { to: '/schedules-appointments', label: 'المواعيد والجداول', icon: CalendarClock, permission: 'view doctor_schedules' },
+  { to: '/cash-reconciliation', label: 'التسوية النقدية', icon: Banknote, permission: 'access cash_reconciliation' },
 
-  // { to: '/bulk-whatsapp', labelKey: 'bulkWhatsApp', icon: MessageCircle, permission: 'send bulk whatsapp' },
+  // { to: '/bulk-whatsapp', label: 'الواتساب الجماعي', icon: MessageCircle, permission: 'send bulk whatsapp' },
 ];
 
 // Utility/Admin Navigation Items (typically at the bottom or in a separate group)
 const utilityNavItems: NavItem[] = [
-  { to: '/reports/doctor-shifts', labelKey: 'reports', icon: FileBarChart2, permission: 'view reports_section' },
-  { to: '/users', labelKey: 'users', icon: Users, permission: 'list users' },
-  { to: '/roles', labelKey: 'roles', icon: ShieldCheck, permission: 'list roles' },
-  { to: '/settings/general', labelKey: 'settings', icon: Settings, permission: 'view settings' }, // Points to the default general settings page
-  { to: '/specialists', labelKey: 'specialists', icon: Users, permission: 'list specialists' },
+  { to: '/reports/doctor-shifts', label: 'التقارير', icon: FileBarChart2, permission: 'view reports_section' },
+  { to: '/users', label: 'المستخدمون', icon: Users, permission: 'list users' },
+  { to: '/roles', label: 'الأدوار', icon: ShieldCheck, permission: 'list roles' },
+  { to: '/settings/general', label: 'الإعدادات', icon: Settings, permission: 'view settings' },
+  { to: '/specialists', label: 'الأخصائيون', icon: Users, permission: 'list specialists' },
 ];
 
 
@@ -124,8 +119,6 @@ const useTheme = () => {
 const AppLayout: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  // Ensure all namespaces used by t() are loaded, especially `navigation` and `common`
-  const { t, i18n } = useTranslation(['navigation', 'userMenu', 'common', 'reports', 'labTests', 'settings']); 
   const { theme, toggleTheme } = useTheme();
 
   const [isDesktopSidebarCollapsed, setIsDesktopSidebarCollapsed] = useState<boolean>(getSidebarCollapsedState());
@@ -153,11 +146,6 @@ const AppLayout: React.FC = () => {
     navigate("/login");
   };
 
-  const changeLanguage = (lang: string) => {
-    i18n.changeLanguage(lang);
-    // Optionally, store language preference in localStorage
-    // localStorage.setItem('i18nextLng', lang);
-  };
 
   const getInitials = (name?: string | null) => {
     if (!name?.trim()) return "U";
@@ -185,8 +173,8 @@ const AppLayout: React.FC = () => {
 
     const linkContent = (
       <>
-        <item.icon className={cn("h-5 w-5 flex-shrink-0", !isCollapsed && (i18n.dir() === 'rtl' ? "ml-3" : "mr-3"))} />
-        {!isCollapsed && <span>{t(item.labelKey, { ns: 'navigation' })}</span>}
+        <item.icon className={cn("h-5 w-5 flex-shrink-0", !isCollapsed && "ml-3")} />
+        {!isCollapsed && <span>{item.label}</span>}
       </>
     );
 
@@ -212,8 +200,8 @@ const AppLayout: React.FC = () => {
                 {linkContent}
               </div>
             </TooltipTrigger>
-            <TooltipContent side={i18n.dir() === 'rtl' ? 'left' : 'right'} sideOffset={5}>
-              <p>{t(item.labelKey, { ns: 'navigation' })}</p>
+            <TooltipContent side="left" sideOffset={5}>
+              <p>{item.label}</p>
             </TooltipContent>
           </Tooltip>
         ) : (
@@ -226,7 +214,7 @@ const AppLayout: React.FC = () => {
   const SidebarContent: React.FC<{isMobile?: boolean}> = ({ isMobile = false }) => (
     <div  className="flex flex-col h-full">
       <ScrollArea className="flex-grow"> {/* Added ScrollArea for long lists */}
-        <nav style={{direction: isRTL ? 'rtl' : 'ltr'}} className="space-y-1 p-2">
+        <nav style={{direction: 'rtl'}} className="space-y-1 p-2">
           {mainNavItems.map((item) => (
             <NavLinkItem key={item.to} item={item} isCollapsed={!isMobile && isDesktopSidebarCollapsed} onClick={() => isMobile && setMobileNavOpen(false)} />
           ))}
@@ -240,19 +228,18 @@ const AppLayout: React.FC = () => {
     </div>
   );
   
-  const isRTL = i18n.dir() === 'rtl';
-  const CollapseIcon = isRTL ? ChevronsRight : ChevronsLeft;
-  const ExpandIcon = isRTL ? ChevronsLeft : ChevronsRight ;
+  const CollapseIcon = ChevronsRight;
+  const ExpandIcon = ChevronsLeft;
 
   return (
     <TooltipProvider delayDuration={100}>
-      <div  style={{direction: isRTL ? 'rtl' : 'ltr'}}  className="flex  h-screen bg-muted/30 dark:bg-background text-foreground">
+      <div  style={{direction: 'rtl'}}  className="flex  h-screen bg-muted/30 dark:bg-background text-foreground">
         {/* Desktop Sidebar */}
-        <aside  style={{direction: isRTL ? 'rtl' : 'ltr'}}
+        <aside  style={{direction: 'rtl'}}
             className={cn(
                 "hidden md:flex flex-col fixed inset-y-0 border-border bg-card transition-all duration-300 ease-in-out z-40", // Added z-40
                 isDesktopSidebarCollapsed ? "w-16" : "w-60",
-                isRTL ? "border-l" : "border-r"
+                "border-l"
             )}
         >
           <div className={cn(
@@ -260,8 +247,9 @@ const AppLayout: React.FC = () => {
               isDesktopSidebarCollapsed && "justify-center px-2"
             )}
           >
-            <Link to="/" className={cn("font-bold text-primary truncate", isDesktopSidebarCollapsed ? "text-xl" : "text-lg")}>
-              {isDesktopSidebarCollapsed ? t('appNameShort', { ns: 'common' }) : t("appName", { ns: 'common' })}
+            <Link to="/" className={cn("flex items-center gap-2 font-bold text-primary truncate", isDesktopSidebarCollapsed ? "text-xl" : "text-lg")}>
+              <img src="/logo.png" alt="شعار النظام" className={cn("rounded-md", isDesktopSidebarCollapsed ? "h-8 w-8" : "h-7 w-7")} />
+              {!isDesktopSidebarCollapsed && <span>نظام جودة الطبي</span>}
             </Link>
           </div>
           <SidebarContent />
@@ -270,11 +258,11 @@ const AppLayout: React.FC = () => {
                 <TooltipTrigger asChild>
                     <Button variant="ghost" size="icon" onClick={toggleDesktopSidebar} className="w-full h-10">
                     {isDesktopSidebarCollapsed ? <ExpandIcon className="h-5 w-5" /> : <CollapseIcon className="h-5 w-5" />}
-                    <span className="sr-only">{isDesktopSidebarCollapsed ? t('expandSidebar', {ns: 'common'}) : t('collapseSidebar', {ns: 'common'})}</span>
+                    <span className="sr-only">{isDesktopSidebarCollapsed ? 'توسيع الشريط الجانبي' : 'طي الشريط الجانبي'}</span>
                     </Button>
                 </TooltipTrigger>
-                <TooltipContent side={isRTL ? 'left' : 'right'} sideOffset={5}>
-                    <p>{isDesktopSidebarCollapsed ? t('expandSidebar', {ns: 'common'}) : t('collapseSidebar', {ns: 'common'})}</p>
+                <TooltipContent side="left" sideOffset={5}>
+                    <p>{isDesktopSidebarCollapsed ? 'توسيع الشريط الجانبي' : 'طي الشريط الجانبي'}</p>
                 </TooltipContent>
             </Tooltip>
           </div>
@@ -282,17 +270,18 @@ const AppLayout: React.FC = () => {
 
         {/* Mobile Sidebar (Sheet) */}
         <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
-            <SheetTrigger asChild className="md:hidden ltr:mr-2 rtl:ml-2">
+            <SheetTrigger asChild className="md:hidden ml-2">
                 <Button variant="ghost" size="icon"><Menu className="h-6 w-6" /></Button>
             </SheetTrigger>
             <SheetContent 
-                side={isRTL ? "right" : "left"} 
+                side="right" 
                 className="w-60 p-0 bg-card border-border md:hidden"
             >
                 <SheetHeader className="h-16 px-4 border-b border-border flex flex-row items-center justify-between">
                     <SheetTitle>
-                        <Link to="/" onClick={() => setMobileNavOpen(false)} className="text-lg font-bold text-primary">
-                            {t("appName", { ns: 'common' })}
+                        <Link to="/" onClick={() => setMobileNavOpen(false)} className="flex items-center gap-2 text-lg font-bold text-primary">
+                            <img src="/logo.png" alt="شعار النظام" className="h-7 w-7 rounded-md" />
+                            <span>نظام جودة الطبي</span>
                         </Link>
                     </SheetTitle>
                 </SheetHeader>
@@ -304,7 +293,7 @@ const AppLayout: React.FC = () => {
         <div 
             className={cn(
                 "flex flex-col flex-1 transition-all duration-300 ease-in-out",
-                isDesktopSidebarCollapsed ? (isRTL ? "md:mr-16" : "md:ml-16") : (isRTL ? "md:mr-60" : "md:ml-60")
+                isDesktopSidebarCollapsed ? "md:mr-16" : "md:mr-60"
             )}
         >
             {/* Header */}
@@ -314,7 +303,7 @@ const AppLayout: React.FC = () => {
             )}>
                 <div className="flex items-center">
                     <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
-                        <SheetTrigger asChild className="md:hidden ltr:mr-2 rtl:ml-2">
+                        <SheetTrigger asChild className="md:hidden ml-2">
                             <Button variant="ghost" size="icon"><Menu className="h-6 w-6" /></Button>
                         </SheetTrigger>
                     </Sheet>
@@ -327,27 +316,13 @@ const AppLayout: React.FC = () => {
                   {/* Theme Toggle */}
                   <Tooltip>
                     <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label={t('toggleTheme', {ns: 'common'})}>
+                        <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="تبديل المظهر">
                             {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
                         </Button>
                     </TooltipTrigger>
-                    <TooltipContent><p>{t(theme === 'light' ? 'switchToDark' : 'switchToLight', {ns: 'common'})}</p></TooltipContent>
+                    <TooltipContent><p>{theme === 'light' ? 'التبديل إلى الوضع المظلم' : 'التبديل إلى الوضع المضيء'}</p></TooltipContent>
                   </Tooltip>
 
-                  {/* Language Switcher */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="flex items-center gap-1 px-2">
-                        <Languages className="h-5 w-5" />
-                        <span className="hidden sm:inline">{i18n.language.toUpperCase()}</span>
-                        <ChevronDown className="ltr:ml-1 rtl:mr-1 h-4 w-4 opacity-70" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => changeLanguage("en")} disabled={i18n.language === "en"}>English</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => changeLanguage("ar")} disabled={i18n.language === "ar"}>العربية</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
 
                   {/* User Menu */}
                   <DropdownMenu>
@@ -366,15 +341,15 @@ const AppLayout: React.FC = () => {
                       </DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild disabled={!can('view profile')}>
-                        <Link to="/profile" className="w-full flex items-center"><Users className="ltr:mr-2 rtl:ml-2 h-4 w-4" /> {t('profile', {ns: 'userMenu'})}</Link>
+                        <Link to="/profile" className="w-full flex items-center"><Users className="mr-2 h-4 w-4" /> الملف الشخصي</Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild disabled={!can('view settings')}>
-                        <Link to="/settings/general" className="w-full flex items-center"><Settings className="ltr:mr-2 rtl:ml-2 h-4 w-4" /> {t('settings', {ns: 'userMenu'})}</Link>
+                        <Link to="/settings/general" className="w-full flex items-center"><Settings className="mr-2 h-4 w-4" /> الإعدادات</Link>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive focus:bg-destructive/10">
-                        <LogOut className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-                        <span>{t('logout', {ns: 'navigation'})}</span>
+                        <LogOut className="mr-2 h-4 w-4" />
+                        <span>تسجيل الخروج</span>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

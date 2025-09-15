@@ -1,6 +1,5 @@
 // src/components/clinic/PatientSearchResultDisplay.tsx
 import React from 'react';
-import { useTranslation } from 'react-i18next';
 import { PatientSearchResult } from '@/types/patients';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';

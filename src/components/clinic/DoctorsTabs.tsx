@@ -48,9 +48,9 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId 
     fetchDoctorShifts();
     
     // Set up interval for refetching every 30 seconds
-    const interval = setInterval(fetchDoctorShifts, 30000);
+    // const interval = setInterval(fetchDoctorShifts, 30000);
     
-    return () => clearInterval(interval);
+    // return () => clearInterval(interval);
   }, [fetchDoctorShifts]);
 
 

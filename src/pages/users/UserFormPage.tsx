@@ -4,7 +4,6 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useNavigate, useParams } from "react-router-dom";
-import { useTranslation } from "react-i18next";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
@@ -66,25 +65,23 @@ const getUserFormSchema = (
       name: z
         .string()
         .min(1, {
-          message: t("common:validation.required", {
-            field: t("users:form.nameLabel"),
-          }),
+          message: "الاسم مطلوب",
         })
         .max(255),
       username: z
         .string()
-        .min(3, { message: t("users:validation.usernameMinLength") })
+        .min(3, { message: "يجب أن يكون اسم المستخدم 3 أحرف على الأقل." })
         .max(255),
       password: isEditMode
         ? z
             .string()
             .optional()
             .refine((val) => !val || val.length === 0 || val.length >= 8, {
-              message: t("users:validation.passwordMinLengthOptional"),
+              message: "كلمة المرور يجب أن تحتوي على الحد الأدنى من الأحرف (اختياري)",
             })
         : z
             .string()
-            .min(8, { message: t("users:validation.passwordMinLength") }),
+            .min(8, { message: "يجب أن تكون كلمة المرور 8 أحرف على الأقل." }),
       password_confirmation: isEditMode ? z.string().optional() : z.string(),
       doctor_id: z.string().optional().nullable(),
       is_nurse: z.boolean(),
@@ -93,7 +90,7 @@ const getUserFormSchema = (
       user_money_collector_type: z.enum(["lab", "company", "clinic", "all"]),
       roles: z
         .array(z.string())
-        .min(1, { message: t("users:validation.roleRequired") }),
+        .min(1, { message: "يجب اختيار دور واحد على الأقل." }),
     })
     .refine(
       (data) => {
@@ -103,7 +100,7 @@ const getUserFormSchema = (
         return true;
       },
       {
-        message: t("users:validation.passwordsDoNotMatch"),
+        message: "كلمتا المرور غير متطابقتين.",
         path: ["password_confirmation"],
       }
     );
@@ -111,7 +108,6 @@ const getUserFormSchema = (
 type UserFormSchemaValues = z.infer<ReturnType<typeof getUserFormSchema>>;
 
 const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
-  const { t, i18n } = useTranslation(["users", "common"]);
   const navigate = useNavigate();
   const { userId } = useParams<{ userId?: string }>();
   const queryClient = useQueryClient();
@@ -215,11 +211,9 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
         : createUser(data),
     onSuccess: () => {
       toast.success(
-        t(
-          isEditMode
-            ? "users:form.userUpdatedSuccess"
-            : "users:form.userCreatedSuccess"
-        )
+        isEditMode
+          ? "تم تحديث بيانات المستخدم بنجاح!"
+          : "تم إنشاء المستخدم بنجاح!"
       );
       queryClient.invalidateQueries({ queryKey: ["users"] });
       if (isEditMode && numericUserId) {
@@ -236,9 +230,7 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
           } 
         } 
       };
-      let errorMessage = t(
-        isEditMode ? "users:form.userUpdateError" : "users:form.userCreateError"
-      );
+      let errorMessage = isEditMode ? "فشل تحديث بيانات المستخدم." : "فشل إنشاء المستخدم.";
       if (errorResponse.response?.data?.errors) {
         const fieldErrors = Object.values(errorResponse.response.data.errors)
           .flat()
@@ -279,17 +271,14 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />{" "}
-        {t("common:loadingEntity", { entity: t("users:entityName") })}
+        جارٍ تحميل بيانات المستخدم...
       </div>
     );
   }
   if (userError) {
     return (
       <div className="p-4 text-center text-destructive">
-        {t("common:error.loadFailedExt", {
-          entity: t("users:entityName"),
-          message: userError.message,
-        })}
+        {`فشل تحميل بيانات المستخدم: ${userError.message}`}
       </div>
     );
   }
@@ -304,7 +293,7 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
           className="mb-4"
         >
           <ArrowLeft className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
-          {t("common:backToList", { listName: t("users:pageTitle") })}
+          العودة إلى قائمة إدارة المستخدمين
         </Button>
 
         <Card>
@@ -318,13 +307,13 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
               <div>
                 <CardTitle>
                   {isEditMode
-                    ? t("users:editUserTitle")
-                    : t("users:createUserTitle")}
+                    ? "تعديل بيانات المستخدم"
+                    : "إضافة مستخدم جديد"}
                 </CardTitle>
                 <CardDescription>
                   {isEditMode
-                    ? t("users:form.editDetailsDescription")
-                    : t("users:form.fillDetailsToCreate")}
+                    ? "قم بتعديل بيانات المستخدم أدناه."
+                    : "الرجاء ملء التفاصيل أدناه."}
                 </CardDescription>
               </div>
             </div>
@@ -336,7 +325,7 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
                 className="flex items-center gap-1.5 text-xs"
               >
                 <Key className="h-3.5 w-3.5" />
-                {t("users:changePassword")}
+                تغيير كلمة المرور
               </Button>
             )}
           </CardHeader>
@@ -349,7 +338,7 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
                     name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t("users:form.nameLabel")}</FormLabel>
+                        <FormLabel>الاسم الكامل</FormLabel>
                         <FormControl>
                           <Input
                             {...field}
@@ -365,7 +354,7 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
                     name="username"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t("users:form.usernameLabel")}</FormLabel>
+                        <FormLabel>اسم المستخدم</FormLabel>
                         <FormControl>
                           <Input
                             {...field}
@@ -385,7 +374,7 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
                       name="password"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>{t("users:form.passwordLabel")}</FormLabel>
+                          <FormLabel>كلمة المرور</FormLabel>
                           <FormControl>
                             <Input
                               type="password"
@@ -394,7 +383,7 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
                             />
                           </FormControl>
                           <FormDescription>
-                            {t("users:validation.passwordMinLength")}
+                            يجب أن تكون كلمة المرور 8 أحرف على الأقل.
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
@@ -406,7 +395,7 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>
-                            {t("users:form.confirmPasswordLabel")}
+                            تأكيد كلمة المرور
                           </FormLabel>
                           <FormControl>
                             <Input
@@ -427,7 +416,7 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
                   name="doctor_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("users:form.doctorIdLabel")}</FormLabel>
+                      <FormLabel>الطبيب المرتبط (اختياري)</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         value={field.value || ""}
@@ -437,17 +426,15 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue
-                              placeholder={t(
-                                "users:form.selectDoctorPlaceholder"
-                              )}
+                              placeholder="اختر طبيباً..."
                             />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value=" ">{t("common:none")}</SelectItem>
+                          <SelectItem value=" ">لا يوجد</SelectItem>
                           {isLoadingDoctors ? (
                             <SelectItem value="loading_docs" disabled>
-                              {t("common:loading")}
+                              جار التحميل...
                             </SelectItem>
                           ) : (
                             doctorsList?.map((doc: DoctorStripped) => (
@@ -462,7 +449,7 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
                         </SelectContent>
                       </Select>
                       <FormDescription>
-                        {t("users:form.doctorIdDescription")}
+                        هذا المستخدم مرتبط بطبيب معين.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -476,7 +463,7 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
                     render={({ field }) => (
                       <FormItem className="flex flex-row items-center space-x-3 rtl:space-x-reverse space-y-0 rounded-md border p-3 shadow-sm h-full justify-between">
                         <FormLabel className="font-normal cursor-pointer">
-                          {t("users:form.isNurseLabel")}
+                          هل هو ممرض/ممرضة؟
                         </FormLabel>
                         <FormControl>
                           <Checkbox
@@ -495,7 +482,7 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
                     render={({ field }) => (
                       <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm h-full">
                         <FormLabel className="font-normal cursor-pointer">
-                          {t("users:form.isSupervisorLabel")}
+                          هل هو مشرف؟
                         </FormLabel>
                         <FormControl>
                           <Switch
@@ -514,7 +501,7 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
                     render={({ field }) => (
                       <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm h-full">
                         <FormLabel className="font-normal cursor-pointer">
-                          {t("users:form.isActiveLabel")}
+                          نشط
                         </FormLabel>
                         <FormControl>
                           <Switch
@@ -535,7 +522,7 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        {t("users:form.moneyCollectorTypeLabel")}
+                        نوع محصل الأموال
                       </FormLabel>
                       <Select
                         onValueChange={field.onChange}
@@ -550,21 +537,21 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="all">
-                            {t("users:moneyCollectorTypes.all")}
+                            الكل
                           </SelectItem>
                           <SelectItem value="lab">
-                            {t("users:moneyCollectorTypes.lab")}
+                            المختبر
                           </SelectItem>
                           <SelectItem value="company">
-                            {t("users:moneyCollectorTypes.company")}
+                            الشركة
                           </SelectItem>
                           <SelectItem value="clinic">
-                            {t("users:moneyCollectorTypes.clinic")}
+                            العيادة
                           </SelectItem>
                         </SelectContent>
                       </Select>
                       <FormDescription className="text-xs">
-                        {t("users:form.moneyCollectorTypeDescription")}
+                        حدد نوع محصل الأموال إذا لزم.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -576,9 +563,9 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
                   name="roles"
                   render={() => (
                     <FormItem>
-                      <FormLabel>{t("users:form.rolesLabel")}</FormLabel>
+                      <FormLabel>الأدوار</FormLabel>
                       <FormDescription>
-                        {t("users:form.selectRolesDescription")}
+                        اختر صلاحيات المستخدم
                       </FormDescription>
                       {isLoadingRoles ? (
                         <div className="flex items-center justify-center p-4">
@@ -638,7 +625,7 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
                     onClick={() => navigate("/users")}
                     disabled={mutation.isPending}
                   >
-                    {t("common:cancel")}
+                    إلغاء
                   </Button>
                   <Button
                     type="submit"
@@ -651,7 +638,7 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
                     {mutation.isPending && (
                       <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />
                     )}
-                    {isEditMode ? t("common:saveChanges") : t("common:create")}
+                    {isEditMode ? "حفظ التغييرات" : "إنشاء"}
                   </Button>
                 </div>
               </form>

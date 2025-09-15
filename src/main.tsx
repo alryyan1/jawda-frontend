@@ -13,7 +13,7 @@ const queryClient = new QueryClient(); // Create a client
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <Suspense  fallback={<div className="flex items-center justify-center min-h-screen">Loading translations...</div>}>
+    <Suspense  fallback={<div className="flex items-center justify-center min-h-screen">جار التحميل...</div>}>
       <QueryClientProvider client={queryClient}> {/* Wrap */}
         <AuthProvider>
           <RouterProvider router={router} />

@@ -1,6 +1,5 @@
 // src/pages/ClinicPage.tsx
 import React, { useState, useCallback, useEffect } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import './clinicpage.css';
 
 // Import Child Components (we will create/update these)
@@ -16,7 +15,8 @@ import PatientDetailsColumnClinic from './PatientDetailsColumnClinic';
 import DoctorFinderDialog from './dialogs/DoctorFinderDialog';
 
 const ClinicPage: React.FC = () => {
-  const queryClient = useQueryClient();
+  // Removed React Query client; using local refresh key instead
+  const [activePatientsRefreshKey, setActivePatientsRefreshKey] = useState(0);
    
   // const {currentClinicShift,isLoadingShift,refetchCurrentClinicShift} = useAuth()
   const [showRegistrationForm, setShowRegistrationForm] = useState(true);
@@ -57,11 +57,9 @@ useEffect(() => {
   };
 }, []); // Empty dependency array means this effect runs once on mount and cleans up on unmount
   const handlePatientRegistered = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['activePatients', activeDoctorShift?.id /* or global */] });
-    // Optionally hide form after registration, or keep it open for next one
-    // setShowRegistrationForm(false); 
-    // setSelectedPatientVisit(null); // Clear selection if form is shown
-  }, [queryClient, activeDoctorShift]);
+    // Trigger remount of ActivePatientsList to refresh data without React Query
+    setActivePatientsRefreshKey(prev => prev + 1);
+  }, []);
 
   const handlePatientSelected = useCallback((patient: Patient, visitId: number) => {
     setSelectedPatientVisit({ patient, visitId });
@@ -117,6 +115,7 @@ useEffect(() => {
         {/* Section 3: Active Patients List Panel */}
         <section className="clinic-panel workspace">
           <ActivePatientsList
+            key={activePatientsRefreshKey}
             onPatientSelect={handlePatientSelected}
             selectedPatientVisitId={selectedPatientVisit?.visitId || null}
             doctorShiftId={activeDoctorShift?.id || null}

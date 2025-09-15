@@ -3,7 +3,6 @@ import React, { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useTranslation } from "react-i18next";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -27,10 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   Form,
-  FormControl,
   FormField,
-  FormItem,
-  FormLabel,
   FormMessage,
 } from "@/components/ui/form";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -57,8 +53,6 @@ import {
   updateServiceConfigurationForDoctor,
   removeServiceConfigurationFromDoctor,
 } from "@/services/doctorService"; // Or your new service file
-import { formatNumber } from "@/lib/utils";
-import i18n from "@/i18n";
 
 interface ManageDoctorServicesDialogProps {
   isOpen: boolean;
@@ -71,7 +65,7 @@ interface ManageDoctorServicesDialogProps {
 const doctorServiceItemSchema = z
   .object({
     doctor_service_id: z.number().optional().nullable(), // ID of the doctor_services pivot record (for updates)
-    service_id: z.string().min(1, "Service is required."),
+    service_id: z.string().min(1, "الخدمة مطلوبة."),
     service_name: z.string().optional(), // For display
     percentage: z.string().nullable().optional(),
     fixed: z.string().nullable().optional(),
@@ -90,9 +84,7 @@ const ManageDoctorServicesDialog: React.FC<ManageDoctorServicesDialogProps> = ({
   isOpen,
   onOpenChange,
   doctor,
-  onConfigurationUpdated,
 }) => {
-  const { t } = useTranslation(["doctors", "services", "common"]);
   const queryClient = useQueryClient();
 
   const configuredServicesQueryKey = ["configuredServicesForDoctor", doctor.id];
@@ -123,7 +115,7 @@ const ManageDoctorServicesDialog: React.FC<ManageDoctorServicesDialogProps> = ({
     defaultValues: { configuredServices: [] },
   });
 
-  const { control, handleSubmit, reset, getValues, setValue, watch, trigger } =
+  const { control, reset, getValues, setValue, trigger } =
     form;
 
   const { fields, append, remove } = useFieldArray({
@@ -182,14 +174,14 @@ const ManageDoctorServicesDialog: React.FC<ManageDoctorServicesDialogProps> = ({
     mutationFn: (data: DoctorServiceFormItemValues) =>
       addServiceConfigurationForDoctor(doctor.id, getPayload(data)),
     onSuccess: () => {
-      toast.success(t("doctors:serviceConfig.addedSuccess"));
+      toast.success("تمت إضافة تكوين الخدمة بنجاح!");
       queryClient.invalidateQueries({ queryKey: configuredServicesQueryKey });
       queryClient.invalidateQueries({ queryKey: availableServicesQueryKey });
       setIsAddingNew(false);
     },
-    onError: (err: any) =>
+    onError: (err: Error & { response?: { data?: { message?: string } } }) =>
       toast.error(
-        err.response?.data?.message || t("common:error.createFailed")
+        err.response?.data?.message || "فشل في إنشاء التكوين"
       ),
   });
 
@@ -201,12 +193,12 @@ const ManageDoctorServicesDialog: React.FC<ManageDoctorServicesDialogProps> = ({
         getPayload(data)
       ),
     onSuccess: () => {
-      toast.success(t("doctors:serviceConfig.updatedSuccess"));
+      toast.success("تم تحديث تكوين الخدمة بنجاح!");
       queryClient.invalidateQueries({ queryKey: configuredServicesQueryKey });
     },
-    onError: (err: any) =>
+    onError: (err: Error & { response?: { data?: { message?: string } } }) =>
       toast.error(
-        err.response?.data?.message || t("common:error.updateFailed")
+        err.response?.data?.message || "فشل في تحديث التكوين"
       ),
   });
 
@@ -214,13 +206,13 @@ const ManageDoctorServicesDialog: React.FC<ManageDoctorServicesDialogProps> = ({
     mutationFn: (serviceId: number) =>
       removeServiceConfigurationFromDoctor(doctor.id, serviceId),
     onSuccess: () => {
-      toast.success(t("common:deletedSuccess"));
+      toast.success("تم الحذف بنجاح!");
       queryClient.invalidateQueries({ queryKey: configuredServicesQueryKey });
       queryClient.invalidateQueries({ queryKey: availableServicesQueryKey });
     },
-    onError: (err: any) =>
+    onError: (err: Error & { response?: { data?: { message?: string } } }) =>
       toast.error(
-        err.response?.data?.message || t("common:error.deleteFailed")
+        err.response?.data?.message || "فشل في الحذف"
       ),
   });
 
@@ -234,7 +226,7 @@ const ManageDoctorServicesDialog: React.FC<ManageDoctorServicesDialogProps> = ({
         addMutation.mutate(rowData);
       }
     } else {
-      toast.error(t("common:validation.checkErrorsInRow"));
+      toast.error("يرجى التحقق من الأخطاء في الصف");
     }
   };
 
@@ -270,12 +262,10 @@ const ManageDoctorServicesDialog: React.FC<ManageDoctorServicesDialogProps> = ({
       <DialogContent className="max-w-2xl xl:max-w-2xl max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
-            {t("doctors:serviceConfig.dialogTitle", {
-              doctorName: doctor.name,
-            })}
+            إدارة خدمات الطبيب: {doctor.name}
           </DialogTitle>
           <DialogDescription>
-            {t("doctors:serviceConfig.dialogDescription")}
+            إدارة الخدمات المخصصة لهذا الطبيب
           </DialogDescription>
         </DialogHeader>
 
@@ -288,20 +278,20 @@ const ManageDoctorServicesDialog: React.FC<ManageDoctorServicesDialogProps> = ({
             {/* No global form onSubmit, saves happen per row */}
             <form className="flex-grow flex flex-col overflow-hidden">
               <ScrollArea className="flex-grow pr-1 -mr-2">
-                <Table dir={i18n.dir()} className="text-xs">
+                <Table dir="rtl" className="text-xs">
                   <TableHeader>
                     <TableRow>
                       <TableHead className="min-w-[200px]">
-                        {t("services:table.serviceName")}
+                        اسم الخدمة
                       </TableHead>
                       <TableHead className="w-[120px] text-center">
-                        {t("doctors:serviceConfig.percentage")}
+                        النسبة
                       </TableHead>
                       <TableHead className="w-[120px] text-center">
-                        {t("doctors:serviceConfig.fixedAmount")}
+                        المبلغ الثابت
                       </TableHead>
                       <TableHead className="w-[100px] text-center">
-                        {t("common:actions.openMenu")}
+                        الإجراءات
                       </TableHead>
                     </TableRow>
                   </TableHeader>
@@ -331,9 +321,7 @@ const ManageDoctorServicesDialog: React.FC<ManageDoctorServicesDialogProps> = ({
                                   >
                                     <SelectTrigger className="h-7 text-xs">
                                       <SelectValue
-                                        placeholder={t(
-                                          "services:form.selectService"
-                                        )}
+                                        placeholder="اختر الخدمة..."
                                       />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -393,7 +381,7 @@ const ManageDoctorServicesDialog: React.FC<ManageDoctorServicesDialogProps> = ({
                                   {...f}
                                   value={f.value || ""}
                                   className="h-7 text-xs text-center"
-                                  placeholder={t("common:currencySymbolShort")}
+                                  placeholder="ج.س"
                                   disabled={isMutating}
                                 />
                               )}
@@ -472,14 +460,14 @@ const ManageDoctorServicesDialog: React.FC<ManageDoctorServicesDialogProps> = ({
                     disabled={isMutating}
                   >
                     <PlusCircle className="h-3.5 w-3.5 ltr:mr-1 rtl:ml-1" />{" "}
-                    {t("doctors:serviceConfig.addServiceConfig")}
+                    إضافة تكوين خدمة
                   </Button>
                 </div>
               )}
               <DialogFooter className="mt-auto pt-4">
                 <DialogClose asChild>
                   <Button type="button" variant="outline" disabled={isMutating}>
-                    {t("common:done")}
+                    تم
                   </Button>
                 </DialogClose>
                 {/* No global save button for the whole form as saves are per row */}

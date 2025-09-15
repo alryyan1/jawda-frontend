@@ -331,7 +331,7 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
         <ContextMenuTrigger asChild>
           <Card
             className={cn(
-              "hover:shadow-lg transition-shadow cursor-pointer flex flex-row items-center px-3 py-2 h-[82px] w-[300px]",
+              "hover:shadow-lg transition-shadow cursor-pointer flex flex-row items-center px-3 py-2 h-[52px] w-[300px]",
               isSelected
                 ? "ring-2 ring-primary shadow-lg bg-primary/10"
                 : `bg-card ring-1 ring-transparent hover:ring-slate-300 ${visit.company ? "ring-pink-400" : ""}`
@@ -365,53 +365,7 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
                 {visit.patient.name}
               </p>
               <div className="flex items-center justify-between mt-1">
-                <div className="flex-1 relative">
-                  <Select
-                    value={visit.status}
-                    onValueChange={handleStatusChange}
-                    dir="rtl"
-                    disabled={
-                      statusUpdateMutation.isPending &&
-                      statusUpdateMutation.variables?.visitId === visit.id
-                    }
-                  >
-                    <SelectTrigger
-                      className={cn(
-                        "h-6 text-xs px-1.5 py-0 focus:ring-0 focus:ring-offset-0 border-0 focus-visible:ring-offset-0 focus-visible:ring-0 shadow-none bg-transparent hover:bg-muted/50 data-[state=open]:bg-muted",
-                        visit.status === "waiting" &&
-                          "text-amber-700",
-                        visit.status === "with_doctor" &&
-                          "text-blue-700",
-                        visit.status === "completed" &&
-                          "text-green-700",
-                        (visit.status === "cancelled" ||
-                          visit.status === "no_show") &&
-                          "text-red-700"
-                      )}
-                      aria-label={`تغيير حالة ${visit.patient.name}`}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent onCloseAutoFocus={(e) => e.preventDefault()}>
-                      {VISIT_STATUSES_FOR_DROPDOWN.map((statusKey) => (
-                        <SelectItem
-                          key={statusKey}
-                          value={statusKey}
-                          className="text-xs"
-                        >
-                          {getStatusText(status)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {statusUpdateMutation.isPending &&
-                    statusUpdateMutation.variables?.visitId === visit.id && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-background/50 rounded-md">
-                        <Loader2 className="h-3 w-3 animate-spin text-primary" />
-                      </div>
-                    )}
-                </div>
+            
                 
                 {visit.company != null && (
                   <div className="flex-shrink-0 ltr:ml-1 rtl:mr-1">

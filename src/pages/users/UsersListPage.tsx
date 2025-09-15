@@ -45,12 +45,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { toast } from "sonner";
-import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 
 export default function UsersListPage() {
-  const { t, i18n } = useTranslation(["users", "common"]);
   const queryClient = useQueryClient();
   const { user: currentUser } = useAuth();
 
@@ -79,23 +77,23 @@ export default function UsersListPage() {
   const deleteMutation = useMutation({
     mutationFn: deleteUser,
     onSuccess: () => {
-      toast.success(t("users:deletedSuccess"));
+      toast.success("تم حذف المستخدم بنجاح!");
       queryClient.invalidateQueries({ queryKey: ["users"] });
     },
     onError: (err: Error) => {
       const errorResponse = err as Error & { response?: { data?: { message?: string } } };
-      toast.error(t("users:deleteError"), {
+      toast.error("خطأ أثناء حذف المستخدم.", {
         description:
           errorResponse.response?.data?.message ||
           err.message ||
-          t("common:error.generic"),
+          "حدث خطأ غير متوقع.",
       });
     },
   });
 
   const handleDelete = (userToDelete: User) => {
     if (currentUser && currentUser.id === userToDelete.id) {
-      toast.error(t("users:errorCannotDeleteSelf"));
+      toast.error("لا يمكنك حذف نفسك");
       return;
     }
     // Add more checks, e.g., cannot delete last super admin
@@ -105,13 +103,13 @@ export default function UsersListPage() {
         u.roles?.some((r) => r.name === "Super Admin")
       ).length === 1
     ) {
-      toast.error(t("users:errorCannotDeleteLastSuperAdmin"));
+      toast.error("لا يمكن حذف آخر مشرف في النظام");
       return;
     }
 
     if (
       window.confirm(
-        t("users:deleteConfirmText", { username: userToDelete.name })
+        `هل أنت متأكد أنك تريد حذف المستخدم ${userToDelete.name}؟`
       )
     ) {
       deleteMutation.mutate(userToDelete.id);
@@ -123,17 +121,14 @@ export default function UsersListPage() {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="ml-3 text-muted-foreground">{t("users:loadingUsers")}</p>
+        <p className="ml-3 text-muted-foreground">جارٍ تحميل المستخدمين...</p>
       </div>
     );
   }
   if (error)
     return (
       <p className="text-destructive p-6 text-center">
-        {t("common:error.fetchFailedExt", {
-          entity: t("users:pageTitle"),
-          message: error.message,
-        })}
+        {`فشل تحميل إدارة المستخدمين: ${error.message}`}
       </p>
     );
 
@@ -150,14 +145,14 @@ export default function UsersListPage() {
             <div className="flex items-center gap-2">
               <UsersIcon className="h-7 w-7 text-primary" />
               <CardTitle className="text-2xl sm:text-3xl">
-                {t("users:pageTitle")}
+                إدارة المستخدمين
               </CardTitle>
             </div>
             <div className="flex sm:flex-row flex-col w-full sm:w-auto gap-2">
               {/* Search Input - Consider debouncing if list is very large */}
               {/* <Input 
                 type="search" 
-                placeholder={t('common:searchPlaceholderNameOrUsername')} 
+                placeholder="ابحث بالاسم أو اسم المستخدم..." 
                 value={searchTerm} 
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="h-9 w-full sm:w-64"
@@ -165,7 +160,7 @@ export default function UsersListPage() {
               {canCreateUsers && (
                 <Button asChild size="sm" className="h-9 w-full sm:w-auto">
                   <Link to="/users/new" className="flex items-center gap-1.5">
-                    <UserPlus className="h-4 w-4" /> {t("users:addUserButton")}
+                    <UserPlus className="h-4 w-4" /> إضافة مستخدم جديد
                   </Link>
                 </Button>
               )}
@@ -176,7 +171,7 @@ export default function UsersListPage() {
         {isFetching && (
           <div className="text-center text-sm text-muted-foreground mb-2">
             <Loader2 className="inline h-4 w-4 animate-spin ltr:mr-1 rtl:ml-1" />
-            {t("common:updatingList")}
+            جاري تحديث القائمة...
           </div>
         )}
 
@@ -186,12 +181,12 @@ export default function UsersListPage() {
               <UsersIcon className="h-16 w-16 text-gray-300 dark:text-gray-600" />
               <p className="font-medium">
                 {searchTerm
-                  ? t("common:noResultsFound")
-                  : t("users:noUsersFound")}
+                  ? "لم يتم العثور على نتائج"
+                  : "لم يتم العثور على مستخدمين."}
               </p>
               {canCreateUsers && !searchTerm && (
                 <Button asChild size="sm" className="mt-2">
-                  <Link to="/users/new">{t("users:addUserButton")}</Link>
+                  <Link to="/users/new">إضافة مستخدم جديد</Link>
                 </Button>
               )}
             </CardContent>
@@ -202,20 +197,20 @@ export default function UsersListPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[50px] text-center hidden sm:table-cell">
-                    {t("users:table.id")}
+                    م
                   </TableHead>
-                  <TableHead>{t("users:table.name")}</TableHead>
+                  <TableHead>الاسم</TableHead>
                   <TableHead className="hidden md:table-cell text-center">
-                    {t("users:table.username")}
+                    اسم المستخدم
                   </TableHead>
                   <TableHead className="text-center">
-                    {t("users:table.roles")}
+                    الأدوار
                   </TableHead>
                   <TableHead className="text-center w-[120px]">
-                    {t("users:table.status")}
+                    الحالة
                   </TableHead>
                   <TableHead className="text-right w-[80px]">
-                    {t("users:table.actions")}
+                    إجراءات
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -241,7 +236,7 @@ export default function UsersListPage() {
                               <UserCheck className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>{t("users:supervisor")}</p>
+                              <p>مشرف</p>
                             </TooltipContent>
                           </Tooltip>
                         )}
@@ -250,7 +245,7 @@ export default function UsersListPage() {
                             variant="secondary"
                             className="text-[10px] px-1.5 py-0 h-4 leading-tight"
                           >
-                            {t("users:you")}
+                            أنت
                           </Badge>
                         )}
                       </div>
@@ -296,7 +291,7 @@ export default function UsersListPage() {
                           className="text-xs px-1.5 py-0.5 font-normal items-center gap-1"
                         >
                           <CheckCircle2 className="h-3 w-3" />{" "}
-                          {t("common:statusEnum.active")}
+                          نشط
                         </Badge>
                       ) : (
                         <Badge
@@ -304,7 +299,7 @@ export default function UsersListPage() {
                           className="text-xs px-1.5 py-0.5 font-normal items-center gap-1"
                         >
                           <XCircle className="h-3 w-3" />{" "}
-                          {t("common:statusEnum.inactive")}
+                          غير نشط
                         </Badge>
                       )}
                     </TableCell>
@@ -326,7 +321,7 @@ export default function UsersListPage() {
                               <MoreHorizontal className="h-4 w-4" />
                             )}
                             <span className="sr-only">
-                              {t("common:actions.openMenu")}
+                              فتح القائمة
                             </span>
                           </Button>
                         </DropdownMenuTrigger>
@@ -338,7 +333,7 @@ export default function UsersListPage() {
                                 className="flex items-center w-full"
                               >
                                 <Edit className="rtl:ml-2 ltr:mr-2 h-4 w-4" />{" "}
-                                {t("common:edit")}
+                                تعديل
                               </Link>
                             </DropdownMenuItem>
                           )}
@@ -358,7 +353,7 @@ export default function UsersListPage() {
                                   }
                                 >
                                   <Trash2 className="rtl:ml-2 ltr:mr-2 h-4 w-4" />{" "}
-                                  {t("common:delete")}
+                                  حذف
                                 </DropdownMenuItem>
                               </>
                             )}
@@ -379,12 +374,10 @@ export default function UsersListPage() {
               size="sm"
               variant="outline"
             >
-              {t("common:pagination.previous")}
+              السابق
             </Button>
             <span className="text-sm text-muted-foreground px-2">
-              {t("common:pagination.pageInfo", {
-                current: meta.current_page,
-                total: meta.last_page,
+              {`صفحة ${meta.current_page} من ${meta.last_page}`}
               })}
             </span>
             <Button
@@ -395,7 +388,7 @@ export default function UsersListPage() {
               size="sm"
               variant="outline"
             >
-              {t("common:pagination.next")}
+              التالي
             </Button>
           </div>
         )}

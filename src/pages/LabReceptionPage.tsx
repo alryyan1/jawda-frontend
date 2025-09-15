@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useLabUpdates } from '@/hooks/useSocketListener';
+// Removed socket listener import
 
 // MUI Imports
 import { createTheme, ThemeProvider } from "@mui/material/styles";
@@ -86,7 +86,7 @@ const LabReceptionPage: React.FC = () => {
   const queryClient = useQueryClient();
   const { currentClinicShift } = useAuth();
 
-  useLabUpdates();
+  // Sockets removed: no realtime lab updates listener
 
   // --- State Management ---
   const [activeVisitId, setActiveVisitId] = useState<number | null>(null);

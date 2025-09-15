@@ -1,6 +1,5 @@
 // src/components/clinic/PatientVisitHistoryDialog.tsx
 import React from 'react';
-import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { format, parseISO } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';

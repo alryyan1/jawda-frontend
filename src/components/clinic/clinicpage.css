@@ -103,11 +103,11 @@
 
 /* RTL Support */
 .clinic-page-container[dir="rtl"] .clinic-main-content.with-registration {
-  grid-template-columns: 60px 390px minmax(365px, 1fr) minmax(320px, 1fr) ;
+  grid-template-columns: 60px 390px 390px minmax(320px, 1fr) ;
 }
 
 .clinic-page-container[dir="rtl"] .clinic-main-content.without-registration {
-  grid-template-columns: 0px minmax(0, 1fr) minmax(0, 1fr) 320px;
+  grid-template-columns: 0px 390px minmax(0, 1fr) 320px;
 }
 
 .clinic-page-container[dir="rtl"] .clinic-panel.registration {

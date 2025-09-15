@@ -27,8 +27,11 @@ import {
   Login as LogInIcon,
   Logout as LogOutIcon,
 } from '@mui/icons-material';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faHeart } from '@fortawesome/free-solid-svg-icons';
 
 import { getDoctorsWithShiftStatus, startDoctorShift, endDoctorShift } from '@/services/doctorShiftService';
+import FavoriteDoctorsDialog from './FavoriteDoctorsDialog';
 
 interface DoctorWithShiftStatus { // Type for the data returned by getDoctorsWithShiftStatus
   id: number; // Doctor ID
@@ -41,9 +44,10 @@ interface DoctorWithShiftStatus { // Type for the data returned by getDoctorsWit
 interface ManageDoctorShiftsDialogProps {
   triggerButton: React.ReactNode;
   currentClinicShiftId: number | null; // The ID of the general clinic shift
+  currentUserId: number | null; // The current user ID for favorite doctors
 }
 
-const ManageDoctorShiftsDialog: React.FC<ManageDoctorShiftsDialogProps> = ({ triggerButton, currentClinicShiftId }) => {
+const ManageDoctorShiftsDialog: React.FC<ManageDoctorShiftsDialogProps> = ({ triggerButton, currentClinicShiftId, currentUserId }) => {
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -62,7 +66,10 @@ const ManageDoctorShiftsDialog: React.FC<ManageDoctorShiftsDialogProps> = ({ tri
   });
 
   const openShiftMutation = useMutation({
-    mutationFn: (doctorId: number) => startDoctorShift(doctorId),
+    mutationFn: (doctorId: number) => startDoctorShift({ 
+      doctor_id: doctorId, 
+      shift_id: currentClinicShiftId! 
+    }),
     onSuccess: () => {
       toast.success('تم فتح النوبة بنجاح');
       queryClient.invalidateQueries({ queryKey: doctorsQueryKey });
@@ -77,7 +84,7 @@ const ManageDoctorShiftsDialog: React.FC<ManageDoctorShiftsDialogProps> = ({ tri
   });
 
   const closeShiftMutation = useMutation({
-    mutationFn: (doctorShiftId: number) => endDoctorShift(doctorShiftId),
+    mutationFn: (doctorShiftId: number) => endDoctorShift({ doctor_shift_id: doctorShiftId }),
     onSuccess: () => {
       toast.success('تم إغلاق النوبة بنجاح');
       queryClient.invalidateQueries({ queryKey: doctorsQueryKey });
@@ -138,14 +145,13 @@ const ManageDoctorShiftsDialog: React.FC<ManageDoctorShiftsDialogProps> = ({ tri
             </Box>
           )}
           {(!isLoading || doctorsList) && (
-            <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
+            <TableContainer  component={Paper} sx={{ maxHeight: 400 }}>
               {doctorsList && doctorsList.length > 0 ? (
                 <Table>
                   <TableHead>
                     <TableRow>
                       <TableCell align="center">الاسم</TableCell>
                       <TableCell align="center">التخصص</TableCell>
-                      <TableCell align="center">الحالة</TableCell>
                       <TableCell align="center">الإجراءات</TableCell>
                     </TableRow>
                   </TableHead>
@@ -158,13 +164,7 @@ const ManageDoctorShiftsDialog: React.FC<ManageDoctorShiftsDialogProps> = ({ tri
                         <TableCell align="center">
                           {doc.specialist_name || '-'}
                         </TableCell>
-                        <TableCell align="center">
-                          <Chip
-                            label={doc.is_on_shift ? 'في النوبة' : 'خارج النوبة'}
-                            color={doc.is_on_shift ? 'success' : 'default'}
-                            variant={doc.is_on_shift ? 'filled' : 'outlined'}
-                          />
-                        </TableCell>
+                 
                         <TableCell align="center">
                           {doc.is_on_shift && doc.current_doctor_shift_id ? (
                             <Button
@@ -210,6 +210,19 @@ const ManageDoctorShiftsDialog: React.FC<ManageDoctorShiftsDialogProps> = ({ tri
           )}
         </DialogContent>
         <DialogActions>
+          <FavoriteDoctorsDialog
+            currentUserId={currentUserId}
+            triggerButton={
+              <Button
+                variant="outlined"
+                color="error"
+                startIcon={<FontAwesomeIcon icon={faHeart} />}
+                sx={{ mr: 1 }}
+              >
+                الأطباء المفضلين
+              </Button>
+            }
+          />
           <Button onClick={() => setIsOpen(false)} variant="outlined">
             إغلاق
           </Button>

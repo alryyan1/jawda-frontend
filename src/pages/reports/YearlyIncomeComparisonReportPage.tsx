@@ -1,7 +1,6 @@
 // src/pages/reports/YearlyIncomeComparisonReportPage.tsx
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
 import { getYear } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
 
@@ -22,8 +21,7 @@ const years = Array.from({ length: 10 }, (_, i) => currentYear - i); // Last 10 
 const CHART_COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#00C49F', '#FFBB28', '#FF8042', '#0088FE', '#AF19FF', '#FF8C00', '#A0522D', '#D2691E'];
 
 const YearlyIncomeComparisonReportPage: React.FC = () => {
-  const { t, i18n } = useTranslation(['reports', 'common', 'months']);
-  const dateLocale = i18n.language.startsWith('ar') ? arSA : enUS;
+  const dateLocale = arSA;
 
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
 
@@ -34,32 +32,32 @@ const YearlyIncomeComparisonReportPage: React.FC = () => {
     enabled: !!selectedYear,
   });
 
+  const AR_MONTHS = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
   const chartData = useMemo(() => {
     return reportData?.data.map((item, index) => ({
-      name: t(`months:m${item.month}`, { defaultValue: item.month_name }), // Use localized month name from backend or format here
-      // name: item.month_name, // Use if backend sends localized name directly
+      name: AR_MONTHS[(item.month - 1) % 12] || item.month_name,
       income: item.total_income,
       fill: CHART_COLORS[index % CHART_COLORS.length],
     })) || [];
-  }, [reportData, t, dateLocale]); // Added dateLocale if formatting month name here
+  }, [reportData, dateLocale]);
 
   return (
     <div className="container mx-auto py-4 sm:py-6 lg:py-8 space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
         <div className="flex items-center gap-3">
           <BarChartHorizontalBig className="h-7 w-7 text-primary" />
-          <h1 className="text-2xl sm:text-3xl font-bold">{t('reports:yearlyIncomeComparisonReport.title')}</h1>
+          <h1 className="text-صxl sm:text-3xl font-bold">مقارنة الدخل السنوية</h1>
         </div>
         {/* No PDF button for now, as it's primarily a chart */}
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">{t('reports:filtersTitle')}</CardTitle>
+          <CardTitle className="text-lg">مرشحات التقرير</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col sm:flex-row gap-3 items-end">
             <div className="space-y-1.5">
-              <label htmlFor="year-select-income" className="text-xs font-medium">{t('common:year')}</label>
+              <label htmlFor="year-select-income" className="text-xs font-medium">السنة</label>
               <Select 
                 value={String(selectedYear)} 
                 onValueChange={(val) => setSelectedYear(parseInt(val))}
@@ -73,7 +71,7 @@ const YearlyIncomeComparisonReportPage: React.FC = () => {
             </div>
             <Button onClick={() => refetch()} className="h-9 mt-auto" disabled={isLoading || isFetching}>
                 {isFetching ? <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2"/> : <Filter className="h-4 w-4 ltr:mr-2 rtl:ml-2"/>}
-                {t('reports:applyFiltersButton')}
+                تطبيق المرشحات
             </Button>
         </CardContent>
       </Card>
@@ -83,29 +81,29 @@ const YearlyIncomeComparisonReportPage: React.FC = () => {
       )}
       {error && (
          <Card className="border-destructive bg-destructive/10 text-destructive-foreground">
-            <CardHeader><CardTitle className="flex items-center gap-2"><AlertTriangle/> {t('common:error.fetchFailedTitle')}</CardTitle></CardHeader>
-            <CardContent><p>{error.message || t('common:error.generic')}</p></CardContent>
+            <CardHeader><CardTitle className="flex items-center gap-2"><AlertTriangle/> فشل جلب البيانات</CardTitle></CardHeader>
+            <CardContent><p>{error.message || 'حدث خطأ غير متوقع'}</p></CardContent>
          </Card>
       )}
       
       {reportData && !isLoading && (
         <>
           <CardDescription className="text-center text-sm">
-            {t('reports:yearlyIncomeComparisonReport.reportForYear', { year: reportData.meta.year })}
+            تقرير سنة: {reportData.meta.year}
           </CardDescription>
           
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-4 mb-6">
             <StatCard 
-                title={t('reports:yearlyIncomeComparisonReport.totalYearlyIncome')}
+                title="إجمالي الدخل السنوي"
                 value={formatNumber(reportData.meta.total_yearly_income)}
-                unit={t('common:currencySymbolShort')}
+                unit="ر.س"
                 icon={DollarSign}
                 variant="success"
             />
             <StatCard 
-                title={t('reports:yearlyIncomeComparisonReport.averageMonthlyIncome')}
+                title="متوسط الدخل الشهري"
                 value={formatNumber(reportData.meta.average_monthly_income)}
-                unit={t('common:currencySymbolShort')}
+                unit="ر.س"
                 icon={TrendingUp}
                 variant="info"
             />
@@ -113,11 +111,11 @@ const YearlyIncomeComparisonReportPage: React.FC = () => {
 
           <Card>
             <CardHeader>
-                <CardTitle>{t('reports:yearlyIncomeComparisonReport.chartTitle')}</CardTitle>
+                <CardTitle>مخطط الدخل الشهري</CardTitle>
             </CardHeader>
             <CardContent className="h-[400px] w-full"> {/* Ensure chart has height */}
                 {chartData.length === 0 && !isFetching ? (
-                     <p className="text-center text-muted-foreground py-10">{t('common:noDataAvailableForChart')}</p>
+                     <p className="text-center text-muted-foreground py-10">لا توجد بيانات لعرض المخطط</p>
                 ) : (
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={chartData} margin={{ top: 5, right: i18n.dir() === 'rtl' ? 5 : 20, left: i18n.dir() === 'rtl' ? 20 : 5, bottom: 5 }}>
@@ -151,10 +149,10 @@ const YearlyIncomeComparisonReportPage: React.FC = () => {
                                 }}
                                 itemStyle={{ color: 'hsl(var(--foreground))'}}
                                 labelStyle={{ fontWeight: 'bold', marginBottom: '4px' }}
-                                formatter={(value: number) => [formatNumber(value), t('common:income')]}
+                                formatter={(value: number) => [formatNumber(value), 'الدخل']}
                             />
                             <Legend wrapperStyle={{fontSize: '12px'}}/>
-                            <Bar dataKey="income" name={t('common:totalIncome')} radius={[4, 4, 0, 0]} barSize={30}>
+                            <Bar dataKey="income" name="إجمالي الدخل" radius={[4, 4, 0, 0]} barSize={30}>
                                 {chartData.map((entry, index) => (
                                     <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                                 ))}

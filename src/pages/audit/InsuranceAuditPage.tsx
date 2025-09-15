@@ -1,10 +1,9 @@
 // src/pages/audit/InsuranceAuditPage.tsx
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
 import { format, parseISO } from 'date-fns';
-import { arSA, enUS } from 'date-fns/locale';
+import { arSA } from 'date-fns/locale';
 import { toast } from 'sonner';
 
 import InsuranceAuditExportFiltersDialog, { type AuditExportFilters } from '@/components/audit/InsuranceAuditExportFiltersDialog';
@@ -45,13 +44,12 @@ interface AuditListFiltersWithStringId extends Omit<AuditListFilters, 'company_i
 }
 
 const InsuranceAuditPage: React.FC = () => {
-  const { t, i18n } = useTranslation(['audit', 'common']);
-  const dateLocale = i18n.language.startsWith('ar') ? arSA : enUS;
+  const dateLocale = arSA; // Use Arabic locale directly
   const [isExportFiltersDialogOpen, setIsExportFiltersDialogOpen] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [isFiltersDialogOpen, setIsFiltersDialogOpen] = useState(false);
-  const [isExporting, setIsExporting] = useState<'pdf' | 'excel' | false>(false);
+  const [isExporting, setIsExporting] = useState<'pdf' | 'excel' | 'xlsx' | false>(false);
 
   const [filters, setFilters] = useState<AuditListFiltersWithStringId>({
     company_id: '',
@@ -84,7 +82,7 @@ const InsuranceAuditPage: React.FC = () => {
     });
   };
 
-  const handleExport = async (exportFilters: AuditExportFilters, formatType: 'pdf' | 'excel') => {
+  const handleExport = async (exportFilters: AuditExportFilters, formatType: 'pdf' | 'excel' | 'xlsx') => {
     setIsExporting(formatType);
     try {
       const blob = formatType === 'pdf' 
@@ -99,16 +97,16 @@ const InsuranceAuditPage: React.FC = () => {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `audit-report-${formatType}-${format(new Date(), 'yyyy-MM-dd')}.${formatType}`;
+      a.download = `audit-report-${formatType === 'xlsx' ? 'excel' : formatType}-${format(new Date(), 'yyyy-MM-dd')}.${formatType === 'xlsx' ? 'xlsx' : formatType}`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
 
-      toast.success(t('audit:export.success', {type: formatType.toUpperCase()}));
+      toast.success(`تم تصدير التقرير بنجاح (${formatType === 'xlsx' ? 'Excel' : formatType.toUpperCase()})`);
     } catch (err: unknown) {
       const error = err as ApiError;
-      toast.error(t('audit:export.error'), { description: error.response?.data?.message || error.message });
+      toast.error('خطأ في تصدير التقرير', { description: error.response?.data?.message || error.message });
     } finally {
       setIsExporting(false);
       setIsExportFiltersDialogOpen(false);
@@ -119,14 +117,14 @@ const InsuranceAuditPage: React.FC = () => {
     const status = visit.auditRecord?.status || 'pending_review';
     switch (status) {
       case 'verified':
-        return <Badge variant="success" className="text-xs"><ShieldCheck className="h-3 w-3 ltr:mr-1 rtl:ml-1"/>{t('audit:status.verified')}</Badge>;
+        return <Badge variant="success" className="text-xs"><ShieldCheck className="h-3 w-3 ltr:mr-1 rtl:ml-1"/>تم التحقق</Badge>;
       case 'needs_correction':
-        return <Badge variant="secondary" className="text-xs"><FileWarning className="h-3 w-3 ltr:mr-1 rtl:ml-1"/>{t('audit:status.needs_correction')}</Badge>;
+        return <Badge variant="secondary" className="text-xs"><FileWarning className="h-3 w-3 ltr:mr-1 rtl:ml-1"/>يحتاج تصحيح</Badge>;
       case 'rejected':
-        return <Badge variant="destructive" className="text-xs"><ShieldAlert className="h-3 w-3 ltr:mr-1 rtl:ml-1"/>{t('audit:status.rejected')}</Badge>;
+        return <Badge variant="destructive" className="text-xs"><ShieldAlert className="h-3 w-3 ltr:mr-1 rtl:ml-1"/>مرفوض</Badge>;
       case 'pending_review':
       default:
-        return <Badge variant="outline" className="text-xs">{t('audit:status.pending_review')}</Badge>;
+        return <Badge variant="outline" className="text-xs">في انتظار المراجعة</Badge>;
     }
   };
 
@@ -139,28 +137,23 @@ const InsuranceAuditPage: React.FC = () => {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div className="flex items-center gap-2">
             <FileSearch className="h-7 w-7 text-primary" />
-            <h1 className="text-2xl sm:text-3xl font-bold">{t('audit:pageTitle')}</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold">مراجعة التأمين</h1>
           </div>
           <div className="flex gap-2 items-center w-full sm:w-auto">
             <Button variant="outline" size="sm" onClick={() => setIsFiltersDialogOpen(true)} className="h-9">
-              <Filter className="h-4 w-4 ltr:mr-2 rtl:ml-2" /> {t('audit:filters.titleShort')}
+              <Filter className="h-4 w-4 ltr:mr-2 rtl:ml-2" /> فلترة
             </Button>
              <Button variant="outline" size="sm" onClick={() => setIsExportFiltersDialogOpen(true)} disabled={isExporting !== false} className="h-9">
                 {isExporting ? <Loader2 className="h-4 w-4 animate-spin"/> : <FileSpreadsheet className="h-4 w-4"/>} 
-                <span className="ltr:ml-2 rtl:mr-2 hidden sm:inline">{t('common:export')}</span>
+                <span className="ltr:ml-2 rtl:mr-2 hidden sm:inline">تصدير</span>
              </Button>
-          </div>
-          <div className="flex gap-2 items-center w-full sm:w-auto">
-            <Button variant="outline" size="sm" onClick={() => setIsFiltersDialogOpen(true)} className="h-9">
-              <Filter className="h-4 w-4 ltr:mr-2 rtl:ml-2" /> {t('audit:filters.titleShort')}
-            </Button>
              <Button variant="outline" size="sm" onClick={() => handleExport({
                company_id: filters.company_id,
                date_from: filters.date_from || '',
                date_to: filters.date_to || ''
              }, 'pdf')} disabled={isExporting === 'pdf' || !filters.company_id} className="h-9">
                 {isExporting === 'pdf' ? <Loader2 className="h-4 w-4 animate-spin"/> : <FileText className="h-4 w-4"/>} 
-                <span className="ltr:ml-2 rtl:mr-2 hidden sm:inline">{t('common:exportPdf')}</span>
+                <span className="ltr:ml-2 rtl:mr-2 hidden sm:inline">تصدير PDF</span>
              </Button>
              <Button variant="outline" size="sm" onClick={() => handleExport({
                company_id: filters.company_id,
@@ -168,16 +161,16 @@ const InsuranceAuditPage: React.FC = () => {
                date_to: filters.date_to || ''
              }, 'excel')} disabled={isExporting === 'excel' || !filters.company_id} className="h-9">
                 {isExporting === 'excel' ? <Loader2 className="h-4 w-4 animate-spin"/> : <Download className="h-4 w-4"/>} 
-                <span className="ltr:ml-2 rtl:mr-2 hidden sm:inline">{t('common:exportExcel')}</span>
+                <span className="ltr:ml-2 rtl:mr-2 hidden sm:inline">تصدير Excel</span>
              </Button>
           </div>
         </div>
 
-        {isFetching && <div className="text-sm text-muted-foreground mb-2 text-center">{t('common:updatingList')}</div>}
+        {isFetching && <div className="text-sm text-muted-foreground mb-2 text-center">جاري تحديث القائمة...</div>}
         
         {!filters.company_id && !isLoading && (
             <Card className="text-center py-10 text-muted-foreground">
-                <CardContent>{t('audit:selectCompanyPrompt')}</CardContent>
+                <CardContent>يرجى اختيار شركة التأمين لعرض الزيارات</CardContent>
             </Card>
         )}
 
@@ -185,11 +178,11 @@ const InsuranceAuditPage: React.FC = () => {
           <div className="text-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
         )}
         {filters.company_id && error && (
-          <p className="text-destructive p-4 text-center">{t('common:error.fetchFailedExt', { entity: t('audit:auditableVisits'), message: error.message })}</p>
+          <p className="text-destructive p-4 text-center">خطأ في تحميل الزيارات القابلة للمراجعة: {error.message}</p>
         )}
         {filters.company_id && !isLoading && !error && visits.length === 0 && (
           <Card className="text-center py-10 text-muted-foreground">
-            <CardContent>{t('audit:noVisitsFound')}</CardContent>
+            <CardContent>لا توجد زيارات للعرض</CardContent>
           </Card>
         )}
 
@@ -198,20 +191,20 @@ const InsuranceAuditPage: React.FC = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-center">{t('audit:table.visitId')}</TableHead>
-                  <TableHead>{t('audit:table.patientName')}</TableHead>
-                  <TableHead className="hidden sm:table-cell text-center">{t('audit:table.visitDate')}</TableHead>
-                  <TableHead className="hidden md:table-cell text-center">{t('audit:table.doctorName')}</TableHead>
-                  <TableHead className="hidden lg:table-cell text-center">{t('audit:table.companyName')}</TableHead>
-                  <TableHead className="text-center">{t('audit:table.auditStatus')}</TableHead>
-                  <TableHead className="text-center">{t('common:actions.openMenu')}</TableHead>
+                  <TableHead className="text-center">رقم الزيارة</TableHead>
+                  <TableHead>اسم المريض</TableHead>
+                  <TableHead className="hidden sm:table-cell text-center">تاريخ الزيارة</TableHead>
+                  <TableHead className="hidden md:table-cell text-center">اسم الطبيب</TableHead>
+                  <TableHead className="hidden lg:table-cell text-center">اسم الشركة</TableHead>
+                  <TableHead className="text-center">حالة المراجعة</TableHead>
+                  <TableHead className="text-center">الإجراءات</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {visits.map((visit) => (
                   <TableRow key={visit.id}>
                     <TableCell className="text-center align-middle">{visit.id}</TableCell>
-                    <TableCell className="font-medium align-middle">{visit.patient?.name || t('common:unknown')}</TableCell>
+                    <TableCell className="font-medium align-middle">{visit.patient?.name || 'غير محدد'}</TableCell>
                     <TableCell className="hidden sm:table-cell text-center align-middle">
                       {visit.visit_date ? format(parseISO(visit.visit_date), 'P', { locale: dateLocale }) : '-'}
                     </TableCell>
@@ -221,7 +214,7 @@ const InsuranceAuditPage: React.FC = () => {
                     <TableCell className="text-center align-middle">
                       <Button variant="outline" size="xs" asChild>
                         <Link to={`/settings/insurance-audit/visit/${visit.id}`}>
-                          {t('audit:actions.auditDetails')}
+                          تفاصيل المراجعة
                         </Link>
                       </Button>
                     </TableCell>
@@ -235,11 +228,11 @@ const InsuranceAuditPage: React.FC = () => {
         {filters.company_id && meta && meta.last_page > 1 && (
           <div className="flex justify-center items-center gap-2 mt-6">
             <Button size="sm" variant="outline" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1 || isFetching}>
-              {t('common:previous')}
+              السابق
             </Button>
-            <span className="mx-2 text-sm">{t('common:page')} {currentPage} {t('common:of')} {meta.last_page}</span>
+            <span className="mx-2 text-sm">صفحة {currentPage} من {meta.last_page}</span>
             <Button size="sm" variant="outline" onClick={() => setCurrentPage(p => Math.min(meta.last_page, p + 1))} disabled={currentPage === meta.last_page || isFetching}>
-              {t('common:next')}
+              التالي
             </Button>
           </div>
         )}

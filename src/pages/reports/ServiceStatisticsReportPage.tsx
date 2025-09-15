@@ -1,7 +1,6 @@
 // src/pages/reports/ServiceStatisticsReportPage.tsx
 import React, { useState } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
 import { format } from 'date-fns';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -42,7 +41,7 @@ const SimpleDatePicker: React.FC<{ value?: string; onChange: (dateStr: string) =
 );
 
 const ServiceStatisticsReportPage: React.FC = () => {
-  const { t, i18n } = useTranslation(['reports', 'common', 'services']);
+  const i18n = { dir: () => 'rtl' } as const;
 
   const initialDateTo = format(new Date(), 'yyyy-MM-dd');
   const initialDateFrom = format(new Date(new Date().setDate(new Date().getDate() - 30)), 'yyyy-MM-dd');
@@ -85,19 +84,19 @@ const ServiceStatisticsReportPage: React.FC = () => {
   // console.log(statistics?.data.length,'statistics')
   const meta = reportData?.meta;
   console.log(statistics,'statistics')
-  if (error) return <p className="text-destructive p-4">{t('common:error.fetchFailedExt', { entity: t('reports:serviceStatisticsReport.title'), message: error.message })}</p>;
+  if (error) return <p className="text-destructive p-4">فشل جلب البيانات: إحصائيات الخدمات: {error.message}</p>;
   
 
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2">
         <BarChartHorizontalBig className="h-7 w-7 text-primary"/>
-        <h1 className="text-2xl sm:text-3xl font-bold">{t('reports:serviceStatisticsReport.title')}</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold">إحصائيات الخدمات</h1>
       </div>
       
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">{t('reports:filtersTitle')}</CardTitle>
+          <CardTitle className="text-lg">مرشحات التقرير</CardTitle>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -107,7 +106,7 @@ const ServiceStatisticsReportPage: React.FC = () => {
                 name="date_from"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs">{t('reports:dateRange')} ({t('common:from')})</FormLabel>
+                    <FormLabel className="text-xs">نطاق التاريخ (من)</FormLabel>
                     <SimpleDatePicker value={field.value} onChange={field.onChange} disabled={isFetching} />
                   </FormItem>
                 )}
@@ -117,7 +116,7 @@ const ServiceStatisticsReportPage: React.FC = () => {
                 name="date_to"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs">{t('common:to')}</FormLabel>
+                    <FormLabel className="text-xs">إلى</FormLabel>
                     <SimpleDatePicker value={field.value} onChange={field.onChange} disabled={isFetching}/>
                   </FormItem>
                 )}
@@ -127,11 +126,11 @@ const ServiceStatisticsReportPage: React.FC = () => {
                 name="service_group_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs">{t('reports:serviceStatisticsReport.serviceGroupFilter')}</FormLabel>
+                    <FormLabel className="text-xs">مجموعة الخدمة</FormLabel>
                     <Select value={field.value} onValueChange={field.onChange} dir={i18n.dir()}>
                       <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">{t('reports:serviceStatisticsReport.allServiceGroups')}</SelectItem>
+                        <SelectItem value="all">كل المجموعات</SelectItem>
                         {serviceGroups?.data.map((sg: ServiceGroup) => (
                           <SelectItem key={sg.id} value={String(sg.id)}>{sg.name}</SelectItem>
                         ))}
@@ -145,10 +144,10 @@ const ServiceStatisticsReportPage: React.FC = () => {
                 name="search_service_name"
                 render={({ field }) => (
                   <FormItem className="lg:col-span-1">
-                    <FormLabel className="text-xs">{t('reports:serviceStatisticsReport.searchServiceName')}</FormLabel>
+                    <FormLabel className="text-xs">ابحث باسم الخدمة</FormLabel>
                     <Input 
                       type="search" 
-                      placeholder={t('common:searchPlaceholder')} 
+                      placeholder={'ابحث...'} 
                       className="h-9" 
                       disabled={isFetching}
                       {...field}
@@ -158,7 +157,7 @@ const ServiceStatisticsReportPage: React.FC = () => {
               />
               <Button type="submit" className="h-9 self-end lg:col-start-4" disabled={isFetching || isLoading}>
                 {isFetching ? <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2"/> : <Filter className="h-4 w-4 ltr:mr-2 rtl:ml-2"/>}
-                {t('reports:applyFilters')}
+                تطبيق المرشحات
               </Button>
             </form>
           </Form>
@@ -173,7 +172,7 @@ const ServiceStatisticsReportPage: React.FC = () => {
       
       {!isLoading && !isFetching && statistics.length === 0 && (
         <Card className="text-center py-10 text-muted-foreground">
-          <CardContent>{t('reports:serviceStatisticsReport.noData')}</CardContent>
+          <CardContent>لا توجد بيانات</CardContent>
         </Card>
       )}
 
@@ -182,9 +181,9 @@ const ServiceStatisticsReportPage: React.FC = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-center">{t('reports:serviceStatisticsReport.table.serviceName')}</TableHead>
-                <TableHead className="text-center hidden md:table-cell">{t('reports:serviceStatisticsReport.table.price')}</TableHead>
-                <TableHead className="text-center">{t('reports:serviceStatisticsReport.table.requestCount')}</TableHead>
+                <TableHead className="text-center">اسم الخدمة</TableHead>
+                <TableHead className="text-center hidden md:table-cell">السعر</TableHead>
+                <TableHead className="text-center">عدد الطلبات</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -209,10 +208,10 @@ const ServiceStatisticsReportPage: React.FC = () => {
             onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
             disabled={currentPage === 1 || isFetching}
           >
-            {t('common:previous')}
+            السابق
           </Button>
           <span className="px-2 py-1 text-sm">
-            {t('common:pageXofY', { current: currentPage, total: meta.last_page })}
+            الصفحة {currentPage} من {meta.last_page}
           </span>
           <Button
             size="sm"
@@ -220,7 +219,7 @@ const ServiceStatisticsReportPage: React.FC = () => {
             onClick={() => setCurrentPage((prev) => Math.min(prev + 1, meta.last_page))}
             disabled={currentPage === meta.last_page || isFetching}
           >
-            {t('common:next')}
+            التالي
           </Button>
         </div>
       )}

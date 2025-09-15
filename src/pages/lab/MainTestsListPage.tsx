@@ -1,8 +1,7 @@
 // src/pages/lab/MainTestsListPage.tsx
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -27,7 +26,6 @@ interface MainTestWithContainer {
 }
 
 export default function MainTestsListPage() {
-  const { t, i18n } = useTranslation(['labTests', 'common']);
   const queryClient = useQueryClient();
   // const { can } = useAuthorization();
   const canCreateTests = true; // Placeholder: can('create lab_tests');
@@ -56,22 +54,22 @@ export default function MainTestsListPage() {
   const deleteMutation = useMutation({
     mutationFn: deleteMainTest,
     onSuccess: () => {
-      toast.success(t('labTests:deletedSuccess'));
+      toast.success('تم حذف الاختبار بنجاح');
       queryClient.invalidateQueries({ queryKey: ['mainTests'] });
     },
     onError: (err: { response?: { data?: { message?: string } }; message?: string }) => {
-      toast.error(t('labTests:deleteError'), { description: err.response?.data?.message || err.message });
+      toast.error('خطأ في حذف الاختبار', { description: err.response?.data?.message || err.message });
     },
   });
 
   const handleDelete = (testId: number, testName: string) => {
-    if (window.confirm(t('labTests:deleteConfirmText', { name: testName }))) {
+    if (window.confirm(`هل أنت متأكد من حذف الاختبار "${testName}"؟`)) {
       deleteMutation.mutate(testId);
     }
   };
 
-  if (isLoading && !isFetching && currentPage === 1) return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin text-primary" /> {t('labTests:loadingTests')}</div>;
-  if (error) return <p className="text-destructive p-4">{t('common:error.fetchFailedExt', { entity: t('labTests:pageTitle'), message: (error as Error).message })}</p>;
+  if (isLoading && !isFetching && currentPage === 1) return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin text-primary" /> جاري تحميل الاختبارات...</div>;
+  if (error) return <p className="text-destructive p-4">خطأ في تحميل قائمة الاختبارات: {(error as Error).message}</p>;
 
   const tests = (paginatedData?.data || []) as MainTestWithContainer[];
   const meta = paginatedData?.meta;
@@ -81,13 +79,13 @@ export default function MainTestsListPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div className="flex items-center gap-2">
             <FlaskConical className="h-7 w-7 text-primary" />
-            <h1 className="text-2xl sm:text-3xl font-bold">{t('labTests:pageTitle')}</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold">قائمة الاختبارات الرئيسية</h1>
         </div>
         <div className="flex sm:flex-row flex-col w-full sm:w-auto gap-2">
             <div className="relative flex-grow sm:flex-grow-0 sm:w-64">
                 <Input
                 type="search"
-                placeholder={t('common:searchPlaceholderName', { entity: t('labTests:testEntityName', "Test")})}
+                placeholder="البحث في الاختبارات..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="ps-10 rtl:pr-10 h-9"
@@ -95,19 +93,19 @@ export default function MainTestsListPage() {
                 <Search className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             </div>
             {canCreateTests && (
-                <Button asChild size="sm" className="h-9"><Link to="/settings/laboratory/new">{t('labTests:addTestButton')}</Link></Button>
+                <Button asChild size="sm" className="h-9"><Link to="/settings/laboratory/new">إضافة اختبار</Link></Button>
             )}
         </div>
       </div>
-      {isFetching && <div className="text-sm text-muted-foreground mb-2 text-center">{t('common:updatingList')}</div>}
+      {isFetching && <div className="text-sm text-muted-foreground mb-2 text-center">جاري تحديث القائمة...</div>}
       
       {!isLoading && tests.length === 0 ? (
         <Card className="text-center py-10 text-muted-foreground">
             <CardContent>
                 <FlaskConical className="mx-auto h-12 w-12 text-muted-foreground/30 mb-4" />
-                <p>{searchTerm ? t('common:noResultsFound') : t('labTests:noTestsFound')}</p>
+                <p>{searchTerm ? 'لم يتم العثور على نتائج' : 'لا توجد اختبارات'}</p>
                 {canCreateTests && !searchTerm && (
-                    <Button asChild size="sm" className="mt-4"><Link to="/settings/laboratory/new">{t('labTests:addTestButton')}</Link></Button>
+                    <Button asChild size="sm" className="mt-4"><Link to="/settings/laboratory/new">إضافة اختبار</Link></Button>
                 )}
             </CardContent>
         </Card>
@@ -116,12 +114,12 @@ export default function MainTestsListPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-center">{t('common:id')}</TableHead>
-                <TableHead className="text-center">{t('labTests:table.name')}</TableHead>
-                <TableHead className="hidden sm:table-cell text-center">{t('labTests:table.container')}</TableHead>
-                <TableHead className="text-center hidden md:table-cell">{t('labTests:table.price')}</TableHead>
-                <TableHead className="text-center">{t('labTests:table.available')}</TableHead>
-                <TableHead className="text-right">{t('labTests:table.actions')}</TableHead>
+                <TableHead className="text-center">المعرف</TableHead>
+                <TableHead className="text-center">اسم الاختبار</TableHead>
+                <TableHead className="hidden sm:table-cell text-center">الوعاء</TableHead>
+                <TableHead className="text-center hidden md:table-cell">السعر</TableHead>
+                <TableHead className="text-center">متاح</TableHead>
+                <TableHead className="text-right">الإجراءات</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -133,20 +131,20 @@ export default function MainTestsListPage() {
                   <TableCell className="text-center hidden md:table-cell">{test.price ? Number(test.price).toFixed(2) : '-'}</TableCell>
                   <TableCell className="text-center">
                     {test.available ? 
-                        <CheckCircle2 className="h-5 w-5 text-green-500 mx-auto" aria-label={t('common:statusEnum.active')} /> : 
-                        <XCircle className="h-5 w-5 text-red-500 mx-auto" aria-label={t('common:statusEnum.inactive')} />}
+                        <CheckCircle2 className="h-5 w-5 text-green-500 mx-auto" aria-label="نشط" /> : 
+                        <XCircle className="h-5 w-5 text-red-500 mx-auto" aria-label="غير نشط" />}
                   </TableCell>
                   <TableCell className="text-right">
-                    <DropdownMenu dir={i18n.dir()}>
+                    <DropdownMenu dir="rtl">
                       <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        {canEditTests && <DropdownMenuItem asChild><Link to={`/settings/laboratory/${test.id}/edit`} className="flex items-center w-full"><Edit className="rtl:ml-2 ltr:mr-2 h-4 w-4" /> {t('common:edit')}</Link></DropdownMenuItem>}
+                        {canEditTests && <DropdownMenuItem asChild><Link to={`/settings/laboratory/${test.id}/edit`} className="flex items-center w-full"><Edit className="rtl:ml-2 ltr:mr-2 h-4 w-4" /> تعديل</Link></DropdownMenuItem>}
                         {canDeleteTests && (
                             <>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => handleDelete(test.id, test.main_test_name)} className="text-destructive focus:text-destructive" disabled={deleteMutation.isPending && deleteMutation.variables === test.id}>
                                 <Trash2 className="rtl:ml-2 ltr:mr-2 h-4 w-4" />
-                                {t('common:delete')}
+                                حذف
                             </DropdownMenuItem>
                             </>
                         )}
@@ -167,10 +165,10 @@ export default function MainTestsListPage() {
             onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
             disabled={currentPage === 1 || isLoading}
           >
-            {t('common:previous')}
+            السابق
           </Button>
           <span className="mx-4 self-center">
-            {t('common:pageXOfY', { current: currentPage, total: meta.last_page })}
+            صفحة {currentPage} من {meta.last_page}
           </span>
           <Button
             variant="outline"
@@ -178,7 +176,7 @@ export default function MainTestsListPage() {
             onClick={() => setCurrentPage(p => Math.min(meta.last_page, p + 1))}
             disabled={currentPage === meta.last_page || isLoading}
           >
-            {t('common:next')}
+            التالي
           </Button>
         </div>
       )}

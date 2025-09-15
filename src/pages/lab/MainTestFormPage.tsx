@@ -1,10 +1,9 @@
 // src/pages/lab/MainTestFormPage.tsx
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Settings2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -54,7 +53,6 @@ interface MainTestSubmissionData {
 }
 
 const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
-  const { t } = useTranslation(['labTests', 'common']);
   const navigate = useNavigate();
   const { testId: routeTestId } = useParams<{ testId?: string }>();
   const queryClient = useQueryClient();
@@ -95,7 +93,7 @@ const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
     queryClient.invalidateQueries({ queryKey: ['packagesList'] });
     // Optionally set the new package as selected
     setMainValue('pack_id', String(newPackage.id), { shouldValidate: true, shouldDirty: true });
-    toast.info(`${t('labPackages:entityName')} "${newPackage.name}" ${t('common:addedToListAndSelected')}`);
+    toast.info(`تم إضافة الحزمة "${newPackage.name}" إلى القائمة وتم تحديدها`);
  };
  
  const dataIsLoading = isLoadingMainTestInitial || isLoadingContainers || isLoadingPackages; // Add isLoadingPackages
@@ -149,7 +147,7 @@ const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
     },
     onSuccess: (response) => {
       const savedMainTest = response.data;
-      toast.success(t('labTests:form.testSavedSuccess'));
+      toast.success('تم حفظ الاختبار بنجاح');
       queryClient.invalidateQueries({ queryKey: ['mainTests'] });
       
       if (!isEditMode && savedMainTest.id) {
@@ -160,7 +158,7 @@ const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
       }
     },
     onError: () => {
-      toast.error(t('common:errors.saveFailed'));
+      toast.error('فشل في حفظ البيانات');
     }
   });
 
@@ -170,7 +168,7 @@ const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
 
   const handleContainerAdded = (newContainer: Container) => {
     setMainValue('container_id', String(newContainer.id), { shouldValidate: true, shouldDirty: true });
-    toast.info(`${t('labTests:containers.entityName')} "${newContainer.container_name}" ${t('common:addedToListAndSelected')}`);
+    toast.info(`تم إضافة الوعاء "${newContainer.container_name}" إلى القائمة وتم تحديده`);
   };
 
   const formIsSubmitting = mainTestMutation.isPending;
@@ -178,7 +176,7 @@ const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
   if (isEditMode && isLoadingMainTestInitial && !mainTestData) {
     return (
       <div className="flex justify-center items-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" /> {t('common:loading')}
+        <Loader2 className="h-8 w-8 animate-spin text-primary" /> جاري التحميل...
       </div>
     );
   }
@@ -187,8 +185,8 @@ const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
     <div className="space-y-8 pb-10">
       <Card>
         <CardHeader>
-          <CardTitle>{isEditMode ? t('labTests:editTestTitle') : t('labTests:createTestTitle')}</CardTitle>
-          <CardDescription>{t('common:form.fillDetails')}</CardDescription>
+          <CardTitle>{isEditMode ? 'تعديل الاختبار' : 'إضافة اختبار جديد'}</CardTitle>
+          <CardDescription>يرجى ملء التفاصيل المطلوبة</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -213,15 +211,15 @@ const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
                     // Or onClick={() => setIsChildTestDialogOpen(true)} // If using a dialog
                   >
                     <Settings2 className="ltr:mr-2 rtl:ml-2 h-4 w-4" /> 
-                    {t('labTests:form.manageParametersButton')}
+                    إدارة المعاملات
                   </Button>
                 )}
                 <Button type="button" variant="outline" onClick={() => navigate('/settings/laboratory')} disabled={formIsSubmitting}>
-                  {t('common:cancel')}
+                  إلغاء
                 </Button>
                 <Button type="submit" disabled={dataIsLoading || formIsSubmitting}>
                   {formIsSubmitting && <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />}
-                  {t('labTests:form.saveButton')}
+                  حفظ
                 </Button>
               </div>
             </form>

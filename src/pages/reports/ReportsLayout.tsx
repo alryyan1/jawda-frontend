@@ -6,26 +6,26 @@ import { ListCollapse, FileBarChart2, FileSpreadsheet, BarChartBig, HandCoins, L
 import { cn } from '@/lib/utils';
 
 const reportNavItems = [
-  { to: '/reports/doctor-shifts', labelKey: 'doctorShiftsReport.titleShort', icon: FileBarChart2 },
-  { to: '/reports/service-statistics', labelKey: 'serviceStatisticsReport.titleShort', icon: FileBarChart2 },
-  { to: '/reports/clinic-shift-summary', labelKey: 'clinicGeneralReport.titleShort', icon: FileSpreadsheet },
-  { to: '/reports/costs', labelKey: 'costsReport.titleShort', icon: FileSpreadsheet },
-  { to: '/reports/monthly-service-income', labelKey: 'monthlyServiceIncomeReport.titleShort', icon: BarChartBig }, // NEW
-  { to: '/reports/service-cost-breakdown', labelKey: 'serviceCostBreakdownReport.titleShort', icon: BarChartBig }, // NEW
-  { to: '/reports/doctor-statistics', labelKey: 'doctorStatisticsReport.titleShort', icon: BarChartBig }, // NEW
-  { to: '/reports/company-performance', labelKey: 'companyPerformanceReport.titleShort', icon: BarChartBig }, // NEW
-  { to: '/reports/doctor-company-entitlement', labelKey: 'doctorCompanyEntitlementReport.titleShort', icon: HandCoins },
-  { to: '/reports/yearly-income-comparison', labelKey: 'yearlyIncomeComparisonReport.titleShort', icon: LineChart },
-  { to: '/reports/yearly-patient-frequency', labelKey: 'yearlyPatientFrequencyReport.titleShort', icon: UsersRound },
-  { to: '/reports/attendance-summary', labelKey: 'reports:attendance.monthlySummaryTitleShort', icon: Users, permission: 'view attendance_reports' },
-  { to: '/reports/attendance-daily', labelKey: 'reports:attendance.dailyDetailTitleShort', icon: CalendarCheck2, permission: 'view attendance_reports' },
-  { to: '/reports/attendance-payroll', labelKey: 'reports:attendance.payrollReportTitleShort', icon: FileText, permission: 'view payroll_attendance_report' },
-  { to: '/reports/monthly-lab-income', labelKey: 'monthlyLabIncomeReport.titleShort', icon: BarChartBig },
-  { to: '/reports/lab-test-statistics', labelKey: 'labTestStatisticsReport.titleShort', icon: BarChartBig },
+  { to: '/reports/doctor-shifts', label: 'مناوبات الأطباء', icon: FileBarChart2 },
+  { to: '/reports/service-statistics', label: 'إحصائيات الخدمات', icon: FileBarChart2 },
+  { to: '/reports/clinic-shift-summary', label: 'ملخص مناوبة العيادة', icon: FileSpreadsheet },
+  { to: '/reports/costs', label: 'تقرير التكاليف', icon: FileSpreadsheet },
+  { to: '/reports/monthly-service-income', label: 'دخل الخدمات الشهري', icon: BarChartBig },
+  { to: '/reports/service-cost-breakdown', label: 'تفصيل تكلفة الخدمات', icon: BarChartBig },
+  { to: '/reports/doctor-statistics', label: 'إحصائيات الأطباء', icon: BarChartBig },
+  { to: '/reports/company-performance', label: 'أداء الشركات', icon: BarChartBig },
+  { to: '/reports/doctor-company-entitlement', label: 'استحقاقات الأطباء للشركات', icon: HandCoins },
+  { to: '/reports/yearly-income-comparison', label: 'مقارنة الدخل السنوية', icon: LineChart },
+  { to: '/reports/yearly-patient-frequency', label: 'تكرار المرضى السنوي', icon: UsersRound },
+  { to: '/reports/attendance-summary', label: 'ملخص الحضور الشهري', icon: Users, permission: 'view attendance_reports' },
+  { to: '/reports/attendance-daily', label: 'تفاصيل الحضور اليومي', icon: CalendarCheck2, permission: 'view attendance_reports' },
+  { to: '/reports/attendance-payroll', label: 'رواتب الحضور', icon: FileText, permission: 'view payroll_attendance_report' },
+  { to: '/reports/monthly-lab-income', label: 'دخل المختبر الشهري', icon: BarChartBig },
+  { to: '/reports/lab-test-statistics', label: 'إحصائيات تحاليل المختبر', icon: BarChartBig },
 
   // Add more reports here:
-  // { to: '/reports/patient-visits', labelKey: 'patientVisitsReport.titleShort', icon: Users },
-  // { to: '/reports/financial-summary', labelKey: 'financialSummaryReport.titleShort', icon: LineChart },
+  // { to: '/reports/patient-visits', label: 'زيارات المرضى', icon: Users },
+  // { to: '/reports/financial-summary', label: 'الملخص المالي', icon: LineChart },
 ];
 
 const ReportsLayout: React.FC = () => {
@@ -53,7 +53,7 @@ const ReportsLayout: React.FC = () => {
               }
             >
               <item.icon className="h-4 w-4" />
-              {item.labelKey}
+              {item.label}
             </NavLink>
           ))}
         </nav>

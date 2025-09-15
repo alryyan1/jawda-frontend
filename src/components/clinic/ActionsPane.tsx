@@ -7,20 +7,29 @@ import {
   IconButton,
 } from "@mui/material";
 import {
-  PersonAdd as UserPlus,
   GridView as LayoutGrid,
   MedicalServices as BriefcaseMedical,
-  Schedule as CalendarClock,
-  PieChart as FilePieChart,
   PersonSearch as UserSearch,
   AttachMoney as Banknote,
 } from "@mui/icons-material";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faSitemap,
+  faUsers,
+  faUserPlus,
+  faAddressBook,
+  faIdBadge,
+  faClockRotateLeft,
+  faGlobe,
+  faLock,
+  faUserDoctor
+} from "@fortawesome/free-solid-svg-icons";
 import ManageDoctorShiftsDialog from "./ManageDoctorShiftsDialog";
 import UserShiftIncomeDialog from "./UserShiftIncomeDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import ShiftSummaryDialog from "./ShiftSummaryDialog";
-import DoctorShiftFinancialReviewDialog from "./dialogs/DoctorShiftFinancialReviewDialog";
 import type { DoctorShift } from "@/types/doctors";
+import { webUrl } from "@/pages/constants";
  
 interface ActionsPaneProps {
   showRegistrationForm: boolean;
@@ -42,7 +51,6 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
   const canViewOwnShiftIncome = true;
   const [isIncomeDialogOpen, setIsIncomeDialogOpen] = useState(false);
   const [showShiftSummaryDialog, setShowShiftSummaryDialog] = useState(false);
-  const [isFinancialReviewDialogOpen, setIsFinancialReviewDialogOpen] = useState(false);
   return (
     <>
     <Box
@@ -69,10 +77,24 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
               onClick={onToggleRegistrationForm}
               sx={{ width: 44, height: 44 }}
             >
-              {showRegistrationForm ? <LayoutGrid /> : <UserPlus />}
+              {showRegistrationForm ? <LayoutGrid /> : <FontAwesomeIcon icon={faUserPlus} />}
             </IconButton>
           </Tooltip>
         )}
+            {canManageDoctorShifts && (
+          <Tooltip title="إدارة نوبات الأطباء" placement="left">
+            <ManageDoctorShiftsDialog
+              currentClinicShiftId={currentClinicShift?.id ?? null}
+              currentUserId={1} // TODO: Get from auth context when available
+              triggerButton={
+                <IconButton sx={{ width: 44, height: 44 }}>
+                  <FontAwesomeIcon icon={faUserDoctor} />
+                </IconButton>
+              }
+            />
+          </Tooltip>
+        )}
+        
         {canViewOwnShiftIncome && currentClinicShift && (
           <Tooltip title="دخل نوبتي" placement="left">
             <IconButton
@@ -91,28 +113,75 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
             <UserSearch />
           </IconButton>
         </Tooltip>
-        {canManageDoctorShifts && (
-          <Tooltip title="إدارة نوبات الأطباء" placement="left">
-            <ManageDoctorShiftsDialog
-              currentClinicShiftId={currentClinicShift?.id ?? null}
-              triggerButton={
-                <IconButton sx={{ width: 44, height: 44 }}>
-                  <CalendarClock />
-                </IconButton>
-              }
-            />
-          </Tooltip>
-        )}
-        <Divider sx={{ width: "100%", my: 1 }} />
         
-        <Tooltip title="المراجعة المالية" placement="left">
+        {/* New icon buttons from the image */}
+        <Tooltip title="الهيكل التنظيمي" placement="left">
           <IconButton
-            onClick={() => setIsFinancialReviewDialogOpen(true)}
-            sx={{ width: 44, height: 44 }}
+            onClick={() => {
+              window.location.href = `${webUrl}reports/clinic-shift-summary/pdf`;
+            }}
+            sx={{ width: 44, height: 44, color: "success.main" }}
           >
-            <FilePieChart />
+            <FontAwesomeIcon icon={faSitemap} />
           </IconButton>
         </Tooltip>
+        
+        <Tooltip title="الأطباء" placement="left">
+          <IconButton
+            onClick={() => {/* TODO: Add doctors management functionality */}}
+            sx={{ width: 44, height: 44 }}
+          >
+            <FontAwesomeIcon icon={faUsers} />
+          </IconButton>
+        </Tooltip>
+        
+        <Tooltip title="دفتر العناوين" placement="left">
+          <IconButton
+            onClick={() => {/* TODO: Add contacts functionality */}}
+            sx={{ width: 44, height: 44 }}
+          >
+            <FontAwesomeIcon icon={faAddressBook} />
+          </IconButton>
+        </Tooltip>
+        
+        <Tooltip title="بطاقات الهوية" placement="left">
+          <IconButton
+            onClick={() => {/* TODO: Add ID cards functionality */}}
+            sx={{ width: 44, height: 44 }}
+          >
+            <FontAwesomeIcon icon={faIdBadge} />
+          </IconButton>
+        </Tooltip>
+        
+        <Tooltip title="تحديث" placement="left">
+          <IconButton
+            onClick={() => {/* TODO: Add refresh functionality */}}
+            sx={{ width: 44, height: 44, color: "success.main" }}
+          >
+            <FontAwesomeIcon icon={faClockRotateLeft} />
+          </IconButton>
+        </Tooltip>
+        
+        <Tooltip title="اللغة والإعدادات" placement="left">
+          <IconButton
+            onClick={() => {/* TODO: Add language/settings functionality */}}
+            sx={{ width: 44, height: 44, color: "secondary.main" }}
+          >
+            <FontAwesomeIcon icon={faGlobe} />
+          </IconButton>
+        </Tooltip>
+        
+        <Tooltip title="الأمان والصلاحيات" placement="left">
+          <IconButton
+            onClick={() => {/* TODO: Add security/permissions functionality */}}
+            sx={{ width: 44, height: 44, color: "error.main" }}
+          >
+            <FontAwesomeIcon icon={faLock} />
+          </IconButton>
+        </Tooltip>
+     
+        <Divider sx={{ width: "100%", my: 1 }} />
+        
         <Tooltip title="الصيدلية (قريباً)" placement="left">
           <IconButton disabled sx={{ width: 44, height: 44 }}>
             <BriefcaseMedical />
@@ -136,10 +205,6 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
         />
       )}
       
-      <DoctorShiftFinancialReviewDialog
-        isOpen={isFinancialReviewDialogOpen}
-        onOpenChange={setIsFinancialReviewDialogOpen}
-      />
     </>
   );
 };

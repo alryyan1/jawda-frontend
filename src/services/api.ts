@@ -1,6 +1,7 @@
 // src/services/api.ts (or your existing axios setup)
 import { host, projectFolder, schema } from '@/pages/constants';
 import axios from 'axios';
+import { toast } from 'sonner';
 
 const API_BASE_URL = `${schema}://${host}/${projectFolder}/public/api`;
 
@@ -26,14 +27,12 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Interceptor to handle 401/Unauthenticated errors
+// Interceptor to handle 401/Unauthenticated errors and show global error toasts
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (
-
-      error.response?.data?.message === "Unauthenticated."
-    ) {
+    // Handle authentication errors
+    if (error.response?.data?.message === "Unauthenticated.") {
       // Clear auth data
       localStorage.removeItem('authToken');
       localStorage.removeItem('authUser');
@@ -42,7 +41,30 @@ apiClient.interceptors.response.use(
       window.location.href = '/login';
       
       console.error('Session expired or invalid. Redirecting to login.');
+      return Promise.reject(error);
     }
+
+    // Show toast for other API errors
+    if (error.response?.status >= 400) {
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          `خطأ في الخادم (${error.response?.status})`;
+      
+      // Show toast for meaningful error messages
+      if (errorMessage && !errorMessage.includes('Network Error')) {
+        toast.error(errorMessage);
+      } else {
+        // Fallback for generic server errors
+        toast.error(`خطأ في الخادم (${error.response?.status})`);
+      }
+    } else if (!error.response) {
+      // Network error (no response from server)
+      toast.error('خطأ في الاتصال بالخادم - تحقق من اتصال الإنترنت');
+    } else {
+      // Other errors
+      toast.error('حدث خطأ غير متوقع');
+    }
+
     return Promise.reject(error);
   }
 );

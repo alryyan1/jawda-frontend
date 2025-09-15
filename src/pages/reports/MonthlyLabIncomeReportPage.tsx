@@ -4,7 +4,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
 import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -24,9 +23,9 @@ import type { MonthlyLabIncomeReportResponse, DailyLabIncomeData } from '@/types
 import { formatNumber } from '@/lib/utils';
 
 // Zod schema for filter form
-const getFilterSchema = (t: (key: string) => string) => z.object({
-  month: z.string().min(1, t('common:validation.monthRequired')),
-  year: z.string().min(4, t('common:validation.yearRequired')),
+const getFilterSchema = () => z.object({
+  month: z.string().min(1, 'الشهر مطلوب'),
+  year: z.string().min(4, 'السنة مطلوبة'),
 });
 type FilterFormValues = z.infer<ReturnType<typeof getFilterSchema>>;
 
@@ -34,15 +33,14 @@ const currentYear = new Date().getFullYear();
 const years = Array.from({ length: 10 }, (_, i) => String(currentYear - 5 + i)); // Last 5 years + next 4
 const months = Array.from({ length: 12 }, (_, i) => ({
   value: String(i + 1),
-  labelKey: `common:months.${i + 1}`
+  label: ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'][i]
 }));
 
 const MonthlyLabIncomeReportPage: React.FC = () => {
-  const { t, i18n } = useTranslation(['reports', 'common', 'labTests']);
-  const dateLocale = i18n.language.startsWith('ar') ? arSA : enUS;
+  const dateLocale = arSA;
 
   const filterForm = useForm<FilterFormValues>({
-    resolver: zodResolver(getFilterSchema(t)),
+    resolver: zodResolver(getFilterSchema()),
     defaultValues: {
       month: String(new Date().getMonth() + 1),
       year: String(currentYear),
@@ -88,7 +86,7 @@ const MonthlyLabIncomeReportPage: React.FC = () => {
       setPdfUrl(objectUrl);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      toast.error(t('common:error.generatePdfFailed'), { description: errorMessage });
+      toast.error('فشل توليد ملف PDF', { description: errorMessage });
       setIsPdfPreviewOpen(false);
     } finally {
       setIsGeneratingPdf(false);
@@ -103,43 +101,43 @@ const MonthlyLabIncomeReportPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-2">
           <FileBarChart2 className="h-7 w-7 text-primary" />
-          <h1 className="text-2xl sm:text-3xl font-bold">{t('reports:monthlyLabIncomeReport.pageTitle')}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">دخل المختبر الشهري</h1>
         </div>
         <Button onClick={handleGeneratePdf} disabled={isGeneratingPdf || isLoading || dailyData.length === 0} size="sm">
           {isGeneratingPdf ? <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2" /> : <Printer className="h-4 w-4 ltr:mr-2 rtl:ml-2" />}
-          {t('common:generatePdf')}
+          توليد PDF
         </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">{t('reports:filtersTitle')}</CardTitle>
+          <CardTitle className="text-lg">مرشحات التقرير</CardTitle>
         </CardHeader>
         <CardContent>
           <Form {...filterForm}>
             <form onSubmit={filterForm.handleSubmit(handleFilterSubmit)} className="flex flex-col sm:flex-row gap-3 items-end">
               <FormField control={filterForm.control} name="month" render={({ field }) => (
                 <FormItem className="w-full sm:w-auto flex-grow sm:flex-grow-0 sm:min-w-[150px]">
-                  <FormLabel className="text-xs">{t('common:month')}</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} dir={i18n.dir()} disabled={isFetching}>
+                  <FormLabel className="text-xs">الشهر</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} dir={'rtl'} disabled={isFetching}>
                     <FormControl><SelectTrigger className="h-9"><SelectValue /></SelectTrigger></FormControl>
                     <SelectContent>
-                      {months.map(m => <SelectItem key={m.value} value={m.value}>{t(m.labelKey)}</SelectItem>)}
+                      {months.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </FormItem>
               )} />
               <FormField control={filterForm.control} name="year" render={({ field }) => (
                 <FormItem className="w-full sm:w-auto flex-grow sm:flex-grow-0 sm:min-w-[120px]">
-                  <FormLabel className="text-xs">{t('common:year')}</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} dir={i18n.dir()} disabled={isFetching}>
+                  <FormLabel className="text-xs">السنة</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} dir={'rtl'} disabled={isFetching}>
                     <FormControl><SelectTrigger className="h-9"><SelectValue /></SelectTrigger></FormControl>
                     <SelectContent>{years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
                   </Select>
                 </FormItem>
               )} />
               <Button type="submit" className="h-9 mt-2 sm:mt-0 w-full sm:w-auto" disabled={isFetching}>
-                {isFetching ? <Loader2 className="h-4 w-4 animate-spin" /> : t('reports:applyFilters')}
+                {isFetching ? <Loader2 className="h-4 w-4 animate-spin" /> : 'تطبيق المرشحات'}
               </Button>
             </form>
           </Form>
@@ -147,33 +145,33 @@ const MonthlyLabIncomeReportPage: React.FC = () => {
       </Card>
 
       {isLoading && !isFetching && <div className="text-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}
-      {isFetching && <div className="text-sm text-muted-foreground mb-2 text-center">{t('common:updatingList')}</div>}
+      {isFetching && <div className="text-sm text-muted-foreground mb-2 text-center">جاري تحديث القائمة</div>}
       
       {error && (
         <Card className="border-destructive bg-destructive/5">
-          <CardHeader className="pb-2 pt-3"><CardTitle className="text-destructive text-sm font-semibold flex items-center gap-2"><AlertTriangle className="h-4 w-4"/>{t('common:error.fetchFailedExt', { entity: t('reports:monthlyLabIncomeReport.titleShort'), message: error.message })}</CardTitle></CardHeader>
+          <CardHeader className="pb-2 pt-3"><CardTitle className="text-destructive text-sm font-semibold flex items-center gap-2"><AlertTriangle className="h-4 w-4"/>فشل جلب البيانات: دخل المختبر الشهري: {error.message}</CardTitle></CardHeader>
         </Card>
       )}
 
       {!isLoading && !error && dailyData.length === 0 && !isFetching && (
-        <Card className="text-center py-10 text-muted-foreground"><CardContent>{t('reports:noDataForPeriod')}</CardContent></Card>
+        <Card className="text-center py-10 text-muted-foreground"><CardContent>لا توجد بيانات لهذه الفترة</CardContent></Card>
       )}
 
       {dailyData.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">
-              {t('reports:dailyBreakdownFor', { monthYear: reportData?.report_period.month_name || '' })}
+              تفصيل يومي لشهر {reportData?.report_period.month_name || ''}
             </CardTitle>
           </CardHeader>
           <CardContent className="px-0 sm:px-2 md:px-4">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-center">{t('common:date')}</TableHead>
-                  <TableHead className="text-right">{t('reports:labIncomeTable.totalPaidLab')}</TableHead>
-                  <TableHead className="text-right">{t('reports:labIncomeTable.cashPaidLab')}</TableHead>
-                  <TableHead className="text-right">{t('reports:labIncomeTable.bankPaidLab')}</TableHead>
+                  <TableHead className="text-center">التاريخ</TableHead>
+                  <TableHead className="text-right">إجمالي المدفوع للمختبر</TableHead>
+                  <TableHead className="text-right">نقداً</TableHead>
+                  <TableHead className="text-right">شبكة/بنك</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -192,10 +190,10 @@ const MonthlyLabIncomeReportPage: React.FC = () => {
           </CardContent>
           {summary && (
             <CardFooter className="flex flex-col items-end gap-1 border-t pt-3 text-sm bg-muted/30">
-              <div>{t('reports:labIncomeTable.monthlyTotalPaidLab')}: <span className="font-bold text-primary">{formatNumber(summary.total_lab_income_paid)}</span></div>
+              <div>إجمالي المدفوع للشهر: <span className="font-bold text-primary">{formatNumber(summary.total_lab_income_paid)}</span></div>
               <Separator className="my-1 w-48 self-end" />
-              <div>{t('reports:labIncomeTable.monthlyCashPaidLab')}: <span className="font-semibold">{formatNumber(summary.total_lab_cash_paid)}</span></div>
-              <div>{t('reports:labIncomeTable.monthlyBankPaidLab')}: <span className="font-semibold">{formatNumber(summary.total_lab_bank_paid)}</span></div>
+              <div>مدفوع نقداً: <span className="font-semibold">{formatNumber(summary.total_lab_cash_paid)}</span></div>
+              <div>مدفوع شبكة/بنك: <span className="font-semibold">{formatNumber(summary.total_lab_bank_paid)}</span></div>
             </CardFooter>
           )}
         </Card>
@@ -208,7 +206,7 @@ const MonthlyLabIncomeReportPage: React.FC = () => {
         }}
         pdfUrl={pdfUrl}
         isLoading={isGeneratingPdf && !pdfUrl}
-        title={t('reports:monthlyLabIncomeReport.pdfTitle', { month: reportData?.report_period.month_name || '' })}
+        title={`دخل المختبر الشهري - ${reportData?.report_period.month_name || ''}`}
         fileName={pdfFileName}
       />
     </div>

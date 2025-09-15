@@ -1,6 +1,4 @@
 // src/components/lab/MainTestFormFields.tsx
-import React from 'react';
-import { useTranslation } from 'react-i18next';
 import type { Control } from 'react-hook-form';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -43,7 +41,6 @@ const MainTestFormFields: React.FC<MainTestFormFieldsProps> = ({
   isLoadingPackages,
   onPackageAdded,
 }) => {
-  const { t, i18n } = useTranslation(['labTests', 'common']);
   const disabled = isLoadingData || isSubmitting;
 
   return (
@@ -53,8 +50,8 @@ const MainTestFormFields: React.FC<MainTestFormFieldsProps> = ({
         name="main_test_name"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>{t('labTests:form.nameLabel')}</FormLabel>
-            <FormControl><Input placeholder={t('labTests:form.namePlaceholder')} {...field} disabled={disabled} /></FormControl>
+            <FormLabel>اسم الاختبار</FormLabel>
+            <FormControl><Input placeholder="أدخل اسم الاختبار" {...field} disabled={disabled} /></FormControl>
             <FormMessage />
           </FormItem>
         )}
@@ -66,8 +63,8 @@ const MainTestFormFields: React.FC<MainTestFormFieldsProps> = ({
           name="price"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t('labTests:form.priceLabel')}</FormLabel>
-              <FormControl><Input type="number" step="0.01" placeholder={t('labTests:form.pricePlaceholder')} {...field} value={field.value || ''} disabled={disabled} /></FormControl>
+              <FormLabel>السعر</FormLabel>
+              <FormControl><Input type="number" step="0.01" placeholder="أدخل السعر" {...field} value={field.value || ''} disabled={disabled} /></FormControl>
               <FormMessage />
             </FormItem>
           )}
@@ -78,24 +75,24 @@ const MainTestFormFields: React.FC<MainTestFormFieldsProps> = ({
         name="pack_id" // This will store the selected package_id as a string
         render={({ field }) => (
           <FormItem>
-            <FormLabel>{t('labTests:form.packIdLabel')}</FormLabel>
+            <FormLabel>الحزمة</FormLabel>
             <div className="flex items-center gap-2">
               <Select
                 onValueChange={field.onChange}
                 value={field.value || ""} // Handle undefined/null for placeholder
                 defaultValue={field.value || ""}
                 disabled={isLoadingPackages || disabled}
-                dir={i18n.dir()}
+                dir="rtl"
               >
                 <FormControl className="flex-grow">
                   <SelectTrigger>
-                    <SelectValue placeholder={t('labTests:form.selectPackagePlaceholder', "Select a package...")} />
+                    <SelectValue placeholder="اختر حزمة..." />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value=" ">{t('common:none')}</SelectItem> {/* Option for no package */}
+                  <SelectItem value=" ">لا يوجد</SelectItem> {/* Option for no package */}
                   {isLoadingPackages ? (
-                    <SelectItem value="loading_pkg" disabled>{t('common:loading')}</SelectItem>
+                    <SelectItem value="loading_pkg" disabled>جاري التحميل...</SelectItem>
                   ) : (
                     packages?.map(pkg => (
                       <SelectItem key={pkg.id} value={String(pkg.id)}>{pkg.name}</SelectItem>
@@ -105,7 +102,7 @@ const MainTestFormFields: React.FC<MainTestFormFieldsProps> = ({
               </Select>
               <AddPackageDialog onPackageAdded={onPackageAdded} />
             </div>
-            <FormDescription>{t('labTests:form.packIdDescription')}</FormDescription>
+            <FormDescription>اختر الحزمة التي ينتمي إليها هذا الاختبار (اختياري)</FormDescription>
             <FormMessage />
           </FormItem>
         )}
@@ -117,14 +114,14 @@ const MainTestFormFields: React.FC<MainTestFormFieldsProps> = ({
         name="container_id"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>{t('labTests:form.containerLabel')}</FormLabel>
+            <FormLabel>الوعاء</FormLabel>
             <div className="flex items-center gap-2">
-              <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={isLoadingContainers || disabled} dir={i18n.dir()}>
+              <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={isLoadingContainers || disabled} dir="rtl">
                 <FormControl className="flex-grow">
-                  <SelectTrigger><SelectValue placeholder={t('labTests:form.selectContainer')} /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="اختر الوعاء" /></SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {isLoadingContainers ? <SelectItem value="loading_cont" disabled>{t('common:loading')}</SelectItem> :
+                  {isLoadingContainers ? <SelectItem value="loading_cont" disabled>جاري التحميل...</SelectItem> :
                    containers?.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.container_name}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -141,7 +138,7 @@ const MainTestFormFields: React.FC<MainTestFormFieldsProps> = ({
           name="pageBreak"
           render={({ field }) => (
             <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-              <FormLabel className="font-normal">{t('labTests:form.pageBreakLabel')}</FormLabel>
+              <FormLabel className="font-normal">قطع الصفحة</FormLabel>
               <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} disabled={disabled} /></FormControl>
             </FormItem>
           )}
@@ -151,7 +148,7 @@ const MainTestFormFields: React.FC<MainTestFormFieldsProps> = ({
           name="divided"
           render={({ field }) => (
             <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-              <FormLabel className="font-normal">{t('labTests:form.dividedLabel')}</FormLabel>
+              <FormLabel className="font-normal">مقسم</FormLabel>
               <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} disabled={disabled} /></FormControl>
             </FormItem>
           )}
@@ -161,7 +158,7 @@ const MainTestFormFields: React.FC<MainTestFormFieldsProps> = ({
           name="available"
           render={({ field }) => (
             <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-              <FormLabel className="font-normal">{t('labTests:form.availableLabel')}</FormLabel>
+              <FormLabel className="font-normal">متاح</FormLabel>
               <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} disabled={disabled} /></FormControl>
             </FormItem>
           )}

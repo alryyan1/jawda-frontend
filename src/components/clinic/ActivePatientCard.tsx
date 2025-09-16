@@ -1,17 +1,11 @@
 // src/components/clinic/ActivePatientCard.tsx
 import React, { useMemo, useState, useEffect } from "react";
-import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+// Removed unused Select imports
 import {
   UserCircle,
   Loader2,
@@ -32,7 +26,7 @@ import {
 
 import type { Patient } from "@/types/patients";
 import type { DoctorShift } from "@/types/doctors";
-import { updateDoctorVisitStatus } from "@/services/visitService";
+// Removed unused updateDoctorVisitStatus import
 import { getActiveDoctorShifts } from "@/services/clinicService";
 import type { Company } from "@/types/companies";
 import { useAuth } from "@/contexts/AuthContext";
@@ -42,7 +36,7 @@ import SendWhatsAppDialog from "./SendWhatsAppDialog";
 import PatientVisitHistoryDialog from "./PatientVisitHistoryDialog";
 import CreateNewVisitForPatientDialog from "./CreateNewVisitForPatientDialog";
 import Badge from "@mui/material/Badge"; // MUI Badge
-import type { DoctorVisit } from "@/types/visits";
+// import type { DoctorVisit } from "@/types/visits";
 
 const VISIT_STATUSES_FOR_DROPDOWN = [
   "waiting",
@@ -70,27 +64,14 @@ interface ActivePatientVisit {
   updated_at: string;
 }
 
-interface PaginatedActivePatientVisitsResponse {
-  data: ActivePatientVisit[];
-  total: number;
-  page: number;
-  limit: number;
-}
-
-interface ApiError {
-  response?: {
-    data?: {
-      message?: string;
-    };
-  };
-}
+// Removed unused PaginatedActivePatientVisitsResponse and ApiError types
 
 interface ActivePatientCardProps {
   visit: ActivePatientVisit;
   isSelected: boolean;
   onSelect: (patient: Patient, visitId: number) => void;
-  onProfileClick: (visit: DoctorVisit) => void;
-  selectedPatientVisitIdInWorkspace: number | null;
+  onProfileClick: (visit: any) => void;
+  selectedPatientVisitIdInWorkspace: number | null; // kept for API parity
 }
 
 const getStatusColor = (status: VisitStatus): string => {
@@ -114,28 +95,7 @@ const getStatusColor = (status: VisitStatus): string => {
   }
 };
 
-const getStatusText = (status: VisitStatus): string => {
-  switch (status) {
-    case "waiting":
-      return "في الانتظار";
-    case "with_doctor":
-      return "مع الطبيب";
-    case "lab_pending":
-      return "في انتظار المختبر";
-    case "imaging_pending":
-      return "في انتظار الأشعة";
-    case "payment_pending":
-      return "في انتظار الدفع";
-    case "completed":
-      return "مكتملة";
-    case "cancelled":
-      return "ملغية";
-    case "no_show":
-      return "لم يحضر";
-    default:
-      return status;
-  }
-};
+// Removed unused getStatusText helper
 
 const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
   visit,
@@ -168,62 +128,19 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
   });
 
   const targetShiftOptionsForNewVisit = useMemo(() => {
-    return (
-      availableDoctorShiftsForNewVisit?.filter(
-        (ds) => true // Example: any open shift of current user
-        // Or: ds.status === true // Any open shift if admin
-      ) || []
-    );
+    return availableDoctorShiftsForNewVisit?.filter(() => true) || [];
   }, [availableDoctorShiftsForNewVisit, currentUser?.id]);
 
-  const statusUpdateMutation = useMutation({
-    mutationFn: (params: { visitId: number; status: VisitStatus }) =>
-      updateDoctorVisitStatus(params.visitId, params.status),
-    onSuccess: (updatedVisitData, variables) => {
-      toast.success("تم تحديث حالة الزيارة بنجاح");
+  // Removed status update mutation (unused)
 
-      // Update all active patients queries that might contain this visit
-      queryClient.setQueriesData(
-        { queryKey: ["activePatients"] },
-        (oldData: PaginatedActivePatientVisitsResponse | undefined) => {
-          if (!oldData?.data) return oldData;
-          return {
-            ...oldData,
-            data: oldData.data.map((v: ActivePatientVisit) =>
-              v.id === variables.visitId
-                ? { ...v, status: variables.status }
-                : v
-            ),
-          };
-        }
-      );
-
-      // Invalidate all active patients queries to ensure data consistency
-      queryClient.invalidateQueries({
-        queryKey: ["activePatients"],
-      });
-
-      // If this visit is selected in workspace, update its data too
-      if (selectedPatientVisitIdInWorkspace === variables.visitId) {
-        queryClient.invalidateQueries({
-          queryKey: ["doctorVisit", variables.visitId],
-        });
-      }
-    },
-    onError: (error: ApiError) => {
-      toast.error(
-        error.response?.data?.message || "فشل في تحديث حالة الزيارة"
-      );
-    },
-  });
-
-  const handleStatusChange = (newStatus: VisitStatus) => {
-    if (visit.status !== newStatus) {
-      statusUpdateMutation.mutate({ visitId: visit.id, status: newStatus });
-    }
+  // Removed unused handleStatusChange
+  const [isClickAnimating, setIsClickAnimating] = useState(false);
+  const handleCardClick = () => {
+    // Trigger scale animation for 0.5s
+    setIsClickAnimating(true);
+    setTimeout(() => setIsClickAnimating(false), 500);
+    onSelect(visit.patient, visit.id);
   };
-
-  const handleCardClick = () => onSelect(visit.patient, visit.id);
 
   const handleProfileButtonClick = (event: React.MouseEvent) => {
     event.stopPropagation();
@@ -260,20 +177,8 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
   // });
 
   const targetShiftOptions = useMemo(() => {
-    return (
-      availableDoctorShifts?.filter(
-        (ds) => true
-          // ds.user_id === currentUser?.id &&
-          // ds.id !== visit.doctor_shift_id &&
-          // ds.status === true
-      ) || []
-    );
-  }, [
-    availableDoctorShifts,
-    visit.doctor?.id,
-    visit.doctor_shift_id,
-    currentUser?.id,
-  ]);
+    return availableDoctorShifts?.filter(() => true) || [];
+  }, [availableDoctorShifts, visit.doctor?.id, visit.doctor_shift_id, currentUser?.id]);
 
   const handleCopyToShiftSuccess = () => {
     setIsCopyDialogOpen(false);
@@ -331,11 +236,12 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
         <ContextMenuTrigger asChild>
           <Card
             className={cn(
-              "hover:shadow-lg transition-shadow cursor-pointer flex flex-row items-center px-3 py-2 h-[52px] w-[300px]",
+              "hover:shadow-lg transition-transform duration-500 cursor-pointer flex flex-row items-center px-3 py-2 h-[52px] w-[300px]",
               isSelected
                 ? "ring-2 ring-primary shadow-lg bg-primary/10"
                 : `bg-card ring-1 ring-transparent hover:ring-slate-300 ${visit.company ? "ring-pink-400" : ""}`
-            )}
+            , isClickAnimating ? "scale-105" : undefined)}
+            data-selected-in-workspace={(selectedPatientVisitIdInWorkspace === visit.id).toString()}
             onClick={handleCardClick}
             role="button"
             tabIndex={0}

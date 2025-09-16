@@ -1,7 +1,7 @@
 // src/components/clinic/ServiceSelectionGrid.tsx
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import type { ServiceGroupWithServices, Service } from '@/types/services';
-import { Search, List, CheckCircle2, AlertCircle, Loader2, PlusCircle } from 'lucide-react';
+import { Search, List, AlertCircle, Loader2, PlusCircle } from 'lucide-react';
 // import { formatNumber } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
@@ -138,15 +138,26 @@ const ServiceSelectionGrid: React.FC<ServiceSelectionGridProps> = ({
   }, [onAddServices, selectedServiceIds]);
 
   // Bubble selection up
+  const lastSelectionRef = useRef<string>("[]");
   useEffect(() => {
-    if (onSelectedIdsChange) {
-      onSelectedIdsChange(Array.from(selectedServiceIds));
+    if (!onSelectedIdsChange) return;
+    const idsArr = Array.from(selectedServiceIds);
+    const key = JSON.stringify(idsArr);
+    if (key !== lastSelectionRef.current) {
+      lastSelectionRef.current = key;
+      onSelectedIdsChange(idsArr);
     }
   }, [selectedServiceIds, onSelectedIdsChange]);
 
-  // Respond to external add selected command
+  // Respond to external add selected command (only when value changes)
+  const lastAddCommandRef = useRef(0);
   useEffect(() => {
-    if (externalAddSelectedCommand > 0) {
+    if (
+      typeof externalAddSelectedCommand === 'number' &&
+      externalAddSelectedCommand > 0 &&
+      externalAddSelectedCommand !== lastAddCommandRef.current
+    ) {
+      lastAddCommandRef.current = externalAddSelectedCommand;
       handleAddClick();
     }
   }, [externalAddSelectedCommand, handleAddClick]);
@@ -157,13 +168,19 @@ const ServiceSelectionGrid: React.FC<ServiceSelectionGridProps> = ({
     const isSelected = selectedServiceIds.has(service.id);
 
     return (
-      <Card sx={{width:'200px'}} onClick={() => toggleServiceSelection(service.id)} role="button" aria-pressed={isSelected} aria-label={service.name}>
-        <CardContent sx={{  display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-          <Box display="flex" alignItems="start" justifyContent="space-between" mb={0.5}>
-            <Typography variant="body2" sx={{ fontWeight: 500 }} noWrap title={service.name}>{service.name}</Typography>
-            {isSelected && <CheckCircle2 className="h-4 w-4 text-primary" aria-hidden="true" />}
-          </Box>
-          {/* Removed price and category name section as requested */}
+      <Card 
+        onClick={() => toggleServiceSelection(service.id)} 
+        role="button" 
+        aria-pressed={isSelected} 
+        aria-selected={isSelected}
+        aria-label={service.name}
+        className={`transition-colors cursor-pointer ${isSelected ? 'ring-2 ring-primary' : 'hover:ring-1 hover:ring-slate-300'} `}
+        sx={{ height: '100%', ...(isSelected ? { backgroundColor: 'action.selected' } : {}) }}
+      >
+        <CardContent sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', height: '64px' }}>
+          <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap title={service.name}>
+            {service.name}
+          </Typography>
         </CardContent>
       </Card>
     );
@@ -229,6 +246,7 @@ const ServiceSelectionGrid: React.FC<ServiceSelectionGridProps> = ({
             <List className="h-4 w-4" />
           </Button>
         </Box>
+        {/* Removed local add-selected button as requested; moved to SelectedPatientWorkspace */}
       </Box>
 
       {/* No results after search */}
@@ -267,11 +285,9 @@ const ServiceSelectionGrid: React.FC<ServiceSelectionGridProps> = ({
               }
               return (
                 <Box>
-                  <Box className='flex flex-wrap gap-2'>
+                  <Box className='grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-2'>
                     {currentGroup.services.map((service) => (
-                      <Box key={service.id} className='w-[200px]'>
-                        <ServiceCard service={service as DisplayService} />
-                      </Box>
+                      <ServiceCard key={service.id} service={service as DisplayService} />
                     ))}
                   </Box>
                 </Box>
@@ -281,15 +297,7 @@ const ServiceSelectionGrid: React.FC<ServiceSelectionGridProps> = ({
         </Box>
       )}
 
-      {/* Add Selected Button */}
-      {selectedServiceIds.size > 0 && (
-        <Box display="flex" justifyContent="flex-end" borderTop={1} borderColor="divider" pt={1}>
-          <Button onClick={handleAddClick} variant="contained" size="small" disabled={isLoading || selectedServiceIds.size === 0}>
-            {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-            &nbsp;إضافة المحدد ({selectedServiceIds.size})
-          </Button>
-        </Box>
-      )}
+      {/* Bottom add button removed; controlled from top bar */}
     </Box>
   );
 };

@@ -92,7 +92,7 @@ const RequestedServicesSummary: React.FC<RequestedServicesSummaryProps> = ({
   }
 
   return (
-    <Card style={{ direction: true }} className={`mt-4 shadow-sm ${className}`}>
+    <Card dir="rtl" style={{ direction: true }} className={`mt-4 shadow-sm ${className}`}>
       <CardHeader className="py-3">
         <CardTitle className="text-md">الملخص المالي</CardTitle>
       </CardHeader>

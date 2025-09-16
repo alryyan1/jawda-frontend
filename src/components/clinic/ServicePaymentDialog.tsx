@@ -1,17 +1,24 @@
 // src/components/clinic/ServicePaymentDialog.tsx
 import React, { useEffect, useMemo, useCallback } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import {
-  Dialog, DialogContent, DialogDescription, DialogFooter,
-  DialogHeader, DialogTitle, DialogClose,
-} from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { 
+  Dialog as MUIDialog,
+  DialogTitle,
+  DialogContent as MUIDialogContent,
+  DialogActions,
+  Button as MUIButton,
+  TextField,
+  RadioGroup as MUIRadioGroup,
+  FormControl as MUIFormControl,
+  FormControlLabel,
+  Radio,
+  FormLabel as MUIFormLabel,
+  Typography,
+  Box
+} from '@mui/material';
 import { Loader2 } from 'lucide-react';
 import type { RequestedService } from '@/types/services';
 import { recordServicePayment } from '@/services/visitService';
@@ -163,76 +170,71 @@ const ServicePaymentDialog: React.FC<ServicePaymentDialogProps> = ({
   }, [isOpen, handleKeyPress]);
 
   if (!isOpen || (!visit?.patient && visitId)) {
-    return isOpen ? <Dialog open={isOpen} onOpenChange={onOpenChange}><DialogContent><div className="p-6 text-center"><Loader2 className="h-6 w-6 animate-spin"/></div></DialogContent></Dialog> : null;
+    return isOpen ? <MUIDialog open={isOpen} onClose={() => onOpenChange(false)}><MUIDialogContent><div className="p-6 text-center"><Loader2 className="h-6 w-6 animate-spin"/></div></MUIDialogContent></MUIDialog> : null;
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>دفع الخدمة</DialogTitle>
-          <DialogDescription>
-            المبلغ الإجمالي: <span className="font-semibold">{formatNumber(fullNetPrice)}</span> ريال <br/>
-            {isCompanyPatient && requestedService.endurance > 0 && (
-                <span className="text-xs text-muted-foreground">
-                    (التأمين: {formatNumber(Number(requestedService.endurance) * (Number(requestedService.count) || 1))} ريال) <br/>
-                </span>
+    <MUIDialog open={isOpen} onClose={() => onOpenChange(false)} fullWidth maxWidth="sm">
+      <DialogTitle>دفع الخدمة</DialogTitle>
+      <MUIDialogContent>
+        <Box mb={1.5}>
+          <Typography variant="body2">
+            المبلغ الإجمالي: <strong>{formatNumber(fullNetPrice)}</strong> ريال
+          </Typography>
+          {isCompanyPatient && requestedService.endurance > 0 && (
+            <Typography variant="caption" color="text.secondary">
+              (التأمين: {formatNumber(Number(requestedService.endurance) * (Number(requestedService.count) || 1))} ريال)
+            </Typography>
+          )}
+          <Typography variant="body2">
+            المبلغ المتبقي: <strong>{formatNumber(displayBalance)}</strong> ريال
+          </Typography>
+        </Box>
+
+        <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ display: 'flex', flexDirection: 'column', gap: 2, py: 1 }}>
+          <Controller
+            name="amount"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                label="المبلغ"
+                type="number"
+                inputProps={{ step: 0.01 }}
+                value={String(field.value ?? '')}
+                onChange={(e) => field.onChange(e.target.value)}
+                disabled={mutation.isPending || (displayBalance <= 0 && parseFloat(String(field.value || '0')) <= 0)}
+                fullWidth
+                size="small"
+              />
             )}
-            المبلغ المتبقي: <span className="font-semibold">{formatNumber(displayBalance)}</span> ريال
-          </DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2">
-            <FormField control={control} name="amount" render={({ field }) => (
-              <FormItem>
-                <FormLabel>المبلغ</FormLabel>
-                <FormControl>
-                  <Input 
-                    type="number" 
-                    step="0.01" 
-                    {...field} 
-                    onChange={(e) => field.onChange(e.target.value)}
-                    value={String(field.value)} // Ensure value is string for input
-                    disabled={mutation.isPending || (displayBalance <= 0 && parseFloat(field.value) <= 0) }
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
-            <FormField control={control} name="is_bank" render={({ field }) => (
-              <FormItem className="space-y-2">
-                <FormLabel>طريقة الدفع</FormLabel>
-                <FormControl>
-                  <RadioGroup
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    className="flex space-x-4 rtl:space-x-reverse"
-                    disabled={mutation.isPending || (displayBalance <= 0 && parseFloat(getValues("amount")) <= 0)}
-                  >
-                    <FormItem className="flex items-center space-x-2 rtl:space-x-reverse">
-                      <FormControl><RadioGroupItem value="0" id={`cash-${requestedService.id}`} /></FormControl>
-                      <FormLabel htmlFor={`cash-${requestedService.id}`} className="font-normal">نقدي</FormLabel>
-                    </FormItem>
-                    <FormItem className="flex items-center space-x-2 rtl:space-x-reverse">
-                      <FormControl><RadioGroupItem value="1" id={`bank-${requestedService.id}`} /></FormControl>
-                      <FormLabel htmlFor={`bank-${requestedService.id}`} className="font-normal">بنكي</FormLabel>
-                    </FormItem>
-                  </RadioGroup>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
-            <DialogFooter className="pt-4">
-              <DialogClose asChild><Button type="button" variant="outline" disabled={mutation.isPending}>إلغاء</Button></DialogClose>
-              <Button type="submit" disabled={mutation.isPending || (displayBalance <= 0 && parseFloat(getValues("amount")) <= 0)}>
-                {mutation.isPending && <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />}
-                دفع
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+          />
+
+          <Controller
+            name="is_bank"
+            control={control}
+            render={({ field }) => (
+              <MUIFormControl disabled={mutation.isPending || (displayBalance <= 0 && parseFloat(getValues('amount')) <= 0)}>
+                <MUIFormLabel>طريقة الدفع</MUIFormLabel>
+                <MUIRadioGroup row value={field.value} onChange={(_e, val) => field.onChange(val)}>
+                  <FormControlLabel value="0" control={<Radio />} label="نقدي" />
+                  <FormControlLabel value="1" control={<Radio />} label="بنكي" />
+                </MUIRadioGroup>
+              </MUIFormControl>
+            )}
+          />
+
+          <DialogActions sx={{ px: 0 }}>
+            <MUIButton type="button" variant="outlined" disabled={mutation.isPending} onClick={() => onOpenChange(false)}>
+              إلغاء
+            </MUIButton>
+            <MUIButton type="submit" variant="contained" disabled={mutation.isPending || (displayBalance <= 0 && parseFloat(getValues('amount')) <= 0)}>
+              {mutation.isPending && <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />}
+              دفع
+            </MUIButton>
+          </DialogActions>
+        </Box>
+      </MUIDialogContent>
+    </MUIDialog>
   );
 };
 export default ServicePaymentDialog;

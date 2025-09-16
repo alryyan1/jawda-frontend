@@ -1,5 +1,5 @@
 // src/components/clinic/ServicesRequestComponent.tsx
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import ServiceSelectionGrid from './ServiceSelectionGrid';
@@ -27,14 +27,21 @@ interface ServicesRequestComponentProps {
   openSelectionGridCommand?: number;
   // When this counter increments, trigger adding currently selected in grid
   addSelectedCommand?: number;
+  // Notify parent when selection count changes in the grid
+  onSelectionCountChange?: (count: number) => void;
 }
 
-const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ visitId, patientId, visit, handlePrintReceipt, openSelectionGridCommand = 0, addSelectedCommand = 0 }) => {
+const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ visitId, patientId, visit, handlePrintReceipt, openSelectionGridCommand = 0, addSelectedCommand = 0, onSelectionCountChange }) => {
   // Using Arabic directly
   const queryClient = useQueryClient();
   const { currentClinicShift } = useAuth();
   const [showServiceSelectionGrid, setShowServiceSelectionGrid] = useState(visit?.requested_services?.length === 0);
   const [selectedIdsInGrid, setSelectedIdsInGrid] = useState<number[]>([]);
+  // Stable callback declared unconditionally to keep hooks order fixed
+  const handleSelectedIdsChange = useCallback((ids: number[]) => {
+    setSelectedIdsInGrid(ids);
+    onSelectionCountChange?.(ids.length);
+  }, [onSelectionCountChange]);
   const requestedServicesQueryKey = ['requestedServicesForVisit', visitId] as const;
   const patientDetailsQueryKey = ['patientDetailsForServiceSelection', patientId] as const;
   
@@ -172,11 +179,19 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ vis
   }, [openSelectionGridCommand]);
 
   // If parent requests to add selected
+  // Avoid re-triggering on same command value
+  const lastAddCmdRef = React.useRef(0);
   React.useEffect(() => {
-    if (addSelectedCommand > 0 && showServiceSelectionGrid && selectedIdsInGrid.length > 0) {
+    if (
+      addSelectedCommand > 0 &&
+      addSelectedCommand !== lastAddCmdRef.current &&
+      showServiceSelectionGrid &&
+      selectedIdsInGrid.length > 0
+    ) {
+      lastAddCmdRef.current = addSelectedCommand;
       addMultipleServicesMutation.mutate(selectedIdsInGrid);
     }
-  }, [addSelectedCommand]);
+  }, [addSelectedCommand, showServiceSelectionGrid, selectedIdsInGrid]);
   if (isLoadingRequested || isLoadingCatalog || (patientId && isLoadingPatient) || (isCompanyPatient && showServiceSelectionGrid && isLoadingCompanyContracts)) {
     return <div className="py-4 text-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
   }
@@ -196,7 +211,7 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ vis
             isLoading={addMultipleServicesMutation.isPending}
             onCancel={() => setShowServiceSelectionGrid(false)}
             isCompanyPatient={isCompanyPatient} // Pass this down
-            onSelectedIdsChange={setSelectedIdsInGrid}
+            onSelectedIdsChange={handleSelectedIdsChange}
             externalAddSelectedCommand={addSelectedCommand}
         />
       ) : (

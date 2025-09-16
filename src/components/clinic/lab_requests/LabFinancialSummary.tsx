@@ -1,6 +1,5 @@
 // src/components/clinic/lab_requests/LabFinancialSummary.tsx
 import React, { useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -37,7 +36,6 @@ const LabFinancialSummary: React.FC<LabFinancialSummaryProps> = ({
   isCompanyPatient,
   className,
 }) => {
-  const { t, i18n } = useTranslation(['payments', 'common', 'labTests']);
   console.log("requestedTests", requestedTests);
   const labSummary = useMemo(() => {
     if (!requestedTests) return { grossTotal:0, totalDiscount: 0, totalEndurance:0, totalNetPayableByPatient: 0, totalPaid: 0, totalBalanceDue: 0, totalNetPayableOverall: 0 };
@@ -96,22 +94,22 @@ const LabFinancialSummary: React.FC<LabFinancialSummaryProps> = ({
   // }
 
   return (
-    <Card className={cn("shadow-sm", className)} style={{direction: i18n.dir()}}>
+    <Card className={cn("shadow-sm", className)} style={{direction: 'rtl'}}>
       <CardHeader className="py-3">
-        <CardTitle className="text-md font-semibold">{t('common:financialSummary_lab')}</CardTitle>
+        <CardTitle className="text-md font-semibold">الملخص المالي (المعمل)</CardTitle>
       </CardHeader>
       <CardContent className="space-y-1.5 pb-3">
-        <DetailRow label={t('payments:summaryLabels.grossTotal')} value={formatNumber(labSummary.grossTotal)} icon={Coins} />
-        <DetailRow label={t('payments:summaryLabels.totalDiscount')} value={`-${formatNumber(labSummary.totalDiscount)}`} icon={Percent} valueClass="text-orange-600 dark:text-orange-400" />
+        <DetailRow label="الإجمالي" value={formatNumber(labSummary.grossTotal)} icon={Coins} />
+        <DetailRow label="إجمالي الخصم" value={`-${formatNumber(labSummary.totalDiscount)}`} icon={Percent} valueClass="text-orange-600 dark:text-orange-400" />
         {isCompanyPatient && (
-          <DetailRow label={t('payments:summaryLabels.companyEndurance')} value={`-${formatNumber(labSummary.totalEndurance)}`} icon={Banknote} valueClass="text-blue-600 dark:text-blue-400" />
+          <DetailRow label="تحمل الشركة" value={`-${formatNumber(labSummary.totalEndurance)}`} icon={Banknote} valueClass="text-blue-600 dark:text-blue-400" />
         )}
         <Separator className="my-2" />
-        <DetailRow label={t('payments:summaryLabels.netPayableByPatient')} value={formatNumber(labSummary.totalNetPayableByPatient)} icon={DollarSign} valueClass="font-bold text-lg" />
-        <DetailRow label={t('payments:summaryLabels.totalPaidByPatient')} value={formatNumber(labSummary.totalPaid)} icon={DollarSign} valueClass="text-green-600 dark:text-green-500 font-semibold" />
+        <DetailRow label="الصافي المستحق على المريض" value={formatNumber(labSummary.totalNetPayableByPatient)} icon={DollarSign} valueClass="font-bold text-lg" />
+        <DetailRow label="المدفوع" value={formatNumber(labSummary.totalPaid)} icon={DollarSign} valueClass="text-green-600 dark:text-green-500 font-semibold" />
         <Separator className="my-2" />
         <DetailRow
-          label={t('payments:summaryLabels.balanceDueFromPatient')}
+          label="المتبقي على المريض"
           value={formatNumber(labSummary.totalBalanceDue)}
           icon={DollarSign}
           valueClass={cn("font-bold text-xl", labSummary.totalBalanceDue > 0.09 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-500')}
@@ -126,7 +124,7 @@ const LabFinancialSummary: React.FC<LabFinancialSummaryProps> = ({
             onClick={onOpenBatchPaymentDialog}
             // disabled={isLoading} // Add appropriate disabled state if needed
           >
-            <DollarSign className="h-4 w-4 ltr:mr-1.5 rtl:ml-1.5" /> {t('payments:payAllDueLab')}
+            <DollarSign className="h-4 w-4 ltr:mr-1.5 rtl:ml-1.5" /> دفع جميع المستحقات (المعمل)
           </Button>
         </CardFooter>
       )}

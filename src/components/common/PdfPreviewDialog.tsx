@@ -53,8 +53,8 @@ const PdfPreviewDialog: React.FC<PdfPreviewDialogProps> = ({
       <DialogContent
         className={
           widthClass
-            ? `${widthClass} max-w-none sm:max-w-none md:max-w-none h-[85vh] flex flex-col p-0 sm:p-0 overflow-hidden`
-            : "max-w-none sm:max-w-none md:max-w-none h-[85vh] flex flex-col p-0 sm:p-0 overflow-hidden"
+            ? `${widthClass} h-[85vh] flex flex-col p-0 sm:p-0 overflow-hidden`
+            : "w-[350px] max-w-[350px] h-[85vh] flex flex-col p-0 sm:p-0 overflow-hidden"
         }
       >
         <DialogHeader className="p-3 sm:p-4 border-b flex-row justify-between items-center space-y-0">
@@ -83,25 +83,6 @@ const PdfPreviewDialog: React.FC<PdfPreviewDialogProps> = ({
           )}
         </div>
 
-        <DialogFooter className="p-4 sm:p-6 border-t">
-          {pdfUrl && !isLoading && (
-            <>
-              <Button variant="outline" onClick={handleActualPrint}>
-                <PrinterIcon className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-                {t('common:print')}
-              </Button>
-              <Button asChild>
-                <a href={pdfUrl} download={fileName}>
-                  <Download className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-                  {t('common:download')}
-                </a>
-              </Button>
-            </>
-          )}
-          <DialogClose asChild>
-            <Button type="button" variant="secondary">{t('common:close')}</Button>
-          </DialogClose>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

@@ -58,6 +58,7 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
   const [pdfFileName, setPdfFileName] = useState('receipt.pdf');
   const [openSelectionGridCommand, setOpenSelectionGridCommand] = useState(0);
   const [addSelectedCommand, setAddSelectedCommand] = useState(0);
+  const [hasSelectedServices, setHasSelectedServices] = useState(false);
 
 
   const handlePrintReceipt = async () => {
@@ -67,7 +68,10 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
     setIsPdfPreviewOpen(true); // Open dialog to show loader
 
     try {
-      const response = await apiClient.get('/api/receipts/print');
+      const response = await apiClient.get(`visits/${visit.id}/thermal-receipt/pdf`, {
+        responseType: 'blob',
+        headers: { Accept: 'application/pdf' },
+      });
       const blob = new Blob([response.data], { type: 'application/pdf' });
       const objectUrl = URL.createObjectURL(blob);
       setPdfUrl(objectUrl);
@@ -166,10 +170,17 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
               <PlusCircle className="h-4 w-4 ltr:mr-2 rtl:ml-2"/>
               إضافة خدمات
             </Button>
-            <Button onClick={() => setAddSelectedCommand(c => c + 1)} variant="secondary" size="sm">
-              <ListOrdered className="h-4 w-4 ltr:mr-2 rtl:ml-2"/>
-              إضافة المحدد
-            </Button>
+            {hasSelectedServices && (
+              <Button
+                onClick={() => setAddSelectedCommand(c => c + 1)}
+                variant="secondary"
+                size="sm"
+                className="animate-pulse"
+              >
+                <ListOrdered className="h-4 w-4 ltr:mr-2 rtl:ml-2"/>
+                إضافة المحدد
+              </Button>
+            )}
           </div>
           </div>
         </ScrollArea>
@@ -178,7 +189,15 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
           value="services"
           className="flex-grow overflow-y-auto p-3 sm:p-4 focus-visible:ring-0 focus-visible:ring-offset-0"
         >
-          <ServicesRequestComponent addSelectedCommand={addSelectedCommand} openSelectionGridCommand={openSelectionGridCommand} handlePrintReceipt={handlePrintReceipt} patientId={patient.id} visit={visit} visitId={visit.id} />
+          <ServicesRequestComponent 
+            addSelectedCommand={addSelectedCommand} 
+            openSelectionGridCommand={openSelectionGridCommand} 
+            handlePrintReceipt={handlePrintReceipt} 
+            patientId={patient.id} 
+            visit={visit} 
+            visitId={visit.id} 
+            onSelectionCountChange={(count) => setHasSelectedServices(count > 0)}
+          />
         </TabsContent>
 
         <TabsContent 

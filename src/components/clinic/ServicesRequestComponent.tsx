@@ -23,13 +23,18 @@ interface ServicesRequestComponentProps {
   patientId: number;
   visit: DoctorVisit; // Make this required since child components need it
   handlePrintReceipt: () => void;
+  // When this counter increments, open the selection grid (triggered by parent)
+  openSelectionGridCommand?: number;
+  // When this counter increments, trigger adding currently selected in grid
+  addSelectedCommand?: number;
 }
 
-const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ visitId, patientId, visit, handlePrintReceipt }) => {
+const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ visitId, patientId, visit, handlePrintReceipt, openSelectionGridCommand = 0, addSelectedCommand = 0 }) => {
   // Using Arabic directly
   const queryClient = useQueryClient();
   const { currentClinicShift } = useAuth();
   const [showServiceSelectionGrid, setShowServiceSelectionGrid] = useState(visit?.requested_services?.length === 0);
+  const [selectedIdsInGrid, setSelectedIdsInGrid] = useState<number[]>([]);
   const requestedServicesQueryKey = ['requestedServicesForVisit', visitId] as const;
   const patientDetailsQueryKey = ['patientDetailsForServiceSelection', patientId] as const;
   
@@ -101,7 +106,7 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ vis
 
 
   const addMultipleServicesMutation = useMutation({
-    mutationFn: (serviceIds: number[]) => addServicesToVisit(visitId, serviceIds),
+    mutationFn: (serviceIds: number[]) => addServicesToVisit({ visitId, service_ids: serviceIds }),
     onSuccess: (_, serviceIds) => {
       toast.success(`تمت إضافة ${serviceIds.length} خدمة بنجاح!`);
       // After successful addition, invalidate queries and hide the grid
@@ -114,6 +119,7 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ vis
         exact: true 
       });
       setShowServiceSelectionGrid(false);
+      setSelectedIdsInGrid([]);
     },
     onError: (error: unknown) => {
       const apiError = error as { response?: { data?: { message?: string } } };
@@ -157,6 +163,20 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ vis
       return false;
     }
   };
+  
+  // Open the selection grid when parent triggers a new command value
+  React.useEffect(() => {
+    if (openSelectionGridCommand > 0) {
+      setShowServiceSelectionGrid(true);
+    }
+  }, [openSelectionGridCommand]);
+
+  // If parent requests to add selected
+  React.useEffect(() => {
+    if (addSelectedCommand > 0 && showServiceSelectionGrid && selectedIdsInGrid.length > 0) {
+      addMultipleServicesMutation.mutate(selectedIdsInGrid);
+    }
+  }, [addSelectedCommand]);
   if (isLoadingRequested || isLoadingCatalog || (patientId && isLoadingPatient) || (isCompanyPatient && showServiceSelectionGrid && isLoadingCompanyContracts)) {
     return <div className="py-4 text-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
   }
@@ -176,6 +196,8 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ vis
             isLoading={addMultipleServicesMutation.isPending}
             onCancel={() => setShowServiceSelectionGrid(false)}
             isCompanyPatient={isCompanyPatient} // Pass this down
+            onSelectedIdsChange={setSelectedIdsInGrid}
+            externalAddSelectedCommand={addSelectedCommand}
         />
       ) : (
         <div className=" gap-1 ">

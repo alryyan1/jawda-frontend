@@ -16,9 +16,24 @@ export const getAvailableServicesForVisit = async (visitId: number): Promise<Ser
   return response.data.data;
 };
 
-export const addServicesToVisit = async (params: { visitId: number; service_ids: number[] }): Promise<RequestedService[]> => {
-  // Backend returns RequestedServiceResource::collection
-  const response = await apiClient.post<{ data: RequestedService[] }>(`${VISIT_API_BASE}/${params.visitId}/request-services`, { service_ids: params.service_ids });
+// Support both call signatures for backwards compatibility:
+// 1) addServicesToVisit({ visitId, service_ids })
+// 2) addServicesToVisit(visitId, service_ids)
+export const addServicesToVisit = async (
+  visitIdOrParams: number | { visitId: number; service_ids: number[] },
+  maybeServiceIds?: number[]
+): Promise<RequestedService[]> => {
+  const visitId = typeof visitIdOrParams === 'number' ? visitIdOrParams : visitIdOrParams.visitId;
+  const service_ids = Array.isArray(maybeServiceIds) ? maybeServiceIds : (visitIdOrParams as { visitId: number; service_ids: number[] }).service_ids;
+
+  if (!visitId || !Array.isArray(service_ids) || service_ids.length === 0) {
+    throw new Error('Invalid parameters: visitId and service_ids are required');
+  }
+
+  const response = await apiClient.post<{ data: RequestedService[] }>(
+    `${VISIT_API_BASE}/${visitId}/request-services`,
+    { service_ids }
+  );
   return response.data.data;
 };
 

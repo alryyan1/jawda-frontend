@@ -66,7 +66,8 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
        <Tooltip title="التقرير العام" placement="left">
           <IconButton
             onClick={() => {
-              window.location.href = `${webUrl}reports/clinic-shift-summary/pdf`;
+              const url = `${webUrl}reports/clinic-shift-summary/pdf`;
+              window.open(url, '_blank', 'noopener,noreferrer');
             }}
             sx={{ width: 44, height: 44, color: "success.main" }}
           >

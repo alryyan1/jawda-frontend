@@ -55,16 +55,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     data: currentClinicShiftData,
     isLoading: isLoadingShiftData,
     refetch: refetchShiftDataFromQuery, // Renamed to avoid conflict
-    isError: isShiftError, // To handle shift fetching errors
   } = useQuery<Shift | null, Error>({
     queryKey: currentOpenShiftQueryKey,
     queryFn: apiGetCurrentOpenShift,
     enabled: !!token && !!user, // Only fetch if authenticated
     // staleTime: 5 * 60 * 1000,p
     refetchOnWindowFocus: true,
-    retry: (failureCount, error: any) => {
+    retry: (failureCount, error: unknown) => {
       // Don't retry excessively if it's a 404 (no shift open)
-      if (error?.response?.status === 404) return false;
+      const maybeAxiosErr = error as { response?: { status?: number } };
+      if (maybeAxiosErr?.response?.status === 404) return false;
       return failureCount < 3;
     },
   });
@@ -82,12 +82,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const response = await apiClient.get<User>("/user");
       setUser(response.data);
       localStorage.setItem("authUser", JSON.stringify(response.data));
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("AuthContext: Failed to fetch user", error);
       // Check if the error is an Unauthenticated error
       if (
-        error.response?.status === 401 && 
-        error.response?.data?.message === "Unauthenticated."
+        (error as any).response?.status === 401 && 
+        (error as any).response?.data?.message === "Unauthenticated."
       ) {
       // Clear everything on auth failure during fetchUser
       setToken(null);
@@ -103,38 +103,51 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // This loading state is specifically for the user fetch operation.
       // The initial overall `isAuthLoading` should be set to false after first token check.
     }
-  }, [token, queryClient, currentOpenShiftQueryKey]);
+  }, [token, queryClient]);
 
   useEffect(() => {
-
+    // One-time check on mount to validate token without creating dependency loops
     const storedToken = localStorage.getItem("authToken");
-    console.log(user,'user in auth context');
-    if (storedToken) {
-      if (token !== storedToken) setToken(storedToken); // Sync token state if needed
-      // If user state is null but token exists, try to fetch user
-      if (!user && storedToken) {
-        // setIsAuthLoading(true); // Indicate we are trying to authenticate
-        fetchUser().finally(() => setIsAuthLoading(false)); // Set loading false after attempt
-      } else {
-        setIsAuthLoading(false); // User already exists or no token, initial auth check done
-      }
-    } else {
-      // No token found, clear user state and finish initial auth loading
+    if (!storedToken) {
       setUser(null);
       localStorage.removeItem("authUser");
       setToken(null);
       setIsAuthLoading(false);
+      return;
     }
-  }, [token, user, fetchUser]); // Rerun if token changes externally or user becomes null
+
+    if (token !== storedToken) setToken(storedToken);
+    setIsAuthLoading(true);
+    apiClient
+      .get<User>("/user")
+      .then((response) => {
+        setUser(response.data);
+        localStorage.setItem("authUser", JSON.stringify(response.data));
+      })
+      .catch((error: any) => {
+        if (
+          error.response?.status === 401 &&
+          error.response?.data?.message === "Unauthenticated."
+        ) {
+          setToken(null);
+          setUser(null);
+          localStorage.removeItem("authToken");
+          localStorage.removeItem("authUser");
+          queryClient.removeQueries({ queryKey: ["currentOpenShiftForContext"] });
+          window.location.href = "/login";
+        }
+      })
+      .finally(() => setIsAuthLoading(false));
+  }, []);
 
   const login = async (credentials: Record<string, any>) => {
     setIsAuthLoading(true); // Loading during login process
     try {
-      const response = await apiClient.post<AuthResponse>(
+      const response = await apiClient.post<unknown>(
         "/login",
         credentials
       );
-      const { user: userData, token: newToken } = response.data;
+      const { user: userData, token: newToken } = response as unknown as { user: User; token: string } as any;
 
       localStorage.setItem("authToken", newToken);
       localStorage.setItem("authUser", JSON.stringify(userData)); // Store basic user from login
@@ -162,8 +175,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const register = async (data: Record<string, any>) => {
     setIsAuthLoading(true);
     try {
-      const response = await apiClient.post<AuthResponse>("/register", data);
-      const { user: userData, token: newToken } = response.data;
+      const response = await apiClient.post<unknown>("/register", data);
+      const { user: userData, token: newToken } = response as unknown as { user: User; token: string } as any;
 
       localStorage.setItem("authToken", newToken);
       localStorage.setItem("authUser", JSON.stringify(userData));
@@ -255,6 +268,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       fetchUser,
       currentClinicShift,
       isLoadingShiftData,
+      currentClinicShiftData,
       refetchCurrentClinicShift,
     ]
   );

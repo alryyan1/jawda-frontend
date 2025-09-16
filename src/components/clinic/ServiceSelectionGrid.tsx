@@ -1,21 +1,29 @@
 // src/components/clinic/ServiceSelectionGrid.tsx
-import React, { useState, useMemo, useEffect, useCallback } from 'react'; // Added useCallback
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import type { ServiceGroupWithServices, Service } from '@/types/services';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search, List, CheckCircle2, AlertCircle, Loader2, PlusCircle } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { cn, formatNumber } from '@/lib/utils'; // Assuming formatNumber is also from utils
+// import { formatNumber } from '@/lib/utils';
 import { toast } from 'sonner';
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  // Chip,
+  InputAdornment,
+  Tab,
+  Tabs,
+  TextField,
+  Typography,
+} from '@mui/material';
+// Use standard Grid
+// Using CSS grid via Box instead of MUI Grid to avoid type issues
 
 // Define a more specific type for the service if contract_price and contract_requires_approval are always present
 // or ensure your base Service type includes them as optional.
 interface DisplayService extends Service {
   contract_price?: number | null; // Assuming it can be null if not applicable
-  contract_requires_approval?: boolean | null;
+  contract_requires_approval?: boolean;
 }
 
 interface ServiceSelectionGridProps {
@@ -24,8 +32,8 @@ interface ServiceSelectionGridProps {
   isLoading: boolean;
   onCancel: () => void;
   onAddSingleServiceById: (serviceId: number) => Promise<boolean>; // NEW: For adding single by ID, returns promise indicating success
-
-  isCompanyPatient: boolean;
+  onSelectedIdsChange?: (ids: number[]) => void; // NEW: bubble selection up
+  externalAddSelectedCommand?: number; // NEW: when increments, trigger add selected
 }
 
 // Helper function to find the first group with services
@@ -39,7 +47,8 @@ const ServiceSelectionGrid: React.FC<ServiceSelectionGridProps> = ({
   isLoading,
   onCancel,
   onAddSingleServiceById,
-  isCompanyPatient,
+  onSelectedIdsChange,
+  externalAddSelectedCommand = 0,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedServiceIds, setSelectedServiceIds] = useState<Set<number>>(new Set());
@@ -128,64 +137,34 @@ const ServiceSelectionGrid: React.FC<ServiceSelectionGridProps> = ({
     }
   }, [onAddServices, selectedServiceIds]);
 
+  // Bubble selection up
+  useEffect(() => {
+    if (onSelectedIdsChange) {
+      onSelectedIdsChange(Array.from(selectedServiceIds));
+    }
+  }, [selectedServiceIds, onSelectedIdsChange]);
+
+  // Respond to external add selected command
+  useEffect(() => {
+    if (externalAddSelectedCommand > 0) {
+      handleAddClick();
+    }
+  }, [externalAddSelectedCommand, handleAddClick]);
+
 
   // Sub-component for rendering each service card for better readability and organization
   const ServiceCard: React.FC<{ service: DisplayService }> = React.memo(({ service }) => {
-    const priceToShow = isCompanyPatient && service.contract_price != null // Check for null or undefined
-      ? service.contract_price
-      : service.price;
-    
-    // Backend `contract_requires_approval` field: true means needs approval
-    const needsApproval = isCompanyPatient && service.contract_requires_approval === true;
     const isSelected = selectedServiceIds.has(service.id);
 
     return (
-      <Card
-        onClick={() => toggleServiceSelection(service.id)}
-        onKeyPress={(e) => (e.key === 'Enter' || e.key === ' ') && toggleServiceSelection(service.id)} // Accessibility
-        tabIndex={0} // Make it focusable
-        role="button" // ARIA role
-        aria-pressed={isSelected} // ARIA state
-        aria-label={service.name}
-        className={cn(
-          "cursor-pointer hover:shadow-lg transition-all text-xs p-2 flex flex-col justify-between h-[110px] sm:h-[120px] relative focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-          isSelected
-            ? "ring-2 ring-primary shadow-lg bg-primary/10"
-            : "bg-card hover:bg-muted/50"
-        )}
-      >
-        <div className="flex items-start justify-between mb-1">
-          <p className="font-medium leading-tight line-clamp-2 text-xs sm:text-sm" title={service.name}>
-            {service.name}
-          </p>
-          {isSelected && <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" aria-hidden="true" />}
-        </div>
-
-        {/* Price and Badges Section */}
-        <div className="mt-auto space-y-1">
-           <div className="flex justify-between items-end">
-            <p className="text-muted-foreground text-[10px] truncate" title={service.service_group?.name}>
-              {service.service_group?.name || "غير متوفر"}
-            </p>
-            <p className="font-semibold text-sm">
-              {priceToShow != null ? `${formatNumber(Number(priceToShow))} ر.س` : "السعر غير متوفر"}
-            </p>
-           </div>
-          {(isCompanyPatient || needsApproval) && (
-            <div className="flex flex-wrap gap-1">
-              {isCompanyPatient && (
-                <Badge variant="outline" className="text-[9px] px-1 py-0 leading-tight border-blue-500 text-blue-600">
-                  سعر الشركة
-                </Badge>
-              )}
-              {needsApproval && (
-                <Badge variant="destructive" className="text-[9px] px-1 py-0 leading-tight">
-                  يتطلب موافقة
-                </Badge>
-              )}
-            </div>
-          )}
-        </div>
+      <Card sx={{width:'200px'}} onClick={() => toggleServiceSelection(service.id)} role="button" aria-pressed={isSelected} aria-label={service.name}>
+        <CardContent sx={{  display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <Box display="flex" alignItems="start" justifyContent="space-between" mb={0.5}>
+            <Typography variant="body2" sx={{ fontWeight: 500 }} noWrap title={service.name}>{service.name}</Typography>
+            {isSelected && <CheckCircle2 className="h-4 w-4 text-primary" aria-hidden="true" />}
+          </Box>
+          {/* Removed price and category name section as requested */}
+        </CardContent>
       </Card>
     );
   });
@@ -207,7 +186,7 @@ const ServiceSelectionGrid: React.FC<ServiceSelectionGridProps> = ({
         <AlertCircle className="h-10 w-10 text-muted-foreground mb-3" />
         <p className="text-lg font-medium">لا توجد خدمات متاحة</p>
         <p className="text-sm text-muted-foreground">لا توجد خدمات متاحة للاختيار</p>
-        <Button onClick={onCancel} variant="outline" size="sm" className="mt-4">
+        <Button onClick={onCancel} variant="outlined" size="small" className="mt-4">
           العودة
         </Button>
       </div>
@@ -215,98 +194,103 @@ const ServiceSelectionGrid: React.FC<ServiceSelectionGridProps> = ({
   }
 
   return (
-    <div className="space-y-3 w-full flex flex-col h-full"> {/* Allow flex column for height control */}
-      <div className="flex flex-col sm:flex-row gap-2 items-center flex-shrink-0"> {/* Search and button bar */}
-        <div className="relative flex-grow w-full sm:w-auto">
-          <Input
-            type="search"
-            aria-label="البحث في الخدمات"
-            placeholder="البحث في الخدمات..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="ps-10 rtl:pr-10 h-9"
+    <Box display="flex" flexDirection="column" gap={1.5} height="100%">
+      {/* Search and actions */}
+      <Box display="flex" flexDirection={{ xs: 'column', sm: 'row' }} gap={1} alignItems={{ xs: 'stretch', sm: 'center' }}>
+        <TextField
+          size="small"
+          type="search"
+          placeholder="البحث في الخدمات..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          fullWidth
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <Search className="h-4 w-4" />
+              </InputAdornment>
+            ),
+          }}
+        />
+        <Box display="flex" gap={1} width={{ xs: '100%', sm: 'auto' }}>
+          <TextField
+            size="small"
+            type="number"
+            placeholder="أدخل رقم الخدمة..."
+            value={serviceIdInput}
+            onChange={(e) => setServiceIdInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddServiceByIdInput(); }}}
+            disabled={isLoading || isFindingServiceById}
           />
-          <Search className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
-        </div>
-         {/* NEW: Input for adding service by ID */}
-         <div className="flex items-center gap-1 w-full sm:w-auto md:max-w-xs">
-            <Input
-                type="number"
-                placeholder="أدخل رقم الخدمة..."
-                value={serviceIdInput}
-                onChange={(e) => setServiceIdInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddServiceByIdInput();}}}
-                className="h-9 flex-grow"
-                disabled={isLoading || isFindingServiceById}
-            />
-            <Button onClick={handleAddServiceByIdInput} size="icon" className="h-9 w-9 shrink-0" disabled={isLoading || isFindingServiceById || !serviceIdInput.trim()}>
-                {isFindingServiceById ? <Loader2 className="h-4 w-4 animate-spin"/> : <PlusCircle className="h-4 w-4"/>}
-            </Button>
-        </div>
-     
-         {/* Add Selected Button - Positioned at the bottom */}
-         {selectedServiceIds.size > 0 && (
-        <div className="mt-auto flex justify-end flex-shrink-0 border-t"> {/* Ensure it's at the bottom */}
-          <Button onClick={handleAddClick} disabled={isLoading || selectedServiceIds.size === 0} size="sm">
-            {isLoading && <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2" aria-hidden="true" />}
-            إضافة المحدد ({selectedServiceIds.size})
+          <Button onClick={handleAddServiceByIdInput} variant="contained" size="small" disabled={isLoading || isFindingServiceById || !serviceIdInput.trim()}>
+            {isFindingServiceById ? <Loader2 className="h-4 w-4 animate-spin"/> : <PlusCircle className="h-4 w-4"/>}
           </Button>
-        </div>
-      )}
-      
-        <Button onClick={onCancel} variant="outline" size="sm" className="w-full sm:w-auto h-9 flex-shrink-0">
-          <List className="h-4 w-4 ltr:mr-2 rtl:ml-2" aria-hidden="true" /> عرض المطلوب
-        </Button>
-      </div>
+          <Button onClick={onCancel} variant="outlined" size="small">
+            <List className="h-4 w-4" />
+          </Button>
+        </Box>
+      </Box>
 
-      {/* Conditional rendering for no results after search */}
+      {/* No results after search */}
       {filteredCatalog.length === 0 && searchTerm ? (
-        <div className="flex-grow flex flex-col items-center justify-center text-center py-10 text-muted-foreground">
-            <Search className="h-12 w-12 mb-4 text-gray-400" />
-            <p className="text-lg font-semibold">لم يتم العثور على نتائج</p>
-            <p className="text-sm">جرب كلمات مختلفة</p>
-        </div>
+        <Box flex={1} display="flex" flexDirection="column" alignItems="center" justifyContent="center" textAlign="center" py={4} color="text.secondary">
+          <Search className="h-12 w-12 mb-2" />
+          <Typography fontWeight={600}>لم يتم العثور على نتائج</Typography>
+          <Typography variant="body2">جرب كلمات مختلفة</Typography>
+        </Box>
       ) : (
-        <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue={activeTab || filteredCatalog[0]?.id.toString()} dir={true} className="w-full flex flex-col flex-grow">
-          <ScrollArea type='scroll' className="w-full whitespace-nowrap border-b flex-shrink-0">
-            <TabsList  className="flex flex-wrap h-auto p-1 bg-muted rounded-lg" aria-label="تنقل مجموعات الخدمات">
+        <Box display="flex" flexDirection="column" flex={1} minHeight={0}>
+          {/* Tabs header */}
+          <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+            <Tabs
+              value={activeTab ?? filteredCatalog[0]?.id.toString()}
+              onChange={(_e, val) => setActiveTab(String(val))}
+              variant="scrollable"
+              allowScrollButtonsMobile
+            >
               {filteredCatalog.map((group) => (
-                <TabsTrigger
-                  key={group.id}
-                  value={group.id.toString()}
-                  className="text-xs px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
-                >
-                  {group.name} ({group.services.length})
-                </TabsTrigger>
+                <Tab key={group.id} value={group.id.toString()} label={`${group.name} (${group.services.length})`} />
               ))}
-            </TabsList>
-          </ScrollArea>
-
-          <div className="flex-grow mt-0 pt-3 relative"> {/* Added relative for absolute positioning of ScrollArea */}
-            {filteredCatalog.map((group) => (
-              <TabsContent key={group.id} value={group.id.toString()} className="h-full mt-0"> {/* Ensure TabsContent fills height */}
-                {group.services.length === 0 && searchTerm ? (
-                  <div className="text-center py-10 text-muted-foreground">لم يتم العثور على نتائج في هذه المجموعة</div>
-                ) : group.services.length === 0 && !searchTerm ? (
-                  <div className="text-center py-10 text-muted-foreground">لا توجد خدمات في هذه المجموعة</div>
-                ): (
-                  // Take up remaining height
-                  <ScrollArea className="absolute inset-0 pr-1"> {/* Use absolute to fill parent */}
-                    <div className="grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 p-0.5">
-                      {group.services.map((service) => (
-                        <ServiceCard key={service.id} service={service as DisplayService} />
-                      ))}
-                    </div>
-                  </ScrollArea>
-                )}
-              </TabsContent>
-            ))}
-          </div>
-        </Tabs>
+            </Tabs>
+          </Box>
+          {/* Tabs content */}
+          <Box flex={1} minHeight={0} position="relative" pt={1}>
+            {(() => {
+              const currentId = activeTab ?? filteredCatalog[0]?.id.toString();
+              const currentGroup = filteredCatalog.find(g => g.id.toString() === currentId);
+              if (!currentGroup) return null;
+              if (currentGroup.services.length === 0 && searchTerm) {
+                return <Typography align="center" color="text.secondary" py={4}>لم يتم العثور على نتائج في هذه المجموعة</Typography>;
+              }
+              if (currentGroup.services.length === 0 && !searchTerm) {
+                return <Typography align="center" color="text.secondary" py={4}>لا توجد خدمات في هذه المجموعة</Typography>;
+              }
+              return (
+                <Box>
+                  <Box className='flex flex-wrap gap-2'>
+                    {currentGroup.services.map((service) => (
+                      <Box key={service.id} className='w-[200px]'>
+                        <ServiceCard service={service as DisplayService} />
+                      </Box>
+                    ))}
+                  </Box>
+                </Box>
+              );
+            })()}
+          </Box>
+        </Box>
       )}
 
-   
-    </div>
+      {/* Add Selected Button */}
+      {selectedServiceIds.size > 0 && (
+        <Box display="flex" justifyContent="flex-end" borderTop={1} borderColor="divider" pt={1}>
+          <Button onClick={handleAddClick} variant="contained" size="small" disabled={isLoading || selectedServiceIds.size === 0}>
+            {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+            &nbsp;إضافة المحدد ({selectedServiceIds.size})
+          </Button>
+        </Box>
+      )}
+    </Box>
   );
 };
 

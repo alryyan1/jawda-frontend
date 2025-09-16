@@ -25,7 +25,7 @@ const roleFormSchema = z.object({
   name: z.string().min(1, { message: 'الاسم مطلوب' }),
   permissions: z.array(z.string()).optional(), // Array of permission names
 });
-type RoleFormValues = z.infer<ReturnType<typeof getRoleFormSchema>>;
+type RoleFormValues = z.infer<typeof roleFormSchema>;
 
 const RoleFormPage: React.FC<RoleFormPageProps> = ({ mode }) => {
   const navigate = useNavigate();
@@ -130,9 +130,8 @@ const RoleFormPage: React.FC<RoleFormPageProps> = ({ mode }) => {
     
     Object.entries(groupedPermissions).forEach(([group, permissions]) => {
       const matchingPermissions = permissions.filter(permission => {
-        const translatedPermission = t(`permissions:${permission.name.replace(/ /g, '_')}`, permission.name).toLowerCase();
         const permissionName = permission.name.toLowerCase();
-        return translatedPermission.includes(searchLower) || permissionName.includes(searchLower);
+        return permissionName.includes(searchLower);
       });
       
       if (matchingPermissions.length > 0) {
@@ -141,7 +140,7 @@ const RoleFormPage: React.FC<RoleFormPageProps> = ({ mode }) => {
     });
     
     return filtered;
-  }, [groupedPermissions, searchTerm, t]);
+  }, [groupedPermissions, searchTerm]);
   console.log(groupedPermissions);  
   if (isEditMode && isLoadingRole) return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin" /> جاري التحميل...</div>;
 

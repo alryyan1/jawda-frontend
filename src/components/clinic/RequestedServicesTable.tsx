@@ -1,18 +1,29 @@
 // src/components/clinic/RequestedServicesTable.tsx
-import React, { useState } from "react";
+import * as React from "react";
+import { useState } from "react";
 
 import type { RequestedService } from "@/types/services";
 import type { DoctorVisit } from "@/types/visits";
 import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  IconButton,
   Table,
   TableBody,
   TableCell,
+  TableContainer,
   TableHead,
-  TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+  TextField,
+  Typography,
+} from "@mui/material";
 import {
   Loader2,
   Trash2,
@@ -28,18 +39,7 @@ import {
 } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Card } from "../ui/card";
 import ServicePaymentDialog from "./ServicePaymentDialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { formatNumber } from "@/lib/utils";
 import {
   updateRequestedServiceDetails,
@@ -235,240 +235,127 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
   }
 
   return (
-    <>
-      <div className="space-y-3">
-        <div className="flex justify-end">
-          <Button onClick={onAddMoreServices} variant="outline" size="sm">
-            <PlusCircle className="h-4 w-4 ltr:mr-2 rtl:ml-2" />{" "}
-            إضافة المزيد من الخدمات
-          </Button>
-        </div>
+    <React.Fragment>
+      <Box display="flex" flexDirection="column" gap={1.5}>
+        <Box display="flex" justifyContent="flex-end">
+      
+        </Box>
         {requestedServices.length === 0 && (
-          <p className="text-sm text-muted-foreground text-center py-4">
-            لم يتم طلب أي خدمات بعد
-          </p>
+          <Typography variant="body2" color="text.secondary" textAlign="center" py={2}>لم يتم طلب أي خدمات بعد</Typography>
         )}
         {requestedServices.length > 0 && (
-          <Card>
-            <Table style={{ direction: 'rtl' }} className="text-xs">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-center">
-                    اسم الخدمة
+          <Card dir="rtl">
+            <CardContent sx={{ p: 0 }}>
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell align="center">اسم الخدمة</TableCell>
+                      <TableCell align="center" sx={{ width: 90 }}>السعر</TableCell>
+                      <TableCell align="center" sx={{ width: 120 }}>المبلغ المدفوع</TableCell>
+                      <TableCell align="center" sx={{ width: 80 }}>دفع</TableCell>
+                      <TableCell align="center" sx={{ width: 60 }}></TableCell>
+                    </TableRow>
                   </TableHead>
-                  <TableHead className="text-center w-[70px]">
-                    السعر
-                  </TableHead>
-                  <TableHead className="text-center w-[90px]">
-                    المبلغ المدفوع
-                  </TableHead>
-                  <TableHead className="text-center w-[60px]">
-                    دفع
-                  </TableHead>
-                  <TableHead className="text-center w-[40px]"> </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+                  <TableBody>
                 {requestedServices.map((rs) => {
                   const isEditingThisRow = editingRowId === rs.id;
                   const isExpanded = expandedRowId === rs.id;
                   const price = Number(rs.price) || 0;
                   return (
                     <React.Fragment key={rs.id}>
-                      <TableRow
-                        className={isEditingThisRow ? "bg-muted/30" : ""}
-                      >
-                        <TableCell className="py-2 font-medium text-center">
+                      <TableRow selected={isEditingThisRow}>
+                        <TableCell align="center" sx={{ py: 1.25, fontWeight: 500 }}>
                           {rs.service?.name || "خدمة غير معروفة"}
                           {rs.service?.service_group?.name && (
-                            <span className="block text-muted-foreground text-[10px]">
-                              ({rs.service.service_group.name})
-                            </span>
+                            <Typography variant="caption" display="block" color="text.secondary">({rs.service.service_group.name})</Typography>
                           )}
                         </TableCell>
-                        <TableCell className="text-center py-2">
+                        <TableCell align="center" sx={{ py: 1.25 }}>
                           {formatNumber(price)}
                         </TableCell>
-                        <TableCell className="text-center py-2 text-green-600">
+                        <TableCell align="center" sx={{ py: 1.25, color: 'success.main' }}>
                           {formatNumber(rs.amount_paid)}
                         </TableCell>
-                        <TableCell className="text-center py-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setPayingService(rs)}
-                            disabled={!currentClinicShiftId}
-                          >
-                            <DollarSign className="h-3 w-3 ltr:mr-1 rtl:ml-1" />
-                            دفع
-                          </Button>
+                        <TableCell align="center" sx={{ py: 1.25 }}>
+                          <Button size="small" variant="outlined" onClick={() => setPayingService(rs)} disabled={!currentClinicShiftId} startIcon={<DollarSign className="h-3 w-3" />}>دفع</Button>
                         </TableCell>
-                        <TableCell className="text-center py-2">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => setExpandedRowId(isExpanded ? null : rs.id)}
-                            aria-label={isExpanded ? "طي" : "توسيع"}
-                          >
+                        <TableCell align="center" sx={{ py: 1.25 }}>
+                          <IconButton size="small" onClick={() => setExpandedRowId(isExpanded ? null : rs.id)} aria-label={isExpanded ? "طي" : "توسيع"}>
                             {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                          </Button>
+                          </IconButton>
                         </TableCell>
                       </TableRow>
                       {isExpanded && (
                         <TableRow>
-                          <TableCell colSpan={5} className="bg-muted/10 p-3">
-                            <div className="space-y-4">
+                          <TableCell colSpan={5} sx={{ backgroundColor: 'action.hover', p: 2 }}>
+                            <Box display="flex" flexDirection="column" gap={1.5}>
                               {/* Details Section */}
-                              <div className="grid grid-cols-2 gap-4 text-sm">
-                                <div>
-                                  <span className="font-semibold">العدد:</span> {rs.count}
-                                </div>
+                              <Box display="grid" gridTemplateColumns={{ xs: '1fr', sm: '1fr 1fr' }} gap={2} fontSize={14}>
+                                <Box><strong>العدد:</strong> {rs.count}</Box>
                                 {!isCompanyPatient && (
-                                  <div>
-                                    <span className="font-semibold">نسبة الخصم:</span> {rs.discount_per}%
-                                  </div>
+                                  <Box><strong>نسبة الخصم:</strong> {rs.discount_per}%</Box>
                                 )}
                                 {isCompanyPatient && (
-                                  <div>
-                                    <span className="font-semibold">التعاون:</span> {formatNumber(rs.endurance)}
-                                  </div>
+                                  <Box><strong>التعاون:</strong> {formatNumber(rs.endurance)}</Box>
                                 )}
-                                <div>
-                                  <span className="font-semibold">إجمالي سعر العنصر:</span> {formatNumber(Number(rs.price) * Number(rs.count))}
-                                </div>
-                                <div>
-                                  <span className="font-semibold">الرصيد:</span> {formatNumber(calculateItemBalance(rs))}
-                                </div>
-                              </div>
+                                <Box><strong>إجمالي سعر العنصر:</strong> {formatNumber(Number(rs.price) * Number(rs.count))}</Box>
+                                <Box><strong>الرصيد:</strong> {formatNumber(calculateItemBalance(rs))}</Box>
+                              </Box>
 
                               {/* Action Buttons */}
-                              <div className="flex flex-wrap gap-2">
+                              <Box display="flex" flexWrap="wrap" gap={1}>
                                 {/* Edit Button */}
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleEdit(service.id)}
-                                  disabled={editingRowId !== null}
-                                >
-                                  <Edit className="h-3 w-3 ltr:mr-1 rtl:ml-1" />
-                                  تعديل
-                                </Button>
+                                <Button size="small" variant="outlined" onClick={() => handleEdit(rs)} disabled={editingRowId !== null} startIcon={<Edit className="h-3 w-3" />}>تعديل</Button>
 
                                 {/* Manage Costs Button */}
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleManageServiceCosts(rs)}
-                                >
-                                  <Settings2 className="h-3 w-3 ltr:mr-1 rtl:ml-1" />
-                                  إدارة التكاليف
-                                </Button>
+                                <Button size="small" variant="outlined" onClick={() => handleManageServiceCosts(rs)} startIcon={<Settings2 className="h-3 w-3" />}>إدارة التكاليف</Button>
 
                                 {/* Manage Deposits Button */}
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleManageDeposits(rs)}
-                                >
-                                  <PackageOpen className="h-3 w-3 ltr:mr-1 rtl:ml-1" />
-                                  إدارة الودائع
-                                </Button>
+                                <Button size="small" variant="outlined" onClick={() => handleManageDeposits(rs)} startIcon={<PackageOpen className="h-3 w-3" />}>إدارة الودائع</Button>
 
                                 {/* Delete Button */}
-                                <Button
-                                  size="sm"
-                                  variant="destructive"
-                                  onClick={() => setServiceToDelete(rs.id)}
-                                >
-                                  <Trash2 className="h-3 w-3 ltr:mr-1 rtl:ml-1" />
-                                  حذف
-                                </Button>
-                              </div>
+                                <Button size="small" color="error" variant="outlined" onClick={() => setServiceToDelete(rs.id)} startIcon={<Trash2 className="h-3 w-3" />}>حذف</Button>
+                              </Box>
 
                               {/* Edit Form (when editing) */}
                               {isEditingThisRow && (
-                                <div className="border rounded-lg p-3 bg-background">
-                                  <div className="grid grid-cols-2 gap-3">
+                                <Box border={1} borderColor="divider" borderRadius={1} p={2}>
+                                  <Box display="grid" gridTemplateColumns={{ xs: '1fr', sm: '1fr 1fr' }} gap={1.5}>
                                     {/* Count Input */}
-                                    <div>
-                                      <label className="text-xs font-medium">
-                                        العدد
-                                      </label>
-                                      <Input
-                                        type="number"
-                                        min="1"
-                                        value={currentEditData.count}
-                                        onChange={(e) =>
-                                          setCurrentEditData({
-                                            ...currentEditData,
-                                            count: parseInt(e.target.value) || 1,
-                                          })
-                                        }
-                                        className="h-8 text-xs"
-                                      />
-                                    </div>
+                                    <Box>
+                                      <Typography variant="caption" fontWeight={600}>العدد</Typography>
+                                      <TextField type="number" size="small" inputProps={{ min: 1 }} value={currentEditData.count}
+                                        onChange={(e) => setCurrentEditData({ ...currentEditData, count: parseInt(e.target.value || '1') || 1 })} />
+                                    </Box>
 
                                     {/* Discount/Endurance Input */}
-                                    <div>
-                                      <label className="text-xs font-medium">
-                                        {isCompanyPatient
-                                          ? "التعاون"
-                                          : "نسبة الخصم"}
-                                      </label>
-                                      <Input
-                                        type="number"
-                                        min="0"
-                                        value={
-                                          isCompanyPatient
-                                            ? currentEditData.endurance
-                                            : currentEditData.discount_per
-                                        }
-                                        onChange={(e) =>
-                                          setCurrentEditData({
-                                            ...currentEditData,
-                                            [isCompanyPatient ? "endurance" : "discount_per"]:
-                                              parseFloat(e.target.value) || 0,
-                                          })
-                                        }
-                                        className="h-8 text-xs"
-                                      />
-                                    </div>
-                                  </div>
+                                    <Box>
+                                      <Typography variant="caption" fontWeight={600}>{isCompanyPatient ? "التعاون" : "نسبة الخصم"}</Typography>
+                                      <TextField type="number" size="small" inputProps={{ min: 0 }}
+                                        value={isCompanyPatient ? currentEditData.endurance : currentEditData.discount_per}
+                                        onChange={(e) => setCurrentEditData({ ...currentEditData, [isCompanyPatient ? 'endurance' : 'discount_per']: parseFloat(e.target.value || '0') || 0 })} />
+                                    </Box>
+                                  </Box>
 
                                   {/* Save/Cancel Buttons */}
-                                  <div className="flex gap-2 mt-3">
-                                    <Button
-                                      size="sm"
-                                      onClick={() => handleSaveEdit()}
-                                      disabled={updateMutation.isPending}
-                                    >
-                                      {updateMutation.isPending ? (
-                                        <Loader2 className="h-3 w-3 animate-spin ltr:mr-1 rtl:ml-1" />
-                                      ) : (
-                                        <Save className="h-3 w-3 ltr:mr-1 rtl:ml-1" />
-                                      )}
-                                      حفظ
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={handleCancelEdit}
-                                    >
-                                      <XCircle className="h-3 w-3 ltr:mr-1 rtl:ml-1" />
-                                      إلغاء
-                                    </Button>
-                                  </div>
-                                </div>
+                                  <Box display="flex" gap={1} mt={1.5}>
+                                    <Button size="small" onClick={() => handleSaveEdit(rs.id)} disabled={updateMutation.isPending} startIcon={updateMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}>حفظ</Button>
+                                    <Button size="small" variant="outlined" onClick={handleCancelEdit} startIcon={<XCircle className="h-3 w-3" />}>إلغاء</Button>
+                                  </Box>
+                                </Box>
                               )}
-                            </div>
+                            </Box>
                           </TableCell>
                         </TableRow>
                       )}
                     </React.Fragment>
                   );
                 })}
-              </TableBody>
-            </Table>
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </CardContent>
           </Card>
         )}
         {payingService && currentClinicShiftId && visit && (
@@ -488,38 +375,16 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
             }}
           />
         )}
-        <AlertDialog
-          open={!!serviceToDelete}
-          onOpenChange={(open) => !open && setServiceToDelete(null)}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>
-                تأكيد الحذف
-              </AlertDialogTitle>
-              <AlertDialogDescription>
-                هل أنت متأكد من حذف هذه الخدمة؟
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>إلغاء</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() =>
-                  serviceToDelete && removeMutation.mutate(serviceToDelete)
-                }
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                disabled={removeMutation.isPending}
-              >
-                {removeMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2" />
-                ) : (
-                  <Trash2 className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
-                )}
-                حذف
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <Dialog open={!!serviceToDelete} onClose={() => setServiceToDelete(null)}>
+          <DialogTitle>تأكيد الحذف</DialogTitle>
+          <DialogContent>
+            <DialogContentText>هل أنت متأكد من حذف هذه الخدمة؟</DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setServiceToDelete(null)}>إلغاء</Button>
+            <Button color="error" onClick={() => serviceToDelete && removeMutation.mutate(serviceToDelete)} disabled={removeMutation.isPending} startIcon={removeMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}>حذف</Button>
+          </DialogActions>
+        </Dialog>
 
         {selectedServiceForDeposits && (
           <ManageServiceDepositsDialog
@@ -543,8 +408,8 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
             }}
           />
         )}
-      </div>
-    </>
+      </Box>
+    </React.Fragment>
   );
 };
 export default RequestedServicesTable;

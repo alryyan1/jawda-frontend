@@ -45,6 +45,7 @@ import LabPriceListPage from "./pages/settings/LabPriceListPage";
 import CompanyMainTestContractsPage from "./pages/companies/CompanyMainTestContractsPage";
 import LabWorkstationPage from "./pages/lab/LabWorkstationPage";
 import NotFoundPage from "./pages/NotFoundPage";
+import ProfilePage from "./pages/ProfilePage";
 import ClinicShiftSummaryReportPage from "./pages/reports/ClinicShiftSummaryReportPage";
 import CostsReportPage from "./pages/CostsReportPage";
 import InsuranceAuditPage from "./pages/audit/InsuranceAuditPage";
@@ -60,7 +61,7 @@ import YearlyIncomeComparisonReportPage from "./pages/reports/YearlyIncomeCompar
 import YearlyPatientFrequencyReportPage from "./pages/reports/YearlyPatientFrequencyReportPage";
 import DailyAttendanceDetailPage from "./pages/reports/attendance/DailyAttendanceDetailPage";
 import PayrollAttendanceReportPage from "./pages/reports/PayrollAttendanceReportPage";
-import MonthlyEmployeeAttendanceSummaryPage from "./pages/reports/attendance/MonthlyEmployeeAttendanceSummaryPage";
+// import MonthlyEmployeeAttendanceSummaryPage from "./pages/reports/attendance/MonthlyEmployeeAttendanceSummaryPage";
 import ShiftDefinitionsPage from "./pages/settings/ShiftDefinitionsPage";
 import AttendanceSheetPage from "./pages/attendance/AttendanceSheetPage";
 import HolidaysPage from "./pages/settings/attendance/HolidaysPage";
@@ -74,11 +75,7 @@ import SpecialistsPage from "./pages/specialists/SpecialistsPage";
 import CashReconciliationPage from "./pages/CashReconciliationPage";
 // import NotFoundPage from './pages/NotFoundPage'; // Optional: For 404 handling
 
-const AppointmentsPlaceholderPage: React.FC = () => (
-  <div className="p-4">
-    <h1>إدارة المواعيد (قيد الإنشاء)</h1>
-  </div>
-);
+import AppointmentsPlaceholderPage from "./pages/AppointmentsPlaceholderPage";
 
 const router = createBrowserRouter([
   // --- PUBLIC ROUTES ---
@@ -233,6 +230,10 @@ const router = createBrowserRouter([
                 ),
               },
             ],
+          },
+          {
+            path: "profile",
+            element: <ProfilePage />,
           },
           {
             path: "reports",

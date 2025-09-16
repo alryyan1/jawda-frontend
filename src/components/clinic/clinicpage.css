@@ -7,7 +7,7 @@
   width: 100%;
   max-width: 100vw;
   overflow-x: hidden;
-  height: 100vh;
+  height: 93vh;
 }
 
 .clinic-header {
@@ -38,7 +38,7 @@
 }
 
 .clinic-main-content.with-registration {
-  grid-template-columns: 60px 390px minmax(365px, 1fr) minmax(0, 1fr) 320px;
+  grid-template-columns: 60px 399px minmax(365px, 1fr) minmax(0, 1fr) 320px;
 }
 
 .clinic-main-content.without-registration {
@@ -46,7 +46,7 @@
 }
 
 .clinic-panel {
-  padding: 32px;
+  padding: 10px;
   overflow-y: auto;
   height: 100%;
   width: 100%;
@@ -103,11 +103,11 @@
 
 /* RTL Support */
 .clinic-page-container[dir="rtl"] .clinic-main-content.with-registration {
-  grid-template-columns:  390px 390px minmax(320px, 1fr) 60px ;
+  grid-template-columns:  390px 395px minmax(320px, 1fr) 60px ;
 }
 
 .clinic-page-container[dir="rtl"] .clinic-main-content.without-registration {
-  grid-template-columns: 390px  minmax(0, 1fr) 320px 60px;
+  grid-template-columns: 362px  minmax(700px, 1fr) 320px 60px;
 }
 
 .clinic-page-container[dir="rtl"] .clinic-panel.registration {

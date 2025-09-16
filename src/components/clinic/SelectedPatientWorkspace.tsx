@@ -17,6 +17,7 @@ import {
   Microscope,
   AlertTriangle,
   PrinterIcon,
+  PlusCircle,
 } from "lucide-react";
 
 import ServicesRequestComponent from "./ServicesRequestComponent";
@@ -55,6 +56,8 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [pdfFileName, setPdfFileName] = useState('receipt.pdf');
+  const [openSelectionGridCommand, setOpenSelectionGridCommand] = useState(0);
+  const [addSelectedCommand, setAddSelectedCommand] = useState(0);
 
 
   const handlePrintReceipt = async () => {
@@ -143,7 +146,8 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
         className="flex-grow flex flex-col overflow-hidden"
       >
         <ScrollArea className="flex-shrink-0 border-b">
-          <TabsList className="mx-3 my-2 grid w-auto grid-flow-col auto-cols-max gap-2 p-1 h-auto">
+          <div className="mx-3 my-2 flex items-center justify-between gap-2">
+          <TabsList className="grid w-auto grid-flow-col auto-cols-max gap-2 p-1 h-auto">
             <TabsTrigger value="services" className="text-xs px-3 py-1.5">
               <ListOrdered className="h-4 w-4 ltr:mr-1 rtl:ml-1" />
               الخدمات
@@ -152,21 +156,29 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
               <Microscope className="h-4 w-4 ltr:mr-1 rtl:ml-1" />
               المختبر
             </TabsTrigger>
-           
           </TabsList>
+          <div className="flex items-center gap-2">
+            <Button onClick={handlePrintReceipt} variant="outline" size="sm" disabled={isGeneratingPdf  || !visit}>
+              {isGeneratingPdf ? <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2"/> : <PrinterIcon className="h-4 w-4 ltr:mr-2 rtl:ml-2"/>}
+              طباعة الإيصال
+            </Button>
+            <Button onClick={() => setOpenSelectionGridCommand(c => c + 1)} variant="default" size="sm">
+              <PlusCircle className="h-4 w-4 ltr:mr-2 rtl:ml-2"/>
+              إضافة خدمات
+            </Button>
+            <Button onClick={() => setAddSelectedCommand(c => c + 1)} variant="secondary" size="sm">
+              <ListOrdered className="h-4 w-4 ltr:mr-2 rtl:ml-2"/>
+              إضافة المحدد
+            </Button>
+          </div>
+          </div>
         </ScrollArea>
 
         <TabsContent
           value="services"
           className="flex-grow overflow-y-auto p-3 sm:p-4 focus-visible:ring-0 focus-visible:ring-offset-0"
         >
-            <div className="p-2 border-b flex justify-end">
-        <Button onClick={handlePrintReceipt} variant="outline" size="sm" disabled={isGeneratingPdf  || !visit}>
-          {isGeneratingPdf ? <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2"/> : <PrinterIcon className="h-4 w-4 ltr:mr-2 rtl:ml-2"/>}
-          طباعة الإيصال
-        </Button>
-      </div>
-          <ServicesRequestComponent handlePrintReceipt={handlePrintReceipt} patientId={patient.id} visit={visit} visitId={visit.id} />
+          <ServicesRequestComponent addSelectedCommand={addSelectedCommand} openSelectionGridCommand={openSelectionGridCommand} handlePrintReceipt={handlePrintReceipt} patientId={patient.id} visit={visit} visitId={visit.id} />
         </TabsContent>
 
         <TabsContent 

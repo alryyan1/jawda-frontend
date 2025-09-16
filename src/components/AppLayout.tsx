@@ -22,7 +22,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Menu,
@@ -156,20 +155,7 @@ const AppLayout: React.FC = () => {
   };
 
 
-  const getInitials = (name?: string | null) => {
-    if (!name?.trim()) return "U";
-    const names = name.trim().split(" ");
-    if (names.length > 1 && names[0] && names[names.length - 1]) {
-      return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
-    }
-    if (names[0] && names[0].length > 1) {
-      return names[0].substring(0, 2).toUpperCase();
-    }
-    if (names[0]) {
-      return names[0][0].toUpperCase();
-    }
-    return "U";
-  };
+  
 
   interface NavLinkItemProps {
     item: NavItem;
@@ -351,11 +337,8 @@ const AppLayout: React.FC = () => {
                   {/* User Menu */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0">
-                        <Avatar className="h-9 w-9">
-                          <AvatarImage src={undefined /* user?.avatar_url */} alt={user?.name || "User"} />
-                          <AvatarFallback>{getInitials(user?.name)}</AvatarFallback>
-                        </Avatar>
+                      <Button variant="ghost" className="h-9 px-3 rounded-md max-w-[220px] truncate">
+                        {user?.username || user?.name || "User"}
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-56">
@@ -363,13 +346,13 @@ const AppLayout: React.FC = () => {
                         <p className="text-sm font-medium leading-none">{user?.name}</p>
                         <p className="text-xs leading-none text-muted-foreground">{user?.username}</p>
                       </DropdownMenuLabel>
+              
+               
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild disabled={!can('view profile')}>
                         <Link to="/profile" className="w-full flex items-center"><Users className="mr-2 h-4 w-4" /> الملف الشخصي</Link>
                       </DropdownMenuItem>
-                      <DropdownMenuItem asChild disabled={!can('view settings')}>
-                        <Link to="/settings/general" className="w-full flex items-center"><Settings className="mr-2 h-4 w-4" /> الإعدادات</Link>
-                      </DropdownMenuItem>
+               
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive focus:bg-destructive/10">
                         <LogOut className="mr-2 h-4 w-4" />
@@ -380,7 +363,7 @@ const AppLayout: React.FC = () => {
                 </div>
             </header>
 
-            <main style={{userSelect: 'none'}} className="flex-1 p-1  overflow-y-auto">
+            <main style={{userSelect: 'none'}} className="flex-1 p-1 overflow-auto">
                 <Outlet />
             </main>
         </div>

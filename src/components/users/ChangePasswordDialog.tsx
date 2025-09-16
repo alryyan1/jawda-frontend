@@ -2,7 +2,6 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useTranslation } from 'react-i18next';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -33,16 +32,16 @@ interface ChangePasswordDialogProps {
   onClose: () => void;
 }
 
-const passwordFormSchema = (t: (key: string, defaultValue?: string) => string) => z.object({
+const passwordFormSchema = () => z.object({
   current_password: z.string().min(1, { 
-    message: t('users:validation.currentPasswordRequired', "Current password is required.") 
+    message: 'كلمة المرور الحالية مطلوبة.'
   }),
   password: z.string().min(8, { 
-    message: t('users:validation.passwordMinLength', "Password must be at least 8 characters.") 
+    message: 'كلمة المرور يجب أن تكون 8 أحرف على الأقل.'
   }),
   password_confirmation: z.string()
 }).refine((data) => data.password === data.password_confirmation, {
-  message: t('users:validation.passwordsDoNotMatch', "Passwords do not match"),
+  message: 'كلمتا المرور غير متطابقتين.',
   path: ["password_confirmation"],
 });
 
@@ -53,9 +52,8 @@ const ChangePasswordDialog: React.FC<ChangePasswordDialogProps> = ({
   isOpen,
   onClose,
 }) => {
-  const { t } = useTranslation(['users', 'common']);
   const form = useForm<PasswordFormValues>({
-    resolver: zodResolver(passwordFormSchema(t)),
+    resolver: zodResolver(passwordFormSchema()),
     defaultValues: {
       current_password: '',
       password: '',
@@ -66,12 +64,12 @@ const ChangePasswordDialog: React.FC<ChangePasswordDialogProps> = ({
   const mutation = useMutation({
     mutationFn: (data: PasswordFormValues) => updateUserPassword(userId, data),
     onSuccess: () => {
-      toast.success(t('users:passwordChanged'));
+      toast.success('تم تغيير كلمة المرور بنجاح');
       form.reset();
       onClose();
     },
     onError: (error: unknown) => {
-      let errorMessage = t('users:passwordChangeFailed');
+      let errorMessage = 'فشل تغيير كلمة المرور';
       if (error && typeof error === 'object' && 'response' in error) {
         const responseError = error as { response?: { data?: { message?: string } } };
         if (responseError.response?.data?.message) {
@@ -90,7 +88,7 @@ const ChangePasswordDialog: React.FC<ChangePasswordDialogProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{t('users:changePassword')}</DialogTitle>
+          <DialogTitle>تغيير كلمة المرور</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -99,7 +97,7 @@ const ChangePasswordDialog: React.FC<ChangePasswordDialogProps> = ({
               name="current_password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('users:form.currentPasswordLabel')}</FormLabel>
+                  <FormLabel>كلمة المرور الحالية</FormLabel>
                   <FormControl>
                     <Input
                       type="password"
@@ -116,7 +114,7 @@ const ChangePasswordDialog: React.FC<ChangePasswordDialogProps> = ({
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('users:form.newPasswordLabel')}</FormLabel>
+                  <FormLabel>كلمة المرور الجديدة</FormLabel>
                   <FormControl>
                     <Input
                       type="password"
@@ -133,7 +131,7 @@ const ChangePasswordDialog: React.FC<ChangePasswordDialogProps> = ({
               name="password_confirmation"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('users:form.confirmNewPasswordLabel')}</FormLabel>
+                  <FormLabel>تأكيد كلمة المرور الجديدة</FormLabel>
                   <FormControl>
                     <Input
                       type="password"
@@ -152,13 +150,13 @@ const ChangePasswordDialog: React.FC<ChangePasswordDialogProps> = ({
                 onClick={onClose}
                 disabled={mutation.isPending}
               >
-                {t('common:cancel')}
+                إلغاء
               </Button>
               <Button type="submit" disabled={mutation.isPending}>
                 {mutation.isPending && (
                   <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />
                 )}
-                {t('users:changePassword')}
+                تغيير كلمة المرور
               </Button>
             </DialogFooter>
           </form>

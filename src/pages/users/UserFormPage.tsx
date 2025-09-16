@@ -1,8 +1,6 @@
 // src/pages/users/UserFormPage.tsx
 import React, { useEffect, useState, useMemo } from "react";
 import { useForm, Controller } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -56,56 +54,16 @@ interface UserFormPageProps {
   mode: UserFormModeEnum;
 }
 
-const getUserFormSchema = (
-  t: (key: string, options?: Record<string, unknown>) => string,
-  isEditMode: boolean
-) =>
-  z
-    .object({
-      name: z
-        .string()
-        .min(1, {
-          message: "الاسم مطلوب",
-        })
-        .max(255),
-      username: z
-        .string()
-        .min(3, { message: "يجب أن يكون اسم المستخدم 3 أحرف على الأقل." })
-        .max(255),
-      password: isEditMode
-        ? z
-            .string()
-            .optional()
-            .refine((val) => !val || val.length === 0 || val.length >= 8, {
-              message: "كلمة المرور يجب أن تحتوي على الحد الأدنى من الأحرف (اختياري)",
-            })
-        : z
-            .string()
-            .min(8, { message: "يجب أن تكون كلمة المرور 8 أحرف على الأقل." }),
-      password_confirmation: isEditMode ? z.string().optional() : z.string(),
-      doctor_id: z.string().optional().nullable(),
-      is_nurse: z.boolean(),
-      is_supervisor: z.boolean(),
-      is_active: z.boolean(),
-      user_money_collector_type: z.enum(["lab", "company", "clinic", "all"]),
-      roles: z
-        .array(z.string())
-        .min(1, { message: "يجب اختيار دور واحد على الأقل." }),
-    })
-    .refine(
-      (data) => {
-        if (data.password && data.password.length > 0) {
-          return data.password === data.password_confirmation;
-        }
-        return true;
-      },
-      {
-        message: "كلمتا المرور غير متطابقتين.",
-        path: ["password_confirmation"],
-      }
-    );
-
-type UserFormSchemaValues = z.infer<ReturnType<typeof getUserFormSchema>>;
+type UserFormValues = {
+  name: string;
+  username: string;
+  password?: string;
+  password_confirmation?: string;
+  doctor_id?: string | undefined;
+  is_supervisor: boolean;
+  is_active: boolean;
+  roles: string[];
+};
 
 const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
   const navigate = useNavigate();
@@ -120,21 +78,16 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
 
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
 
-  const userFormSchema = getUserFormSchema(t, isEditMode);
-
-  const form = useForm<UserFormSchemaValues>({
-    resolver: zodResolver(userFormSchema),
+  const form = useForm<UserFormValues>({
     defaultValues: {
       name: "",
       username: "",
       password: "",
       password_confirmation: "",
       doctor_id: undefined,
-      is_nurse: false,
       is_supervisor: false,
       is_active: true,
       roles: [],
-      user_money_collector_type: "all",
     },
   });
   const {
@@ -181,12 +134,10 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
         password: "",
         password_confirmation: "",
         doctor_id: userData.doctor_id ? String(userData.doctor_id) : undefined,
-        is_nurse: !!userData.is_nurse,
         is_supervisor: !!userData.is_supervisor,
         is_active:
           userData.is_active === undefined ? true : !!userData.is_active,
         roles: userData.roles?.map((role) => role.name) || [],
-        user_money_collector_type: userData.user_money_collector_type || "all",
       });
     } else if (!isEditMode) {
       reset({
@@ -195,11 +146,9 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
         password: "",
         password_confirmation: "",
         doctor_id: undefined,
-        is_nurse: false,
         is_supervisor: false,
         is_active: true,
         roles: [],
-        user_money_collector_type: "all",
       });
     }
   }, [isEditMode, userData, reset]);
@@ -245,16 +194,16 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
     },
   });
 
-  const onSubmit = (formData: UserFormSchemaValues) => {
+  const onSubmit = (formData: UserFormValues) => {
     const apiPayload: UserApiPayload = {
       name: formData.name,
       username: formData.username,
       doctor_id: formData.doctor_id ? Number(formData.doctor_id) : undefined,
-      is_nurse: formData.is_nurse,
+      is_nurse: false,
       is_supervisor: formData.is_supervisor,
       is_active: formData.is_active,
       roles: formData.roles || [],
-      user_money_collector_type: formData.user_money_collector_type,
+      user_money_collector_type: 'all',
     };
 
     // Only include password if it's provided (for create or if edit form allows password change)
@@ -421,7 +370,7 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
                         onValueChange={field.onChange}
                         value={field.value || ""}
                         disabled={dataIsLoading || mutation.isPending}
-                        dir={i18n.dir()}
+                        dir="rtl"
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -457,25 +406,6 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
                 />
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <FormField
-                    control={control}
-                    name="is_nurse"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center space-x-3 rtl:space-x-reverse space-y-0 rounded-md border p-3 shadow-sm h-full justify-between">
-                        <FormLabel className="font-normal cursor-pointer">
-                          هل هو ممرض/ممرضة؟
-                        </FormLabel>
-                        <FormControl>
-                          <Checkbox
-                            id="is_nurse_checkbox"
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            disabled={dataIsLoading || mutation.isPending}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
                   <FormField
                     control={control}
                     name="is_supervisor"
@@ -516,47 +446,7 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
                   />
                 </div>
 
-                <FormField
-                  control={control}
-                  name="user_money_collector_type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        نوع محصل الأموال
-                      </FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                        disabled={dataIsLoading || mutation.isPending}
-                        dir={i18n.dir()}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="all">
-                            الكل
-                          </SelectItem>
-                          <SelectItem value="lab">
-                            المختبر
-                          </SelectItem>
-                          <SelectItem value="company">
-                            الشركة
-                          </SelectItem>
-                          <SelectItem value="clinic">
-                            العيادة
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormDescription className="text-xs">
-                        حدد نوع محصل الأموال إذا لزم.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                
 
                 <FormField
                   control={control}

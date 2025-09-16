@@ -3,14 +3,28 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { getRoles, deleteRole } from '@/services/roleService';
-import { Role, PaginatedRolesResponse, Permission } from '@/types/auth'; // Adjust path
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Trash2, Edit, Loader2, ShieldCheck } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { Role, Permission } from '@/types/auth';
 import { toast } from 'sonner';
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Chip,
+  Container,
+  IconButton,
+  Menu,
+  MenuItem,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Typography,
+  Divider,
+} from '@mui/material';
+import { MoreHorizontal, Trash2, Edit, Loader2 } from 'lucide-react';
 
 export default function RolesListPage() {
   // i18n removed
@@ -44,96 +58,87 @@ export default function RolesListPage() {
   };
 
   const renderPermissions = (permissions?: Permission[]) => {
-    if (!permissions || permissions.length === 0) return <span className="text-xs text-muted-foreground">لا يوجد</span>;
+    if (!permissions || permissions.length === 0) return <Typography variant="caption" color="text.secondary">لا يوجد</Typography>;
     const displayLimit = 3;
     const displayed = permissions.slice(0, displayLimit);
     const remaining = permissions.length - displayLimit;
 
     return (
-      <div className="flex flex-wrap gap-1 items-center">
+      <Box display="flex" flexWrap="wrap" gap={0.5} alignItems="center">
         {displayed.map(p => (
-          <Badge key={p.id} variant="secondary" className="text-xs whitespace-nowrap">
-            {p.name}
-          </Badge>
+          <Chip key={p.id} label={p.name} size="small" variant="outlined" sx={{ fontSize: 12 }} />
         ))}
         {remaining > 0 && (
-          <Badge variant="outline" className="text-xs">+{remaining} المزيد</Badge>
+          <Chip label={`+${remaining} المزيد`} size="small" variant="outlined" sx={{ fontSize: 12 }} />
         )}
-      </div>
+      </Box>
     );
   };
 
-  if (isLoading && !isFetching) return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin" /> جاري تحميل الأدوار...</div>;
-  if (error) return <p className="text-destructive p-4">حدث خطأ أثناء جلب الأدوار: {error.message}</p>;
+  if (isLoading && !isFetching) return <Box display="flex" justifyContent="center" alignItems="center" height={256}><Loader2 className="h-8 w-8 animate-spin" /> <Typography sx={{ ml: 1 }}>جاري تحميل الأدوار...</Typography></Box>;
+  if (error) return <Typography color="error" sx={{ p: 2 }}>حدث خطأ أثناء جلب الأدوار: {error.message}</Typography>;
 
   const roles = paginatedData?.data || [];
   const meta = paginatedData?.meta;
 
   return (
-    <div className="container mx-auto py-4 sm:py-6 lg:py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold">الأدوار</h1>
-        {/* TODO: Add permission check for this button (e.g., can('create roles')) */}
-        <Button asChild size="sm"><Link to="/roles/new">إضافة دور</Link></Button>
-      </div>
-      {isFetching && <div className="text-sm text-muted-foreground mb-2">جاري تحديث القائمة...</div>}
-      
+    <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 3, lg: 4 } }} dir="rtl">
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Typography variant="h5">الأدوار</Typography>
+        <Link to="/roles/new">
+          <Button variant="contained" size="small">إضافة دور</Button>
+        </Link>
+      </Box>
+      {isFetching && <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>جاري تحديث القائمة...</Typography>}
+
       {roles.length === 0 && !isLoading ? (
-        <div className="text-center py-10 text-muted-foreground">لا توجد أدوار للعرض</div>
+        <Typography textAlign="center" color="text.secondary" sx={{ py: 6 }}>لا توجد أدوار للعرض</Typography>
       ) : (
         <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[80px] sm:w-[100px]">الإسم</TableHead>
-                <TableHead>الصلاحيات</TableHead>
-                <TableHead className="text-right w-[100px]">الإجراءات</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {roles.map((role) => (
-                <TableRow key={role.id}>
-                  <TableCell className="font-medium">{role.name}</TableCell>
-                  <TableCell>{renderPermissions(role.permissions)}</TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">فتح القائمة</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {/* TODO: Add permission check for edit */}
-                        <DropdownMenuItem asChild><Link to={`/roles/${role.id}/edit`} className="flex items-center w-full"><Edit className="rtl:ml-2 ltr:mr-2 h-4 w-4" /> تعديل</Link></DropdownMenuItem>
-                        {/* Prevent deleting critical roles like Super Admin */}
-                        {role.name !== 'Super Admin' && ( 
-                          <>
-                            <DropdownMenuSeparator />
-                            {/* TODO: Add permission check for delete */}
-                            <DropdownMenuItem onClick={() => handleDelete(role)} className="text-destructive focus:text-destructive flex items-center w-full" disabled={deleteMutation.isPending && deleteMutation.variables === role.id}>
-                              {deleteMutation.isPending && deleteMutation.variables === role.id ? <Loader2 className="rtl:ml-2 ltr:mr-2 h-4 w-4 animate-spin"/> : <Trash2 className="rtl:ml-2 ltr:mr-2 h-4 w-4" />}
-                              حذف
-                            </DropdownMenuItem>
-                          </>
+          <CardContent sx={{ p: 0 }}>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ width: { xs: 80, sm: 100 } }}>الإسم</TableCell>
+                    <TableCell>الصلاحيات</TableCell>
+                    <TableCell align="right" sx={{ width: 100 }}>الإجراءات</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {roles.map((role) => (
+                    <TableRow key={role.id} hover>
+                      <TableCell sx={{ fontWeight: 500 }}>{role.name}</TableCell>
+                      <TableCell>{renderPermissions(role.permissions)}</TableCell>
+                      <TableCell align="right">
+                        <div className="flex items-center gap-2">
+                        <Link to={`/roles/${role.id}/edit`}>
+                          <Button size="small" variant="outlined" sx={{ mr: 1 }}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                        {role.name !== 'Super Admin' && (
+                          <Button size="small" color="error" variant="outlined" onClick={() => handleDelete(role)} disabled={deleteMutation.isPending && deleteMutation.variables === role.id}>
+                            {deleteMutation.isPending && deleteMutation.variables === role.id ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4" />}
+                          </Button>
                         )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </CardContent>
         </Card>
       )}
       {meta && meta.last_page > 1 && (
-         <div className="flex items-center justify-between mt-6">
-            <Button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1 || isFetching} size="sm" variant="outline">
-                السابق
-            </Button>
-            <span className="text-sm text-muted-foreground">
-                صفحة {meta.current_page} من {meta.last_page}
-            </span>
-            <Button onClick={() => setCurrentPage(p => Math.min(meta.last_page, p + 1))} disabled={currentPage === meta.last_page || isFetching} size="sm" variant="outline">
-                التالي
-            </Button>
-        </div>
+        <Box display="flex" alignItems="center" justifyContent="space-between" mt={3}>
+          <Button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1 || isFetching} size="small" variant="outlined">السابق</Button>
+          <Typography variant="body2" color="text.secondary">صفحة {meta.current_page} من {meta.last_page}</Typography>
+          <Button onClick={() => setCurrentPage(p => Math.min(meta.last_page, p + 1))} disabled={currentPage === meta.last_page || isFetching} size="small" variant="outlined">التالي</Button>
+        </Box>
       )}
-    </div>
+    </Container>
   );
 }

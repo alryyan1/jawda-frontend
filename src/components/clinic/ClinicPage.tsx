@@ -8,6 +8,7 @@ import PatientRegistrationForm from '@/components/clinic/PatientRegistrationForm
 import ActivePatientsList from '@/components/clinic/ActivePatientsList';
 
 import type { Patient } from '@/types/patients'; // Or your more specific ActivePatientListItem
+import { useClinicSelection } from '@/contexts/ClinicSelectionContext';
 import type { DoctorShift } from '@/types/doctors'; // Assuming a DoctorShift type for Tabs
 import { useAuth } from '@/contexts/AuthContext';
 import realtimeService from '@/services/realtimeService';
@@ -18,6 +19,7 @@ import DoctorFinderDialog from './dialogs/DoctorFinderDialog';
 import UserShiftIncomeDialog from './UserShiftIncomeDialog';
 
 const ClinicPage: React.FC = () => {
+  const { requestSelection } = useClinicSelection();
   // Removed React Query client; using local refresh key instead
   const [activePatientsRefreshKey, setActivePatientsRefreshKey] = useState(0);
    
@@ -77,6 +79,23 @@ const handleDoctorShiftSelectedFromFinder = useCallback((shift: DoctorShift) => 
   // F8 and F10 keyboard listeners
   // F8: Open income dialog, F10: Open doctor finder dialog
   useEffect(() => {
+    // Expose selection handler to the header search when clinic page is active
+    requestSelection({ onSelect: (patient, visitId, doctorShift) => {
+      setSelectedPatientVisit({ patient, visitId });
+      setShowRegistrationForm(false);
+      
+      // If the patient is from the current shift and the doctor shift is currently open,
+      // set that doctor shift as active
+      if (doctorShift) {
+        setActiveDoctorShift(doctorShift);
+      }
+    }});
+    return () => requestSelection(null);
+  }, [requestSelection]);
+
+  // F8 and F10 keyboard listeners
+  // F8: Open income dialog, F10: Open doctor finder dialog
+  useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'F8') {
         event.preventDefault();
@@ -84,6 +103,15 @@ const handleDoctorShiftSelectedFromFinder = useCallback((shift: DoctorShift) => 
       } else if (event.key === 'F10') {
         event.preventDefault();
         setIsDoctorFinderDialogOpen(true);
+      } else if (
+        event.key === '+' ||
+        event.key === '=' && event.shiftKey ||
+        event.code === 'NumpadAdd'
+      ) {
+        // Plus key should open the registration form like the ActionsPane button
+        event.preventDefault();
+        setShowRegistrationForm(true);
+        setSelectedPatientVisit(null);
       }
     };
 

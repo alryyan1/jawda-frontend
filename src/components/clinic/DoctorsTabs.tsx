@@ -1,5 +1,5 @@
 // src/components/clinic/DoctorsTabs.tsx
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   Box,
   CircularProgress,
@@ -21,6 +21,7 @@ interface DoctorsTabsProps {
 
 const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId }) => {
   const { currentClinicShift } = useAuth();
+  const tabRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
 
   // Use React Query to fetch doctor shifts
   // This will automatically update when shifts are opened/closed from ManageDoctorShiftsDialog
@@ -35,6 +36,27 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId 
     refetchInterval: 30000, // Refetch every 30 seconds
     staleTime: 10000, // Consider data stale after 10 seconds
   });
+
+  // Scroll active tab into view when activeShiftId changes
+  // This ensures that when a patient is selected from the search and their doctor shift
+  // becomes active, the corresponding doctor tab is automatically scrolled into view
+  useEffect(() => {
+    if (activeShiftId && tabRefs.current[activeShiftId]) {
+      // Small delay to ensure the DOM has updated
+      const timeoutId = setTimeout(() => {
+        const activeTab = tabRefs.current[activeShiftId];
+        if (activeTab) {
+          activeTab.scrollIntoView({
+            behavior: 'smooth',
+            block: 'nearest',
+            inline: 'center'
+          });
+        }
+      }, 100);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [activeShiftId]);
 
 
   
@@ -105,6 +127,9 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId 
               return (
                 <Box
                   key={shift.id}
+                  ref={(el) => {
+                    tabRefs.current[shift.id] = el;
+                  }}
                   onClick={() => onShiftSelect(shift)}
                   className={getTabClassName()}
                 >

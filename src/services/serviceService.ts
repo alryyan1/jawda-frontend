@@ -64,3 +64,9 @@ export const executeBatchUpdateServicePrices = async (payload: BatchUpdatePayloa
     const response = await apiClient.post('/services/batch-update-prices', payload);
     return response.data;
 };
+
+// Activate all services
+export const activateAllServices = async (): Promise<{ message: string; affected_count?: number }> => {
+    const response = await apiClient.post('/services/activate-all');
+    return response.data;
+};

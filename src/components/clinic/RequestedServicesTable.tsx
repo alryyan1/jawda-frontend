@@ -28,7 +28,6 @@ import {
   Loader2,
   Trash2,
   DollarSign,
-  PlusCircle,
   Edit,
   XCircle,
   Save,
@@ -36,6 +35,7 @@ import {
   PackageOpen,
   ChevronDown,
   ChevronUp,
+  CheckCircle,
 } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -75,6 +75,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
   onAddMoreServices,
   handlePrintReceipt,
 }) => {
+  void onAddMoreServices; // silence unused prop for now
   const queryClient = useQueryClient();
   const [editingRowId, setEditingRowId] = useState<number | null>(null);
   const [serviceToDelete, setServiceToDelete] = useState<number | null>(null);
@@ -278,7 +279,11 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                           {formatNumber(rs.amount_paid)}
                         </TableCell>
                         <TableCell align="center" sx={{ py: 1.25 }}>
-                          <Button size="small" variant="outlined" onClick={() => setPayingService(rs)} disabled={!currentClinicShiftId} startIcon={<DollarSign className="h-3 w-3" />}>دفع</Button>
+                          {calculateItemBalance(rs) <= 0.01 ? (
+                            <CheckCircle className="h-5 w-5 text-green-600" aria-label="مدفوع بالكامل" />
+                          ) : (
+                            <Button size="small" variant="outlined" onClick={() => setPayingService(rs)} disabled={!currentClinicShiftId} startIcon={<DollarSign className="h-3 w-3" />}>دفع</Button>
+                          )}
                         </TableCell>
                         <TableCell align="center" sx={{ py: 1.25 }}>
                           <IconButton size="small" onClick={() => setExpandedRowId(isExpanded ? null : rs.id)} aria-label={isExpanded ? "طي" : "توسيع"}>

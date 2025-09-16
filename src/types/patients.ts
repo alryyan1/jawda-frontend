@@ -170,6 +170,7 @@ export interface RecentDoctorVisitSearchItem {
   patient_name: string;
   patient_phone?: string | null;
   doctor_name?: string | null;
+  doctor_shift_id?: number | null;
   visit_date?: string | null; // YYYY-MM-DD
   visit_time?: string | null;
   autocomplete_label: string; // For Autocomplete display

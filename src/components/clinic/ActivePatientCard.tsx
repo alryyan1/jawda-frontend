@@ -296,6 +296,13 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
                   height: "12px",
                   minWidth: "12px",
                   padding: "0 3px",
+                  ...(visit.requested_services_count > 0
+                    ? {
+                        backgroundColor:
+                          visit.status === "payment_pending" ? "#ef4444" : "#16a34a",
+                        color: "#fff",
+                      }
+                    : {}),
                 },
               }}
             >

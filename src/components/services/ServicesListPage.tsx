@@ -7,7 +7,7 @@ import {
   useQueryClient,
   keepPreviousData,
 } from "@tanstack/react-query";
-import { getServices, deleteService } from "@/services/serviceService";
+import { getServices, deleteService, activateAllServices } from "@/services/serviceService";
 import { getServiceGroupsList } from "@/services/serviceGroupService"; // IMPORT
 import { Button, Card, CardContent, CardHeader, Typography, TextField, FormControl, InputLabel, Select, MenuItem, Table, TableBody, TableCell, TableHead, TableRow, TableContainer, Paper, Dialog, DialogTitle, DialogContent, DialogActions, Menu } from "@mui/material";
 import {
@@ -214,6 +214,17 @@ export default function ServicesListPage() {
       setIsExportingCosts(false);
     }
   };
+  // Activate all services
+  const activateAllMutation = useMutation({
+    mutationFn: () => activateAllServices(),
+    onSuccess: (res) => {
+      toast.success(res.message || 'تم تفعيل كل الخدمات بنجاح');
+      queryClient.invalidateQueries({ queryKey: ['services'] });
+    },
+    onError: (err: ApiError) => {
+      toast.error('فشل تفعيل جميع الخدمات', { description: err.message || err.response?.data?.message });
+    }
+  });
   const openDeleteDialog = (service: Service) => {
     setServiceToDelete(service);
     setDeleteDialogOpen(true);
@@ -310,6 +321,10 @@ export default function ServicesListPage() {
           </Button>
           <Button onClick={handleExportWithCosts} disabled={isExportingCosts} size="small" variant="outlined">
             تصدير مع التكلفة
+          </Button>
+          <Button onClick={() => activateAllMutation.mutate()} disabled={activateAllMutation.isPending} size="small" variant="outlined" color="success">
+            {activateAllMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin rtl:ml-2 ltr:mr-2" /> : null}
+            تفعيل كل الخدمات
           </Button>
           <Button component={Link as any} to="/settings/services/new" size="small" variant="contained">إضافة خدمة</Button>
             {/* --- NEW BATCH UPDATE BUTTON & DIALOG --- */}

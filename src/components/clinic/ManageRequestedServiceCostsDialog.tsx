@@ -86,7 +86,7 @@ const ManageRequestedServiceCostsDialog: React.FC<ManageRequestedServiceCostsDia
   
   const { data: serviceCostDefinitions = [], isLoading: isLoadingDefinitions } = useQuery<ServiceCost[], Error>({
     queryKey: serviceCostDefinitionsQueryKey,
-    queryFn: () => getServiceCostsForService(requestedService.service_id),
+    queryFn: () => getServiceCostsForService(requestedService.service_id).then(res => res.data),
     enabled: isOpen && !!requestedService.service_id,
   });
 
@@ -140,19 +140,7 @@ const ManageRequestedServiceCostsDialog: React.FC<ManageRequestedServiceCostsDia
   useEffect(() => {
     if (!isOpen || isLoadingExisting || isLoadingDefinitions) return;
 
-    const formattedCosts = existingReqServiceCosts.length > 0
-      ? existingReqServiceCosts.map(rc => ({
-          id: rc.id,
-          sub_service_cost_id: String(rc.sub_service_cost_id),
-          service_cost_id: String(rc.service_cost_id),
-          amount: String(rc.amount),
-        }))
-      : serviceCostDefinitions.map(def => ({
-          id: null,
-          sub_service_cost_id: String(def.sub_service_cost_id),
-          service_cost_id: String(def.id),
-          amount: String(calculateAmount.toFixed(2)),
-        }));
+    // Prepare default rows if no existing costs
 
     reset({
       costs: existingReqServiceCosts.length > 0 
@@ -164,7 +152,7 @@ const ManageRequestedServiceCostsDialog: React.FC<ManageRequestedServiceCostsDia
         : serviceCostDefinitions.map(def => ({
             sub_service_cost_id: String(def.sub_service_cost_id),
             service_cost_id: String(def.id),
-            amount: String(calculateAmount.toFixed(2)),
+            amount: String(calculateAmount(def).toFixed(2)),
           }))
     });
   }, [isOpen, isLoadingExisting, isLoadingDefinitions, existingReqServiceCosts, serviceCostDefinitions, calculateAmount, reset]);
@@ -178,7 +166,7 @@ const ManageRequestedServiceCostsDialog: React.FC<ManageRequestedServiceCostsDia
       return;
     }
 
-    const calculatedAmount = calculateAmount;
+    const calculatedAmount = calculateAmount(definition);
     setValue(`costs.${index}.amount`, calculatedAmount.toFixed(2));
     setValue(`costs.${index}.sub_service_cost_id`, String(definition.sub_service_cost_id));
   }, [serviceCostDefinitions, setValue, calculateAmount]);

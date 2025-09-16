@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   Outlet,
   Link,
   NavLink,
   useNavigate,
+  useLocation,
 } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -58,6 +59,13 @@ import { cn } from "@/lib/utils";
 import { getSidebarCollapsedState, setSidebarCollapsedState } from '../lib/sidebar-store';
 import { getCurrentOpenShift } from "@/services/shiftService";
 import realtimeService from "@/services/realtimeService";
+import { ClinicSelectionProvider, useClinicSelection } from "@/contexts/ClinicSelectionContext";
+import Autocomplete from "@mui/material/Autocomplete";
+import TextField from "@mui/material/TextField";
+import CircularProgress from "@mui/material/CircularProgress";
+import { searchRecentDoctorVisits, getPatientById } from "@/services/patientService";
+import { getActiveDoctorShifts } from "@/services/clinicService";
+import type { DoctorShift } from "@/types/doctors";
 
 // Define navigation items structure
 export interface NavItem {
@@ -119,6 +127,113 @@ const useTheme = () => {
   return { theme, toggleTheme };
 };
 
+
+const AppHeaderSearch: React.FC = () => {
+  const location = useLocation();
+  const isClinicRoute = useMemo(() => location.pathname.startsWith("/clinic"), [location.pathname]);
+  const { currentRequest } = useClinicSelection();
+
+  const [inputValue, setInputValue] = useState("");
+  const [options, setOptions] = useState<Array<{ label: string; visit_id: number; patient_id: number; doctor_shift_id?: number | null }>>([]);
+  const [open, setOpen] = useState(false);
+  const [activeDoctorShifts, setActiveDoctorShifts] = useState<DoctorShift[]>([]);
+  const loading = open && inputValue.trim().length >= 2 && options.length === 0;
+
+  // Fetch active doctor shifts when component mounts
+  useEffect(() => {
+    if (!isClinicRoute) return;
+    
+    const fetchActiveDoctorShifts = async () => {
+      try {
+        const shifts = await getActiveDoctorShifts();
+        setActiveDoctorShifts(shifts);
+      } catch (error) {
+        console.error('Failed to fetch active doctor shifts:', error);
+      }
+    };
+
+    fetchActiveDoctorShifts();
+  }, [isClinicRoute]);
+
+  useEffect(() => {
+    let active = true;
+    const term = inputValue.trim();
+    if (!open || term.length < 2) {
+      setOptions([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const results = await searchRecentDoctorVisits(term, 15);
+        if (!active) return;
+        setOptions(results.map(r => ({ 
+          label: r.autocomplete_label || r.patient_name, 
+          visit_id: r.visit_id, 
+          patient_id: r.patient_id,
+          doctor_shift_id: r.doctor_shift_id
+        })));
+      } catch {
+        if (!active) return;
+        setOptions([]);
+      }
+    }, 250);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [inputValue, open]);
+
+  const handleSelect = async (_: unknown, value: { label: string; visit_id: number; patient_id: number; doctor_shift_id?: number | null } | null) => {
+    if (!value || !currentRequest) return;
+    const patient = await getPatientById(value.patient_id);
+    
+    // Check if the patient's doctor shift is currently active
+    const matchingDoctorShift = value.doctor_shift_id 
+      ? activeDoctorShifts.find(shift => shift.id === value.doctor_shift_id)
+      : null;
+    
+    // Pass the doctor shift information along with the patient selection
+    currentRequest.onSelect(patient, value.visit_id, matchingDoctorShift || undefined);
+    setInputValue("");
+    setOptions([]);
+  };
+
+  if (!isClinicRoute) return null;
+  return (
+    <div className="hidden md:flex items-center w-[360px] max-w-[45vw]">
+      <Autocomplete
+        open={open}
+        onOpen={() => setOpen(true)}
+        onClose={() => setOpen(false)}
+        options={options}
+        loading={loading}
+        onChange={handleSelect}
+        filterOptions={(x) => x}
+        getOptionLabel={(o) => o.label}
+        noOptionsText="لا توجد نتائج"
+        renderInput={(params) => (
+          <TextField
+            {...params}
+            placeholder="بحث عن مريض بالاسم في زيارات العيادة"
+            size="small"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            InputProps={{
+              ...params.InputProps,
+              endAdornment: (
+                <>
+                  {loading ? <CircularProgress color="inherit" size={16} /> : null}
+                  {params.InputProps.endAdornment}
+                </>
+              ),
+            }}
+          />
+        )}
+        sx={{ width: '100%' }}
+      />
+    </div>
+  );
+};
 
 const AppLayout: React.FC = () => {
   const { user, logout } = useAuth();
@@ -246,6 +361,7 @@ const AppLayout: React.FC = () => {
   const ExpandIcon = ChevronsLeft;
 
   return (
+    <ClinicSelectionProvider>
     <TooltipProvider delayDuration={100}>
       <div  style={{direction: 'rtl'}}  className="flex  h-screen bg-muted/30 dark:bg-background text-foreground">
         {/* Desktop Sidebar */}
@@ -321,9 +437,8 @@ const AppLayout: React.FC = () => {
                             <Button variant="ghost" size="icon"><Menu className="h-6 w-6" /></Button>
                         </SheetTrigger>
                     </Sheet>
-                    <div className="flex-1 text-lg font-semibold hidden md:block truncate px-4">
-                        {/* Placeholder for dynamic page title based on location.pathname */}
-                    </div>
+                    <div className="flex-1 text-lg font-semibold hidden md:block truncate px-4" />
+                    <AppHeaderSearch />
                 </div>
                 
                 <div className="flex items-center gap-2 sm:gap-3">
@@ -405,6 +520,7 @@ const AppLayout: React.FC = () => {
         <Toaster richColors position="top-right" />
       </div>
     </TooltipProvider>
+    </ClinicSelectionProvider>
   );
 };
 

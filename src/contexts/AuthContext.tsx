@@ -55,6 +55,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     data: currentClinicShiftData,
     isLoading: isLoadingShiftData,
     refetch: refetchShiftDataFromQuery, // Renamed to avoid conflict
+    error: shiftError,
   } = useQuery<Shift | null, Error>({
     queryKey: currentOpenShiftQueryKey,
     queryFn: apiGetCurrentOpenShift,
@@ -68,6 +69,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return failureCount < 3;
     },
   });
+
+  // Debug shift fetching
+  if (shiftError) {
+    console.log("Shift fetch error:", shiftError);
+  }
   const currentClinicShift = currentClinicShiftData ?? null; // Ensure null if undefined
   console.log('currentClinicShift', currentClinicShift ,'in auth context');
   const fetchUser = useCallback(async () => {
@@ -143,21 +149,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (credentials: Record<string, any>) => {
     setIsAuthLoading(true); // Loading during login process
     try {
-      const response = await apiClient.post<unknown>(
+      const response = await apiClient.post(
         "/login",
         credentials
       );
-      const { user: userData, token: newToken } = response as unknown as { user: User; token: string } as any;
+      const { user: userData, token: newToken } = (response as { data: { user: User; token: string } }).data;
+
+      console.log("Login successful:", { userData, newToken });
 
       localStorage.setItem("authToken", newToken);
       localStorage.setItem("authUser", JSON.stringify(userData)); // Store basic user from login
       setToken(newToken);
       setUser(userData); // Set user immediately, fetchUser can refine with more details if needed later
 
+      console.log("Auth state after login:", { token: newToken, user: userData, isAuthenticated: !!(newToken && userData) });
+
       // After successful login, trigger refetch of current shift
-      await queryClient.invalidateQueries({
-        queryKey: currentOpenShiftQueryKey,
-      });
+      // Commented out temporarily to debug login issue
+      // await queryClient.invalidateQueries({
+      //   queryKey: currentOpenShiftQueryKey,
+      // });
       // Or await refetchShiftDataFromQuery();
     } catch (error) {
       // Clear partial auth state on login failure
@@ -175,8 +186,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const register = async (data: Record<string, any>) => {
     setIsAuthLoading(true);
     try {
-      const response = await apiClient.post<unknown>("/register", data);
-      const { user: userData, token: newToken } = response as unknown as { user: User; token: string } as any;
+      const response = await apiClient.post("/register", data);
+      const { user: userData, token: newToken } = (response as { data: { user: User; token: string } }).data;
 
       localStorage.setItem("authToken", newToken);
       localStorage.setItem("authUser", JSON.stringify(userData));

@@ -10,6 +10,7 @@ import ActivePatientsList from '@/components/clinic/ActivePatientsList';
 import type { Patient } from '@/types/patients'; // Or your more specific ActivePatientListItem
 import type { DoctorShift } from '@/types/doctors'; // Assuming a DoctorShift type for Tabs
 import { useAuth } from '@/contexts/AuthContext';
+import realtimeService from '@/services/realtimeService';
 import ActionsPane from './ActionsPane';
 import SelectedPatientWorkspace from './SelectedPatientWorkspace';
 import PatientDetailsColumnClinic from './PatientDetailsColumnClinic';
@@ -44,9 +45,15 @@ const handleDoctorShiftSelectedFromFinder = useCallback((shift: DoctorShift) => 
 }, [/* showRegistrationForm, setShowRegistrationForm, setSelectedPatientVisit */]);
 
 // Empty dependency array means this effect runs once on mount and cleans up on unmount
-  const handlePatientRegistered = useCallback(() => {
-    // Trigger remount of ActivePatientsList to refresh data without React Query
+  const handlePatientRegistered = useCallback((patient: Patient) => {
+    // Refresh active patients list
     setActivePatientsRefreshKey(prev => prev + 1);
+    // If backend returned the created visit on the patient, auto-select it
+    const visitId = patient.doctor_visit?.id;
+    if (visitId) {
+      setSelectedPatientVisit({ patient, visitId });
+      setShowRegistrationForm(false);
+    }
   }, []);
 
   const handlePatientSelected = useCallback((patient: Patient, visitId: number) => {
@@ -86,7 +93,34 @@ const handleDoctorShiftSelectedFromFinder = useCallback((shift: DoctorShift) => 
     };
   }, []);
 
- console.log(activeDoctorShift,'activeDoctorShift',activePatientsRefreshKey,'activePatientsRefreshKey',selectedPatientVisit,'selectedPatientVisit',showRegistrationForm,'showRegistrationForm')
+  // Subscribe to realtime patient-registered events
+  useEffect(() => {
+    const handleRealtimePatientRegistered = (patient: Patient) => {
+      console.log('Realtime patient registered:', patient);
+      
+      // Check if the patient belongs to the current doctor shift
+      if (activeDoctorShift && patient.doctor_visit?.doctor_shift_id === activeDoctorShift.id) {
+        // Refresh the active patients list
+        setActivePatientsRefreshKey(prev => prev + 1);
+        
+        // Optionally auto-select the new patient
+        const visitId = patient.doctor_visit?.id;
+        if (visitId) {
+          setSelectedPatientVisit({ patient, visitId });
+          setShowRegistrationForm(false);
+        }
+      }
+    };
+
+    // Subscribe to the event
+    realtimeService.onPatientRegistered(handleRealtimePatientRegistered);
+
+    // Cleanup on unmount
+    return () => {
+      realtimeService.offPatientRegistered(handleRealtimePatientRegistered);
+    };
+  }, [activeDoctorShift]);
+
 
   return (
     <div className="clinic-page-container" dir="rtl">

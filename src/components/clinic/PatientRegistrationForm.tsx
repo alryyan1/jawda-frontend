@@ -20,6 +20,7 @@ import {
   DialogActions,
   FormHelperText
 } from '@mui/material';
+import type { SelectChangeEvent } from '@mui/material/Select';
 import { Add as AddIcon } from '@mui/icons-material';
 import axios from 'axios';
 
@@ -75,7 +76,7 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
   // Form state
   const [formData, setFormData] = useState<FormData>({
       name: '',
-      phone: '',
+      phone: '0',
       gender: 'female',
       age_year: '',
       age_month: '',
@@ -222,7 +223,7 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
     }
   };
 
-  const handleSelectChange = (field: keyof FormData) => (event: any) => {
+  const handleSelectChange = (field: keyof FormData) => (event: SelectChangeEvent) => {
     const value = event.target.value;
     setFormData(prev => ({ ...prev, [field]: value }));
     
@@ -268,7 +269,7 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
     }
 
     setIsSubmitting(true);
-    setAlert({ type: 'error', message: 'حدث خطأ' });
+    // setAlert({ type: 'error', message: 'حدث خطأ' });
 
     try {
       const submissionData = {
@@ -296,7 +297,7 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
       // Reset form
       setFormData({
         name: '',
-        phone: '',
+        phone: '0',
         gender: 'female',
         age_year: '',
         age_month: '',
@@ -313,23 +314,14 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
       
     } catch (error: unknown) {
       console.error('Patient registration failed:', error);
-      
-      let errorMessage = 'فشل في تسجيل المريض';
-      const axiosError = error as { response?: { data?: { errors?: Record<string, string[]>; message?: string; } } };
-      if (axiosError.response?.data?.errors) {
-        const fieldErrors = Object.values(axiosError.response.data.errors).flat().join(' ');
-        errorMessage = `${errorMessage}: ${fieldErrors}`;
-      } else if (axiosError.response?.data?.message) {
-        errorMessage = axiosError.response.data.message;
-      }
-      
-      setAlert({ type: 'error', message: 'حدث خطأ' });
+      //  setAlert({ type: 'error', message: 'حدث خطأ' });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleSelectPatientFromSearch = async (patientId: number, previousVisitId?: number | null) => {
+    void previousVisitId;
     if (!activeDoctorShift?.doctor_id) {
       setAlert({ type: 'error', message: 'حدث خطأ' });
       return;
@@ -345,7 +337,7 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
       // Reset form
       setFormData({
         name: '',
-        phone: '',
+        phone: '0',
         gender: 'female',
         age_year: '',
         age_month: '',
@@ -362,16 +354,6 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
       
     } catch (error: unknown) {
       console.error('Failed to create visit:', error);
-      
-      let errorMessage = 'فشل في إنشاء زيارة';
-      const axiosError = error as { response?: { data?: { errors?: Record<string, string[]>; message?: string; } } };
-      if (axiosError.response?.data?.message) {
-        errorMessage = axiosError.response.data.message;
-      } else if (axiosError.response?.data?.errors) {
-        const errors = Object.values(axiosError.response.data.errors).flat().join(', ');
-        errorMessage = `${errorMessage}: ${errors}`;
-      }
-      
       setAlert({ type: 'error', message: 'حدث خطأ' });
     }
   };
@@ -601,7 +583,7 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
                 type="submit"
                 variant="contained"
                 fullWidth
-                disabled={isSubmitting}
+                disabled={isSubmitting || !activeDoctorShift?.doctor_id}
                 startIcon={isSubmitting ? <CircularProgress size={20} /> : null}
               >
                 {isSubmitting ? 'جاري التسجيل...' : 'تسجيل المريض'}

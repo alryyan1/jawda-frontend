@@ -31,8 +31,10 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Handle authentication errors
-    if (error.response?.data?.message === "Unauthenticated.") {
+    // Handle authentication errors - but not during login/register
+    const isAuthEndpoint = error.config?.url?.includes('/login') || error.config?.url?.includes('/register');
+    
+    if (error.response?.data?.message === "Unauthenticated." && !isAuthEndpoint) {
       // Clear auth data
       localStorage.removeItem('authToken');
       localStorage.removeItem('authUser');

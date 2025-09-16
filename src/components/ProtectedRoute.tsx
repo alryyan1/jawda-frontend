@@ -4,8 +4,10 @@ import { useAuth } from '../contexts/AuthContext'; // Your AuthContext
 import { Loader2 } from 'lucide-react'; // Or your preferred loading spinner
 
 const ProtectedRoute: React.FC = () => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user, token } = useAuth();
   const location = useLocation(); // Gets the current URL location object
+
+  console.log("ProtectedRoute state:", { isAuthenticated, isLoading, user, token });
 
   if (isLoading) {
     // While the authentication status is being determined, show a loading state.

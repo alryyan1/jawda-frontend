@@ -49,8 +49,13 @@ const LoginPage: React.FC = () => {
 
     try {
       await login(formData);
-      const from = location.state?.from?.pathname || "/";
-      navigate(from, { replace: true });
+      console.log("Login completed, navigating to:", location.state?.from?.pathname || "/");
+      
+      // Small delay to ensure auth state is updated
+      setTimeout(() => {
+        const from = location.state?.from?.pathname || "/";
+        navigate(from, { replace: true });
+      }, 100);
     } catch (error: unknown) {
       let errorMessage = "فشلت المصادقة. يرجى التحقق من بيانات الاعتماد.";
       if (error && typeof error === 'object' && 'response' in error) {

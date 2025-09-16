@@ -43,6 +43,8 @@ import {
   Syringe,
   Microscope,
   Banknote,
+  Wifi,
+  WifiOff,
 } from "lucide-react";
 import { Toaster } from "sonner";
 import { useQuery } from "@tanstack/react-query";
@@ -55,6 +57,7 @@ import {
 import { cn } from "@/lib/utils";
 import { getSidebarCollapsedState, setSidebarCollapsedState } from '../lib/sidebar-store';
 import { getCurrentOpenShift } from "@/services/shiftService";
+import realtimeService from "@/services/realtimeService";
 
 // Define navigation items structure
 export interface NavItem {
@@ -124,6 +127,7 @@ const AppLayout: React.FC = () => {
 
   const [isDesktopSidebarCollapsed, setIsDesktopSidebarCollapsed] = useState<boolean>(getSidebarCollapsedState());
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
 
   // Current general shift status for app-wide indicator
   const { data: currentOpenShift } = useQuery({
@@ -131,6 +135,21 @@ const AppLayout: React.FC = () => {
     queryFn: getCurrentOpenShift,
     refetchInterval: 30000,
   });
+
+  // Monitor realtime connection status
+  useEffect(() => {
+    const checkConnection = () => {
+      setIsRealtimeConnected(realtimeService.getConnectionStatus());
+    };
+
+    // Check initial status
+    checkConnection();
+
+    // Check periodically
+    const interval = setInterval(checkConnection, 2000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Placeholder for actual permission checking from useAuthorization hook
   const can = (permission?: string): boolean => {
@@ -323,6 +342,22 @@ const AppLayout: React.FC = () => {
                     </TooltipContent>
                   </Tooltip>
 
+                  {/* Realtime Connection Status */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center" aria-label="realtime-status">
+                        {isRealtimeConnected ? (
+                          <Wifi className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <WifiOff className="h-4 w-4 text-red-500" />
+                        )}
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{isRealtimeConnected ? 'متصل بالخادم المباشر' : 'غير متصل بالخادم المباشر'}</p>
+                    </TooltipContent>
+                  </Tooltip>
+
                   {/* Theme Toggle */}
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -363,7 +398,7 @@ const AppLayout: React.FC = () => {
                 </div>
             </header>
 
-            <main style={{userSelect: 'none'}} className="flex-1 p-1 overflow-auto">
+            <main style={{userSelect: 'none'}} className="flex-1 p-1 overflow-hidden">
                 <Outlet />
             </main>
         </div>

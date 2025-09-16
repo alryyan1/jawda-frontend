@@ -3,25 +3,47 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-// Removed i18n for visible labels: using direct Arabic where applicable
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Card, CardDescription } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Search, Save, Trash2, Printer, FlaskConical } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import {
+  Box,
+  Button,
+  TextField,
+  Checkbox,
+  Card,
+  CardContent,
+  Typography,
+  CircularProgress,
+  Stack,
+  Container,
+  InputAdornment,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  FormHelperText,
+  Grid,
+  Paper,
+  Chip
+} from '@mui/material';
+import {
+  Search,
+  Save,
+  Delete,
+  Print,
+  Science
+} from '@mui/icons-material';
+import { FormProvider } from 'react-hook-form';
 
-import type { MainTest } from '@/types/labTests';
+import type { MainTest, Package } from '@/types/labTests';
 import { 
     getAllActiveMainTestsForPriceList, 
     batchUpdateTestPrices, 
     batchDeleteMainTests 
 } from '@/services/mainTestService';
 import { downloadLabPriceListPdf } from '@/services/reportService';
+import { getPackagesList } from '@/services/packageService';
 
 // Zod schema for the form managing an array of price list items
 const priceListItemSchema = z.object({
@@ -45,11 +67,11 @@ interface ErrorResponse {
 }
 
 const LabPriceListPage: React.FC = () => {
-  // const { t } = useTranslation(['labSettings', 'common', 'labTests']);
   const queryClient = useQueryClient();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [selectedPackageId, setSelectedPackageId] = useState<string>('');
   const [numColumns, setNumColumns] = useState(3); // Default columns
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
@@ -73,8 +95,13 @@ const LabPriceListPage: React.FC = () => {
   }, []);
 
   const { data: allTests, isLoading: isLoadingTests } = useQuery<MainTest[], Error>({
-    queryKey: ['allActiveMainTestsForPriceList', debouncedSearchTerm],
-    queryFn: () => getAllActiveMainTestsForPriceList(debouncedSearchTerm),
+    queryKey: ['allActiveMainTestsForPriceList', debouncedSearchTerm, selectedPackageId],
+    queryFn: () => getAllActiveMainTestsForPriceList(debouncedSearchTerm, selectedPackageId),
+  });
+
+  const { data: packages, isLoading: isLoadingPackages } = useQuery<Package[], Error>({
+    queryKey: ['packagesList'], 
+    queryFn: getPackagesList,
   });
 
   const form = useForm<PriceListFormValues>({
@@ -195,110 +222,220 @@ const LabPriceListPage: React.FC = () => {
   }, [testsToDisplay, numColumns]);
 
   if (isLoadingTests && !allTests) {
-    return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" height={256}>
+        <Stack direction="row" spacing={2} alignItems="center">
+          <CircularProgress size={32} />
+          <Typography>جاري تحميل قائمة الأسعار...</Typography>
+        </Stack>
+      </Box>
+    );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-        <div className="flex items-center gap-2">
-          <FlaskConical className="h-7 w-7 text-primary" />
-          <h1 className="text-2xl sm:text-3xl font-bold">قائمة أسعار التحاليل</h1>
-        </div>
-        <div className="flex gap-2 items-center w-full sm:w-auto">
-          <Button onClick={handleGeneratePdf} variant="outline" size="sm" disabled={isGeneratingPdf}>
-             {isGeneratingPdf ? <Loader2 className="h-4 w-4 animate-spin"/> : <Printer className="h-4 w-4"/>}
-             <span className="ltr:ml-2 rtl:mr-2 hidden sm:inline">توليد قائمة الأسعار PDF</span>
-          </Button>
-          <Button onClick={handleSubmit(onSubmit)} size="sm" disabled={updatePricesMutation.isPending || !isDirty}>
-            {updatePricesMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>}
-            <span className="ltr:ml-2 rtl:mr-2 hidden sm:inline">حفظ جميع الأسعار</span>
-          </Button>
-        </div>
-      </div>
-      <CardDescription>تحديث أسعار التحاليل بشكل مجمّع والبحث عن التحاليل</CardDescription>
+    <Container maxWidth="xl" sx={{ py: 3 }}>
+      <Stack spacing={3}>
+        <Stack 
+          direction={{ xs: 'column', sm: 'row' }} 
+          justifyContent="space-between" 
+          alignItems={{ xs: 'flex-start', sm: 'center' }}
+          spacing={2}
+        >
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Science color="primary" sx={{ fontSize: 28 }} />
+            <Typography variant="h4" component="h1" fontWeight="bold">
+              قائمة أسعار التحاليل
+            </Typography>
+          </Stack>
+          
+          <Stack direction="row" spacing={2}>
+            <Button 
+              onClick={handleGeneratePdf} 
+              variant="outlined" 
+              size="small" 
+              disabled={isGeneratingPdf}
+              startIcon={isGeneratingPdf ? <CircularProgress size={16} /> : <Print />}
+            >
+              توليد قائمة الأسعار PDF
+            </Button>
+            <Button 
+              onClick={handleSubmit(onSubmit)} 
+              size="small" 
+              disabled={updatePricesMutation.isPending || !isDirty}
+              startIcon={updatePricesMutation.isPending ? <CircularProgress size={16} /> : <Save />}
+            >
+              حفظ جميع الأسعار
+            </Button>
+          </Stack>
+        </Stack>
+        
+        <Typography variant="body2" color="text.secondary">
+          تحديث أسعار التحاليل بشكل مجمّع والبحث عن التحاليل
+        </Typography>
 
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-3 p-4 border bg-card rounded-lg">
-         <div className="relative flex-grow w-full sm:max-w-xs">
-             <Input
-                 type="search"
-                 placeholder={'ابحث عن اسم التحليل'}
-                 value={searchTerm}
-                 onChange={(e) => setSearchTerm(e.target.value)}
-                 className="ps-10 rtl:pr-10 h-9"
-             />
-             <Search className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-         </div>
-         <Button 
-             variant="destructive" 
-             size="sm" 
-             onClick={handleDeleteSelected}
-             disabled={deleteMutation.isPending || getValues().tests.filter(t => t.isSelectedForDelete).length === 0}
-         >
-             <Trash2 className="h-4 w-4 ltr:mr-2 rtl:ml-2"/> 
-             حذف المحدد ({getValues().tests.filter(t => t.isSelectedForDelete).length})
-         </Button>
-      </div>
+        <Paper elevation={1} sx={{ p: 3 }}>
+          <Stack 
+            direction={{ xs: 'column', sm: 'row' }} 
+            spacing={2} 
+            alignItems="center"
+            justifyContent="space-between"
+          >
+            <Stack 
+              direction={{ xs: 'column', sm: 'row' }} 
+              spacing={2} 
+              sx={{ flexGrow: 1 }}
+            >
+              <TextField
+                type="search"
+                placeholder="ابحث عن اسم التحليل"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                size="small"
+                sx={{ minWidth: { xs: '100%', sm: 250 } }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+              
+              <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 200 } }}>
+                <InputLabel>فلترة حسب الحزمة</InputLabel>
+                <Select
+                  value={selectedPackageId}
+                  onChange={(e) => setSelectedPackageId(e.target.value)}
+                  label="فلترة حسب الحزمة"
+                  disabled={isLoadingPackages}
+                >
+                  <MenuItem value="">جميع الحزم</MenuItem>
+                  {isLoadingPackages ? (
+                    <MenuItem value="loading" disabled>جاري التحميل...</MenuItem>
+                  ) : (
+                    packages?.map(pkg => (
+                      <MenuItem key={pkg.id} value={String(pkg.id)}>{pkg.name}</MenuItem>
+                    ))
+                  )}
+                </Select>
+              </FormControl>
+            </Stack>
+            
+            <Button 
+              variant="contained" 
+              color="error"
+              size="small" 
+              onClick={handleDeleteSelected}
+              disabled={deleteMutation.isPending || getValues().tests.filter(t => t.isSelectedForDelete).length === 0}
+              startIcon={<Delete />}
+            >
+              حذف المحدد ({getValues().tests.filter(t => t.isSelectedForDelete).length})
+            </Button>
+          </Stack>
+        </Paper>
 
-      {isLoadingTests && testsToDisplay.length === 0 ? <div className="text-center p-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div> : null}
-      {!isLoadingTests && testsToDisplay.length === 0 ? (
-         <div className="text-center py-10 text-muted-foreground border rounded-lg bg-card">
-             {searchTerm ? 'لا توجد نتائج' : 'لا توجد تحاليل للعرض'}
-         </div>
-      ) : (
-         <form onSubmit={handleSubmit(onSubmit)}> {/* Main form for submitting all price changes */}
-             <ScrollArea className="w-full" style={{maxHeight: 'calc(100vh - 300px)'}}> {/* Adjust max height */}
-                 <div className="space-y-1"> {/* Vertical space between rows of items */}
-                 {testChunks.map((chunk, rowIndex) => (
-                     <div key={`row-${rowIndex}`} className="grid gap-2 items-start" style={{gridTemplateColumns: `repeat(${numColumns}, minmax(0, 1fr))`}}>
-                         {chunk.map((field, colIndex) => {
-                             const actualIndex = rowIndex * numColumns + colIndex;
-                             return (
-                             <Card key={field.fieldId} className={cn("p-2 text-xs", errors.tests?.[actualIndex]?.price && "border-destructive")}>
-                                 <div className="flex items-start gap-2">
-                                     <Controller
-                                         control={control}
-                                         name={`tests.${actualIndex}.isSelectedForDelete`}
-                                         render={({ field: checkboxField }) => (
-                                             <Checkbox
-                                                 id={`delete-${field.id}`}
-                                                 checked={checkboxField.value}
-                                                 onCheckedChange={checkboxField.onChange}
-                                                 className="mt-1"
-                                             />
-                                         )}
-                                     />
-                                     <div className="flex-grow space-y-1">
-                                         <label htmlFor={`price-${field.id}`} className="block font-medium leading-tight line-clamp-2" title={field.main_test_name}>
-                                             {field.main_test_name}
-                                         </label>
-                                         <Controller
-                                             control={control}
-                                             name={`tests.${actualIndex}.price`}
-                                             render={({ field: priceField }) => (
-                                                 <Input
-                                                     id={`price-${field.id}`}
-                                                     type="number"
-                                                     step="0.01"
-                                                     className="h-7 text-xs p-1"
-                                                     {...priceField}
-                                                 />
-                                             )}
-                                         />
-                                         {errors.tests?.[actualIndex]?.price && <p className="text-destructive text-[10px] mt-0.5">{errors.tests[actualIndex]?.price?.message}</p>}
-                                     </div>
-                                 </div>
-                             </Card>
-                         );})}
-                         {/* Fill empty cells in the last row if chunk is not full */}
-                         {Array(numColumns - chunk.length).fill(0).map((_, emptyIndex) => <div key={`empty-${rowIndex}-${emptyIndex}`} />)}
-                     </div>
-                 ))}
-                 </div>
-             </ScrollArea>
-         </form>
-      )}
-    </div>
+        {isLoadingTests && testsToDisplay.length === 0 ? (
+          <Box display="flex" justifyContent="center" alignItems="center" py={5}>
+            <CircularProgress />
+          </Box>
+        ) : null}
+        
+        {!isLoadingTests && testsToDisplay.length === 0 ? (
+          <Paper elevation={1} sx={{ p: 5, textAlign: 'center' }}>
+            <Typography variant="h6" color="text.secondary">
+              {searchTerm || selectedPackageId ? 'لا توجد نتائج' : 'لا توجد تحاليل للعرض'}
+            </Typography>
+          </Paper>
+        ) : (
+          <FormProvider {...form}>
+            <Box component="form" onSubmit={handleSubmit(onSubmit)}>
+              <Box sx={{ maxHeight: 'calc(100vh - 300px)', overflow: 'auto' }}>
+                <Stack spacing={1}>
+                  {testChunks.map((chunk, rowIndex) => (
+                    <Grid key={`row-${rowIndex}`} container spacing={1}>
+                      {chunk.map((field, colIndex) => {
+                        const actualIndex = rowIndex * numColumns + colIndex;
+                        return (
+                          <Grid key={field.fieldId} item xs={12} sm={6} md={4} lg={3}>
+                            <Card 
+                              sx={{ 
+                                p: 1.5, 
+                                border: errors.tests?.[actualIndex]?.price ? '1px solid' : 'none',
+                                borderColor: errors.tests?.[actualIndex]?.price ? 'error.main' : 'transparent'
+                              }}
+                            >
+                              <Stack direction="row" spacing={1} alignItems="flex-start">
+                                <Controller
+                                  control={control}
+                                  name={`tests.${actualIndex}.isSelectedForDelete`}
+                                  render={({ field: checkboxField }) => (
+                                    <Checkbox
+                                      id={`delete-${field.id}`}
+                                      checked={checkboxField.value}
+                                      onChange={checkboxField.onChange}
+                                      size="small"
+                                      sx={{ mt: 0.5 }}
+                                    />
+                                  )}
+                                />
+                                <Box sx={{ flexGrow: 1 }}>
+                                  <Typography 
+                                    variant="body2" 
+                                    component="label" 
+                                    htmlFor={`price-${field.id}`}
+                                    sx={{ 
+                                      display: 'block', 
+                                      fontWeight: 'medium', 
+                                      mb: 1,
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      whiteSpace: 'nowrap'
+                                    }}
+                                    title={field.main_test_name}
+                                  >
+                                    {field.main_test_name}
+                                  </Typography>
+                                  <Controller
+                                    control={control}
+                                    name={`tests.${actualIndex}.price`}
+                                    render={({ field: priceField }) => (
+                                      <TextField
+                                        id={`price-${field.id}`}
+                                        type="number"
+                                        inputProps={{ step: "0.01" }}
+                                        size="small"
+                                        fullWidth
+                                        {...priceField}
+                                        error={!!errors.tests?.[actualIndex]?.price}
+                                        helperText={errors.tests?.[actualIndex]?.price?.message}
+                                        sx={{ 
+                                          '& .MuiInputBase-input': { 
+                                            fontSize: '0.75rem',
+                                            py: 0.5
+                                          }
+                                        }}
+                                      />
+                                    )}
+                                  />
+                                </Box>
+                              </Stack>
+                            </Card>
+                          </Grid>
+                        );
+                      })}
+                      {/* Fill empty cells in the last row if chunk is not full */}
+                      {Array(numColumns - chunk.length).fill(0).map((_, emptyIndex) => (
+                        <Grid key={`empty-${rowIndex}-${emptyIndex}`} item xs={12} sm={6} md={4} lg={3} />
+                      ))}
+                    </Grid>
+                  ))}
+                </Stack>
+              </Box>
+            </Box>
+          </FormProvider>
+        )}
+      </Stack>
+    </Container>
   );
 };
 

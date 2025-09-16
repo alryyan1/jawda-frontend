@@ -158,10 +158,17 @@ const AppHeaderSearch: React.FC = () => {
   useEffect(() => {
     let active = true;
     const term = inputValue.trim();
-    if (!open || term.length < 2) {
+    
+    // For numeric input (visit ID), search immediately
+    // For text input, require minimum 2 characters
+    const isNumeric = /^\d+$/.test(term);
+    const shouldSearch = isNumeric ? term.length >= 1 : term.length >= 2;
+    
+    if (!open || !shouldSearch) {
       setOptions([]);
       return;
     }
+    
     const timer = setTimeout(async () => {
       try {
         const results = await searchRecentDoctorVisits(term, 15);
@@ -176,7 +183,7 @@ const AppHeaderSearch: React.FC = () => {
         if (!active) return;
         setOptions([]);
       }
-    }, 250);
+    }, isNumeric ? 100 : 250); // Faster response for numeric search
     return () => {
       active = false;
       clearTimeout(timer);
@@ -198,6 +205,43 @@ const AppHeaderSearch: React.FC = () => {
     setOptions([]);
   };
 
+  const handleKeyDown = async (event: React.KeyboardEvent) => {
+    if (event.key === 'Enter' && inputValue.trim()) {
+      event.preventDefault();
+      
+      // If there are options available, select the first one
+      if (options.length > 0) {
+        await handleSelect(null, options[0]);
+        return;
+      }
+      
+      // If no options but input is numeric (visit ID), try to search directly
+      const term = inputValue.trim();
+      const isNumeric = /^\d+$/.test(term);
+      
+      if (isNumeric && currentRequest) {
+        try {
+          const results = await searchRecentDoctorVisits(term, 1);
+          if (results.length > 0) {
+            const result = results[0];
+            const patient = await getPatientById(result.patient_id);
+            
+            // Check if the patient's doctor shift is currently active
+            const matchingDoctorShift = result.doctor_shift_id 
+              ? activeDoctorShifts.find(shift => shift.id === result.doctor_shift_id)
+              : null;
+            
+            currentRequest.onSelect(patient, result.visit_id, matchingDoctorShift || undefined);
+            setInputValue("");
+            setOptions([]);
+          }
+        } catch (error) {
+          console.error('Error searching by ID:', error);
+        }
+      }
+    }
+  };
+
   if (!isClinicRoute) return null;
   return (
     <div className="hidden md:flex items-center w-[360px] max-w-[45vw]">
@@ -214,10 +258,11 @@ const AppHeaderSearch: React.FC = () => {
         renderInput={(params) => (
           <TextField
             {...params}
-            placeholder="بحث عن مريض بالاسم في زيارات العيادة"
+            placeholder="بحث عن مريض بالاسم أو رقم الزيارة"
             size="small"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={handleKeyDown}
             InputProps={{
               ...params.InputProps,
               endAdornment: (
@@ -341,15 +386,15 @@ const AppLayout: React.FC = () => {
   };
 
   const SidebarContent: React.FC<{isMobile?: boolean}> = ({ isMobile = false }) => (
-    <div  className="flex flex-col h-full">
-      <ScrollArea className="flex-grow"> {/* Added ScrollArea for long lists */}
+    <div className="flex flex-col h-full">
+      <ScrollArea className="flex-1 min-h-0"> {/* Changed from flex-grow to flex-1 min-h-0 for proper flex behavior */}
         <nav style={{direction: 'rtl'}} className="space-y-1 p-2">
           {mainNavItems.map((item) => (
             <NavLinkItem key={item.to} item={item} isCollapsed={!isMobile && isDesktopSidebarCollapsed} onClick={() => isMobile && setMobileNavOpen(false)} />
           ))}
         </nav>
       </ScrollArea>
-      <div className="mt-auto p-2 space-y-1 border-t border-border">
+      <div className="flex-shrink-0 p-2 space-y-1 border-t border-border">
         {utilityNavItems.map((item) => (
            <NavLinkItem key={item.to} item={item} isCollapsed={!isMobile && isDesktopSidebarCollapsed} onClick={() => isMobile && setMobileNavOpen(false)} />
         ))}
@@ -367,7 +412,7 @@ const AppLayout: React.FC = () => {
         {/* Desktop Sidebar */}
         <aside  style={{direction: 'rtl'}}
             className={cn(
-                "hidden md:flex flex-col fixed inset-y-0 border-border bg-card transition-all duration-300 ease-in-out z-40", // Added z-40
+                "hidden md:flex flex-col fixed inset-y-0 border-border bg-card transition-all duration-300 ease-in-out z-40 h-screen", // Added h-screen for explicit height
                 isDesktopSidebarCollapsed ? "w-16" : "w-60",
                 "border-l"
             )}
@@ -405,7 +450,7 @@ const AppLayout: React.FC = () => {
             </SheetTrigger>
             <SheetContent 
                 side="right" 
-                className="w-60 p-0 bg-card border-border md:hidden"
+                className="w-60 p-0 bg-card border-border md:hidden h-full"
             >
                 <SheetHeader className="h-16 px-4 border-b border-border flex flex-row items-center justify-between">
                     <SheetTitle>

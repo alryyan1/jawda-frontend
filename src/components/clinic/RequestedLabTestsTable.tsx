@@ -96,7 +96,7 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
       >;
     }) => updateLabRequestDetails(params.labRequestId, params.data),
     onSuccess: (updatedLabRequest) => {
-      toast.success("detailsUpdatedSuccess");
+      toast.success("تم تحديث التفاصيل بنجاح");
       queryClient.setQueryData(
         requestedTestsQueryKey,
         (oldData: LabRequest[] | undefined) =>
@@ -108,14 +108,14 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
     },
     onError: (error: ApiError) =>
       toast.error(
-        error.response?.data?.message || "error.updateFailed"
+        error.response?.data?.message || "فشل في التحديث"
       ),
   });
 
   const cancelRequestMutation = useMutation({
     mutationFn: cancelLabRequest,
     onSuccess: (_, labRequestId) => {
-      toast.success("request.cancelledSuccess");
+      toast.success("تم إلغاء الطلب بنجاح");
       queryClient.setQueryData(
         requestedTestsQueryKey,
         (oldData: LabRequest[] | undefined) =>
@@ -124,7 +124,7 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
     },
     onError: (error: ApiError) =>
       toast.error(
-        error.response?.data?.message || "error.requestFailed"
+        error.response?.data?.message || "فشل في الطلب"
       ),
   });
 
@@ -153,7 +153,7 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
   const handleCancelRequest = (lr: LabRequest) => {
     if (
       window.confirm(
-        "request.cancelConfirmForItem"
+        "هل أنت متأكد من إلغاء هذا الطلب؟"
       )
     ) {
       cancelRequestMutation.mutate(lr.id);
@@ -183,7 +183,7 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
       {!isLoading && requestedTests.length === 0 && !isFetchingList && (
         <div className="flex-grow flex items-center justify-center">
           <p className="text-sm text-muted-foreground text-center py-6">
-            {"request.noRequestsYet"}
+            {"لا توجد طلبات بعد"}
           </p>
         </div>
       )}
@@ -200,30 +200,30 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
             <TableHeader>
               <TableRow>
                 <TableHead className="min-w-[120px] text-center">
-                  {"table.testName"}
+                  {"اسم الفحص"}
                 </TableHead>
                 <TableHead className="text-center w-[60px]">
-                  {"table.price"}
+                  {"السعر"}
                 </TableHead>
                 <TableHead className="text-center w-[100px]">
-                  {"table.discountPercentageShort"}
+                  {"الخصم %"}
                 </TableHead>
                 {isCompanyPatient && (
                   <TableHead className="text-center w-[90px]">
-                    {"table.endurance"}
+                    {"التعاون"}
                   </TableHead>
                 )}
                 <TableHead className="text-center w-[80px]">
-                  {"table.netPriceShort"}
+                  {"الصافي"}
                 </TableHead>
                 <TableHead className="text-center w-[80px]">
-                  {"table.amountPaid"}
+                  {"المدفوع"}
                 </TableHead>
                 <TableHead className="text-center hidden md:table-cell w-[90px]">
-                  {"table.statusPayment"}
+                  {"حالة الدفع"}
                 </TableHead>
                 <TableHead className="text-center w-[80px]">
-                  {"table.paymentMethodShort"}
+                  {"طريقة الدفع"}
                 </TableHead>
                 <TableHead className="text-right w-[100px]">
                   {"فتح القائمة"}
@@ -333,11 +333,11 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
                     <TableCell className="text-center hidden md:table-cell py-1.5">
                       {lr.is_paid ? (
                         <span className="text-green-600 font-medium">
-                          {"status.paid"}
+                          {"مدفوع"}
                         </span>
                       ) : (
                         <span className="text-amber-600">
-                          {"status.pending"}
+                          {"معلق"}
                         </span>
                       )}
                     </TableCell>
@@ -351,12 +351,12 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
                               is_bankak: !!checked,
                             }))
                           }
-                          aria-label={"paymentMethodBankak"}
+                          aria-label={"طريقة الدفع بنكاك"}
                         />
                       ) : lr.is_bankak ? (
-                        "bankShort"
+                        "بنكاك"
                       ) : (
-                        "cashShort"
+                        "نقدي"
                       )}
                     </TableCell>
                     <TableCell className="text-right py-1.5">
@@ -399,7 +399,7 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
                                 variant="ghost"
                                 onClick={() => onPayIndividual(lr)}
                                 className="h-7 w-7 text-green-600 hover:text-green-700"
-                                title={"pay"}
+                                title={"دفع"}
                               >
                                 <DollarSign className="h-4 w-4" />
                               </Button>
@@ -410,7 +410,7 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
                                 variant="ghost"
                                 onClick={() => onCancelIndividual(lr)}
                                 className="h-7 w-7 text-red-600 hover:text-red-700"
-                                title={"remove"}
+                                title={"إزالة"}
                               >
                                 <Trash className="h-4 w-4" />
                               </Button>
@@ -419,7 +419,7 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
                                 variant="ghost"
                                 onClick={() => onUnpayIndividual(lr)}
                                 className="h-7 w-7 text-green-600 hover:text-green-700"
-                                title={"unpay"}
+                                title={"إلغاء الدفع"}
                               >
                                 <Hand className="h-4 w-4" />
                               </Button>

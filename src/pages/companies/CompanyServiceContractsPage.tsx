@@ -1,69 +1,53 @@
 // src/pages/companies/CompanyServiceContractsPage.tsx
-import React, { useEffect, useState, useCallback } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useEffect, useState, useCallback } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   useQuery,
   useMutation,
   useQueryClient,
   keepPreviousData,
 } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import _debounce from 'lodash/debounce';
 
-import { Button } from "@/components/ui/button";
 import {
+  Button,
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
   Table,
   TableBody,
   TableCell,
+  TableContainer,
   TableHead,
-  TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+  Paper,
+  Menu,
+  MenuItem,
+  IconButton,
+  CircularProgress,
+  Box,
+  Typography,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Switch,
+  Checkbox,
+  InputAdornment,
+} from "@mui/material";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-  Loader2,
   MoreHorizontal,
-  Edit,
   Trash2,
   PlusCircle,
   ArrowRightLeft,
-  ArrowLeft,
   FileText,
-  CheckCircle2,
-  XCircle,
-  Save,
   Search,
-  LibrarySquare,
   Printer,
   Copy,
   File,
   RefreshCw,
-} from "lucide-react"; // ArrowRightLeft can be for "Back" in RTL
+} from "lucide-react";
 
 import type {
   Company,
@@ -87,9 +71,6 @@ import AddCompanyServiceDialog from "./AddCompanyServiceDialog";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Switch } from "@/components/ui/switch";
 import {
   downloadCompanyServiceContractPdf,
   type CompanyContractPdfFilters,
@@ -127,8 +108,8 @@ type FormValues = z.infer<typeof formSchema>;
 type ContractFormItem = FormValues['contracts'][0];
 
 export default function CompanyServiceContractsPage() {
-  const { t, i18n } = useTranslation(["companies", "common", "services"]);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   const handleGenerateServiceContractPdf = async () => {
     if (!companyId) return;
@@ -151,10 +132,10 @@ export default function CompanyServiceContractsPage() {
       a.click();
       window.URL.revokeObjectURL(url);
       a.remove();
-      toast.success(t("common:pdfGeneratedSuccess"));
+      toast.success("تم إنشاء ملف PDF بنجاح");
     } catch (error: unknown) {
       const apiError = error as ApiError;
-      toast.error(t("common:pdfGeneratedError"), {
+      toast.error("فشل في إنشاء ملف PDF", {
         description: apiError.response?.data?.message || apiError.message,
       });
     } finally {
@@ -255,10 +236,10 @@ export default function CompanyServiceContractsPage() {
     onSuccess: (updatedContract) => {
       // Don't update the query cache immediately to prevent re-renders that cause focus loss
       // The form will be updated when the user navigates away or manually refreshes
-      toast.success(t('common:autosaveSuccess'), { id: `autosave-${updatedContract.data.service_id}` });
+      toast.success("تم الحفظ تلقائياً", { id: `autosave-${updatedContract.data.service_id}` });
     },
     onError: (error: Error & { response?: { data?: { message?: string } } }) => {
-      toast.error(t('common:error.updateFailed'), { description: error.response?.data?.message });
+      toast.error("فشل في التحديث", { description: error.response?.data?.message });
       // Only invalidate on error to revert optimistic updates
       queryClient.invalidateQueries({ queryKey: contractedServicesQueryKey });
     },
@@ -274,21 +255,21 @@ export default function CompanyServiceContractsPage() {
                 ? parseFloat(fullRowData[fieldName] as string)
                 : fullRowData[fieldName]
         };
-        toast.info(t('common:autosaving'), { id: `autosave-${fullRowData.service_id}-${fieldName}` });
+        toast.info("جاري الحفظ...", { id: `autosave-${fullRowData.service_id}-${fieldName}` });
         updateMutation.mutate({ serviceId: fullRowData.service_id, data: payload });
       }
     }, 200), // 200ms debounce
-  [dirtyFields, getValues, updateMutation, t]
+  [dirtyFields, getValues, updateMutation]
   );
 
   const importAllMutation = useMutation({
-    mutationFn: (payload?: ImportAllServicesPayload) => importAllServicesToCompanyContract(companyId, payload),
+    mutationFn: (payload?: ImportAllServicesPayload) => importAllServicesToCompanyContract(Number(companyId), payload),
     onSuccess: (data) => {
-        toast.success(data.message || t('companies:contracts.importAllSuccess')); // Assuming backend returns a message
+        toast.success(data.message || "تم استيراد جميع الخدمات بنجاح"); // Assuming backend returns a message
         queryClient.invalidateQueries({ queryKey: contractedServicesQueryKey });
-        queryClient.invalidateQueries({ queryKey: ['companyAvailableServices', companyId] });
+        queryClient.invalidateQueries({ queryKey: ['companyAvailableServices', Number(companyId)] });
     },
-    onError: (error: any) => toast.error(error.response?.data?.message || t('companies:contracts.importAllError')),
+    onError: (error: ApiError) => toast.error(error.response?.data?.message || "فشل في استيراد الخدمات"),
   });
 
   // Modified handler for import all
@@ -316,12 +297,7 @@ export default function CompanyServiceContractsPage() {
     mutationFn: (params: { companyId: number; serviceId: number }) =>
       removeServiceFromCompanyContract(params.companyId, params.serviceId),
     onSuccess: () => {
-      toast.success(
-        t(
-          "companies:serviceContracts.removedSuccess",
-          "Service removed from contract."
-        )
-      );
+      toast.success("تم إزالة الخدمة من العقد بنجاح");
       queryClient.invalidateQueries({
         queryKey: ["companyContractedServices", companyId],
       });
@@ -330,13 +306,7 @@ export default function CompanyServiceContractsPage() {
       }); // Also refetch available services
     },
     onError: (error: ApiError) => {
-      toast.error(
-        t("common:error.deleteFailed", {
-          entity: t(
-            "companies:serviceContracts.contractEntityName",
-            "Contract"
-          ),
-        }),
+      toast.error("فشل في الحذف",
         { description: error.response?.data?.message || error.message }
       );
     },
@@ -351,7 +321,7 @@ export default function CompanyServiceContractsPage() {
   const handleRemoveContract = (serviceId: number, serviceName: string) => {
     if (
       window.confirm(
-        t("companies:serviceContracts.removeConfirm", { serviceName })
+        `هل تريد إزالة الخدمة "${serviceName}" من العقد؟`
       )
     ) {
       removeContractMutation.mutate({
@@ -370,7 +340,7 @@ export default function CompanyServiceContractsPage() {
     });
     // Reset to first page to ensure we see the new contracts
     setCurrentPage(1);
-    toast.info(t("companies:serviceContracts.copyProcessCompletedRefresh"));
+    toast.info("تم نسخ العقود بنجاح، جاري التحديث...");
   };
 
   // Determine if the "Copy Contract" button should be enabled
@@ -379,444 +349,454 @@ export default function CompanyServiceContractsPage() {
 
   if (isLoadingCompany || (isLoadingContracts && !isFetchingContracts)) {
     return (
-      <div className="flex justify-center items-center h-[calc(100vh-10rem)]">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-      </div>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - 10rem)' }}>
+        <CircularProgress size={48} />
+      </Box>
     );
   }
   if (contractsError)
     return (
-      <p className="text-destructive p-4">
-        {t("common:error.fetchFailedExt", {
-          entity: t("companies:serviceContracts.title"),
-          message: contractsError.message,
-        })}
-      </p>
+      <Typography variant="body1" color="error" sx={{ p: 2 }}>
+        فشل في جلب عقود الخدمات: {contractsError.message}
+      </Typography>
     );
 
   const contracts = paginatedContracts?.data || [];
   const meta = paginatedContracts?.meta;
 
-  const BackButtonIcon = i18n.dir() === "rtl" ? ArrowRightLeft : ArrowLeft;
+  const BackButtonIcon = ArrowRightLeft;
 
   return (
-    <div className="container mx-auto py-4 sm:py-6 lg:py-8">
-      <div className="mb-6">
+    <Box >
+      <Box sx={{ mb: 3 }}>
         <Button
-          variant="outline"
-          size="sm"
+          variant="outlined"
+          size="small"
           onClick={() => navigate("/settings/companies")}
-          className="mb-4"
+          sx={{ mb: 2 }}
         >
           <BackButtonIcon className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-          {t("common:backToList", { listName: t("companies:pageTitle") })}
+          العودة إلى قائمة الشركات
         </Button>
-        <CardHeader className="px-0 pt-0">
-          <CardTitle className="text-2xl sm:text-3xl font-bold">
-            {t("companies:serviceContracts.title", {
-              companyName: company?.name || t("common:loading"),
-            })}
-          </CardTitle>
-          <CardDescription>
-            {t(
-              "companies:serviceContracts.description",
-              "Manage the services and their specific pricing included in this company's contract."
-            )}
-          </CardDescription>
-        </CardHeader>
-      </div>
+        <Box sx={{ px: 0, pt: 0 }}>
+          <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
+            عقود خدمات {company?.name || "جاري التحميل..."}
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            إدارة الخدمات وأسعارها المحددة المدرجة في عقد هذه الشركة.
+          </Typography>
+        </Box>
+      </Box>
 
-      <div className="flex gap-2 w-full sm:w-auto justify-end">
+      <Box sx={{ display: 'flex', gap: 1, width: { xs: '100%', sm: 'auto' }, justifyContent: 'flex-end' }}>
         <Button
           onClick={() => setIsCopyContractDialogOpen(true)}
-          variant="outline"
-          size="sm"
-          disabled={!canCopyContracts || importAllMutation.isPending} // Disable if importing all or cannot copy
-          className="h-9"
+          variant="outlined"
+          size="small"
+          disabled={!canCopyContracts || importAllMutation.isPending}
+          sx={{ height: 36 }}
         >
           <Copy className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
-          {t("companies:serviceContracts.copyContractsButton")}
+          نسخ العقود
         </Button>
         <Button 
-                    size="sm" 
-                    variant="outline" 
-                    onClick={handleOpenImportPreferenceDialog} // MODIFIED
+                    size="small" 
+                    variant="outlined" 
+                    onClick={handleOpenImportPreferenceDialog}
                     disabled={importAllMutation.isPending}
                 >
-                    {importAllMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2"/> : <File className="h-4 w-4 ltr:mr-2 rtl:ml-2"/>}
-                    {t('companies:contracts.importAllServicesButton')}
+                    {importAllMutation.isPending ? <CircularProgress size={16} className="ltr:mr-2 rtl:ml-2"/> : <File className="h-4 w-4 ltr:mr-2 rtl:ml-2"/>}
+                    استيراد جميع الخدمات
                 </Button>
         <Button
           onClick={handleGenerateServiceContractPdf}
-          variant="outline"
-          size="sm"
-          className="h-9"
+          variant="outlined"
+          size="small"
+          sx={{ height: 36 }}
           disabled={isGeneratingPdf || isLoadingContracts || !contracts.length}
         >
           {isGeneratingPdf ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <CircularProgress size={16} />
           ) : (
             <Printer className="h-4 w-4" />
           )}
           <span className="ltr:ml-2 rtl:mr-2 hidden sm:inline">
-            {t("common:print")}
+            طباعة
           </span>
         </Button>
         <Button 
-          size="sm" 
-          variant="outline" 
+          size="small" 
+          variant="outlined" 
           onClick={() => queryClient.invalidateQueries({ queryKey: contractedServicesQueryKey })}
           disabled={isLoadingContracts}
         >
           <RefreshCw className={`h-4 w-4 ltr:mr-2 rtl:ml-2 ${isLoadingContracts ? 'animate-spin' : ''}`} />
-          {t('common:refresh')}
+          تحديث
         </Button>
         <AddCompanyServiceDialog
           companyId={Number(companyId)}
           companyName={company?.name || ""}
           onContractAdded={handleContractAdded}
         />
-      </div>
+      </Box>
 
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-2 mb-4">
-        <div className="relative w-full sm:w-auto sm:max-w-xs">
-          <Input
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: 'center', gap: 2, mb: 2 }}>
+        <Box sx={{ position: 'relative', width: { xs: '100%', sm: 'auto' }, maxWidth: { sm: 320 } }}>
+          <TextField
             type="search"
-            placeholder={t("common:searchPlaceholder", "Search services...")}
+            placeholder="البحث في الخدمات..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="ps-10 rtl:pr-10" // Padding for icon
+            size="small"
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search className="h-4 w-4" />
+                </InputAdornment>
+              ),
+            }}
+            sx={{ width: '100%' }}
           />
-          <Search className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        </div>
-      </div>
+        </Box>
+      </Box>
 
       {isFetchingContracts && (
-        <div className="text-sm text-muted-foreground mb-2">
-          {t("common:updatingList")}
-        </div>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+          جاري تحديث القائمة...
+        </Typography>
       )}
 
       {contracts.length === 0 && !isLoadingContracts ? (
-        <Card className="text-center py-10">
+        <Card sx={{ textAlign: 'center', py: 5 }}>
           <CardContent>
-            <FileText className="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />
-            <p className="text-muted-foreground">
-              {t("companies:serviceContracts.noContracts")}
-            </p>
+            <FileText className="mx-auto h-12 w-12" style={{ opacity: 0.5, marginBottom: 16 }} />
+            <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+              لا توجد عقود خدمات
+            </Typography>
             <AddCompanyServiceDialog
               companyId={Number(companyId)}
               companyName={company?.name || ""}
               onContractAdded={handleContractAdded}
               triggerButton={
-                <Button size="sm" className="mt-4">
+                <Button size="small" sx={{ mt: 2 }}>
                   <PlusCircle className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-                  {t("companies:serviceContracts.addContractButton")}
+                  إضافة عقد خدمة
                 </Button>
               }
             />
-          
           </CardContent>
         </Card>
       ) : (
         <Card>
-          <CardContent className="p-0">
-            <form> {/* Form wraps the table */}
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[200px] text-center">
-                      {t("companies:serviceContracts.serviceName")}
-                    </TableHead>
-                    <TableHead className="w-[100px] text-center">
-                      {t("companies:serviceContracts.price")}
-                    </TableHead>
-                    <TableHead className="w-[120px] text-center hidden md:table-cell">
-                      {t("companies:serviceContracts.staticEndurance")}
-                    </TableHead>
-                    <TableHead className="w-[120px] text-center hidden md:table-cell">
-                      {t("companies:serviceContracts.percentageEndurance")}
-                    </TableHead>
-                    <TableHead className="w-[120px] text-center hidden lg:table-cell">
-                      {t("companies:serviceContracts.staticWage")}
-                    </TableHead>
-                    <TableHead className="w-[120px] text-center hidden lg:table-cell">
-                      {t("companies:serviceContracts.percentageWage")}
-                    </TableHead>
-                    <TableHead className="w-[100px] text-center">
-                      {t("companies:serviceContracts.useStatic")}
-                    </TableHead>
-                    <TableHead className="w-[100px] text-center">
-                      {t("companies:serviceContracts.approval")}
-                    </TableHead>
-                    <TableHead className="text-right w-[120px]">
-                      {t("common:actions.openMenu")}
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoadingContracts && <TableRow><TableCell colSpan={8} className="text-center h-24"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>}
-                  {!isLoadingContracts && fields.length === 0 && <TableRow><TableCell colSpan={8} className="text-center h-24 text-muted-foreground">{t("companies:serviceContracts.noContracts")}</TableCell></TableRow>}
-                  {fields.map((field, index) => (
-                    <TableRow key={field.id}>
-                      <TableCell className="font-medium text-center">
-                        {field.service_name}
-                        {field.service_group_name && (
-                          <span className="block text-xs text-muted-foreground">
-                            {field.service_group_name}
-                          </span>
-                        )}
+          <CardContent sx={{ p: 0 }}>
+            <form>
+              <TableContainer component={Paper} elevation={0}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ width: 200, textAlign: 'center' }}>
+                        اسم الخدمة
                       </TableCell>
+                      <TableCell sx={{ width: 130, textAlign: 'center' }}>
+                        السعر
+                      </TableCell>
+                      <TableCell sx={{ width: 120, textAlign: 'center', display: { xs: 'none', md: 'table-cell' } }}>
+                        التحمل الثابت
+                      </TableCell>
+                      <TableCell sx={{ width: 120, textAlign: 'center', display: { xs: 'none', md: 'table-cell' } }}>
+                        التحمل النسبي
+                      </TableCell>
+                      <TableCell sx={{ width: 120, textAlign: 'center', display: { xs: 'none', lg: 'table-cell' } }}>
+                        الأجر الثابت
+                      </TableCell>
+                      <TableCell sx={{ width: 120, textAlign: 'center', display: { xs: 'none', lg: 'table-cell' } }}>
+                        الأجر النسبي
+                      </TableCell>
+                      <TableCell sx={{ width: 100, textAlign: 'center' }}>
+                        استخدام الثابت
+                      </TableCell>
+                      <TableCell sx={{ width: 100, textAlign: 'center' }}>
+                        الموافقة
+                      </TableCell>
+                      <TableCell sx={{ textAlign: 'right', width: 120 }}>
+                        فتح القائمة
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {isLoadingContracts && <TableRow><TableCell colSpan={9} sx={{ textAlign: 'center', height: 96 }}><CircularProgress size={24} /></TableCell></TableRow>}
+                    {!isLoadingContracts && fields.length === 0 && <TableRow><TableCell colSpan={9} sx={{ textAlign: 'center', height: 96, color: 'text.secondary' }}>لا توجد عقود خدمات</TableCell></TableRow>}
+                    {fields.map((field, index) => (
+                      <TableRow key={field.id}>
+                        <TableCell sx={{ fontWeight: 'medium', textAlign: 'center' }}>
+                          {field.service_name}
+                          {field.service_group_name && (
+                            <Typography variant="caption" display="block" color="text.secondary">
+                              {field.service_group_name}
+                            </Typography>
+                          )}
+                        </TableCell>
 
-                      <TableCell className="text-center">
-                        <Controller name={`contracts.${index}.price`} control={control} render={({ field: f }) => (
-                           <Input 
-                             {...f} 
-                             type="number" 
-                             step="0.01" 
-                             className="h-8 text-center" 
-                             onChange={(e) => { f.onChange(e); debouncedUpdate(index, 'price'); }}
-                             onFocus={(e) => e.target.select()}
-                             onKeyDown={(e) => {
-                               if (e.key === 'Enter') {
-                                 e.preventDefault();
-                                 // Find next price input
-                                 const nextIndex = index + 1;
-                                 if (nextIndex < fields.length) {
-                                   const nextInput = document.querySelector(`input[name="contracts.${nextIndex}.price"]`) as HTMLInputElement;
-                                   if (nextInput) {
-                                     nextInput.focus();
-                                     nextInput.select();
+                        <TableCell sx={{ textAlign: 'center' }}>
+                          <Controller name={`contracts.${index}.price`} control={control} render={({ field: f }) => (
+                             <TextField 
+                               {...f} 
+                               type="number" 
+                               size="small"
+                               inputProps={{ step: "0.01" }}
+                               sx={{ width: '100%', '& input': { textAlign: 'center' } }}
+                               onChange={(e) => { f.onChange(e); debouncedUpdate(index, 'price'); }}
+                               onFocus={(e) => e.target.select()}
+                               onKeyDown={(e) => {
+                                 if (e.key === 'Enter') {
+                                   e.preventDefault();
+                                   const nextIndex = index + 1;
+                                   if (nextIndex < fields.length) {
+                                     const nextInput = document.querySelector(`input[name="contracts.${nextIndex}.price"]`) as HTMLInputElement;
+                                     if (nextInput) {
+                                       nextInput.focus();
+                                       nextInput.select();
+                                     }
                                    }
                                  }
-                               }
-                             }}
-                           />
-                        )} />
-                      </TableCell>
+                               }}
+                             />
+                          )} />
+                        </TableCell>
 
-                      <TableCell className="text-center hidden md:table-cell">
-                        <Controller name={`contracts.${index}.static_endurance`} control={control} render={({ field: f }) => (
-                           <Input 
-                             {...f} 
-                             type="number" 
-                             step="0.01" 
-                             className="h-8 text-center" 
-                             onChange={(e) => { f.onChange(e); debouncedUpdate(index, 'static_endurance'); }}
-                             onFocus={(e) => e.target.select()}
-                             onKeyDown={(e) => {
-                               if (e.key === 'Enter') {
-                                 e.preventDefault();
-                                 // Find next static endurance input
-                                 const nextIndex = index + 1;
-                                 if (nextIndex < fields.length) {
-                                   const nextInput = document.querySelector(`input[name="contracts.${nextIndex}.static_endurance"]`) as HTMLInputElement;
-                                   if (nextInput) {
-                                     nextInput.focus();
-                                     nextInput.select();
+                        <TableCell sx={{ textAlign: 'center', display: { xs: 'none', md: 'table-cell' } }}>
+                          <Controller name={`contracts.${index}.static_endurance`} control={control} render={({ field: f }) => (
+                             <TextField 
+                               {...f} 
+                               type="number" 
+                               size="small"
+                               inputProps={{ step: "0.01" }}
+                               sx={{ width: '100%', '& input': { textAlign: 'center' } }}
+                               onChange={(e) => { f.onChange(e); debouncedUpdate(index, 'static_endurance'); }}
+                               onFocus={(e) => e.target.select()}
+                               onKeyDown={(e) => {
+                                 if (e.key === 'Enter') {
+                                   e.preventDefault();
+                                   const nextIndex = index + 1;
+                                   if (nextIndex < fields.length) {
+                                     const nextInput = document.querySelector(`input[name="contracts.${nextIndex}.static_endurance"]`) as HTMLInputElement;
+                                     if (nextInput) {
+                                       nextInput.focus();
+                                       nextInput.select();
+                                     }
                                    }
                                  }
-                               }
-                             }}
-                           />
-                        )} />
-                      </TableCell>
+                               }}
+                             />
+                          )} />
+                        </TableCell>
 
-                      <TableCell className="text-center hidden md:table-cell">
-                        <Controller name={`contracts.${index}.percentage_endurance`} control={control} render={({ field: f }) => (
-                           <Input 
-                             {...f} 
-                             type="number" 
-                             step="0.01" 
-                             min="0" 
-                             max="100" 
-                             className="h-8 text-center" 
-                             placeholder="%" 
-                             onChange={(e) => { f.onChange(e); debouncedUpdate(index, 'percentage_endurance'); }}
-                             onFocus={(e) => e.target.select()}
-                             onKeyDown={(e) => {
-                               if (e.key === 'Enter') {
-                                 e.preventDefault();
-                                 // Find next percentage endurance input
-                                 const nextIndex = index + 1;
-                                 if (nextIndex < fields.length) {
-                                   const nextInput = document.querySelector(`input[name="contracts.${nextIndex}.percentage_endurance"]`) as HTMLInputElement;
-                                   if (nextInput) {
-                                     nextInput.focus();
-                                     nextInput.select();
+                        <TableCell sx={{ textAlign: 'center', display: { xs: 'none', md: 'table-cell' } }}>
+                          <Controller name={`contracts.${index}.percentage_endurance`} control={control} render={({ field: f }) => (
+                             <TextField 
+                               {...f} 
+                               type="number" 
+                               size="small"
+                               inputProps={{ step: "0.01", min: "0", max: "100" }}
+                               placeholder="%"
+                               sx={{ width: '100%', '& input': { textAlign: 'center' } }}
+                               onChange={(e) => { f.onChange(e); debouncedUpdate(index, 'percentage_endurance'); }}
+                               onFocus={(e) => e.target.select()}
+                               onKeyDown={(e) => {
+                                 if (e.key === 'Enter') {
+                                   e.preventDefault();
+                                   const nextIndex = index + 1;
+                                   if (nextIndex < fields.length) {
+                                     const nextInput = document.querySelector(`input[name="contracts.${nextIndex}.percentage_endurance"]`) as HTMLInputElement;
+                                     if (nextInput) {
+                                       nextInput.focus();
+                                       nextInput.select();
+                                     }
                                    }
                                  }
-                               }
-                             }}
-                           />
-                        )} />
-                      </TableCell>
+                               }}
+                             />
+                          )} />
+                        </TableCell>
 
-                      <TableCell className="text-center hidden lg:table-cell">
-                        <Controller name={`contracts.${index}.static_wage`} control={control} render={({ field: f }) => (
-                           <Input 
-                             {...f} 
-                             type="number" 
-                             step="0.01" 
-                             className="h-8 text-center" 
-                             onChange={(e) => { f.onChange(e); debouncedUpdate(index, 'static_wage'); }}
-                             onFocus={(e) => e.target.select()}
-                             onKeyDown={(e) => {
-                               if (e.key === 'Enter') {
-                                 e.preventDefault();
-                                 // Find next static wage input
-                                 const nextIndex = index + 1;
-                                 if (nextIndex < fields.length) {
-                                   const nextInput = document.querySelector(`input[name="contracts.${nextIndex}.static_wage"]`) as HTMLInputElement;
-                                   if (nextInput) {
-                                     nextInput.focus();
-                                     nextInput.select();
+                        <TableCell sx={{ textAlign: 'center', display: { xs: 'none', lg: 'table-cell' } }}>
+                          <Controller name={`contracts.${index}.static_wage`} control={control} render={({ field: f }) => (
+                             <TextField 
+                               {...f} 
+                               type="number" 
+                               size="small"
+                               inputProps={{ step: "0.01" }}
+                               sx={{ width: '100%', '& input': { textAlign: 'center' } }}
+                               onChange={(e) => { f.onChange(e); debouncedUpdate(index, 'static_wage'); }}
+                               onFocus={(e) => e.target.select()}
+                               onKeyDown={(e) => {
+                                 if (e.key === 'Enter') {
+                                   e.preventDefault();
+                                   const nextIndex = index + 1;
+                                   if (nextIndex < fields.length) {
+                                     const nextInput = document.querySelector(`input[name="contracts.${nextIndex}.static_wage"]`) as HTMLInputElement;
+                                     if (nextInput) {
+                                       nextInput.focus();
+                                       nextInput.select();
+                                     }
                                    }
                                  }
-                               }
-                             }}
-                           />
-                        )} />
-                      </TableCell>
+                               }}
+                             />
+                          )} />
+                        </TableCell>
 
-                      <TableCell className="text-center hidden lg:table-cell">
-                        <Controller name={`contracts.${index}.percentage_wage`} control={control} render={({ field: f }) => (
-                           <Input 
-                             {...f} 
-                             type="number" 
-                             step="0.01" 
-                             min="0" 
-                             max="100" 
-                             className="h-8 text-center" 
-                             placeholder="%" 
-                             onChange={(e) => { f.onChange(e); debouncedUpdate(index, 'percentage_wage'); }}
-                             onFocus={(e) => e.target.select()}
-                             onKeyDown={(e) => {
-                               if (e.key === 'Enter') {
-                                 e.preventDefault();
-                                 // Find next percentage wage input
-                                 const nextIndex = index + 1;
-                                 if (nextIndex < fields.length) {
-                                   const nextInput = document.querySelector(`input[name="contracts.${nextIndex}.percentage_wage"]`) as HTMLInputElement;
-                                   if (nextInput) {
-                                     nextInput.focus();
-                                     nextInput.select();
+                        <TableCell sx={{ textAlign: 'center', display: { xs: 'none', lg: 'table-cell' } }}>
+                          <Controller name={`contracts.${index}.percentage_wage`} control={control} render={({ field: f }) => (
+                             <TextField 
+                               {...f} 
+                               type="number" 
+                               size="small"
+                               inputProps={{ step: "0.01", min: "0", max: "100" }}
+                               placeholder="%"
+                               sx={{ width: '100%', '& input': { textAlign: 'center' } }}
+                               onChange={(e) => { f.onChange(e); debouncedUpdate(index, 'percentage_wage'); }}
+                               onFocus={(e) => e.target.select()}
+                               onKeyDown={(e) => {
+                                 if (e.key === 'Enter') {
+                                   e.preventDefault();
+                                   const nextIndex = index + 1;
+                                   if (nextIndex < fields.length) {
+                                     const nextInput = document.querySelector(`input[name="contracts.${nextIndex}.percentage_wage"]`) as HTMLInputElement;
+                                     if (nextInput) {
+                                       nextInput.focus();
+                                       nextInput.select();
+                                     }
                                    }
                                  }
-                               }
-                             }}
-                           />
-                        )} />
-                      </TableCell>
+                               }}
+                             />
+                          )} />
+                        </TableCell>
 
-                      <TableCell className="text-center">
-                        <Controller name={`contracts.${index}.use_static`} control={control} render={({ field: f }) => (
-                           <Switch checked={f.value} onCheckedChange={(val) => { f.onChange(val); debouncedUpdate(index, 'use_static'); }} />
-                        )} />
-                      </TableCell>
+                        <TableCell sx={{ textAlign: 'center' }}>
+                          <Controller name={`contracts.${index}.use_static`} control={control} render={({ field: f }) => (
+                             <Switch 
+                               checked={f.value} 
+                               onChange={(e) => { f.onChange(e.target.checked); debouncedUpdate(index, 'use_static'); }} 
+                             />
+                          )} />
+                        </TableCell>
 
-                      <TableCell className="text-center">
-                        <Controller name={`contracts.${index}.approval`} control={control} render={({ field: f }) => (
-                           <Checkbox checked={f.value} onCheckedChange={(val) => { f.onChange(val); debouncedUpdate(index, 'approval'); }} />
-                        )} />
-                      </TableCell>
+                        <TableCell sx={{ textAlign: 'center' }}>
+                          <Controller name={`contracts.${index}.approval`} control={control} render={({ field: f }) => (
+                             <Checkbox 
+                               checked={f.value} 
+                               onChange={(e) => { f.onChange(e.target.checked); debouncedUpdate(index, 'approval'); }} 
+                             />
+                          )} />
+                        </TableCell>
 
-                      <TableCell className="text-right">
-                        <DropdownMenu dir={i18n.dir()}>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() =>
-                                handleRemoveContract(
-                                  field.service_id,
-                                  field.service_name
-                                )
-                              }
-                              className="text-destructive focus:text-destructive"
+                        <TableCell sx={{ textAlign: 'right' }}>
+                          <IconButton
+                            size="small"
+                            onClick={(event) => setAnchorEl(event.currentTarget)}
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </IconButton>
+                          <Menu
+                            anchorEl={anchorEl}
+                            open={Boolean(anchorEl)}
+                            onClose={() => setAnchorEl(null)}
+                            anchorOrigin={{
+                              vertical: 'bottom',
+                              horizontal: 'right',
+                            }}
+                            transformOrigin={{
+                              vertical: 'top',
+                              horizontal: 'right',
+                            }}
+                          >
+                            <MenuItem
+                              onClick={() => {
+                                handleRemoveContract(field.service_id, field.service_name);
+                                setAnchorEl(null);
+                              }}
                               disabled={
                                 removeContractMutation.isPending &&
-                                removeContractMutation.variables?.serviceId ===
-                                  field.service_id
+                                removeContractMutation.variables?.serviceId === field.service_id
                               }
+                              sx={{ color: 'error.main' }}
                             >
                               {removeContractMutation.isPending &&
-                              removeContractMutation.variables?.serviceId ===
-                                field.service_id ? (
-                                <Loader2 className="rtl:ml-2 ltr:mr-2 h-4 w-4 animate-spin" />
+                              removeContractMutation.variables?.serviceId === field.service_id ? (
+                                <CircularProgress size={16} className="rtl:ml-2 ltr:mr-2" />
                               ) : (
                                 <Trash2 className="rtl:ml-2 ltr:mr-2 h-4 w-4" />
                               )}
-                              {t("companies:serviceContracts.removeContract")}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
+                              إزالة العقد
+                            </MenuItem>
+                          </Menu>
+                        </TableCell>
                     </TableRow>
                   ))}
-                </TableBody>
-              </Table>
+                  </TableBody>
+                </Table>
+              </TableContainer>
             </form>
           </CardContent>
         </Card>
       )}
 
       {meta && meta.last_page > 1 && (
-        <div className="flex justify-center mt-6 gap-2">
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3, gap: 1 }}>
           <Button
-            size="sm"
-            variant="outline"
+            size="small"
+            variant="outlined"
             onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
             disabled={currentPage === 1}
           >
-            {t("common:previous")}
+            السابق
           </Button>
-          <span className="px-2 py-1 text-sm">
-            {t("common:page")} {currentPage} {t("common:of")} {meta.last_page}
-          </span>
+          <Typography variant="body2" sx={{ px: 2, py: 1, display: 'flex', alignItems: 'center' }}>
+            صفحة {currentPage} من {meta.last_page}
+          </Typography>
           <Button
-            size="sm"
-            variant="outline"
+            size="small"
+            variant="outlined"
             onClick={() =>
               setCurrentPage((prev) => Math.min(prev + 1, meta.last_page))
             }
             disabled={currentPage === meta.last_page}
           >
-            {t("common:next")}
+            التالي
           </Button>
-        </div>
+        </Box>
       )}
 
-      <AlertDialog
+      <Dialog
         open={isImportAllDialogOpen}
-        onOpenChange={setIsImportAllDialogOpen}
+        onClose={() => setIsImportAllDialogOpen(false)}
       >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {t("companies:serviceContracts.importAllButton")}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("companies:serviceContracts.importAllConfirm")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t("common:cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => importAllMutation.mutate(undefined)}
-              disabled={importAllMutation.isPending}
-            >
-              {importAllMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2" />
-              ) : null}
-              {t("common:confirm")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        <DialogTitle>
+          استيراد جميع الخدمات
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body1">
+            هل تريد استيراد جميع الخدمات المتاحة إلى عقد هذه الشركة؟
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsImportAllDialogOpen(false)}>
+            إلغاء
+          </Button>
+          <Button
+            onClick={() => importAllMutation.mutate(undefined)}
+            disabled={importAllMutation.isPending}
+            variant="contained"
+          >
+            {importAllMutation.isPending ? (
+              <CircularProgress size={16} className="ltr:mr-2 rtl:ml-2" />
+            ) : null}
+            تأكيد
+          </Button>
+        </DialogActions>
+      </Dialog>
          {/* NEW: Copy Contract Dialog */}
          {company && ( // Ensure company data is loaded before rendering this dialog
         <CopyCompanyContractDialog
@@ -833,6 +813,6 @@ export default function CompanyServiceContractsPage() {
             onConfirm={handleConfirmImportPreference}
             companyName={company?.name || ''}
         />
-    </div>
+    </Box>
   );
 }

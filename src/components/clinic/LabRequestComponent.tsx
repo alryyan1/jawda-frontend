@@ -41,7 +41,6 @@ import { cn } from "@/lib/utils";
 import LabTestSelectionArea from "./lab_requests/LabTestSelectionArea";
 import LabRequestDisplayArea from "./lab_requests/LabRequestDisplayArea";
 import BatchLabPaymentDialog from "./BatchLabPaymentDialog";
-import LabFinancialSummary from "./lab_requests/LabFinancialSummary"; // New Summary Component
 import { IconButton } from "@mui/material";
 
 interface ApiError {
@@ -132,7 +131,6 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
 		staleTime: 5 * 60 * 1000, // Cache for 5 minutes
 	});
 
-	const isCompanyPatient = !!currentPatient?.company_id;
 
 	// --- Mutations ---
 	const addTestsMutation = useMutation({
@@ -268,24 +266,10 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
 
 	return (
 		<div
-			className="flex flex-col lg:flex-row gap-4 h-full p-1"
+			className="flex flex-col gap-4 h-full p-1"
 			style={{ direction: 'rtl' }}
 		>
-			{/* Left Column: Financial Summary */}
-			<div className="lg:w-[320px] xl:w-[360px] flex-shrink-0 space-y-3">
-				<LabFinancialSummary
-					requestedTests={requestedTests}
-					currentPatient={currentPatient || null}
-					currentClinicShift={currentClinicShift}
-					onOpenBatchPaymentDialog={() =>{
-						//  aler"open batch payment dialog";
-						setShowBatchPaymentDialog(true);
-					}}
-					isCompanyPatient={isCompanyPatient}
-				/>
-			</div>
-
-			{/* Right Column: Test Selection & Display */}
+			{/* Test Selection & Display */}
 			<div className="flex-grow flex flex-col space-y-3 min-w-0">
 				{" "}
 				{/* min-w-0 for flex item shrink */}

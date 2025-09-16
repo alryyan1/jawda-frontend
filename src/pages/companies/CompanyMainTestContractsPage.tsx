@@ -1,22 +1,38 @@
 // src/pages/companies/CompanyMainTestContractsPage.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useForm, useFieldArray, Controller } from 'react-hook-form'; // Import RHF hooks
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import { toast } from 'sonner';
 import _debounce from 'lodash/debounce';
 
 // UI Components
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Switch } from '@/components/ui/switch'; // Good for boolean toggles
-import { Loader2, ArrowLeft, Search, Trash2, RefreshCw, Printer, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  Button,
+  Card,
+  CardContent,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  TextField,
+  Checkbox,
+  Switch,
+  Box,
+  Typography,
+  IconButton,
+  Pagination,
+  Stack,
+  CircularProgress,
+} from '@mui/material';
+import {
+  ArrowBack as ArrowLeft,
+  Search as SearchIcon,
+  Delete as Trash2,
+  Refresh as RefreshCw,
+  Print as Printer,
+} from '@mui/icons-material';
 
 // Services & Types
 import { getCompanyById } from '@/services/companyService';
@@ -30,32 +46,28 @@ import {
 import type { Company, CompanyMainTestFormData, PaginatedCompanyMainTestContractsResponse } from '@/types/companies';
 import { useDebounce } from '@/hooks/useDebounce';
 
-// --- Zod Schema for the Form Array ---
-const contractItemSchema = z.object({
+// --- Form Types ---
+interface ContractFormItem {
   // Read-only fields for display
-  main_test_id: z.number(),
-  main_test_name: z.string(),
-  container_name: z.string().optional(),
+  main_test_id: number;
+  main_test_name: string;
+  container_name?: string;
   
   // Editable fields
-  status: z.boolean(),
-  price: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Price must be a positive number"),
-  approve: z.boolean(),
-  endurance_static: z.string().refine(val => /^\d+$/.test(val), "Must be a whole number"),
-  endurance_percentage: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0 && parseFloat(val) <= 100, "Must be between 0-100"),
-  use_static: z.boolean(),
-});
+  status: boolean;
+  price: string;
+  approve: boolean;
+  endurance_static: string;
+  endurance_percentage: string;
+  use_static: boolean;
+}
 
-const formSchema = z.object({
-  contracts: z.array(contractItemSchema),
-});
-
-type FormValues = z.infer<typeof formSchema>;
-type ContractFormItem = FormValues['contracts'][0];
+interface FormValues {
+  contracts: ContractFormItem[];
+}
 
 const CompanyMainTestContractsPage: React.FC = () => {
   const { companyId } = useParams<{ companyId: string }>();
-  const { t } = useTranslation(['companies', 'common', 'labTests']);
   const queryClient = useQueryClient();
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -87,8 +99,8 @@ const CompanyMainTestContractsPage: React.FC = () => {
 
   // --- React Hook Form Setup ---
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
     defaultValues: { contracts: [] },
+    mode: 'onChange',
   });
   const { control, getValues, formState: { dirtyFields } } = form;
   const { fields, replace } = useFieldArray({ control, name: "contracts" });
@@ -135,17 +147,17 @@ const CompanyMainTestContractsPage: React.FC = () => {
     onSuccess: (updatedContract) => {
       // Don't update the query cache immediately to prevent re-renders that cause focus loss
       // The form will be updated when the user navigates away or manually refreshes
-      toast.success(t('common:autosaveSuccess'), { id: `autosave-${updatedContract.data.main_test_id}` });
+      toast.success("تم الحفظ تلقائياً", { id: `autosave-${updatedContract.data.main_test_id}` });
     },
     onError: (error: Error & { response?: { data?: { message?: string } } }) => {
-      toast.error(t('common:error.updateFailed'), { description: error.response?.data?.message });
+      toast.error("فشل في التحديث", { description: error.response?.data?.message });
       // Only invalidate on error to revert optimistic updates
       queryClient.invalidateQueries({ queryKey: contractsQueryKey });
     },
   });
   
-  const debouncedUpdate = useCallback(
-    _debounce((index: number, fieldName: keyof ContractFormItem) => {
+  const updateFunction = useCallback(
+    (index: number, fieldName: keyof ContractFormItem) => {
       // Check if the specific field was actually changed by the user
       if (dirtyFields.contracts?.[index]?.[fieldName]) {
         const fullRowData = getValues(`contracts.${index}`);
@@ -156,21 +168,26 @@ const CompanyMainTestContractsPage: React.FC = () => {
                 ? parseInt(fullRowData[fieldName] as string)
                 : fullRowData[fieldName]
         };
-        toast.info(t('common:autosaving'), { id: `autosave-${fullRowData.main_test_id}-${fieldName}` });
+        toast.info("جاري الحفظ...", { id: `autosave-${fullRowData.main_test_id}-${fieldName}` });
         updateMutation.mutate({ mainTestId: fullRowData.main_test_id, data: payload });
       }
-    }, 200), // 200ms debounce
-  [dirtyFields, getValues, updateMutation, t]
+    },
+    [dirtyFields, getValues, updateMutation]
+  );
+
+  const debouncedUpdate = useMemo(
+    () => _debounce(updateFunction, 200),
+    [updateFunction]
   );
   
 
   const removeMutation = useMutation({
     mutationFn: (mainTestId: number) => removeMainTestFromCompanyContract(Number(companyId), mainTestId),
     onSuccess: () => {
-      toast.success(t('contracts.removedSuccess'));
+      toast.success("تم حذف العقد بنجاح");
       queryClient.invalidateQueries({ queryKey: contractsQueryKey });
     },
-    onError: (error: Error & { response?: { data?: { message?: string } } }) => toast.error(t('common:error.deleteFailed'), { description: error.response?.data?.message }),
+    onError: (error: Error & { response?: { data?: { message?: string } } }) => toast.error("فشل في الحذف", { description: error.response?.data?.message }),
   });
 
   // Print contract function
@@ -188,10 +205,10 @@ const CompanyMainTestContractsPage: React.FC = () => {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      toast.success(t('contracts.printedSuccess'));
+      toast.success("تم طباعة العقد بنجاح");
     } catch (error) {
       console.error('Print error:', error);
-      toast.error(t('common:error.printFailed'));
+      toast.error("فشل في الطباعة");
     } finally {
       setIsPrinting(false);
     }
@@ -205,296 +222,295 @@ const CompanyMainTestContractsPage: React.FC = () => {
   const meta = paginatedData?.meta;
 
   return (
-    <>
-      <div className="container mx-auto py-6 space-y-4">
-        {/* Header */}
-        <div className="flex items-center gap-4">
-            <Button asChild variant="outline" size="icon"><Link to="/settings/companies"><ArrowLeft className="h-4 w-4" /></Link></Button>
-            <div>
-                <h1 className="text-2xl font-bold">{company?.name || t('common:loading')}</h1>
-                <p className="text-sm text-muted-foreground">{t('contracts.manageTestContracts')}</p>
-            </div>
-        </div>
-        {/* Actions Bar */}
-        <div className="flex justify-between items-center">
-            <div className="relative w-full max-w-sm">
-                <Input type="search" placeholder={t('common:searchPlaceholder', { entity: t('labTests:testEntityNamePlural') })} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="ps-10" />
-                <Search className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            </div>
-            <div className="flex gap-2">
-                <Button 
-                    size="sm" 
-                    variant="outline" 
-                    onClick={() => queryClient.invalidateQueries({ queryKey: contractsQueryKey })}
-                    disabled={isLoading}
-                >
-                    <RefreshCw className={`h-4 w-4 ltr:mr-2 rtl:ml-2 ${isLoading ? 'animate-spin' : ''}`} />
-                    {t('common:refresh')}
-                </Button>
-                <Button 
-                    size="sm" 
-                    variant="outline" 
-                    onClick={handlePrintContract}
-                    disabled={isPrinting || isLoading}
-                >
-                    <Printer className={`h-4 w-4 ltr:mr-2 rtl:ml-2 ${isPrinting ? 'animate-spin' : ''}`} />
-                    {t('contracts.printContract')}
-                </Button>
-                {/* <Button size="sm" onClick={() => setIsAddDialogOpen(true)}><PlusCircle className="h-4 w-4 ltr:mr-2 rtl:ml-2" />{t('contracts.addTestToContract')}</Button> */}
-            </div>
-        </div>
+    <Box >
+      {/* Header */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+        <IconButton 
+          component={Link} 
+          to="/settings/companies" 
+          size="small"
+          sx={{ border: 1, borderColor: 'divider' }}
+        >
+          <ArrowLeft />
+        </IconButton>
+        <Box>
+          <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold' }}>
+            {company?.name || "جاري التحميل..."}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            إدارة عقود الفحوصات الرئيسية
+          </Typography>
+        </Box>
+      </Box>
+      {/* Actions Bar */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <TextField
+          type="search"
+          placeholder="البحث في الفحوصات..."
+          value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
+          size="small"
+          sx={{ width: '300px' }}
+          InputProps={{
+            startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />
+          }}
+        />
+        <Stack direction="row" spacing={1}>
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={() => queryClient.invalidateQueries({ queryKey: contractsQueryKey })}
+            disabled={isLoading}
+            startIcon={isLoading ? <CircularProgress size={16} /> : <RefreshCw />}
+          >
+            تحديث
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={handlePrintContract}
+            disabled={isPrinting || isLoading}
+            startIcon={isPrinting ? <CircularProgress size={16} /> : <Printer />}
+          >
+            طباعة العقد
+          </Button>
+          {/* <Button size="small" onClick={() => setIsAddDialogOpen(true)} startIcon={<PlusCircle />}>إضافة فحص للعقد</Button> */}
+        </Stack>
+      </Box>
 
-        {/* Table */}
-        <Card>
-          <CardContent className="p-0">
-            <form> {/* Form wraps the table */}
-              <Table>
-                <TableHeader>
+      {/* Table */}
+      <Card>
+        <CardContent sx={{ p: 0 }}>
+          <Box component="form">
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ width: '80px', textAlign: 'center', fontWeight: 'bold' }}>المعرف</TableCell>
+                  <TableCell sx={{ width: '200px', textAlign: 'center', fontWeight: 'bold' }}>اسم الفحص</TableCell>
+                  <TableCell sx={{ width: '120px', textAlign: 'center', fontWeight: 'bold' }}>الحالة</TableCell>
+                  <TableCell sx={{ width: '120px', textAlign: 'center', fontWeight: 'bold' }}>السعر</TableCell>
+                  <TableCell sx={{ width: '120px', textAlign: 'center', fontWeight: 'bold' }}>الموافقة</TableCell>
+                  <TableCell sx={{ width: '150px', textAlign: 'center', fontWeight: 'bold' }}>نسبة التحمل</TableCell>
+                  <TableCell sx={{ width: '150px', textAlign: 'center', fontWeight: 'bold' }}>التحمل الثابت</TableCell>
+                  <TableCell sx={{ width: '100px', textAlign: 'center', fontWeight: 'bold' }}>استخدام الثابت</TableCell>
+                  <TableCell sx={{ width: '60px', textAlign: 'right', fontWeight: 'bold' }}>الإجراءات</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {isLoading && (
                   <TableRow>
-                    <TableHead className="w-[80px] text-center">{t('common:id')}</TableHead>
-                    <TableHead className="w-[200px] text-center">{t('labTests:table.name')}</TableHead>
-                    <TableHead className="w-[120px] text-center">{t('contracts.table.status')}</TableHead>
-                    <TableHead className="w-[120px] text-center">{t('contracts.table.price')}</TableHead>
-                    <TableHead className="w-[120px] text-center">{t('contracts.table.approve')}</TableHead>
-                    <TableHead className="w-[150px] text-center">{t('contracts.table.endurancePercentage')}</TableHead>
-                    <TableHead className="w-[150px] text-center">{t('contracts.table.enduranceStatic')}</TableHead>
-                    <TableHead className="w-[100px] text-center">{t('contracts.table.useStatic')}</TableHead>
-                    <TableHead className="w-[60px] text-right">{t('common:actions.title')}</TableHead>
+                    <TableCell colSpan={9} sx={{ textAlign: 'center', height: '96px' }}>
+                      <CircularProgress />
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoading && <TableRow><TableCell colSpan={9} className="text-center h-24"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>}
-                  {!isLoading && fields.length === 0 && <TableRow><TableCell colSpan={9} className="text-center h-24 text-muted-foreground">{t('contracts.noContractedTests')}</TableCell></TableRow>}
-                  {fields.map((field, index) => (
-                    <TableRow key={field.id}>
-                      <TableCell className="text-center font-mono text-sm">{field.main_test_id}</TableCell>
-                      <TableCell className="font-medium text-center">{field.main_test_name}</TableCell>
-                      <TableCell className="text-center">
-                        <Controller name={`contracts.${index}.status`} control={control} render={({ field: f }) => (
-                           <Switch checked={f.value} onCheckedChange={(val) => { f.onChange(val); debouncedUpdate(index, 'status'); }} />
-                        )} />
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Controller name={`contracts.${index}.price`} control={control} render={({ field: f }) => (
-                           <Input 
-                             {...f} 
-                             type="number" 
-                             step="0.01" 
-                             className="h-8 text-center" 
-                             onChange={(e) => { f.onChange(e); debouncedUpdate(index, 'price'); }}
-                             onFocus={(e) => e.target.select()}
-                             onKeyDown={(e) => {
-                               if (e.key === 'Enter') {
-                                 e.preventDefault();
-                                 // Find next price input
-                                 const nextIndex = index + 1;
-                                 if (nextIndex < fields.length) {
-                                   const nextInput = document.querySelector(`input[name="contracts.${nextIndex}.price"]`) as HTMLInputElement;
-                                   if (nextInput) {
-                                     nextInput.focus();
-                                     nextInput.select();
-                                   }
-                                 }
-                               }
-                             }}
-                           />
-                        )} />
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Controller name={`contracts.${index}.approve`} control={control} render={({ field: f }) => (
-                           <Checkbox checked={f.value} onCheckedChange={(val) => { f.onChange(val); debouncedUpdate(index, 'approve'); }} />
-                        )} />
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Controller name={`contracts.${index}.endurance_percentage`} control={control} render={({ field: f }) => (
-                            <Input 
-                              {...f} 
-                              type="number" 
-                              step="0.01" 
-                              min="0" 
-                              max="100" 
-                              className="h-8 text-center" 
-                              placeholder="%" 
-                              onChange={(e) => { f.onChange(e); debouncedUpdate(index, 'endurance_percentage'); }}
-                              onFocus={(e) => e.target.select()}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  e.preventDefault();
-                                  // Find next endurance percentage input
-                                  const nextIndex = index + 1;
-                                  if (nextIndex < fields.length) {
-                                    const nextInput = document.querySelector(`input[name="contracts.${nextIndex}.endurance_percentage"]`) as HTMLInputElement;
-                                    if (nextInput) {
-                                      nextInput.focus();
-                                      nextInput.select();
-                                    }
+                )}
+                {!isLoading && fields.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={9} sx={{ textAlign: 'center', height: '96px', color: 'text.secondary' }}>
+                      لا توجد فحوصات متعاقد عليها
+                    </TableCell>
+                  </TableRow>
+                )}
+                {fields.map((field, index) => (
+                  <TableRow key={field.id}>
+                    <TableCell sx={{ textAlign: 'center', fontFamily: 'monospace', fontSize: '0.875rem' }}>
+                      {field.main_test_id}
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 'medium', textAlign: 'center' }}>
+                      {field.main_test_name}
+                    </TableCell>
+                    <TableCell sx={{ textAlign: 'center' }}>
+                      <Controller 
+                        name={`contracts.${index}.status`} 
+                        control={control} 
+                        render={({ field: f }) => (
+                          <Switch 
+                            checked={f.value} 
+                            onChange={(e) => { 
+                              f.onChange(e.target.checked); 
+                              debouncedUpdate(index, 'status'); 
+                            }} 
+                          />
+                        )} 
+                      />
+                    </TableCell>
+                    <TableCell sx={{ textAlign: 'center' }}>
+                      <Controller 
+                        name={`contracts.${index}.price`} 
+                        control={control} 
+                        render={({ field: f }) => (
+                          <TextField
+                            {...f}
+                            type="number"
+                            inputProps={{ step: "0.01" }}
+                            size="small"
+                            sx={{ width: '100px' }}
+                            onChange={(e) => { 
+                              f.onChange(e); 
+                              debouncedUpdate(index, 'price'); 
+                            }}
+                            onFocus={(e) => e.target.select()}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                // Find next price input
+                                const nextIndex = index + 1;
+                                if (nextIndex < fields.length) {
+                                  const nextInput = document.querySelector(`input[name="contracts.${nextIndex}.price"]`) as HTMLInputElement;
+                                  if (nextInput) {
+                                    nextInput.focus();
+                                    nextInput.select();
                                   }
                                 }
-                              }}
-                            />
-                        )} />
-                      </TableCell>
-                      <TableCell className="text-center">
-                         <Controller name={`contracts.${index}.endurance_static`} control={control} render={({ field: f }) => (
-                             <Input 
-                               {...f} 
-                               type="number" 
-                               step="1" 
-                               min="0" 
-                               className="h-8 text-center" 
-                               onChange={(e) => { f.onChange(e); debouncedUpdate(index, 'endurance_static'); }}
-                               onFocus={(e) => e.target.select()}
-                               onKeyDown={(e) => {
-                                 if (e.key === 'Enter') {
-                                   e.preventDefault();
-                                   // Find next endurance static input
-                                   const nextIndex = index + 1;
-                                   if (nextIndex < fields.length) {
-                                     const nextInput = document.querySelector(`input[name="contracts.${nextIndex}.endurance_static"]`) as HTMLInputElement;
-                                     if (nextInput) {
-                                       nextInput.focus();
-                                       nextInput.select();
-                                     }
-                                   }
-                                 }
-                               }}
-                             />
-                         )} />
-                       </TableCell>
-                      <TableCell className="text-center">
-                        <Controller name={`contracts.${index}.use_static`} control={control} render={({ field: f }) => (
-                           <Switch checked={f.value} onCheckedChange={(val) => { f.onChange(val); debouncedUpdate(index, 'use_static'); }} />
-                        )} />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeMutation.mutate(field.main_test_id)} disabled={removeMutation.isPending && removeMutation.variables === field.main_test_id}>
-                            {removeMutation.isPending && removeMutation.variables === field.main_test_id ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4" />}
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </form>
-          </CardContent>
-        </Card>
+                              }
+                            }}
+                          />
+                        )} 
+                      />
+                    </TableCell>
+                    <TableCell sx={{ textAlign: 'center' }}>
+                      <Controller 
+                        name={`contracts.${index}.approve`} 
+                        control={control} 
+                        render={({ field: f }) => (
+                          <Checkbox 
+                            checked={f.value} 
+                            onChange={(e) => { 
+                              f.onChange(e.target.checked); 
+                              debouncedUpdate(index, 'approve'); 
+                            }} 
+                          />
+                        )} 
+                      />
+                    </TableCell>
+                    <TableCell sx={{ textAlign: 'center' }}>
+                      <Controller 
+                        name={`contracts.${index}.endurance_percentage`} 
+                        control={control} 
+                        render={({ field: f }) => (
+                          <TextField
+                            {...f}
+                            type="number"
+                            inputProps={{ step: "0.01", min: "0", max: "100" }}
+                            size="small"
+                            placeholder="%"
+                            sx={{ width: '100px' }}
+                            onChange={(e) => { 
+                              f.onChange(e); 
+                              debouncedUpdate(index, 'endurance_percentage'); 
+                            }}
+                            onFocus={(e) => e.target.select()}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                // Find next endurance percentage input
+                                const nextIndex = index + 1;
+                                if (nextIndex < fields.length) {
+                                  const nextInput = document.querySelector(`input[name="contracts.${nextIndex}.endurance_percentage"]`) as HTMLInputElement;
+                                  if (nextInput) {
+                                    nextInput.focus();
+                                    nextInput.select();
+                                  }
+                                }
+                              }
+                            }}
+                          />
+                        )} 
+                      />
+                    </TableCell>
+                    <TableCell sx={{ textAlign: 'center' }}>
+                      <Controller 
+                        name={`contracts.${index}.endurance_static`} 
+                        control={control} 
+                        render={({ field: f }) => (
+                          <TextField
+                            {...f}
+                            type="number"
+                            inputProps={{ step: "1", min: "0" }}
+                            size="small"
+                            sx={{ width: '100px' }}
+                            onChange={(e) => { 
+                              f.onChange(e); 
+                              debouncedUpdate(index, 'endurance_static'); 
+                            }}
+                            onFocus={(e) => e.target.select()}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                // Find next endurance static input
+                                const nextIndex = index + 1;
+                                if (nextIndex < fields.length) {
+                                  const nextInput = document.querySelector(`input[name="contracts.${nextIndex}.endurance_static"]`) as HTMLInputElement;
+                                  if (nextInput) {
+                                    nextInput.focus();
+                                    nextInput.select();
+                                  }
+                                }
+                              }
+                            }}
+                          />
+                        )} 
+                      />
+                    </TableCell>
+                    <TableCell sx={{ textAlign: 'center' }}>
+                      <Controller 
+                        name={`contracts.${index}.use_static`} 
+                        control={control} 
+                        render={({ field: f }) => (
+                          <Switch 
+                            checked={f.value} 
+                            onChange={(e) => { 
+                              f.onChange(e.target.checked); 
+                              debouncedUpdate(index, 'use_static'); 
+                            }} 
+                          />
+                        )} 
+                      />
+                    </TableCell>
+                    <TableCell sx={{ textAlign: 'right' }}>
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => removeMutation.mutate(field.main_test_id)}
+                        disabled={removeMutation.isPending && removeMutation.variables === field.main_test_id}
+                      >
+                        {removeMutation.isPending && removeMutation.variables === field.main_test_id ? (
+                          <CircularProgress size={16} />
+                        ) : (
+                          <Trash2 />
+                        )}
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Box>
+        </CardContent>
+      </Card>
 
-        {/* Pagination */}
-        {meta && meta.last_page > 1 && (
-          <div className="flex justify-center mt-6 gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
-              {t('common:previous')}
-            </Button>
-            
-            {/* Page numbers */}
-            <div className="flex gap-1">
-              {/* First page */}
-              {meta.current_page > 3 && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handlePageChange(1)}
-                >
-                  1
-                </Button>
-              )}
-              
-              {/* Ellipsis */}
-              {meta.current_page > 4 && (
-                <span className="px-2 py-1 text-sm text-muted-foreground">...</span>
-              )}
-              
-              {/* Previous pages */}
-              {Array.from({ length: Math.min(2, meta.current_page - 1) }, (_, i) => {
-                const page = meta.current_page - 2 + i;
-                if (page > 1) {
-                  return (
-                    <Button
-                      key={page}
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handlePageChange(page)}
-                    >
-                      {page}
-                    </Button>
-                  );
-                }
-                return null;
-              })}
-              
-              {/* Current page */}
-              <Button
-                size="sm"
-                variant="default"
-                disabled
-              >
-                {meta.current_page}
-              </Button>
-              
-              {/* Next pages */}
-              {Array.from({ length: Math.min(2, meta.last_page - meta.current_page) }, (_, i) => {
-                const page = meta.current_page + 1 + i;
-                if (page < meta.last_page) {
-                  return (
-                    <Button
-                      key={page}
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handlePageChange(page)}
-                    >
-                      {page}
-                    </Button>
-                  );
-                }
-                return null;
-              })}
-              
-              {/* Ellipsis */}
-              {meta.current_page < meta.last_page - 3 && (
-                <span className="px-2 py-1 text-sm text-muted-foreground">...</span>
-              )}
-              
-              {/* Last page */}
-              {meta.current_page < meta.last_page - 2 && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handlePageChange(meta.last_page)}
-                >
-                  {meta.last_page}
-                </Button>
-              )}
-            </div>
-            
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === meta.last_page}
-            >
-              {t('common:next')}
-              <ChevronRight className="h-4 w-4 ltr:ml-2 rtl:mr-2" />
-            </Button>
-          </div>
-        )}
+      {/* Pagination */}
+      {meta && meta.last_page > 1 && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+          <Pagination
+            count={meta.last_page}
+            page={currentPage}
+            onChange={(_, page) => handlePageChange(page)}
+            color="primary"
+            showFirstButton
+            showLastButton
+            siblingCount={1}
+            boundaryCount={1}
+          />
+        </Box>
+      )}
 
-        {/* Results info */}
-        {meta && (
-          <div className="text-center text-sm text-muted-foreground">
-            {t('common:showingResults', {
-              from: meta.from,
-              to: meta.to,
-              total: meta.total
-            })}
-          </div>
-        )}
-      </div>
+      {/* Results info */}
+      {meta && (
+        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mt: 2 }}>
+          عرض {meta.from} إلى {meta.to} من أصل {meta.total} نتيجة
+        </Typography>
+      )}
 
       {/* <AddMainTestToContractDialog
         isOpen={isAddDialogOpen}
@@ -502,7 +518,8 @@ const CompanyMainTestContractsPage: React.FC = () => {
         companyId={Number(companyId)}
         onContractAdded={() => queryClient.invalidateQueries({ queryKey: contractsQueryKey })}
       /> */}
-    </>
+    </Box>
   );
 };
+
 export default CompanyMainTestContractsPage;

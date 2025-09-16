@@ -1,11 +1,22 @@
 // src/components/lab/MainTestFormFields.tsx
 import type { Control } from 'react-hook-form';
-import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Controller } from 'react-hook-form';
+import {
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  FormHelperText,
+  Switch,
+  FormControlLabel,
+  Box,
+  Stack,
+  Typography,
+  Paper
+} from '@mui/material';
 import AddContainerDialog from './AddContainerDialog';
-import type { Container, Package   } from '@/types/labTests';
+import type { Container, Package } from '@/types/labTests';
 import AddPackageDialog from './AddPackageDialog';
 
 interface MainTestFormValues {
@@ -44,127 +55,162 @@ const MainTestFormFields: React.FC<MainTestFormFieldsProps> = ({
   const disabled = isLoadingData || isSubmitting;
 
   return (
-    <div className="space-y-6">
-      <FormField
+    <Stack spacing={3}>
+      <Controller
         control={control}
         name="main_test_name"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>اسم الاختبار</FormLabel>
-            <FormControl><Input placeholder="أدخل اسم الاختبار" {...field} disabled={disabled} /></FormControl>
-            <FormMessage />
-          </FormItem>
+        render={({ field, fieldState: { error } }) => (
+          <TextField
+            {...field}
+            label="اسم الاختبار"
+            placeholder="أدخل اسم الاختبار"
+            disabled={disabled}
+            error={!!error}
+            helperText={error?.message}
+            fullWidth
+          />
         )}
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FormField
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+        <Controller
           control={control}
           name="price"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>السعر</FormLabel>
-              <FormControl><Input type="number" step="0.01" placeholder="أدخل السعر" {...field} value={field.value || ''} disabled={disabled} /></FormControl>
-              <FormMessage />
-            </FormItem>
+          render={({ field, fieldState: { error } }) => (
+            <TextField
+              {...field}
+              label="السعر"
+              type="number"
+              inputProps={{ step: "0.01" }}
+              placeholder="أدخل السعر"
+              value={field.value || ''}
+              disabled={disabled}
+              error={!!error}
+              helperText={error?.message}
+              fullWidth
+            />
           )}
         />
-     {/* --- UPDATED pack_id FIELD --- */}
-     <FormField
-        control={control}
-        name="pack_id" // This will store the selected package_id as a string
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>الحزمة</FormLabel>
-            <div className="flex items-center gap-2">
-              <Select
-                onValueChange={field.onChange}
-                value={field.value || ""} // Handle undefined/null for placeholder
-                defaultValue={field.value || ""}
-                disabled={isLoadingPackages || disabled}
-                dir="rtl"
-              >
-                <FormControl className="flex-grow">
-                  <SelectTrigger>
-                    <SelectValue placeholder="اختر حزمة..." />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value=" ">لا يوجد</SelectItem> {/* Option for no package */}
+        
+        <Controller
+          control={control}
+          name="pack_id"
+          render={({ field, fieldState: { error } }) => (
+            <Box sx={{ position: 'relative' }}>
+              <FormControl fullWidth error={!!error} disabled={isLoadingPackages || disabled}>
+                <InputLabel>الحزمة</InputLabel>
+                <Select
+                  {...field}
+                  value={field.value || ""}
+                  label="الحزمة"
+                  dir="rtl"
+                >
+                  <MenuItem value=" ">لا يوجد</MenuItem>
                   {isLoadingPackages ? (
-                    <SelectItem value="loading_pkg" disabled>جاري التحميل...</SelectItem>
+                    <MenuItem value="loading_pkg" disabled>جاري التحميل...</MenuItem>
                   ) : (
                     packages?.map(pkg => (
-                      <SelectItem key={pkg.id} value={String(pkg.id)}>{pkg.name}</SelectItem>
+                      <MenuItem key={pkg.id} value={String(pkg.id)}>{pkg.name}</MenuItem>
                     ))
                   )}
-                </SelectContent>
-              </Select>
-              <AddPackageDialog onPackageAdded={onPackageAdded} />
-            </div>
-            <FormDescription>اختر الحزمة التي ينتمي إليها هذا الاختبار (اختياري)</FormDescription>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      </div>
+                </Select>
+                <FormHelperText>
+                  {error?.message || "اختر الحزمة التي ينتمي إليها هذا الاختبار (اختياري)"}
+                </FormHelperText>
+              </FormControl>
+              <Box sx={{ position: 'absolute', top: 8, right: 8 }}>
+                <AddPackageDialog onPackageAdded={onPackageAdded} />
+              </Box>
+            </Box>
+          )}
+        />
+      </Stack>
       
-      <FormField
+      <Controller
         control={control}
         name="container_id"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>الوعاء</FormLabel>
-            <div className="flex items-center gap-2">
-              <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={isLoadingContainers || disabled} dir="rtl">
-                <FormControl className="flex-grow">
-                  <SelectTrigger><SelectValue placeholder="اختر الوعاء" /></SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {isLoadingContainers ? <SelectItem value="loading_cont" disabled>جاري التحميل...</SelectItem> :
-                   containers?.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.container_name}</SelectItem>)}
-                </SelectContent>
+        render={({ field, fieldState: { error } }) => (
+          <Box sx={{ position: 'relative' }}>
+            <FormControl fullWidth error={!!error} disabled={isLoadingContainers || disabled}>
+              <InputLabel>الوعاء</InputLabel>
+              <Select
+                {...field}
+                value={field.value}
+                label="الوعاء"
+                dir="rtl"
+              >
+                {isLoadingContainers ? (
+                  <MenuItem value="loading_cont" disabled>جاري التحميل...</MenuItem>
+                ) : (
+                  containers?.map(c => (
+                    <MenuItem key={c.id} value={String(c.id)}>{c.container_name}</MenuItem>
+                  ))
+                )}
               </Select>
+              <FormHelperText>{error?.message}</FormHelperText>
+            </FormControl>
+            <Box sx={{ position: 'absolute', top: 8, right: 8 }}>
               <AddContainerDialog onContainerAdded={onContainerAdded} />
-            </div>
-            <FormMessage />
-          </FormItem>
+            </Box>
+          </Box>
         )}
       />
 
-      <div className="space-y-3 pt-2">
-        <FormField
-          control={control}
-          name="pageBreak"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-              <FormLabel className="font-normal">قطع الصفحة</FormLabel>
-              <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} disabled={disabled} /></FormControl>
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={control}
-          name="divided"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-              <FormLabel className="font-normal">مقسم</FormLabel>
-              <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} disabled={disabled} /></FormControl>
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={control}
-          name="available"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-              <FormLabel className="font-normal">متاح</FormLabel>
-              <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} disabled={disabled} /></FormControl>
-            </FormItem>
-          )}
-        />
-      </div>
-    </div>
+      <Paper elevation={1} sx={{ p: 2, mt: 2 }}>
+        <Stack direction="row" spacing={4} justifyContent="space-around" alignItems="center">
+          <Controller
+            control={control}
+            name="pageBreak"
+            render={({ field }) => (
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={field.value}
+                    onChange={field.onChange}
+                    disabled={disabled}
+                  />
+                }
+                label="قطع الصفحة"
+              />
+            )}
+          />
+          
+          <Controller
+            control={control}
+            name="divided"
+            render={({ field }) => (
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={field.value}
+                    onChange={field.onChange}
+                    disabled={disabled}
+                  />
+                }
+                label="مقسم"
+              />
+            )}
+          />
+          
+          <Controller
+            control={control}
+            name="available"
+            render={({ field }) => (
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={field.value}
+                    onChange={field.onChange}
+                    disabled={disabled}
+                  />
+                }
+                label="متاح"
+              />
+            )}
+          />
+        </Stack>
+      </Paper>
+    </Stack>
   );
 };
 

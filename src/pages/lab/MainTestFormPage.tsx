@@ -5,12 +5,21 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Loader2, Settings2 } from 'lucide-react';
+import { Settings2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form } from "@/components/ui/form";
+import {
+  Box,
+  Card,
+  CardContent,
+  CardHeader,
+  Typography,
+  Button,
+  CircularProgress,
+  Stack,
+  Paper
+} from '@mui/material';
+import { FormProvider } from 'react-hook-form';
 
 import type { Container, Package } from '@/types/labTests';
 import { createMainTest, updateMainTest, getMainTestById } from '@/services/mainTestService';
@@ -175,60 +184,77 @@ const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
 
   if (isEditMode && isLoadingMainTestInitial && !mainTestData) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" /> جاري التحميل...
-      </div>
+      <Box display="flex" justifyContent="center" alignItems="center" height={256}>
+        <Stack direction="row" spacing={2} alignItems="center">
+          <CircularProgress size={32} />
+          <Typography>جاري التحميل...</Typography>
+        </Stack>
+      </Box>
     );
   }
 
   return (
-    <div className="space-y-8 pb-10">
+    <Box sx={{ py: 2, pb: 5 }}>
       <Card>
         <CardHeader>
-          <CardTitle>{isEditMode ? 'تعديل الاختبار' : 'إضافة اختبار جديد'}</CardTitle>
-          <CardDescription>يرجى ملء التفاصيل المطلوبة</CardDescription>
+          <Typography variant="h5" component="h1">
+            {isEditMode ? 'تعديل الاختبار' : 'إضافة اختبار جديد'}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            يرجى ملء التفاصيل المطلوبة
+          </Typography>
         </CardHeader>
         <CardContent>
-          <Form {...form}>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              <MainTestFormFields
-                control={control}
-                isLoadingData={dataIsLoading}
-                isSubmitting={formIsSubmitting}
-                containers={containers}
-                isLoadingContainers={isLoadingContainers}
-                onContainerAdded={handleContainerAdded}
-                packages={packages}
-                isLoadingPackages={isLoadingPackages}
-                onPackageAdded={handlePackageAdded}
-              />
-              <div className="flex justify-end gap-2 pt-4">
-              {currentMainTestId && (
+          <FormProvider {...form}>
+            <Box component="form" onSubmit={handleSubmit(onSubmit)}>
+              <Stack spacing={3}>
+                <MainTestFormFields
+                  control={control}
+                  isLoadingData={dataIsLoading}
+                  isSubmitting={formIsSubmitting}
+                  containers={containers}
+                  isLoadingContainers={isLoadingContainers}
+                  onContainerAdded={handleContainerAdded}
+                  packages={packages}
+                  isLoadingPackages={isLoadingPackages}
+                  onPackageAdded={handlePackageAdded}
+                />
+                <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ pt: 2 }}>
+                  {currentMainTestId && (
+                    <Button 
+                      type="button" 
+                      variant="outlined" 
+                      onClick={() => navigate(`/settings/laboratory/${currentMainTestId}/parameters`)}
+                      startIcon={<Settings2 size={16} />}
+                    >
+                      إدارة المعاملات
+                    </Button>
+                  )}
                   <Button 
                     type="button" 
-                    variant="secondary" 
-                    onClick={() => navigate(`/settings/laboratory/${currentMainTestId}/parameters`)} // Navigate to new page
-                    // Or onClick={() => setIsChildTestDialogOpen(true)} // If using a dialog
+                    variant="outlined" 
+                    onClick={() => navigate('/settings/laboratory')} 
+                    disabled={formIsSubmitting}
                   >
-                    <Settings2 className="ltr:mr-2 rtl:ml-2 h-4 w-4" /> 
-                    إدارة المعاملات
+                    إلغاء
                   </Button>
-                )}
-                <Button type="button" variant="outline" onClick={() => navigate('/settings/laboratory')} disabled={formIsSubmitting}>
-                  إلغاء
-                </Button>
-                <Button type="submit" disabled={dataIsLoading || formIsSubmitting}>
-                  {formIsSubmitting && <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />}
-                  حفظ
-                </Button>
-              </div>
-            </form>
-          </Form>
+                  <Button 
+                    type="submit" 
+                    variant="contained"
+                    disabled={dataIsLoading || formIsSubmitting}
+                    startIcon={formIsSubmitting ? <CircularProgress size={16} /> : null}
+                  >
+                    حفظ
+                  </Button>
+                </Stack>
+              </Stack>
+            </Box>
+          </FormProvider>
         </CardContent>
       </Card>
 
       {/* <ChildTestsSection mainTestId={currentMainTestId} /> */}
-    </div>
+    </Box>
   );
 };
 

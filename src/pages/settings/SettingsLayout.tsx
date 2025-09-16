@@ -23,13 +23,13 @@ const settingsNavItems: SettingsNavItem[] = [
   { to: 'general', labelKey: 'tabs.general', icon: Settings, permission: 'view settings' },
   { to: 'companies', labelKey: 'companies', icon: Building, permission: 'manage company_settings' }, // Example permission
   { to: 'laboratory', labelKey: 'laboratory', icon: FlaskConical, permission: 'manage laboratory_settings' },
+  { to: 'service-groups', labelKey: 'tabs.serviceGroups', icon: Layers, permission: 'manage service_groups' }, // NEW
   { to: 'services', labelKey: 'tabs.servicesConfig', icon: ListOrdered, permission: 'manage service_settings' },
   { to: '/settings/laboratory/price-list', labelKey: 'laboratoryTestsPriceList', icon: CreditCard, permission: 'manage price_list' },
   { to: 'insurance-audit', labelKey: 'insuranceAudit', icon: CreditCard, permission: 'manage insurance_audit' },
   // Example settingsNavItems update
-{ to: 'attendance/shift-definitions', labelKey: 'settings:tabs.shiftDefinitions', icon: ClockIcon, permission: 'manage_shift_definitions' },
-{ to: 'attendance/holidays', labelKey: 'settings:tabs.holidays', icon: PartyPopperIcon, permission: 'manage_holidays' },
-{ to: 'service-groups', labelKey: 'tabs.serviceGroups', icon: Layers, permission: 'manage service_groups' }, // NEW
+// { to: 'attendance/shift-definitions', labelKey: 'settings:tabs.shiftDefinitions', icon: ClockIcon, permission: 'manage_shift_definitions' },
+// { to: 'attendance/holidays', labelKey: 'settings:tabs.holidays', icon: PartyPopperIcon, permission: 'manage_holidays' },
 
 ];
 

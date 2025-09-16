@@ -4,12 +4,42 @@ import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Loader2, Edit, Trash2, MoreHorizontal, FlaskConical, CheckCircle2, XCircle, Search } from 'lucide-react';
+import {
+  Box,
+  Button,
+  TextField,
+  Card,
+  CardContent,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  IconButton,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+  Divider,
+  Typography,
+  CircularProgress,
+  Stack,
+  Container,
+  InputAdornment,
+  Chip,
+  Pagination
+} from '@mui/material';
+import {
+  Edit,
+  Delete,
+  MoreVert,
+  Science,
+  CheckCircle,
+  Cancel,
+  Search,
+  Add
+} from '@mui/icons-material';
 
 import { getMainTests, deleteMainTest } from '@/services/mainTestService';
 // import { useAuthorization } from '@/hooks/useAuthorization';
@@ -35,6 +65,8 @@ export default function MainTestsListPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [selectedTestId, setSelectedTestId] = useState<number | null>(null);
 
   useEffect(() => {
     const handler = setTimeout(() => setDebouncedSearchTerm(searchTerm), 500);
@@ -68,118 +100,233 @@ export default function MainTestsListPage() {
     }
   };
 
-  if (isLoading && !isFetching && currentPage === 1) return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin text-primary" /> جاري تحميل الاختبارات...</div>;
-  if (error) return <p className="text-destructive p-4">خطأ في تحميل قائمة الاختبارات: {(error as Error).message}</p>;
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, testId: number) => {
+    setAnchorEl(event.currentTarget);
+    setSelectedTestId(testId);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setSelectedTestId(null);
+  };
+
+  if (isLoading && !isFetching && currentPage === 1) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" height={256}>
+        <Stack direction="row" spacing={2} alignItems="center">
+          <CircularProgress size={32} />
+          <Typography>جاري تحميل الاختبارات...</Typography>
+        </Stack>
+      </Box>
+    );
+  }
+  
+  if (error) {
+    return (
+      <Typography color="error" sx={{ p: 2 }}>
+        خطأ في تحميل قائمة الاختبارات: {(error as Error).message}
+      </Typography>
+    );
+  }
 
   const tests = (paginatedData?.data || []) as MainTestWithContainer[];
   const meta = paginatedData?.meta;
 
   return (
-    <div className="container mx-auto py-4 sm:py-6 lg:py-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <div className="flex items-center gap-2">
-            <FlaskConical className="h-7 w-7 text-primary" />
-            <h1 className="text-2xl sm:text-3xl font-bold">قائمة الاختبارات الرئيسية</h1>
-        </div>
-        <div className="flex sm:flex-row flex-col w-full sm:w-auto gap-2">
-            <div className="relative flex-grow sm:flex-grow-0 sm:w-64">
-                <Input
-                type="search"
-                placeholder="البحث في الاختبارات..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="ps-10 rtl:pr-10 h-9"
-                />
-                <Search className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            </div>
+    <Container maxWidth="xl" sx={{ py: { xs: 2, sm: 3, md: 4 } }}>
+      <Stack spacing={3}>
+        <Stack 
+          direction={{ xs: 'column', sm: 'row' }} 
+          justifyContent="space-between" 
+          alignItems={{ xs: 'flex-start', sm: 'center' }}
+          spacing={2}
+        >
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Science color="primary" sx={{ fontSize: 28 }} />
+            <Typography variant="h4" component="h1" fontWeight="bold">
+              قائمة الاختبارات الرئيسية
+            </Typography>
+          </Stack>
+          
+          <Stack 
+            direction={{ xs: 'column', sm: 'row' }} 
+            spacing={2} 
+            sx={{ width: { xs: '100%', sm: 'auto' } }}
+          >
+            <TextField
+              type="search"
+              placeholder="البحث في الاختبارات..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              size="small"
+              sx={{ minWidth: { xs: '100%', sm: 256 } }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search />
+                  </InputAdornment>
+                ),
+              }}
+            />
             {canCreateTests && (
-                <Button asChild size="sm" className="h-9"><Link to="/settings/laboratory/new">إضافة اختبار</Link></Button>
+              <Button 
+                component={Link} 
+                to="/settings/laboratory/new"
+                variant="contained"
+                size="small"
+                startIcon={<Add />}
+              >
+                إضافة اختبار
+              </Button>
             )}
-        </div>
-      </div>
-      {isFetching && <div className="text-sm text-muted-foreground mb-2 text-center">جاري تحديث القائمة...</div>}
+          </Stack>
+        </Stack>
+        
+        {isFetching && (
+          <Typography variant="body2" color="text.secondary" textAlign="center">
+            جاري تحديث القائمة...
+          </Typography>
+        )}
       
-      {!isLoading && tests.length === 0 ? (
-        <Card className="text-center py-10 text-muted-foreground">
-            <CardContent>
-                <FlaskConical className="mx-auto h-12 w-12 text-muted-foreground/30 mb-4" />
-                <p>{searchTerm ? 'لم يتم العثور على نتائج' : 'لا توجد اختبارات'}</p>
-                {canCreateTests && !searchTerm && (
-                    <Button asChild size="sm" className="mt-4"><Link to="/settings/laboratory/new">إضافة اختبار</Link></Button>
-                )}
+        {!isLoading && tests.length === 0 ? (
+          <Card>
+            <CardContent sx={{ textAlign: 'center', py: 8 }}>
+              <Science sx={{ fontSize: 48, color: 'text.secondary', opacity: 0.3, mb: 2 }} />
+              <Typography variant="h6" color="text.secondary" gutterBottom>
+                {searchTerm ? 'لم يتم العثور على نتائج' : 'لا توجد اختبارات'}
+              </Typography>
+              {canCreateTests && !searchTerm && (
+                <Button 
+                  component={Link} 
+                  to="/settings/laboratory/new"
+                  variant="contained"
+                  size="small"
+                  startIcon={<Add />}
+                  sx={{ mt: 2 }}
+                >
+                  إضافة اختبار
+                </Button>
+              )}
             </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="text-center">المعرف</TableHead>
-                <TableHead className="text-center">اسم الاختبار</TableHead>
-                <TableHead className="hidden sm:table-cell text-center">الوعاء</TableHead>
-                <TableHead className="text-center hidden md:table-cell">السعر</TableHead>
-                <TableHead className="text-center">متاح</TableHead>
-                <TableHead className="text-right">الإجراءات</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {tests.map((test) => (
-                <TableRow key={test.id}>
-                  <TableCell className="font-medium text-center">{test.id}</TableCell>
-                  <TableCell className="font-medium text-center">{test.main_test_name}</TableCell>
-                  <TableCell className="hidden sm:table-cell text-center">{test.container?.container_name || test.container_name || '-'}</TableCell>
-                  <TableCell className="text-center hidden md:table-cell">{test.price ? Number(test.price).toFixed(2) : '-'}</TableCell>
-                  <TableCell className="text-center">
-                    {test.available ? 
-                        <CheckCircle2 className="h-5 w-5 text-green-500 mx-auto" aria-label="نشط" /> : 
-                        <XCircle className="h-5 w-5 text-red-500 mx-auto" aria-label="غير نشط" />}
+          </Card>
+        ) : (
+          <Card>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell align="center">المعرف</TableCell>
+                  <TableCell align="center">اسم الاختبار</TableCell>
+                  <TableCell align="center" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
+                    الوعاء
                   </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu dir="rtl">
-                      <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {canEditTests && <DropdownMenuItem asChild><Link to={`/settings/laboratory/${test.id}/edit`} className="flex items-center w-full"><Edit className="rtl:ml-2 ltr:mr-2 h-4 w-4" /> تعديل</Link></DropdownMenuItem>}
-                        {canDeleteTests && (
-                            <>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => handleDelete(test.id, test.main_test_name)} className="text-destructive focus:text-destructive" disabled={deleteMutation.isPending && deleteMutation.variables === test.id}>
-                                <Trash2 className="rtl:ml-2 ltr:mr-2 h-4 w-4" />
-                                حذف
-                            </DropdownMenuItem>
-                            </>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                  <TableCell align="center" sx={{ display: { xs: 'none', md: 'table-cell' } }}>
+                    السعر
                   </TableCell>
+                  <TableCell align="center">متاح</TableCell>
+                  <TableCell align="right">الإجراءات</TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
-      )}
-      {meta && meta.last_page > 1 && (
-        <div className="flex justify-center mt-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-            disabled={currentPage === 1 || isLoading}
-          >
-            السابق
-          </Button>
-          <span className="mx-4 self-center">
-            صفحة {currentPage} من {meta.last_page}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage(p => Math.min(meta.last_page, p + 1))}
-            disabled={currentPage === meta.last_page || isLoading}
-          >
-            التالي
-          </Button>
-        </div>
-      )}
-    </div>
+              </TableHead>
+              <TableBody>
+                {tests.map((test) => (
+                  <TableRow key={test.id}>
+                    <TableCell align="center" sx={{ fontWeight: 'medium' }}>
+                      {test.id}
+                    </TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'medium' }}>
+                      {test.main_test_name}
+                    </TableCell>
+                    <TableCell align="center" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
+                      {test.container?.container_name || test.container_name || '-'}
+                    </TableCell>
+                    <TableCell align="center" sx={{ display: { xs: 'none', md: 'table-cell' } }}>
+                      {test.price ? Number(test.price).toFixed(2) : '-'}
+                    </TableCell>
+                    <TableCell align="center">
+                      {test.available ? (
+                        <CheckCircle color="success" />
+                      ) : (
+                        <Cancel color="error" />
+                      )}
+                    </TableCell>
+                    <TableCell align="right">
+                      <IconButton
+                        onClick={(e) => handleMenuOpen(e, test.id)}
+                        size="small"
+                      >
+                        <MoreVert />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
+        )}
+        {meta && meta.last_page > 1 && (
+          <Box display="flex" justifyContent="center" mt={2}>
+            <Pagination
+              count={meta.last_page}
+              page={currentPage}
+              onChange={(_, page) => setCurrentPage(page)}
+              disabled={isLoading}
+              color="primary"
+              showFirstButton
+              showLastButton
+            />
+          </Box>
+        )}
+
+        {/* Dropdown Menu */}
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={handleMenuClose}
+          anchorOrigin={{
+            vertical: 'bottom',
+            horizontal: 'right',
+          }}
+          transformOrigin={{
+            vertical: 'top',
+            horizontal: 'right',
+          }}
+        >
+          {canEditTests && (
+            <MenuItem 
+              component={Link} 
+              to={`/settings/laboratory/${selectedTestId}/edit`}
+              onClick={handleMenuClose}
+            >
+              <ListItemIcon>
+                <Edit fontSize="small" />
+              </ListItemIcon>
+              <ListItemText>تعديل</ListItemText>
+            </MenuItem>
+          )}
+          {canDeleteTests && (
+            <>
+              <Divider />
+              <MenuItem 
+                onClick={() => {
+                  if (selectedTestId) {
+                    const test = tests.find(t => t.id === selectedTestId);
+                    if (test) {
+                      handleDelete(test.id, test.main_test_name);
+                    }
+                  }
+                  handleMenuClose();
+                }}
+                disabled={deleteMutation.isPending && deleteMutation.variables === selectedTestId}
+                sx={{ color: 'error.main' }}
+              >
+                <ListItemIcon>
+                  <Delete fontSize="small" color="error" />
+                </ListItemIcon>
+                <ListItemText>حذف</ListItemText>
+              </MenuItem>
+            </>
+          )}
+        </Menu>
+      </Stack>
+    </Container>
   );
 }

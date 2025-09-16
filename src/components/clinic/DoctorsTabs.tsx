@@ -1,11 +1,12 @@
 // src/components/clinic/DoctorsTabs.tsx
-import React, { useEffect, useState, useCallback } from 'react';
+import React from 'react';
 import {
   Box,
   CircularProgress,
   Paper,
   Typography,
 } from '@mui/material';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import type { DoctorShift } from '@/types/doctors';
 import type { Patient } from '@/types/patients';
@@ -21,37 +22,19 @@ interface DoctorsTabsProps {
 const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId }) => {
   const { currentClinicShift } = useAuth();
 
-  // State for managing doctor shifts data
-  const [doctorShifts, setDoctorShifts] = useState<DoctorShift[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
-
-  // Fetch doctor shifts function
-  const fetchDoctorShifts = useCallback(async () => {
-    if (!currentClinicShift?.id) return;
-    
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      const data = await getActiveDoctorShifts(currentClinicShift.id);
-      setDoctorShifts(data);
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('فشل في تحميل نوبات الأطباء'));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentClinicShift?.id]);
-
-  // Initial fetch and refetch interval
-  useEffect(() => {
-    fetchDoctorShifts();
-    
-    // Set up interval for refetching every 30 seconds
-    // const interval = setInterval(fetchDoctorShifts, 30000);
-    
-    // return () => clearInterval(interval);
-  }, [fetchDoctorShifts]);
+  // Use React Query to fetch doctor shifts
+  // This will automatically update when shifts are opened/closed from ManageDoctorShiftsDialog
+  const { 
+    data: doctorShifts = [], 
+    isLoading, 
+    error 
+  } = useQuery<DoctorShift[], Error>({
+    queryKey: ['activeDoctorShifts', currentClinicShift?.id],
+    queryFn: () => getActiveDoctorShifts(currentClinicShift?.id),
+    enabled: !!currentClinicShift?.id,
+    refetchInterval: 30000, // Refetch every 30 seconds
+    staleTime: 10000, // Consider data stale after 10 seconds
+  });
 
 
   
@@ -75,7 +58,7 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId 
           فشل في تحميل الأطباء النشطين
         </Typography>
         <Typography className="error-message">
-          {error.message}
+          {error.message || 'حدث خطأ غير متوقع'}
         </Typography>
       </Box>
     </Paper>
@@ -97,7 +80,10 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId 
   }
 
   return (
-      <Box className="doctors-tabs-flex-wrapper">
+      <Box sx={{
+        width:`${window.innerWidth - 250}px`,
+        overflowX:'auto'
+      }} className="doctors-tabs-flex-wrapper">
     
           <Box className="doctors-tabs-flex-container">
             {doctorShifts.map((shift) => {

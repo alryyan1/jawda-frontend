@@ -73,6 +73,9 @@ const DoctorShiftsReportPage: React.FC = () => {
 
   // Create MUI theme that supports dark mode
   const muiTheme = useMemo(() => createTheme({
+    typography: {
+      fontFamily: "'Tajawal', 'Cairo', sans-serif",
+    },
     palette: {
       mode: theme === 'dark' ? 'dark' : 'light',
       primary: {

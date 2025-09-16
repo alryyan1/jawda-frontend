@@ -19,8 +19,13 @@ const queryClient = new QueryClient(); // Create a client
 // Create RTL emotion cache for MUI
 const rtlCache = createCache({ key: 'mui-rtl', stylisPlugins: [prefixer, rtlPlugin] });
 
-// Create MUI theme with RTL direction
-const theme = createTheme({ direction: 'rtl' });
+// Create MUI theme with RTL direction and Tajawal font
+const theme = createTheme({ 
+  direction: 'rtl',
+  typography: {
+    fontFamily: "'Tajawal', 'Cairo', sans-serif",
+  },
+});
 
 // Ensure document is RTL
 document.documentElement.setAttribute('dir', 'rtl');

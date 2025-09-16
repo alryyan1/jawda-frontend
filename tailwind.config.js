@@ -13,7 +13,10 @@ export default {
     theme: {
         extend: {
            fontFamily: {
-  sans: ['Cairo', 'sans-serif'],      },
+  sans: ['Tajawal', 'Cairo', 'sans-serif'],
+  tajawal: ['Tajawal', 'sans-serif'],
+  cairo: ['Cairo', 'sans-serif'],
+      },
         },
     },
     plugins: [],

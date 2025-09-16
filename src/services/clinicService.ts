@@ -16,7 +16,6 @@ interface ActivePatientFilters {
     doctor_shift_id?: number | null; // If filtering by doctor's specific session
     doctor_id?: number | null;       // If filtering by doctor directly
     search?: string;
-    clinic_shift_id?: number | null; // General clinic shift
 }
 
 export const getActiveClinicPatients = async (filters: ActivePatientFilters): Promise<ActivePatientVisit[]> => {

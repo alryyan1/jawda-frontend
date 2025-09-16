@@ -9,16 +9,18 @@ import ActivePatientsList from '@/components/clinic/ActivePatientsList';
 
 import type { Patient } from '@/types/patients'; // Or your more specific ActivePatientListItem
 import type { DoctorShift } from '@/types/doctors'; // Assuming a DoctorShift type for Tabs
+import { useAuth } from '@/contexts/AuthContext';
 import ActionsPane from './ActionsPane';
 import SelectedPatientWorkspace from './SelectedPatientWorkspace';
 import PatientDetailsColumnClinic from './PatientDetailsColumnClinic';
 import DoctorFinderDialog from './dialogs/DoctorFinderDialog';
+import UserShiftIncomeDialog from './UserShiftIncomeDialog';
 
 const ClinicPage: React.FC = () => {
   // Removed React Query client; using local refresh key instead
   const [activePatientsRefreshKey, setActivePatientsRefreshKey] = useState(0);
    
-  // const {currentClinicShift,isLoadingShift,refetchCurrentClinicShift} = useAuth()
+  const { currentClinicShift } = useAuth();
   const [showRegistrationForm, setShowRegistrationForm] = useState(true);
   const [selectedPatientVisit, setSelectedPatientVisit] = useState<{ patient: Patient; visitId: number } | null>(null);
   const [activeDoctorShift, setActiveDoctorShift] = useState<DoctorShift | null>(null); // For DoctorsTabs interaction
@@ -26,6 +28,8 @@ const ClinicPage: React.FC = () => {
  // NEW CALLBACK for DoctorFinderDialog
 // NEW: State for DoctorFinderDialog visibility, now controlled by F9 too
 const [isDoctorFinderDialogOpen, setIsDoctorFinderDialogOpen] = useState(false);
+// NEW: State for UserShiftIncomeDialog visibility, controlled by F8
+const [isIncomeDialogOpen, setIsIncomeDialogOpen] = useState(false);
 
 const handleDoctorShiftSelectedFromFinder = useCallback((shift: DoctorShift) => {
   setActiveDoctorShift(shift);
@@ -62,6 +66,26 @@ const handleDoctorShiftSelectedFromFinder = useCallback((shift: DoctorShift) => 
     setShowRegistrationForm(true);
     setSelectedPatientVisit(null); // Clear selected patient
   }
+
+  // F8 and F10 keyboard listeners
+  // F8: Open income dialog, F10: Open doctor finder dialog
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'F8') {
+        event.preventDefault();
+        setIsIncomeDialogOpen(true);
+      } else if (event.key === 'F10') {
+        event.preventDefault();
+        setIsDoctorFinderDialogOpen(true);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
  console.log(activeDoctorShift,'activeDoctorShift',activePatientsRefreshKey,'activePatientsRefreshKey',selectedPatientVisit,'selectedPatientVisit',showRegistrationForm,'showRegistrationForm')
 
   return (
@@ -99,7 +123,6 @@ const handleDoctorShiftSelectedFromFinder = useCallback((shift: DoctorShift) => 
             onPatientSelect={handlePatientSelected}
             selectedPatientVisitId={selectedPatientVisit?.visitId || null}
             doctorShiftId={activeDoctorShift?.id || null}
-            currentClinicShiftId={activeDoctorShift?.id || null}
           />
         </section>
 
@@ -146,7 +169,6 @@ const handleDoctorShiftSelectedFromFinder = useCallback((shift: DoctorShift) => 
         <ActionsPane
           showRegistrationForm={showRegistrationForm}
           onToggleRegistrationForm={toggleRegistrationForm}
-          onOpenDoctorFinderDialog={() => setIsDoctorFinderDialogOpen(true)}
           onDoctorShiftSelectedFromFinder={handleDoctorShiftSelectedFromFinder}
         />
       </div>
@@ -156,6 +178,14 @@ const handleDoctorShiftSelectedFromFinder = useCallback((shift: DoctorShift) => 
         onOpenChange={setIsDoctorFinderDialogOpen}
         onDoctorShiftSelect={handleDoctorShiftSelectedFromFinder}
       />
+
+      {currentClinicShift && (
+        <UserShiftIncomeDialog
+          isOpen={isIncomeDialogOpen}
+          onOpenChange={setIsIncomeDialogOpen}
+          currentClinicShiftId={currentClinicShift?.id ?? null}
+        />
+      )}
     </div>
   );
 };

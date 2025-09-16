@@ -21,6 +21,9 @@ import { format } from 'date-fns';
 
 // Create a dark theme compatible MUI theme for calendar
 const createCalendarTheme = (isDark: boolean) => createTheme({
+  typography: {
+    fontFamily: "'Tajawal', 'Cairo', sans-serif",
+  },
   palette: {
     mode: isDark ? 'dark' : 'light',
     primary: {

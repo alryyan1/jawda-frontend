@@ -5,6 +5,9 @@ import { useTheme } from 'next-themes';
 
 // Create a dark theme compatible MUI theme
 const createMuiTheme = (isDark: boolean) => createTheme({
+  typography: {
+    fontFamily: "'Tajawal', 'Cairo', sans-serif",
+  },
   palette: {
     mode: isDark ? 'dark' : 'light',
     primary: {

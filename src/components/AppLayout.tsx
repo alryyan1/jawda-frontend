@@ -72,7 +72,7 @@ const mainNavItems: NavItem[] = [
   { to: '/clinic', label: 'العيادة', icon: BriefcaseMedical, permission: 'access clinic_workspace' },
   { to: '/lab-reception', label: 'استقبال المختبر', icon: Microscope, permission: 'access lab_reception' },
   { to: '/lab-sample-collection', label: 'جمع العينات', icon: Syringe, permission: 'access lab_sample_collection' },
-  { to: '/lab-workstation', label: 'محطة المختبر', icon: FlaskConical, permission: 'access lab_workstation' },
+  { to: '/lab-workstation', label: 'نتائج المختبر', icon: FlaskConical, permission: 'access lab_workstation' },
   { to: '/attendance/sheet', label: 'سجل الحضور', icon: ClipboardEditIcon, permission: 'record_attendance' },
   { to: '/patients', label: 'المرضى', icon: Users, permission: 'list patients' },
   { to: '/doctors', label: 'الأطباء', icon: Stethoscope, permission: 'list doctors' },

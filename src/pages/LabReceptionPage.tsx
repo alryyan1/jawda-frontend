@@ -42,6 +42,9 @@ import PdfPreviewDialog from "@/components/common/PdfPreviewDialog";
 
 // Material Theme
 const materialTheme = createTheme({
+  typography: {
+    fontFamily: "'Tajawal', 'Cairo', sans-serif",
+  },
   palette: {
     primary: {
       main: '#1976d2',

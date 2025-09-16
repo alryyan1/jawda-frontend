@@ -17,14 +17,12 @@ interface ActivePatientsListProps {
   doctorShiftId: number | null; // ID of the selected DoctorShift
   // Or, if DoctorTabs directly gives doctor_id:
   // doctorId: number | null;
-  currentClinicShiftId?: number | null; // Optional: overall clinic shift
 }
 
 const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
   onPatientSelect,
   selectedPatientVisitId,
   doctorShiftId,
-  currentClinicShiftId,
 }) => {
 
   const {
@@ -37,12 +35,10 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
     queryKey: [
       "activePatients",
       doctorShiftId,
-      currentClinicShiftId,
     ],
     queryFn: async (): Promise<ActivePatientVisit[]> => {
       const response = await getActiveClinicPatients({
         doctor_shift_id: doctorShiftId,
-        clinic_shift_id: currentClinicShiftId,
       });
       // Handle both paginated and non-paginated responses
       if (response && typeof response === 'object' && 'data' in response) {

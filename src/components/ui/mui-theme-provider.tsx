@@ -198,7 +198,7 @@ const createUnifiedMuiTheme = (isDark: boolean) => createTheme({
     },
   },
   typography: {
-    fontFamily: 'inherit',
+    fontFamily: "'Tajawal', 'Cairo', sans-serif",
   },
   shape: {
     borderRadius: 8,

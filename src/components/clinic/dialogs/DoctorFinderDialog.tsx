@@ -1,7 +1,6 @@
 // src/components/clinic/dialogs/DoctorFinderDialog.tsx
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -25,9 +24,8 @@ interface DoctorFinderDialogProps {
 const DoctorFinderDialog: React.FC<DoctorFinderDialogProps> = ({
   isOpen, onOpenChange, onDoctorShiftSelect
 }) => {
-  const { t, i18n } = useTranslation(['clinic', 'common', 'doctors']);
   const { currentClinicShift } = useAuth();
-  const isRTL = i18n.dir() === 'rtl';
+  const isRTL = true; // Always RTL for Arabic
   const scrollViewportRef = useRef<HTMLDivElement>(null);
 
   // NEW: State for DoctorFinderDialog visibility, now controlled by F9 too
@@ -44,18 +42,18 @@ const DoctorFinderDialog: React.FC<DoctorFinderDialogProps> = ({
     if (!activeDoctorShifts) return [];
     const specialistMap = new Map<string, number>(); // name -> count
     activeDoctorShifts.forEach(shift => {
-      const specName = shift.doctor_specialist_name || t('doctors:unknownSpecialist');
+      const specName = shift.doctor_specialist_name || 'غير محدد';
       specialistMap.set(specName, (specialistMap.get(specName) || 0) + 1);
     });
     return Array.from(specialistMap.entries()).map(([name, count]) => ({ name, count })).sort((a,b) => a.name.localeCompare(b.name));
-  }, [activeDoctorShifts, t]);
+  }, [activeDoctorShifts]);
 
   const filteredDoctorsBySpecialist = useMemo(() => {
     if (!selectedSpecialistName) return activeDoctorShifts; // Should not happen if bySpecialist tab active
     return activeDoctorShifts.filter(shift => 
-      (shift.doctor_specialist_name || t('doctors:unknownSpecialist')) === selectedSpecialistName
+      (shift.doctor_specialist_name || 'غير محدد') === selectedSpecialistName
     );
-  }, [activeDoctorShifts, selectedSpecialistName, t]);
+  }, [activeDoctorShifts, selectedSpecialistName]);
   
   // Reset specialist selection when main tab changes or dialog closes
   useEffect(() => {
@@ -99,7 +97,7 @@ const DoctorFinderDialog: React.FC<DoctorFinderDialogProps> = ({
         </Avatar>
         <div>
             <p className="text-sm font-medium leading-tight">{shift.doctor_name}</p>
-            <p className="text-xs text-muted-foreground leading-tight">{shift.doctor_specialist_name || t('doctors:noSpecialty')}</p>
+            <p className="text-xs text-muted-foreground leading-tight">{shift.doctor_specialist_name || 'لا يوجد تخصص'}</p>
         </div>
         </div>
     </Card>
@@ -108,14 +106,14 @@ const DoctorFinderDialog: React.FC<DoctorFinderDialogProps> = ({
 
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog  open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl lg:max-w-5xl max-h-[80vh] flex flex-col p-0 sm:p-0">
         <DialogHeader className="p-4 sm:p-6 border-b">
-          <DialogTitle>{t('clinic:doctorFinder.title')}</DialogTitle>
-          <DialogDescription>{t('clinic:doctorFinder.description')}</DialogDescription>
+          <DialogTitle>البحث عن الأطباء</DialogTitle>
+          <DialogDescription>اختر طبيباً من القائمة النشطة</DialogDescription>
         </DialogHeader>
 
-        <div className={cn("flex-grow flex overflow-hidden", isRTL ? "flex-row-reverse" : "flex-row")}>
+        <div dir="rtl" className={cn("flex-grow flex overflow-hidden", isRTL ? "flex-row-reverse" : "flex-row")}>
           {/* Side Tabs for All Shifts / Specialists */}
           <div className={cn("w-48 p-3 border-slate-200 dark:border-slate-700 shrink-0 bg-muted/30", isRTL ? "border-l" : "border-r")}>
             <Tabs 
@@ -126,10 +124,10 @@ const DoctorFinderDialog: React.FC<DoctorFinderDialogProps> = ({
             >
               <TabsList className="flex flex-col h-auto items-stretch w-full gap-1">
                 <TabsTrigger value="allShifts" className="justify-start px-2 py-1.5 text-xs h-auto data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                    <Users2 className="h-4 w-4 ltr:mr-2 rtl:ml-2"/>{t('clinic:doctorFinder.allActiveShiftsTab')}
+                    <Users2 className="h-4 w-4 ltr:mr-2 rtl:ml-2"/>جميع النوبات النشطة
                 </TabsTrigger>
                 <TabsTrigger value="bySpecialist" className="justify-start px-2 py-1.5 text-xs h-auto data-[state=active]:bg-primary data-[state=active]:text-primary-foreground" disabled={uniqueSpecialistsOnDuty.length === 0}>
-                    <Stethoscope className="h-4 w-4 ltr:mr-2 rtl:ml-2"/>{t('clinic:doctorFinder.bySpecialistTab')}
+                    <Stethoscope className="h-4 w-4 ltr:mr-2 rtl:ml-2"/>حسب التخصص
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -153,14 +151,14 @@ const DoctorFinderDialog: React.FC<DoctorFinderDialogProps> = ({
                         </Button>
                         ))
                     }
-                    { !isLoading && uniqueSpecialistsOnDuty.length === 0 && <p className="text-xs text-muted-foreground p-2 text-center">{t('doctors:noSpecialistsOnDuty')}</p>}
+                    { !isLoading && uniqueSpecialistsOnDuty.length === 0 && <p className="text-xs text-muted-foreground p-2 text-center">لا يوجد أطباء في النوبة</p>}
                     </div>
                 </ScrollArea>
                 <ScrollArea className="flex-grow p-3">
                     <div ref={scrollViewportRef} className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {filteredDoctorsBySpecialist.map(shift => <DoctorShiftCard key={shift.id} shift={shift}/>)}
                         {!isLoading && selectedSpecialistName && filteredDoctorsBySpecialist.length === 0 && (
-                             <p className="col-span-full text-center text-sm text-muted-foreground py-4">{t('doctors:noDoctorsForSpecialty')}</p>
+                             <p className="col-span-full text-center text-sm text-muted-foreground py-4">لا يوجد أطباء لهذا التخصص</p>
                         )}
                     </div>
                 </ScrollArea>
@@ -173,14 +171,14 @@ const DoctorFinderDialog: React.FC<DoctorFinderDialogProps> = ({
                         {isLoading ? <div className="col-span-full text-center py-10"><Loader2 className="h-8 w-8 animate-spin"/></div> :
                          activeDoctorShifts.map(shift => <DoctorShiftCard key={shift.id} shift={shift}/>)
                         }
-                        {!isLoading && activeDoctorShifts.length === 0 && <p className="col-span-full text-center text-sm text-muted-foreground py-10">{t('clinic:doctorsTabs.noActiveShifts')}</p>}
+                        {!isLoading && activeDoctorShifts.length === 0 && <p className="col-span-full text-center text-sm text-muted-foreground py-10">لا توجد نوبات نشطة</p>}
                     </div>
                 </ScrollArea>
             )}
           </div>
         </div>
         <DialogFooter className="p-4 border-t">
-            <DialogClose asChild><Button type="button" variant="outline">{t('common:close')}</Button></DialogClose>
+            <DialogClose asChild><Button type="button" variant="outline">إغلاق</Button></DialogClose>
         </DialogFooter>
       </DialogContent>
     </Dialog>

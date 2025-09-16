@@ -17,28 +17,28 @@ import {
   TableRow,
   TableContainer,
   Paper,
-  Chip,
   Box,
   CircularProgress,
   InputAdornment,
+  Tooltip,
 } from '@mui/material';
 import {
   Search as SearchIcon,
   Login as LogInIcon,
   Logout as LogOutIcon,
+  PictureAsPdf as PdfIcon,
 } from '@mui/icons-material';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faHeart } from '@fortawesome/free-solid-svg-icons';
 
 import { getDoctorsWithShiftStatus, startDoctorShift, endDoctorShift } from '@/services/doctorShiftService';
+import { getFavoriteDoctors, type FavoriteDoctor } from '@/services/favoriteDoctorsService';
 import FavoriteDoctorsDialog from './FavoriteDoctorsDialog';
+import { webUrl } from '@/pages/constants';
 
-interface DoctorWithShiftStatus { // Type for the data returned by getDoctorsWithShiftStatus
-  id: number; // Doctor ID
-  name: string;
-  specialist_name?: string | null;
+interface FavoriteDoctorWithShiftStatus extends FavoriteDoctor {
   is_on_shift: boolean;
-  current_doctor_shift_id?: number | null; // ID of the DoctorShift record if active
+  current_doctor_shift_id?: number | null;
 }
 
 interface ManageDoctorShiftsDialogProps {
@@ -57,11 +57,39 @@ const ManageDoctorShiftsDialog: React.FC<ManageDoctorShiftsDialogProps> = ({ tri
     return () => clearTimeout(handler);
   }, [searchTerm]);
 
-  const doctorsQueryKey = ['doctorsWithShiftStatus', debouncedSearchTerm];
+  const doctorsQueryKey = ['favoriteDoctorsWithShiftStatus', debouncedSearchTerm];
 
-  const { data: doctorsList, isLoading, isFetching } = useQuery<DoctorWithShiftStatus[], Error>({
+  // Function to get favorite doctors with their shift status
+  const getFavoriteDoctorsWithShiftStatus = async (): Promise<FavoriteDoctorWithShiftStatus[]> => {
+    // Get favorite doctors
+    const favoriteDoctors = await getFavoriteDoctors();
+    
+    // Get all doctors with shift status
+    const allDoctorsWithShiftStatus = await getDoctorsWithShiftStatus({ search: debouncedSearchTerm });
+    
+    // Filter to only include favorite doctors and combine with shift status
+    const favoriteDoctorsWithShiftStatus = favoriteDoctors
+      .filter(doc => 
+        // Apply search filter
+        !debouncedSearchTerm || 
+        doc.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        (doc.specialist_name && doc.specialist_name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()))
+      )
+      .map(favoriteDoc => {
+        const shiftStatus = allDoctorsWithShiftStatus.find(doc => doc.id === favoriteDoc.id);
+        return {
+          ...favoriteDoc,
+          is_on_shift: shiftStatus?.is_on_shift || false,
+          current_doctor_shift_id: shiftStatus?.current_doctor_shift_id || null,
+        };
+      });
+    
+    return favoriteDoctorsWithShiftStatus;
+  };
+
+  const { data: doctorsList, isLoading, isFetching } = useQuery<FavoriteDoctorWithShiftStatus[], Error>({
     queryKey: doctorsQueryKey,
-    queryFn: () => getDoctorsWithShiftStatus({ search: debouncedSearchTerm }), // Pass search to service
+    queryFn: getFavoriteDoctorsWithShiftStatus,
     enabled: isOpen, // Fetch only when dialog is open
   });
 
@@ -71,14 +99,20 @@ const ManageDoctorShiftsDialog: React.FC<ManageDoctorShiftsDialogProps> = ({ tri
       shift_id: currentClinicShiftId! 
     }),
     onSuccess: () => {
-      toast.success('تم فتح النوبة بنجاح');
+      toast.success('تم فتح الورديه بنجاح');
       queryClient.invalidateQueries({ queryKey: doctorsQueryKey });
+      // Invalidate all active doctor shifts queries
       queryClient.invalidateQueries({ queryKey: ['activeDoctorShifts'] });
+      queryClient.invalidateQueries({ queryKey: ['activeDoctorShifts', currentClinicShiftId] });
+      queryClient.invalidateQueries({ queryKey: ['activeDoctorShiftsForNewVisit'] });
+      queryClient.invalidateQueries({ queryKey: ['activeDoctorShiftsForCostDialog'] });
+      queryClient.invalidateQueries({ queryKey: ['activeDoctorShiftsForFinderDialog'] });
+      queryClient.invalidateQueries({ queryKey: ['favoriteDoctors'] });
     },
     onError: (error: unknown) => {
       const errorMessage = error instanceof Error && 'response' in error 
         ? (error as { response?: { data?: { message?: string } } }).response?.data?.message 
-        : 'خطأ في فتح النوبة';
+        : 'خطأ في فتح الورديه';
       toast.error(errorMessage);
     },
   });
@@ -86,14 +120,20 @@ const ManageDoctorShiftsDialog: React.FC<ManageDoctorShiftsDialogProps> = ({ tri
   const closeShiftMutation = useMutation({
     mutationFn: (doctorShiftId: number) => endDoctorShift({ doctor_shift_id: doctorShiftId }),
     onSuccess: () => {
-      toast.success('تم إغلاق النوبة بنجاح');
+      toast.success('تم إغلاق الورديه بنجاح');
       queryClient.invalidateQueries({ queryKey: doctorsQueryKey });
+      // Invalidate all active doctor shifts queries
       queryClient.invalidateQueries({ queryKey: ['activeDoctorShifts'] });
+      queryClient.invalidateQueries({ queryKey: ['activeDoctorShifts', currentClinicShiftId] });
+      // queryClient.invalidateQueries({ queryKey: ['activeDoctorShiftsForNewVisit'] });
+      // queryClient.invalidateQueries({ queryKey: ['activeDoctorShiftsForCostDialog'] });
+      // queryClient.invalidateQueries({ queryKey: ['activeDoctorShiftsForFinderDialog'] });
+      // queryClient.invalidateQueries({ queryKey: ['favoriteDoctors'] });
     },
     onError: (error: unknown) => {
       const errorMessage = error instanceof Error && 'response' in error 
         ? (error as { response?: { data?: { message?: string } } }).response?.data?.message 
-        : 'خطأ في إغلاق النوبة';
+        : 'خطأ في إغلاق الورديه';
       toast.error(errorMessage);
     },
   });
@@ -109,6 +149,12 @@ const ManageDoctorShiftsDialog: React.FC<ManageDoctorShiftsDialogProps> = ({ tri
     closeShiftMutation.mutate(doctorShiftId);
   };
 
+  const handleViewReport = (doctorShiftId: number) => {
+    // Open doctor's clinic report in a new tab
+    const reportUrl = `${webUrl}reports/clinic-report-old/pdf?doctor_shift_id=${doctorShiftId}`;
+    window.open(reportUrl, '_blank');
+  };
+
   return (
     <>
       <Box onClick={() => setIsOpen(true)}>
@@ -119,14 +165,13 @@ const ManageDoctorShiftsDialog: React.FC<ManageDoctorShiftsDialogProps> = ({ tri
         onClose={() => setIsOpen(false)}
         maxWidth="lg"
         fullWidth
-        sx={{ direction: 'rtl' }}
       >
-        <DialogTitle>إدارة نوبات الأطباء</DialogTitle>
+        <DialogTitle>ورديات الأطباء المفضلين</DialogTitle>
         <DialogContent>
           <Box sx={{ mb: 2 }}>
             <TextField
               fullWidth
-              placeholder="البحث عن الأطباء..."
+              placeholder="البحث عن الأطباء المفضلين..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               InputProps={{
@@ -153,6 +198,7 @@ const ManageDoctorShiftsDialog: React.FC<ManageDoctorShiftsDialogProps> = ({ tri
                       <TableCell align="center">الاسم</TableCell>
                       <TableCell align="center">التخصص</TableCell>
                       <TableCell align="center">الإجراءات</TableCell>
+                      <TableCell align="center">التقرير</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -179,7 +225,7 @@ const ManageDoctorShiftsDialog: React.FC<ManageDoctorShiftsDialogProps> = ({ tri
                                   : <LogOutIcon />
                               }
                             >
-                              إغلاق النوبة
+                              إغلاق الورديه
                             </Button>
                           ) : (
                             <Button
@@ -193,9 +239,22 @@ const ManageDoctorShiftsDialog: React.FC<ManageDoctorShiftsDialogProps> = ({ tri
                                   : <LogInIcon />
                               }
                             >
-                              فتح النوبة
+                              فتح الورديه
                             </Button>
                           )}
+                        </TableCell>
+                        <TableCell align="center">
+                          <Tooltip title="عرض تقرير الطبيب في تبويب جديد">
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              color="primary"
+                              onClick={() => handleViewReport(doc.current_doctor_shift_id!)}
+                              startIcon={<PdfIcon />}
+                            >
+                              عرض التقرير
+                            </Button>
+                          </Tooltip>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -203,7 +262,16 @@ const ManageDoctorShiftsDialog: React.FC<ManageDoctorShiftsDialogProps> = ({ tri
                 </Table>
               ) : (
                 <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
-                  {searchTerm ? 'لا توجد نتائج' : 'لا يوجد أطباء'}
+                  {searchTerm ? (
+                    'لا توجد نتائج'
+                  ) : (
+                    <Box>
+                      <Box sx={{ mb: 2 }}>لا يوجد أطباء مفضلين</Box>
+                      <Box sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>
+                        استخدم زر "الأطباء المفضلين" لإضافة أطباء إلى قائمة المفضلة
+                      </Box>
+                    </Box>
+                  )}
                 </Box>
               )}
             </TableContainer>

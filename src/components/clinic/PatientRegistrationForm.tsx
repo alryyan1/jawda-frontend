@@ -290,7 +290,7 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
       const response = await apiClient.post('/patients', submissionData);
       const newPatient = response.data.data;
 
-      setAlert({ type: 'error', message: 'حدث خطأ' });
+      // setAlert({ type: 'error', message: 'حدث خطأ' });
       onPatientRegistered(newPatient);
       
       // Reset form

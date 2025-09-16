@@ -137,7 +137,6 @@ const FavoriteDoctorsDialog: React.FC<FavoriteDoctorsDialogProps> = ({
         onClose={() => setIsOpen(false)}
         maxWidth="lg"
         fullWidth
-        sx={{ direction: 'rtl' }}
       >
         <DialogTitle>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

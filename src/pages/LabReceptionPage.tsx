@@ -15,7 +15,7 @@ import { toast } from "sonner";
 
 // Custom Components & Services
 import LabRegistrationForm from "@/components/lab/reception/LabRegistrationForm";
-import LabPatientQueue from "@/components/lab/reception/LabPatientQueue";
+import LabPatientQueue, { type LabPatientQueueRef } from "@/components/lab/reception/LabPatientQueue";
 import LabRequestsColumn from "@/components/lab/reception/LabRequestsColumn";
 import PatientDetailsColumnV1, { type PatientDetailsColumnV1Ref } from "@/components/lab/reception/PatientDetailsColumnV1";
 import LabReceptionActionPage from "@/components/lab/reception/LabReceptionActionPage";
@@ -24,11 +24,12 @@ import PatientHistoryTable from "@/components/lab/reception/PatientHistoryTable"
 import { useDebounce } from "@/hooks/useDebounce";
 import { useAuth } from "@/contexts/AuthContext";
 import { getDoctorVisitById } from "@/services/visitService";
+import realtimeService from "@/services/realtimeService";
 
 // Types
 import type { Patient, PatientSearchResult } from "@/types/patients";
 import type { LabQueueFilters, PatientLabQueueItem } from "@/types/labWorkflow";
-import type { DoctorVisit } from "@/types/visits";
+import type { DoctorVisit, LabRequest } from "@/types/visits";
 import { getAppearanceSettings } from "@/lib/appearance-settings-store";
 import type { DoctorShift, DoctorStripped } from "@/types/doctors";
 import DoctorFinderDialog from "@/components/clinic/dialogs/DoctorFinderDialog";
@@ -38,6 +39,7 @@ import { useCachedMainTestsList } from "@/hooks/useCachedData";
 import type { MainTestStripped } from "@/types/labTests";
 import apiClient from "@/services/api";
 import { addLabTestsToVisit } from "@/services/labRequestService";
+// Removed getSinglePatientQueueItem import - using getDoctorVisitById instead
 import PdfPreviewDialog from "@/components/common/PdfPreviewDialog";
 
 // Material Theme
@@ -82,7 +84,75 @@ const LabReceptionPage: React.FC = () => {
   const queryClient = useQueryClient();
   const { currentClinicShift } = useAuth();
 
-  // Sockets removed: no realtime lab updates listener
+  // Helper function to convert DoctorVisit to PatientLabQueueItem format
+  const convertVisitToQueueItem = (visit: DoctorVisit): PatientLabQueueItem => {
+    const labRequests = visit.lab_requests || [];
+    const oldestRequest = labRequests.length > 0 ? labRequests[0] : null;
+    
+    return {
+      visit_id: visit.id,
+      patient_id: visit.patient_id,
+      lab_number: visit.patient.visit_number?.toString() || visit.id.toString(),
+      patient_name: visit.patient?.name || '',
+      phone: visit.patient?.phone || '',
+      sample_id: oldestRequest?.id?.toString() || visit.id.toString(),
+      lab_request_ids: labRequests.map((req: LabRequest) => req.id),
+      oldest_request_time: oldestRequest?.created_at || visit.created_at,
+      test_count: labRequests.length,
+      result_is_locked: visit.patient?.result_is_locked || false,
+      all_requests_paid: labRequests.length > 0 ? labRequests.every((req: LabRequest) => req.amount_paid > 0) : false,
+      is_result_locked: visit.patient?.result_is_locked || false,
+      is_printed: false, // This would need to be determined from lab results
+      company: visit.patient?.company,
+    };
+  };
+
+  // Real-time event subscription for patient registration
+  useEffect(() => {
+    const handlePatientRegistered = async (patient: Patient) => {
+      console.log('Patient registered event received:', patient);
+      
+      try {
+        // If the patient has a doctor visit, fetch the visit data and convert to queue item
+        if (patient.doctor_visit?.id) {
+          console.log('Fetching visit data for visit ID:', patient.doctor_visit.id);
+          const visitData = await getDoctorVisitById(patient.doctor_visit.id);
+          const newQueueItem = convertVisitToQueueItem(visitData);
+          console.log('Converted queue item:', newQueueItem);
+          
+          // Update the lab patient queue directly using the ref
+          console.log('Current shift ID:', currentClinicShift?.id);
+          if (labPatientQueueRef.current) {
+            labPatientQueueRef.current.appendPatientToQueue(newQueueItem);
+          }
+          
+          // Show a toast notification
+          toast.success(`تم تسجيل مريض جديد: ${patient.name}`);
+        } else {
+          // Fallback: refresh the entire queue if no visit ID is available
+          if (labPatientQueueRef.current) {
+            labPatientQueueRef.current.refresh();
+          }
+          toast.success(`تم تسجيل مريض جديد: ${patient.name}`);
+        }
+      } catch (error) {
+        console.error('Error fetching new patient queue item:', error);
+        // Fallback: refresh the entire queue on error
+        if (labPatientQueueRef.current) {
+          labPatientQueueRef.current.refresh();
+        }
+        toast.success(`تم تسجيل مريض جديد: ${patient.name}`);
+      }
+    };
+
+    // Subscribe to patient-registered events
+    realtimeService.onPatientRegistered(handlePatientRegistered);
+
+    // Cleanup subscription on component unmount
+    return () => {
+      realtimeService.offPatientRegistered(handlePatientRegistered);
+    };
+  }, [queryClient, currentClinicShift?.id]);
 
   // --- State Management ---
   const [activeVisitId, setActiveVisitId] = useState<number | null>(null);
@@ -105,7 +175,9 @@ const LabReceptionPage: React.FC = () => {
 
   // State lifted from LabRegistrationForm
   const [searchQuery, setSearchQuery] = useState('');
+  const [nameSearchQuery, setNameSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
+  const debouncedNameSearchQuery = useDebounce(nameSearchQuery, 300);
   const [selectedDoctorForNewVisit, setSelectedDoctorForNewVisit] = useState<DoctorStripped | null>(null);
   
   // Patient history visibility state
@@ -113,10 +185,13 @@ const LabReceptionPage: React.FC = () => {
   const patientHistoryRef = useRef<HTMLDivElement>(null);
   
   // Ref for test selection autocomplete focus
-  const testSelectionAutocompleteRef = useRef<any>(null);
+  const testSelectionAutocompleteRef = useRef<HTMLDivElement>(null);
   
   // Ref for patient details column to trigger payment
   const patientDetailsRef = useRef<PatientDetailsColumnV1Ref>(null);
+  
+  // Ref for lab patient queue to update it directly
+  const labPatientQueueRef = useRef<LabPatientQueueRef>(null);
 
   // --- Data Fetching & Mutations ---
   const { data: searchResults = [], isLoading: isLoadingSearchResults } = useQuery<PatientSearchResult[], Error>({
@@ -125,10 +200,27 @@ const LabReceptionPage: React.FC = () => {
     enabled: debouncedSearchQuery.length >= 2 && isFormVisible,
   });
 
-  // Show patient history when search results are available
+  // Name-based search query
+  const { data: nameSearchResults = [], isLoading: isLoadingNameSearchResults } = useQuery<PatientSearchResult[], Error>({
+    queryKey: ["patientSearchExistingLabByName", debouncedNameSearchQuery],
+    queryFn: () => debouncedNameSearchQuery.length >= 2 ? searchExistingPatients(debouncedNameSearchQuery) : Promise.resolve([]),
+    enabled: debouncedNameSearchQuery.length >= 2 && isFormVisible,
+  });
+
+  // Combine search results from both phone and name searches
+  const combinedSearchResults = React.useMemo(() => {
+    const combined = [...searchResults, ...nameSearchResults];
+    // Remove duplicates based on patient ID
+    const uniqueResults = combined.filter((patient, index, self) => 
+      index === self.findIndex(p => p.id === patient.id)
+    );
+    return uniqueResults;
+  }, [searchResults, nameSearchResults]);
+
+  // Show patient history when search results are available (from either phone or name search)
   useEffect(() => {
-    setShowPatientHistory(searchResults.length > 0);
-  }, [searchResults.length]);
+    setShowPatientHistory(combinedSearchResults.length > 0);
+  }, [combinedSearchResults.length]);
 
   // Keyboard event listener for Enter key to trigger payment
   useEffect(() => {
@@ -185,7 +277,8 @@ const LabReceptionPage: React.FC = () => {
     onSuccess: (newPatientWithVisit) => {
       toast.success(`تم إنشاء زيارة للمريض ${newPatientWithVisit.name}`);
       handlePatientActivated(newPatientWithVisit);
-      setSearchQuery(''); // Clear search query after success
+      setSearchQuery(''); // Clear phone search query after success
+      setNameSearchQuery(''); // Clear name search query after success
     },
     onError: (error: AxiosError) => {
         const apiError = error as { response?: { data?: { message?: string } } };
@@ -222,9 +315,9 @@ const LabReceptionPage: React.FC = () => {
   // --- Event Handlers ---
   const handlePatientActivated = useCallback(
     (patientWithVisit: Patient & { doctorVisit?: DoctorVisit }) => {
-      queryClient.invalidateQueries({
-        queryKey: ["labReceptionQueue", currentClinicShift?.id],
-      });
+      // queryClient.invalidateQueries({
+      //   queryKey: ["labReceptionQueue", currentClinicShift?.id],
+      // });
       
       if (patientWithVisit.doctorVisit) {
         setActiveVisitId(patientWithVisit.doctorVisit.id);
@@ -248,14 +341,15 @@ const LabReceptionPage: React.FC = () => {
         toast.success(`تم اختيار المريض تلقائياً: ${patientWithVisit.name} (زيارة ${patientWithVisit.doctorVisit.id})`);
       }
     },
-    [queryClient, currentClinicShift?.id]
+    []
   );
 
   // New callback to handle post-save actions
   const handlePatientSaved = useCallback(() => {
     // Close patient history table
     setShowPatientHistory(false);
-    setSearchQuery(''); // Clear search query
+    setSearchQuery(''); // Clear phone search query
+    setNameSearchQuery(''); // Clear name search query
     
     // Focus on test selection autocomplete after a short delay
     setTimeout(() => {
@@ -478,6 +572,7 @@ interface AutocompleteVisitOption {
                   onPatientActivated={handlePatientActivated}
                   isVisible={isFormVisible}
                   onSearchChange={setSearchQuery}
+                  onNameSearchChange={setNameSearchQuery}
                   onDoctorChange={setSelectedDoctorForNewVisit}
                   referringDoctor={selectedDoctorForNewVisit}
                   onPatientSaved={handlePatientSaved}
@@ -506,8 +601,8 @@ interface AutocompleteVisitOption {
                     </Button>
                   </div>
                   <PatientHistoryTable
-                    searchResults={searchResults}
-                    isLoading={isLoadingSearchResults}
+                    searchResults={combinedSearchResults}
+                    isLoading={isLoadingSearchResults || isLoadingNameSearchResults}
                     onSelectPatient={handlePatientSelectedFromHistory}
                     referringDoctor={selectedDoctorForNewVisit}
                   />
@@ -521,6 +616,7 @@ interface AutocompleteVisitOption {
             <Card className="bg-white dark:bg-slate-800 shadow-lg border-0 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-xl h-full">
               <CardContent className="p-0 h-full overflow-hidden">
                 <LabPatientQueue
+                  ref={labPatientQueueRef}
                   appearanceSettings={getAppearanceSettings()}
                   labFilters={filters}
                   currentShift={currentClinicShift}

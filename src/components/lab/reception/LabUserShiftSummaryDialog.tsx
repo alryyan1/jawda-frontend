@@ -1,23 +1,24 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
 import {
   Dialog,
-  DialogContent,
-  DialogHeader,
   DialogTitle,
-  DialogDescription,
-  DialogClose,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+  DialogContent,
+  DialogActions,
+  Button,
+  Card,
+  CardContent,
+  Box,
+  Typography,
+  CircularProgress,
+  Alert,
+  Divider,
+} from '@mui/material';
 import { Loader2, AlertTriangle, DollarSign, Landmark, Coins } from 'lucide-react';
 import type { LabUserShiftIncomeSummary } from '@/types/attendance';
 import { fetchCurrentUserLabIncomeSummary } from '@/services/userService';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatNumber } from '@/lib/utils';
-import { cn } from '@/lib/utils';
 
 // Reusable Detail Row sub-component for consistent styling
 interface DetailRowProps {
@@ -29,16 +30,44 @@ interface DetailRowProps {
 }
 
 const DetailRow: React.FC<DetailRowProps> = ({ label, value, icon: Icon, unit, valueClass }) => (
-  <div className="flex justify-between items-center py-2 border-b last:border-b-0 dark:border-slate-700">
-    <div className="flex items-center text-sm text-muted-foreground">
-      {Icon && <Icon className="h-4 w-4 ltr:mr-2 rtl:ml-2 text-slate-500" />}
-      <span>{label}:</span>
-    </div>
-    <span className={cn("text-sm font-semibold", valueClass)}>
+  <Box sx={{ 
+    display: 'flex', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    py: 1.5,
+    borderBottom: 1,
+    borderColor: 'divider',
+    '&:last-child': {
+      borderBottom: 0
+    }
+  }}>
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+      {Icon && <Icon size={16} style={{ color: '#666' }} />}
+      <Typography variant="body2" color="text.secondary">
+        {label}:
+      </Typography>
+    </Box>
+    <Typography 
+      variant="body2" 
+      sx={{ 
+        fontWeight: 'semibold',
+        ...(valueClass === 'text-blue-600 dark:text-blue-400' && { color: 'primary.main' }),
+        ...(valueClass === 'text-purple-600 dark:text-purple-400' && { color: 'secondary.main' }),
+        ...(valueClass === 'text-xl text-green-600 dark:text-green-500' && { 
+          color: 'success.main',
+          fontSize: '1.1rem',
+          fontWeight: 'bold'
+        })
+      }}
+    >
       {value === null || value === undefined ? '-' : value}
-      {unit && <span className="text-xs text-muted-foreground ltr:ml-1 rtl:mr-1">{unit}</span>}
-    </span>
-  </div>
+      {unit && (
+        <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
+          {unit}
+        </Typography>
+      )}
+    </Typography>
+  </Box>
 );
 
 interface LabUserShiftSummaryDialogProps {
@@ -48,7 +77,6 @@ interface LabUserShiftSummaryDialogProps {
 }
 
 const LabUserShiftSummaryDialog: React.FC<LabUserShiftSummaryDialogProps> = ({ isOpen, onOpenChange, currentClinicShiftId }) => {
-  const { t } = useTranslation(['labReception', 'common', 'payments']);
   const { user } = useAuth();
 
   const queryKey = ['labUserShiftIncomeSummary', user?.id, currentClinicShiftId] as const;
@@ -66,68 +94,98 @@ const LabUserShiftSummaryDialog: React.FC<LabUserShiftSummaryDialogProps> = ({ i
   });
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="!max-w-[300px] !min-w-0 w-full">
-        <DialogHeader>
-          <DialogTitle>{t('summaryDialog.title', { userName: user?.name || t('common:user') })}</DialogTitle>
-          <DialogDescription>
-            {t('summaryDialog.labDescription', { shiftId: currentClinicShiftId || 'N/A' })}
-          </DialogDescription>
-        </DialogHeader>
+    <Dialog 
+      open={isOpen} 
+      onClose={onOpenChange}
+      maxWidth="xs"
+      fullWidth
+    >
+      <DialogTitle>
+        ملخص دخل {user?.name || 'المستخدم'} - المختبر
+      </DialogTitle>
+      <DialogContent>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          رقم الوردية: {currentClinicShiftId || 'غير محدد'}
+        </Typography>
 
-        <div className="py-4">
+        <Box sx={{ py: 2 }}>
           {(isLoading || (isFetching && !summary)) && (
-            <div className="flex-grow flex items-center justify-center py-10">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="ltr:ml-3 rtl:mr-3 text-muted-foreground">{t('summaryDialog.loading')}</p>
-            </div>
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: 'column',
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              py: 5,
+              gap: 2
+            }}>
+              <CircularProgress size={32} />
+              <Typography variant="body2" color="text.secondary">
+                جاري التحميل...
+              </Typography>
+            </Box>
           )}
+          
           {error && (
-            <div className="flex-grow text-center text-destructive bg-destructive/10 p-4 rounded-md">
-              <AlertTriangle className="mx-auto h-6 w-6 mb-2" />
-              <p className="font-semibold">{t('common:error.fetchFailed', { entity: t('common:summary') })}</p>
-              <p className="text-xs mt-1">{error.message}</p>
-            </div>
+            <Alert severity="error" sx={{ mb: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                <AlertTriangle size={20} />
+                <Typography variant="subtitle2">
+                  فشل في جلب البيانات
+                </Typography>
+              </Box>
+              <Typography variant="caption">
+                {error.message}
+              </Typography>
+            </Alert>
           )}
+          
           {summary && !isLoading && (
-            <Card>
-              <CardContent className="pt-6 space-y-1">
-                <h4 className="font-semibold text-md mb-3 text-center">{t('summaryDialog.labIncomeTitle')}</h4>
+            <Card variant="outlined">
+              <CardContent sx={{ pt: 3 }}>
+                <Typography variant="h6" sx={{ textAlign: 'center', mb: 3, fontWeight: 'bold' }}>
+                  إجمالي دخل المختبر
+                </Typography>
                 <DetailRow
-                  label={t('summaryDialog.totalCash')}
+                  label="إجمالي النقد"
                   value={formatNumber(summary.total_cash)}
                   icon={Coins}
-                  unit={t('common:currencySymbolShort')}
+                  unit="د.ك"
                   valueClass="text-blue-600 dark:text-blue-400"
                 />
                 <DetailRow
-                  label={t('summaryDialog.totalBank')}
+                  label="إجمالي البنك"
                   value={formatNumber(summary.total_bank)}
                   icon={Landmark}
-                  unit={t('common:currencySymbolShort')}
+                  unit="د.ك"
                   valueClass="text-purple-600 dark:text-purple-400"
                 />
                 <DetailRow
-                  label={t('summaryDialog.totalIncome')}
+                  label="إجمالي الدخل"
                   value={formatNumber(summary.total_lab_income)}
                   icon={DollarSign}
-                  unit={t('common:currencySymbolShort')}
+                  unit="د.ك"
                   valueClass="text-xl text-green-600 dark:text-green-500"
                 />
               </CardContent>
             </Card>
           )}
+          
           {!summary && !isLoading && !isFetching && !error && (
-             <p className="text-center text-muted-foreground py-6">{t('common:noDataAvailable')}</p>
+            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+              لا توجد بيانات متاحة
+            </Typography>
           )}
-        </div>
-
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button type="button" variant="outline">{t('common:close')}</Button>
-          </DialogClose>
-        </DialogFooter>
+        </Box>
       </DialogContent>
+      
+      <DialogActions sx={{ px: 3, pb: 2 }}>
+        <Button 
+          variant="outlined" 
+          onClick={() => onOpenChange(false)}
+        >
+          إغلاق
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 };

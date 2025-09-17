@@ -50,6 +50,7 @@ export interface PatientStripped {
   gender?: "male" | "female" | "other"; // Optional
   // You can add age_year or a computed age_string if frequently needed with stripped info
   // age_year?: number | null;
+  visit_number?: number | null;
 }
 
 // For paginated responses if you have a patient list API

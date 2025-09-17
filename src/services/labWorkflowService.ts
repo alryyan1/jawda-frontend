@@ -2,7 +2,7 @@
 import apiClient from './api';
 
 import type { ChildTestOption } from '../types/labTests';
-import type { ChildTestWithResult, LabQueueFilters, MainTestWithChildrenResults, PaginatedPatientLabQueueResponse, ResultEntryFormValues } from '@/types/labWorkflow';
+import type { LabQueueFilters, MainTestWithChildrenResults, PaginatedPatientLabQueueResponse, ResultEntryFormValues } from '@/types/labWorkflow';
 import type { LabRequest, RequestedResult } from '@/types/visits';
 
 const LABREQUEST_BASE_URL = '/labrequests';

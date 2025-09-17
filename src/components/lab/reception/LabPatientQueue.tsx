@@ -1,6 +1,5 @@
 // src/components/lab/reception/LabPatientQueue.tsx
-import React, { useState, useEffect } from 'react';
-import { useQuery, keepPreviousData, useQueryClient } from '@tanstack/react-query';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Loader2, AlertTriangle, Users } from 'lucide-react';
 
@@ -8,7 +7,7 @@ import { Loader2, AlertTriangle, Users } from 'lucide-react';
 import QueueHeader from '@/components/lab/workstation/QueueHeader'; // Reusable header component
 import PatientLabRequestItem from '@/components/lab/workstation/PatientLabRequestItem'; // Reusable patient square component
 import type { Shift } from '@/types/shifts';
-import type { PatientLabQueueItem, PaginatedPatientLabQueueResponse, LabQueueFilters } from '@/types/labWorkflow';
+import type { PatientLabQueueItem, LabQueueFilters } from '@/types/labWorkflow';
 import { getNewlyRegisteredLabPendingQueue } from '@/services/labWorkflowService';
 import type { LabAppearanceSettings } from '@/lib/appearance-settings-store';
 
@@ -23,50 +22,101 @@ interface LabPatientQueueProps {
   appearanceSettings: LabAppearanceSettings;
 }
 
-const LabPatientQueue: React.FC<LabPatientQueueProps> = ({
+export interface LabPatientQueueRef {
+  appendPatientToQueue: (patient: PatientLabQueueItem) => void;
+  refresh: () => void;
+}
+
+const LabPatientQueue = React.forwardRef<LabPatientQueueRef, LabPatientQueueProps>(({
   appearanceSettings,
   currentShift, onShiftChange, onPatientSelect, selectedVisitId, globalSearchTerm, labFilters, filters
-}) => {
-  const queryClient = useQueryClient();
+}, ref) => {
   const [currentPage, setCurrentPage] = useState(1);
+  const [queueItems, setQueueItems] = useState<PatientLabQueueItem[]>([]);
+  const [meta, setMeta] = useState<{ total: number; page: number; limit: number } | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isFetching, setIsFetching] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
   
-  // Use either labFilters or filters prop
-  const activeFilters = labFilters || filters || {};
-  // console.log(activeFilters,'activeFilters from queue')
-  
-  // Use a query key specific to this queue to avoid conflicts with other queues
-  const queueQueryKey = ['labReceptionQueue', currentShift?.id, globalSearchTerm, currentPage, activeFilters] as const;
-
-  const { data: paginatedQueue, isLoading, error, isFetching } = useQuery<PaginatedPatientLabQueueResponse, Error>({
-    queryKey: queueQueryKey,
-    queryFn: () => {
-      const filters: LabQueueFilters & { search?: string; page?: number; per_page?: number; shift_id?: number } = {
+  // Fetch queue data function
+  const fetchQueueData = useCallback(async () => {
+    if (!currentShift) return;
+    
+    setIsFetching(true);
+    setError(null);
+    
+    try {
+      // Use either labFilters or filters prop
+      const activeFilters = labFilters || filters || {};
+      
+      const requestFilters: LabQueueFilters & { search?: string; page?: number; per_page?: number; shift_id?: number } = {
         ...activeFilters,
         search: globalSearchTerm,
         page: currentPage,
         per_page: 50, // Fetch a good number of items for the flexbox layout
       };
       if (currentShift?.id) {
-        filters.shift_id = currentShift.id;
+        requestFilters.shift_id = currentShift.id;
       }
-      // The backend method getNewlyRegisteredLabPendingQueue will default to today if no shift_id is provided
-      return getNewlyRegisteredLabPendingQueue(filters);
-    },
-    placeholderData: keepPreviousData, // Smooth pagination experience
-    enabled: !!currentShift, // Only run the query if there is an active shift context
-  });
+      
+      const paginatedQueue = await getNewlyRegisteredLabPendingQueue(requestFilters);
+      setQueueItems(paginatedQueue.data);
+      setMeta(paginatedQueue.meta);
+    } catch (err) {
+      setError(err as Error);
+      console.error('Error fetching queue data:', err);
+    } finally {
+      setIsLoading(false);
+      setIsFetching(false);
+    }
+  }, [currentShift, labFilters, filters, globalSearchTerm, currentPage]);
+
+  // Initial load and when dependencies change
+  useEffect(() => {
+    if (currentShift) {
+      setIsLoading(true);
+      fetchQueueData();
+    }
+  }, [currentShift, fetchQueueData]);
 
   // Reset to the first page whenever the shift or search term changes
   useEffect(() => {
     setCurrentPage(1);
   }, [currentShift?.id, globalSearchTerm]);
 
-  const queueItems = paginatedQueue?.data || [];
-  const meta = paginatedQueue?.meta;
+  const handleRefresh = useCallback(() => {
+    fetchQueueData();
+  }, [fetchQueueData]);
 
-  const handleRefresh = () => {
-    queryClient.invalidateQueries({ queryKey: ['labReceptionQueue', currentShift?.id] });
-  };
+  // Method to append a new patient to the queue (for real-time updates)
+  const appendPatientToQueue = useCallback((newPatient: PatientLabQueueItem) => {
+    setQueueItems(prevItems => {
+      // Check if patient already exists to avoid duplicates
+      const existingPatient = prevItems.find(item => item.visit_id === newPatient.visit_id);
+      if (existingPatient) {
+        return prevItems; // Patient already exists, no need to add
+      }
+      
+      // Add the new patient to the beginning of the queue
+      return [newPatient, ...prevItems];
+    });
+    
+    // Update the total count
+    setMeta(prevMeta => {
+      if (!prevMeta) return prevMeta;
+      return {
+        ...prevMeta,
+        total: prevMeta.total + 1
+      };
+    });
+  }, []);
+
+  // Expose the appendPatientToQueue method via ref
+  React.useImperativeHandle(ref, () => ({
+    appendPatientToQueue,
+    refresh: handleRefresh
+  }));
+
   // console.log(queueItems,'queueItems from queue')
   return (
     <div className="h-full flex flex-col">
@@ -111,7 +161,7 @@ const LabPatientQueue: React.FC<LabPatientQueueProps> = ({
 
         {queueItems.length > 0 && (
           <ScrollArea className="h-[calc(100vh-300px)] overflow-y-auto ">
-            <div className="p-2 flex flex-wrap gap-2 justify-start items-start content-start">
+            <div className="p-2 flex flex-wrap gap-2 justify-center items-start content-start">
               {queueItems.map((item) => (
                 <PatientLabRequestItem
                   appearanceSettings={appearanceSettings}
@@ -133,5 +183,8 @@ const LabPatientQueue: React.FC<LabPatientQueueProps> = ({
   
     </div>
   );
-};
+});
+
+LabPatientQueue.displayName = 'LabPatientQueue';
+
 export default LabPatientQueue;

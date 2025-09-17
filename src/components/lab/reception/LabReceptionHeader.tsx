@@ -37,7 +37,7 @@ interface LabReceptionHeaderProps {
   isLoadingTests: boolean;
   activeVisitId: number | null;
   addTestsMutation: { isPending: boolean };
-  testSelectionAutocompleteRef: React.RefObject<any>;
+  testSelectionAutocompleteRef: React.RefObject<HTMLDivElement | null>;
 
   // Search props
   recentVisitsData: AutocompleteVisitOption[] | undefined;
@@ -241,6 +241,14 @@ const LabReceptionHeader: React.FC<LabReceptionHeaderProps> = ({
                     if (foundTest) {
                       setSelectedTests([...selectedTests, foundTest]);
                     }
+                  } else if (e.key === "+" || e.key === "=") {
+                    // Trigger add tests when + or = key is pressed
+                    e.preventDefault();
+                    if (selectedTests.length > 0 && activeVisitId && !addTestsMutation.isPending) {
+                      onAddTests();
+                      // Remove focus from the input after adding tests
+                      (e.target as HTMLInputElement).blur();
+                    }
                   }
                 }}
               />
@@ -261,15 +269,13 @@ const LabReceptionHeader: React.FC<LabReceptionHeaderProps> = ({
             }
             sx={{
               bgcolor: 'primary.main',
-              '&:hover': {
-                bgcolor: 'primary.dark',
-              },
               px: 2,
               py: 1,
               borderRadius: 1,
               boxShadow: 2,
               transition: 'all 0.2s ease-in-out',
               '&:hover': {
+                bgcolor: 'primary.dark',
                 boxShadow: 4,
                 transform: 'scale(1.05)',
               },

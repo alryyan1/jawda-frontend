@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -27,15 +27,14 @@ import AddCompanyRelationDialog from "@/components/clinic/AddCompanyRelationDial
 // Services & Types
 import { registerNewPatientFromLab } from "@/services/patientService";
 import {
-  getCompaniesList,
   getSubcompaniesList,
-  getCompanyRelationsList,
 } from "@/services/companyService";
 import { useCachedDoctorsList, useCachedCompaniesList, useCachedCompanyRelationsList } from "@/hooks/useCachedData";
+import { useDebounce } from "@/hooks/useDebounce";
 import type { Patient } from "@/types/patients";
 import type { DoctorVisit } from "@/types/visits";
 import type { DoctorStripped } from "@/types/doctors";
-import type { Company, Subcompany, CompanyRelation } from "@/types/companies";
+import type { Subcompany, CompanyRelation } from "@/types/companies";
 // i18n removed
 
 
@@ -61,6 +60,7 @@ interface LabRegistrationFormProps {
   onPatientActivated: (patientWithVisit: Patient & { doctorVisit?: DoctorVisit }) => void;
   isVisible?: boolean;
   onSearchChange: (query: string) => void;
+  onNameSearchChange: (query: string) => void; // New callback for name-based search
   onDoctorChange: (doctor: DoctorStripped | null) => void;
   referringDoctor: DoctorStripped | null;
   setActiveVisitId: (visitId: number) => void;
@@ -68,10 +68,11 @@ interface LabRegistrationFormProps {
   onPatientSaved?: () => void; // New callback to handle post-save actions
 }
 
-const LabRegistrationForm: React.FC<LabRegistrationFormProps> = ({
+const LabRegistrationForm: React.FC<LabRegistrationFormProps> = React.memo(({
   onPatientActivated,
   isVisible,
   onSearchChange,
+  onNameSearchChange,
   onDoctorChange,
   setActiveVisitId,
   setFormVisible,
@@ -91,9 +92,23 @@ const LabRegistrationForm: React.FC<LabRegistrationFormProps> = ({
     },
   });
   const { control, handleSubmit, reset, setValue, watch } = form;
-
+  
+  // Only watch company_id for conditional rendering, not for every keystroke
   const companyId = watch("company_id");
-  const isCompanySelected = !!companyId && companyId !== "";
+  const isCompanySelected = useMemo(() => !!companyId && companyId !== "", [companyId]);
+
+  // Use a state to track the name value for debounced search
+  const [nameValue, setNameValue] = useState<string>("");
+  const debouncedNameSearch = useDebounce(nameValue, 500);
+
+  // Trigger name search when debounced value changes
+  useEffect(() => {
+    if (debouncedNameSearch && debouncedNameSearch.length >= 2) {
+      onNameSearchChange(debouncedNameSearch);
+    } else if (debouncedNameSearch === "") {
+      onNameSearchChange(""); // Clear search when name is empty
+    }
+  }, [debouncedNameSearch, onNameSearchChange]);
 
   // لم يعد هناك Zod؛ التحقق البسيط سيكون عند الإرسال
 
@@ -113,13 +128,17 @@ const LabRegistrationForm: React.FC<LabRegistrationFormProps> = ({
   const selectedDoctor = watch("doctor");
   useEffect(() => {
     if (!selectedDoctor && doctorsList && doctorsList.length > 0) {
-      const defaultDoctor = doctorsList.find((d) => (d as any)?.is_default === true);
+      const defaultDoctor = doctorsList.find((d) => (d as DoctorStripped & { is_default?: boolean })?.is_default === true);
       if (defaultDoctor) {
-        setValue("doctor", defaultDoctor as any, { shouldValidate: true, shouldDirty: true });
+        setValue("doctor", defaultDoctor, { shouldValidate: true, shouldDirty: true });
         onDoctorChange(defaultDoctor);
       }
     }
   }, [doctorsList, selectedDoctor, setValue, onDoctorChange]);
+
+  const handleDoctorChange = useCallback((doctor: DoctorStripped | null) => {
+    onDoctorChange(doctor);
+  }, [onDoctorChange]);
 
   const { data: subcompanies = [] } = useQuery<Subcompany[], Error>({
     queryKey: ["subcompaniesList", companyId],
@@ -168,13 +187,23 @@ const LabRegistrationForm: React.FC<LabRegistrationFormProps> = ({
     },
   });
 
-  const handleSearchInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSearchInputChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
     setValue(name as keyof LabRegistrationFormValues, value, { shouldValidate: true });
-    onSearchChange(value);
-  };
+    // Only trigger search for phone field, not name field
+    if (name === 'phone') {
+      onSearchChange(value);
+    }
+  }, [setValue, onSearchChange]);
 
-  const onSubmit = handleSubmit((data) => {
+  const handleNameInputChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const { value } = event.target;
+    setValue('name', value, { shouldValidate: true });
+    // Update the state for debounced search
+    setNameValue(value);
+  }, [setValue]);
+
+  const onSubmit = useCallback((data: LabRegistrationFormValues) => {
     // تحقق بسيط قبل الإرسال
     if (!data.name?.trim()) {
       toast.error('الاسم مطلوب');
@@ -201,32 +230,36 @@ const LabRegistrationForm: React.FC<LabRegistrationFormProps> = ({
       return;
     }
     registrationMutation.mutate(data);
-  });
-  const handleSubcompanyAdded = (newSubcompany: Subcompany) => {
+  }, [isCompanySelected, registrationMutation]);
+  const handleSubcompanyAdded = useCallback((newSubcompany: Subcompany) => {
     queryClient.invalidateQueries({ queryKey: ["subcompaniesList", companyId] });
     setValue("subcompany_id", newSubcompany.id.toString());
     setShowSubcompanyDialog(false);
-  };
-  const handleRelationAdded = (newRelation: CompanyRelation) => {
+  }, [queryClient, companyId, setValue]);
+
+  const handleRelationAdded = useCallback((newRelation: CompanyRelation) => {
     queryClient.invalidateQueries({ queryKey: ["companyRelationsList"] });
     setValue("company_relation_id", newRelation.id.toString());
     setShowRelationDialog(false);
-  };
+  }, [queryClient, setValue]);
 
-  const currentIsLoading = isLoadingDoctors || isLoadingCompanies || registrationMutation.isPending;
+  const currentIsLoading = useMemo(() => 
+    isLoadingDoctors || isLoadingCompanies || registrationMutation.isPending,
+    [isLoadingDoctors, isLoadingCompanies, registrationMutation.isPending]
+  );
 
   return (
     <Box sx={{ width: '100%', maxWidth: 380, mx: 'auto' }}>
       <Card>
         <CardContent>
           <Typography variant="h6">تسجيل مريض جديد</Typography>
-          <Box component="form" onSubmit={onSubmit} sx={{ mt: 2 }}>
+          <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ mt: 2 }}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <Controller name="phone" control={control} render={({ field }) => (
                 <TextField fullWidth label="رقم الهاتف" id="lab-phone" type="tel" inputProps={{ maxLength: 10 }} placeholder="0xxxxxxxxx" autoComplete="off" {...field} value={field.value || ""} inputRef={phoneInputRef} onChange={handleSearchInputChange} disabled={currentIsLoading}/>
               )} />
               <Controller name="name" control={control} render={({ field }) => (
-                <TextField fullWidth label="اسم المريض" id="lab-name" autoComplete="off" {...field} inputRef={nameInputRef} onChange={handleSearchInputChange} />
+                <TextField fullWidth label="اسم المريض" id="lab-name" autoComplete="off" {...field} inputRef={nameInputRef} onChange={handleNameInputChange} />
               )} />
               <Controller name="doctor" control={control} render={({ field, fieldState }) => (
                 <FormControl fullWidth size="small">
@@ -239,7 +272,7 @@ const LabRegistrationForm: React.FC<LabRegistrationFormProps> = ({
                     isOptionEqualToValue={(option, value) => option.id === value.id}
                     onChange={(_, data) => {
                       field.onChange(data);
-                      onDoctorChange(data);
+                      handleDoctorChange(data);
                     }}
                     size="small"
                     renderInput={(params) => (
@@ -348,5 +381,8 @@ const LabRegistrationForm: React.FC<LabRegistrationFormProps> = ({
       />
     </Box>
   );
-};
+});
+
+LabRegistrationForm.displayName = 'LabRegistrationForm';
+
 export default LabRegistrationForm;

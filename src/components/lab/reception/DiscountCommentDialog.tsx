@@ -1,10 +1,17 @@
 // src/components/lab/reception/DiscountCommentDialog.tsx
 import React, { useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
-import { useTranslation } from 'react-i18next';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  TextField,
+  Box,
+  Typography,
+  CircularProgress,
+} from '@mui/material';
 import { Loader2 } from 'lucide-react';
 
 interface DiscountCommentDialogProps {
@@ -24,7 +31,6 @@ const DiscountCommentDialog: React.FC<DiscountCommentDialogProps> = ({
   isSaving,
   labRequestId
 }) => {
-  const { t } = useTranslation(['labReception', 'common']);
   const { control, setValue, watch } = useForm<{ comment: string }>({
     defaultValues: { comment: currentComment || '' },
   });
@@ -46,7 +52,7 @@ const DiscountCommentDialog: React.FC<DiscountCommentDialogProps> = ({
   
   const handleDialogClose = () => {
     if (currentComment !== commentText) {
-      if(window.confirm(t('common:confirmDiscardChanges'))) {
+      if(window.confirm('هل تريد تجاهل التغييرات؟')) {
         onOpenChange(false);
       }
     } else {
@@ -55,39 +61,55 @@ const DiscountCommentDialog: React.FC<DiscountCommentDialogProps> = ({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleDialogClose}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{t('labReception:discountComment.title', 'Discount Comment')}</DialogTitle>
-        </DialogHeader>
-        <div className="py-4">
+    <Dialog 
+      open={isOpen} 
+      onClose={handleDialogClose}
+      maxWidth="sm"
+      fullWidth
+    >
+      <DialogTitle>
+        تعليق الخصم
+      </DialogTitle>
+      <DialogContent>
+        <Box sx={{ py: 2 }}>
           <Controller
             name="comment"
             control={control}
             render={({ field }) => (
-              <Textarea
+              <TextField
                 {...field}
+                multiline
                 rows={6}
-                placeholder={t('labReception:discountComment.placeholder', 'Enter discount comment...')}
-                className="text-sm"
+                fullWidth
+                placeholder="أدخل تعليق الخصم..."
+                variant="outlined"
+                sx={{ 
+                  '& .MuiInputBase-input': {
+                    fontSize: '0.875rem',
+                  }
+                }}
               />
             )}
           />
-        </div>
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={handleDialogClose}>
-            {t('common:cancel')}
-          </Button>
-          <Button 
-            type="button" 
-            onClick={handleSave} 
-            disabled={isSaving || !commentText.trim()}
-          >
-            {isSaving && <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2" />}
-            {t('common:save')}
-          </Button>
-        </DialogFooter>
+        </Box>
       </DialogContent>
+      <DialogActions sx={{ px: 3, pb: 2 }}>
+        <Button 
+          variant="outlined" 
+          onClick={handleDialogClose}
+          disabled={isSaving}
+        >
+          إلغاء
+        </Button>
+        <Button 
+          variant="contained"
+          onClick={handleSave} 
+          disabled={isSaving || !commentText.trim()}
+          startIcon={isSaving ? <CircularProgress size={16} /> : null}
+        >
+          حفظ
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 };

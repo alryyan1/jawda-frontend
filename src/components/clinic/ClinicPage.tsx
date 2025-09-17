@@ -150,6 +150,8 @@ const handleDoctorShiftSelectedFromFinder = useCallback((shift: DoctorShift) => 
   }, [activeDoctorShift]);
 
 
+  const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<'services' | 'lab'>('services');
+
   return (
     <div className="clinic-page-container" dir="rtl">
       {/* Top Section: Doctors Tabs Only */}
@@ -213,15 +215,17 @@ const handleDoctorShiftSelectedFromFinder = useCallback((shift: DoctorShift) => 
               initialPatient={selectedPatientVisit.patient}
               visitId={selectedPatientVisit.visitId}
               onClose={() => setSelectedPatientVisit(null)}
+              onActiveTabChange={(tab) => setActiveWorkspaceTab(tab)}
             />
           </section>
         )}
 
         {/* Section 5: Patient Details Column (Always visible) */}
        { <section className="clinic-panel details">
-          <PatientDetailsColumnClinic
+         <PatientDetailsColumnClinic
             visitId={selectedPatientVisit?.visitId || null}
             currentClinicShiftId={activeDoctorShift?.id || null}
+            activeTab={activeWorkspaceTab}
             onPrintReceipt={() => {
               // Print receipt functionality
             }}

@@ -14,12 +14,14 @@ interface PatientDetailsColumnClinicProps {
   visitId: number | null;
   onPrintReceipt?: () => void;
   currentClinicShiftId?: number | null;
+  activeTab?: 'services' | 'lab';
 }
 
 const PatientDetailsColumnClinic: React.FC<PatientDetailsColumnClinicProps> = ({
   visitId,
   onPrintReceipt,
   currentClinicShiftId,
+  activeTab = 'services',
 }) => {
   const queryClient = useQueryClient();
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -37,6 +39,16 @@ const PatientDetailsColumnClinic: React.FC<PatientDetailsColumnClinicProps> = ({
   const { data: requestedServices = [], isLoading: isLoadingServices } = useQuery({
     queryKey: ["requestedServicesForVisit", visitId],
     queryFn: () => getRequestedServicesForVisit(visitId!),
+    enabled: !!visitId,
+  });
+
+  // Fetch lab requests for lab totals when needed
+  const { data: labRequests = [], isLoading: isLoadingLab } = useQuery({
+    queryKey: ["labRequestsForVisit", visitId],
+    queryFn: async () => {
+      const { getLabRequestsForVisit } = await import("@/services/labRequestService");
+      return getLabRequestsForVisit(visitId!);
+    },
     enabled: !!visitId,
   });
 
@@ -148,7 +160,7 @@ const PatientDetailsColumnClinic: React.FC<PatientDetailsColumnClinicProps> = ({
     );
   }
 
-  if (isLoadingVisit || isLoadingServices) {
+  if (isLoadingVisit || isLoadingServices || isLoadingLab) {
     return (
       <div className="flex flex-col h-full w-full items-center justify-center p-4">
         <Loader2 className="h-8 w-8 animate-spin mb-2" />
@@ -166,20 +178,37 @@ const PatientDetailsColumnClinic: React.FC<PatientDetailsColumnClinicProps> = ({
     );
   }
 
-  // Calculate totals
-  const total = requestedServices.reduce((sum, service) => {
-    const price = Number(service.price) || 0;
-    const count = Number(service.count) || 1;
-    return sum + (price * count);
-  }, 0);
+  // Calculate totals depending on active tab
+  let total = 0;
+  let totalPaid = 0;
+  let totalBalance = 0;
 
-  const totalPaid = requestedServices.reduce((sum, service) => {
-    return sum + (Number(service.amount_paid) || 0);
-  }, 0);
-
-  const totalBalance = requestedServices.reduce((sum, service) => {
-    return sum + calculateItemBalance(service);
-  }, 0);
+  if (activeTab === 'lab') {
+    total = labRequests.reduce((sum, lr) => {
+      const price = Number(lr.price) || 0;
+      const count = Number(lr.count) || 1;
+      const discountPer = Number(lr.discount_per) || 0;
+      const endurance = Number(lr.endurance) || 0;
+      const subTotal = price * count;
+      const discountAmount = (subTotal * discountPer) / 100;
+      const net = subTotal - discountAmount - endurance;
+      return sum + net;
+    }, 0);
+    totalPaid = labRequests.reduce((sum, lr) => sum + (Number(lr.amount_paid) || 0), 0);
+    totalBalance = total - totalPaid;
+  } else {
+    total = requestedServices.reduce((sum, service) => {
+      const price = Number(service.price) || 0;
+      const count = Number(service.count) || 1;
+      return sum + (price * count);
+    }, 0);
+    totalPaid = requestedServices.reduce((sum, service) => {
+      return sum + (Number(service.amount_paid) || 0);
+    }, 0);
+    totalBalance = requestedServices.reduce((sum, service) => {
+      return sum + calculateItemBalance(service);
+    }, 0);
+  }
 
   const patientName = visit.patient?.name;
   const doctorName = visit.doctor?.name;
@@ -229,37 +258,20 @@ const PatientDetailsColumnClinic: React.FC<PatientDetailsColumnClinicProps> = ({
           </div>
         )}
 
-        {/* Services Summary */}
-        <div className="w-full mb-4">
-          <div className="text-center text-muted-foreground font-semibold border-b border-border pb-2 mb-3">
-            الخدمات المطلوبة ({requestedServices.length})
-          </div>
-          
-          {requestedServices.length > 0 && (
-            <div className="space-y-1 mb-3 max-h-32 overflow-y-auto">
-              {requestedServices.map((service) => (
-                <div key={service.id} className="flex justify-between text-xs p-2 bg-muted/50 rounded">
-                  <span className="truncate">{service.service?.name}</span>
-                  <span className="font-medium">{Number(service.price).toLocaleString()}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
 
-        {/* Financial Summary */}
+        {/* Financial Summary (switches based on activeTab) */}
         <div className="w-full bg-muted/30 rounded-lg border border-border flex flex-col items-center mb-4">
           <div className="flex w-full">
             <div className="flex-1 text-center p-3 border-r border-border">
-              <div className="text-xs text-muted-foreground">المجموع</div>
+              <div className="text-xs text-muted-foreground">{activeTab === 'lab' ? 'إجمالي المختبر' : 'المجموع'}</div>
               <div className="text-lg font-bold text-foreground">{total.toLocaleString()}</div>
             </div>
             <div className="flex-1 text-center p-3 border-r border-border">
-              <div className="text-xs text-muted-foreground">المدفوع</div>
+              <div className="text-xs text-muted-foreground">{activeTab === 'lab' ? 'المدفوع للمختبر' : 'المدفوع'}</div>
               <div className="text-lg text-green-600 font-bold">{totalPaid.toLocaleString()}</div>
             </div>
             <div className="flex-1 text-center p-3">
-              <div className="text-xs text-muted-foreground">المتبقي</div>
+              <div className="text-xs text-muted-foreground">{activeTab === 'lab' ? 'المتبقي للمختبر' : 'المتبقي'}</div>
               <div className={cn(
                 "text-lg font-bold",
                 totalBalance > 0.009 ? "text-red-600" : "text-green-600"

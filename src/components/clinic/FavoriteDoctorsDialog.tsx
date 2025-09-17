@@ -41,11 +41,13 @@ import {
 interface FavoriteDoctorsDialogProps {
   triggerButton: React.ReactNode;
   currentUserId: number | null;
+  onClose?: () => void;
 }
 
 const FavoriteDoctorsDialog: React.FC<FavoriteDoctorsDialogProps> = ({ 
   triggerButton, 
-  currentUserId 
+  currentUserId,
+  onClose,
 }) => {
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
@@ -134,7 +136,7 @@ const FavoriteDoctorsDialog: React.FC<FavoriteDoctorsDialogProps> = ({
       </Box>
       <Dialog 
         open={isOpen} 
-        onClose={() => setIsOpen(false)}
+        onClose={() => { setIsOpen(false); onClose?.(); }}
         maxWidth="lg"
         fullWidth
       >
@@ -263,7 +265,7 @@ const FavoriteDoctorsDialog: React.FC<FavoriteDoctorsDialogProps> = ({
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setIsOpen(false)} variant="outlined">
+          <Button onClick={() => { setIsOpen(false); onClose?.(); }} variant="outlined">
             إغلاق
           </Button>
         </DialogActions>

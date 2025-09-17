@@ -130,7 +130,7 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
       id: dep.id,
       amount: String(dep.amount),
       is_bank: dep.is_bank,
-      user_name: dep.user?.name || "unknown",
+      user_name: dep.user?.name || "غير معروف",
       created_at_formatted: dep.created_at
         ? format(new Date(dep.created_at), "Pp", { locale: dateLocale })
         : "-",
@@ -167,25 +167,25 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
   const createMutation = useMutation<RequestedServiceDeposit, ApiError, Omit<RequestedServiceDepositFormData, "id">>({
     mutationFn: (data) => createRequestedServiceDeposit(requestedService.id, data),
     onSuccess: () => {
-      toast.success("depositAddedSuccess");
+      toast.success("تم إضافة الدفعة بنجاح");
       handleQueryInvalidation();
     },
-    onError: (err) => toast.error(err.response?.data?.message || "error.createFailed"),
+    onError: (err) => toast.error(err.response?.data?.message || "فشل إنشاء الدفعة"),
   });
 
   const updateMutation = useMutation<RequestedServiceDeposit, ApiError, RequestedServiceDepositFormData>({
     mutationFn: (data) => updateRequestedServiceDeposit(data.id!, data),
     onSuccess: () => {
-      toast.success("depositUpdatedSuccess");
+      toast.success("تم تحديث الدفعة بنجاح");
       handleQueryInvalidation();
     },
-    onError: (err) => toast.error(err.response?.data?.message || "error.updateFailed"),
+    onError: (err) => toast.error(err.response?.data?.message || "فشل تحديث الدفعة"),
   });
 
   const deleteMutation = useMutation<void, ApiError, number>({
     mutationFn: (depositId) => deleteRequestedServiceDeposit(depositId),
     onSuccess: () => {
-      toast.success("depositDeletedSuccess");
+      toast.success("تم حذف الدفعة بنجاح");
       handleQueryInvalidation();
     },
     onError: (err) => toast.error(err.response?.data?.message || "فشل في الحذف"),
@@ -196,14 +196,14 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
 
     form.trigger(`deposits.${index}`).then((isValid) => {
       if (!isValid) {
-        toast.error("validation.checkErrorsInRow");
+        toast.error("تحقق من وجود أخطاء في الصف");
         return;
       }
 
       const rowData = getValues(`deposits.${index}`);
       
       if (!currentClinicShift?.id && !rowData.id) {
-        toast.error("error.noActiveShiftForPayment");
+        toast.error("لا توجد وردية نشطة للدفع");
         return;
       }
 
@@ -219,7 +219,7 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
         createMutation.mutate(payload as Omit<RequestedServiceDepositFormData, "id">);
       }
     });
-  }, [getValues, currentClinicShift?.id, t, updateMutation, createMutation, form, isOpen]);
+  }, [getValues, currentClinicShift?.id, updateMutation, createMutation, form, isOpen]);
 
   const addNewDepositField = useCallback(() => {
     if (!isOpen) return;
@@ -227,7 +227,7 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
     append({
       amount: "0.00",
       is_bank: false,
-      user_name: "newEntry",
+      user_name: "إدخال جديد",
       created_at_formatted: format(new Date(), "Pp", { locale: dateLocale }),
     });
   }, [append, dateLocale, isOpen]);
@@ -249,10 +249,10 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
       <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
-            {"manageDepositsDialog.title"}
+            {"إدارة دفعات الخدمة"}
           </DialogTitle>
           <DialogDescription>
-            {"manageDepositsDialog.description"}
+            {"أضف وعدّل واحذف دفعات الخدمة"}
           </DialogDescription>
         </DialogHeader>
 
@@ -273,7 +273,7 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
                 {fields.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
                     <Info size={24} className="mx-auto mb-2" />
-                    {"manageDepositsDialog.noDeposits"}
+                    {"لا توجد دفعات"}
                   </div>
                 )}
                 {fields.length > 0 && (
@@ -281,19 +281,19 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-[120px] text-center">
-                          {"table.amount"}
+                          {"المبلغ"}
                         </TableHead>
                         <TableHead className="w-[100px] text-center">
-                          {"table.method"}
+                          {"طريقة الدفع"}
                         </TableHead>
                         <TableHead className="hidden sm:table-cell text-center">
-                          {"table.user"}
+                          {"المستخدم"}
                         </TableHead>
                         <TableHead className="hidden sm:table-cell text-center">
-                          {"table.dateTime"}
+                          {"التاريخ والوقت"}
                         </TableHead>
                         <TableHead className="w-[80px] text-center">
-                          {"فتح القائمة"}
+                          {"إجراءات"}
                         </TableHead>
                       </TableRow>
                     </TableHeader>
@@ -330,8 +330,8 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
                                     className="text-xs ltr:ml-2 rtl:mr-2"
                                   >
                                     {f.value
-                                      ? "bankShort"
-                                      : "cashShort"}
+                                      ? "تحويل بنكي"
+                                      : "نقدي"}
                                   </label>
                                 </div>
                               )}
@@ -398,7 +398,7 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
                   className="text-xs"
                 >
                   <PlusCircle className="h-3.5 w-3.5 ltr:mr-1 rtl:ml-1" />{" "}
-                  {"manageDepositsDialog.addDepositButton"}
+                  {"إضافة دفعة"}
                 </Button>
               </div>
               <DialogFooter className="mt-auto pt-4">

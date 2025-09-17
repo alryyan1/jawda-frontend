@@ -280,6 +280,10 @@ const ManageDoctorShiftsDialog: React.FC<ManageDoctorShiftsDialogProps> = ({ tri
         <DialogActions>
           <FavoriteDoctorsDialog
             currentUserId={currentUserId}
+            onClose={() => {
+              queryClient.invalidateQueries({ queryKey: doctorsQueryKey });
+              queryClient.invalidateQueries({ queryKey: ['favoriteDoctors'] });
+            }}
             triggerButton={
               <Button
                 variant="outlined"

@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 
 // Shadcn UI & Custom Components
@@ -67,7 +66,6 @@ interface LabFilterDialogProps {
 const LabFilterDialog: React.FC<LabFilterDialogProps> = ({
   currentFilters, onApplyFilters, onClearFilters, activeFilterCount
 }) => {
-  const { t } = useTranslation(['labReception', 'common']);
   const [isOpen, setIsOpen] = useState(false);
 
   const form = useForm<FilterFormValues>({
@@ -123,7 +121,7 @@ const LabFilterDialog: React.FC<LabFilterDialogProps> = ({
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="h-10 relative">
           <Filter className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
-          {t('actions.filter')}
+          تصفية
           {activeFilterCount > 0 && (
             <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px]">
               {activeFilterCount}
@@ -133,8 +131,8 @@ const LabFilterDialog: React.FC<LabFilterDialogProps> = ({
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{t('filterDialog.title')}</DialogTitle>
-          <DialogDescription>{t('filterDialog.description')}</DialogDescription>
+          <DialogTitle>تصفية الطابور</DialogTitle>
+          <DialogDescription>اختر معايير التصفية لتقليل النتائج</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2">
@@ -151,7 +149,7 @@ const LabFilterDialog: React.FC<LabFilterDialogProps> = ({
                   onChange={(_, data) => field.onChange(data)}
                   size="small"
                   renderInput={(params) => (
-                    <TextField {...params} label={t('filterDialog.companyLabel')} variant="outlined" InputProps={{...params.InputProps, endAdornment: (<>{isLoadingCompanies ? <CircularProgress size={16}/> : null}{params.InputProps.endAdornment}</>)}}/>
+                    <TextField {...params} label={"الشركة"} variant="outlined" InputProps={{...params.InputProps, endAdornment: (<>{isLoadingCompanies ? <CircularProgress size={16}/> : null}{params.InputProps.endAdornment}</>)}}/>
                   )}
                   PaperComponent={(props) => <Paper {...props} className="dark:bg-slate-800 dark:text-slate-100" />}
                 />
@@ -170,7 +168,7 @@ const LabFilterDialog: React.FC<LabFilterDialogProps> = ({
                   onChange={(_, data) => field.onChange(data)}
                   size="small"
                   renderInput={(params) => (
-                    <TextField {...params} label={t('filterDialog.doctorLabel')} variant="outlined" InputProps={{...params.InputProps, endAdornment: (<>{isLoadingDoctors ? <CircularProgress size={16}/> : null}{params.InputProps.endAdornment}</>)}}/>
+                    <TextField {...params} label={"الطبيب"} variant="outlined" InputProps={{...params.InputProps, endAdornment: (<>{isLoadingDoctors ? <CircularProgress size={16}/> : null}{params.InputProps.endAdornment}</>)}}/>
                   )}
                   PaperComponent={(props) => <Paper {...props} className="dark:bg-slate-800 dark:text-slate-100" />}
                 />
@@ -189,7 +187,7 @@ const LabFilterDialog: React.FC<LabFilterDialogProps> = ({
                   onChange={(_, data) => field.onChange(data)}
                   size="small"
                   renderInput={(params) => (
-                    <TextField {...params} label={t('filterDialog.specialistLabel')} variant="outlined" InputProps={{...params.InputProps, endAdornment: (<>{isLoadingSpecialists ? <CircularProgress size={16}/> : null}{params.InputProps.endAdornment}</>)}}/>
+                    <TextField {...params} label={"التخصص"} variant="outlined" InputProps={{...params.InputProps, endAdornment: (<>{isLoadingSpecialists ? <CircularProgress size={16}/> : null}{params.InputProps.endAdornment}</>)}}/>
                   )}
                   PaperComponent={(props) => <Paper {...props} className="dark:bg-slate-800 dark:text-slate-100" />}
                 />
@@ -207,7 +205,7 @@ const LabFilterDialog: React.FC<LabFilterDialogProps> = ({
                     />
                   </FormControl>
                   <div className="space-y-1 leading-none">
-                    <FormLabel>{t('filterDialog.bankPaymentOnly')}</FormLabel>
+                    <FormLabel>دفع بنكي فقط</FormLabel>
                   </div>
                 </FormItem>
               )}
@@ -215,11 +213,11 @@ const LabFilterDialog: React.FC<LabFilterDialogProps> = ({
             <DialogFooter className="gap-2 sm:justify-between">
               <Button type="button" variant="ghost" onClick={handleClear} disabled={activeFilterCount === 0}>
                 <X className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
-                {t('actions.clearFilters')}
+                مسح التصفية
               </Button>
               <div className="flex gap-2">
-                <DialogClose asChild><Button type="button" variant="secondary">{t('common:cancel')}</Button></DialogClose>
-                <Button type="submit">{t('actions.applyFilters')}</Button>
+                <DialogClose asChild><Button type="button" variant="secondary">إلغاء</Button></DialogClose>
+                <Button type="submit">تطبيق</Button>
               </div>
             </DialogFooter>
           </form>

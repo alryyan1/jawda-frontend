@@ -1,11 +1,7 @@
 // src/components/clinic/lab_requests/LabTestSelectionArea.tsx
 import React from 'react'; // Removed useState, useCallback as they are managed by parent
-import { useTranslation } from 'react-i18next';
-// import { Button } from '@/components/ui/button'; // Button removed from here
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
-import { Microscope } from 'lucide-react';
+import { Card, CardHeader, CardContent, Typography, Box, TextField } from '@mui/material';
+import MicroscopeIcon from '@mui/icons-material/Biotech';
 
 import type { MainTestStripped } from '@/types/labTests';
 import LabTestSelectionTabs from '../LabTestSelectionTabs';
@@ -28,50 +24,54 @@ const LabTestSelectionArea: React.FC<LabTestSelectionAreaProps> = ({
   visitId,
   // existingRequestCount,
   // addTestsMutation,
-  onSwitchToDisplayMode,
+  // onSwitchToDisplayMode, // handled by parent
   selectedTestIds,
   onTestSelectionChange,
   comment,
   onCommentChange,
   onAddById,
 }) => {
-  const { t } = useTranslation(['labTests', 'common']);
-
   return (
-    <Card className="shadow-md h-full flex flex-col"> {/* Ensure card can flex vertically */}
-      <CardHeader className="pb-3 flex-shrink-0">
-        {/* Button has been moved to parent (LabRequestComponent) */}
-        <CardTitle className="text-md flex items-center gap-2">
-          <Microscope className="h-5 w-5 text-primary" />
-          {t('labTests:request.selectTestsTitle')}
-        </CardTitle>
-        <CardDescription>{t('labTests:request.selectAndAddDescription')}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3 flex-grow flex flex-col overflow-hidden"> {/* Allow content to grow and overflow */}
-        <div className="flex-grow overflow-hidden"> {/* This div will contain the scrollable tabs */}
+    <Card sx={{ boxShadow: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <CardHeader
+        sx={{ pb: 1 }}
+        title={
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <MicroscopeIcon color="primary" fontSize="small" />
+            <Typography variant="h6">اختيار التحاليل</Typography>
+          </Box>
+        }
+        subheader={
+          <Typography variant="body2" color="text.secondary">
+            قم باختيار التحاليل وإضافتها إلى الطلب
+          </Typography>
+        }
+      />
+      <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, flexGrow: 1, overflow: 'hidden' }}>
+        <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
           <LabTestSelectionTabs
             visitId={visitId}
             selectedTestIds={selectedTestIds}
             onTestSelectionChange={onTestSelectionChange}
             onAddById={onAddById}
           />
-        </div>
-        <div className="space-y-1 pt-2 flex-shrink-0"> {/* Comment section */}
-          <Label htmlFor="labrequest-batch-comment" className="text-xs font-medium">
-            {t('labTests:request.commentLabel')}
-          </Label>
-          <Textarea
+        </Box>
+        <Box sx={{ pt: 1 }}>
+          <Typography component="label" htmlFor="labrequest-batch-comment" sx={{ fontSize: 12, fontWeight: 500, display: 'block', mb: 0.5 }}>
+            ملاحظات الطلب
+          </Typography>
+          <TextField
             id="labrequest-batch-comment"
             value={comment}
             onChange={(e) => onCommentChange(e.target.value)}
-            placeholder={t('labTests:request.commentPlaceholderOverall')}
-            rows={2}
-            // disabled={addTestsMutation.isPending} // Disable if parent is submitting
-            className="text-sm"
+            placeholder="أضف ملاحظة عامة للطلب"
+            multiline
+            minRows={2}
+            size="small"
+            fullWidth
           />
-        </div>
+        </Box>
       </CardContent>
-      {/* CardFooter with "Request Selected" button is removed and moved to LabRequestComponent */}
     </Card>
   );
 };

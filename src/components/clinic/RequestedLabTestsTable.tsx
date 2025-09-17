@@ -4,34 +4,31 @@ import React, { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
+// MUI replacements
 import {
+  Box,
+  // Button,
+  Checkbox,
+  CircularProgress,
+  IconButton,
+  MenuItem,
+  Paper,
+  Select,
   Table,
   TableBody,
   TableCell,
+  TableContainer,
   TableHead,
-  TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
+  TextField,
+} from "@mui/material";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Loader2,
-  Trash2,
-  DollarSign,
-  Edit,
-  Save,
-  Trash,
-  Hand,
-} from "lucide-react";
+  AttachMoney as AttachMoneyIcon,
+  Delete as DeleteIcon,
+  Edit as EditIcon,
+  Save as SaveIcon,
+  PanTool as PanToolIcon,
+} from "@mui/icons-material";
 
 import type { LabRequest } from "@/types/visits";
 import type { Patient } from "@/types/patients";
@@ -164,9 +161,9 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
 
   if (isLoading && requestedTests.length === 0) {
     return (
-      <div className="py-10 text-center h-full flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
+      <Box className="py-10 text-center h-full flex items-center justify-center">
+        <CircularProgress size={32} />
+      </Box>
     );
   }
 
@@ -176,7 +173,7 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
     <div className="space-y-2 h-full flex flex-col">
       {isFetchingList && (
         <div className="text-xs text-muted-foreground p-1 text-center">
-          <Loader2 className="inline h-3 w-3 animate-spin" />{" "}
+          <CircularProgress size={14} className="inline" />{" "}
           {"جاري تحديث القائمة..."}
         </div>
       )}
@@ -189,47 +186,35 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
       )}
 
       {requestedTests.length > 0 && (
-        // ScrollArea directly wraps the Table container, and `flex-grow` allows it to expand.
-        <ScrollArea
-          className="h-[400px] border rounded-md flex-grow"
-          style={{ direction: "rtl" }}
-        >
-          <Table className="text-xs min-w-[650px]">
-            {" "}
-            {/* min-w to ensure table content isn't too squished before scroll */}
-            <TableHeader>
+        <TableContainer component={Paper} className="h-[400px] border rounded-md flex-grow" sx={{ direction: "rtl" }}>
+          <Table size="small" className="text-xs min-w-[650px]">
+            <TableHead>
               <TableRow>
-                <TableHead className="min-w-[120px] text-center">
+                <TableCell align="center" className="min-w-[120px]">
                   {"اسم الفحص"}
-                </TableHead>
-                <TableHead className="text-center w-[60px]">
+                </TableCell>
+                <TableCell align="center" className="w-[60px]">
                   {"السعر"}
-                </TableHead>
-                <TableHead className="text-center w-[100px]">
+                </TableCell>
+                <TableCell align="center" className="w-[100px]">
                   {"الخصم %"}
-                </TableHead>
+                </TableCell>
                 {isCompanyPatient && (
-                  <TableHead className="text-center w-[90px]">
+                  <TableCell align="center" className="w-[90px]">
                     {"التعاون"}
-                  </TableHead>
+                  </TableCell>
                 )}
-                <TableHead className="text-center w-[80px]">
-                  {"الصافي"}
-                </TableHead>
-                <TableHead className="text-center w-[80px]">
+                <TableCell align="center" className="w-[80px]">
                   {"المدفوع"}
-                </TableHead>
-                <TableHead className="text-center hidden md:table-cell w-[90px]">
-                  {"حالة الدفع"}
-                </TableHead>
-                <TableHead className="text-center w-[80px]">
+                </TableCell>
+                <TableCell align="center" className="w-[80px]">
                   {"طريقة الدفع"}
-                </TableHead>
-                <TableHead className="text-right w-[100px]">
+                </TableCell>
+                <TableCell align="right" className="w-[100px]">
                   {"فتح القائمة"}
-                </TableHead>
+                </TableCell>
               </TableRow>
-            </TableHeader>
+            </TableHead>
             <TableBody>
               {requestedTests.map((lr) => {
                 const isEditingThisRow = editingRowId === lr.id;
@@ -238,32 +223,19 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
                   : {};
 
                 const price = Number(lr.price) || 0;
-                const itemSubTotal = price; // Lab tests typically have count 1
 
                 const discountPerDisplay = Number(
                   currentDataForCalc.discount_per ?? lr.discount_per ?? 0
                 );
-                const discountAmount =
-                  (itemSubTotal * discountPerDisplay) / 100;
-
                 let enduranceDisplay = Number(
                   currentDataForCalc.endurance ?? lr.endurance ?? 0
                 );
                 if (!isCompanyPatient) enduranceDisplay = 0;
-
-                const netPrice = itemSubTotal - discountAmount - enduranceDisplay;
                 const amountPaid = Number(lr.amount_paid) || 0;
-                // const balance = netPrice - amountPaid;
-                // const canBeCancelled = !lr.is_paid; // Simple cancellation logic for now
 
                 return (
-                  <TableRow
-                    key={lr.id}
-                    className={
-                      isEditingThisRow ? "bg-muted/10" : ""
-                    }
-                  >
-                    <TableCell className="py-1.5 font-medium text-center">
+                  <TableRow key={lr.id} className={isEditingThisRow ? "bg-muted/10" : ""}>
+                    <TableCell align="center" className="py-1.5 font-medium">
                       {lr.main_test?.main_test_name || "جاري التحميل..."}
                       {lr.comment && (
                         <p
@@ -274,42 +246,38 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
                         </p>
                       )}
                     </TableCell>
-                    <TableCell className="text-center py-1.5">
+                    <TableCell align="center" className="py-1.5">
                       {price.toFixed(1)}
                     </TableCell>
-                    <TableCell className="text-center py-1.5">
+                    <TableCell align="center" className="py-1.5">
                       {isEditingThisRow ? (
                         <Select
                           value={String(editableRowData.discount_per ?? 0)}
-                          onValueChange={(val) =>
+                          onChange={(e) =>
                             setEditableRowData((d) => ({
                               ...d,
-                              discount_per: parseInt(val),
+                              discount_per: parseInt(e.target.value as string),
                             }))
                           }
-                          dir="rtl"
+                          size="small"
+                          sx={{ minWidth: 80 }}
                         >
-                          <SelectTrigger className="h-7 text-xs px-1 w-20 mx-auto">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {discountOptions.map((opt) => (
-                              <SelectItem key={opt} value={String(opt)}>
-                                {opt}%
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
+                          {discountOptions.map((opt) => (
+                            <MenuItem key={opt} value={String(opt)}>
+                              {opt}%
+                            </MenuItem>
+                          ))}
                         </Select>
                       ) : (
                         `${discountPerDisplay}%`
                       )}
                     </TableCell>
                     {isCompanyPatient && (
-                      <TableCell className="text-center py-1.5">
+                      <TableCell align="center" className="py-1.5">
                         {isEditingThisRow ? (
-                          <Input
+                          <TextField
                             type="number"
-                            step="0.01"
+                            inputProps={{ step: "0.01" }}
                             value={editableRowData.endurance ?? ""}
                             onChange={(e) =>
                               setEditableRowData((d) => ({
@@ -317,41 +285,28 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
                                 endurance: parseFloat(e.target.value) || 0,
                               }))
                             }
-                            className="h-7 w-20 mx-auto text-xs px-1"
+                            size="small"
+                            className="w-20 mx-auto"
                           />
                         ) : (
                           enduranceDisplay.toFixed(1)
                         )}
                       </TableCell>
                     )}
-                    <TableCell className="text-center py-1.5 font-semibold">
-                      {netPrice.toFixed(1)}
-                    </TableCell>
-                    <TableCell className="text-center py-1.5 text-green-600">
+                    <TableCell align="center" className="py-1.5 text-green-600">
                       {amountPaid.toFixed(1)}
                     </TableCell>
-                    <TableCell className="text-center hidden md:table-cell py-1.5">
-                      {lr.is_paid ? (
-                        <span className="text-green-600 font-medium">
-                          {"مدفوع"}
-                        </span>
-                      ) : (
-                        <span className="text-amber-600">
-                          {"معلق"}
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center py-1.5">
+                    <TableCell align="center" className="py-1.5">
                       {isEditingThisRow ? (
                         <Checkbox
                           checked={!!editableRowData.is_bankak}
-                          onCheckedChange={(checked) =>
+                          onChange={(_, checked) =>
                             setEditableRowData((d) => ({
                               ...d,
                               is_bankak: !!checked,
                             }))
                           }
-                          aria-label={"طريقة الدفع بنكاك"}
+                          inputProps={{ "aria-label": "طريقة الدفع بنكاك" }}
                         />
                       ) : lr.is_bankak ? (
                         "بنكاك"
@@ -359,15 +314,14 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
                         "نقدي"
                       )}
                     </TableCell>
-                    <TableCell className="text-right py-1.5">
+                    <TableCell align="right" className="py-1.5">
                       <div className="flex gap-0.5 justify-end">
                         {isEditingThisRow ? (
                           <>
-                            <Button
-                              size="icon"
-                              variant="ghost"
+                            <IconButton
                               onClick={() => handleSaveEdit(lr.id)}
                               className="h-7 w-7"
+                              size="small"
                               disabled={
                                 updateDetailsMutation.isPending &&
                                 updateDetailsMutation.variables
@@ -377,62 +331,57 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
                               {updateDetailsMutation.isPending &&
                               updateDetailsMutation.variables?.labRequestId ===
                                 lr.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <CircularProgress size={16} />
                               ) : (
-                                <Save className="h-4 w-4 text-green-600" />
+                                <SaveIcon as={undefined} />
                               )}
-                            </Button>
-                            <Button
-                              size="icon"
-                              variant="ghost"
+                            </IconButton>
+                            <IconButton
                               onClick={() => handleCancelRequest(lr)}
                               className="h-7 w-7"
+                              size="small"
                             >
-                              <Trash2 className="h-4 w-4 text-red-600" />
-                            </Button>
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
                           </>
                         ) : (
                           <>
                             {!lr.is_paid ? (
-                              <Button
-                                size="icon"
-                                variant="ghost"
+                              <IconButton
                                 onClick={() => onPayIndividual(lr)}
                                 className="h-7 w-7 text-green-600 hover:text-green-700"
                                 title={"دفع"}
+                                size="small"
                               >
-                                <DollarSign className="h-4 w-4" />
-                              </Button>
+                                <AttachMoneyIcon as={undefined} />
+                              </IconButton>
                             ) : (
                              <div className="flex gap-0.5">
-                               <Button
-                                size="icon"
-                                variant="ghost"
+                               <IconButton
                                 onClick={() => onCancelIndividual(lr)}
                                 className="h-7 w-7 text-red-600 hover:text-red-700"
                                 title={"إزالة"}
+                                size="small"
                               >
-                                <Trash className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="icon"
-                                variant="ghost"
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                              <IconButton
                                 onClick={() => onUnpayIndividual(lr)}
                                 className="h-7 w-7 text-green-600 hover:text-green-700"
                                 title={"إلغاء الدفع"}
+                                size="small"
                               >
-                                <Hand className="h-4 w-4" />
-                              </Button>
+                                <PanToolIcon as={undefined} />
+                              </IconButton>
                              </div>
                             )}
-                            <Button
-                              size="icon"
-                              variant="ghost"
+                            <IconButton
                               onClick={() => handleStartEdit(lr)}
                               className="h-7 w-7"
+                              size="small"
                             >
-                              <Edit className="h-4 w-4" />
-                            </Button>
+                              <EditIcon fontSize="small" />
+                            </IconButton>
                          
                           </>
                         )}
@@ -443,7 +392,7 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
               })}
             </TableBody>
           </Table>
-        </ScrollArea>
+        </TableContainer>
       )}
     </div>
   );

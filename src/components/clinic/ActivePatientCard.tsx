@@ -236,7 +236,7 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
         <ContextMenuTrigger asChild>
           <Card
             className={cn(
-              "hover:shadow-lg transition-transform duration-500 cursor-pointer flex flex-row items-center px-3 py-2 h-[52px] w-[300px]",
+              "hover:shadow-lg transition-transform duration-500 cursor-pointer flex flex-row items-center px-3 py-2 h-[52px] w-[320px]",
               isSelected
                 ? "ring-2 ring-primary shadow-lg bg-primary/10"
                 : `bg-card ring-1 ring-transparent hover:ring-slate-300 ${visit.company ? "ring-pink-400" : ""}`

@@ -31,6 +31,7 @@ interface SelectedPatientWorkspaceProps {
   initialPatient: Patient;
   visitId: number;
   onClose?: () => void;
+  onActiveTabChange?: (tab: 'services' | 'lab') => void;
 }
 
 const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
@@ -38,8 +39,10 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
   initialPatient,
   visitId,
   onClose,
+  onActiveTabChange,
 }) => {
   const visitQueryKey = ["doctorVisit", visitId];
+  const [activeTab, setActiveTab] = useState<'services' | 'lab'>("services");
   const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false);
   const {
     data: visit,
@@ -141,12 +144,15 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
     );
   }
 
- 
-
   return (
     <div className="flex flex-col h-full bg-background shadow-xl">
       <Tabs
-        defaultValue="services"
+        value={activeTab}
+        onValueChange={(val) => {
+          const v = (val as 'services' | 'lab');
+          setActiveTab(v);
+          onActiveTabChange?.(v);
+        }}
         className="flex-grow flex flex-col overflow-hidden"
       >
         <ScrollArea className="flex-shrink-0 border-b">

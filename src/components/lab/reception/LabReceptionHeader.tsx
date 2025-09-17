@@ -100,65 +100,8 @@ const LabReceptionHeader: React.FC<LabReceptionHeaderProps> = ({
           </div>
           {/* Sockets removed: no connection status */}
         </div>
-
-        {/* Test Selection Autocomplete - Multiple Selection */}
-        <div className="flex items-center gap-3">
-          <Autocomplete
-            multiple
-            options={availableTests || []}
-            value={selectedTests}
-            onChange={(_, newValue) => {
-              console.log('Autocomplete onChange:', newValue);
-              setSelectedTests(newValue);
-            }}
-            getOptionKey={(option) => option.id}
-            getOptionLabel={(option) => option.main_test_name}
-            isOptionEqualToValue={(option, value) => option.id === value.id}
-            loading={isLoadingTests}
-            size="small"
-            sx={{ width: 400 }}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label={"اختر الفحوصات لإضافتها"}
-                variant="outlined"
-                placeholder={"ابحث واختر الفحوصات..."}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    const enteredId = (e.target as HTMLInputElement).value;
-                    const foundTest = availableTests?.find(
-                      (test) => test.id === parseInt(enteredId)
-                    );
-                    if (foundTest) {
-                      setSelectedTests([...selectedTests, foundTest]);
-                    }
-                  }
-                }}
-           
-           
-              />
-            )}
-      
-        
-            noOptionsText={"لا توجد نتائج"}
-            loadingText={"جاري التحميل"}
-          />
-          <Button
-            onClick={onAddTests}
-            disabled={selectedTests.length === 0 || !activeVisitId || addTestsMutation.isPending}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg hover:scale-105"
-          >
-            {addTestsMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <Plus className="h-4 w-4 mr-2" />
-            )}
-            {"إضافة فحص"} {selectedTests.length > 0 && `(${selectedTests.length})`}
-          </Button>
-        </div>
-
-        {/* Search Controls */}
-        <div className="flex items-center gap-3">
+        {/* Search Controls - centered */}
+        <div className="flex items-center gap-3 flex-1 justify-center">
           <Autocomplete
             options={recentVisitsData || []}
             value={selectedVisitFromAutocomplete}
@@ -225,6 +168,58 @@ const LabReceptionHeader: React.FC<LabReceptionHeaderProps> = ({
             className="h-10 w-10 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700"
           >
             <ListRestart className="h-5 w-5" />
+          </Button>
+        </div>
+
+        {/* Test Selection Autocomplete - moved to the right */}
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <Autocomplete
+            multiple
+            options={availableTests || []}
+            value={selectedTests}
+            onChange={(_, newValue) => {
+              console.log('Autocomplete onChange:', newValue);
+              setSelectedTests(newValue);
+            }}
+            getOptionKey={(option) => option.id}
+            getOptionLabel={(option) => option.main_test_name}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            loading={isLoadingTests}
+            size="small"
+            sx={{ width: 320 }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label={"اختر الفحوصات لإضافتها"}
+                variant="outlined"
+                placeholder={"ابحث واختر الفحوصات..."}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    const enteredId = (e.target as HTMLInputElement).value;
+                    const foundTest = availableTests?.find(
+                      (test) => test.id === parseInt(enteredId)
+                    );
+                    if (foundTest) {
+                      setSelectedTests([...selectedTests, foundTest]);
+                    }
+                  }
+                }}
+              />
+            )}
+            noOptionsText={"لا توجد نتائج"}
+            loadingText={"جاري التحميل"}
+          />
+          <Button
+            onClick={onAddTests}
+            disabled={selectedTests.length === 0 || !activeVisitId || addTestsMutation.isPending}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg hover:scale-105"
+          >
+            {addTestsMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <Plus className="h-4 w-4 mr-2" />
+            )}
+            {"إضافة فحص"} {selectedTests.length > 0 && `(${selectedTests.length})`}
           </Button>
         </div>
       </div>

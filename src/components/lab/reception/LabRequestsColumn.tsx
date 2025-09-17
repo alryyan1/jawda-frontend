@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { useTranslation } from "react-i18next";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -72,7 +71,6 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
   isLoading,
   onPrintReceipt,
 }) => {
-  const { t } = useTranslation(["labReception", "common", "clinic", "labTests", "payments"]);
   const queryClient = useQueryClient();
   const { currentClinicShift } = useAuth();
 
@@ -92,7 +90,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
       return response.data;
     },
     onSuccess: () => {
-      toast.success(t("labRequestsColumn.discountUpdated", "Discount updated successfully"));
+      toast.success("تم تحديث الخصم بنجاح");
       queryClient.invalidateQueries({
         queryKey: ["activeVisitForLabRequests", activeVisitId],
       });
@@ -102,9 +100,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
     },
     onError: (error: Error) => {
       const apiError = error as { response?: { data?: { message?: string } } };
-      toast.error(
-        apiError.response?.data?.message || t("common:error.updateFailed")
-      );
+      toast.error(apiError.response?.data?.message || "فشل التحديث");
     },
   });
 
@@ -117,7 +113,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
       return response.data;
     },
     onSuccess: () => {
-      toast.success(t("labRequestsColumn.bankakUpdated", "Payment method updated successfully"));
+      toast.success("تم تحديث طريقة الدفع بنجاح");
       queryClient.invalidateQueries({
         queryKey: ["activeVisitForLabRequests", activeVisitId],
       });
@@ -127,9 +123,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
     },
     onError: (error: Error) => {
       const apiError = error as { response?: { data?: { message?: string } } };
-      toast.error(
-        apiError.response?.data?.message || t("common:error.updateFailed")
-      );
+      toast.error(apiError.response?.data?.message || "فشل التحديث");
     },
   });
 
@@ -140,7 +134,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
       return response.data;
     },
     onSuccess: () => {
-      toast.success(t("labRequestsColumn.requestDeletedSuccessfully", "Lab request deleted successfully"));
+      toast.success("تم حذف طلب المختبر بنجاح");
       queryClient.invalidateQueries({
         queryKey: ["activeVisitForLabRequests", activeVisitId],
       });
@@ -150,9 +144,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
     },
     onError: (error: Error) => {
       const apiError = error as { response?: { data?: { message?: string } } };
-      toast.error(
-        apiError.response?.data?.message || t("common:error.deleteFailed")
-      );
+      toast.error(apiError.response?.data?.message || "فشل الحذف");
     },
   });
 
@@ -160,11 +152,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
   const removeAllPendingMutation = useMutation({
     mutationFn: () => clearPendingLabRequestsForVisit(activeVisitId!),
     onSuccess: (result) => {
-      toast.success(
-        t("labTests:request.removedAllSuccess", {
-          count: result.deleted_count,
-        })
-      );
+      toast.success(`تم حذف ${result.deleted_count} فحص قيد الانتظار`);
       queryClient.invalidateQueries({
         queryKey: ["activeVisitForLabRequests", activeVisitId],
       });
@@ -174,9 +162,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
     },
     onError: (error: Error) => {
       const apiError = error as { response?: { data?: { message?: string } } };
-      toast.error(
-        apiError.response?.data?.message || t("common:error.requestFailed")
-      );
+      toast.error(apiError.response?.data?.message || "فشل الطلب");
     },
   });
 
@@ -184,7 +170,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
   const unpayLabRequestMutation = useMutation({
     mutationFn: (labRequestId: number) => unpayLabRequest(labRequestId),
     onSuccess: () => {
-      toast.success(t("labTests:request.unpaidSuccess"));
+      toast.success("تم إلغاء الدفع بنجاح");
       queryClient.invalidateQueries({
         queryKey: ["activeVisitForLabRequests", activeVisitId],
       });
@@ -194,9 +180,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
     },
     onError: (error: Error) => {
       const apiError = error as { response?: { data?: { message?: string } } };
-      toast.error(
-        apiError.response?.data?.message || t("common:error.requestFailed")
-      );
+      toast.error(apiError.response?.data?.message || "فشل الطلب");
     },
   });
 
@@ -211,7 +195,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
         is_bankak: params.is_bankak,
       }),
     onSuccess: () => {
-      toast.success(t("payments:paymentRecordedSuccess"));
+      toast.success("تم تسجيل الدفع بنجاح");
       queryClient.invalidateQueries({
         queryKey: ["activeVisitForLabRequests", activeVisitId],
       });
@@ -222,9 +206,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
     },
     onError: (error: Error) => {
       const apiError = error as { response?: { data?: { message?: string } } };
-      toast.error(
-        apiError.response?.data?.message || t("payments:error.paymentFailed")
-      );
+      toast.error(apiError.response?.data?.message || "فشل الدفع");
     },
   });
 
@@ -232,7 +214,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
   const updateAllBankakMutation = useMutation({
     mutationFn: (isBankak: boolean) => updateAllLabRequestsBankak(activeVisitId!, isBankak),
     onSuccess: () => {
-      toast.success(t("labRequestsColumn.bankakUpdatedAll", "All lab requests marked as Bankak"));
+      toast.success("تم تعيين جميع الطلبات كبنكاك");
       queryClient.invalidateQueries({
         queryKey: ["activeVisitForLabRequests", activeVisitId],
       });
@@ -242,9 +224,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
     },
     onError: (error: Error) => {
       const apiError = error as { response?: { data?: { message?: string } } };
-      toast.error(
-        apiError.response?.data?.message || t("common:error.requestFailed")
-      );
+      toast.error(apiError.response?.data?.message || "فشل الطلب");
     },
   });
 
@@ -255,7 +235,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
       return response;
     },
     onSuccess: () => {
-      toast.success(t("labRequestsColumn.commentUpdated", "Comment updated successfully"));
+      toast.success("تم تحديث الملاحظة بنجاح");
       queryClient.invalidateQueries({
         queryKey: ["activeVisitForLabRequests", activeVisitId],
       });
@@ -265,9 +245,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
     },
     onError: (error: Error) => {
       const apiError = error as { response?: { data?: { message?: string } } };
-      toast.error(
-        apiError.response?.data?.message || t("common:error.updateFailed")
-      );
+      toast.error(apiError.response?.data?.message || "فشل التحديث");
     },
   });
 
@@ -287,26 +265,26 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
   };
 
   const handleDeleteRequest = (requestId: number) => {
-    if (window.confirm(t("labRequestsColumn.confirmDeleteRequest", "Are you sure you want to delete this lab request?"))) {
+    if (window.confirm("هل أنت متأكد من حذف طلب المختبر؟")) {
       deleteRequestMutation.mutate(requestId);
     }
   };
 
   const handleRemoveAllPending = () => {
-    if (window.confirm(t("labRequestsColumn.confirmRemoveAllPending", "Are you sure you want to remove all pending lab requests?"))) {
+    if (window.confirm("هل أنت متأكد من إزالة جميع الطلبات المعلقة؟")) {
       removeAllPendingMutation.mutate();
     }
   };
 
   const handleUnpayLabRequest = (requestId: number) => {
-    if (window.confirm(t("labRequestsColumn.confirmUnpayLabRequest", "Are you sure you want to unpay this lab request?"))) {
+    if (window.confirm("هل أنت متأكد من إلغاء دفع هذا الطلب؟")) {
       unpayLabRequestMutation.mutate(requestId);
     }
   };
 
   const handleDirectPayItem = (requestId: number, isBankak: boolean) => {
     if (!currentClinicShift) {
-      toast.error(t("common:error.noActiveShift"));
+      toast.error("لا توجد وردية فعّالة");
       return;
     }
     directPayItemMutation.mutate({
@@ -317,7 +295,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
   };
 
   const handleUpdateAllBankak = () => {
-    if (window.confirm(t("labRequestsColumn.confirmUpdateAllBankak", "Are you sure you want to mark all lab requests as Bankak?"))) {
+    if (window.confirm("هل تريد تعيين كل الطلبات كبنكاك؟")) {
       updateAllBankakMutation.mutate(true);
     }
   };
@@ -362,7 +340,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
         <div className="text-center space-y-3">
           <Loader2 className="h-8 w-8 animate-spin text-purple-600 mx-auto" />
           <p className="text-sm text-slate-600 dark:text-slate-400">
-            {t("common:loading")}...
+            {"جاري التحميل"}...
           </p>
         </div>
       </div>
@@ -377,10 +355,10 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
           <Activity className="h-16 w-16 mx-auto opacity-30" />
           <div className="space-y-2">
             <p className="text-lg font-medium">
-              {t("selectPatient", "Select a patient")}
+              {"اختر مريضاً"}
             </p>
             <p className="text-sm max-w-xs mx-auto leading-relaxed">
-              {t("selectPatientDesc", "Choose a patient from the queue to view their lab requests")}
+              {"اختر مريضاً من الطابور لعرض طلباته"}
             </p>
           </div>
         </div>
@@ -400,7 +378,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
             disabled={visit?.lab_requests?.length === 0}
           >
             <PrinterIcon className="h-4 w-4 mr-2" />
-            <span className="hidden sm:inline">{t('common:printReceipt')}</span>
+            <span className="hidden sm:inline">طباعة الإيصال</span>
           </Button>
         </div>
         
@@ -418,7 +396,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
             ) : (
               <Trash2 className="h-4 w-4 mr-2" />
             )}
-            <span className="hidden sm:inline">{t("labRequestsColumn.removeAllTests", "Remove All Tests")}</span>
+            <span className="hidden sm:inline">حذف جميع المعلّق</span>
           </Button>
           
           <Button
@@ -432,7 +410,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
             ) : (
               <Banknote className="h-4 w-4 mr-2" />
             )}
-            <span className="hidden sm:inline">{t("labRequestsColumn.markAllAsBankak", "Mark All as Bankak")}</span>
+            <span className="hidden sm:inline">تعيين الكل بنكاك</span>
           </Button>
         </div>
       </div>
@@ -444,12 +422,8 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
             <div className="text-center space-y-4">
               <FileText className="h-16 w-16 mx-auto text-slate-300 dark:text-slate-600" />
               <div className="space-y-2">
-                <p className="text-lg font-medium text-slate-600 dark:text-slate-400">
-                  {t("labRequestsColumn.noLabRequests", "No lab requests found")}
-                </p>
-                <p className="text-sm text-slate-500 dark:text-slate-500">
-                  {t("labRequestsColumn.addTestsToStart", "Add tests to get started")}
-                </p>
+                <p className="text-lg font-medium text-slate-600 dark:text-slate-400">لا توجد طلبات مختبر</p>
+                <p className="text-sm text-slate-500 dark:text-slate-500">أضف فحوصات للبدء</p>
               </div>
             </div>
           </div>
@@ -458,21 +432,21 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="min-w-[150px]">{t("labRequestsColumn.testName", "Test Name")}</TableHead>
-                  <TableHead className="min-w-[80px] hidden sm:table-cell">{t("labRequestsColumn.price", "Price")}</TableHead>
+                  <TableHead className="min-w-[150px]">اسم الفحص</TableHead>
+                  <TableHead className="min-w-[80px] hidden sm:table-cell">السعر</TableHead>
                   {!visit?.patient?.company && (
-                    <TableHead className="min-w-[100px] hidden md:table-cell">{t("labRequestsColumn.discount", "Discount")}</TableHead>
+                    <TableHead className="min-w-[100px] hidden md:table-cell">الخصم</TableHead>
                   )}
                   {!visit?.patient?.company && (
-                    <TableHead className="min-w-[80px]">{t("labRequestsColumn.amount", "Amount")}</TableHead>
+                    <TableHead className="min-w-[80px]">المبلغ</TableHead>
                   )}
                   {visit?.patient?.company && (
-                    <TableHead className="min-w-[100px] text-red-600">{t("labRequestsColumn.payableAmount", "التحمل")}</TableHead>
+                    <TableHead className="min-w-[100px] text-red-600">التحمل</TableHead>
                   )}
                   {visit?.patient?.company && (
-                    <TableHead className="min-w-[100px]">{t("labRequestsColumn.needApprove", "Need Approve")}</TableHead>
+                    <TableHead className="min-w-[100px]">يحتاج موافقة</TableHead>
                   )}
-                  <TableHead className="min-w-[60px]">{t("labRequestsColumn.actions", "Actions")}</TableHead>
+                  <TableHead className="min-w-[60px]">الإجراءات</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -493,13 +467,13 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                               <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
                             )}
                             {/* Comment icon if comment exists */}
-                            {request.comment && (
+                          {request.comment && (
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 className="h-6 w-6 p-0 text-blue-600 hover:text-blue-800"
                                 onClick={() => handleOpenCommentDialog(request.id)}
-                                title={t("labRequestsColumn.viewComment", "View comment")}
+                              title={"عرض الملاحظة"}
                               >
                                 <MessageSquare className="h-4 w-4" />
                               </Button>
@@ -513,28 +487,28 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                             <Badge
                               className={`mt-1 w-fit ${request.is_paid ? "bg-green-600 text-white" : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"}`}
                             >
-                              {t("labRequestsColumn.bankak", "Bank")}
+                              {"بنكاك"}
                             </Badge>
                           )}
                           {/* Mobile-only info */}
                           <div className="sm:hidden space-y-1 mt-2">
                             <div className="flex justify-between text-xs">
-                              <span className="text-slate-500">Price:</span>
+                              <span className="text-slate-500">السعر:</span>
                               <span className="font-medium">${request.price.toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between text-xs">
-                              <span className="text-slate-500">Amount:</span>
+                              <span className="text-slate-500">المبلغ:</span>
                               <span className="font-medium">${discountedAmount.toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between text-xs">
-                              <span className="text-slate-500">Paid:</span>
+                              <span className="text-slate-500">المدفوع:</span>
                               <span className={`font-medium ${request.is_paid ? 'text-green-600' : 'text-red-600'}`}>
                                 ${request.amount_paid.toFixed(2)}
                               </span>
                             </div>
                             {!request.is_paid && (
                               <div className="flex justify-between text-xs">
-                                <span className="text-slate-500">Due:</span>
+                                <span className="text-slate-500">المتبقي:</span>
                                 <span className="font-medium text-red-600">${remainingAmount.toFixed(2)}</span>
                               </div>
                             )}
@@ -606,11 +580,11 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                               {request.is_paid ? (
                                 <Badge variant="default" className="text-xs w-fit mr-2">
                                   <CheckCircle2 className="h-3 w-3 mr-1" />
-                                  {t('labRequestsColumn.paid', 'Paid')}
+                                  {"مدفوع"}
                                 </Badge>
                               ) : (
                                 <Badge variant="destructive" className="text-xs w-fit mr-2">
-                                  ${remainingAmount.toFixed(2)} {t('labRequestsColumn.due', 'due')}
+                                  ${remainingAmount.toFixed(2)} {"مستحق"}
                                 </Badge>
                               )}
                               <span>${request.amount_paid.toFixed(2)}</span>
@@ -625,7 +599,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                                 disabled={toggleBankakMutation.isPending}
                                 className="mr-2"
                               />
-                              {request.is_bankak ? t("labRequestsColumn.unmarkBankak", "Unmark Bankak") : t("labRequestsColumn.markBankak", "Mark Bankak")}
+                              {request.is_bankak ? "إلغاء بنكاك" : "تعيين بنكاك"}
                             </DropdownMenuItem>
                             {/* Payment Button */}
                             {!request.is_paid && (
@@ -638,7 +612,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                                 ) : (
                                   <Banknote className="h-4 w-4 mr-2" />
                                 )}
-                                {t("labRequestsColumn.payCash", "Pay Cash")}
+                                {"دفع نقدي"}
                               </DropdownMenuItem>
                             )}
                             {/* Unpay Option */}
@@ -649,7 +623,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                                 disabled={unpayLabRequestMutation.isPending}
                               >
                                 <AlertCircle className="h-4 w-4 mr-2" />
-                                {t("labRequestsColumn.unpayLabRequest", "Unpay Request")}
+                                {"إلغاء الدفع"}
                               </DropdownMenuItem>
                             )}
                             {/* Delete Option */}
@@ -659,7 +633,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                               disabled={deleteRequestMutation.isPending}
                             >
                               <Trash2 className="h-4 w-4 mr-2" />
-                              {t("labRequestsColumn.delete", "Delete")}
+                              {"حذف"}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>

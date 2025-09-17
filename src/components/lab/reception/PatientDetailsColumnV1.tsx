@@ -1,6 +1,5 @@
 import React from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import apiClient from "@/services/api";
 import type { DoctorVisit } from "@/types/visits";
@@ -17,7 +16,6 @@ const PatientDetailsColumnV1: React.FC<PatientDetailsColumnV1Props> = ({
   visit,
   onPrintReceipt,
 }) => {
-  const { t } = useTranslation(["labReception", "common"]);
   const queryClient = useQueryClient();
 
   const payAllMutation = useMutation({
@@ -26,7 +24,7 @@ const PatientDetailsColumnV1: React.FC<PatientDetailsColumnV1Props> = ({
       return response.data;
     },
     onSuccess: () => {
-      toast.success(t("labRequestsColumn.allPaymentsProcessed", "All payments processed successfully"));
+      toast.success("تمت معالجة جميع المدفوعات بنجاح");
       onPrintReceipt();
       queryClient.invalidateQueries({
         queryKey: ["activeVisitForLabRequests", activeVisitId],
@@ -38,9 +36,7 @@ const PatientDetailsColumnV1: React.FC<PatientDetailsColumnV1Props> = ({
     },
     onError: (error: Error) => {
       const apiError = error as { response?: { data?: { message?: string } } };
-      toast.error(
-        apiError.response?.data?.message || t("common:error.paymentFailed")
-      );
+      toast.error(apiError.response?.data?.message || "فشل الدفع");
     },
   });
 
@@ -100,7 +96,7 @@ const PatientDetailsColumnV1: React.FC<PatientDetailsColumnV1Props> = ({
 
       {/* Operations Title */}
       <div className="w-full text-center text-gray-700 font-semibold border-b border-gray-200 pb-1 mb-2">
-        operations
+        العمليات
       </div>
       {/* Icon Row */}
       <div className="w-full flex justify-start mb-2">
@@ -139,7 +135,7 @@ const PatientDetailsColumnV1: React.FC<PatientDetailsColumnV1Props> = ({
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
             </svg>
           ) : null}
-          {t("labRequestsColumn.payAll", "Pay All")}
+          {"دفع الكل"}
         </button>
       )}
     </div>

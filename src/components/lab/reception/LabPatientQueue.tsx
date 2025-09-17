@@ -1,7 +1,6 @@
 // src/components/lab/reception/LabPatientQueue.tsx
 import React, { useState, useEffect } from 'react';
 import { useQuery, keepPreviousData, useQueryClient } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Loader2, AlertTriangle, Users } from 'lucide-react';
 
@@ -28,7 +27,6 @@ const LabPatientQueue: React.FC<LabPatientQueueProps> = ({
   appearanceSettings,
   currentShift, onShiftChange, onPatientSelect, selectedVisitId, globalSearchTerm, labFilters, filters
 }) => {
-  const { t } = useTranslation(['labResults', 'common', 'labReception']);
   const queryClient = useQueryClient();
   const [currentPage, setCurrentPage] = useState(1);
   
@@ -87,14 +85,14 @@ const LabPatientQueue: React.FC<LabPatientQueueProps> = ({
         )}
         {(isFetching && queueItems.length > 0) && (
             <div className="p-1 text-xs text-center text-muted-foreground border-b">
-                <Loader2 className="inline h-3 w-3 animate-spin"/> {t('common:updatingList')}
+                <Loader2 className="inline h-3 w-3 animate-spin"/> جاري تحديث القائمة
             </div>
         )}
 
         {error && (
           <div className="p-4 text-center text-destructive">
             <AlertTriangle className="mx-auto h-8 w-8 mb-2"/>
-            <p className="font-semibold">{t('common:error.fetchFailed', {entity: t('labReception:queueTitle', "Patient Queue")})}</p>
+            <p className="font-semibold">فشل في جلب بيانات طابور المرضى</p>
             <p className="text-xs mt-1">{error.message}</p>
           </div>
         )}
@@ -103,13 +101,10 @@ const LabPatientQueue: React.FC<LabPatientQueueProps> = ({
           <div className="p-6 text-center text-muted-foreground flex-grow flex flex-col justify-center items-center">
             <Users className="h-12 w-12 text-muted-foreground/20 mb-3"/>
             <p className="font-medium">
-                {globalSearchTerm 
-                    ? t('common:noResultsFound') 
-                    : t('labReception:noPatientsInQueue', "No patients in queue for this shift.")
-                }
+                {globalSearchTerm ? 'لا توجد نتائج' : 'لا يوجد مرضى في الطابور لهذه الوردية.'}
             </p>
             <p className="text-xs mt-1">
-                {t('labReception:useFormToAdd', "Use the registration form to add a new patient.")}
+                استخدم نموذج التسجيل لإضافة مريض جديد.
             </p>
           </div>
         )}

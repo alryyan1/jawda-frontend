@@ -1,13 +1,11 @@
 // src/components/schedules/DoctorScheduleForm.tsx
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2 } from 'lucide-react';
+
+// MUI
+import { Box, Card, CardContent, CardHeader, Typography, Button, Checkbox, Table, TableBody, TableCell, TableHead, TableRow, CircularProgress, Alert } from '@mui/material';
+
 import type { DoctorStripped } from '@/types/doctors';
 import type { DoctorScheduleEntry, TimeSlot } from '@/types/schedules';
 import { getDoctorSchedules, saveDoctorWeeklySchedule } from '@/services/sheduleService';
@@ -17,19 +15,24 @@ interface DoctorScheduleFormProps {
 }
 
 const DAYS_OF_WEEK = [0, 1, 2, 3, 4, 5, 6]; // 0:Sun, 1:Mon ...
+const DAY_NAMES_AR = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const TIME_SLOTS: TimeSlot[] = ['morning', 'afternoon', 'evening'];
+const SLOT_NAMES_AR: Record<TimeSlot, string> = {
+  morning: 'صباحاً',
+  afternoon: 'عصراً',
+  evening: 'مساءً',
+};
 
 const DoctorScheduleForm: React.FC<DoctorScheduleFormProps> = ({ selectedDoctor }) => {
-  const { t } = useTranslation(['schedules', 'common']);
   const queryClient = useQueryClient();
   
   // Local state for managing the schedule being edited
   const [editableSchedule, setEditableSchedule] = useState<Record<number, Record<TimeSlot, boolean>>>(() => {
-     const initial: Record<number, Record<TimeSlot, boolean>> = {};
-     DAYS_OF_WEEK.forEach(day => {
-         initial[day] = { morning: false, afternoon: false, evening: false, full_day: false };
-     });
-     return initial;
+    const initial: Record<number, Record<TimeSlot, boolean>> = {} as any;
+    DAYS_OF_WEEK.forEach(day => {
+      initial[day] = { morning: false, afternoon: false, evening: false } as Record<TimeSlot, boolean>;
+    });
+    return initial;
   });
 
   const scheduleQueryKey = ['doctorSchedule', selectedDoctor.id];
@@ -43,9 +46,9 @@ const DoctorScheduleForm: React.FC<DoctorScheduleFormProps> = ({ selectedDoctor 
   // Update schedule when data is fetched
   React.useEffect(() => {
     if (schedules) {
-      const newEditableSchedule = { ...editableSchedule };
+      const newEditableSchedule: Record<number, Record<TimeSlot, boolean>> = {} as any;
       DAYS_OF_WEEK.forEach(day => {
-        newEditableSchedule[day] = { morning: false, afternoon: false, evening: false, full_day: false };
+        newEditableSchedule[day] = { morning: false, afternoon: false, evening: false } as Record<TimeSlot, boolean>;
       });
       schedules.forEach((entry) => {
         if (newEditableSchedule[entry.day_of_week]) {
@@ -59,11 +62,11 @@ const DoctorScheduleForm: React.FC<DoctorScheduleFormProps> = ({ selectedDoctor 
   const mutation = useMutation<DoctorScheduleEntry[], Error, DoctorScheduleEntry[]>({
     mutationFn: (schedulesToSave) => saveDoctorWeeklySchedule(selectedDoctor.id, schedulesToSave),
     onSuccess: () => {
-      toast.success(t('schedules:scheduleSavedSuccess'));
+      toast.success('تم حفظ الجدول بنجاح');
       queryClient.invalidateQueries({ queryKey: scheduleQueryKey });
     },
     onError: (error: Error) => {
-      toast.error(error.message || t('schedules:scheduleSaveError'));
+      toast.error(error.message || 'فشل حفظ الجدول');
     }
   });
 
@@ -71,7 +74,7 @@ const DoctorScheduleForm: React.FC<DoctorScheduleFormProps> = ({ selectedDoctor 
     setEditableSchedule(prev => {
       const newSchedule = { ...prev };
       if (!newSchedule[day]) {
-        newSchedule[day] = { morning: false, afternoon: false, evening: false, full_day: false };
+        newSchedule[day] = { morning: false, afternoon: false, evening: false } as Record<TimeSlot, boolean>;
       }
       newSchedule[day][slot] = checked;
       return newSchedule;
@@ -83,7 +86,7 @@ const DoctorScheduleForm: React.FC<DoctorScheduleFormProps> = ({ selectedDoctor 
     Object.entries(editableSchedule).forEach(([dayStr, slots]) => {
       const day = parseInt(dayStr);
       Object.entries(slots).forEach(([slotStr, isSelected]) => {
-        if (isSelected && slotStr !== 'full_day') { // Exclude 'full_day' helper
+        if (isSelected) {
           schedulesToSave.push({
             doctor_id: selectedDoctor.id,
             day_of_week: day,
@@ -95,53 +98,48 @@ const DoctorScheduleForm: React.FC<DoctorScheduleFormProps> = ({ selectedDoctor 
     mutation.mutate(schedulesToSave);
   };
 
-  if (isLoading) return <div className="p-4 text-center"><Loader2 className="h-6 w-6 animate-spin text-primary"/></div>;
-  if (error) return <div className="p-4 text-destructive">{t('common:error.fetchFailed', {entity: t('schedules:schedulesTitle')})}</div>;
+  if (isLoading) return <Box sx={{ p: 2, textAlign: 'center' }}><CircularProgress /></Box>;
+  if (error) return <Alert severity="error" sx={{ p: 2 }}>فشل جلب الجداول</Alert>;
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>{t('schedules:editScheduleFor', { doctorName: selectedDoctor.name })}</CardTitle>
-        <CardDescription>{t('schedules:editScheduleDescription')}</CardDescription>
-      </CardHeader>
+      <CardHeader title={`تعديل جدول: ${selectedDoctor.name}`} />
       <CardContent>
-        <div className="overflow-x-auto">
-          <Table className="min-w-[600px]">
-            <TableHeader>
+        <Box sx={{ overflowX: 'auto' }}>
+          <Table size="small" sx={{ minWidth: 600 }}>
+            <TableHead>
               <TableRow>
-                <TableHead className="w-[120px] text-center">{t('schedules:day')}</TableHead>
+                <TableCell align="center" sx={{ fontWeight: 700 }}>اليوم</TableCell>
                 {TIME_SLOTS.map(slot => (
-                  <TableHead key={slot} className="text-center">{t(`schedules:timeSlots.${slot}`)}</TableHead>
+                  <TableCell key={slot} align="center" sx={{ fontWeight: 700 }}>{SLOT_NAMES_AR[slot]}</TableCell>
                 ))}
               </TableRow>
-            </TableHeader>
+            </TableHead>
             <TableBody>
               {DAYS_OF_WEEK.map(day => (
-                <TableRow key={day}>
-                  <TableCell className="font-medium text-center">{t(`schedules:days.${day}`)}</TableCell>
+                <TableRow key={day} hover>
+                  <TableCell align="center" sx={{ fontWeight: 500 }}>{DAY_NAMES_AR[day]}</TableCell>
                   {TIME_SLOTS.map(slot => (
-                    <TableCell key={slot} className="text-center">
-                      <div className="flex justify-center">
-                        <Checkbox
-                          checked={editableSchedule[day]?.[slot] || false}
-                          onCheckedChange={(checked) => handleCheckboxChange(day, slot, !!checked)}
-                          disabled={mutation.isPending}
-                          id={`schedule-${day}-${slot}`}
-                        />
-                      </div>
+                    <TableCell key={slot} align="center">
+                      <Checkbox
+                        checked={editableSchedule[day]?.[slot] || false}
+                        onChange={(e) => handleCheckboxChange(day, slot, e.target.checked)}
+                        disabled={mutation.isPending}
+                        inputProps={{ 'aria-label': `schedule-${day}-${slot}` }}
+                      />
                     </TableCell>
                   ))}
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-        </div>
-        <div className="mt-6 flex justify-end">
-          <Button onClick={handleSubmitSchedule} disabled={mutation.isPending || isFetching}>
-            {mutation.isPending && <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />}
-            {t('schedules:saveScheduleButton')}
+        </Box>
+        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+          <Button variant="contained" onClick={handleSubmitSchedule} disabled={mutation.isPending || isFetching}>
+            {mutation.isPending && <CircularProgress size={16} sx={{ mr: 1 }} />}
+            حفظ الجدول
           </Button>
-        </div>
+        </Box>
       </CardContent>
     </Card>
   );

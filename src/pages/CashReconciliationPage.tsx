@@ -3,13 +3,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Loader2 } from 'lucide-react';
+// MUI
+import { Box, Card, CardContent, CardHeader, Typography, FormControl, InputLabel, Select, MenuItem, TextField, CircularProgress } from '@mui/material';
+
 import { formatNumber } from '@/lib/utils';
 import { getDenominationsForShift, saveDenominationCounts } from '@/services/cashReconciliationService';
 import type { Denomination } from '@/types/cash';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getShiftsList } from '@/services/shiftService';
 import type { Shift } from '@/types/shifts';
 
@@ -44,10 +43,9 @@ const CashReconciliationPage: React.FC = () => {
     mutationFn: (data: { shiftId: number; counts: Denomination[] }) =>
       saveDenominationCounts(data.shiftId, data.counts),
     onSuccess: () => {
-      // toast.success(t('saveSuccess'));
       queryClient.invalidateQueries({ queryKey: ['denominationsForShift', selectedShiftId] });
     },
-    onError: () => toast.error('saveError'),
+    onError: () => toast.error('فشل الحفظ')
   });
 
   const handleCountKeyPress = (id: number, count: string, event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -58,20 +56,15 @@ const CashReconciliationPage: React.FC = () => {
           const updatedDenominations = prev.map(deno => 
             deno.id === id ? { ...deno, count: deno.count + newCount } : deno
           );
-          
-          // Auto-save after updating
           if (selectedShiftId) {
             saveMutation.mutate({ 
               shiftId: Number(selectedShiftId), 
               counts: updatedDenominations 
             });
           }
-          
           return updatedDenominations;
         });
-        
-        // Clear the input field
-        event.currentTarget.value = '';
+        (event.currentTarget as HTMLInputElement).value = '';
       }
     }
   };
@@ -83,15 +76,12 @@ const CashReconciliationPage: React.FC = () => {
         const updatedDenominations = prev.map(deno => 
           deno.id === id ? { ...deno, count: newCount } : deno
         );
-        
-        // Auto-save after updating
         if (selectedShiftId) {
           saveMutation.mutate({ 
             shiftId: Number(selectedShiftId), 
             counts: updatedDenominations 
           });
         }
-        
         return updatedDenominations;
       });
     }
@@ -104,99 +94,101 @@ const CashReconciliationPage: React.FC = () => {
   const isLoading = isLoadingShifts || (!!selectedShiftId && isLoadingDenominations);
 
   return (
-    <div className="container mx-auto py-8">
-      <h1 className="text-3xl font-bold mb-6">pageTitle</h1>
+    <Box sx={{ maxWidth: 1200, mx: 'auto', py: 3 }}>
+      <Typography variant="h5" fontWeight={700} sx={{ mb: 2 }}>تسوية النقدية</Typography>
       
-      <div className="mb-6 max-w-sm">
-        <label htmlFor="shift-select" className="text-sm font-medium text-muted-foreground">selectShift</label>
-        <Select
+      <Box sx={{ mb: 2, maxWidth: 360 }}>
+        <FormControl fullWidth size="small">
+          <InputLabel id="shift-select-label">اختر الوردية</InputLabel>
+          <Select
+            labelId="shift-select-label"
+            label="اختر الوردية"
             value={selectedShiftId || ''}
-            onValueChange={setSelectedShiftId}
-            dir="rtl"
+            onChange={(e) => setSelectedShiftId(String(e.target.value))}
             disabled={isLoadingShifts}
-        >
-            <SelectTrigger id="shift-select"><SelectValue placeholder="selectShiftPlaceholder" /></SelectTrigger>
-            <SelectContent>
-                {shiftsList?.map(s => (
-                    <SelectItem key={s.id} value={s.id.toString()}>
-                        {s.name || `Shift #${s.id} (${new Date(s.created_at).toLocaleDateString()})`}
-                    </SelectItem>
-                ))}
-            </SelectContent>
-        </Select>
-      </div>
+          >
+            {(shiftsList || []).map(s => (
+              <MenuItem key={s.id} value={s.id.toString()}>
+                {s.name || `وردية #${s.id} (${new Date(s.created_at).toLocaleDateString('ar-SA')})`}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Box>
 
       {isLoading ? (
-        <div className="flex justify-center items-center h-64"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 256 }}>
+          <CircularProgress />
+        </Box>
       ) : !selectedShiftId ? (
-        <Card className="p-10 text-center text-muted-foreground">pleaseSelectShift</Card>
+        <Card sx={{ p: 4, textAlign: 'center', color: 'text.secondary' }}>يرجى اختيار وردية</Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr' }, gap: 2 }}>
           {/* Right Column: Denomination Calculator */}
-          <Card className="md:col-span-2">
-            <CardHeader><CardTitle>calculatorTitle</CardTitle></CardHeader>
+          <Card>
+            <CardHeader title="حاسبة الفئات" />
             <CardContent>
-              <div className="space-y-2">
+              <Box sx={{ display: 'grid', gap: 1 }}>
                 {/* Headers */}
-                <div className="grid grid-cols-4 gap-4 px-2 font-semibold text-sm text-muted-foreground">
-                  <div className="text-center">denominationHeader</div>
-                  <div className="text-center">countHeader</div>
-                  <div className="text-center">sumOfCountsHeader</div>
-                  <div className="text-center">totalHeader</div>
-                </div>
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 2, px: 1, fontWeight: 600, fontSize: 14, color: 'text.secondary' }}>
+                  <Box textAlign="center">الفئة</Box>
+                  <Box textAlign="center">الإضافة</Box>
+                  <Box textAlign="center">الإجمالي الحالي</Box>
+                  <Box textAlign="center">المجموع</Box>
+                </Box>
                 {/* Denomination Rows */}
                 {denominations.map(deno => (
-                  <div key={deno.id} className="grid grid-cols-4 gap-4 items-center">
-                    <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-md text-center font-bold text-blue-800 dark:text-blue-200">
+                  <Box key={deno.id} sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 2, alignItems: 'center' }}>
+                    <Box sx={{ p: 1, bgcolor: 'primary.light', color: 'primary.contrastText', textAlign: 'center', borderRadius: 1, fontWeight: 700 }}>
                       {deno.name}
-                    </div>
-                    <Input
+                    </Box>
+                    <TextField
                       type="number"
                       defaultValue=""
-                      onKeyPress={e => handleCountKeyPress(deno.id, e.currentTarget.value, e)}
-                        placeholder="countInputPlaceholder"
-                      className="text-center"
+                      onKeyPress={e => handleCountKeyPress(deno.id, (e.target as HTMLInputElement).value, e)}
+                      placeholder="أدخل عدد للإضافة"
+                      size="small"
+                      inputProps={{ min: 0 }}
                     />
-                    <Input 
+                    <TextField 
                       value={deno.count} 
                       onChange={(e) => handleSumChange(deno.id, e.target.value)}
                       onBlur={(e) => handleSumChange(deno.id, e.target.value)}
                       onKeyPress={(e) => {
                         if (e.key === 'Enter') {
-                          handleSumChange(deno.id, e.currentTarget.value);
-                          e.currentTarget.blur();
+                          handleSumChange(deno.id, (e.target as HTMLInputElement).value);
+                          (e.target as HTMLInputElement).blur();
                         }
                       }}
-                      className="text-center bg-green-50 dark:bg-green-900/20 font-bold text-green-700 dark:text-green-300" 
+                      size="small"
+                      inputProps={{ min: 0 }}
                     />
-                    <Input readOnly value={formatNumber(deno.name * deno.count, 0)} className="text-center font-bold" />
-                  </div>
+                    <TextField value={formatNumber(deno.name * deno.count, 0)} size="small" InputProps={{ readOnly: true }} />
+                  </Box>
                 ))}
-              </div>
+              </Box>
             </CardContent>
           </Card>
           
           {/* Left Column: Summary */}
-          <div className="space-y-4">
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <Card>
-              <CardHeader><CardTitle>summary.employeeAccount</CardTitle></CardHeader>
-              <CardContent className="space-y-2 text-center">
-                <p className="text-xs text-muted-foreground">summary.totalDenominations</p>
-                <p className="text-2xl font-bold">{formatNumber(totalCalculated, 2)}</p>
-                
-                {/* Other summary fields from your image would go here */}
-                {/* These would need to be fetched from a separate API endpoint */}
-                <p className="text-xs text-muted-foreground mt-4">summary.totalWithExpenses</p>
-                <p className="text-2xl font-bold">0.0</p>
-                
-                <p className="text-xs text-muted-foreground mt-4">summary.bank</p>
-                <p className="text-2xl font-bold">0.0</p>
+              <CardHeader title="حساب الموظف" />
+              <CardContent sx={{ textAlign: 'center' }}>
+                <Typography variant="caption" color="text.secondary">إجمالي الفئات</Typography>
+                <Typography variant="h5" fontWeight={700}>{formatNumber(totalCalculated, 2)}</Typography>
+
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>الإجمالي مع المصروفات</Typography>
+                <Typography variant="h6" fontWeight={700}>0.0</Typography>
+
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>البنك</Typography>
+                <Typography variant="h6" fontWeight={700}>0.0</Typography>
               </CardContent>
             </Card>
-          </div>
-        </div>
+          </Box>
+        </Box>
       )}
-    </div>
+    </Box>
   );
 };
 export default CashReconciliationPage;

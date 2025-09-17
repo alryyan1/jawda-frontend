@@ -1,61 +1,47 @@
 // src/pages/patients/TodaysPatientsPage.tsx
-import React, { useState, useEffect, useMemo } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
-import { format, parseISO, startOfDay, endOfDay } from "date-fns"; // Date functions
-import { arSA, enUS } from "date-fns/locale";
-import { toast } from "sonner";
+import dayjs from "dayjs";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+// MUI
 import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  Typography,
+  TextField,
   Table,
   TableBody,
   TableCell,
+  TableContainer,
   TableHead,
-  TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
-import { DatePickerWithRange } from "@/components/ui/date-range-picker"; // Your DateRangePicker
-import type { DateRange } from "react-day-picker";
-import { Loader2, Search, Eye, Filter, CalendarIcon } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+  Paper,
+  Chip,
+  CircularProgress
+} from "@mui/material";
+import { Search as SearchIcon, CalendarMonth as CalendarIcon, Visibility as VisibilityIcon } from "@mui/icons-material";
 
 import {
   getPatientVisitsSummary,
   GetVisitsFilters,
 } from "@/services/visitService";
 import type { PaginatedResponse } from "@/types/common";
-import type { PatientVisitSummary } from "@/types/visits"; // Ensure this type includes doctor_name, total_discount, visit_time_formatted
+import type { PatientVisitSummary } from "@/types/visits";
 import { formatNumber } from "@/lib/utils";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import ViewVisitServicesDialog from "@/components/clinic/patients/ViewVisitServicesDialog";
-import dayjs from "dayjs";
-
-// Update PatientVisitSummary type in src/types/visits.ts if not already done:
-// export interface PatientVisitSummary {
-//   // ... existing fields
-//   visit_time_formatted?: string | null; // NEW
-//   doctor_name?: string | null; // NEW (if doctor is just name, or use DoctorStripped)
-//   // doctor?: DoctorStripped; // Alternative if you send full doctor object
-//   total_discount: number; // NEW
-// }
 
 const TodaysPatientsPage: React.FC = () => {
-  const { t, i18n } = useTranslation(["todaysPatients", "common"]);
-  const dateLocale = i18n.language.startsWith("ar") ? arSA : enUS;
-
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
 
-  // NEW: Date range state
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: startOfDay(new Date()),
-    to: endOfDay(new Date()),
-  });
+  // Simple date range with two inputs
+  const todayIso = dayjs().format("YYYY-MM-DD");
+  const [dateFrom, setDateFrom] = useState<string>(todayIso);
+  const [dateTo, setDateTo] = useState<string>(todayIso);
 
   const [selectedVisitForServices, setSelectedVisitForServices] =
     useState<PatientVisitSummary | null>(null);
@@ -63,22 +49,21 @@ const TodaysPatientsPage: React.FC = () => {
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
-      setCurrentPage(1); // Reset page on new search
+      setCurrentPage(1);
     }, 500);
     return () => clearTimeout(handler);
   }, [searchTerm]);
 
-  // Reset page if date range changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [dateRange]);
+  }, [dateFrom, dateTo]);
 
   const visitsQueryKey = [
     "patientVisitsSummary",
     currentPage,
     debouncedSearchTerm,
-    dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : "all", // Add dates to query key
-    dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : "all",
+    dateFrom || "all",
+    dateTo || "all",
   ] as const;
 
   const {
@@ -93,10 +78,8 @@ const TodaysPatientsPage: React.FC = () => {
         page: currentPage,
         per_page: 15,
         search: debouncedSearchTerm || undefined,
-        date_from: dateRange?.from
-          ? format(dateRange.from, "yyyy-MM-dd")
-          : undefined,
-        date_to: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
+        date_from: dateFrom || undefined,
+        date_to: dateTo || undefined,
       };
       return getPatientVisitsSummary(filters);
     },
@@ -111,213 +94,140 @@ const TodaysPatientsPage: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto py-4 sm:py-6 lg:py-8 space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-2xl sm:text-3xl font-bold">
-          {t("todaysPatients:pageTitle")}
-        </h1>
+    <Box sx={{ maxWidth: 1200, mx: 'auto', py: 2 }}>
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2 }}>
+        <Typography variant="h5" fontWeight={700}>مرضى اليوم</Typography>
         {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-          <div className="relative flex-grow sm:flex-grow-0 sm:w-56 md:w-64">
-            <Input
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 1, width: { xs: '100%', sm: 'auto' } }}>
+          <Box sx={{ position: 'relative', flexGrow: 1 }}>
+            <TextField
+              fullWidth
+              size="small"
               type="search"
-              placeholder={t("common:searchByNameOrPhone")}
+              placeholder="ابحث بالاسم أو الهاتف"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="ps-10 rtl:pr-10 h-9"
+              InputProps={{ startAdornment: <SearchIcon fontSize="small" sx={{ mr: 1 }} /> }}
             />
-            <Search className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          </div>
-          <DatePickerWithRange
-            date={dateRange}
-            onDateChange={setDateRange}
-            align="end"
-            buttonSize="sm" // Or your desired size
-            className="w-full sm:w-auto"
-            triggerClassName="h-9"
+          </Box>
+          <TextField
+            label="من"
+            type="date"
+            size="small"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            InputLabelProps={{ shrink: true }}
           />
-        </div>
-      </div>
+          <TextField
+            label="إلى"
+            type="date"
+            size="small"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+          />
+        </Box>
+      </Box>
 
       {isFetching && (
-        <div className="text-sm text-muted-foreground mb-2 text-center py-2">
-          <Loader2 className="inline h-4 w-4 animate-spin" />{" "}
-          {t("common:updatingList")}
-        </div>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1, textAlign: 'center', py: 1 }}>
+          <CircularProgress size={16} sx={{ mr: 1 }} /> جاري تحديث القائمة...
+        </Typography>
       )}
 
       {isLoading && !isFetching && visits.length === 0 ? (
-        <div className="text-center py-10">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
+        <Box sx={{ textAlign: 'center', py: 5 }}>
+          <CircularProgress />
+        </Box>
       ) : error ? (
-        <p className="text-destructive p-4 text-center">
-          {t("common:error.fetchFailedExt", {
-            entity: t("todaysPatients:patients"),
-            message: error.message,
-          })}
-        </p>
+        <Typography color="error" sx={{ p: 2, textAlign: 'center' }}>
+          فشل جلب المرضى: {error.message}
+        </Typography>
       ) : visits.length === 0 ? (
-        <Card className="text-center py-10 text-muted-foreground">
+        <Card sx={{ textAlign: 'center' }}>
           <CardContent>
-            <CalendarIcon className="mx-auto h-12 w-12 text-muted-foreground/30 mb-4" />
-            <p>
-              {searchTerm ||
-              (dateRange?.from &&
-                dateRange.from.toDateString() !== new Date().toDateString())
-                ? t("common:noResultsFound")
-                : t("todaysPatients:noPatientsToday")}
-            </p>
+            <CalendarIcon sx={{ mx: 'auto', display: 'block', mb: 1, opacity: 0.3 }} />
+            <Typography color="text.secondary">
+              {searchTerm || (dateFrom !== todayIso || dateTo !== todayIso)
+                ? 'لا توجد نتائج'
+                : 'لا توجد زيارات اليوم'}
+            </Typography>
           </CardContent>
         </Card>
       ) : (
-        <Card  className="overflow-hidden">
-          <ScrollArea className="max-h-[calc(100vh-250px)]">
-            {" "}
-            {/* Adjust max-height as needed */}
-            <Table dir={i18n.language === "ar" ? "rtl" : "ltr"}>
-              <TableHeader>
+        <Card>
+          <TableContainer component={Paper} sx={{ maxHeight: 'calc(100vh - 250px)' }}>
+            <Table stickyHeader size="small">
+              <TableHead>
                 <TableRow>
-                  <TableHead className="text-center w-[80px]">
-                    {t("todaysPatients:table.visitId")}
-                  </TableHead>
-                  <TableHead className="text-center">{t("todaysPatients:table.patientName")}</TableHead>
-                  <TableHead className="hidden md:table-cell text-center">
-                    {t("todaysPatients:table.doctorName")}
-                  </TableHead>{" "}
-                  {/* NEW */}
-                  <TableHead className="text-center hidden sm:table-cell">
-                    {t("todaysPatients:table.createdAt")}
-                  </TableHead>{" "}
-                  {/* NEW */}
-                  <TableHead className="text-center">
-                    {t("todaysPatients:table.totalAmount")}
-                  </TableHead>
-                  <TableHead className="text-center hidden md:table-cell">
-                    {t("todaysPatients:table.discount")}
-                  </TableHead>{" "}
-                  {/* NEW */}
-                  <TableHead className="text-center">
-                    {t("todaysPatients:table.totalPaid")}
-                  </TableHead>
-                  <TableHead className="text-center">
-                    {t("todaysPatients:table.balanceDue")}
-                  </TableHead>
-                  <TableHead className="text-center">
-                    {t("common:status")}
-                  </TableHead>
-                  <TableHead className="text-center">
-                    {t("common:actions.title")}
-                  </TableHead>
+                  <TableCell align="center" sx={{ width: 80 }}>رقم الزيارة</TableCell>
+                  <TableCell align="center">اسم المريض</TableCell>
+                  <TableCell align="center">الطبيب</TableCell>
+                  <TableCell align="center">التاريخ</TableCell>
+                  <TableCell align="center">الإجمالي</TableCell>
+                  <TableCell align="center">الخصم</TableCell>
+                  <TableCell align="center">المدفوع</TableCell>
+                  <TableCell align="center">المتبقي</TableCell>
+                  <TableCell align="center">الحالة</TableCell>
+                  <TableCell align="center">إجراءات</TableCell>
                 </TableRow>
-              </TableHeader>
+              </TableHead>
               <TableBody>
                 {visits.map((visit) => (
-                  <TableRow key={visit.id}>
-                    <TableCell className="text-center font-medium">
-                      {visit.id}
-                    </TableCell>
-                    <TableCell className="text-center">
+                  <TableRow key={visit.id} hover>
+                    <TableCell align="center" sx={{ fontWeight: 500 }}>{visit.id}</TableCell>
+                    <TableCell align="center">
                       {visit.patient.name}
                       {visit.patient.company?.name && (
-                        <Badge
-                          variant="outline"
-                          className="ltr:ml-2 rtl:mr-2 text-xs border-blue-500 text-blue-600"
-                        >
-                          {visit.patient.company.name}
-                        </Badge>
+                        <Chip label={visit.patient.company.name} size="small" variant="outlined" color="primary" sx={{ ml: 1 }} />
                       )}
                     </TableCell>
-                    <TableCell className="hidden md:table-cell text-center">
-                      {visit.doctor?.name || t("common:unassigned")}
-                    </TableCell>{" "}
-                    {/* NEW */}
-                    <TableCell className="text-center hidden sm:table-cell">
-                      {dayjs(visit.created_at).format("DD/MM/YYYY HH:mm")}
-                    </TableCell>{" "}
-                    {/* NEW */}
-                    <TableCell className="text-center">
-                      {formatNumber(visit.total_amount)}
+                    <TableCell align="center">{visit.doctor?.name || 'غير معين'}</TableCell>
+                    <TableCell align="center">{dayjs(visit.created_at).format("DD/MM/YYYY HH:mm")}</TableCell>
+                    <TableCell align="center">{formatNumber(visit.total_amount)}</TableCell>
+                    <TableCell align="center" sx={{ color: 'orange' }}>{formatNumber(visit.total_discount)}</TableCell>
+                    <TableCell align="center" sx={{ color: 'green' }}>{formatNumber(visit.total_paid)}</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: visit.balance_due > 0 ? 'error.main' : 'success.main' }}>{formatNumber(visit.balance_due)}</TableCell>
+                    <TableCell align="center">
+                      <Chip
+                        label={visit.status}
+                        color={visit.status === 'completed' ? 'success' : visit.status === 'cancelled' ? 'error' : 'default'}
+                        size="small"
+                      />
                     </TableCell>
-                    <TableCell className="text-center hidden md:table-cell text-orange-600">
-                      {formatNumber(visit.total_discount)}
-                    </TableCell>{" "}
-                    {/* NEW */}
-                    <TableCell className="text-center text-green-600">
-                      {formatNumber(visit.total_paid)}
-                    </TableCell>
-                    <TableCell
-                      className={`text-center font-semibold ${
-                        visit.balance_due > 0
-                          ? "text-red-600"
-                          : "text-green-600"
-                      }`}
-                    >
-                      {formatNumber(visit.balance_due)}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge
-                        variant={
-                          visit.status === "completed"
-                            ? "success"
-                            : visit.status === "cancelled"
-                            ? "destructive"
-                            : "secondary"
-                        }
-                      >
-                        {t(
-                          `clinic:workspace.status.${visit.status}`,
-                          visit.status
-                        )}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleViewServices(visit)}
-                        className="h-7 px-2"
-                      >
-                        <Eye className="h-4 w-4 ltr:mr-1 rtl:ml-1" />{" "}
-                        {t("todaysPatients:actions.viewServicesShort")}
-                      </Button>
-                  
+                    <TableCell align="center">
+                      <Button variant="outlined" size="small" onClick={() => handleViewServices(visit)} startIcon={<VisibilityIcon fontSize="small" />}>عرض الخدمات</Button>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-          </ScrollArea>
+          </TableContainer>
         </Card>
       )}
 
       {meta && meta.last_page > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-4">
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mt: 2 }}>
           <Button
+            variant="outlined"
+            size="small"
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
             disabled={currentPage === 1 || isFetching}
-            size="sm"
-            variant="outline"
           >
-            {t("common:pagination.previous")}
+            السابق
           </Button>
-          <span className="text-sm text-muted-foreground">
-            {t("common:pagination.pageInfo", {
-              current: meta.current_page,
-              total: meta.last_page,
-            })}
-          </span>
+          <Typography variant="body2" color="text.secondary">
+            صفحة {meta.current_page} من {meta.last_page}
+          </Typography>
           <Button
-            onClick={() =>
-              setCurrentPage((p) => Math.min(meta.last_page, p + 1))
-            }
+            variant="outlined"
+            size="small"
+            onClick={() => setCurrentPage((p) => Math.min(meta.last_page, p + 1))}
             disabled={currentPage === meta.last_page || isFetching}
-            size="sm"
-            variant="outline"
           >
-            {t("common:pagination.next")}
+            التالي
           </Button>
-        </div>
+        </Box>
       )}
 
       {selectedVisitForServices && (
@@ -327,7 +237,7 @@ const TodaysPatientsPage: React.FC = () => {
           visit={selectedVisitForServices}
         />
       )}
-    </div>
+    </Box>
   );
 };
 

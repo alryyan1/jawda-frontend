@@ -4,33 +4,23 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { AxiosError } from "axios";
 
-// MUI Imports for Autocomplete
+// MUI Imports
 import Autocomplete from "@mui/material/Autocomplete";
 import TextField from "@mui/material/TextField";
 import CircularProgress from "@mui/material/CircularProgress";
 import Paper from "@mui/material/Paper";
+import Button from "@mui/material/Button";
+import Box from "@mui/material/Box";
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
+import Typography from "@mui/material/Typography";
+import FormControl from "@mui/material/FormControl";
+import InputLabel from "@mui/material/InputLabel";
+import Select from "@mui/material/Select";
+import MenuItem from "@mui/material/MenuItem";
+import FormHelperText from "@mui/material/FormHelperText";
 
-// Shadcn UI & Custom Components
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Card, CardDescription } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, PlusCircle } from "lucide-react";
+// Removed shadcn UI; using MUI components instead
 import AddSubcompanyDialog from "@/components/clinic/AddSubcompanyDialog";
 import AddCompanyRelationDialog from "@/components/clinic/AddCompanyRelationDialog";
 
@@ -94,11 +84,11 @@ const LabRegistrationForm: React.FC<LabRegistrationFormProps> = ({
 
   const form = useForm<LabRegistrationFormValues>({
     defaultValues: {
-      phone: "", name: "", doctor: null, gender: "female",
-      age_year: "", age_month: "", age_day: "",
+      phone: "0", name: "", doctor: null, gender: "female",
+      age_year: "0",
     },
   });
-  const { control, handleSubmit, reset, setValue, watch, trigger } = form;
+  const { control, handleSubmit, reset, setValue, watch } = form;
 
   const companyId = watch("company_id");
   const isCompanySelected = !!companyId && companyId !== "";
@@ -213,192 +203,124 @@ const LabRegistrationForm: React.FC<LabRegistrationFormProps> = ({
   const currentIsLoading = isLoadingDoctors || isLoadingCompanies || registrationMutation.isPending;
 
   return (
-    <div  className="w-full h-full flex flex-col">
-      <div className="mb-4">
-        <h2 className="text-lg font-semibold">تسجيل مريض جديد</h2>
-        <p className="text-sm text-muted-foreground">يرجى تعبئة البيانات التالية لتسجيل المريض وتفعيل الزيارة</p>
-      </div>
-      <Form  {...form}>
-        <form  onSubmit={onSubmit} className="space-y-4 flex-grow flex flex-col">
-          <ScrollArea className="flex-grow pr-3 -mr-3">
-            <div className="space-y-4">
-              <FormField control={control} name="phone" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>الهاتف</FormLabel>
-                  <FormControl>
-                    <Input type="tel" maxLength={10} placeholder="0xxxxxxxxx" autoComplete="off" {...field} value={field.value || ""} ref={phoneInputRef} onChange={handleSearchInputChange} disabled={currentIsLoading} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+    <Box sx={{ width: '100%', maxWidth: 380, mx: 'auto' }}>
+      <Card>
+        <CardContent>
+          <Typography variant="h6">تسجيل مريض جديد</Typography>
+          <Box component="form" onSubmit={onSubmit} sx={{ mt: 2 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Controller name="phone" control={control} render={({ field }) => (
+                <TextField fullWidth label="رقم الهاتف" id="lab-phone" type="tel" inputProps={{ maxLength: 10 }} placeholder="0xxxxxxxxx" autoComplete="off" {...field} value={field.value || ""} inputRef={phoneInputRef} onChange={handleSearchInputChange} disabled={currentIsLoading}/>
               )} />
-              <FormField control={control} name="name" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>الاسم</FormLabel>
-                  <FormControl>
-                    <Input placeholder="اسم المريض" autoComplete="off" {...field} ref={nameInputRef} onChange={handleSearchInputChange} disabled={currentIsLoading} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+              <Controller name="name" control={control} render={({ field }) => (
+                <TextField fullWidth label="اسم المريض" id="lab-name" autoComplete="off" {...field} inputRef={nameInputRef} onChange={handleSearchInputChange} disabled={currentIsLoading}/>
               )} />
               <Controller name="doctor" control={control} render={({ field, fieldState }) => (
-                  <FormItem>
-                    <FormLabel>الطبيب المحوِّل</FormLabel>
-                    <Autocomplete
-                      {...field}
-                      options={doctorsList}
-                      loading={isLoadingDoctors}
-                      getOptionLabel={(option) => `${option.name} ${option.specialist_name ? `(${option.specialist_name})` : ""}`}
-                      isOptionEqualToValue={(option, value) => option.id === value.id}
-                      onChange={(_, data) => {
-                        field.onChange(data);
-                        onDoctorChange(data);
-                      }}
-                      size="small"
-                      renderInput={(params) => ( <TextField {...params} placeholder="اختر الطبيب" variant="outlined" error={!!fieldState.error} helperText={fieldState.error?.message} InputProps={{ ...params.InputProps, endAdornment: (<>{isLoadingDoctors ? <CircularProgress size={16}/> : null}{params.InputProps.endAdornment}</>) }} sx={{ "& .MuiOutlinedInput-root": { backgroundColor: "var(--background)", paddingTop: "1px !important", paddingBottom: "1px !important" } }} /> )}
-                      PaperComponent={(props) => (<Paper {...props} className="dark:bg-slate-800 dark:text-slate-100" />)}
-                    />
-                    <FormMessage />
-                  </FormItem>
+                <FormControl fullWidth size="small">
+                  {/* <InputLabel shrink>الطبيب المحوِّل</InputLabel> */}
+                  <Autocomplete
+                    {...field}
+                    options={doctorsList}
+                    loading={isLoadingDoctors}
+                    getOptionLabel={(option) => `${option.name} ${option.specialist_name ? `(${option.specialist_name})` : ""}`}
+                    isOptionEqualToValue={(option, value) => option.id === value.id}
+                    onChange={(_, data) => {
+                      field.onChange(data);
+                      onDoctorChange(data);
+                    }}
+                    size="small"
+                    renderInput={(params) => (
+                      <TextField {...params} placeholder="اختر الطبيب" variant="outlined" error={!!fieldState.error} helperText={fieldState.error?.message} InputProps={{ ...params.InputProps, endAdornment: (<>{isLoadingDoctors ? <CircularProgress size={16}/> : null}{params.InputProps.endAdornment}</>) }} />
+                    )}
+                    PaperComponent={(props) => (<Paper {...props} />)}
+                  />
+                  <FormHelperText />
+                </FormControl>
               )} />
-              <div className="grid grid-cols-2 gap-4">
-                <FormField control={control} name="gender" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>النوع</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={currentIsLoading}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder={"اختر النوع"} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="male">ذكر</SelectItem>
-                        <SelectItem value="female">أنثى</SelectItem>
-                      </SelectContent>
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+                <Controller name="gender" control={control} render={({ field }) => (
+                  <FormControl fullWidth size="small">
+                    <InputLabel id="gender-label">النوع</InputLabel>
+                    <Select labelId="gender-label" value={field.value} label="النوع" onChange={(e) => field.onChange(e.target.value)} disabled={currentIsLoading}>
+                      <MenuItem value="male">ذكر</MenuItem>
+                      <MenuItem value="female">أنثى</MenuItem>
                     </Select>
-                    <FormMessage />
-                  </FormItem>
+                  </FormControl>
                 )} />
-                <FormField control={control} name="company_id" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>الشركة</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ""} disabled={currentIsLoading}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder={"اختر الشركة (اختياري)"} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value=" ">بدون شركة</SelectItem>
-                        {companies.map((company) => (
-                          <SelectItem key={company.id} value={company.id.toString()}>
-                            {company.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
+                <Controller name="company_id" control={control} render={({ field }) => (
+                  <FormControl fullWidth size="small">
+                    <InputLabel id="company-label">الشركة</InputLabel>
+                    <Select labelId="company-label" value={field.value || ""} label="الشركة" onChange={(e) => field.onChange(e.target.value)} disabled={currentIsLoading}>
+                      <MenuItem value=" ">لا يوجد</MenuItem>
+                      {companies.map((company) => (
+                        <MenuItem key={company.id} value={company.id.toString()}>{company.name}</MenuItem>
+                      ))}
                     </Select>
-                    <FormMessage />
-                  </FormItem>
+                  </FormControl>
                 )} />
-              </div>
-              <FormItem>
-                <FormLabel>العمر</FormLabel>
-                <div className="grid grid-cols-3 gap-2">
-                  <FormField control={control} name="age_year" render={({ field }) => ( <Input className="h-9" type="number" placeholder={"سنوات"} {...field} value={field.value || ""} disabled={currentIsLoading} /> )} />
-                  <FormField control={control} name="age_month" render={({ field }) => ( <Input className="h-9" type="number" placeholder={"أشهر"} {...field} value={field.value || ""} disabled={currentIsLoading} /> )} />
-                  <FormField control={control} name="age_day" render={({ field }) => ( <Input className="h-9" type="number" placeholder={"أيام"} {...field} value={field.value || ""} disabled={currentIsLoading} /> )} />
-                </div>
-                <FormMessage>{form.formState.errors.age_year?.message || form.formState.errors.age_month?.message || form.formState.errors.age_day?.message}</FormMessage>
-              </FormItem>
+              </Box>
+              <Box>
+                <Typography variant="body2" sx={{ mb: 1 }}>العمر</Typography>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Controller name="age_year" control={control} render={({ field }) => (
+                    <TextField fullWidth label="سنوات" type="number" {...field} value={field.value || ""} disabled={currentIsLoading}/>
+                  )} />
+                  <Controller name="age_month" control={control} render={({ field }) => (
+                    <TextField fullWidth label="أشهر" type="number" {...field} value={field.value || ""} disabled={currentIsLoading}/>
+                  )} />
+                  <Controller name="age_day" control={control} render={({ field }) => (
+                    <TextField fullWidth label="أيام" type="number" {...field} value={field.value || ""} disabled={currentIsLoading}/>
+                  )} />
+                </Box>
+                <FormHelperText>{form.formState.errors.age_year?.message || form.formState.errors.age_month?.message || form.formState.errors.age_day?.message}</FormHelperText>
+              </Box>
               {isCompanySelected && (
-                <Card className="p-3 pt-2 mt-4 border-dashed">
-                  <CardDescription className="mb-3">بيانات التأمين</CardDescription>
-                  <div className="space-y-3">
-                    <FormField control={control} name="insurance_no" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>رقم التأمين</FormLabel>
-                        <FormControl>
-                          <Input placeholder={"أدخل رقم التأمين"} {...field} value={field.value || ""} disabled={currentIsLoading} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
+                <Card variant="outlined" sx={{ p: 2, bgcolor: 'primary.50' }}>
+                  <Typography variant="subtitle2" sx={{ mb: 2, color: 'primary.main' }}>
+                    تفاصيل التأمين
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <Controller name="insurance_no" control={control} render={({ field }) => (
+                      <TextField fullWidth label="رقم التأمين" {...field} value={field.value || ""} disabled={currentIsLoading} size="small"/>
                     )} />
-                    <FormField control={control} name="guarantor" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>الضامن</FormLabel>
-                        <FormControl>
-                          <Input placeholder={"اسم الضامن (اختياري)"} {...field} value={field.value || ""} disabled={currentIsLoading} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
+                    <Controller name="guarantor" control={control} render={({ field }) => (
+                      <TextField fullWidth label="الضامن" placeholder="اسم الضامن (اختياري)" {...field} value={field.value || ""} disabled={currentIsLoading} size="small"/>
                     )} />
-                    <div className="grid grid-cols-1 gap-4">
-                      <FormField control={control} name="subcompany_id" render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>الفرع</FormLabel>
-                          <div className="flex gap-2">
-                            <Select onValueChange={field.onChange} value={field.value || ""} disabled={currentIsLoading}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder={"اختر الفرع (اختياري)"} />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value=" ">بدون فرع</SelectItem>
-                                {subcompanies.map((subcompany) => (
-                                  <SelectItem key={subcompany.id} value={subcompany.id.toString()}>
-                                    {subcompany.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <Button type="button" onClick={() => setShowSubcompanyDialog(true)} disabled={currentIsLoading}>
-                              <PlusCircle className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          <FormMessage />
-                        </FormItem>
-                      )} />
-                      <FormField control={control} name="company_relation_id" render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>صلة القرابة</FormLabel>
-                          <div className="flex gap-2">
-                            <Select onValueChange={field.onChange} value={field.value || ""} disabled={currentIsLoading}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder={"اختر صلة القرابة (اختياري)"} />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value=" ">بدون صلة</SelectItem>
-                                {companyRelations.map((relation) => (
-                                  <SelectItem key={relation.id} value={relation.id.toString()}>
-                                    {relation.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <Button type="button" onClick={() => setShowRelationDialog(true)} disabled={currentIsLoading}>
-                              <PlusCircle className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          <FormMessage />
-                        </FormItem>
-                      )} />
-                    </div>
-                  </div>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <FormControl fullWidth size="small">
+                        <InputLabel id="subcompany-label">الشركة الفرعية</InputLabel>
+                        <Select labelId="subcompany-label" value={form.getValues('subcompany_id') || ''} label="الشركة الفرعية" onChange={(e) => setValue('subcompany_id', String(e.target.value))} disabled={currentIsLoading}>
+                          <MenuItem value=" ">لا يوجد</MenuItem>
+                          {subcompanies.map((sub) => (
+                            <MenuItem key={sub.id} value={String(sub.id)}>{sub.name}</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      <Button onClick={() => setShowSubcompanyDialog(true)} disabled={currentIsLoading} size="small">إضافة</Button>
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <FormControl fullWidth size="small">
+                        <InputLabel id="relation-label">العلاقة</InputLabel>
+                        <Select labelId="relation-label" value={form.getValues('company_relation_id') || ''} label="العلاقة" onChange={(e) => setValue('company_relation_id', String(e.target.value))} disabled={currentIsLoading}>
+                          <MenuItem value=" ">لا يوجد</MenuItem>
+                          {companyRelations.map((rel) => (
+                            <MenuItem key={rel.id} value={String(rel.id)}>{rel.name}</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      <Button onClick={() => setShowRelationDialog(true)} disabled={currentIsLoading} size="small">إضافة</Button>
+                    </Box>
+                  </Box>
                 </Card>
               )}
-            </div>
-          </ScrollArea>
-          <div className="pt-4 flex-shrink-0">
-            <Button type="submit" className="w-full" disabled={currentIsLoading}>
-              {registrationMutation.isPending && <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />}
-              تسجيل
-            </Button>
-          </div>
-        </form>
-      </Form>
-   
+              <Button type="submit" variant="contained" fullWidth disabled={currentIsLoading} startIcon={registrationMutation.isPending ? <CircularProgress size={20} /> : null}>
+                {registrationMutation.isPending ? 'جاري التسجيل...' : 'تسجيل المريض'}
+              </Button>
+            </Box>
+          </Box>
+        </CardContent>
+      </Card>
+ 
       <AddSubcompanyDialog
         companyId={companyId ? Number(companyId) : null}
         open={showSubcompanyDialog}
@@ -411,7 +333,7 @@ const LabRegistrationForm: React.FC<LabRegistrationFormProps> = ({
         onOpenChange={setShowRelationDialog}
         onCompanyRelationAdded={handleRelationAdded}
       />
-    </div>
+    </Box>
   );
 };
 export default LabRegistrationForm;

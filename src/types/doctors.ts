@@ -38,7 +38,7 @@ export interface Doctor {
   image_url?: string | null; // full URL for display
   finance_account_id?: number | null;
   finance_account_name?: string;
-  finance_account_id_insurance: number;
+  finanace_account_id_insurance: number;
   insurance_finance_account_name?: string;
   calc_insurance: boolean;
   user_id?: number | null;
@@ -71,7 +71,7 @@ export interface DoctorFormData {
   image_file?: File | null; // For new image upload
   image?: string | null; // Existing image path (for edit view)
   finance_account_id?: string | undefined;
-  finance_account_id_insurance: string | undefined;
+  finanace_account_id_insurance: string | undefined;
   calc_insurance: boolean;
   // user_id_to_link?: string | undefined; // If linking to an existing user during creation/edit
 }

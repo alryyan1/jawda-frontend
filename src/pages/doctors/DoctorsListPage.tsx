@@ -1,17 +1,13 @@
 // src/pages/doctors/DoctorsListPage.tsx
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { getDoctors, deleteDoctor } from '../../services/doctorService';
 import type { Doctor } from '../../types/doctors';
-import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Trash2, Edit, Loader2, Search, ListChecks } from 'lucide-react';
 import { toast } from 'sonner';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+// MUI
+import { Box, Button, Card, CardContent, TextField, IconButton, CircularProgress, Avatar, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Menu, MenuItem, Divider, Typography } from '@mui/material';
+import { MoreHoriz as MoreHorizIcon, Delete as DeleteIcon, Edit as EditIcon, Search as SearchIcon, Checklist as ChecklistIcon, Person as PersonIcon, NavigateBefore, NavigateNext } from '@mui/icons-material';
 import { useDebounce } from '@/hooks/useDebounce';
 import ManageDoctorServicesDialog from '@/components/doctors/ManageDoctorServicesDialog';
 
@@ -20,6 +16,7 @@ interface ErrorWithMessage {
 }
 
 export default function DoctorsListPage() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
@@ -103,146 +100,134 @@ export default function DoctorsListPage() {
   };
 
 
-  if (isLoading && !isFetching) return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin" /> جارٍ تحميل الأطباء...</div>;
-  if (error) return <p className="text-destructive p-4">{`فشل تحميل الأطباء: ${error.message}`}</p>;
+  if (isLoading && !isFetching) return (
+    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 256, gap: 1 }}>
+      <CircularProgress size={24} /> جارٍ تحميل الأطباء...
+    </Box>
+  );
+  if (error) return <Box sx={{ color: 'error.main', p: 2 }}>{`فشل تحميل الأطباء: ${error.message}`}</Box>;
 
   const doctors = paginatedData?.data || [];
   const meta = paginatedData?.meta;
 
-  return (
-    <div className="container mx-auto py-4 sm:py-6 lg:py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold">إدارة الأطباء</h1>
-        <Button asChild size="sm">
-          <Link to="/doctors/new">إضافة طبيب جديد</Link>
-        </Button>
-      </div>
+  // Menu state
+  const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const [menuDoctor, setMenuDoctor] = useState<Doctor | null>(null);
+  const openMenu = Boolean(menuAnchorEl);
 
-      <Card className="mb-6">
-        <div className="p-4">
-          <div className="flex items-center gap-2">
-            <Search className="h-4 w-4 text-muted-foreground shrink-0" />
-            <Input
-              type="text"
+  const handleMenuOpen = (event: React.MouseEvent<HTMLButtonElement>, doctor: Doctor) => {
+    setMenuAnchorEl(event.currentTarget);
+    setMenuDoctor(doctor);
+  };
+  const handleMenuClose = () => {
+    setMenuAnchorEl(null);
+  };
+
+  return (
+    <Box sx={{ maxWidth: 1200, mx: 'auto', py: { xs: 2, sm: 3, lg: 4 } }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h5" fontWeight={700}>إدارة الأطباء</Typography>
+        <Button component={Link} to="/doctors/new" variant="contained" size="small">إضافة طبيب جديد</Button>
+      </Box>
+
+      <Card sx={{ mb: 2 }}>
+        <CardContent>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <SearchIcon fontSize="small" color="action" />
+            <TextField
+              variant="outlined"
+              size="small"
               placeholder="ابحث بالاسم..."
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page on search
+                setCurrentPage(1);
               }}
-              className="max-w-sm"
+              sx={{ maxWidth: 320 }}
             />
-          </div>
-        </div>
+          </Box>
+        </CardContent>
       </Card>
 
-      {isFetching && <div className="text-sm text-muted-foreground mb-2">جاري تحديث القائمة...</div>}
-      
+      {isFetching && <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>جاري تحديث القائمة...</Typography>}
+
       {doctors.length === 0 && !isLoading ? (
-        <div className="text-center py-10 text-muted-foreground">لم يتم العثور على أطباء</div>
+        <Box sx={{ textAlign: 'center', py: 5, color: 'text.secondary' }}>لم يتم العثور على أطباء</Box>
       ) : (
-        <Card>
-            <Table>
-                <TableHeader>
-                <TableRow>
-                    <TableHead className="w-[80px] text-center">الصورة</TableHead>
-                    <TableHead className='text-center'>الاسم</TableHead>
-                    <TableHead className="hidden md:table-cell text-center">الهاتف</TableHead>
-                    <TableHead className="hidden sm:table-cell text-center">الاختصاص</TableHead>
-                    <TableHead className="hidden lg:table-cell text-center">نسبة النقد</TableHead>
-                    <TableHead className="hidden lg:table-cell text-center">نسبة الشركة</TableHead>
-                    <TableHead className="hidden lg:table-cell text-center">الراتب الثابت</TableHead>
-                    <TableHead className="text-center">إجراءات</TableHead>
+        <TableContainer component={Paper}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell align="center" sx={{ width: 80 }}>الصورة</TableCell>
+                <TableCell align="center">الاسم</TableCell>
+                <TableCell align="center">الهاتف</TableCell>
+                <TableCell align="center">الاختصاص</TableCell>
+                <TableCell align="center">نسبة النقد</TableCell>
+                <TableCell align="center">نسبة الشركة</TableCell>
+                <TableCell align="center">الراتب الثابت</TableCell>
+                <TableCell align="center">إجراءات</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {doctors.map((doctor) => (
+                <TableRow key={doctor.id} hover onClick={() => navigate(`/doctors/${doctor.id}/edit`)} sx={{ cursor: 'pointer' }}>
+                  <TableCell align="center">
+                    <Avatar sx={{ width: 40, height: 40, mx: 'auto' }} src={getImageUrl(doctor.image)} alt={doctor.name}>
+                      <PersonIcon />
+                    </Avatar>
+                  </TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 500 }}>{doctor.name}</TableCell>
+                  <TableCell align="center">{doctor.phone}</TableCell>
+                  <TableCell align="center">{doctor.specialist?.name || doctor.specialist_name || 'N/A'}</TableCell>
+                  <TableCell align="center">{doctor.cash_percentage || 'N/A'}</TableCell>
+                  <TableCell align="center">{doctor.company_percentage || 'N/A'}</TableCell>
+                  <TableCell align="center">{doctor.static_wage || 'N/A'}</TableCell>
+                  <TableCell align="center">
+                    <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleMenuOpen(e, doctor); }}>
+                      <MoreHorizIcon fontSize="small" />
+                    </IconButton>
+                  </TableCell>
                 </TableRow>
-                </TableHeader>
-                <TableBody>
-                {doctors.map((doctor) => (
-                    <TableRow key={doctor.id}>
-                    <TableCell>
-                        <Avatar className="h-10 w-10">
-                            <AvatarImage src={getImageUrl(doctor.image)} alt={doctor.name} />
-                            <AvatarFallback>{getInitials(doctor.name)}</AvatarFallback>
-                        </Avatar>
-                    </TableCell>
-                    <TableCell className="font-medium text-center">{doctor.name}</TableCell>
-                    <TableCell className="hidden md:table-cell text-center">{doctor.phone}</TableCell>
-                    <TableCell className="hidden sm:table-cell text-center">{doctor.specialist?.name || doctor.specialist_name || 'N/A'}</TableCell>
-                    <TableCell className="hidden lg:table-cell text-center">{doctor.cash_percentage || 'N/A'}</TableCell>
-                    <TableCell className="hidden lg:table-cell text-center">{doctor.company_percentage || 'N/A'}</TableCell>
-                    <TableCell className="hidden lg:table-cell text-center">{doctor.static_wage || 'N/A'}</TableCell>
-                    <TableCell className="text-center">
-                        <DropdownMenu dir="rtl">
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">فتح القائمة</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem asChild>
-                            <Link to={`/doctors/${doctor.id}/edit`} className="flex items-center w-full">
-                                <Edit className="rtl:ml-2 ltr:mr-2 h-4 w-4" /> تعديل
-                            </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => handleManageDoctorServices(doctor)} className="flex items-center w-full">
-      <ListChecks className="rtl:ml-2 ltr:mr-2 h-4 w-4" /> إدارة الخدمات
-    </DropdownMenuItem>
-                            <DropdownMenuItem
-                            onClick={() => handleDelete(doctor.id)}
-                            className="text-destructive focus:text-destructive flex items-center w-full"
-                            disabled={deleteMutation.isPending && deleteMutation.variables === doctor.id}
-                            >
-                            {deleteMutation.isPending && deleteMutation.variables === doctor.id 
-                                ? <Loader2 className="rtl:ml-2 ltr:mr-2 h-4 w-4 animate-spin"/> 
-                                : <Trash2 className="rtl:ml-2 ltr:mr-2 h-4 w-4" />
-                            }
-                            حذف
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                        </DropdownMenu>
-                    </TableCell>
-                    </TableRow>
-                ))}
-                </TableBody>
-            </Table>
-        </Card>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
 
       {meta && meta.last_page > 1 && (
-        <div className="flex items-center justify-between mt-6">
-          <Button 
-            onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
-            disabled={currentPage === 1 || isFetching}
-            size="sm"
-            variant="outline"
-          >
-            السابق
-          </Button>
-          <span className="text-sm text-muted-foreground">
-            {`صفحة ${meta.current_page} من ${meta.last_page}`}
-          </span>
-          <Button 
-            onClick={() => setCurrentPage(p => Math.min(meta.last_page, p + 1))} 
-            disabled={currentPage === meta.last_page || isFetching}
-            size="sm"
-            variant="outline"
-          >
-            التالي
-          </Button>
-        </div>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 2 }}>
+          <Button startIcon={<NavigateBefore />} onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1 || isFetching} variant="outlined" size="small">السابق</Button>
+          <Typography variant="body2" color="text.secondary">{`صفحة ${meta.current_page} من ${meta.last_page}`}</Typography>
+          <Button endIcon={<NavigateNext />} onClick={() => setCurrentPage(p => Math.min(meta.last_page, p + 1))} disabled={currentPage === meta.last_page || isFetching} variant="outlined" size="small">التالي</Button>
+        </Box>
       )}
-            {dialogState.doctor && (
+
+      <Menu anchorEl={menuAnchorEl} open={openMenu} onClose={handleMenuClose} transformOrigin={{ horizontal: 'right', vertical: 'top' }} anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}>
+        <MenuItem component={Link} to={menuDoctor ? `/doctors/${menuDoctor.id}/edit` : '#'} onClick={handleMenuClose}>
+          <EditIcon fontSize="small" sx={{ ml: 1 }} /> تعديل
+        </MenuItem>
+        <Divider />
+        <MenuItem onClick={() => { if (menuDoctor) handleManageDoctorServices(menuDoctor); handleMenuClose(); }}>
+          <ChecklistIcon fontSize="small" sx={{ ml: 1 }} /> إدارة الخدمات
+        </MenuItem>
+        <MenuItem disabled={deleteMutation.isPending && (!!menuDoctor && deleteMutation.variables === menuDoctor.id)} onClick={() => { if (menuDoctor) handleDelete(menuDoctor.id); handleMenuClose(); }} sx={{ color: 'error.main' }}>
+          {deleteMutation.isPending && (!!menuDoctor && deleteMutation.variables === menuDoctor.id) ? (
+            <CircularProgress size={16} sx={{ ml: 1 }} />
+          ) : (
+            <DeleteIcon fontSize="small" sx={{ ml: 1 }} />
+          )}
+          حذف
+        </MenuItem>
+      </Menu>
+
+      {dialogState.doctor && (
         <ManageDoctorServicesDialog
           isOpen={dialogState.isOpen}
           onOpenChange={handleDialogOpenChange}
           doctor={dialogState.doctor}
-          onConfigurationUpdated={() => {
-            // Optional: Could refetch the main doctors list if the dialog shows a count of configured services
-            // queryClient.invalidateQueries({ queryKey: ['doctors', currentPage] });
-          }}
+          onConfigurationUpdated={() => {}}
         />
       )}
-    </div>
+    </Box>
   );
 }

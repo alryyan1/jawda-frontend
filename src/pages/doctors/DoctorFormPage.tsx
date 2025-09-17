@@ -1,35 +1,29 @@
 // src/pages/doctors/DoctorFormPage.tsx
 import React, { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
+  Box,
+  TextField,
+  Button,
   Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox"; // For calc_insurance
-import {
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Typography,
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Loader2 } from "lucide-react";
+  CardActions,
+  CircularProgress,
+  FormHelperText,
+  Checkbox,
+  FormControlLabel
+} from '@mui/material';
+import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
+import { Save as SaveIcon } from '@mui/icons-material';
 import { toast } from "sonner";
 
 import type { DoctorFormData, Specialist, FinanceAccount } from "@/types/doctors";
@@ -55,7 +49,7 @@ interface DoctorFormValues {
   image_file?: File | null;
   image?: string | null;
   finance_account_id?: string;
-  finance_account_id_insurance?: string;
+  finanace_account_id_insurance?: string;
   calc_insurance: boolean;
 }
 
@@ -117,7 +111,7 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
       image_file: undefined,
       image: null,
       finance_account_id: undefined,
-      finance_account_id_insurance: undefined,
+      finanace_account_id_insurance: undefined,
       calc_insurance: false,
     },
   });
@@ -142,8 +136,8 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
         finance_account_id: doctorData.finance_account_id
           ? String(doctorData.finance_account_id)
           : undefined,
-        finance_account_id_insurance: String(
-          doctorData.finance_account_id_insurance
+        finanace_account_id_insurance: String(
+          doctorData.finanace_account_id_insurance
         ),
         calc_insurance: doctorData.calc_insurance,
       });
@@ -235,18 +229,17 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
       return;
     }
     // Ensure numeric fields are numbers, not strings, if backend expects numbers
-    const submissionData: DoctorFormData = {
+    const submissionData: DoctorFormData & { finanace_account_id_insurance?: string } = {
       ...data,
       specialist_id: String(data.specialist_id!),
-      cash_percentage: String(data.cash_percentage), // Keep as string for FormData
+      cash_percentage: String(data.cash_percentage),
       company_percentage: String(data.company_percentage),
       static_wage: String(data.static_wage),
       lab_percentage: String(data.lab_percentage),
       start: String(data.start),
-      // image_file is already File or undefined
-      // specialist_id, finance_account_id, finance_account_id_insurance are already strings
       finance_account_id: data.finance_account_id ?? undefined,
-      finance_account_id_insurance: data.finance_account_id_insurance ?? "",
+      // Backend column is misspelled as 'finanace_account_id_insurance'
+      finanace_account_id_insurance: data.finanace_account_id_insurance ?? "",
     };
     // if (!isEditMode && !data.image_file) {
     //     form.setError("image_file", { type: "manual", message: t('common:validation.required', { field: t('doctors:form.imageLabel')}) });
@@ -273,296 +266,124 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
 
   if (isEditMode && isLoadingDoctor)
     return (
-      <div className="flex justify-center items-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin" /> جاري التحميل...
-      </div>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 256 }}>
+        <CircularProgress size={24} />
+        <Typography sx={{ ml: 1 }}>جاري التحميل...</Typography>
+      </Box>
     );
   return (
-    <Card className="max-w-3xl mx-auto">
-      <CardHeader>
-        <CardTitle>{isEditMode ? 'تعديل طبيب' : 'إضافة طبيب'}</CardTitle>
-        <CardDescription>يرجى تعبئة البيانات التالية</CardDescription>
-      </CardHeader>
+    <Card sx={{ maxWidth: 960, mx: 'auto' }}>
+      <CardHeader
+        title={isEditMode ? 'تعديل طبيب' : 'إضافة طبيب'}
+        subheader="يرجى تعبئة البيانات التالية"
+        action={isEditMode ? (
+          <Button variant="outlined" size="small" onClick={() => navigate(-1)} startIcon={<ArrowBackIcon fontSize="small" />}>
+            رجوع
+          </Button>
+        ) : null}
+      />
       <CardContent>
-        <Form {...form}>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>الاسم</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder={'اسم الطبيب'}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>الهاتف</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="tel"
-                        placeholder={'رقم الهاتف'}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            <FormField
-              control={control}
-              name="specialist_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>التخصص</FormLabel>
-                  <div className="flex items-center gap-2">
-                    {/* debug removed */}
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value ?? ""}
-                      // defaultValue={'1'} // Important for react-hook-form with Select
-                      disabled={isLoadingSpecialists || formState.isSubmitting}
-                    >
-                      <FormControl className="flex-grow">
-                        <SelectTrigger>
-                          <SelectValue placeholder={'اختر التخصص'} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {isLoadingSpecialists ? (
-                          <SelectItem value="loading" disabled>جاري التحميل...</SelectItem>
-                        ) : (
-                          specialists?.map((s) => (
-                            <SelectItem key={s.id} value={String(s.id)}>
-                              {s.name}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                    {/* Add the Dialog Trigger Here */}
-                    <AddSpecialistDialog
-                      onSpecialistAdded={handleSpecialistAdded}
-                    />
-                  </div>
-                  <FormMessage />
-                </FormItem>
+        <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
+            <Controller name="name" control={control} render={({ field }) => (
+              <TextField label="الاسم" placeholder="اسم الطبيب" {...field} />
+            )} />
+            <Controller name="phone" control={control} render={({ field }) => (
+              <TextField label="الهاتف" type="tel" placeholder="رقم الهاتف" {...field} />
+            )} />
+          </Box>
+
+          <Controller name="specialist_id" control={control} render={({ field, fieldState }) => (
+            <Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <FormControl fullWidth size="small">
+                  <InputLabel id="specialist-label">التخصص</InputLabel>
+                  <Select labelId="specialist-label" label="التخصص" value={field.value ?? ''} onChange={(e) => field.onChange(e.target.value)} disabled={isLoadingSpecialists || formState.isSubmitting}>
+                    {isLoadingSpecialists ? (
+                      <MenuItem value="" disabled>جاري التحميل...</MenuItem>
+                    ) : (
+                      (specialists || []).map((s) => (
+                        <MenuItem key={s.id} value={String(s.id)}>{s.name}</MenuItem>
+                      ))
+                    )}
+                  </Select>
+                  <FormHelperText />
+                </FormControl>
+                <AddSpecialistDialog onSpecialistAdded={handleSpecialistAdded} />
+              </Box>
+              {fieldState.error && <FormHelperText error>{fieldState.error.message}</FormHelperText>}
+            </Box>
+          )} />
+
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr 1fr' }, gap: 2 }}>
+            <Controller name="cash_percentage" control={control} render={({ field }) => (
+              <TextField label="نسبة الكاش %" type="number" inputProps={{ step: '0.01' }} {...field} />
+            )} />
+            <Controller name="company_percentage" control={control} render={({ field }) => (
+              <TextField label="نسبة الشركات %" type="number" inputProps={{ step: '0.01' }} {...field} />
+            )} />
+            <Controller name="static_wage" control={control} render={({ field }) => (
+              <TextField label="الأجر الثابت" type="number" inputProps={{ step: '0.01' }} {...field} />
+            )} />
+            <Controller name="lab_percentage" control={control} render={({ field }) => (
+              <TextField label="نسبة المختبر %" type="number" inputProps={{ step: '0.01' }} {...field} />
+            )} />
+          </Box>
+
+          <Controller name="start" control={control} render={({ field }) => (
+            <TextField label="بداية الحساب (رقم)" type="number" {...field} />
+          )} />
+
+          <Controller name="image_file" control={control} render={({ field: { onChange, ...rest } }) => (
+            <Box>
+              <Typography variant="subtitle2">صورة الطبيب</Typography>
+              <TextField type="file" inputProps={{ accept: 'image/*' }} onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.files ? e.target.files[0] : null)} name={rest.name} onBlur={rest.onBlur} inputRef={rest.ref} />
+              {imagePreview && (
+                <Box component="img" src={imagePreview} alt="Preview" sx={{ mt: 1, width: 128, height: 128, objectFit: 'cover', borderRadius: 1 }} />
               )}
-            />
+            </Box>
+          )} />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <FormField
-                control={control}
-                name="cash_percentage"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>نسبة الكاش %</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.01" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={control}
-                name="company_percentage"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>نسبة الشركات %</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.01" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={control}
-                name="static_wage"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>الأجر الثابت</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.01" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={control}
-                name="lab_percentage"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>نسبة المختبر %</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.01" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={control}
-              name="start"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>بداية الحساب (رقم)</FormLabel>
-                  <FormControl>
-                    <Input type="number" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={control}
-              name="image_file"
-              render={({ field: { onChange, ...restField } }) => (
-                <FormItem>
-                  <FormLabel>صورة الطبيب</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) =>
-                        onChange(e.target.files ? e.target.files[0] : null)
-                      }
-                      // avoid passing value for file input
-                      name={restField.name}
-                      onBlur={restField.onBlur}
-                      ref={restField.ref}
-                      className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
-                    />
-                  </FormControl>
-                  {imagePreview && (
-                    <img
-                      src={imagePreview}
-                      alt="Preview"
-                      className="mt-2 h-32 w-32 object-cover rounded-md"
-                    />
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
+            <Controller name="finance_account_id" control={control} render={({ field }) => (
+              <FormControl fullWidth size="small">
+                <InputLabel id="finance-label">حساب مالي (كاش/شركة)</InputLabel>
+                <Select labelId="finance-label" label="حساب مالي (كاش/شركة)" value={field.value ?? ''} onChange={(e) => field.onChange(e.target.value)}>
+                  {isLoadingFinanceAccounts ? (
+                    <MenuItem value="" disabled>جاري التحميل...</MenuItem>
+                  ) : (
+                    (financeAccounts || []).map((fa) => (
+                      <MenuItem key={fa.id} value={String(fa.id)}>{fa.name}</MenuItem>
+                    ))
                   )}
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                </Select>
+              </FormControl>
+            )} />
+            <Controller name="finanace_account_id_insurance" control={control} render={({ field }) => (
+              <FormControl fullWidth size="small">
+                <InputLabel id="finance-ins-label">حساب مالي للتأمين</InputLabel>
+                <Select labelId="finance-ins-label" label="حساب مالي للتأمين" value={field.value ?? ''} onChange={(e) => field.onChange(e.target.value)}>
+                  {isLoadingFinanceAccounts ? (
+                    <MenuItem value="" disabled>جاري التحميل...</MenuItem>
+                  ) : (
+                    (financeAccounts || []).map((fa) => (
+                      <MenuItem key={fa.id} value={String(fa.id)}>{fa.name}</MenuItem>
+                    ))
+                  )}
+                </Select>
+              </FormControl>
+            )} />
+          </Box>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={control}
-                name="finance_account_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>حساب مالي (كاش/شركة)</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder={'اختر الحساب'} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {isLoadingFinanceAccounts ? (
-                          <SelectItem value="loading" disabled>جاري التحميل...</SelectItem>
-                        ) : (
-                          financeAccounts?.map((fa) => (
-                            <SelectItem key={fa.id} value={String(fa.id)}>
-                              {fa.name}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={control}
-                name="finance_account_id_insurance"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>حساب مالي للتأمين</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value ?? ""}
-                      defaultValue={field.value ?? ""}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder={'اختر الحساب'} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {isLoadingFinanceAccounts ? (
-                          <SelectItem value="loading" disabled>جاري التحميل...</SelectItem>
-                        ) : (
-                          financeAccounts?.map((fa) => (
-                            <SelectItem key={fa.id} value={String(fa.id)}>
-                              {fa.name}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+          <Controller name="calc_insurance" control={control} render={({ field }) => (
+            <FormControlLabel control={<Checkbox checked={field.value} onChange={(_, checked) => field.onChange(checked)} />} label="حساب التأمين ضمن النسبة؟" />
+          )} />
 
-            <FormField
-              control={control}
-              name="calc_insurance"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4 rtl:space-x-reverse">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel>حساب التأمين ضمن النسبة؟</FormLabel>
-                  </div>
-                </FormItem>
-              )}
-            />
-
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                onClick={() => navigate("/doctors")}
-                className="bg-transparent border text-foreground hover:bg-muted"
-              >
-                إلغاء
-              </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                حفظ
-              </Button>
-            </div>
-          </form>
-        </Form>
+          <CardActions sx={{ justifyContent: 'flex-end' }}>
+            <Button type="button" variant="outlined" onClick={() => navigate('/doctors')}>إلغاء</Button>
+            <Button type="submit" variant="contained" disabled={isLoading} startIcon={isLoading ? <CircularProgress size={16} /> : <SaveIcon fontSize="small" />}>حفظ</Button>
+          </CardActions>
+        </Box>
       </CardContent>
     </Card>
   );

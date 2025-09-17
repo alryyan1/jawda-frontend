@@ -7,9 +7,8 @@ import CircularProgress from "@mui/material/CircularProgress";
 import Paper from "@mui/material/Paper";
 // import Chip from "@mui/material/Chip";
 
-// Shadcn & Lucide Imports
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+// MUI & Lucide Imports
+import { Button, Box, Typography, IconButton } from "@mui/material";
 import {
   Search,
   Loader2,
@@ -38,6 +37,7 @@ interface LabReceptionHeaderProps {
   isLoadingTests: boolean;
   activeVisitId: number | null;
   addTestsMutation: { isPending: boolean };
+  testSelectionAutocompleteRef: React.RefObject<any>;
 
   // Search props
   recentVisitsData: AutocompleteVisitOption[] | undefined;
@@ -64,6 +64,7 @@ const LabReceptionHeader: React.FC<LabReceptionHeaderProps> = ({
   isLoadingTests,
   activeVisitId,
   addTestsMutation,
+  testSelectionAutocompleteRef,
 
   // Search props
   recentVisitsData,
@@ -84,24 +85,49 @@ const LabReceptionHeader: React.FC<LabReceptionHeaderProps> = ({
   // Translations removed; using direct Arabic strings
 
   return (
-    <header className="flex-shrink-0 h-auto p-4 bg-white dark:bg-slate-800 shadow-lg border-b border-blue-200 dark:border-slate-700">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3 flex-shrink-0">
-          <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-            <Microscope className="h-7 w-7 text-blue-600 dark:text-blue-400" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">
+    <Box
+      component="header"
+      sx={{
+        flexShrink: 0,
+        height: 'auto',
+        p: 2,
+        bgcolor: 'background.paper',
+        boxShadow: 2,
+        borderBottom: 1,
+        borderColor: 'divider',
+      }}
+    >
+      <Box
+        sx={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 2,
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexShrink: 0 }}>
+          <Box
+            sx={{
+              p: 1,
+              bgcolor: 'primary.light',
+              borderRadius: 1,
+            }}
+          >
+            <Microscope size={28} color="#1976d2" />
+          </Box>
+          <Box>
+            <Typography variant="h5" component="h1" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
               استقبال المختبر
-            </h1>
-            <p className="text-sm text-slate-600 dark:text-slate-400">
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
               نظام إدارة المختبرات الاحترافي
-            </p>
-          </div>
+            </Typography>
+          </Box>
           {/* Sockets removed: no connection status */}
-        </div>
+        </Box>
         {/* Search Controls - centered */}
-        <div className="flex items-center gap-3 flex-1 justify-center">
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1, justifyContent: 'center' }}>
           <Autocomplete
             options={recentVisitsData || []}
             value={selectedVisitFromAutocomplete}
@@ -139,7 +165,7 @@ const LabReceptionHeader: React.FC<LabReceptionHeaderProps> = ({
               />
             )}
             PaperComponent={(props) => (
-              <Paper {...props} className="dark:bg-slate-800 dark:text-slate-100" />
+              <Paper {...props} />
             )}
             noOptionsText={
               autocompleteInputValue.length < 2
@@ -149,31 +175,44 @@ const LabReceptionHeader: React.FC<LabReceptionHeaderProps> = ({
             loadingText={"جاري التحميل"}
           />
 
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-            <Input
+          <Box sx={{ position: 'relative' }}>
+            <TextField
               type="number"
-              placeholder={"رقم الزيارة"}
+              placeholder="رقم الزيارة"
               value={visitIdSearchTerm}
               onChange={(e) => setVisitIdSearchTerm(e.target.value)}
               onKeyDown={onSearchByVisitIdEnter}
-              className="pl-10 w-28 h-10 text-sm rounded-lg border-slate-300 focus:border-blue-500 focus:ring-blue-500"
               disabled={fetchVisitDetailsMutation.isPending}
+              size="small"
+              sx={{ width: 120 }}
+              InputProps={{
+                startAdornment: (
+                  <Search size={16} style={{ marginRight: 8, color: '#666' }} />
+                ),
+              }}
             />
-          </div>
+          </Box>
 
-          <Button
+          <IconButton
             onClick={onResetView}
-            title={"إعادة التعيين"}
-            className="h-10 w-10 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700"
+            title="إعادة التعيين"
+            sx={{
+              width: 40,
+              height: 40,
+              borderRadius: 1,
+              '&:hover': {
+                bgcolor: 'action.hover',
+              },
+            }}
           >
-            <ListRestart className="h-5 w-5" />
-          </Button>
-        </div>
+            <ListRestart size={20} />
+          </IconButton>
+        </Box>
 
         {/* Test Selection Autocomplete - moved to the right */}
-        <div className="flex items-center gap-3 flex-shrink-0">
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexShrink: 0 }}>
           <Autocomplete
+            ref={testSelectionAutocompleteRef}
             multiple
             options={availableTests || []}
             value={selectedTests}
@@ -212,18 +251,35 @@ const LabReceptionHeader: React.FC<LabReceptionHeaderProps> = ({
           <Button
             onClick={onAddTests}
             disabled={selectedTests.length === 0 || !activeVisitId || addTestsMutation.isPending}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg hover:scale-105"
+            variant="contained"
+            startIcon={
+              addTestsMutation.isPending ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Plus size={16} />
+              )
+            }
+            sx={{
+              bgcolor: 'primary.main',
+              '&:hover': {
+                bgcolor: 'primary.dark',
+              },
+              px: 2,
+              py: 1,
+              borderRadius: 1,
+              boxShadow: 2,
+              transition: 'all 0.2s ease-in-out',
+              '&:hover': {
+                boxShadow: 4,
+                transform: 'scale(1.05)',
+              },
+            }}
           >
-            {addTestsMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <Plus className="h-4 w-4 mr-2" />
-            )}
-            {"إضافة فحص"} {selectedTests.length > 0 && `(${selectedTests.length})`}
+            إضافة فحص {selectedTests.length > 0 && `(${selectedTests.length})`}
           </Button>
-        </div>
-      </div>
-    </header>
+        </Box>
+      </Box>
+    </Box>
   );
 };
 

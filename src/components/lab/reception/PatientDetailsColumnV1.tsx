@@ -1,4 +1,4 @@
-import React from "react";
+import React, { forwardRef, useImperativeHandle } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import apiClient from "@/services/api";
@@ -11,11 +11,15 @@ interface PatientDetailsColumnV1Props {
   onPrintReceipt: () => void;
 }
 
-const PatientDetailsColumnV1: React.FC<PatientDetailsColumnV1Props> = ({
+export interface PatientDetailsColumnV1Ref {
+  triggerPayment: () => void;
+}
+
+const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDetailsColumnV1Props>(({
   activeVisitId,
   visit,
   onPrintReceipt,
-}) => {
+}, ref) => {
   const queryClient = useQueryClient();
 
   const payAllMutation = useMutation({
@@ -39,6 +43,15 @@ const PatientDetailsColumnV1: React.FC<PatientDetailsColumnV1Props> = ({
       toast.error(apiError.response?.data?.message || "فشل الدفع");
     },
   });
+
+  // Expose the payment function via ref
+  useImperativeHandle(ref, () => ({
+    triggerPayment: () => {
+      if (activeVisitId && balance !== 0 && !payAllMutation.isPending) {
+        payAllMutation.mutate();
+      }
+    },
+  }));
 
   // Placeholder data for demonstration
   const patientName = visit?.patient?.name 
@@ -140,6 +153,8 @@ const PatientDetailsColumnV1: React.FC<PatientDetailsColumnV1Props> = ({
       )}
     </div>
   );
-};
+});
+
+PatientDetailsColumnV1.displayName = 'PatientDetailsColumnV1';
 
 export default PatientDetailsColumnV1; 

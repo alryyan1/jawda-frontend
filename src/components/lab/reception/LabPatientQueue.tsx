@@ -32,7 +32,7 @@ const LabPatientQueue: React.FC<LabPatientQueueProps> = ({
   
   // Use either labFilters or filters prop
   const activeFilters = labFilters || filters || {};
-  console.log(activeFilters,'activeFilters from queue')
+  // console.log(activeFilters,'activeFilters from queue')
   
   // Use a query key specific to this queue to avoid conflicts with other queues
   const queueQueryKey = ['labReceptionQueue', currentShift?.id, globalSearchTerm, currentPage, activeFilters] as const;

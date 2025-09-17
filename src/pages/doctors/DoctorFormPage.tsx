@@ -51,6 +51,7 @@ interface DoctorFormValues {
   finance_account_id?: string;
   finanace_account_id_insurance?: string;
   calc_insurance: boolean;
+  is_default?: boolean;
 }
 
 interface DoctorFormPageProps {
@@ -113,6 +114,7 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
       finance_account_id: undefined,
       finanace_account_id_insurance: undefined,
       calc_insurance: false,
+      is_default: false,
     },
   });
   const { control, handleSubmit, reset, watch, setValue, formState } = form;
@@ -121,7 +123,7 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
   useEffect(() => {
     console.log("useEffect ran");
     if (isEditMode && doctorData) {
-      console.log(doctorData.specialist_id, "doctorData.specialist_id");
+      console.log(doctorData, "doctorData");
       reset({
         name: doctorData.name,
         phone: doctorData.phone,
@@ -140,6 +142,7 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
           doctorData.finanace_account_id_insurance
         ),
         calc_insurance: doctorData.calc_insurance,
+        is_default: Boolean((doctorData as any).is_default),
       });
     }
   }, [isEditMode, doctorData, reset]);
@@ -240,6 +243,7 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
       finance_account_id: data.finance_account_id ?? undefined,
       // Backend column is misspelled as 'finanace_account_id_insurance'
       finanace_account_id_insurance: data.finanace_account_id_insurance ?? "",
+      is_default: data.is_default ?? false,
     };
     // if (!isEditMode && !data.image_file) {
     //     form.setError("image_file", { type: "manual", message: t('common:validation.required', { field: t('doctors:form.imageLabel')}) });
@@ -299,14 +303,14 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
                 <FormControl fullWidth size="small">
                   <InputLabel id="specialist-label">التخصص</InputLabel>
                   <Select labelId="specialist-label" label="التخصص" value={field.value ?? ''} onChange={(e) => field.onChange(e.target.value)} disabled={isLoadingSpecialists || formState.isSubmitting}>
-                    {isLoadingSpecialists ? (
+                        {isLoadingSpecialists ? (
                       <MenuItem value="" disabled>جاري التحميل...</MenuItem>
                     ) : (
                       (specialists || []).map((s) => (
                         <MenuItem key={s.id} value={String(s.id)}>{s.name}</MenuItem>
                       ))
                     )}
-                  </Select>
+                    </Select>
                   <FormHelperText />
                 </FormControl>
                 <AddSpecialistDialog onSpecialistAdded={handleSpecialistAdded} />
@@ -338,7 +342,7 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
             <Box>
               <Typography variant="subtitle2">صورة الطبيب</Typography>
               <TextField type="file" inputProps={{ accept: 'image/*' }} onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.files ? e.target.files[0] : null)} name={rest.name} onBlur={rest.onBlur} inputRef={rest.ref} />
-              {imagePreview && (
+                  {imagePreview && (
                 <Box component="img" src={imagePreview} alt="Preview" sx={{ mt: 1, width: 128, height: 128, objectFit: 'cover', borderRadius: 1 }} />
               )}
             </Box>
@@ -349,34 +353,38 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
               <FormControl fullWidth size="small">
                 <InputLabel id="finance-label">حساب مالي (كاش/شركة)</InputLabel>
                 <Select labelId="finance-label" label="حساب مالي (كاش/شركة)" value={field.value ?? ''} onChange={(e) => field.onChange(e.target.value)}>
-                  {isLoadingFinanceAccounts ? (
+                        {isLoadingFinanceAccounts ? (
                     <MenuItem value="" disabled>جاري التحميل...</MenuItem>
                   ) : (
                     (financeAccounts || []).map((fa) => (
                       <MenuItem key={fa.id} value={String(fa.id)}>{fa.name}</MenuItem>
                     ))
                   )}
-                </Select>
-              </FormControl>
+                    </Select>
+                      </FormControl>
             )} />
             <Controller name="finanace_account_id_insurance" control={control} render={({ field }) => (
               <FormControl fullWidth size="small">
                 <InputLabel id="finance-ins-label">حساب مالي للتأمين</InputLabel>
                 <Select labelId="finance-ins-label" label="حساب مالي للتأمين" value={field.value ?? ''} onChange={(e) => field.onChange(e.target.value)}>
-                  {isLoadingFinanceAccounts ? (
+                        {isLoadingFinanceAccounts ? (
                     <MenuItem value="" disabled>جاري التحميل...</MenuItem>
                   ) : (
                     (financeAccounts || []).map((fa) => (
                       <MenuItem key={fa.id} value={String(fa.id)}>{fa.name}</MenuItem>
                     ))
                   )}
-                </Select>
+                    </Select>
               </FormControl>
             )} />
           </Box>
 
           <Controller name="calc_insurance" control={control} render={({ field }) => (
             <FormControlLabel control={<Checkbox checked={field.value} onChange={(_, checked) => field.onChange(checked)} />} label="حساب التأمين ضمن النسبة؟" />
+          )} />
+
+          <Controller name="is_default" control={control} render={({ field }) => (
+            <FormControlLabel control={<Checkbox checked={!!field.value} onChange={(_, checked) => field.onChange(checked)} />} label="تعيين كطبيب افتراضي" />
           )} />
 
           <CardActions sx={{ justifyContent: 'flex-end' }}>

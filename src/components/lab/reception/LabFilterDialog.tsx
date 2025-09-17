@@ -35,7 +35,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Paper from '@mui/material/Paper';
 
 // Services & Types
-import { getCompaniesList } from '@/services/companyService';
+import { useCachedCompaniesList } from '@/hooks/useCachedData';
 import { getDoctorsList, getSpecialistsList } from '@/services/doctorService';
 import type { Company } from '@/types/companies';
 import type { DoctorStripped, Specialist } from '@/types/doctors';
@@ -89,12 +89,8 @@ const LabFilterDialog: React.FC<LabFilterDialogProps> = ({
   }, [currentFilters, form.reset]);
 
   // Data fetching for Autocomplete options
-  const { data: companies = [], isLoading: isLoadingCompanies } = useQuery({
-    queryKey: ['companiesListActive'], queryFn: () => getCompaniesList({ status: true }), enabled: isOpen,
-  });
-  const { data: doctors = [], isLoading: isLoadingDoctors } = useQuery({
-    queryKey: ['doctorsListActive'], queryFn: () => getDoctorsList({ active: true }), enabled: isOpen,
-  });
+  const { data: companies = [], isLoading: isLoadingCompanies } = useCachedCompaniesList();
+  const { data: doctors = [], isLoading: isLoadingDoctors } = useCachedDoctorsList();
   const { data: specialists = [], isLoading: isLoadingSpecialists } = useQuery({
     queryKey: ['specialistsList'], queryFn: getSpecialistsList, enabled: isOpen,
   });

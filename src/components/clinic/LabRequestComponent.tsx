@@ -33,7 +33,7 @@ import {
 	cancelLabRequest,
 	unpayLabRequest,
 } from "@/services/labRequestService";
-import { getMainTestsListForSelection } from "@/services/mainTestService"; // More generic for fetching all tests for Autocomplete
+import { useCachedMainTestsList } from "@/hooks/useCachedData"; // More generic for fetching all tests for Autocomplete
 import { getPatientById } from "@/services/patientService";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -115,21 +115,12 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
 	});
 	//   console.log('requestedTests',requestedTests,'requestedError',requestedTestsError)
 	// Fetch ALL main tests for the Autocomplete
-	// We use getMainTestsListForSelection with specific params to get *all available* tests,
+	// We use cached main tests list to get *all available* tests,
 	// excluding those already requested for this visit.
 	const {
 		data: allAvailableTestsForAutocomplete,
 		isLoading: isLoadingAllTests,
-	} = useQuery<MainTestStripped[], Error>({
-		queryKey: allMainTestsForAutocompleteKey,
-		queryFn: () =>
-			getMainTestsListForSelection({
-				visit_id_to_exclude_requests: visitId,
-				pack_id: "all",
-			}),
-		enabled: !!visitId, // Fetch when visitId is available
-		staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-	});
+	} = useCachedMainTestsList(visitId);
 
 
 	// --- Mutations ---

@@ -7,7 +7,7 @@ import type { Doctor } from '../../types/doctors';
 import { toast } from 'sonner';
 // MUI
 import { Box, Button, Card, CardContent, TextField, IconButton, CircularProgress, Avatar, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Menu, MenuItem, Divider, Typography } from '@mui/material';
-import { MoreHoriz as MoreHorizIcon, Delete as DeleteIcon, Edit as EditIcon, Search as SearchIcon, Checklist as ChecklistIcon, Person as PersonIcon, NavigateBefore, NavigateNext } from '@mui/icons-material';
+import { MoreHoriz as MoreHorizIcon, Delete as DeleteIcon, Edit as EditIcon, Search as SearchIcon, Checklist as ChecklistIcon, Person as PersonIcon, NavigateBefore, NavigateNext, Star as StarIcon } from '@mui/icons-material';
 import { useDebounce } from '@/hooks/useDebounce';
 import ManageDoctorServicesDialog from '@/components/doctors/ManageDoctorServicesDialog';
 
@@ -176,7 +176,12 @@ export default function DoctorsListPage() {
                       <PersonIcon />
                     </Avatar>
                   </TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 500 }}>{doctor.name}</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 500 }}>
+                    <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                      {doctor.name}
+                      {doctor.is_default ? (<StarIcon sx={{ color: 'gold', fontSize: 16 }} />) : null}
+                    </Box>
+                  </TableCell>
                   <TableCell align="center">{doctor.phone}</TableCell>
                   <TableCell align="center">{doctor.specialist?.name || doctor.specialist_name || 'N/A'}</TableCell>
                   <TableCell align="center">{doctor.cash_percentage || 'N/A'}</TableCell>

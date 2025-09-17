@@ -32,10 +32,9 @@ import type { MainTestStripped, Package } from "@/types/labTests";
 import type { Company } from "@/types/companies";
 import type { DoctorStripped } from "@/types/doctors";
 
-import { getMainTestsListForSelection } from "@/services/mainTestService";
+import { useCachedMainTestsList } from "@/hooks/useCachedData";
 import { getPackagesList } from "@/services/packageService";
-import { getCompaniesList } from "@/services/companyService";
-import { getDoctorsList } from "@/services/doctorService";
+import { useCachedCompaniesList, useCachedDoctorsList } from "@/hooks/useCachedData";
 
 export interface LabQueueFilters {
   search?: string;
@@ -80,16 +79,7 @@ const LabQueueFilterDialog: React.FC<LabQueueFilterDialogProps> = ({
     }));
   };
 
-  const { data: mainTests, isLoading: isLoadingMainTests, error: mainTestsError } = useQuery<
-    MainTestStripped[],
-    Error
-  >({
-    queryKey: ["allMainTestsForFilter"],
-    queryFn: () =>
-      getMainTestsListForSelection({ pack_id: "all" }),
-    enabled: isOpen,
-    staleTime: Infinity,
-  });
+  const { data: mainTests, isLoading: isLoadingMainTests, error: mainTestsError } = useCachedMainTestsList();
 
   // Debug logs
   useEffect(() => {
@@ -111,25 +101,8 @@ const LabQueueFilterDialog: React.FC<LabQueueFilterDialogProps> = ({
     staleTime: Infinity,
   });
 
-  const { data: companies, isLoading: isLoadingCompanies } = useQuery<
-    Company[],
-    Error
-  >({
-    queryKey: ["allCompaniesForFilter"],
-    queryFn: () => getCompaniesList({ status: true }),
-    enabled: isOpen,
-    staleTime: Infinity,
-  });
-
-  const { data: doctors, isLoading: isLoadingDoctors } = useQuery<
-    DoctorStripped[],
-    Error
-  >({
-    queryKey: ["allDoctorsForFilter"],
-    queryFn: () => getDoctorsList({ active: true }),
-    enabled: isOpen,
-    staleTime: Infinity,
-  });
+  const { data: companies, isLoading: isLoadingCompanies } = useCachedCompaniesList();
+  const { data: doctors, isLoading: isLoadingDoctors } = useCachedDoctorsList();
 
   const isLoadingDropdowns =
     isLoadingMainTests ||

@@ -24,7 +24,8 @@ import StyleIcon from '@mui/icons-material/Style'; // MUI equivalent for Tag ico
 import { cn } from '@/lib/utils'; // Keep cn for other conditional classes if needed
 import type { Package, MainTestStripped } from '@/types/labTests';
 import { getPackagesList } from '@/services/packageService';
-import { getMainTestsListForSelection, findMainTestByIdentifier } from '@/services/mainTestService';
+import { useCachedMainTestsList } from '@/hooks/useCachedData';
+import { findMainTestByIdentifier } from '@/services/mainTestService';
 import { toast } from 'sonner';
 
 interface LabTestSelectionTabsProps {
@@ -79,15 +80,7 @@ const LabTestSelectionTabs: React.FC<LabTestSelectionTabsProps> = ({
     queryFn: getPackagesList,
   });
 
-  const { data: testsForTab, isLoading: isLoadingTests } = useQuery<MainTestStripped[], Error>({
-    queryKey: ['availableMainTestsForSelection', activePackageTab, visitId, debouncedSearchTerm],
-    queryFn: () => getMainTestsListForSelection({
-      pack_id: activePackageTab === 'all' ? 'all' : (activePackageTab === 'none' ? 'none' : Number(activePackageTab)),
-      visit_id_to_exclude_requests: visitId,
-      search: debouncedSearchTerm,
-    }),
-    enabled: !!visitId,
-  });
+  const { data: testsForTab, isLoading: isLoadingTests } = useCachedMainTestsList(visitId);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: string) => {
     setActivePackageTab(newValue);

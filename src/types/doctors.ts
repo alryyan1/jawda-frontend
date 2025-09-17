@@ -41,6 +41,7 @@ export interface Doctor {
   finanace_account_id_insurance: number;
   insurance_finance_account_name?: string;
   calc_insurance: boolean;
+  is_default?: boolean;
   user_id?: number | null;
   username?: string;
   user?: User; // if you embed the whole user object
@@ -73,6 +74,7 @@ export interface DoctorFormData {
   finance_account_id?: string | undefined;
   finanace_account_id_insurance: string | undefined;
   calc_insurance: boolean;
+  is_default?: boolean;
   // user_id_to_link?: string | undefined; // If linking to an existing user during creation/edit
 }
 

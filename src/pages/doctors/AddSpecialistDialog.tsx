@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -30,18 +29,17 @@ interface AddSpecialistDialogProps {
   triggerButton?: React.ReactNode; // Optional custom trigger
 }
 
-const getSpecialistSchema = (t: Function) => z.object({
-  name: z.string().min(1, { message: t('common:validation.required', { field: t('specialists:form.nameLabel') }) }),
+const getSpecialistSchema = () => z.object({
+  name: z.string().min(1, { message: 'اسم التخصص مطلوب' }),
 });
 
 type SpecialistFormValues = z.infer<ReturnType<typeof getSpecialistSchema>>;
 
 const AddSpecialistDialog: React.FC<AddSpecialistDialogProps> = ({ onSpecialistAdded, triggerButton }) => {
-  const { t } = useTranslation(['specialists', 'common']); // Assuming a 'specialists' namespace
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
 
-  const specialistSchema = getSpecialistSchema(t);
+  const specialistSchema = getSpecialistSchema();
 
   const form = useForm<SpecialistFormValues>({
     resolver: zodResolver(specialistSchema),
@@ -51,14 +49,14 @@ const AddSpecialistDialog: React.FC<AddSpecialistDialogProps> = ({ onSpecialistA
   const mutation = useMutation({
     mutationFn: createSpecialist,
     onSuccess: (newSpecialist) => {
-      toast.success(t('specialists:addSuccess'));
+      toast.success('تم إضافة التخصص بنجاح');
       queryClient.invalidateQueries({ queryKey: ['specialistsList'] });
       onSpecialistAdded(newSpecialist); // Call the callback
       form.reset();
       setIsOpen(false); // Close the dialog
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || t('specialists:addError'));
+      toast.error(error.response?.data?.message || 'حدث خطأ أثناء إضافة التخصص');
     },
   });
 
@@ -72,14 +70,14 @@ const AddSpecialistDialog: React.FC<AddSpecialistDialogProps> = ({ onSpecialistA
         {triggerButton || (
           <Button type="button" variant="outline" size="icon" className="ltr:ml-2 rtl:mr-2 shrink-0">
             <PlusCircle className="h-4 w-4" />
-            <span className="sr-only">{t('specialists:addSpecialistButton')}</span>
+            <span className="sr-only">إضافة تخصص</span>
           </Button>
         )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{t('specialists:addDialogTitle')}</DialogTitle>
-          <DialogDescription>{t('specialists:addDialogDescription')}</DialogDescription>
+          <DialogTitle>إضافة تخصص جديد</DialogTitle>
+          <DialogDescription>أدخل اسم التخصص الجديد لإضافته إلى القائمة</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
@@ -88,9 +86,9 @@ const AddSpecialistDialog: React.FC<AddSpecialistDialogProps> = ({ onSpecialistA
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('specialists:form.nameLabel')}</FormLabel>
+                  <FormLabel>اسم التخصص</FormLabel>
                   <FormControl>
-                    <Input placeholder={t('specialists:form.namePlaceholder')} {...field} />
+                    <Input placeholder="أدخل اسم التخصص" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -99,12 +97,12 @@ const AddSpecialistDialog: React.FC<AddSpecialistDialogProps> = ({ onSpecialistA
             <DialogFooter>
               <DialogClose asChild>
                 <Button type="button" variant="outline" disabled={mutation.isPending}>
-                  {t('common:cancel')}
+                  إلغاء
                 </Button>
               </DialogClose>
               <Button type="submit" disabled={mutation.isPending}>
                 {mutation.isPending && <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />}
-                {t('common:save')}
+                حفظ
               </Button>
             </DialogFooter>
           </form>

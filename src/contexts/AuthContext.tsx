@@ -12,6 +12,7 @@ import type { Shift } from "../types/shifts"; // Your Shift type
 import { getCurrentOpenShift as apiGetCurrentOpenShift } from "../services/shiftService";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { User } from "@/types/auth";
+import { clearAllCaches } from "@/hooks/useCachedData";
 
 // 1. Define the Context Type (as we did before)
 export interface AuthContextType {
@@ -218,6 +219,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
     localStorage.removeItem("authToken");
     localStorage.removeItem("authUser");
+    
+    // Clear all cached data on logout
+    clearAllCaches();
 
     // Clear React Query cache for shift and user related data on logout
     queryClient.removeQueries({ queryKey: currentOpenShiftQueryKey });

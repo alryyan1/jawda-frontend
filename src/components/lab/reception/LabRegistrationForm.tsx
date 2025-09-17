@@ -31,7 +31,7 @@ import {
   getSubcompaniesList,
   getCompanyRelationsList,
 } from "@/services/companyService";
-import { getDoctorsList } from "@/services/doctorService";
+import { useCachedDoctorsList, useCachedCompaniesList, useCachedCompanyRelationsList } from "@/hooks/useCachedData";
 import type { Patient } from "@/types/patients";
 import type { DoctorVisit } from "@/types/visits";
 import type { DoctorStripped } from "@/types/doctors";
@@ -65,6 +65,7 @@ interface LabRegistrationFormProps {
   referringDoctor: DoctorStripped | null;
   setActiveVisitId: (visitId: number) => void;
   setFormVisible: (visible: boolean) => void;
+  onPatientSaved?: () => void; // New callback to handle post-save actions
 }
 
 const LabRegistrationForm: React.FC<LabRegistrationFormProps> = ({
@@ -73,7 +74,8 @@ const LabRegistrationForm: React.FC<LabRegistrationFormProps> = ({
   onSearchChange,
   onDoctorChange,
   setActiveVisitId,
-  setFormVisible
+  setFormVisible,
+  onPatientSaved
 }) => {
   const phoneInputRef = useRef<HTMLInputElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
@@ -95,30 +97,36 @@ const LabRegistrationForm: React.FC<LabRegistrationFormProps> = ({
 
   // لم يعد هناك Zod؛ التحقق البسيط سيكون عند الإرسال
 
+  // Autofocus on name field when the form becomes visible
   useEffect(() => {
-    if (isVisible && phoneInputRef.current) {
-      setTimeout(() => phoneInputRef.current?.focus(), 100);
+    if (isVisible && nameInputRef.current) {
+      setTimeout(() => {
+        nameInputRef.current?.focus();
+      }, 100);
     }
   }, [isVisible]);
 
-  const { data: doctorsList = [], isLoading: isLoadingDoctors } = useQuery<DoctorStripped[], Error>({
-    queryKey: ["doctorsListForLabRegistration"],
-    queryFn: () => getDoctorsList({ active: true }),
-  });
-  const { data: companies = [], isLoading: isLoadingCompanies } = useQuery<Company[], Error>({
-    queryKey: ["companiesListActive"],
-    queryFn: () => getCompaniesList({ status: true }),
-  });
+  const { data: doctorsList = [], isLoading: isLoadingDoctors } = useCachedDoctorsList();
+  const { data: companies = [], isLoading: isLoadingCompanies } = useCachedCompaniesList();
+
+  // Auto-select default doctor if available and none selected yet
+  const selectedDoctor = watch("doctor");
+  useEffect(() => {
+    if (!selectedDoctor && doctorsList && doctorsList.length > 0) {
+      const defaultDoctor = doctorsList.find((d) => (d as any)?.is_default === true);
+      if (defaultDoctor) {
+        setValue("doctor", defaultDoctor as any, { shouldValidate: true, shouldDirty: true });
+        onDoctorChange(defaultDoctor);
+      }
+    }
+  }, [doctorsList, selectedDoctor, setValue, onDoctorChange]);
+
   const { data: subcompanies = [] } = useQuery<Subcompany[], Error>({
     queryKey: ["subcompaniesList", companyId],
     queryFn: () => companyId ? getSubcompaniesList(Number(companyId)) : Promise.resolve([]),
     enabled: !!companyId,
   });
-  const { data: companyRelations = [] } = useQuery<CompanyRelation[], Error>({
-    queryKey: ["companyRelationsList"],
-    queryFn: getCompanyRelationsList,
-    enabled: isCompanySelected,
-  });
+  const { data: companyRelations = [] } = useCachedCompanyRelationsList();
 
   const registrationMutation = useMutation({
     mutationFn: (data: LabRegistrationFormValues) => {
@@ -148,6 +156,11 @@ const LabRegistrationForm: React.FC<LabRegistrationFormProps> = ({
       phoneInputRef.current?.focus();
       setActiveVisitId(newPatientWithVisit?.doctor_visit?.id ?? 0);
       setFormVisible(false);
+      
+      // Call the onPatientSaved callback to trigger additional actions
+      if (onPatientSaved) {
+        onPatientSaved();
+      }
     },
     onError: (error: AxiosError) => {
       const apiError = error as { response?: { data?: { message?: string } } };
@@ -213,7 +226,7 @@ const LabRegistrationForm: React.FC<LabRegistrationFormProps> = ({
                 <TextField fullWidth label="رقم الهاتف" id="lab-phone" type="tel" inputProps={{ maxLength: 10 }} placeholder="0xxxxxxxxx" autoComplete="off" {...field} value={field.value || ""} inputRef={phoneInputRef} onChange={handleSearchInputChange} disabled={currentIsLoading}/>
               )} />
               <Controller name="name" control={control} render={({ field }) => (
-                <TextField fullWidth label="اسم المريض" id="lab-name" autoComplete="off" {...field} inputRef={nameInputRef} onChange={handleSearchInputChange} disabled={currentIsLoading}/>
+                <TextField fullWidth label="اسم المريض" id="lab-name" autoComplete="off" {...field} inputRef={nameInputRef} onChange={handleSearchInputChange} />
               )} />
               <Controller name="doctor" control={control} render={({ field, fieldState }) => (
                 <FormControl fullWidth size="small">

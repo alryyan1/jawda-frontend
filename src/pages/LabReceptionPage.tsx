@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import LabRegistrationForm from "@/components/lab/reception/LabRegistrationForm";
 import LabPatientQueue from "@/components/lab/reception/LabPatientQueue";
 import LabRequestsColumn from "@/components/lab/reception/LabRequestsColumn";
-import PatientDetailsColumnV1 from "@/components/lab/reception/PatientDetailsColumnV1";
+import PatientDetailsColumnV1, { type PatientDetailsColumnV1Ref } from "@/components/lab/reception/PatientDetailsColumnV1";
 import LabReceptionActionPage from "@/components/lab/reception/LabReceptionActionPage";
 import LabReceptionHeader from "@/components/lab/reception/LabReceptionHeader";
 import PatientHistoryTable from "@/components/lab/reception/PatientHistoryTable";
@@ -34,7 +34,7 @@ import type { DoctorShift, DoctorStripped } from "@/types/doctors";
 import DoctorFinderDialog from "@/components/clinic/dialogs/DoctorFinderDialog";
 import type { AxiosError } from "axios";
 import { createLabVisitForExistingPatient, searchExistingPatients } from "@/services/patientService";
-import { getMainTestsListForSelection } from "@/services/mainTestService";
+import { useCachedMainTestsList } from "@/hooks/useCachedData";
 import type { MainTestStripped } from "@/types/labTests";
 import apiClient from "@/services/api";
 import { addLabTestsToVisit } from "@/services/labRequestService";
@@ -111,6 +111,12 @@ const LabReceptionPage: React.FC = () => {
   // Patient history visibility state
   const [showPatientHistory, setShowPatientHistory] = useState(false);
   const patientHistoryRef = useRef<HTMLDivElement>(null);
+  
+  // Ref for test selection autocomplete focus
+  const testSelectionAutocompleteRef = useRef<any>(null);
+  
+  // Ref for patient details column to trigger payment
+  const patientDetailsRef = useRef<PatientDetailsColumnV1Ref>(null);
 
   // --- Data Fetching & Mutations ---
   const { data: searchResults = [], isLoading: isLoadingSearchResults } = useQuery<PatientSearchResult[], Error>({
@@ -123,6 +129,34 @@ const LabReceptionPage: React.FC = () => {
   useEffect(() => {
     setShowPatientHistory(searchResults.length > 0);
   }, [searchResults.length]);
+
+  // Keyboard event listener for Enter key to trigger payment
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Only trigger if Enter is pressed and a patient is selected
+      if (event.key === 'Enter' && activeVisitId && !event.ctrlKey && !event.altKey && !event.shiftKey) {
+        // Check if we're not in an input field or textarea
+        const target = event.target as HTMLElement;
+        const isInputField = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true';
+        
+        if (!isInputField) {
+          event.preventDefault();
+          // Trigger payment if patient details ref is available
+          if (patientDetailsRef.current) {
+            patientDetailsRef.current.triggerPayment();
+          }
+        }
+      }
+    };
+
+    // Add event listener
+    document.addEventListener('keydown', handleKeyDown);
+
+    // Cleanup
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [activeVisitId]);
 
   // Click outside handler for patient history - DISABLED to prevent closing on click away
   // useEffect(() => {
@@ -198,12 +232,44 @@ const LabReceptionPage: React.FC = () => {
         // Hide the form to show the queue with the selected patient
         setIsFormVisible(false);
         
+        // Focus on test selection autocomplete after patient is activated
+        setTimeout(() => {
+          if (testSelectionAutocompleteRef.current) {
+            console.log("testSelectionAutocompleteRef", testSelectionAutocompleteRef.current);
+            // Find the input element within the Autocomplete
+            const inputElement = testSelectionAutocompleteRef.current.querySelector('input');
+            if (inputElement) {
+              inputElement.focus();
+            }
+          }
+        }, 100);
+        
         // Show success message
         toast.success(`تم اختيار المريض تلقائياً: ${patientWithVisit.name} (زيارة ${patientWithVisit.doctorVisit.id})`);
       }
     },
     [queryClient, currentClinicShift?.id]
   );
+
+  // New callback to handle post-save actions
+  const handlePatientSaved = useCallback(() => {
+    // Close patient history table
+    setShowPatientHistory(false);
+    setSearchQuery(''); // Clear search query
+    
+    // Focus on test selection autocomplete after a short delay
+    setTimeout(() => {
+      if (testSelectionAutocompleteRef.current) {
+        console.log(testSelectionAutocompleteRef.current, "testSelectionAutocompleteRef.current");
+        console.log("Focusing on test selection autocomplete after patient save");
+        // Find the input element within the Autocomplete
+        const inputElement = testSelectionAutocompleteRef.current.querySelector('input');
+        if (inputElement) {
+          inputElement.focus();
+        }
+      }
+    }, 200);
+  }, []);
 
   const handlePatientSelectedFromQueue = useCallback(
     (queueItem: PatientLabQueueItem) => {
@@ -254,13 +320,7 @@ const LabReceptionPage: React.FC = () => {
       toast.error(apiError.response?.data?.message || 'فشل الإضافة');
     },
   });
-  const { data: availableTests = [], isLoading: isLoadingTests } = useQuery<MainTestStripped[], Error>({
-    queryKey: ["mainTestsForSelection", activeVisitId],
-    queryFn: () => getMainTestsListForSelection({
-      visit_id_to_exclude_requests: activeVisitId || undefined,
-      pack_id: "all",
-    }),
-  });
+  const { data: availableTests = [], isLoading: isLoadingTests } = useCachedMainTestsList(activeVisitId);
   const generateAndShowPdf = async (
     title: string,
     fileNamePrefix: string,
@@ -303,7 +363,7 @@ const LabReceptionPage: React.FC = () => {
   // Debug logging
   useEffect(() => {
     console.log('Available tests:', availableTests);
-    console.log('Selected tests:', selectedTests);
+    // console.log('Selected tests:', selectedTests);
   }, [availableTests, selectedTests]);
   // Type for the Autocomplete's options
 interface AutocompleteVisitOption {
@@ -374,6 +434,7 @@ interface AutocompleteVisitOption {
           isLoadingTests={isLoadingTests}
           activeVisitId={activeVisitId}
           addTestsMutation={addTestsMutation}
+          testSelectionAutocompleteRef={testSelectionAutocompleteRef}
 
           // Search props
           recentVisitsData={recentVisitsData}
@@ -405,11 +466,11 @@ interface AutocompleteVisitOption {
 
           {/* Form Column (slides in/out) */}
           <div 
-            className={`transition-all duration-500 ease-in-out ${
+            className={`${
               isFormVisible ? 'w-1/4' : 'w-0 opacity-0'
             } overflow-hidden`}
           >
-            <Card className="bg-white dark:bg-slate-800 shadow-lg border-0 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-xl h-full">
+            <Card className="bg-white dark:bg-slate-800 shadow-lg border-0 rounded-xl overflow-hidden h-full">
               <CardContent className="p-4 h-full overflow-y-auto">
                 <LabRegistrationForm
                   setActiveVisitId={setActiveVisitId}
@@ -419,6 +480,7 @@ interface AutocompleteVisitOption {
                   onSearchChange={setSearchQuery}
                   onDoctorChange={setSelectedDoctorForNewVisit}
                   referringDoctor={selectedDoctorForNewVisit}
+                  onPatientSaved={handlePatientSaved}
                 />
               </CardContent>
             </Card>
@@ -472,7 +534,7 @@ interface AutocompleteVisitOption {
           </div>
 
           {/* Lab Requests Column (takes twice the width when form is hidden) */}
-          <div className={`transition-all duration-500 ease-in-out ${
+          <div className={`${
             isFormVisible ? 'w-0' : 'w-1/2'
           } flex-shrink-0`}>
             <Card className="bg-white dark:bg-slate-800 shadow-lg border-0 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-xl h-full">
@@ -489,12 +551,13 @@ interface AutocompleteVisitOption {
 
           {/* Patient Info Column - Dynamic Width */}
           {activeVisitId && (
-            <div className={`transition-all duration-500 ease-in-out ${
+            <div className={`${
               isFormVisible ? 'w-1/4' : 'w-1/6'
             } flex-shrink-0`}>
               <Card className="bg-white dark:bg-slate-800 shadow-lg border-0 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-xl h-full">
                 <CardContent className="p-0 h-full overflow-hidden">
                   <PatientDetailsColumnV1
+                    ref={patientDetailsRef}
                     activeVisitId={activeVisitId}
                     visit={activeVisit}
                     onPrintReceipt={handlePrintReceipt}

@@ -1,10 +1,9 @@
 // src/components/lab/reception/PatientHistoryTable.tsx
 import React, { useState } from "react";
-import { useTranslation } from "react-i18next";
 import { format, parseISO } from "date-fns";
-import { arSA, enUS } from "date-fns/locale";
+import { arSA } from "date-fns/locale";
 
-// Shadcn UI & Custom Components
+// MUI Components
 import {
   Table,
   TableBody,
@@ -12,26 +11,25 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
-import { Loader2, UserPlus } from "lucide-react";
+  TableContainer,
+  Paper,
+  Box,
+  Button,
+  CircularProgress,
+  Typography,
+} from "@mui/material";
+import Autocomplete from "@mui/material/Autocomplete";
+import TextField from "@mui/material/TextField";
+import { Add as UserPlus } from "@mui/icons-material";
+import { toast } from "sonner";
+
+// Types
 import type { PatientSearchResult } from "@/types/patients";
 import type { DoctorStripped } from "@/types/doctors";
 import type { Company } from "@/types/companies";
-import { toast } from "sonner";
-
-// MUI Components
-import Autocomplete from "@mui/material/Autocomplete";
-import TextField from "@mui/material/TextField";
-import CircularProgress from "@mui/material/CircularProgress";
-import Paper from "@mui/material/Paper";
-import Box from "@mui/material/Box";
 
 // Services
-import { getDoctorsList } from "@/services/doctorService";
-import { getCompaniesList } from "@/services/companyService";
-import { useQuery } from "@tanstack/react-query";
+import { useCachedDoctorsList, useCachedCompaniesList } from "@/hooks/useCachedData";
 
 interface PatientHistoryTableProps {
   searchResults: PatientSearchResult[];
@@ -46,25 +44,16 @@ const PatientHistoryTable: React.FC<PatientHistoryTableProps> = ({
   onSelectPatient,
   referringDoctor,
 }) => {
-  const { t, i18n } = useTranslation(["patients", "common", "labReception"]);
-  const dateLocale = i18n.language.startsWith("ar") ? arSA : enUS;
+  const dateLocale = arSA;
 
   // State for patient selections
   const [patientSelections, setPatientSelections] = useState<Record<number, { doctor?: DoctorStripped | null; company?: Company | null }>>({});
 
-  // Queries for doctors and companies
-  const { data: doctors, isLoading: doctorsLoading } = useQuery({
-    queryKey: ['doctorsListActive'],
-    queryFn: () => getDoctorsList({ active: true }),
-  });
- 
-  const { data: companies, isLoading: companiesLoading } = useQuery({
-    queryKey: ['companiesListActive'],
-    queryFn: () => getCompaniesList({ status: true }),
-  });
+  // Queries for doctors and companies using cached data
+  const { data: doctors, isLoading: doctorsLoading } = useCachedDoctorsList();
+  const { data: companies, isLoading: companiesLoading } = useCachedCompaniesList();
 
-  console.log(doctors,'doctors');
-  console.log(companies,'companies');
+
 
   const handleSelect = (patientId: number) => {
     // Get the selected doctor and company for this patient
@@ -76,7 +65,7 @@ const PatientHistoryTable: React.FC<PatientHistoryTableProps> = ({
     const doctorToUse = selectedDoctor || referringDoctor;
     
     if (!doctorToUse?.id) {
-      toast.error(t("labReception:validation.selectDoctorFirst"));
+      toast.error("يرجى اختيار الطبيب أولاً");
       return;
     }
     
@@ -98,35 +87,35 @@ const PatientHistoryTable: React.FC<PatientHistoryTableProps> = ({
       [patientId]: { ...prev[patientId], company }
     }));
   };
-  console.log(searchResults,'searchResults');
+  // console.log(searchResults,'searchResults');
   // The component is now just the content, without its own Card or Header
   return (
-    <ScrollArea className="max-h-[300px] sm:max-h-[400px]">
-      <Table>
-        <TableHeader>
+    <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
+      <Table stickyHeader>
+        <TableHead>
           <TableRow>
-            <TableHead className="w-[150px]">
-              {t("search.patientName")}
-            </TableHead>
-            <TableHead className="hidden sm:table-cell text-center">
-              {t("search.lastVisit")}
-            </TableHead>
-            <TableHead className="w-[200px] text-center">
-              {t("common:doctor")}
-            </TableHead>
-            <TableHead className="w-[200px] text-center">
-              {t("common:company")}
-            </TableHead>
-            <TableHead className="text-right">
-              {t("common:actions.title")}
-            </TableHead>
+            <TableCell sx={{ width: 150, fontWeight: 'bold' }}>
+              اسم المريض
+            </TableCell>
+            <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' }, textAlign: 'center', fontWeight: 'bold' }}>
+              آخر زيارة
+            </TableCell>
+            <TableCell sx={{ width: 200, textAlign: 'center', fontWeight: 'bold' }}>
+              الطبيب
+            </TableCell>
+            <TableCell sx={{ width: 200, textAlign: 'center', fontWeight: 'bold' }}>
+              الشركة
+            </TableCell>
+            <TableCell sx={{ textAlign: 'right', fontWeight: 'bold' }}>
+              الإجراءات
+            </TableCell>
           </TableRow>
-        </TableHeader>
+        </TableHead>
         <TableBody>
           {isLoading && (
             <TableRow>
-              <TableCell colSpan={5} className="h-24 text-center">
-                <Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" />
+              <TableCell colSpan={5} sx={{ height: 96, textAlign: 'center' }}>
+                <CircularProgress size={24} />
               </TableCell>
             </TableRow>
           )}
@@ -134,9 +123,9 @@ const PatientHistoryTable: React.FC<PatientHistoryTableProps> = ({
             <TableRow>
               <TableCell
                 colSpan={5}
-                className="h-24 text-center text-muted-foreground"
+                sx={{ height: 96, textAlign: 'center', color: 'text.secondary' }}
               >
-                {t("search.noHistoryFound")}
+                لم يتم العثور على تاريخ للمريض
               </TableCell>
             </TableRow>
           )}
@@ -144,25 +133,30 @@ const PatientHistoryTable: React.FC<PatientHistoryTableProps> = ({
             searchResults.map((patient) => (
               <TableRow
                 key={patient.id}
-                className="cursor-pointer hover:bg-muted/50"
+                sx={{ 
+                  cursor: 'pointer',
+                  '&:hover': { backgroundColor: 'action.hover' }
+                }}
                 onClick={() => handleSelect(patient.id)}
               >
-                <TableCell className="font-medium">
-                  <div className="flex flex-col">
-                    <span>{patient.name}</span>
-                    <span className="text-xs text-muted-foreground">
+                <TableCell sx={{ fontWeight: 'medium' }}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                    <Typography variant="body2" component="span">
+                      {patient.name}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
                       {patient.phone}
-                    </span>
-                  </div>
+                    </Typography>
+                  </Box>
                 </TableCell>
-                <TableCell className="hidden sm:table-cell text-center">
+                <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' }, textAlign: 'center' }}>
                   {patient.last_visit_date
                     ? format(parseISO(patient.last_visit_date), "P", {
                         locale: dateLocale,
                       })
                     : "-"}
                 </TableCell>
-                <TableCell className="text-center">
+                <TableCell sx={{ textAlign: 'center' }}>
                   <Box onClick={(e) => e.stopPropagation()}>
                     <Autocomplete
                       options={doctors || []}
@@ -174,7 +168,7 @@ const PatientHistoryTable: React.FC<PatientHistoryTableProps> = ({
                         <TextField
                           {...params}
                           size="small"
-                          placeholder={t("common:selectDoctor")}
+                          placeholder="اختر الطبيب"
                           InputProps={{
                             ...params.InputProps,
                             endAdornment: (
@@ -213,7 +207,7 @@ const PatientHistoryTable: React.FC<PatientHistoryTableProps> = ({
                     />
                   </Box>
                 </TableCell>
-                <TableCell className="text-center">
+                <TableCell sx={{ textAlign: 'center' }}>
                   <Box onClick={(e) => e.stopPropagation()}>
                     <Autocomplete
                       options={companies || []}
@@ -225,7 +219,7 @@ const PatientHistoryTable: React.FC<PatientHistoryTableProps> = ({
                         <TextField
                           {...params}
                           size="small"
-                          placeholder={t("common:selectCompany")}
+                          placeholder="اختر الشركة"
                           InputProps={{
                             ...params.InputProps,
                             endAdornment: (
@@ -264,25 +258,25 @@ const PatientHistoryTable: React.FC<PatientHistoryTableProps> = ({
                     />
                   </Box>
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell sx={{ textAlign: 'right' }}>
                   <Button
-                    size="sm"
-                    variant="ghost"
+                    size="small"
+                    variant="text"
                     disabled={!referringDoctor}
                     title={
                       !referringDoctor
-                        ? t("labReception:validation.selectDoctorFirst")
-                        : t("labReception:createNewLabVisit")
+                        ? "يرجى اختيار الطبيب أولاً"
+                        : "إنشاء زيارة مختبر جديدة"
                     }
                   >
-                    <UserPlus className="h-4 w-4" />
+                    <UserPlus fontSize="small" />
                   </Button>
                 </TableCell>
               </TableRow>
             ))}
         </TableBody>
       </Table>
-    </ScrollArea>
+    </TableContainer>
   );
 };
 export default PatientHistoryTable;

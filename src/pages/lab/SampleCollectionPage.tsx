@@ -1,45 +1,39 @@
 // src/pages/lab/SampleCollectionPage.tsx
 import React, { useState, useCallback, useEffect } from "react";
-import { useTranslation } from "react-i18next";
-import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { Input } from "@/components/ui/input";
-import { Search, Loader2, Users, Syringe } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Toaster } from "@/components/ui/sonner";
+import { 
+  TextField, 
+  Box, 
+  Typography, 
+  Paper, 
+  CircularProgress,
+  AppBar,
+  Toolbar
+} from "@mui/material";
+import { Search, Users, Check, Clock } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
-import PatientQueuePanelSC from "@/components/lab/sample_collection/PatientQueuePanelSC";
-import SamplesForVisitPanel from "@/components/lab/sample_collection/SamplesForVisitPanel";
-import SampleActionsPane from "@/components/lab/sample_collection/SampleActionsPane";
+import CollectedSamples from "@/components/lab/sample_collection/CollectedSamples";
+import NotCollectedSamples from "@/components/lab/sample_collection/NotCollectedSamples";
+import VisitSampleContainers from "@/components/lab/sample_collection/VisitSampleContainers";
+import RequestedTests from "../../components/lab/sample_collection/RequestedTests";
 import PdfPreviewDialog from "@/components/common/PdfPreviewDialog";
 
 import type { PatientLabQueueItem } from "@/types/labWorkflow";
 import type { Shift } from "@/types/shifts";
 import type { LabRequest } from "@/types/visits";
-import { getCurrentOpenShift, getShiftsList } from "@/services/shiftService";
+import { getCurrentOpenShift } from "@/services/shiftService";
 import { togglePatientResultLock } from "@/services/patientService";
 import apiClient from "@/services/api";
 import { getLabRequestsForVisit } from "@/services/labRequestService";
+import { getAppearanceSettings, type LabAppearanceSettings } from "@/lib/appearance-settings-store";
+import { getSampleCollectionQueue } from "@/services/sampleCollectionService";
 
-// Services for Sample Collection
-import {
-  markSampleCollectedApi,
-  generateSampleIdForRequestApi,
-} from "@/services/sampleCollectionService";
 import SendWhatsAppTextDialogSC from "@/components/lab/sample_collection/SendWhatsAppTextDialogSC";
 import SendPdfToCustomNumberDialogSC from "@/components/lab/sample_collection/SendPdfToCustomNumberDialogSC";
 
 const SampleCollectionPage: React.FC = () => {
-  const { t, i18n } = useTranslation([
-    "labSampleCollection",
-    "labResults",
-    "common",
-    "whatsapp",
-    "patients",
-  ]);
-  const queryClient = useQueryClient();
   const {
     currentClinicShift: globalClinicShift,
     isLoading: isLoadingGlobalShift,
@@ -55,6 +49,13 @@ const SampleCollectionPage: React.FC = () => {
     useState<PatientLabQueueItem | null>(null);
   const [labRequestsForSelectedVisit, setLabRequestsForSelectedVisit] =
     useState<LabRequest[]>([]);
+  const [appearanceSettings] = useState<LabAppearanceSettings>(getAppearanceSettings);
+
+  // Data fetching states
+  const [allQueueItems, setAllQueueItems] = useState<PatientLabQueueItem[]>([]);
+  const [isLoadingQueue, setIsLoadingQueue] = useState(false);
+  const [queueError, setQueueError] = useState<string | null>(null);
+
 
   // Dialog states
   const [whatsAppTextData, setWhatsAppTextData] = useState<{
@@ -72,6 +73,38 @@ const SampleCollectionPage: React.FC = () => {
     fileName: string;
     isLoading: boolean;
   }>({ isOpen: false, url: null, title: "", fileName: "", isLoading: false });
+
+  // Fetch all queue data
+  const fetchQueueData = useCallback(async () => {
+    if (!currentShiftForQueue) return;
+    
+    setIsLoadingQueue(true);
+    setQueueError(null);
+    
+    try {
+      const filters: Record<string, string | number | boolean> = {
+        search: debouncedGlobalSearch,
+        per_page: 1000, // Fetch all data without pagination
+      };
+      
+      if (currentShiftForQueue.id) {
+        filters.shift_id = currentShiftForQueue.id;
+      } else {
+        const today = new Date().toISOString().split('T')[0];
+        filters.date_from = today;
+        filters.date_to = today;
+      }
+      
+      const response = await getSampleCollectionQueue(filters);
+      setAllQueueItems(response.data || []);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'فشل في تحميل البيانات';
+      setQueueError(errorMessage);
+      setAllQueueItems([]);
+    } finally {
+      setIsLoadingQueue(false);
+    }
+  }, [currentShiftForQueue, debouncedGlobalSearch]);
 
   useEffect(() => {
     if (
@@ -96,6 +129,20 @@ const SampleCollectionPage: React.FC = () => {
     }
   }, [globalClinicShift, currentShiftForQueue, isLoadingGlobalShift]);
 
+  // Fetch data when shift or search term changes
+  useEffect(() => {
+    fetchQueueData();
+  }, [fetchQueueData]);
+
+  // Distribute data based on sample_collected field
+  const collectedItems = allQueueItems.filter(item => 
+    (item as unknown as Record<string, unknown>).sample_collected === true
+  );
+  const notCollectedItems = allQueueItems.filter(item => 
+    (item as unknown as Record<string, unknown>).sample_collected === false
+  );
+
+  
   useEffect(() => {
     const handler = setTimeout(
       () => setDebouncedGlobalSearch(globalSearchTerm),
@@ -104,22 +151,27 @@ const SampleCollectionPage: React.FC = () => {
     return () => clearTimeout(handler);
   }, [globalSearchTerm]);
 
-  const {
-    isLoading: isLoadingLabRequestsForVisit,
-    refetch: refetchLabRequestsForVisit,
-    data: labRequestsData,
-  } = useQuery<LabRequest[], Error>({
-    queryKey: ["labRequestsForSampleCollection", selectedQueueItem?.visit_id],
-    queryFn: async () => {
-      if (!selectedQueueItem?.visit_id) return [];
-      const allRequests = await getLabRequestsForVisit(
-        selectedQueueItem.visit_id
-      );
-      // Filter for actual sample collection needs (not just pending collection)
-      return allRequests;
-    },
-    enabled: !!selectedQueueItem?.visit_id,
-  });
+  // Lab requests for selected visit
+  const [labRequestsData, setLabRequestsData] = useState<LabRequest[]>([]);
+  const [isLoadingLabRequestsForVisit, setIsLoadingLabRequestsForVisit] = useState(false);
+
+  const refetchLabRequestsForVisit = useCallback(async () => {
+    if (!selectedQueueItem?.visit_id) return;
+    
+    setIsLoadingLabRequestsForVisit(true);
+    try {
+      const allRequests = await getLabRequestsForVisit(selectedQueueItem.visit_id);
+      setLabRequestsData(allRequests);
+    } catch (error) {
+      console.error('Failed to fetch lab requests:', error);
+    } finally {
+      setIsLoadingLabRequestsForVisit(false);
+    }
+  }, [selectedQueueItem?.visit_id]);
+
+  useEffect(() => {
+    refetchLabRequestsForVisit();
+  }, [refetchLabRequestsForVisit]);
 
   // Update local state when query data changes
   useEffect(() => {
@@ -136,97 +188,19 @@ const SampleCollectionPage: React.FC = () => {
     []
   );
 
-  const handleShiftNavigation = useCallback(
-    async (direction: "next" | "prev") => {
-      const allShifts = await queryClient.fetchQuery<Shift[]>({
-        queryKey: ["allShiftsListForSampleCollectionNav"],
-        queryFn: () => getShiftsList({ per_page: 0 }),
-      });
-      if (allShifts && allShifts.length > 0) {
-        const currentIndex = currentShiftForQueue
-          ? allShifts.findIndex((s) => s.id === currentShiftForQueue.id)
-          : allShifts.length > 0
-          ? 0
-          : -1; // Default to first if no current
-        let newIndex = currentIndex; // Default to current index if logic fails
-        if (currentIndex !== -1) {
-          // If a current shift is found or we defaulted to first
-          if (direction === "prev")
-            newIndex =
-              currentIndex > 0 ? currentIndex - 1 : allShifts.length - 1;
-          else
-            newIndex =
-              currentIndex < allShifts.length - 1 ? currentIndex + 1 : 0;
-        } else if (allShifts.length > 0) {
-          // No current shift, but shifts exist
-          newIndex = 0; // Default to first shift
-        }
 
-        if (newIndex !== -1 && allShifts[newIndex]) {
-          setCurrentShiftForQueue(allShifts[newIndex]);
-          setSelectedQueueItem(null);
-          setLabRequestsForSelectedVisit([]);
-        }
-      } else {
-        toast.info(t("labResults:queueHeader.noOtherShifts"));
-      }
-    },
-    [queryClient, currentShiftForQueue, t]
-  );
 
-  // Mutations for actions within SamplesForVisitPanel (passed as callbacks)
-  const markSampleCollectedMutation = useMutation({
-    mutationFn: (labRequestId: number) => markSampleCollectedApi(labRequestId),
-    onSuccess: (updatedLabRequest) => {
-      toast.success(t("labSampleCollection:sampleMarkedCollected"));
-      // Optimistically update local state for the specific lab request
-      setLabRequestsForSelectedVisit((prev) =>
-        prev.map((lr) =>
-          lr.id === updatedLabRequest.id ? updatedLabRequest : lr
-        )
-      );
-      queryClient.invalidateQueries({
-        queryKey: ["sampleCollectionQueue", currentShiftForQueue?.id],
-      });
-    },
-    onError: (error: any) =>
-      toast.error(
-        error.response?.data?.message || t("common:error.operationFailed")
-      ),
-  });
+  // Removed mark-all success from page; handled within dedicated modules
 
-  const generateSampleIdMutation = useMutation({
-    mutationFn: (labRequestId: number) =>
-      generateSampleIdForRequestApi(labRequestId),
-    onSuccess: (updatedLabRequest) => {
-      toast.success(
-        t("labSampleCollection:sampleIdGenerated", {
-          sampleId: updatedLabRequest.sample_id,
-        })
-      );
-      setLabRequestsForSelectedVisit((prev) =>
-        prev.map((lr) =>
-          lr.id === updatedLabRequest.id ? updatedLabRequest : lr
-        )
-      );
-    },
-    onError: (error: any) =>
-      toast.error(
-        error.response?.data?.message || t("common:error.operationFailed")
-      ),
-  });
-
-  const handleMarkAllCollectedSuccess = (updatedCount: number) => {
-    toast.success(
-      t("labSampleCollection:allSamplesMarkedCollected", {
-        count: updatedCount,
+  // Narrow extra fields that may exist on queue item without using any
+  const selectedExtra = selectedQueueItem
+    ? (selectedQueueItem as unknown as {
+        patient_age?: string | number;
+        doctor_name?: string;
+        visit_creation_time?: string | Date;
+        phone?: string;
       })
-    );
-    refetchLabRequestsForVisit(); // Refetch samples for the current visit
-    queryClient.invalidateQueries({
-      queryKey: ["sampleCollectionQueue", currentShiftForQueue?.id],
-    });
-  };
+    : undefined;
 
   // Context Menu Action Handlers
   const handleSendWhatsAppText = (queueItem: PatientLabQueueItem) =>
@@ -234,28 +208,22 @@ const SampleCollectionPage: React.FC = () => {
   const handleSendPdfToCustomNumber = (queueItem: PatientLabQueueItem) =>
     setSendPdfCustomData({ isOpen: true, queueItem });
 
-  const toggleResultLockMutation = useMutation({
-    mutationFn: (patientId: number) => togglePatientResultLock(patientId),
-    onSuccess: (updatedPatient) => {
+  const handleToggleResultLock = async (queueItem: PatientLabQueueItem) => {
+    if (!queueItem?.patient_id) return;
+    
+    try {
+      // Get current lock status and toggle it
+      const currentLockStatus = (queueItem as unknown as Record<string, unknown>).is_result_locked as boolean;
+      const updatedPatient = await togglePatientResultLock(queueItem.patient_id, !currentLockStatus);
       toast.success(
         updatedPatient.result_is_locked
-          ? t("labResults:contextMenu.resultsLockedSuccess")
-          : t("labResults:contextMenu.resultsUnlockedSuccess")
+          ? "تم قفل النتائج بنجاح"
+          : "تم إلغاء قفل النتائج بنجاح"
       );
-      queryClient.setQueryData(
-        ["patientDataForSampleCollectionLock", updatedPatient.id],
-        updatedPatient
-      );
-      // No need to invalidate queue here unless lock status is a filter for the queue itself
-    },
-    onError: (error: any) =>
-      toast.error(
-        error.response?.data?.message || t("common:error.operationFailed")
-      ),
-  });
-  const handleToggleResultLock = (queueItem: PatientLabQueueItem) => {
-    if (queueItem?.patient_id)
-      toggleResultLockMutation.mutate(queueItem.patient_id);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "فشلت العملية";
+      toast.error(errorMessage);
+    }
   };
 
   const generateAndShowPdfForActionPane = async (
@@ -265,14 +233,14 @@ const SampleCollectionPage: React.FC = () => {
   ) => {
     const visitIdToUse = selectedQueueItem?.visit_id;
     if (!visitIdToUse) {
-      toast.error(t("labSampleCollection:selectVisitFirst"));
+      toast.error("يرجى اختيار زيارة أولاً");
       return;
     }
 
     setPdfPreviewData((prev) => ({
       ...prev,
       isLoading: true,
-      title: t(titleKey),
+      title: titleKey,
       isOpen: true,
       url: null,
     }));
@@ -292,10 +260,8 @@ const SampleCollectionPage: React.FC = () => {
           selectedQueueItem?.patient_name.replace(/\s+/g, "_") || "Patient"
         }.pdf`,
       }));
-    } catch (error: any) {
-      toast.error(t("common:error.generatePdfFailed"), {
-        description: error.response?.data?.message || error.message,
-      });
+    } catch {
+      toast.error("فشل في إنشاء ملف PDF");
       setPdfPreviewData((prev) => ({
         ...prev,
         isLoading: false,
@@ -306,128 +272,216 @@ const SampleCollectionPage: React.FC = () => {
 
   if (isLoadingGlobalShift && !currentShiftForQueue) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-      </div>
+      <Box 
+        display="flex" 
+        alignItems="center" 
+        justifyContent="center" 
+        minHeight="100vh"
+      >
+        <CircularProgress size={48} />
+      </Box>
     );
   }
 
   return (
     <>
-      <div className="flex flex-col h-screen bg-slate-100 dark:bg-slate-900 text-sm overflow-hidden">
-        <header className="flex-shrink-0 h-[70px] p-3 border-b bg-card flex items-center justify-between gap-x-4 shadow-sm dark:border-slate-800">
-          <div className="flex items-center gap-3">
-            <Syringe className="h-7 w-7 text-blue-500" />
-            <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">
-              {t("labSampleCollection:pageTitle")}
-            </h1>
-          </div>
-          <div className="relative flex-grow max-w-xs sm:max-w-sm md:max-w-md">
-            <Search className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
-            <Input
-              type="search"
-              placeholder={t("labResults:globalSearchPlaceholder")}
-              value={globalSearchTerm}
-              onChange={(e) => setGlobalSearchTerm(e.target.value)}
-              className="ps-10 rtl:pr-10 h-10 bg-slate-50 dark:bg-slate-800 focus:bg-white dark:focus:bg-slate-700 border-slate-300 dark:border-slate-700"
-            />
-          </div>
-          <div className="w-1/6 hidden lg:block"></div>
-        </header>
+      <Box 
+        display="flex" 
+        flexDirection="column" 
+        height="100vh" 
+        bgcolor="grey.100" 
+        fontSize="0.875rem" 
+        overflow="hidden"
+      >
+        <AppBar
+          position="static"
+          sx={{
+            height: 64,
+            flexShrink: 0,
+            bgcolor: 'background.paper',
+            color: 'text.primary',
+            boxShadow: 0,
+            borderBottom: 1,
+            borderColor: 'divider'
+          }}
+        >
+          <Toolbar sx={{ justifyContent: 'space-between', gap: 2, px: 3 }}>
+            <Box display="flex" alignItems="center" gap={1.5}>
+              <Clock size={22} color="#6b7280" />
+              <Check size={22} color="#6b7280" />
+            </Box>
+            <Box sx={{ flexGrow: 1, maxWidth: { xs: '200px', sm: '300px', md: '400px' } }}>
+              <TextField
+                type="search"
+                placeholder="البحث في المرضى..."
+                value={globalSearchTerm}
+                onChange={(e) => setGlobalSearchTerm(e.target.value)}
+                size="small"
+                fullWidth
+                InputProps={{
+                  startAdornment: <Search size={16} style={{ marginRight: 8, color: '#9ca3af' }} />
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    bgcolor: 'background.paper',
+                    '&:hover': {
+                      bgcolor: 'background.paper'
+                    },
+                    '&.Mui-focused': {
+                      bgcolor: 'background.paper'
+                    }
+                  }
+                }}
+              />
+            </Box>
+            <Box sx={{ width: '16.67%', display: { xs: 'none', lg: 'block' } }} />
+          </Toolbar>
+        </AppBar>
 
-        <div className="flex-grow flex overflow-hidden">
-          <aside
-            className={cn(
-              "w-[calc(50px*4+8px*3)] sm:w-[calc(50px*5+8px*4)] md:w-[calc(50px*6+8px*5)] lg:w-[calc(50px*7+8px*6)] xl:w-[calc(50px*8+8px*7)] 2xl:w-[calc(50px*9+8px*8)] flex-shrink-0 bg-card dark:bg-slate-800/50 flex flex-col h-full overflow-hidden shadow-lg z-10",
-              i18n.dir() === "rtl"
-                ? "border-l dark:border-slate-700"
-                : "border-r dark:border-slate-700"
-            )}
+        <Box display="flex" flexGrow={1} overflow="hidden">
+          {/* Column 1 - Collected Samples */}
+          <Paper
+            elevation={3}
+            sx={{
+              width: 200,
+              flexShrink: 0,
+              bgcolor: 'background.paper',
+              display: 'flex',
+              flexDirection: 'column',
+              height: '100%',
+              overflow: 'hidden',
+              zIndex: 10,
+              borderRight: 1,
+              borderColor: 'divider'
+            }}
           >
-            <PatientQueuePanelSC
-              currentShift={currentShiftForQueue}
-              onShiftChange={handleShiftNavigation}
+            <CollectedSamples
+              queueItems={collectedItems}
               onPatientSelect={handlePatientSelect}
               selectedVisitId={selectedQueueItem?.visit_id || null}
-              globalSearchTerm={debouncedGlobalSearch}
+              appearanceSettings={appearanceSettings}
+              isLoading={isLoadingQueue}
+              error={queueError}
               onSendWhatsAppText={handleSendWhatsAppText}
               onSendPdfToPatient={() =>
                 toast.info(
-                  "Send PDF to Patient - action TBD for Sample Collection"
+                  "إرسال PDF للمريض - إجراء قيد التطوير لجمع العينات"
                 )
-              } // Example
+              }
               onSendPdfToCustomNumber={handleSendPdfToCustomNumber}
               onToggleResultLock={handleToggleResultLock}
             />
-          </aside>
+          </Paper>
 
-          <main
-            className={cn(
-              "flex-grow bg-slate-50 dark:bg-slate-800/20 flex flex-col h-full overflow-hidden relative p-2 sm:p-3",
-              i18n.dir() === "rtl"
-                ? "border-r dark:border-slate-700"
-                : "border-l dark:border-slate-700"
-            )}
+          {/* Column 2 - Not Collected Samples */}
+          <Paper
+            elevation={3}
+            sx={{
+              width: 200,
+              flexShrink: 0,
+              bgcolor: 'background.paper',
+              display: 'flex',
+              flexDirection: 'column',
+              height: '100%',
+              overflow: 'hidden',
+              zIndex: 10,
+              borderRight: 1,
+              borderColor: 'divider'
+            }}
+          >
+            <NotCollectedSamples
+              queueItems={notCollectedItems}
+              onPatientSelect={handlePatientSelect}
+              selectedVisitId={selectedQueueItem?.visit_id || null}
+              appearanceSettings={appearanceSettings}
+              isLoading={isLoadingQueue}
+              error={queueError}
+              onSendWhatsAppText={handleSendWhatsAppText}
+              onSendPdfToPatient={() =>
+                toast.info(
+                  "إرسال PDF للمريض - إجراء قيد التطوير لجمع العينات"
+                )
+              }
+              onSendPdfToCustomNumber={handleSendPdfToCustomNumber}
+              onToggleResultLock={handleToggleResultLock}
+            />
+          </Paper>
+
+          <Box
+            component="main"
+            sx={{
+              flexGrow: 1,
+              bgcolor: 'grey.50',
+              display: 'flex',
+              flexDirection: 'column',
+              height: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              p: { xs: 2, sm: 3 },
+              borderLeft: 1,
+              borderColor: 'divider'
+            }}
           >
             {selectedQueueItem ? (
-              <SamplesForVisitPanel
-                key={`samples-for-${selectedQueueItem.visit_id}`}
+              <VisitSampleContainers
+                key={`containers-for-${selectedQueueItem.visit_id}`}
                 visitId={selectedQueueItem.visit_id}
                 patientName={selectedQueueItem.patient_name}
                 labRequests={labRequestsForSelectedVisit}
                 isLoading={isLoadingLabRequestsForVisit}
-                onSampleCollectedSuccess={(updatedLR) => {
-                  setLabRequestsForSelectedVisit((prev) =>
-                    prev.map((lr) => (lr.id === updatedLR.id ? updatedLR : lr))
-                  );
-                  queryClient.invalidateQueries({
-                    queryKey: [
-                      "sampleCollectionQueue",
-                      currentShiftForQueue?.id,
-                    ],
-                  });
-                }}
-                onGenerateSampleIdSuccess={(updatedLR) => {
-                  setLabRequestsForSelectedVisit((prev) =>
-                    prev.map((lr) => (lr.id === updatedLR.id ? updatedLR : lr))
-                  );
-                }}
+                patientAge={selectedExtra?.patient_age}
+                doctorName={selectedExtra?.doctor_name}
+                visitDateTime={selectedExtra?.visit_creation_time}
+                patientPhone={selectedExtra?.phone}
+                
               />
             ) : (
-              <div className="flex-grow flex items-center justify-center p-10 text-center">
-                <div className="flex flex-col items-center text-muted-foreground">
-                  <Users className="h-12 w-12 mb-4 opacity-30" />
-                  <p>{t("labSampleCollection:selectPatientPrompt")}</p>
-                </div>
-              </div>
+              <Box 
+                flexGrow={1} 
+                display="flex" 
+                alignItems="center" 
+                justifyContent="center" 
+                p={10} 
+                textAlign="center"
+              >
+                <Box display="flex" flexDirection="column" alignItems="center" color="text.secondary">
+                  <Users size={48} style={{ marginBottom: 16, opacity: 0.3 }} />
+                  <Typography variant="body1">يرجى اختيار مريض لعرض عيناته</Typography>
+                </Box>
+              </Box>
             )}
-          </main>
+          </Box>
 
-          <aside
-            className={cn(
-              "w-[56px] flex-shrink-0 bg-card dark:bg-slate-800/50 flex flex-col h-full items-center p-1.5 space-y-1.5 shadow-md",
-              i18n.dir() === "rtl"
-                ? "border-r dark:border-slate-700"
-                : "border-l dark:border-slate-700"
-            )}
+          {/* Column 4 - Requested Tests */}
+          <Paper
+            elevation={2}
+            sx={{
+              width: 325,
+              flexShrink: 0,
+              bgcolor: 'background.paper',
+              display: 'flex',
+              flexDirection: 'column',
+              height: '100%',
+              p: 1.5,
+              gap: 1.5,
+              borderLeft: 1,
+              borderColor: 'divider'
+            }}
           >
-            <SampleActionsPane
+            <RequestedTests
               selectedVisitId={selectedQueueItem?.visit_id || null}
-              canMarkAllCollected={labRequestsForSelectedVisit.some(
-                (lr) => !lr.sample_collected_at
-              )}
-              onMarkAllCollectedSuccess={handleMarkAllCollectedSuccess}
+              labRequests={labRequestsForSelectedVisit}
               onPrintAllLabels={() =>
                 generateAndShowPdfForActionPane(
-                  t("labSampleCollection:actions.printAllLabelsDialogTitle"),
+                  "طباعة جميع ملصقات العينات",
                   "AllSampleLabels",
                   `/visits/{visitId}/lab-sample-labels/pdf`
                 )
               }
             />
-          </aside>
-        </div>
-      </div>
+          </Paper>
+        </Box>
+      </Box>
 
       {/* Dialogs */}
       <SendWhatsAppTextDialogSC
@@ -464,10 +518,6 @@ const SampleCollectionPage: React.FC = () => {
         isLoading={pdfPreviewData.isLoading}
         title={pdfPreviewData.title}
         fileName={pdfPreviewData.fileName}
-      />
-      <Toaster
-        richColors
-        position={i18n.dir() === "rtl" ? "top-left" : "top-right"}
       />
     </>
   );

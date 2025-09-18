@@ -10,6 +10,7 @@ import QueueHeader from '@/components/lab/workstation/QueueHeader'; // Reusable 
 import PatientLabRequestItem from '@/components/lab/workstation/PatientLabRequestItem'; // Reusable item display
 import type { Shift } from '@/types/shifts';
 import type { PatientLabQueueItem, PaginatedPatientLabQueueResponse } from '@/types/labWorkflow';
+import type { LabAppearanceSettings } from '@/lib/appearance-settings-store';
 import { getSampleCollectionQueue } from '@/services/sampleCollectionService'; // Specific service for this queue
 import { getPatientById } from '@/services/patientService'; // To fetch patient data for context menu
 
@@ -19,6 +20,7 @@ interface PatientQueuePanelSCProps {
   onPatientSelect: (queueItem: PatientLabQueueItem) => void;
   selectedVisitId: number | null;
   globalSearchTerm: string;
+  appearanceSettings: LabAppearanceSettings;
 
   // Context Menu Action Callbacks
   onSendWhatsAppText: (queueItem: PatientLabQueueItem) => void;
@@ -28,7 +30,7 @@ interface PatientQueuePanelSCProps {
 }
 
 const PatientQueuePanelSC: React.FC<PatientQueuePanelSCProps> = ({
-  currentShift, onShiftChange, onPatientSelect, selectedVisitId, globalSearchTerm,
+  currentShift, onShiftChange, onPatientSelect, selectedVisitId, globalSearchTerm, appearanceSettings,
   onSendWhatsAppText, onSendPdfToPatient, onSendPdfToCustomNumber, onToggleResultLock
 }) => {
   const { t } = useTranslation(['labSampleCollection', 'labResults', 'common']);
@@ -117,6 +119,7 @@ const PatientQueuePanelSC: React.FC<PatientQueuePanelSCProps> = ({
                   onSelect={() => onPatientSelect(item)}
                   allRequestsPaid={(item as any).all_requests_paid_for_badge} // From backend resource (PatientLabQueueItemResource)
                   isResultLocked={(item as any).is_result_locked} // From backend resource
+                  appearanceSettings={appearanceSettings}
                   // Pass context menu actions
                   onSendWhatsAppText={onSendWhatsAppText}
                   onSendPdfToPatient={onSendPdfToPatient}

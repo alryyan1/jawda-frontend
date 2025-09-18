@@ -409,7 +409,7 @@ const HomePage: React.FC = () => {
   } = useQuery<Shift | null, Error>({
     queryKey: openShiftQueryKey,
     queryFn: getCurrentOpenShift,
-    refetchInterval: 1 * 60 * 1000, // Reduced to 1 minute for more responsive shift status
+    // Removed refetchInterval - fetch only once
     refetchOnWindowFocus: true,
   });
     const {

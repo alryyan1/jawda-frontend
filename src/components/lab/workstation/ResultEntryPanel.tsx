@@ -612,6 +612,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                                       
                                         <div style={{ fontSize: "0.75rem" }}>
                                           <ChildTestAutocompleteInput
+                                            key={`${ctResult.id}-${ctResult.result_id}`}
                                             value={field.value as string | ChildTestOption | null}
                                             onChange={field.onChange}
                                             onBlur={field.onBlur}
@@ -644,15 +645,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
               {/* Other Tab */}
             </CustomTabPanel>
 
-            <div className="mt-3 pt-3 border-t flex-shrink-0">
-              <MainCommentEditor
-                control={control}
-                fieldName="main_test_comment"
-                debouncedSave={debouncedSaveMainComment}
-                fieldSaveStatus={fieldSaveStatus["main_test_comment"] || "idle"}
-                disabled={isLoading}
-              />
-            </div>
+           
           </form>
         </Form>
       </div>

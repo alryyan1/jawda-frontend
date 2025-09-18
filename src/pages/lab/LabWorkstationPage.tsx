@@ -98,8 +98,6 @@ const LabWorkstationPage: React.FC = () => {
     useState<PatientLabQueueItem | null>(null);
   const [selectedLabRequestForEntry, setSelectedLabRequestForEntry] =
     useState<LabRequest | null>(null);
-  const [focusedChildTestForInfo, setFocusedChildTestForInfo] =
-    useState<ChildTestWithResult | null>(null);
   const [currentShiftForQueue, setCurrentShiftForQueue] =
     useState<Shift | null>(null);
   const [isManuallyNavigatingShifts, setIsManuallyNavigatingShifts] =
@@ -178,7 +176,7 @@ const LabWorkstationPage: React.FC = () => {
     useQuery<Shift | null, Error>({
       queryKey: ["currentOpenShiftForLabWorkstation"],
       queryFn: getCurrentOpenShift,
-      refetchInterval: 60000, // Poll for global shift changes every minute
+      // Removed refetchInterval - fetch only once
     });
 
   // Initialize or update currentShiftForQueue based on global shift
@@ -797,8 +795,6 @@ const LabWorkstationPage: React.FC = () => {
               }-${selectedLabRequestForEntry?.id || "none"}`}
               patientId={selectedQueueItem.patient_id}
               visitId={selectedQueueItem.visit_id} // Pass the visit_id (context ID)
-              selectedLabRequest={selectedLabRequestForEntry}
-              focusedChildTest={focusedChildTestForInfo}
               patientLabQueueItem={selectedQueueItem || null}
             />
           ) : (

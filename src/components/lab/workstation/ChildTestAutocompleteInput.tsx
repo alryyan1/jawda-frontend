@@ -1,5 +1,5 @@
 // src/components/lab/workstation/ChildTestAutocompleteInput.tsx
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 // استخدام نص عربي مباشر بدلاً من i18n
 import { useMutation } from "@tanstack/react-query";
 import { debounce } from "lodash";
@@ -14,6 +14,7 @@ import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import Button from "@mui/material/Button"; // MUI Button
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import { toast } from "sonner";
 
 import type { ChildTestOption } from "@/types/labTests";
@@ -75,15 +76,37 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
   const [dialogValue, setDialogValue] = useState("");
   const [isSavingNewOption, setIsSavingNewOption] = useState(false);
 
-  // Debounced onChange to avoid too many API calls on every keystroke
+  // Save status indicators
+  const [isSaving, setIsSaving] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Debounced visual feedback for save status
   const debouncedOnChange = useCallback(
     (value: string) => {
-      const debouncedFn = debounce((val: string) => {
-        onChange(val);
-      }, 800);
-      debouncedFn(value);
+      // Clear existing timeout
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+
+      // Set saving state
+      setIsSaving(true);
+      setShowSuccess(false);
+
+      // Set new timeout for visual feedback only
+      debounceTimeoutRef.current = setTimeout(() => {
+        // The actual API save will be handled by the parent component's useWatch mechanism
+        // We just need to show the saving/success states
+        setIsSaving(false);
+        setShowSuccess(true);
+        
+        // Hide success indicator after 2 seconds
+        setTimeout(() => {
+          setShowSuccess(false);
+        }, 2000);
+      }, 1000); // Show success after 1 second (API call should be done by then)
     },
-    [onChange]
+    []
   );
 
   // Fetch and cache options using localStorage (from your original component)
@@ -114,16 +137,27 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
     }
   }, [childTestId]);
 
-  // Sync RHF `value` to local `currentInputValue` for display in TextField
+  // Initialize currentInputValue from RHF value and update when value changes
   useEffect(() => {
-    if (typeof value === "object" && value !== null) {
-      setCurrentInputValue(value.name);
-    } else if (typeof value === "string") {
-      setCurrentInputValue(value);
-    } else {
-      setCurrentInputValue("");
-    }
-  }, [value]);
+    const newValue = typeof value === "object" && value !== null 
+      ? value.name 
+      : typeof value === "string" 
+        ? value 
+        : "";
+    
+    // Always update the display value when the prop value changes
+    // This ensures saved values are properly displayed
+    setCurrentInputValue(newValue);
+  }, [value]); // Watch for value changes from parent
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleDialogClose = () => {
     setDialogValue("");
@@ -209,7 +243,6 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
         value={value}
         onChange={(_, newValue) => {
           if (typeof newValue === "string") {
-            
             // User typed and pressed Enter for a new value (freeSolo)
             // For numeric fields, we just pass the string. For qualitative, open dialog if not numeric.
             if (!isNumeric(newValue)) {
@@ -219,6 +252,7 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
                 setDialogOpen(true);
               });
             } else {
+              setCurrentInputValue(newValue);
               onChange(newValue); // Pass string for numeric input
             }
           } else if (newValue && "inputValue" in newValue) {
@@ -227,15 +261,37 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
             setDialogOpen(true);
           } else {
             // User selected an existing option or cleared
+            const newInputValue = newValue ? (newValue as ChildTestOption).name : "";
+            setCurrentInputValue(newInputValue);
             onChange(newValue as ChildTestOption | null);
           }
         }}
         inputValue={currentInputValue} // Controlled input value for display
         onInputChange={(_, newInputValue, reason) => {
           if (reason === "input") {
+            // Update local state immediately for responsive typing
             setCurrentInputValue(newInputValue);
-            // Trigger debounced onChange for direct text input to enable autosave
+            // Call onChange immediately to mark field as dirty in React Hook Form
+            onChange(newInputValue);
+            // Trigger debounced onChange for visual feedback
             debouncedOnChange(newInputValue);
+          } else if (reason === "reset") {
+            // Handle reset case
+            setCurrentInputValue("");
+            setShowSuccess(false);
+            setIsSaving(false);
+            if (debounceTimeoutRef.current) {
+              clearTimeout(debounceTimeoutRef.current);
+            }
+          } else if (reason === "clear") {
+            // Handle clear case
+            setCurrentInputValue("");
+            setShowSuccess(false);
+            setIsSaving(false);
+            if (debounceTimeoutRef.current) {
+              clearTimeout(debounceTimeoutRef.current);
+            }
+            onChange(null);
           }
         }}
         onFocus={() => onFocusChange(parentChildTestModel)}
@@ -333,6 +389,17 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
                       color="inherit"
                       size={16}
                       sx={{ mr: 1 }}
+                    />
+                  ) : isSaving ? (
+                    <CircularProgress
+                      color="primary"
+                      size={16}
+                      sx={{ mr: 1 }}
+                    />
+                  ) : showSuccess ? (
+                    <CheckCircleIcon
+                      color="success"
+                      sx={{ fontSize: 16, mr: 1 }}
                     />
                   ) : null}
                   {params.InputProps.endAdornment}

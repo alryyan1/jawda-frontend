@@ -223,7 +223,7 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
             "bg-card border-border p-1.5 flex flex-col items-center space-y-2 overflow-y-auto h-full shadow-md",
 "border-l" // Should be the outermost border
         )}
-        style={{width: '56px'}} // Fixed slim width for icons
+        style={{width: '72px'}} // Fixed width for larger icons
       >
         {/* <h3 className="text-[10px] font-medium text-muted-foreground pt-1 self-center uppercase tracking-wider">
           {t('common:actions')}
@@ -237,11 +237,11 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
                     <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="w-10 h-10"
+                        className="w-12 h-12"
                         onClick={handleBatchAuthorize}
                         aria-label="التفويض المجمع"
                     >
-                        <FontAwesomeIcon icon={faWifi} className="h-5 w-5 text-purple-500" />
+                        <FontAwesomeIcon icon={faWifi} className="h-7! w-7! text-purple-500" />
                     </Button>
                 </TooltipTrigger>
                 <TooltipContent side="right" sideOffset={5}>
@@ -254,12 +254,12 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
                     <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="w-10 h-10"
+                        className="w-12 h-12"
                         onClick={handleResetToDefault}
                         disabled={!selectedLabRequest || setDefaultMutation.isPending}
                         aria-label="إعادة تعيين إلى القيم الافتراضية"
                     >
-                        {setDefaultMutation.isPending ? <Loader2 className="h-5 w-5 animate-spin"/> : <FontAwesomeIcon icon={faBluetoothB} className="h-5 w-5" />}
+                        {setDefaultMutation.isPending ? <Loader2 className="h-7! w-7! animate-spin"/> : <FontAwesomeIcon icon={faBluetoothB} className="h-7! w-7!" />}
                     </Button>
                 </TooltipTrigger>
                 <TooltipContent side="right" sideOffset={5}>
@@ -271,12 +271,12 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
                     <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="w-10 h-10"
+                        className="w-12 h-12"
                         onClick={handlePopulateCbc}
                         disabled={!selectedLabRequest || !selectedVisitId || populateCbcMutation.isPending}
                         aria-label="ملء نتائج CBC"
                     >
-                        {populateCbcMutation.isPending ? <Loader2 className="h-5 w-5 animate-spin"/> : <FontAwesomeIcon icon={faLockOpen} className="h-5 w-5" />}
+                        {populateCbcMutation.isPending ? <Loader2 className="h-7! w-7! animate-spin"/> : <FontAwesomeIcon icon={faLockOpen} className="h-7! w-7!" />}
                     </Button>
                 </TooltipTrigger>
                 <TooltipContent side="right" sideOffset={5}>
@@ -286,8 +286,8 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
         {/* Placeholder for LIS Sync */}
         <Tooltip>
             <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="w-10 h-10" onClick={handleLISSync} disabled={!canSyncLIS}>
-                    <FontAwesomeIcon icon={faCog} className="h-5 w-5" />
+                <Button variant="ghost" size="icon" className="w-12 h-12" onClick={handleLISSync} disabled={!canSyncLIS}>
+                    <FontAwesomeIcon icon={faCog} className="h-7! w-7!" />
                 </Button>
             </TooltipTrigger>
             <TooltipContent side="right" sideOffset={5}>
@@ -298,12 +298,12 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
         {canManageQC && (
             <Tooltip>
                 <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="w-10 h-10" onClick={handleManageQC}>
-                        <FontAwesomeIcon icon={faDownload} className="h-5 w-5 text-orange-500" />
+                    <Button variant="ghost" size="icon" className="" onClick={handleResetToDefault}>
+                        <FontAwesomeIcon icon={faDownload} className="h-7! w-7! text-orange-500" />
                     </Button>
                 </TooltipTrigger>
                 <TooltipContent side="right" sideOffset={5}>
-                    <p>مراقبة الجودة</p>
+                    <p>القيم الافتراضية</p>
                 </TooltipContent>
             </Tooltip>
         )}
@@ -312,8 +312,8 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
 
         <Tooltip>
             <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="w-10 h-10" onClick={handlePrintWorklist}>
-                    <FontAwesomeIcon icon={faBars} className="h-5 w-5" />
+                <Button variant="ghost" size="icon" className="w-12 h-12" onClick={handlePrintWorklist}>
+                    <FontAwesomeIcon icon={faBars} className="h-7! w-7!" />
                 </Button>
             </TooltipTrigger>
             <TooltipContent side="right" sideOffset={5}>
@@ -325,8 +325,8 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
           {/* New Appearance Settings Button */}
           <Tooltip>
               <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="w-10 h-10" onClick={() => setIsAppearanceDialogOpen(true)}>
-                      <FontAwesomeIcon icon={faBolt} className="h-5 w-5" />
+                  <Button variant="ghost" size="icon" className="w-12 h-12" onClick={() => setIsAppearanceDialogOpen(true)}>
+                      <FontAwesomeIcon icon={faBolt} className="h-7! w-7!" />
                   </Button>
               </TooltipTrigger>
               <TooltipContent side="right" sideOffset={5}>
@@ -338,17 +338,17 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="w-10 h-10"
+                    className="w-12 h-12"
                     onClick={handleToggleLock}
                     disabled={toggleLockMutation.isPending}
                     aria-label={currentLockStatus === false ? 'إلغاء قفل النتائج' : 'قفل النتائج'}
                 >
                     {toggleLockMutation.isPending ? (
-                        <Loader2 className="h-5 w-5 animate-spin" />
+                        <Loader2 className="h-7! w-7! animate-spin" />
                     ) : currentLockStatus === false ? (
-                        <FontAwesomeIcon icon={faThumbsUp} className="h-5 w-5 text-green-500" />
+                        <FontAwesomeIcon icon={faThumbsUp} className="h-7! w-7! text-green-500" />
                     ) : (
-                        <FontAwesomeIcon icon={faThumbsUp} className="h-5 w-5 text-red-500" />
+                        <FontAwesomeIcon icon={faThumbsUp} className="h-7! w-7! text-red-500" />
                     )}
                 </Button>
                 </TooltipTrigger>
@@ -361,8 +361,8 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
 
         <Tooltip>
             <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="w-10 h-10" onClick={() => toast.info("Navigate to Lab Settings")}> {/* TODO: Navigate */}
-                    <FontAwesomeIcon icon={faDove} className="h-5 w-5" />
+                <Button variant="ghost" size="icon" className="w-12 h-12" onClick={() => toast.info("Navigate to Lab Settings")}> {/* TODO: Navigate */}
+                    <FontAwesomeIcon icon={faDove} className="h-7! w-7!" />
                 </Button>
             </TooltipTrigger>
             <TooltipContent side="right" sideOffset={5}>

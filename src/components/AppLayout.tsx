@@ -293,7 +293,7 @@ const AppLayout: React.FC = () => {
   const { data: currentOpenShift } = useQuery({
     queryKey: ['currentOpenShift'],
     queryFn: getCurrentOpenShift,
-    refetchInterval: 30000,
+    // Removed refetchInterval - fetch only once
   });
 
   // Monitor realtime connection status

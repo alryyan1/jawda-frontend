@@ -1,218 +1,214 @@
 // src/pages/reports/MonthlyServiceIncomeReportPage.tsx
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
 import { format, parseISO, getYear, getMonth, subMonths } from 'date-fns';
-import { arSA, enUS } from 'date-fns/locale';
 
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
-import { Loader2, Filter, BarChartBig, AlertTriangle, FileText, Download } from 'lucide-react'; // BarChartBig or similar
+import { Loader2, Filter, BarChartBig, AlertTriangle, FileText, Download } from 'lucide-react';
 import { getMonthlyServiceDepositsIncome, type MonthlyServiceIncomeFilters } from '@/services/reportService';
 import { formatNumber } from '@/lib/utils';
 import apiClient from '@/services/api';
 import { toast } from 'sonner';
 
-const currentYear = getYear(new Date());
-const years = Array.from({ length: 10 }, (_, i) => currentYear - i); // Last 10 years
-const months = Array.from({ length: 12 }, (_, i) => i + 1); // 1-12
+// MUI imports
+import {
+	Card,
+	CardHeader,
+	CardContent,
+	Typography,
+	Button,
+	FormControl,
+	InputLabel,
+	Select as MUISelect,
+	MenuItem,
+	Alert,
+	Table as MUITable,
+	TableHead as MUITableHead,
+	TableRow as MUITableRow,
+	TableCell as MUITableCell,
+	TableBody as MUITableBody,
+	TableFooter as MUITableFooter,
+} from '@mui/material';
 
-type MonthKey = `m${number}`;
+const currentYear = getYear(new Date());
+const years = Array.from({ length: 10 }, (_, i) => currentYear - i);
+const months = Array.from({ length: 12 }, (_, i) => i + 1);
+
+const AR_MONTHS = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
 
 const MonthlyServiceIncomeReportPage: React.FC = () => {
-  const { t, i18n } = useTranslation(['reports', 'common', 'months']);
-  const dateLocale = i18n.language.startsWith('ar') ? arSA : enUS;
+	const [filters, setFilters] = useState<MonthlyServiceIncomeFilters>(() => {
+		const prevMonthDate = subMonths(new Date(), 1);
+		return {
+			year: getYear(prevMonthDate),
+			month: getMonth(prevMonthDate) + 1,
+		};
+	});
+	
+	const { data: reportData, isLoading, error, isFetching, refetch } = useQuery({
+		queryKey: ['monthlyServiceDepositsIncomeReport', filters],
+		queryFn: () => getMonthlyServiceDepositsIncome(filters),
+		enabled: !!(filters.year && filters.month),
+	});
 
-  const [filters, setFilters] = useState<MonthlyServiceIncomeFilters>(() => {
-    const prevMonthDate = subMonths(new Date(), 1);
-    return {
-      year: getYear(prevMonthDate),
-      month: getMonth(prevMonthDate) + 1, // getMonth is 0-indexed
-    };
-  });
-  
-  const { data: reportData, isLoading, error, isFetching, refetch } = useQuery({
-    queryKey: ['monthlyServiceDepositsIncomeReport', filters],
-    queryFn: () => getMonthlyServiceDepositsIncome(filters),
-    enabled: !!(filters.year && filters.month),
-  });
+	const handleFilterChange = (type: 'year' | 'month', value: string) => {
+		setFilters(prev => ({ ...prev, [type]: parseInt(value) }));
+	};
+	const [isExporting, setIsExporting] = useState<'pdf' | 'excel' | false>(false);
+	
+	const handleApplyFilters = () => {
+		refetch();
+	};
+	
+	const dailyData = reportData?.daily_data || [];
+	const summary = reportData?.summary;
+	  
+	const handleExport = async (formatType: 'pdf' | 'excel') => {
+		if (!filters.year || !filters.month) {
+			toast.error('الرجاء اختيار الشهر والسنة');
+			return;
+		}
+		setIsExporting(formatType);
+		try {
+			const endpoint = `/reports/monthly-service-deposits-income/${formatType}`;
+			const response = await apiClient.get(endpoint, {
+				params: filters,
+				responseType: 'blob',
+			});
 
-  const handleFilterChange = (type: 'year' | 'month', value: string) => {
-    setFilters(prev => ({ ...prev, [type]: parseInt(value) }));
-  };
-  const [isExporting, setIsExporting] = useState<'pdf' | 'excel' | false>(false);
-  
-  const handleApplyFilters = () => {
-    refetch();
-  };
-  
-  const dailyData = reportData?.daily_data || [];
-  const summary = reportData?.summary;
-    
-  const handleExport = async (formatType: 'pdf' | 'excel') => {
-    if (!filters.year || !filters.month) {
-        toast.error(t('common:validation.monthYearRequired'));
-        return;
-    }
-    setIsExporting(formatType);
-    try {
-        const endpoint = `/reports/monthly-service-deposits-income/${formatType}`;
-        const response = await apiClient.get(endpoint, {
-            params: filters,
-            responseType: 'blob',
-        });
+			const url = window.URL.createObjectURL(new Blob([response.data]));
+			const link = document.createElement('a');
+			link.href = url;
+			const extension = formatType === 'pdf' ? 'pdf' : 'xlsx';
+			const monthStr = String(filters.month).padStart(2, '0');
+			link.setAttribute('download', `monthly_service_income_${filters.year}_${monthStr}.${extension}`);
+			document.body.appendChild(link);
+			link.click();
+			link.parentNode?.removeChild(link);
+			window.URL.revokeObjectURL(url);
+			toast.success('تم التصدير بنجاح');
+		} catch (err: unknown) {
+			const e = err as { response?: { data?: { message?: string } }, message?: string };
+			toast.error('فشل التصدير', { 
+				description: e.response?.data?.message || e.message || 'خطأ غير معروف'
+			});
+		} finally {
+			setIsExporting(false);
+		}
+	};
 
-        const url = window.URL.createObjectURL(new Blob([response.data]));
-        const link = document.createElement('a');
-        link.href = url;
-        const extension = formatType === 'pdf' ? 'pdf' : 'xlsx';
-        const monthStr = String(filters.month).padStart(2, '0');
-        link.setAttribute('download', `monthly_service_income_${filters.year}_${monthStr}.${extension}`);
-        document.body.appendChild(link);
-        link.click();
-        link.parentNode?.removeChild(link);
-        window.URL.revokeObjectURL(url);
-        toast.success(t('common:exportSuccess'));
-    } catch (err: any) {
-        toast.error(t('common:error.exportFailed'), { 
-            description: err.response?.data?.message || err.message 
-        });
-    } finally {
-        setIsExporting(false);
-    }
-  };
+	return (
+		<div className="space-y-6">
+			<div className="flex items-center gap-2">
+				<BarChartBig className="h-7 w-7 text-primary"/>
+				<h1 className="text-2xl sm:text-3xl font-bold">دخل الخدمات الشهري</h1>
+			</div>
+			<div className="flex flex-col sm:flex-row justify-between items-center gap-2">
+				<div className="flex gap-2">
+					<Button variant="outlined" size="small" onClick={() => handleExport('pdf')} disabled={isExporting === 'pdf' || isLoading} startIcon={isExporting === 'pdf' ? undefined : <FileText className="h-4 w-4"/>}>
+						{isExporting === 'pdf' ? <Loader2 className="h-4 w-4 animate-spin"/> : 'تصدير PDF'}
+					</Button>
+					<Button variant="outlined" size="small" onClick={() => handleExport('excel')} disabled={isExporting === 'excel' || isLoading} startIcon={isExporting === 'excel' ? undefined : <Download className="h-4 w-4"/>}>
+						{isExporting === 'excel' ? <Loader2 className="h-4 w-4 animate-spin"/> : 'تصدير Excel'}
+					</Button>
+				</div>
+			</div>
+			<Card>
+				<CardHeader>
+					<Typography variant="h6">مرشحات التقرير</Typography>
+				</CardHeader>
+				<CardContent className="flex flex-col sm:flex-row gap-3 items-end">
+					<div className="grid grid-cols-2 gap-3 flex-grow">
+						<div className="space-y-1.5">
+							<FormControl size="small" className="w-full">
+								<InputLabel id="year-select-label">السنة</InputLabel>
+								<MUISelect labelId="year-select-label" id="year-select" label="السنة" value={String(filters.year)} onChange={(e) => handleFilterChange('year', String(e.target.value))}>
+									{years.map(y => <MenuItem key={y} value={String(y)}>{y}</MenuItem>)}
+								</MUISelect>
+							</FormControl>
+						</div>
+						<div className="space-y-1.5">
+							<FormControl size="small" className="w-full">
+								<InputLabel id="month-select-label">الشهر</InputLabel>
+								<MUISelect labelId="month-select-label" id="month-select" label="الشهر" value={String(filters.month)} onChange={(e) => handleFilterChange('month', String(e.target.value))}>
+									{months.map(m => (
+										<MenuItem key={m} value={String(m)}>{AR_MONTHS[m - 1]}</MenuItem>
+									))}
+								</MUISelect>
+							</FormControl>
+						</div>
+					</div>
+					<Button onClick={handleApplyFilters} variant="contained" size="small" className="h-9 mt-auto sm:mt-0" disabled={isLoading || isFetching} startIcon={!isFetching ? <Filter className="h-4 w-4"/> : undefined}>
+						{isFetching ? <Loader2 className="h-4 w-4 animate-spin"/> : 'تطبيق المرشحات'}
+					</Button>
+				</CardContent>
+			</Card>
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-2">
-        <BarChartBig className="h-7 w-7 text-primary"/>
-        <h1 className="text-2xl sm:text-3xl font-bold">{t('reports:monthlyServiceIncomeReport.title')}</h1>
-      </div>
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
-    
-        <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => handleExport('pdf')} disabled={isExporting === 'pdf' || isLoading}>
-                {isExporting === 'pdf' ? <Loader2 className="h-4 w-4 animate-spin"/> : <FileText className="h-4 w-4"/>} 
-                <span className="ltr:ml-2 rtl:mr-2 hidden sm:inline">{t('common:exportPdf')}</span>
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => handleExport('excel')} disabled={isExporting === 'excel' || isLoading}>
-                {isExporting === 'excel' ? <Loader2 className="h-4 w-4 animate-spin"/> : <Download className="h-4 w-4"/>} 
-                <span className="ltr:ml-2 rtl:mr-2 hidden sm:inline">{t('common:exportExcel')}</span>
-            </Button>
-        </div>
-        </div>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">{t('reports:filtersTitle')}</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col sm:flex-row gap-3 items-end">
-          <div className="grid grid-cols-2 gap-3 flex-grow">
-            <div className="space-y-1.5">
-              <label htmlFor="year-select" className="text-xs font-medium">{t('common:year')}</label>
-              <Select 
-                value={String(filters.year)} 
-                onValueChange={(val) => handleFilterChange('year', val)}
-                dir={i18n.dir()}
-              >
-                <SelectTrigger id="year-select" className="h-9"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {years.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <label htmlFor="month-select" className="text-xs font-medium">{t('common:month')}</label>
-              <Select 
-                value={String(filters.month)} 
-                onValueChange={(val) => handleFilterChange('month', val)}
-                dir={i18n.dir()}
-              >
-                <SelectTrigger id="month-select" className="h-9"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {months.map(m => (
-                    <SelectItem key={m} value={String(m)}>
-                      {t(`months:m${m}` as MonthKey, format(new Date(2000, m - 1, 1), 'LLLL', {locale: dateLocale}))}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <Button onClick={handleApplyFilters} className="h-9 mt-auto sm:mt-0" disabled={isLoading || isFetching}>
-            {isFetching ? <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2"/> : <Filter className="h-4 w-4 ltr:mr-2 rtl:ml-2"/>}
-            {t('reports:applyFiltersButton')}
-          </Button>
-        </CardContent>
-      </Card>
-
-      {(isLoading || isFetching) && !reportData && (
-        <div className="text-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
-      )}
-      {error && (
-         <Card className="border-destructive bg-destructive/10 text-destructive-foreground">
-            <CardHeader><CardTitle className="flex items-center gap-2"><AlertTriangle/> {t('common:error.fetchFailedTitle')}</CardTitle></CardHeader>
-            <CardContent><p>{error.message || t('common:error.generic')}</p></CardContent>
-         </Card>
-      )}
-      
-      {reportData && !isLoading && (
-        <>
-          <CardDescription className="text-center text-sm">
-            {t('reports:reportForPeriod',{from: reportData.report_period.from, to: reportData.report_period.to})}
-          </CardDescription>
-          <Card>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-center">{t('common:date')}</TableHead>
-                  <TableHead className="text-center">{t('reports:monthlyServiceIncomeReport.totalDeposits')}</TableHead>
-                  <TableHead className="text-center">{t('reports:monthlyServiceIncomeReport.cashDeposits')}</TableHead>
-                  <TableHead className="text-center">{t('reports:monthlyServiceIncomeReport.bankDeposits')}</TableHead>
-                  <TableHead className="text-center">{t('reports:monthlyServiceIncomeReport.doctorEntitlements')}</TableHead>
-                  <TableHead className="text-center">{t('reports:monthlyServiceIncomeReport.netCashFlow')}</TableHead>
-                  <TableHead className="text-center">{t('reports:monthlyServiceIncomeReport.netBankFlow')}</TableHead>
-                  <TableHead className="text-center font-semibold">{t('reports:monthlyServiceIncomeReport.netDailyIncome')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {dailyData.length === 0 && (
-                  <TableRow><TableCell colSpan={8} className="h-24 text-center">{t('common:noDataAvailableForPeriod')}</TableCell></TableRow>
-                )}
-                {dailyData.map((day) => (
-                  <TableRow key={day.date}>
-                    <TableCell className="text-center">{format(parseISO(day.date), 'P', { locale: dateLocale })} ({format(parseISO(day.date), 'EEEE', { locale: dateLocale })})</TableCell>
-                    <TableCell className="text-center">{formatNumber(day.total_income)}</TableCell>
-                    <TableCell className="text-center">{formatNumber(day.total_cash_income)}</TableCell>
-                    <TableCell className="text-center">{formatNumber(day.total_bank_income)}</TableCell>
-                    <TableCell className="text-center text-red-600 dark:text-red-400">{formatNumber(day.total_cost)}</TableCell>
-                    <TableCell className="text-center">{formatNumber(day.net_cash)}</TableCell>
-                    <TableCell className="text-center">{formatNumber(day.net_bank)}</TableCell>
-                    <TableCell className="text-center font-semibold">{formatNumber(day.net_income_for_day)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-              {summary && dailyData.length > 0 && (
-                <TableFooter>
-                  <TableRow className="bg-muted/50 font-bold text-sm">
-                    <TableCell className="text-center">{t('common:total')}</TableCell>
-                    <TableCell className="text-center">{formatNumber(summary.total_deposits)}</TableCell>
-                    <TableCell className="text-center">{formatNumber(summary.total_cash_deposits)}</TableCell>
-                    <TableCell className="text-center">{formatNumber(summary.total_bank_deposits)}</TableCell>
-                    <TableCell className="text-center text-red-600 dark:text-red-400">{formatNumber(summary.total_costs_for_days_with_deposits)}</TableCell>
-                    <TableCell className="text-center">{formatNumber(summary.net_cash_flow)}</TableCell>
-                    <TableCell className="text-center">{formatNumber(summary.net_bank_flow)}</TableCell>
-                    <TableCell className="text-center text-lg">{formatNumber(summary.net_total_income)}</TableCell>
-                  </TableRow>
-                </TableFooter>
-              )}
-            </Table>
-          </Card>
-        </>
-      )}
-    </div>
-  );
+			{(isLoading || isFetching) && !reportData && (
+				<div className="text-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+			)}
+			{error && (
+				<Alert severity="error" icon={<AlertTriangle />}>
+					<Typography fontWeight={600}>فشل جلب البيانات</Typography>
+					<Typography>{(error as Error).message || 'حدث خطأ غير متوقع'}</Typography>
+				</Alert>
+			)}
+			
+			{reportData && !isLoading && (
+				<>
+					<Typography align="center" variant="body2">
+						تقرير الفترة: {reportData.report_period.from} - {reportData.report_period.to}
+					</Typography>
+					<Card>
+						<MUITable size="small">
+							<MUITableHead>
+								<MUITableRow>
+									<MUITableCell align="center">التاريخ</MUITableCell>
+									<MUITableCell align="center">إجمالي الإيداعات</MUITableCell>
+									<MUITableCell align="center">الإيداعات نقدًا</MUITableCell>
+									<MUITableCell align="center">الإيداعات بنكي</MUITableCell>
+									<MUITableCell align="center">استحقاق الأطباء</MUITableCell>
+									<MUITableCell align="center">صافي النقد</MUITableCell>
+									<MUITableCell align="center">صافي البنك</MUITableCell>
+									<MUITableCell align="center" className="font-semibold">صافي الدخل اليومي</MUITableCell>
+								</MUITableRow>
+							</MUITableHead>
+							<MUITableBody>
+								{dailyData.length === 0 && (
+									<MUITableRow><MUITableCell colSpan={8} align="center" className="h-24">لا توجد بيانات للفترة</MUITableCell></MUITableRow>
+								)}
+								{dailyData.map((day) => (
+									<MUITableRow key={day.date}>
+										<MUITableCell align="center">{format(parseISO(day.date), 'P')} ({format(parseISO(day.date), 'EEEE')})</MUITableCell>
+										<MUITableCell align="center">{formatNumber(day.total_income)}</MUITableCell>
+										<MUITableCell align="center">{formatNumber(day.total_cash_income)}</MUITableCell>
+										<MUITableCell align="center">{formatNumber(day.total_bank_income)}</MUITableCell>
+										<MUITableCell align="center" className="text-red-600 dark:text-red-400">{formatNumber(day.total_cost)}</MUITableCell>
+										<MUITableCell align="center">{formatNumber(day.net_cash)}</MUITableCell>
+										<MUITableCell align="center">{formatNumber(day.net_bank)}</MUITableCell>
+										<MUITableCell align="center" className="font-semibold">{formatNumber(day.net_income_for_day)}</MUITableCell>
+									</MUITableRow>
+								))}
+							</MUITableBody>
+							{summary && dailyData.length > 0 && (
+								<MUITableFooter>
+									<MUITableRow>
+										<MUITableCell align="center">الإجمالي</MUITableCell>
+										<MUITableCell align="center">{formatNumber(summary.total_deposits)}</MUITableCell>
+										<MUITableCell align="center">{formatNumber(summary.total_cash_deposits)}</MUITableCell>
+										<MUITableCell align="center">{formatNumber(summary.total_bank_deposits)}</MUITableCell>
+										<MUITableCell align="center" className="text-red-600 dark:text-red-400">{formatNumber(summary.total_costs_for_days_with_deposits)}</MUITableCell>
+										<MUITableCell align="center">{formatNumber(summary.net_cash_flow)}</MUITableCell>
+										<MUITableCell align="center">{formatNumber(summary.net_bank_flow)}</MUITableCell>
+										<MUITableCell align="center" className="text-lg">{formatNumber(summary.net_total_income)}</MUITableCell>
+									</MUITableRow>
+								</MUITableFooter>
+							)}
+						</MUITable>
+					</Card>
+				</>
+			)}
+		</div>
+	);
 };
 
 export default MonthlyServiceIncomeReportPage;

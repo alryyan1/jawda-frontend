@@ -22,7 +22,7 @@ import PdfPreviewDialog from "@/components/common/PdfPreviewDialog";
 
 import type { PatientLabQueueItem } from "@/types/labWorkflow";
 import type { Shift } from "@/types/shifts";
-import type { LabRequest } from "@/types/visits";
+import type { DoctorVisit, LabRequest } from "@/types/visits";
 import { getCurrentOpenShift } from "@/services/shiftService";
 import { togglePatientResultLock } from "@/services/patientService";
 import apiClient from "@/services/api";
@@ -32,6 +32,7 @@ import { getSampleCollectionQueue } from "@/services/sampleCollectionService";
 
 import SendWhatsAppTextDialogSC from "@/components/lab/sample_collection/SendWhatsAppTextDialogSC";
 import SendPdfToCustomNumberDialogSC from "@/components/lab/sample_collection/SendPdfToCustomNumberDialogSC";
+import { getDoctorVisitById } from "@/services/visitService";
 
 const SampleCollectionPage: React.FC = () => {
   const {
@@ -197,7 +198,7 @@ const SampleCollectionPage: React.FC = () => {
     ? (selectedQueueItem as unknown as {
         patient_age?: string | number;
         doctor_name?: string;
-        visit_creation_time?: string | Date;
+        visit_created_at?: string | Date;
         phone?: string;
       })
     : undefined;
@@ -225,7 +226,17 @@ const SampleCollectionPage: React.FC = () => {
       toast.error(errorMessage);
     }
   };
+ const pirntToZebra = (activePatient: DoctorVisit)=>{
+  fetch("http://127.0.0.1:5000/", {
+    method: "POST",
+    headers: {
+      "Content-Type": "APPLICATION/JSON",
+    },
 
+    body: JSON.stringify(activePatient),
+  }).then(() => {});
+
+ }
   const generateAndShowPdfForActionPane = async (
     titleKey: string,
     fileNamePrefix: string,
@@ -249,6 +260,9 @@ const SampleCollectionPage: React.FC = () => {
         "{visitId}",
         String(visitIdToUse)
       );
+        const doctorVisit = await getDoctorVisitById(visitIdToUse);
+        console.log(doctorVisit,"doctorVisit",visitIdToUse,'visitIdToUse');
+        pirntToZebra(doctorVisit);
       const response = await apiClient.get(endpoint, { responseType: "blob" });
       const blob = new Blob([response.data], { type: "application/pdf" });
       const objectUrl = URL.createObjectURL(blob);
@@ -288,7 +302,7 @@ const SampleCollectionPage: React.FC = () => {
       <Box 
         display="flex" 
         flexDirection="column" 
-        height="100vh" 
+        height="100%" 
         bgcolor="grey.100" 
         fontSize="0.875rem" 
         overflow="hidden"
@@ -423,6 +437,8 @@ const SampleCollectionPage: React.FC = () => {
             }}
           >
             {selectedQueueItem ? (
+              <>
+           {console.log(selectedExtra,"selectedExtra",selectedQueueItem,'selectedQueueItem')}
               <VisitSampleContainers
                 key={`containers-for-${selectedQueueItem.visit_id}`}
                 visitId={selectedQueueItem.visit_id}
@@ -431,10 +447,15 @@ const SampleCollectionPage: React.FC = () => {
                 isLoading={isLoadingLabRequestsForVisit}
                 patientAge={selectedExtra?.patient_age}
                 doctorName={selectedExtra?.doctor_name}
-                visitDateTime={selectedExtra?.visit_creation_time}
+                visitDateTime={selectedExtra?.visit_created_at}
                 patientPhone={selectedExtra?.phone}
+                onAfterPrint={() => {
+                  fetchQueueData();
+                  refetchLabRequestsForVisit();
+                }}
                 
               />
+              </>
             ) : (
               <Box 
                 flexGrow={1} 
@@ -478,6 +499,10 @@ const SampleCollectionPage: React.FC = () => {
                   `/visits/{visitId}/lab-sample-labels/pdf`
                 )
               }
+              onAfterPrint={() => {
+                fetchQueueData();
+                refetchLabRequestsForVisit();
+              }}
             />
           </Paper>
         </Box>

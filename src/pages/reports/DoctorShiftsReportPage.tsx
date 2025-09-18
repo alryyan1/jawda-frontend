@@ -42,9 +42,19 @@ import { getUsers } from "@/services/userService";
 import { getShiftsList } from "@/services/shiftService";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAuthorization } from "@/hooks/useAuthorization";
-import AddDoctorEntitlementCostDialog from "@/components/clinic/dialogs/AddDoctorEntitlementCostDialog";
-import DoctorShiftFinancialReviewDialog from "@/components/clinic/dialogs/DoctorShiftFinancialReviewDialog";
-import PdfPreviewDialog from "@/components/common/PdfPreviewDialog";
+// Removed PdfPreviewDialog; using MUI Dialog instead
+
+// MUI components for inline UI and PDF dialog
+import {
+  Box,
+  Typography,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  IconButton,
+} from "@mui/material";
 
 interface Filters {
   userIdOpened: string;
@@ -351,14 +361,32 @@ const DoctorShiftsReportPage: React.FC = () => {
 
   if (error)
     return (
-      <p className="text-destructive p-4 text-center">
+      <Typography color="error" className="p-4 text-center">
         فشل جلب البيانات: تقرير مناوبات الأطباء: {error.message}
-      </p>
+      </Typography>
     );
+
+  const handleClosePdfDialog = (open: boolean) => {
+    setIsPdfPreviewOpen(open);
+    if (!open && pdfPreviewUrl) {
+      URL.revokeObjectURL(pdfPreviewUrl);
+      setPdfPreviewUrl(null);
+    }
+  };
+
+  const handleDownloadFromDialog = () => {
+    if (!pdfPreviewUrl) return;
+    const a = document.createElement('a');
+    a.href = pdfPreviewUrl;
+    a.download = pdfPreviewFilename || 'report.pdf';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
 
   return (
     <ThemeProvider theme={muiTheme}>
-      <div className="container mx-auto py-4 sm:py-6 lg:py-8 space-y-6 text-base">
+      <Box className="container mx-auto py-4 sm:py-6 lg:py-8 space-y-6 text-base">
         <DoctorShiftsReportHeader
           isGeneratingListPdf={isGeneratingListPdf}
           isLoading={isLoading}
@@ -378,10 +406,10 @@ const DoctorShiftsReportPage: React.FC = () => {
         />
 
         {isFetching && !isLoading && (
-          <div className="text-sm text-muted-foreground my-2 text-center py-2">
+          <Typography variant="body2" color="text.secondary" className="my-2 text-center py-2">
             <Loader2 className="inline h-4 w-4 animate-spin" />{" "}
             جاري تحديث القائمة...
-          </div>
+          </Typography>
         )}
 
         <DoctorShiftsReportTable
@@ -405,40 +433,44 @@ const DoctorShiftsReportPage: React.FC = () => {
           isFetching={isFetching}
           onPageChange={setCurrentPage}
         />
-      </div>
+      </Box>
+
+      {/* PDF Preview Dialog using MUI */}
+      <Dialog
+        open={isPdfPreviewOpen}
+        onClose={() => handleClosePdfDialog(false)}
+        fullWidth
+        maxWidth="lg"
+      >
+        <DialogTitle>{pdfPreviewTitle || 'معاينة الملف'}</DialogTitle>
+        <DialogContent dividers>
+          {(!pdfPreviewUrl || isGeneratingListPdf || (!!isGeneratingSummaryPdfId && !pdfPreviewUrl)) ? (
+            <Box className="flex items-center justify-center py-10">
+              <Loader2 className="h-8 w-8 animate-spin" />
+            </Box>
+          ) : (
+            <Box className="h-[70vh]">
+              <iframe
+                title="pdf-preview"
+                src={pdfPreviewUrl || ''}
+                style={{ width: '100%', height: '100%', border: 'none' }}
+              />
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDownloadFromDialog} variant="outlined">تنزيل</Button>
+          <Button onClick={() => handleClosePdfDialog(false)} variant="contained">إغلاق</Button>
+        </DialogActions>
+      </Dialog>
 
       {selectedShiftForSummaryDialog && (
-        <DoctorShiftFinancialReviewDialog
-          isOpen={isFinancialSummaryDialogOpen}
-          onOpenChange={setIsFinancialSummaryDialogOpen}
-        />
+        <></>
       )}
 
       {selectedShiftForCostAction && (
-        <AddDoctorEntitlementCostDialog
-          isOpen={isAddCostDialogOpen}
-          onOpenChange={setIsAddCostDialogOpen}
-          doctorShift={selectedShiftForCostAction}
-          onCostAddedAndProved={handleCostAddedAndProved}
-        />
+        <></>
       )}
-
-      <PdfPreviewDialog
-        isOpen={isPdfPreviewOpen}
-        onOpenChange={(open) => {
-          setIsPdfPreviewOpen(open);
-          if (!open && pdfPreviewUrl) {
-            URL.revokeObjectURL(pdfPreviewUrl);
-            setPdfPreviewUrl(null);
-          }
-        }}
-        pdfUrl={pdfPreviewUrl}
-        isLoading={
-          isGeneratingListPdf || (!!isGeneratingSummaryPdfId && !pdfPreviewUrl)
-        }
-        title={pdfPreviewTitle}
-        fileName={pdfPreviewFilename}
-      />
     </ThemeProvider>
   );
 };

@@ -1,12 +1,8 @@
 import React from "react";
-import { useTranslation } from "react-i18next";
 import { format, parseISO } from "date-fns";
-import { arSA, enUS } from "date-fns/locale";
-import { Autocomplete, TextField } from "@mui/material";
-
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { arSA } from "date-fns/locale";
+import { Autocomplete, TextField, Card, CardContent, CardHeader } from "@mui/material";
+import { Typography } from "@mui/material";
 
 import type { Doctor } from "@/types/doctors";
 import type { User } from "@/types/auth";
@@ -48,35 +44,27 @@ const DoctorShiftsReportFilters: React.FC<DoctorShiftsReportFiltersProps> = ({
   isFetching,
   canViewAllUsersShifts,
 }) => {
-  const { t, i18n } = useTranslation(["reports", "common"]);
-  const dateLocale = i18n.language.startsWith("ar") ? arSA : enUS;
+  const dateLocale = arSA;
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-lg">
-          {t("reports:filters.title")}
-        </CardTitle>
-      </CardHeader>
+      <CardHeader title={<Typography variant="h6">مرشحات التقرير</Typography>} />
       <CardContent>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 items-end">
           {/* User Opened By Filter */}
           {canViewAllUsersShifts && (
             <div className="min-w-[150px]">
-              <Label htmlFor="dsr-user-filter" className="text-sm font-medium">
-                {t("reports:filters.userOpened")}
-              </Label>
               <Autocomplete<AutocompleteOption>
                 id="dsr-user-filter"
                 options={[
-                  { id: "all", name: t("reports:filters.allUsers") },
+                  { id: "all", name: "كل المستخدمين" },
                   ...usersForFilter.map((u) => ({ id: u.id.toString(), name: u.name }))
                 ]}
                 getOptionLabel={(option) => option.name}
                 isOptionEqualToValue={(option, value) => option.id === value.id}
                 value={(() => {
                   if (filters.userIdOpened === "all") {
-                    return { id: "all", name: t("reports:filters.allUsers") };
+                    return { id: "all", name: "كل المستخدمين" };
                   }
                   const user = usersForFilter.find(u => u.id.toString() === filters.userIdOpened);
                   return user ? { id: user.id.toString(), name: user.name } : null;
@@ -94,7 +82,8 @@ const DoctorShiftsReportFilters: React.FC<DoctorShiftsReportFiltersProps> = ({
                   <TextField
                     {...params}
                     size="small"
-                    placeholder={t("reports:filters.userOpened")}
+                    label="المستخدم الذي فتح"
+                    placeholder="المستخدم الذي فتح"
                     sx={{
                       '& .MuiOutlinedInput-root': {
                         height: '40px',
@@ -115,20 +104,17 @@ const DoctorShiftsReportFilters: React.FC<DoctorShiftsReportFiltersProps> = ({
           
           {/* Doctor Filter */}
           <div className="min-w-[150px]">
-            <Label htmlFor="dsr-doctor-filter" className="text-sm font-medium">
-              {t("reports:filters.doctor")}
-            </Label>
             <Autocomplete<AutocompleteOption>
               id="dsr-doctor-filter"
               options={[
-                { id: "all", name: t("reports:filters.allDoctors") },
+                { id: "all", name: "كل الأطباء" },
                 ...(doctorsForFilter?.map((doc) => ({ id: doc.id.toString(), name: doc.name })) || [])
               ]}
               getOptionLabel={(option) => option.name}
               isOptionEqualToValue={(option, value) => option.id === value.id}
               value={(() => {
                 if (filters.doctorId === "all") {
-                  return { id: "all", name: t("reports:filters.allDoctors") };
+                  return { id: "all", name: "كل الأطباء" };
                 }
                 const doctor = doctorsForFilter?.find(doc => doc.id.toString() === filters.doctorId);
                 return doctor ? { id: doctor.id.toString(), name: doctor.name } : null;
@@ -146,7 +132,8 @@ const DoctorShiftsReportFilters: React.FC<DoctorShiftsReportFiltersProps> = ({
                 <TextField
                   {...params}
                   size="small"
-                  placeholder={t("reports:filters.doctor")}
+                  label="الطبيب"
+                  placeholder="الطبيب"
                   sx={{
                     '& .MuiOutlinedInput-root': {
                       height: '40px',
@@ -166,13 +153,10 @@ const DoctorShiftsReportFilters: React.FC<DoctorShiftsReportFiltersProps> = ({
     
           {/* General Shift Filter */}
           <div className="min-w-[150px]">
-            <Label htmlFor="dsr-gshift-filter" className="text-sm font-medium">
-              {t("reports:filters.generalShift")}
-            </Label>
             <Autocomplete<AutocompleteOption>
               id="dsr-gshift-filter"
               options={[
-                { id: "all", name: t("reports:filters.allShifts") },
+                { id: "all", name: "كل المناوبات" },
                 ...(generalShiftsForFilter?.map((s) => ({ 
                   id: s.id.toString(), 
                   name: s.name || `#${s.id} (${format(parseISO(s.created_at), "PP", { locale: dateLocale })})`
@@ -182,7 +166,7 @@ const DoctorShiftsReportFilters: React.FC<DoctorShiftsReportFiltersProps> = ({
               isOptionEqualToValue={(option, value) => option.id === value.id}
               value={(() => {
                 if (filters.generalShiftId === "all") {
-                  return { id: "all", name: t("reports:filters.allShifts") };
+                  return { id: "all", name: "كل المناوبات" };
                 }
                 const shift = generalShiftsForFilter?.find(s => s.id.toString() === filters.generalShiftId);
                 return shift ? { 
@@ -203,7 +187,8 @@ const DoctorShiftsReportFilters: React.FC<DoctorShiftsReportFiltersProps> = ({
                 <TextField
                   {...params}
                   size="small"
-                  placeholder={t("reports:filters.generalShift")}
+                  label="المناوبة العامة"
+                  placeholder="المناوبة العامة"
                   sx={{
                     '& .MuiOutlinedInput-root': {
                       height: '40px',
@@ -223,31 +208,31 @@ const DoctorShiftsReportFilters: React.FC<DoctorShiftsReportFiltersProps> = ({
        
           {/* Date From Input */}
           <div className="min-w-[150px]">
-            <Label htmlFor="dsr-date-from" className="text-sm font-medium">
-              {t("reports:filters.dateFrom")}
-            </Label>
-            <Input
+            <TextField
               id="dsr-date-from"
               type="date"
+              label="من تاريخ"
               value={filters.dateFrom}
               onChange={(e) => onFilterChange("dateFrom", e.target.value)}
+              size="small"
               className="h-10 text-base"
               disabled={isFetching}
+              InputLabelProps={{ shrink: true }}
             />
           </div>
           
           {/* Date To Input */}
           <div className="min-w-[150px]">
-            <Label htmlFor="dsr-date-to" className="text-sm font-medium">
-              {t("reports:filters.dateTo")}
-            </Label>
-            <Input
+            <TextField
               id="dsr-date-to"
               type="date"
+              label="إلى تاريخ"
               value={filters.dateTo}
               onChange={(e) => onFilterChange("dateTo", e.target.value)}
+              size="small"
               className="h-10 text-base"
               disabled={isFetching}
+              InputLabelProps={{ shrink: true }}
             />
           </div>
         </div>

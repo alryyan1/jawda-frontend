@@ -2,23 +2,37 @@
 import React, { useState } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import * as z from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Form, FormField, FormItem, FormLabel } from '@/components/ui/form';
-import { Loader2, Filter, BarChartHorizontalBig, CheckCircle2, XCircle } from 'lucide-react';
+import { Loader2, Filter, BarChartHorizontalBig } from 'lucide-react';
 
 import { getServiceStatisticsReport } from '@/services/reportService';
 import { getServiceGroupsList } from '@/services/serviceGroupService';
 import type { PaginatedResponse } from '@/types/common';
 import type { ServiceGroup } from '@/types/services';
 import type { ServiceStatisticItem } from '@/types/reports';
+
+// MUI imports
+import {
+  Box,
+  Card,
+  CardHeader,
+  CardContent,
+  Typography,
+  Button,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select as MUISelect,
+  MenuItem,
+  Table as MUITable,
+  TableHead as MUITableHead,
+  TableBody as MUITableBody,
+  TableRow as MUITableRow,
+  TableCell as MUITableCell,
+} from '@mui/material';
 
 const filterSchema = z.object({
   date_from: z.string(),
@@ -37,12 +51,10 @@ interface ServiceStatisticsFilters extends FilterFormValues {
 
 // Simple DatePicker component
 const SimpleDatePicker: React.FC<{ value?: string; onChange: (dateStr: string) => void; disabled?: boolean }> = ({ value, onChange, disabled }) => (
-    <Input type="date" value={value} onChange={e => onChange(e.target.value)} className="h-9" disabled={disabled}/>
+    <TextField type="date" value={value} onChange={e => onChange(e.target.value)} size="small" className="h-9" disabled={disabled} InputLabelProps={{ shrink: true }}/>
 );
 
 const ServiceStatisticsReportPage: React.FC = () => {
-  const i18n = { dir: () => 'rtl' } as const;
-
   const initialDateTo = format(new Date(), 'yyyy-MM-dd');
   const initialDateFrom = format(new Date(new Date().setDate(new Date().getDate() - 30)), 'yyyy-MM-dd');
 
@@ -81,9 +93,7 @@ const ServiceStatisticsReportPage: React.FC = () => {
     setAppliedFilters(values);
   };
   const statistics = reportData?.data || [];
-  // console.log(statistics?.data.length,'statistics')
   const meta = reportData?.meta;
-  console.log(statistics,'statistics')
   if (error) return <p className="text-destructive p-4">فشل جلب البيانات: إحصائيات الخدمات: {error.message}</p>;
   
 
@@ -96,71 +106,65 @@ const ServiceStatisticsReportPage: React.FC = () => {
       
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">مرشحات التقرير</CardTitle>
+          <Typography variant="h6">مرشحات التقرير</Typography>
         </CardHeader>
         <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 items-end">
-              <FormField
-                control={form.control}
-                name="date_from"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs">نطاق التاريخ (من)</FormLabel>
-                    <SimpleDatePicker value={field.value} onChange={field.onChange} disabled={isFetching} />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="date_to"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs">إلى</FormLabel>
-                    <SimpleDatePicker value={field.value} onChange={field.onChange} disabled={isFetching}/>
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="service_group_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs">مجموعة الخدمة</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange} dir={i18n.dir()}>
-                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">كل المجموعات</SelectItem>
-                        {serviceGroups?.data.map((sg: ServiceGroup) => (
-                          <SelectItem key={sg.id} value={String(sg.id)}>{sg.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="search_service_name"
-                render={({ field }) => (
-                  <FormItem className="lg:col-span-1">
-                    <FormLabel className="text-xs">ابحث باسم الخدمة</FormLabel>
-                    <Input 
-                      type="search" 
-                      placeholder={'ابحث...'} 
-                      className="h-9" 
-                      disabled={isFetching}
-                      {...field}
-                    />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" className="h-9 self-end lg:col-start-4" disabled={isFetching || isLoading}>
-                {isFetching ? <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2"/> : <Filter className="h-4 w-4 ltr:mr-2 rtl:ml-2"/>}
-                تطبيق المرشحات
-              </Button>
-            </form>
-          </Form>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 items-end">
+            <Controller
+              control={form.control}
+              name="date_from"
+              render={({ field }) => (
+                <div>
+                  <Typography className="text-xs">نطاق التاريخ (من)</Typography>
+                  <SimpleDatePicker value={field.value} onChange={field.onChange} disabled={isFetching} />
+                </div>
+              )}
+            />
+            <Controller
+              control={form.control}
+              name="date_to"
+              render={({ field }) => (
+                <div>
+                  <Typography className="text-xs">إلى</Typography>
+                  <SimpleDatePicker value={field.value} onChange={field.onChange} disabled={isFetching}/>
+                </div>
+              )}
+            />
+            <Controller
+              control={form.control}
+              name="service_group_id"
+              render={({ field }) => (
+                <FormControl size="small">
+                  <InputLabel id="svc-group-label">مجموعة الخدمة</InputLabel>
+                  <MUISelect labelId="svc-group-label" label="مجموعة الخدمة" value={field.value} onChange={field.onChange}>
+                    <MenuItem value="all">كل المجموعات</MenuItem>
+                    {serviceGroups?.data.map((sg: ServiceGroup) => (
+                      <MenuItem key={sg.id} value={String(sg.id)}>{sg.name}</MenuItem>
+                    ))}
+                  </MUISelect>
+                </FormControl>
+              )}
+            />
+            <Controller
+              control={form.control}
+              name="search_service_name"
+              render={({ field }) => (
+                <div className="lg:col-span-1">
+                  <Typography className="text-xs">ابحث باسم الخدمة</Typography>
+                  <TextField 
+                    type="search" 
+                    placeholder={'ابحث...'} 
+                    size="small"
+                    disabled={isFetching}
+                    {...field}
+                  />
+                </div>
+              )}
+            />
+            <Button type="submit" variant="contained" className="h-9 self-end lg:col-start-4" disabled={isFetching || isLoading} startIcon={!isFetching ? <Filter className="h-4 w-4" /> : undefined}>
+              {isFetching ? <Loader2 className="h-4 w-4 animate-spin" /> : 'تطبيق المرشحات'}
+            </Button>
+          </form>
         </CardContent>
       </Card>
 
@@ -178,33 +182,33 @@ const ServiceStatisticsReportPage: React.FC = () => {
 
       { statistics?.length > 0 && (
         <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="text-center">اسم الخدمة</TableHead>
-                <TableHead className="text-center hidden md:table-cell">السعر</TableHead>
-                <TableHead className="text-center">عدد الطلبات</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <MUITable size="small">
+            <MUITableHead>
+              <MUITableRow>
+                <MUITableCell align="center">اسم الخدمة</MUITableCell>
+                <MUITableCell align="center" className="hidden md:table-cell">السعر</MUITableCell>
+                <MUITableCell align="center">عدد الطلبات</MUITableCell>
+              </MUITableRow>
+            </MUITableHead>
+            <MUITableBody>
               {statistics.map((stat: ServiceStatisticItem) => (
-                <TableRow key={stat.id}>
-                  <TableCell className="font-medium text-center">{stat.name}</TableCell>
-                  <TableCell className="text-center hidden md:table-cell">{Number(stat.price).toFixed(2)}</TableCell>
-                  <TableCell className="text-center font-semibold text-lg">{stat.request_count}</TableCell>
+                <MUITableRow key={stat.id}>
+                  <MUITableCell align="center" className="font-medium">{stat.name}</MUITableCell>
+                  <MUITableCell align="center" className="hidden md:table-cell">{Number(stat.price).toFixed(2)}</MUITableCell>
+                  <MUITableCell align="center" className="font-semibold text-lg">{stat.request_count}</MUITableCell>
                   
-                </TableRow>
+                </MUITableRow>
               ))}
-            </TableBody>
-          </Table>
+            </MUITableBody>
+          </MUITable>
         </Card>
       )}
 
       {meta && meta.last_page > 1 && (
         <div className="flex justify-center mt-6 gap-2">
           <Button
-            size="sm"
-            variant="outline"
+            size="small"
+            variant="outlined"
             onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
             disabled={currentPage === 1 || isFetching}
           >
@@ -214,8 +218,8 @@ const ServiceStatisticsReportPage: React.FC = () => {
             الصفحة {currentPage} من {meta.last_page}
           </span>
           <Button
-            size="sm"
-            variant="outline"
+            size="small"
+            variant="outlined"
             onClick={() => setCurrentPage((prev) => Math.min(prev + 1, meta.last_page))}
             disabled={currentPage === meta.last_page || isFetching}
           >

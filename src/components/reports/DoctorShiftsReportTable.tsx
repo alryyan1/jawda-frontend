@@ -1,31 +1,30 @@
-import React from "react";
-import { useTranslation } from "react-i18next";
+import React, { useState } from "react";
 import { format, parseISO } from "date-fns";
-import { arSA, enUS } from "date-fns/locale";
+import { arSA } from "date-fns/locale";
 import { Loader2, MoreHorizontal, Download, XCircle, CheckCircle, ShieldQuestion, Edit } from "lucide-react";
 
-import { Card } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatNumber } from "@/lib/utils";
 
 import type { DoctorShiftReportItem } from "@/types/reports";
+
+// MUI components
+import {
+  Card,
+  Table as MUITable,
+  TableBody as MUITableBody,
+  TableCell as MUITableCell,
+  TableHead as MUITableHead,
+  TableRow as MUITableRow,
+  TableContainer,
+  Paper,
+  IconButton,
+  Menu,
+  MenuItem,
+  Divider,
+  Chip,
+  Typography,
+  Box,
+} from "@mui/material";
 
 type ProofingFlagKey = keyof Pick<
   DoctorShiftReportItem,
@@ -70,8 +69,20 @@ const DoctorShiftsReportTable: React.FC<DoctorShiftsReportTableProps> = ({
   onOpenAddCostDialog,
   onProofingAction,
 }) => {
-  const { t, i18n } = useTranslation(["reports", "common", "clinic", "review"]);
-  const dateLocale = i18n.language.startsWith("ar") ? arSA : enUS;
+  const dateLocale = arSA;
+
+  const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const [menuRowId, setMenuRowId] = useState<number | null>(null);
+  const isMenuOpen = Boolean(menuAnchorEl);
+
+  const handleOpenMenu = (event: React.MouseEvent<HTMLElement>, rowId: number) => {
+    setMenuAnchorEl(event.currentTarget);
+    setMenuRowId(rowId);
+  };
+  const handleCloseMenu = () => {
+    setMenuAnchorEl(null);
+    setMenuRowId(null);
+  };
 
   if (isLoading && !isFetching && shifts.length === 0) {
     return (
@@ -84,241 +95,180 @@ const DoctorShiftsReportTable: React.FC<DoctorShiftsReportTableProps> = ({
   if (shifts.length === 0 && !isFetching) {
     return (
       <Card className="text-center py-10 text-muted-foreground mt-6">
-        <div className="p-4">{t("common:noDataAvailableFilters")}</div>
+        <div className="p-4">لا توجد بيانات مطابقة للمرشحات</div>
       </Card>
     );
   }
 
+  const currentRow = shifts.find((s) => s.id === menuRowId) || null;
+
   return (
     <Card className="mt-6 overflow-hidden">
-      <ScrollArea className="h-[calc(100vh-420px)] w-full">
-        <div className="min-w-[1200px]">
-          <Table className="text-xs" dir={i18n.dir()}>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="text-center min-w-[140px]">
-                  {t("reports:doctorName")}
-                </TableHead>
-                <TableHead className="text-center hidden md:table-cell min-w-[110px]">
-                  {t("reports:specialist")}
-                </TableHead>
-               
-                <TableHead className="text-center min-w-[90px]">
-                  {t("reports:totalEntitlement")}
-                </TableHead>
-                <TableHead className="text-center hidden md:table-cell min-w-[90px]">
-                  {t("reports:cashEntitlement")}
-                </TableHead>
-                <TableHead className="text-center hidden md:table-cell min-w-[90px]">
-                  {t("reports:insuranceEntitlement")}
-                </TableHead>
-                <TableHead className="text-center min-w-[70px]">
-                  {t("common:status")}
-                </TableHead>
-                <TableHead className="text-center min-w-[100px] hidden xl:table-cell">
-                  {t("reports:openedBy")}
-                </TableHead>
-                <TableHead className="text-center min-w-[100px] hidden xl:table-cell">
-                  {t("reports:createdAt")}
-                </TableHead>
-                <TableHead className="text-right min-w-[110px] sticky right-0 bg-card z-10">
-                  {t("common:actions.title")}
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+      <TableContainer component={Paper} sx={{ maxHeight: 'calc(100vh - 420px)' }}>
+        <Box className="min-w-[1200px]">
+          <MUITable size="small">
+            <MUITableHead>
+              <MUITableRow>
+                <MUITableCell align="center" className="min-w-[140px]">اسم الطبيب</MUITableCell>
+                <MUITableCell align="center" className="hidden md:table-cell min-w-[110px]">التخصص</MUITableCell>
+                <MUITableCell align="center" className="min-w-[90px]">إجمالي الاستحقاق</MUITableCell>
+                <MUITableCell align="center" className="hidden md:table-cell min-w-[90px]">استحقاق نقدي</MUITableCell>
+                <MUITableCell align="center" className="hidden md:table-cell min-w-[90px]">استحقاق تأميني</MUITableCell>
+                <MUITableCell align="center" className="min-w-[70px]">الحالة</MUITableCell>
+                <MUITableCell align="center" className="min-w-[100px] hidden xl:table-cell">فُتحت بواسطة</MUITableCell>
+                <MUITableCell align="center" className="min-w-[100px] hidden xl:table-cell">تاريخ الإنشاء</MUITableCell>
+                <MUITableCell align="right" className="min-w-[110px] sticky right-0 bg-card z-10">إجراءات</MUITableCell>
+              </MUITableRow>
+            </MUITableHead>
+            <MUITableBody>
               {shifts.map((ds: DoctorShiftReportItem) => (
-                <TableRow
-                  key={ds.id}
-                  className={
-                    ds.status ? "bg-green-50/50 dark:bg-green-900/20" : ""
-                  }
-                >
-                  <TableCell className="font-medium text-center">
-                    {ds.doctor_name}
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell text-center">
-                    {ds.doctor_specialist_name || "-"}
-                  </TableCell>
-                
-                  <TableCell className="text-center font-semibold">
-                    {formatNumber(ds.total_doctor_entitlement || 0)}
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell text-center">
-                    {formatNumber(ds.cash_entitlement || 0)}
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell text-center">
-                    {formatNumber(ds.insurance_entitlement || 0)}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Badge
-                      variant={ds.status ? "success" : "outline"}
-                      className={
-                        ds.status
-                          ? "border-green-600 bg-green-100 text-green-700 dark:bg-green-800/40 dark:text-green-300 dark:border-green-700"
-                          : ""
-                      }
-                    >
-                      {ds.status_text}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-center hidden xl:table-cell">
-                    {ds.user_name_opened || "-"}
-                  </TableCell>
-                  <TableCell className="text-center hidden xl:table-cell">
-                    {ds.created_at ? format(parseISO(ds.created_at), "PP", {
-                      locale: dateLocale,
-                    }) : "-"}
-                  </TableCell>
-                  <TableCell className="text-right sticky right-0 bg-card z-10">
-                    <DropdownMenu dir={i18n.dir()}>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-7 w-7 p-0">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-56">
-                    
-                        <DropdownMenuItem
-                          onClick={() => onDownloadSummaryPdf(ds)}
-                          disabled={isGeneratingSummaryPdfId === ds.id}
-                        >
-                          {isGeneratingSummaryPdfId === ds.id ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <Download className="h-3.5 w-3.5" />
-                          )}
-                          <span className="ltr:ml-2 rtl:mr-2">
-                            {t("reports:actions.privateReport")}
-                          </span>
-                        </DropdownMenuItem>
-                        {ds.status && canCloseShifts && (
-                          <>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => closeShiftMutation.mutate(ds.id)}
-                              disabled={
-                                closeShiftMutation.isPending &&
-                                closeShiftMutation.variables === ds.id
-                              }
-                              className="text-destructive focus:text-destructive"
-                            >
-                              {closeShiftMutation.isPending &&
-                              closeShiftMutation.variables === ds.id ? (
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              ) : (
-                                <XCircle className="h-3.5 w-3.5" />
-                              )}
-                              <span className="ltr:ml-2 rtl:ml-2">
-                                {t("clinic:doctorShifts.closeShiftButton")}
-                              </span>
-                            </DropdownMenuItem>
-                          </>
-                        )}
-                        {canRecordEntitlementCost &&
-                          (ds.total_doctor_entitlement ?? 0) > 0 &&
-                          !ds.is_cash_reclaim_prooved &&
-                          !ds.is_company_reclaim_prooved && (
-                            <>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => onOpenAddCostDialog(ds)}
-                              >
-                                <Edit className="h-3.5 w-3.5 ltr:mr-2 rtl:ml-2" />
-                                {t("review.recordEntitlementAsCost")}
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                        {canUpdateProofing && (
-                          <>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() =>
-                                onProofingAction(
-                                  ds.id,
-                                  "is_cash_revenue_prooved",
-                                  ds.is_cash_revenue_prooved
-                                )
-                              }
-                              disabled={proofingFlagsMutation.isPending}
-                            >
-                              {ds.is_cash_revenue_prooved ? (
-                                <CheckCircle className="h-3.5 w-3.5 text-green-500" />
-                              ) : (
-                                <ShieldQuestion className="h-3.5 w-3.5" />
-                              )}{" "}
-                              <span className="ltr:ml-2 rtl:mr-2">
-                                {t("review.toggleCashRevenueProof")}
-                              </span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() =>
-                                onProofingAction(
-                                  ds.id,
-                                  "is_cash_reclaim_prooved",
-                                  ds.is_cash_reclaim_prooved
-                                )
-                              }
-                              disabled={proofingFlagsMutation.isPending}
-                            >
-                              {ds.is_cash_reclaim_prooved ? (
-                                <CheckCircle className="h-3.5 w-3.5 text-green-500" />
-                              ) : (
-                                <ShieldQuestion className="h-3.5 w-3.5" />
-                              )}{" "}
-                              <span className="ltr:ml-2 rtl:mr-2">
-                                {t("review.toggleCashEntitlementProof")}
-                              </span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() =>
-                                onProofingAction(
-                                  ds.id,
-                                  "is_company_revenue_prooved",
-                                  ds.is_company_revenue_prooved
-                                )
-                              }
-                              disabled={proofingFlagsMutation.isPending}
-                            >
-                              {ds.is_company_revenue_prooved ? (
-                                <CheckCircle className="h-3.5 w-3.5 text-green-500" />
-                              ) : (
-                                <ShieldQuestion className="h-3.5 w-3.5" />
-                              )}{" "}
-                              <span className="ltr:ml-2 rtl:mr-2">
-                                {t("review.toggleInsuranceRevenueProof")}
-                              </span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() =>
-                                onProofingAction(
-                                  ds.id,
-                                  "is_company_reclaim_prooved",
-                                  ds.is_company_reclaim_prooved
-                                )
-                              }
-                              disabled={proofingFlagsMutation.isPending}
-                            >
-                              {ds.is_company_reclaim_prooved ? (
-                                <CheckCircle className="h-3.5 w-3.5 text-green-500" />
-                              ) : (
-                                <ShieldQuestion className="h-3.5 w-3.5" />
-                              )}{" "}
-                              <span className="ltr:ml-2 rtl:mr-2">
-                                {t("review.toggleInsuranceEntitlementProof")}
-                              </span>
-                            </DropdownMenuItem>
-                          </>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
+                <MUITableRow key={ds.id} className={ds.status ? "bg-green-50/50 dark:bg-green-900/20" : ""}>
+                  <MUITableCell align="center" className="font-medium">{ds.doctor_name}</MUITableCell>
+                  <MUITableCell align="center" className="hidden md:table-cell">{ds.doctor_specialist_name || "-"}</MUITableCell>
+                  <MUITableCell align="center" className="font-semibold">{formatNumber(ds.total_doctor_entitlement || 0)}</MUITableCell>
+                  <MUITableCell align="center" className="hidden md:table-cell">{formatNumber(ds.cash_entitlement || 0)}</MUITableCell>
+                  <MUITableCell align="center" className="hidden md:table-cell">{formatNumber(ds.insurance_entitlement || 0)}</MUITableCell>
+                  <MUITableCell align="center">
+                    <Chip
+                      label={ds.status_text}
+                      color={ds.status ? "success" : "default"}
+                      variant={ds.status ? "filled" : "outlined"}
+                      size="small"
+                    />
+                  </MUITableCell>
+                  <MUITableCell align="center" className="hidden xl:table-cell">{ds.user_name_opened || "-"}</MUITableCell>
+                  <MUITableCell align="center" className="hidden xl:table-cell">
+                    {ds.created_at ? format(parseISO(ds.created_at), "PP", { locale: dateLocale }) : "-"}
+                  </MUITableCell>
+                  <MUITableCell align="right" className="sticky right-0 bg-card z-10">
+                    <IconButton size="small" onClick={(e) => handleOpenMenu(e, ds.id)}>
+                      <MoreHorizontal className="h-4 w-4" />
+                    </IconButton>
+                  </MUITableCell>
+                </MUITableRow>
               ))}
-            </TableBody>
-          </Table>
-        </div>
-      </ScrollArea>
+            </MUITableBody>
+          </MUITable>
+        </Box>
+      </TableContainer>
+
+      {/* Row actions menu */}
+      <Menu
+        anchorEl={menuAnchorEl}
+        open={isMenuOpen}
+        onClose={handleCloseMenu}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        {currentRow && (
+          <>
+            <MenuItem
+              onClick={() => { onDownloadSummaryPdf(currentRow); handleCloseMenu(); }}
+              disabled={isGeneratingSummaryPdfId === currentRow.id}
+            >
+              {isGeneratingSummaryPdfId === currentRow.id ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Download className="h-3.5 w-3.5" />
+              )}
+              <span className="ltr:ml-2 rtl:mr-2">تقرير خاص</span>
+            </MenuItem>
+
+            {currentRow.status && canCloseShifts && (
+              <>
+                <Divider />
+                <MenuItem
+                  onClick={() => { closeShiftMutation.mutate(currentRow.id); handleCloseMenu(); }}
+                  disabled={closeShiftMutation.isPending && closeShiftMutation.variables === currentRow.id}
+                  className="text-destructive"
+                >
+                  {closeShiftMutation.isPending && closeShiftMutation.variables === currentRow.id ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <XCircle className="h-3.5 w-3.5" />
+                  )}
+                  <span className="ltr:ml-2 rtl:ml-2">إغلاق المناوبة</span>
+                </MenuItem>
+              </>
+            )}
+
+            {canRecordEntitlementCost &&
+              (currentRow.total_doctor_entitlement ?? 0) > 0 &&
+              !currentRow.is_cash_reclaim_prooved &&
+              !currentRow.is_company_reclaim_prooved && (
+                <>
+                  <Divider />
+                  <MenuItem onClick={() => { onOpenAddCostDialog(currentRow); handleCloseMenu(); }}>
+                    <Edit className="h-3.5 w-3.5 ltr:mr-2 rtl:ml-2" />
+                    تسجيل الاستحقاق كتكلفة
+                  </MenuItem>
+                </>
+              )}
+
+            {canUpdateProofing && (
+              <>
+                <Divider />
+                <MenuItem
+                  onClick={() => {
+                    onProofingAction(currentRow.id, "is_cash_revenue_prooved", currentRow.is_cash_revenue_prooved);
+                    handleCloseMenu();
+                  }}
+                  disabled={proofingFlagsMutation.isPending}
+                >
+                  {currentRow.is_cash_revenue_prooved ? (
+                    <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                  ) : (
+                    <ShieldQuestion className="h-3.5 w-3.5" />
+                  )}
+                  <span className="ltr:ml-2 rtl:mr-2">تبديل إثبات إيراد نقدي</span>
+                </MenuItem>
+                <MenuItem
+                  onClick={() => {
+                    onProofingAction(currentRow.id, "is_cash_reclaim_prooved", currentRow.is_cash_reclaim_prooved);
+                    handleCloseMenu();
+                  }}
+                  disabled={proofingFlagsMutation.isPending}
+                >
+                  {currentRow.is_cash_reclaim_prooved ? (
+                    <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                  ) : (
+                    <ShieldQuestion className="h-3.5 w-3.5" />
+                  )}
+                  <span className="ltr:ml-2 rtl:mr-2">تبديل إثبات استحقاق نقدي</span>
+                </MenuItem>
+                <MenuItem
+                  onClick={() => {
+                    onProofingAction(currentRow.id, "is_company_revenue_prooved", currentRow.is_company_revenue_prooved);
+                    handleCloseMenu();
+                  }}
+                  disabled={proofingFlagsMutation.isPending}
+                >
+                  {currentRow.is_company_revenue_prooved ? (
+                    <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                  ) : (
+                    <ShieldQuestion className="h-3.5 w-3.5" />
+                  )}
+                  <span className="ltr:ml-2 rtl:mr-2">تبديل إثبات إيراد تأميني</span>
+                </MenuItem>
+                <MenuItem
+                  onClick={() => {
+                    onProofingAction(currentRow.id, "is_company_reclaim_prooved", currentRow.is_company_reclaim_prooved);
+                    handleCloseMenu();
+                  }}
+                  disabled={proofingFlagsMutation.isPending}
+                >
+                  {currentRow.is_company_reclaim_prooved ? (
+                    <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                  ) : (
+                    <ShieldQuestion className="h-3.5 w-3.5" />
+                  )}
+                  <span className="ltr:ml-2 rtl:mr-2">تبديل إثبات استحقاق تأميني</span>
+                </MenuItem>
+              </>
+            )}
+          </>
+        )}
+      </Menu>
     </Card>
   );
 };

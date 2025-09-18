@@ -31,3 +31,8 @@ export const generateSampleIdForRequestApi = async (labRequestId: number): Promi
   const response = await apiClient.patch<{ data: LabRequest }>(`/sample-collection/labrequests/${labRequestId}/generate-sample-id`);
   return response.data.data;
 };
+
+export const markPatientSampleCollectedForVisitApi = async (visitId: number): Promise<{ message: string; patient_id: number; sample_collected: boolean; sample_collect_time: string } > => {
+  const response = await apiClient.post(`/sample-collection/visits/${visitId}/mark-patient-collected`);
+  return response.data;
+};

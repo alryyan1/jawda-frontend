@@ -2,11 +2,12 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, FlaskConical, Printer, Clock, Phone, User, Hash } from 'lucide-react';
+import { Loader2, FlaskConical, Printer, Hash } from 'lucide-react';
 import { toast } from 'sonner';
 
 import type { LabRequest } from '@/types/visits';
 import apiClient from '@/services/api';
+import { markPatientSampleCollectedForVisitApi } from '@/services/sampleCollectionService';
 
 interface VisitSampleContainersProps {
   visitId: number;
@@ -17,6 +18,7 @@ interface VisitSampleContainersProps {
   doctorName?: string;
   visitDateTime?: string | Date; // ISO string or Date instance
   patientPhone?: string;
+  onAfterPrint?: () => void;
 }
 
 const VisitSampleContainers: React.FC<VisitSampleContainersProps> = ({
@@ -28,6 +30,7 @@ const VisitSampleContainers: React.FC<VisitSampleContainersProps> = ({
   doctorName,
   visitDateTime,
   patientPhone
+ , onAfterPrint
 }) => {
   const formatDate = (value?: string | Date) => {
     const d = value ? new Date(value) : new Date();
@@ -114,6 +117,15 @@ const VisitSampleContainers: React.FC<VisitSampleContainersProps> = ({
       } else {
         toast.error('فشل في فتح نافذة الطباعة');
       }
+
+      // After printing trigger mark patient sample collected
+      try {
+        await markPatientSampleCollectedForVisitApi(visitId);
+        toast.success('تم تحديث حالة جمع العينة للمريض');
+        if (onAfterPrint) onAfterPrint();
+      } catch {
+        // Silently ignore if it fails, printing succeeded
+      }
     } catch (error) {
       console.error('Error printing container barcode:', error);
       toast.error('فشل في إنشاء باركود الحاوية');
@@ -140,21 +152,31 @@ const VisitSampleContainers: React.FC<VisitSampleContainersProps> = ({
   return (
     <Card className="h-full flex flex-col shadow-sm">
       <div className="p-4 border-b bg-background/40 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <FlaskConical className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">{patientName}</h2>
-          </div>
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <div className="flex items-center gap-1"><Hash className="h-4 w-4" /><span>{visitId}</span></div>
-            <div className="hidden sm:flex items-center gap-1"><Phone className="h-4 w-4" /><span>{patientPhone ?? '-'}{patientAge ? ` · ${patientAge}` : ''}</span></div>
-            <div className="hidden sm:flex items-center gap-1"><User className="h-4 w-4" /><span>{doctorName ?? '-'}</span></div>
-            <div className="flex items-center gap-1"><Clock className="h-4 w-4" /><span>{formatDate(visitDateTime)} · {formatTime(visitDateTime)}</span></div>
+        <div className="flex items-center justify-center gap-4">
+          <FlaskConical className="h-6 w-6 text-primary" />
+          <h2 className="text-2xl font-bold">{patientName}</h2>
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Hash className="h-6 w-6" />
+            <span className="text-3xl font-extrabold">{visitId}</span>
           </div>
         </div>
       </div>
       
       <CardContent className="flex-grow p-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xl mb-3">
+          <div>
+            <span className="font-medium">الهاتف:</span> <span>{patientPhone ?? '-'}</span>
+          </div>
+          <div>
+            <span className="font-medium">العمر:</span> <span>{patientAge ?? '-'}</span>
+          </div>
+          <div>
+            <span className="font-medium">الطبيب:</span> <span>{doctorName ?? '-'}</span>
+          </div>
+          <div>
+            <span className="font-medium">التاريخ:</span> <span>{formatDate(visitDateTime)} · {formatTime(visitDateTime)}</span>
+          </div>
+        </div>
         {uniqueContainers.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center">
             <FlaskConical className="h-12 w-12 text-muted-foreground mb-3" />
@@ -167,7 +189,7 @@ const VisitSampleContainers: React.FC<VisitSampleContainersProps> = ({
             {/* Removed: Print All Samples button */}
             
             {/* Container Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2  gap-4">
             {uniqueContainers.map((container) => (
               <Card
                 key={container.id}

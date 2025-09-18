@@ -1,31 +1,21 @@
 // src/pages/reports/ClinicShiftSummaryReportPage.tsx
 import React, { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
-import { format, parseISO } from "date-fns";
-import { Button } from "@/components/ui/button";
+import { format } from "date-fns";
+import { Autocomplete, TextField, CircularProgress } from "@mui/material";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
+  Box,
   Card,
   CardHeader,
-  CardTitle,
-  CardDescription,
   CardContent,
-} from "@/components/ui/card";
-import {
-  Form,
+  Typography,
+  Button,
   FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+  InputLabel,
+  Select as MUISelect,
+  MenuItem,
+  IconButton,
+} from "@mui/material";
 import {
   Loader2,
   FileSpreadsheet,
@@ -45,8 +35,6 @@ import {
   downloadClinicShiftSummaryPdf,
   type ClinicReportPdfFilters,
 } from "@/services/reportService";
-import { Autocomplete, TextField } from "@mui/material";
-import { CircularProgress } from "@mui/material";
 
 interface AppUser {
   id: number;
@@ -54,13 +42,12 @@ interface AppUser {
   username: string;
 }
 
-const reportFilterSchema = (t: (key: string) => string) =>
-  z.object({
-    shift: z.string().min(1, t("common:validation.requiredField")),
-    user: z.string().nullable(),
-  });
+const reportFilterSchema = z.object({
+  shift: z.string().min(1, "هذا الحقل مطلوب"),
+  user: z.string().nullable(),
+});
 
-type ReportFilterValues = z.infer<ReturnType<typeof reportFilterSchema>>;
+type ReportFilterValues = z.infer<typeof reportFilterSchema>;
 
 interface ApiError {
   response?: {
@@ -72,12 +59,11 @@ interface ApiError {
 }
 
 const ClinicShiftSummaryReportPage: React.FC = () => {
-  const { t, i18n } = useTranslation(["reports", "common"]);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 
   const form = useForm<ReportFilterValues>({
-    resolver: zodResolver(reportFilterSchema(t)),
+    resolver: zodResolver(reportFilterSchema),
     defaultValues: {
       shift: "",
       user: "all",
@@ -115,8 +101,8 @@ const ClinicShiftSummaryReportPage: React.FC = () => {
     } catch (error) {
       console.error("PDF generation error:", error);
       const apiError = error as ApiError;
-      toast.error(t("reports:pdfGeneratedError"), {
-        description: apiError.response?.data?.message || apiError.message || t("common:error.unknown"),
+      toast.error("فشل توليد ملف PDF", {
+        description: apiError.response?.data?.message || apiError.message || "حدث خطأ غير معروف",
       });
     } finally {
       setIsGeneratingPdf(false);
@@ -124,12 +110,11 @@ const ClinicShiftSummaryReportPage: React.FC = () => {
   };
   const shiftOptions = useMemo(() => {
     return shifts?.map(s => ({
-      label: `${t('common:shift')} #${s.id} ${dayjs(s.created_at).format('DD/MM/YYYY ')}`,
+      label: `مناوبة #${s.id} ${dayjs(s.created_at).format('DD/MM/YYYY ')}`,
       id: s.id,
-      // Include the full shift object if needed by form/validation
       originalShift: s 
     })) || [];
-  }, [shifts, t, i18n.language]);
+  }, [shifts]);
 
   useEffect(() => {
     return () => {
@@ -144,117 +129,99 @@ const ClinicShiftSummaryReportPage: React.FC = () => {
       <div className="flex items-center gap-2">
         <FileSpreadsheet className="h-7 w-7 text-primary" />
         <h1 className="text-2xl sm:text-3xl font-bold">
-          {t("reports:clinicShiftSummaryReport.pageTitle")}
+          ملخص مناوبة العيادة
         </h1>
       </div>
       <Card>
         <CardHeader>
-          <CardTitle>
-            {t("reports:clinicShiftSummaryReport.filterTitle")}
-          </CardTitle>
-          <CardDescription>
-            {t("reports:clinicShiftSummaryReport.filterDescription")}
-          </CardDescription>
+          <Typography variant="h6">مرشحات التقرير</Typography>
+          <Typography variant="body2" color="text.secondary">اختر المناوبة والمستخدم (اختياري) ثم اطبع التقرير</Typography>
         </CardHeader>
         <CardContent>
-          <Form {...form}>
-            <form
-              onSubmit={form.handleSubmit(handleGeneratePdf)}
-              className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-end"
-            >
-             <Controller
-                name="shift"
-                control={form.control}
-                render={({ field }) => (
-                  <Autocomplete
-                    options={shiftOptions}
-                    loading={isLoadingShifts}
-                    getOptionLabel={(option) => option.label || ''}
-                    value={shiftOptions.find(opt => opt.id === field.value?.id) || null}
-                    onChange={(event, newValue) => {
-                      field.onChange(newValue ? newValue.originalShift.id.toString() : null); // Store the full Shift object or null     
-                      console.log(newValue,'newValue')                                       
-                    }}
-                    isOptionEqualToValue={(option, value) => option.id === value.id}
-                    disabled={isGeneratingPdf}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        label={t("reports:clinicShiftSummaryReport.selectShiftPlaceholder")}
-                        variant="outlined"
-                        size="small"
-                        error={!!form.formState.errors.shift}
-                        helperText={form.formState.errors.shift?.message}
-                        InputProps={{
-                          ...params.InputProps,
-                          endAdornment: (
-                            <>
-                              {isLoadingShifts ? <CircularProgress color="inherit" size={20} /> : null}
-                              {params.InputProps.endAdornment}
-                            </>
-                          ),
-                        }}
-                      />
-                    )}
-                  />
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="user"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      {t("reports:clinicShiftSummaryReport.selectUserLabel")}
-                    </FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value || "all"}
-                      defaultValue={field.value || "all"}
-                      dir={i18n.dir()}
-                      disabled={isLoadingDropdowns || isGeneratingPdf}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="all">
-                          {t("common:allUsers", "All Users")}
-                        </SelectItem>
-                        {isLoadingUsers ? (
-                          <SelectItem value="loading_users" disabled>
-                            {t("common:loading")}
-                          </SelectItem>
-                        ) : (
-                          users?.map((u) => (
-                            <SelectItem key={u.id} value={String(u.id)}>
-                              {u.name} ({u.username})
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          <form
+            onSubmit={form.handleSubmit(handleGeneratePdf)}
+            className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-end"
+          >
+            <Controller
+              name="shift"
+              control={form.control}
+              render={({ field }) => (
+                <Autocomplete
+                  options={shiftOptions}
+                  loading={isLoadingShifts}
+                  getOptionLabel={(option) => option.label || ''}
+                  value={shiftOptions.find(opt => String(opt.id) === field.value) || null}
+                  onChange={(event, newValue) => {
+                    field.onChange(newValue ? newValue.originalShift.id.toString() : "");
+                  }}
+                  isOptionEqualToValue={(option, value) => option.id === value.id}
+                  disabled={isGeneratingPdf}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label={"اختر المناوبة"}
+                      variant="outlined"
+                      size="small"
+                      error={!!form.formState.errors.shift}
+                      helperText={form.formState.errors.shift?.message}
+                      InputProps={{
+                        ...params.InputProps,
+                        endAdornment: (
+                          <>
+                            {isLoadingShifts ? <CircularProgress color="inherit" size={20} /> : null}
+                            {params.InputProps.endAdornment}
+                          </>
+                        ),
+                      }}
+                    />
+                  )}
+                />
+              )}
+            />
 
-              <Button
-                type="submit"
-                disabled={isLoadingDropdowns || isGeneratingPdf}
-                className="h-10 sm:mt-[26px]"
-              >
-                {isGeneratingPdf ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Printer className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
-                )}
-                {t("reports:clinicShiftSummaryReport.generateButton")}
-              </Button>
-            </form>
-          </Form>
+            <Controller
+              control={form.control}
+              name="user"
+              render={({ field }) => (
+                <FormControl size="small">
+                  <InputLabel id="user-select-label">المستخدم</InputLabel>
+                  <MUISelect
+                    labelId="user-select-label"
+                    label="المستخدم"
+                    onChange={field.onChange}
+                    value={field.value || "all"}
+                    defaultValue={field.value || "all"}
+                    disabled={isLoadingDropdowns || isGeneratingPdf}
+                  >
+                    <MenuItem value="all">كل المستخدمين</MenuItem>
+                    {isLoadingUsers ? (
+                      <MenuItem value="loading_users" disabled>جارِ التحميل...</MenuItem>
+                    ) : (
+                      users?.map((u) => (
+                        <MenuItem key={u.id} value={String(u.id)}>
+                          {u.name} ({u.username})
+                        </MenuItem>
+                      ))
+                    )}
+                  </MUISelect>
+                </FormControl>
+              )}
+            />
+
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={isLoadingDropdowns || isGeneratingPdf}
+              className="h-10 sm:mt-[26px]"
+              startIcon={!isGeneratingPdf ? <Printer className="h-4 w-4" /> : undefined}
+            >
+              {isGeneratingPdf ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                'طباعة التقرير'
+              )}
+            </Button>
+          </form>
         </CardContent>
       </Card>
 
@@ -262,7 +229,7 @@ const ClinicShiftSummaryReportPage: React.FC = () => {
         <div className="text-center py-10">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-2" />
           <p className="text-muted-foreground">
-            {t("common:generatingReport")}
+            جارِ توليد التقرير...
           </p>
         </div>
       )}
@@ -270,16 +237,16 @@ const ClinicShiftSummaryReportPage: React.FC = () => {
       {pdfUrl && (
         <Card className="mt-6">
           <CardHeader className="flex flex-row justify-between items-center">
-            <CardTitle>{t("reports:reportPreview")}</CardTitle>
-            <Button variant="ghost" size="icon" onClick={() => setPdfUrl(null)}>
+            <Typography variant="h6">معاينة التقرير</Typography>
+            <IconButton size="small" onClick={() => setPdfUrl(null)}>
               <XCircle className="h-5 w-5" />
-            </Button>
+            </IconButton>
           </CardHeader>
           <CardContent>
             <iframe
               src={pdfUrl}
               className="w-full h-[75vh] border rounded-md"
-              title={t("reports:clinicShiftSummaryReport.pageTitle")}
+              title={'ملخص مناوبة العيادة'}
             ></iframe>
           </CardContent>
         </Card>

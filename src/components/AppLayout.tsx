@@ -83,12 +83,12 @@ const mainNavItems: NavItem[] = [
   { to: '/lab-reception', label: 'استقبال المختبر', icon: Microscope, permission: 'access lab_reception' },
   { to: '/lab-sample-collection', label: 'جمع العينات', icon: Syringe, permission: 'access lab_sample_collection' },
   { to: '/lab-workstation', label: 'نتائج المختبر', icon: FlaskConical, permission: 'access lab_workstation' },
-  { to: '/attendance/sheet', label: 'سجل الحضور', icon: ClipboardEditIcon, permission: 'record_attendance' },
+  // { to: '/attendance/sheet', label: 'سجل الحضور', icon: ClipboardEditIcon, permission: 'record_attendance' },
   { to: '/patients', label: 'المرضى', icon: Users, permission: 'list patients' },
   { to: '/doctors', label: 'الأطباء', icon: Stethoscope, permission: 'list doctors' },
-  { to: '/analysis', label: 'التحليل', icon: FileBarChart2, permission: 'view analysis' },
-  { to: '/schedules-appointments', label: 'المواعيد والجداول', icon: CalendarClock, permission: 'view doctor_schedules' },
-  { to: '/cash-reconciliation', label: 'التسوية النقدية', icon: Banknote, permission: 'access cash_reconciliation' },
+  // { to: '/analysis', label: 'التحليل', icon: FileBarChart2, permission: 'view analysis' },
+  // { to: '/schedules-appointments', label: 'المواعيد والجداول', icon: CalendarClock, permission: 'view doctor_schedules' },
+  // { to: '/cash-reconciliation', label: 'التسوية النقدية', icon: Banknote, permission: 'access cash_reconciliation' },
 
   // { to: '/bulk-whatsapp', label: 'الواتساب الجماعي', icon: MessageCircle, permission: 'send bulk whatsapp' },
 ];

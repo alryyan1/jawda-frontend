@@ -1,6 +1,6 @@
 // src/components/lab/workstation/ChildTestAutocompleteInput.tsx
 import React, { useState, useEffect, useCallback } from "react";
-import { useTranslation } from "react-i18next";
+// استخدام نص عربي مباشر بدلاً من i18n
 import { useMutation } from "@tanstack/react-query";
 import { debounce } from "lodash";
 import Autocomplete, {
@@ -63,7 +63,7 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
   parentChildTestModel,
   onFocusChange,
 }) => {
-  const { t } = useTranslation(["labResults", "common"]);
+  // استخدام نص عربي مباشر بدلاً من i18n
 
   const [isAutocompleteOpen, setIsAutocompleteOpen] = useState(false);
   const [currentInputValue, setCurrentInputValue] = useState(""); // For the text field part
@@ -77,9 +77,12 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
 
   // Debounced onChange to avoid too many API calls on every keystroke
   const debouncedOnChange = useCallback(
-    debounce((value: string) => {
-      onChange(value);
-    }, 800), // 800ms delay
+    (value: string) => {
+      const debouncedFn = debounce((val: string) => {
+        onChange(val);
+      }, 800);
+      debouncedFn(value);
+    },
     [onChange]
   );
 
@@ -131,7 +134,7 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
     mutationFn: (newOptionName: string) =>
       createChildTestOption(childTestId, { name: newOptionName }),
     onSuccess: (newOption) => {
-      toast.success(t("labTests:childTests.options.addedSuccess"));
+      toast.success("تم إضافة الخيار بنجاح");
       const newOptionsList = [...options, newOption];
       setOptions(newOptionsList);
       localStorage.setItem(
@@ -144,7 +147,7 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
     onError: (err: unknown) => {
       const errorMessage = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
       toast.error(
-        errorMessage || t("labTests:childTests.options.addError")
+        errorMessage || "فشل إضافة الخيار"
       );
     },
     onSettled: () => setIsSavingNewOption(false),
@@ -170,12 +173,28 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
         loading={isLoadingOptions}
         disabled={disabled}
         sx={{
+          '& .MuiAutocomplete-root': {
+            fontSize: '0.75rem',
+          },
+          '& .MuiInputBase-root': {
+            minHeight: '28px',
+            fontSize: '0.75rem',
+            padding: '2px 8px',
+          },
+          '& .MuiInputBase-input': {
+            padding: '2px 4px',
+            fontSize: '0.75rem',
+          },
           '& .MuiAutocomplete-listbox': {
             backgroundColor: 'var(--background)',
             color: 'var(--foreground)',
+            fontSize: '0.75rem',
           },
           '& .MuiAutocomplete-option': {
             color: 'var(--foreground)',
+            fontSize: '0.75rem',
+            padding: '4px 8px',
+            minHeight: 'auto',
             '&:hover': {
               backgroundColor: 'var(--accent)',
             },
@@ -246,9 +265,7 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
               filtered.push({
                 // This structure is from your original code
                 inputValue: params.inputValue,
-                name: t("labResults:resultEntry.addNewOption", {
-                  optionName: params.inputValue,
-                }),
+                name: `إضافة "${params.inputValue}"`,
               });
             }
           }
@@ -266,7 +283,7 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
           <TextField
             {...params}
             variant="outlined"
-            placeholder={t("labResults:resultEntry.enterOrSelectResult")}
+            placeholder="أدخل أو اختر النتيجة"
             error={error}
             helperText={helperText}
             onKeyDown={(event) => {
@@ -281,6 +298,8 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
               '& .MuiOutlinedInput-root': {
                 backgroundColor: 'var(--background)',
                 color: 'var(--foreground)',
+                minHeight: '28px',
+                fontSize: '0.75rem',
                 '& fieldset': {
                   borderColor: 'var(--border)',
                 },
@@ -291,11 +310,18 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
                   borderColor: 'var(--ring)',
                 },
               },
+              '& .MuiInputBase-input': {
+                padding: '2px 4px',
+                fontSize: '0.75rem',
+              },
               '& .MuiInputLabel-root': {
                 color: 'var(--muted-foreground)',
+                fontSize: '0.75rem',
               },
               '& .MuiFormHelperText-root': {
                 color: 'var(--muted-foreground)',
+                fontSize: '0.65rem',
+                margin: '2px 0 0 0',
               },
             }}
             InputProps={{
@@ -335,16 +361,14 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
       >
         <form onSubmit={handleDialogSubmit}>
           <DialogTitle sx={{ color: 'var(--foreground)' }}>
-            {t("labResults:resultEntry.addNewOptionTitle", {
-              testName: childTestName,
-            })}
+            إضافة خيار جديد لـ {childTestName}
           </DialogTitle>
           <DialogContent>
             <TextField
               autoFocus
               margin="dense"
               id="new-option-name"
-              label={t("labResults:resultEntry.optionNameLabel")}
+              label="اسم الخيار"
               type="text"
               fullWidth
               variant="standard"
@@ -374,14 +398,14 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
           </DialogContent>
           <DialogActions>
             <Button onClick={handleDialogClose} color="inherit" size="small">
-              {t("common:cancel")}
+              إلغاء
             </Button>
             <Button
               type="submit"
               size="small"
               disabled={isSavingNewOption}
             >
-              {t("common:add")}
+              إضافة
             </Button>
           </DialogActions>
         </form>

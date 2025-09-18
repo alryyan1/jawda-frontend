@@ -1,5 +1,5 @@
 // src/components/clinic/SendWhatsAppDialog.tsx
-import React, { useEffect, useMemo, useCallback } from "react";
+import React, { useEffect, useMemo, useCallback, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -112,8 +112,9 @@ const SendWhatsAppDialog: React.FC<SendWhatsAppDialogProps> = ({
       template_id: "",
     },
   });
-  const { watch, setValue, reset, control } = form; // Added control
-  const attachmentFile = watch("attachment");
+  const { setValue, reset, control } = form; // Removed watch to avoid re-render loops
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+  const initializedRef = useRef(false);
 
   // Fetch application settings (e.g., for clinic name in templates)
   const { data: appSettings, isLoading: isLoadingSettings } = useQuery<
@@ -209,35 +210,40 @@ const SendWhatsAppDialog: React.FC<SendWhatsAppDialogProps> = ({
   }, [setValue, initialMessage, templates, appSettings, patient.name, visitId, dateLocale]);
 
   useEffect(() => {
-    if (isOpen) {
-      const defaultTemplateId = initialMessage ? "" : templates[0]?.id || "";
-      reset({
-        message_content: initialMessage || "",
-        template_id: defaultTemplateId,
-      });
-      if (defaultTemplateId) {
-        // Apply initial template content if no initialMessage
-        applyTemplateContent(defaultTemplateId);
-      } else if (initialMessage) {
-        // If there is an initial message, don't override with template
-        setValue("message_content", initialMessage);
-      }
-    } else {
-      reset(); // Clear form when dialog closes
+    if (!isOpen) {
+      initializedRef.current = false;
+      setSelectedFileName(null);
+      reset();
+      return;
     }
-  }, [
-    isOpen,
-    reset,
-    initialMessage,
-    initialAttachment,
-    templates,
-    patient.name,
-    visitId,
-    appSettings,
-    dateLocale,
-    applyTemplateContent,
-    setValue,
-  ]); // Added dependencies
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+
+    const defaultTemplateId = initialMessage ? "" : templates[0]?.id || "";
+    // Initialize base values once when dialog opens
+    reset({
+      message_content: initialMessage || "",
+      template_id: defaultTemplateId,
+    });
+
+    if (defaultTemplateId && !initialMessage) {
+      // Inline apply template to avoid depending on external callback and causing re-renders
+      const selectedTemplate = templates.find((tpl) => tpl.id === defaultTemplateId);
+      if (selectedTemplate) {
+        const clinicName =
+          appSettings?.hospital_name || appSettings?.lab_name || "العيادة";
+        const replacedContent = selectedTemplate.contentKey
+          .replace("{patientName}", patient.name)
+          .replace("{visitId}", String(visitId || "N/A"))
+          .replace("{date}", format(new Date(), "PPP", { locale: dateLocale }))
+          .replace("{time}", format(new Date(), "p", { locale: dateLocale }))
+          .replace("{clinicName}", clinicName);
+        setValue("message_content", replacedContent, { shouldDirty: false, shouldTouch: false, shouldValidate: false });
+      }
+    }
+    // Intentionally only dependent on isOpen to prevent update loops
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   const isPhoneNumberMissing = !patient.phone;
   // Backend now handles waapi config check, so remove isConfigMissing from frontend
@@ -333,16 +339,19 @@ const SendWhatsAppDialog: React.FC<SendWhatsAppDialogProps> = ({
                     <Input
                       type="file"
                       accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt"
-                      onChange={(e) => onChange(e.target.files)}
+                      onChange={(e) => {
+                        const files = e.target.files;
+                        onChange(files);
+                        setSelectedFileName(files && files[0] ? files[0].name : null);
+                      }}
                       {...rest}
                       className="text-xs"
                       disabled={sendMutation.isPending}
-                      value=""
                     />
                   </FormControl>
-                  {attachmentFile?.[0] && (
+                  {selectedFileName && (
                     <p className="text-xs text-muted-foreground mt-1">
-                      الملف المحدد: {attachmentFile[0].name}
+                      الملف المحدد: {selectedFileName}
                     </p>
                   )}
                   <FormMessage />

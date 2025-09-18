@@ -21,16 +21,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Box, Card as MuiCard, CardContent as MuiCardContent, Typography, Button as MuiButton, Chip, Divider, Collapse, CircularProgress, IconButton } from "@mui/material";
 import {
   Loader2,
   UserCircle,
@@ -69,6 +60,8 @@ import apiClient from "@/services/api";
 // i18n removed
 import SendReportWhatsAppDialog from "./dialog/SendReportWhatsAppDialog";
 import { WhatsApp } from "@mui/icons-material";
+import { Separator } from "@/components/ui/separator";
+import PatientDetailsLabEntry from "@/components/lab/workstation/PatientDetailsLabEntry";
 
 // Direct Arabic labels (translations removed)
 const AR = {
@@ -231,63 +224,46 @@ const SortableInfoCard: React.FC<SortableInfoCardProps> = ({
 
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={cn("touch-none", cardClassName)}
-    >
-      <Collapsible
-        open={!isCollapsed}
-        onOpenChange={handleToggleCollapse}
-      >
-        <Card
-        dir={"rtl"}
-          className={cn(
-            "shadow-md overflow-hidden",
-            isDragging && "ring-2 ring-primary"
-          )}
-        >
-          <CollapsibleTrigger asChild>
-            <CardHeader className="flex flex-row items-center justify-between py-2 px-3 cursor-pointer hover:bg-muted/50 transition-colors">
-              <div className="flex items-center gap-2">
-                {canDrag && (
-                  <button
-                    {...attributes}
-                    {...listeners}
-                    className="cursor-grab active:cursor-grabbing p-1 -ml-1"
-                  >
-                    <GripVertical className="h-4 w-4 text-muted-foreground" />
-                  </button>
-                )}
-                <Icon className="h-4 w-4 text-primary" />
-                <CardTitle className="text-sm font-semibold">{title}</CardTitle>
+    <div ref={setNodeRef} style={style} className={cn("touch-none", cardClassName)}>
+      <MuiCard dir={"rtl"} className={cn("shadow-md overflow-hidden", isDragging && "ring-2 ring-primary")}>
+        <Box className="flex flex-row items-center justify-between py-2 px-3 hover:bg-muted/50 transition-colors">
+          <div className="flex items-center gap-2">
+            {canDrag && (
+              <button
+                {...attributes}
+                {...listeners}
+                className="cursor-grab active:cursor-grabbing p-1 -ml-1"
+              >
+                <GripVertical className="h-4 w-4 text-muted-foreground" />
+              </button>
+            )}
+            <Icon className="h-4 w-4 text-primary" />
+            <Typography variant="subtitle2" className="text-sm font-semibold">{title}</Typography>
+          </div>
+          <IconButton size="small" onClick={handleToggleCollapse} className="h-6 w-6">
+            {isCollapsed ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ChevronUp className="h-4 w-4" />
+            )}
+          </IconButton>
+        </Box>
+        <Collapse in={!isCollapsed} timeout="auto" unmountOnExit>
+          <MuiCardContent className="px-3 pt-1 pb-2 text-xs">
+            {isLoading ? (
+              <div className="py-4 text-center">
+                <CircularProgress size={20} className="text-muted-foreground" />
               </div>
-              <Button className="h-6 w-6">
-                {isCollapsed ? (
-                  <ChevronDown className="h-4 w-4" />
-                ) : (
-                  <ChevronUp className="h-4 w-4" />
-                )}
-              </Button>
-            </CardHeader>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <CardContent className="px-3 pt-1 pb-2 text-xs">
-              {isLoading ? (
-                <div className="py-4 text-center">
-                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                </div>
-              ) : error ? (
-                <div className="text-destructive py-2 text-center text-xs">
-                  {AR.loadFailed}: {error.message}
-                </div>
-              ) : (
-                children
-              )}
-            </CardContent>
-          </CollapsibleContent>
-        </Card>
-      </Collapsible>
+            ) : error ? (
+              <div className="text-destructive py-2 text-center text-xs">
+                {AR.loadFailed}: {error.message}
+              </div>
+            ) : (
+              children
+            )}
+          </MuiCardContent>
+        </Collapse>
+      </MuiCard>
     </div>
   );
 };
@@ -423,26 +399,26 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
   const getPaymentStatusBadge = (lr: LabRequest) => {
     const balance = calculateLabRequestBalance(lr);
     if (balance <= 0.09) {
-      return <Badge variant="default" className="bg-green-500 text-white text-xs">Paid</Badge>;
+      return <Chip size="small" label="مدفوع" color="success" className="text-xs" />;
     } else {
-      return <Badge variant="destructive" className="text-xs">Pending</Badge>;
+      return <Chip size="small" label="قيد الدفع" color="error" variant="outlined" className="text-xs" />;
     }
   };
 
   const getSampleStatusBadge = (lr: LabRequest) => {
     // Check if sample is collected based on available properties
     if (lr.sample_id && lr.sample_id.trim() !== "") {
-      return <Badge variant="default" className="bg-blue-500 text-white text-xs">Collected</Badge>;
+      return <Chip size="small" label="مُستلمة" color="primary" className="text-xs" />;
     } else {
-      return <Badge variant="outline" className="text-xs">Pending</Badge>;
+      return <Chip size="small" label="بانتظار الاستلام" variant="outlined" className="text-xs" />;
     }
   };
 
   const getApprovalStatusBadge = (lr: LabRequest) => {
     if (lr.approve) {
-      return <Badge variant="default" className="bg-purple-500 text-white text-xs">Authorized</Badge>;
+      return <Chip size="small" label="معتمد" color="secondary" className="text-xs" />;
     } else {
-      return <Badge variant="secondary" className="text-xs">Pending</Badge>;
+      return <Chip size="small" label="بانتظار الاعتماد" variant="outlined" className="text-xs" />;
     }
   };
 
@@ -471,171 +447,31 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
   // console.log(patient,'patient')
   const panelComponents: Record<PanelId, React.ReactNode> = {
     patientInfo: (
-      <SortableInfoCard
-        id="patientInfo"
-        title={AR.patientInfoTitle}
-        icon={UserCircle}
-        isLoading={isLoadingPatient && !patient}
-        error={patientError}
-        cardClassName="bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700/40"
-      >
-        {patient ? (
-          <>
-           <DetailRowDisplay 
-              label={AR.visitIdShort} 
-              value={visitId} 
-              icon={Hash} 
-              valueClassName="text-lg font-bold text-sky-600 dark:text-sky-400" 
-            />
-            <DetailRowDisplay
-              label={AR.name}
-              value={patient.name}
-              valueClassName="text-primary font-semibold"
-            />
-
-             <DetailRowDisplay 
-              label={AR.visitDate} 
-              value={patient.created_at ? format(parseISO(patient.created_at as unknown as string), "PPP", { locale: dateLocale }) : 'N/A'}
-              icon={CalendarDays}
-            />
-            {patient.doctor && (
-                <DetailRowDisplay 
-                    label={AR.doctor} 
-                    value={patient.doctor.name} 
-                    icon={User} 
-                />
-            )}
-
-            <DetailRowDisplay label={AR.phone} value={patient.phone} />
-            {/* <DetailRowDisplay label={t("common:doctor")} value={patient.doctor.name} /> */}
-            <DetailRowDisplay
-              label={AR.gender}
-              value={patient.gender === 'male' ? 'ذكر' : patient.gender === 'female' ? 'أنثى' : AR.notAvailableShort}
-            />
-            <DetailRowDisplay
-              label={AR.age}
-              value={getAgeString(patient)}
-            />
-        
-               {/* Company Info if applicable */}
-               {isCompanyPatient && patient.company && (
-              <>
-                <Separator className="my-2" />
-                <DetailRowDisplay 
-                    label={AR.company} 
-                    value={patient.company.name} 
-                    icon={Briefcase} 
-                    valueClassName="font-semibold"
-                />
-                {patient.insurance_no && 
-                    <DetailRowDisplay 
-                        label={AR.insuranceNo} 
-                        value={patient.insurance_no} 
-                        icon={IdCard}
-                    />
-                }
-                {patient.subcompany && 
-                    <DetailRowDisplay 
-                        label={AR.subCompanyShort} 
-                        value={patient.subcompany.name} 
-                        icon={Tags}
-                    />
-                }
-                {patient.company_relation && 
-                    <DetailRowDisplay 
-                        label={AR.relationShort} 
-                        value={patient.company_relation.name} 
-                        icon={Tags}
-                    />
-                }
-                {patient.guarantor && 
-                    <DetailRowDisplay 
-                        label={AR.guarantor} 
-                        value={patient.guarantor} 
-                    />
-                }
-                </>
-            )}
-            <DetailRowDisplay
-              label={AR.address}
-              value={patient.address}
-              titleValue={patient.address || undefined}
-            />
-          </>
-        ) : !isLoadingPatient ? (
-          <p className="text-xs text-muted-foreground py-2 text-center">
-            {AR.patientDataNotAvailable}
-          </p>
-        ) : null}
-      </SortableInfoCard>
-    ),
-    requestStatus: selectedLabRequest ? (
-      <SortableInfoCard
-        id="requestStatus"
-        title={AR.requestStatusTitle}
-        icon={ClipboardList}
-        defaultCollapsed={false}
-        cardClassName="bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-700/40"
-      >
-        <p
-          className="text-[11px] text-muted-foreground mb-1 truncate"
-          title={selectedLabRequest.main_test?.main_test_name}
-        >
-          {selectedLabRequest.main_test?.main_test_name || AR.test}{" "}
-          (ID: {selectedLabRequest.id})
+      patient ? (
+        <PatientDetailsLabEntry
+          visitId={visitId}
+          patientName={patient.name}
+          doctorName={patient.doctor?.name ?? null}
+          date={patient.created_at as unknown as string}
+          phone={patient.phone ?? null}
+          paymentMethod={selectedLabRequest?.payment_method as unknown as string}
+          registeredBy={(patient as unknown as { registered_by?: string }).registered_by ?? null}
+          age={getAgeString(patient)}
+          statuses={{
+            payment: { done: true, by: undefined },
+            collected: { time: undefined, by: undefined },
+            print: { time: undefined, by: undefined },
+            authentication: { done: patient.result_is_locked },
+          }}
+          className="mb-2"
+        />
+      ) : !isLoadingPatient ? (
+        <p className="text-xs text-muted-foreground py-2 text-center">
+          {AR.patientDataNotAvailable}
         </p>
-        <DetailRowDisplay
-          label={AR.paymentStatus}
-          value={getPaymentStatusBadge(selectedLabRequest)}
-        />
-        <DetailRowDisplay
-          label={AR.sampleStatus}
-          value={getSampleStatusBadge(selectedLabRequest)}
-        />
-        <DetailRowDisplay
-          label={AR.approvalStatus}
-          value={getApprovalStatusBadge(selectedLabRequest)}
-        />
-        <Separator className="my-1" />
-        <DetailRowDisplay
-          label={AR.price}
-          value={Number(selectedLabRequest.price).toFixed(1)}
-        />
-        {isCompanyPatient && (
-          <DetailRowDisplay
-            label={AR.endurance}
-            value={Number(selectedLabRequest.endurance || 0).toFixed(1)}
-          />
-        )}
-        <DetailRowDisplay
-          label={AR.discountPercentageShort}
-          value={`${selectedLabRequest.discount_per || 0}%`}
-        />
-        <DetailRowDisplay
-          label={AR.amountPaid}
-          value={Number(selectedLabRequest.amount_paid).toFixed(1)}
-          valueClassName="text-green-600 dark:text-green-400 font-semibold"
-        />
-        <DetailRowDisplay
-          label={AR.balanceDue}
-          value={calculateLabRequestBalance(selectedLabRequest).toFixed(1)}
-          valueClassName={cn(
-            "font-bold",
-            calculateLabRequestBalance(selectedLabRequest) > 0.09
-              ? "text-red-600 dark:text-red-400"
-              : "text-green-600 dark:text-green-400"
-          )}
-        />
-        {selectedLabRequest.created_at && (
-          <DetailRowDisplay
-            label={AR.requestedAt}
-            value={format(parseISO(selectedLabRequest.created_at), "Pp", {
-              locale: dateLocale,
-            })}
-          />
-        )}
-      </SortableInfoCard>
-    ) : null,
+      ) : null
+    ),
+    requestStatus: null,
     parameterDetails: focusedChildTest ? (
       <SortableInfoCard
         id="parameterDetails"
@@ -664,7 +500,7 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
           />
         )}
         {(focusedChildTest.lowest || focusedChildTest.max) && (
-          <Separator className="my-1" />
+          <Divider className="my-1" />
         )}
         {focusedChildTest.lowest && (
           <DetailRowDisplay
@@ -709,44 +545,49 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
 
   return (
   <>
-  <ScrollArea dir={"rtl"} className="h-full bg-slate-50 dark:bg-slate-800/30">
+  <Box dir={"rtl"} className="h-full bg-slate-50 dark:bg-slate-800/30 overflow-y-auto">
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={panelOrder.map(id => id)} strategy={verticalListSortingStrategy}>
             <div className="p-2 sm:p-3 space-y-2 sm:space-y-3">
-              {panelOrder.map(panelId => panelComponents[panelId]).filter(Boolean)}
+              {panelOrder.map(panelId => (
+                <div key={panelId}>{panelComponents[panelId]}</div>
+              )).filter(Boolean)}
               
-              <Card className="shadow-sm bg-slate-100 dark:bg-slate-900/40">
-                <CardHeader className="pb-2 pt-3">
-                  <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
+              <MuiCard className="shadow-sm bg-slate-100 dark:bg-slate-900/40">
+                <Box className="pb-2 pt-3 px-3">
+                  <Typography variant="subtitle2" className="text-sm font-semibold flex items-center gap-1.5">
                     <Palette className="h-4 w-4 text-muted-foreground" />
                     {AR.actionsTitle}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-1.5">
+                  </Typography>
+                </Box>
+                <MuiCardContent className="space-y-1.5">
                     {/* New WhatsApp Buttons */}
-            <Button
+            <MuiButton
+              variant="outlined"
               className="w-full justify-start text-xs text-green-700 hover:text-green-800 border-green-300 hover:bg-green-50 dark:text-green-400 dark:border-green-600 dark:hover:bg-green-700/20"
               onClick={() => handleOpenWhatsAppDialog('thermal_lab_receipt')}
               disabled={!visitId || !patient} // Simple check for now
             >
               <WhatsApp className="ltr:mr-2 rtl:ml-2 h-3.5 w-3.5" />
               {AR.sendReceiptShort}
-            </Button>
-            <Button
+            </MuiButton>
+            <MuiButton
+              variant="outlined"
               className="w-full justify-start text-xs text-green-700 hover:text-green-800 border-green-300 hover:bg-green-50 dark:text-green-400 dark:border-green-600 dark:hover:bg-green-700/20"
               onClick={() => handleOpenWhatsAppDialog('full_lab_report')}
               disabled={!visitId || !patient /* || resultsLocked - if preview implies sendable */}
             >
               <WhatsApp className="ltr:mr-2 rtl:ml-2 h-3.5 w-3.5" />
               {AR.sendReportShort}
-            </Button>
-                  <Button className="w-full justify-start text-xs" onClick={handlePrintReceipt} disabled={!visitId || isGeneratingPdf}>
+            </MuiButton>
+                  <MuiButton variant="outlined" className="w-full justify-start text-xs" onClick={handlePrintReceipt} disabled={!visitId || isGeneratingPdf}>
                     <Receipt className="ltr:mr-2 rtl:ml-2 h-3.5 w-3.5" /> {AR.printReceipt}
-                  </Button>
-                  <Button className="w-full justify-start text-xs" onClick={handlePrintSampleLabels} disabled={!visitId || isGeneratingPdf}>
+                  </MuiButton>
+                  <MuiButton variant="outlined" className="w-full justify-start text-xs" onClick={handlePrintSampleLabels} disabled={!visitId || isGeneratingPdf}>
                     <Printer className="ltr:mr-2 rtl:ml-2 h-3.5 w-3.5" />{AR.printSampleLabels}
-                  </Button>
-                  <Button
+                  </MuiButton>
+                  <MuiButton
+                    variant="outlined"
                     className="w-full justify-start text-xs"
                     onClick={handleViewReportPreview}
                     disabled={!visitId || isGeneratingPdf || resultsLocked || patientLabQueueItem?.all_requests_paid === false} // Check resultsLocked
@@ -754,13 +595,13 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
                   >
                     <FileText className="ltr:mr-2 rtl:ml-2 h-3.5 w-3.5" />
                     {AR.viewReportPreview}
-                  </Button>
-                </CardContent>
-              </Card>
+                  </MuiButton>
+                </MuiCardContent>
+              </MuiCard>
             </div>
           </SortableContext>
         </DndContext>
-      </ScrollArea>
+      </Box>
       {patient && visitId && (
         <SendReportWhatsAppDialog
           isOpen={isSendWhatsAppDialogOpen}

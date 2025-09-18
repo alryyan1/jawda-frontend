@@ -66,7 +66,7 @@ const SendWhatsAppTextDialog: React.FC<SendWhatsAppTextDialogProps> = ({
     enabled: isOpen, staleTime: Infinity,
   });
 
-  const templates = useMemo(() => getLocalizedTemplatesLab(t), [t]);
+  const templates = useMemo(() => getLocalizedTemplatesLab(t), [i18n.language]);
 
   const sendMutation = useMutation({
     mutationFn: async (data: WhatsAppFormValues) => {
@@ -114,7 +114,9 @@ const SendWhatsAppTextDialog: React.FC<SendWhatsAppTextDialogProps> = ({
     } else if (!isOpen) {
       reset();
     }
-  }, [isOpen, queueItem, templates, appSettings, t, dateLocale, reset, setValue]); // Added setValue
+    // Intentionally limit deps to avoid re-running each render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, queueItem, templates, appSettings]);
 
   if (!queueItem) return null;
 

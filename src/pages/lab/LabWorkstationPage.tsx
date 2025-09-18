@@ -1,8 +1,7 @@
 // src/pages/lab/LabWorkstationPage.tsx
 import React, { useState, useCallback, useEffect } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { Input } from "@/components/ui/input"; // shadcn Input
-import { Button } from "@/components/ui/button"; // shadcn Button
+// Replaced shadcn with MUI
 import {
   Search,
   FlaskConical,
@@ -16,13 +15,16 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { Toaster } from "@/components/ui/sonner"; // shadcn Toaster
+// Removed shadcn Toaster import
 
 // MUI Autocomplete for "Recent Visits" dropdown
 import Autocomplete from "@mui/material/Autocomplete";
 import TextField from "@mui/material/TextField";
 import CircularProgress from "@mui/material/CircularProgress";
 import Paper from "@mui/material/Paper";
+import IconButton from "@mui/material/IconButton";
+import Tooltip from "@mui/material/Tooltip";
+import InputAdornment from "@mui/material/InputAdornment";
 
 // Import Panel Components
 import PatientQueuePanel from "@/components/lab/workstation/PatientQueuePanel";
@@ -33,7 +35,6 @@ import StatusAndInfoPanel from "@/components/lab/workstation/StatusAndInfoPanel"
 
 import type {
   ChildTestWithResult,
- 
   PatientLabQueueItem,
 } from "@/types/labWorkflow";
 import type { Shift } from "@/types/shifts";
@@ -47,17 +48,29 @@ interface RecentDoctorVisitSearchItem {
 
 import { getCurrentOpenShift, getShiftsList } from "@/services/shiftService";
 import { getDoctorVisitById } from "@/services/visitService";
-import { getPatientById, searchRecentDoctorVisits, togglePatientResultLock } from "@/services/patientService"; // Updated service function
+import {
+  getPatientById,
+  searchRecentDoctorVisits,
+  togglePatientResultLock,
+} from "@/services/patientService"; // Updated service function
 import apiClient from "@/services/api";
-import LabQueueFilterDialog, { type LabQueueFilters } from "@/components/lab/workstation/LabQueueFilterDialog";
+import LabQueueFilterDialog, {
+  type LabQueueFilters,
+} from "@/components/lab/workstation/LabQueueFilterDialog";
 import ShiftFinderDialog from "@/components/lab/workstation/ShiftFinderDialog";
 import PdfPreviewDialog from "@/components/common/PdfPreviewDialog";
 import SendWhatsAppTextDialog from "@/components/lab/workstation/dialog/SendWhatsAppTextDialog";
 import SendPdfToCustomNumberDialog from "@/components/lab/workstation/dialog/SendPdfToCustomNumberDialog";
-import { sendBackendWhatsAppMedia, type BackendWhatsAppMediaPayload } from "@/services/backendWhatsappService";
+import {
+  sendBackendWhatsAppMedia,
+  type BackendWhatsAppMediaPayload,
+} from "@/services/backendWhatsappService";
 import { fileToBase64 } from "@/services/whatsappService";
 import type { Patient } from "@/types/patients";
-import { getAppearanceSettings, type LabAppearanceSettings } from "@/lib/appearance-settings-store";
+import {
+  getAppearanceSettings,
+  type LabAppearanceSettings,
+} from "@/lib/appearance-settings-store";
 // Removed socket updates and service imports
 
 const LabWorkstationPage: React.FC = () => {
@@ -95,32 +108,51 @@ const LabWorkstationPage: React.FC = () => {
   const [activeQueueFilters, setActiveQueueFilters] = useState<LabQueueFilters>(
     {}
   );
-  const [appearanceSettings, setAppearanceSettings] = useState<LabAppearanceSettings>(getAppearanceSettings);
-  
+  const [appearanceSettings, setAppearanceSettings] =
+    useState<LabAppearanceSettings>(getAppearanceSettings);
+
   // Callback function to force a re-render of this page, which will re-read settings and pass them down
   const handleAppearanceSettingsChanged = () => {
     setAppearanceSettings(getAppearanceSettings());
   };
 
-  const [appliedQueueFilters, setAppliedQueueFilters] = useState<LabQueueFilters>({
-    result_status_filter: 'pending', // Default to show pending results
-    print_status_filter: 'all',
-    // other filters undefined initially
-  });
-  const { data: patientDetailsForActionPane } = useQuery<Patient | null, Error>({
-    queryKey: ['patientDetailsForActionPane', selectedQueueItem?.patient_id],
-    queryFn: () => selectedQueueItem?.patient_id ? getPatientById(selectedQueueItem.patient_id) : Promise.resolve(null),
-    enabled: !!selectedQueueItem?.patient_id, // Fetch when a patient is selected in the queue
-    staleTime: 5 * 60 * 1000, // Cache for 5 mins
-});
+  const [appliedQueueFilters, setAppliedQueueFilters] =
+    useState<LabQueueFilters>({
+      result_status_filter: "pending", // Default to show pending results
+      print_status_filter: "all",
+      // other filters undefined initially
+    });
+  const { data: patientDetailsForActionPane } = useQuery<Patient | null, Error>(
+    {
+      queryKey: ["patientDetailsForActionPane", selectedQueueItem?.patient_id],
+      queryFn: () =>
+        selectedQueueItem?.patient_id
+          ? getPatientById(selectedQueueItem.patient_id)
+          : Promise.resolve(null),
+      enabled: !!selectedQueueItem?.patient_id, // Fetch when a patient is selected in the queue
+      staleTime: 5 * 60 * 1000, // Cache for 5 mins
+    }
+  );
   // Global states
-  const [globalSearchTerm, setGlobalSearchTerm] = useState('');
-  const [debouncedGlobalSearch, setDebouncedGlobalSearch] = useState('');
+  const [globalSearchTerm, setGlobalSearchTerm] = useState("");
+  const [debouncedGlobalSearch, setDebouncedGlobalSearch] = useState("");
   const [isResultLocked, setIsResultLocked] = useState(false);
-    // Dialog states
-    const [whatsAppTextData, setWhatsAppTextData] = useState<{ isOpen: boolean; queueItem: PatientLabQueueItem | null }>({ isOpen: false, queueItem: null });
-    const [sendPdfCustomData, setSendPdfCustomData] = useState<{ isOpen: boolean; queueItem: PatientLabQueueItem | null }>({ isOpen: false, queueItem: null });
-    const [pdfPreviewData, setPdfPreviewData] = useState<{isOpen: boolean, url: string | null, title: string, fileName: string, isLoading: boolean}>({isOpen: false, url: null, title: '', fileName: '', isLoading: false});
+  // Dialog states
+  const [whatsAppTextData, setWhatsAppTextData] = useState<{
+    isOpen: boolean;
+    queueItem: PatientLabQueueItem | null;
+  }>({ isOpen: false, queueItem: null });
+  const [sendPdfCustomData, setSendPdfCustomData] = useState<{
+    isOpen: boolean;
+    queueItem: PatientLabQueueItem | null;
+  }>({ isOpen: false, queueItem: null });
+  const [pdfPreviewData, setPdfPreviewData] = useState<{
+    isOpen: boolean;
+    url: string | null;
+    title: string;
+    fileName: string;
+    isLoading: boolean;
+  }>({ isOpen: false, url: null, title: "", fileName: "", isLoading: false });
   // --- Search State ---
   const [autocompleteInputValue, setAutocompleteInputValue] = useState("");
   const [selectedVisitFromAutocomplete, setSelectedVisitFromAutocomplete] =
@@ -137,9 +169,7 @@ const LabWorkstationPage: React.FC = () => {
     setSelectedVisitFromAutocomplete(null);
     setAutocompleteInputValue("");
     setVisitIdSearchTerm("");
-    toast.info(
-      t("shifts:shiftFinder.shiftSelected", { shiftId: selectedShift.id })
-    );
+    toast.info(`تم اختيار الوردية رقم ${selectedShift.id}`);
   };
   const [visitIdSearchTerm, setVisitIdSearchTerm] = useState("");
   // Sockets removed: no realtime lab updates listener
@@ -255,21 +285,18 @@ const LabWorkstationPage: React.FC = () => {
           setSelectedLabRequestForEntry(data.lab_requests[0]); // Select first lab request for entry
         } else {
           setSelectedLabRequestForEntry(null);
-          toast.info(t("labResults:noLabRequestsInSelectedVisit"));
+          toast.info("لا توجد طلبات مختبر في الزيارة المحددة");
         }
         setFocusedChildTestForInfo(null);
         toast.success(
-          t("labResults:visitLoaded", {
-            visitId: data.id,
-            patientName: data.patient.name,
-          })
+          `تم تحميل الزيارة رقم ${data.id} للمريض ${data.patient.name}`
         );
       } else {
-        toast.error(t("labResults:visitOrLabDataNotFound"));
+        toast.error("لم يتم العثور على بيانات الزيارة أو المختبر");
       }
     },
     onError: (error: Error) => {
-      const errorMessage = error.message || t("common:error.fetchFailed");
+      const errorMessage = error.message || "فشل في جلب البيانات";
       toast.error(errorMessage);
     },
     onSettled: () => {
@@ -310,50 +337,82 @@ const LabWorkstationPage: React.FC = () => {
           setFocusedChildTestForInfo(null);
         }
       } else {
-        toast.info(t("labResults:queueHeader.noOtherShifts"));
+        toast.info("لا توجد ورديات أخرى");
       }
     },
-    [queryClient, currentShiftForQueue, t]
+    [queryClient, currentShiftForQueue]
   );
   const isCurrentResultLocked = selectedQueueItem?.result_is_locked || false;
 
   const toggleResultLockMutation = useMutation({
     mutationFn: (patientId: number) => togglePatientResultLock(patientId),
     onSuccess: (updatedPatient) => {
-      toast.success(updatedPatient.result_is_locked ? t('labResults:contextMenu.resultsLockedSuccess') : t('labResults:contextMenu.resultsUnlockedSuccess'));
-      queryClient.setQueryData(['patientDataForResultLock', updatedPatient.id], updatedPatient);
-      queryClient.invalidateQueries({queryKey: ['labPendingQueue', currentShiftForQueue?.id]}); // Refresh queue if lock status affects display
+      toast.success(
+        updatedPatient.result_is_locked
+          ? "تم قفل النتائج بنجاح"
+          : "تم فتح قفل النتائج بنجاح"
+      );
+      queryClient.setQueryData(
+        ["patientDataForResultLock", updatedPatient.id],
+        updatedPatient
+      );
+      queryClient.invalidateQueries({
+        queryKey: ["labPendingQueue", currentShiftForQueue?.id],
+      }); // Refresh queue if lock status affects display
     },
-    onError: (error: any) => toast.error(error.response?.data?.message || t('common:error.operationFailed'))
+    onError: (error: any) =>
+      toast.error(error.response?.data?.message || "فشلت العملية"),
   });
 
   // Context Menu Action Handlers
-  const handleSendWhatsAppText = (queueItem: PatientLabQueueItem) => setWhatsAppTextData({ isOpen: true, queueItem });
+  const handleSendWhatsAppText = (queueItem: PatientLabQueueItem) =>
+    setWhatsAppTextData({ isOpen: true, queueItem });
   const handleSendPdfToPatient = async (queueItem: PatientLabQueueItem) => {
     if (!queueItem.phone) {
-        toast.error(t("whatsapp:errors.patientPhoneMissing")); return;
+      toast.error("رقم هاتف المريض غير متوفر");
+      return;
     }
-    setPdfPreviewData(prev => ({...prev, isLoading: true, title: t('labResults:contextMenu.sendingPdfTo', {name: queueItem.patient_name}), isOpen: true, url: null}));
+    setPdfPreviewData((prev) => ({
+      ...prev,
+      isLoading: true,
+      title: `يتم إرسال التقرير إلى ${queueItem.patient_name}`,
+      isOpen: true,
+      url: null,
+    }));
     try {
-        const pdfResponse = await apiClient.get(`/visits/${queueItem.visit_id}/lab-report/pdf?base64=1&pid=${queueItem.visit_id}`);
-        console.log(pdfResponse.data, "pdfResponse.data")
-        const payload: BackendWhatsAppMediaPayload = {
-            chat_id: queueItem.phone,
-            media_base64: pdfResponse.data,
-            media_name: `LabReport_Visit_${queueItem.visit_id}_${queueItem.patient_name.replace(/\s+/g, '_')}.pdf`,
-            media_caption: t('labResults:pdfSentCaptionDefault', {patientName: queueItem.patient_name, visitId: queueItem.visit_id }),
-            as_document: true,
-        };
-        const waResponse = await sendBackendWhatsAppMedia(payload);
-        toast.success(waResponse.message || t("whatsapp:pdfSentSuccess"));
+      const pdfResponse = await apiClient.get(
+        `/visits/${queueItem.visit_id}/lab-report/pdf?base64=1&pid=${queueItem.visit_id}`
+      );
+      console.log(pdfResponse.data, "pdfResponse.data");
+      const payload: BackendWhatsAppMediaPayload = {
+        chat_id: queueItem.phone,
+        media_base64: pdfResponse.data,
+        media_name: `LabReport_Visit_${
+          queueItem.visit_id
+        }_${queueItem.patient_name.replace(/\s+/g, "_")}.pdf`,
+        media_caption: `تقرير المختبر للزيارة ${queueItem.visit_id} - ${queueItem.patient_name}`,
+        as_document: true,
+      };
+      const waResponse = await sendBackendWhatsAppMedia(payload);
+      toast.success(waResponse.message || "تم إرسال ملف PDF عبر واتساب بنجاح");
     } catch (error: any) {
-        toast.error(error.response?.data?.message || error.message || t("whatsapp:pdfSentError"));
+      toast.error(
+        error.response?.data?.message ||
+          error.message ||
+          "فشل إرسال ملف PDF عبر واتساب"
+      );
     } finally {
-        setPdfPreviewData(prev => ({...prev, isLoading: false, isOpen: false})); // Close intermediate loading
+      setPdfPreviewData((prev) => ({
+        ...prev,
+        isLoading: false,
+        isOpen: false,
+      })); // Close intermediate loading
     }
   };
-  const handleSendPdfToCustomNumber = (queueItem: PatientLabQueueItem) => setSendPdfCustomData({ isOpen: true, queueItem });
-  const handleToggleResultLock = (queueItem: PatientLabQueueItem) => toggleResultLockMutation.mutate(queueItem.patient_id);
+  const handleSendPdfToCustomNumber = (queueItem: PatientLabQueueItem) =>
+    setSendPdfCustomData({ isOpen: true, queueItem });
+  const handleToggleResultLock = (queueItem: PatientLabQueueItem) =>
+    toggleResultLockMutation.mutate(queueItem.patient_id);
   const handlePatientSelectFromQueue = useCallback(
     (queueItem: PatientLabQueueItem | null) => {
       setSelectedQueueItem(queueItem);
@@ -403,7 +462,7 @@ const LabWorkstationPage: React.FC = () => {
         setAutocompleteInputValue("");
         fetchVisitDetailsMutation.mutate(id);
       } else {
-        toast.error(t("labResults:invalidVisitId"));
+        toast.error("رقم الزيارة غير صالح");
       }
     }
   };
@@ -418,7 +477,7 @@ const LabWorkstationPage: React.FC = () => {
     setAutocompleteInputValue("");
     setVisitIdSearchTerm("");
     queryClient.invalidateQueries({ queryKey: ["labPendingQueue"] });
-    toast.info(t("labResults:viewReset"));
+    toast.info("تمت إعادة تعيين العرض");
   };
 
   const isRTL = true;
@@ -433,53 +492,82 @@ const LabWorkstationPage: React.FC = () => {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="ltr:ml-3 rtl:mr-3 text-muted-foreground">{AR.loadingShiftInfo}</p>
+        <p className="ltr:ml-3 rtl:mr-3 text-muted-foreground">
+          {AR.loadingShiftInfo}
+        </p>
       </div>
     );
   }
 
-  
   const handleApplyQueueFilters = (newFilters: LabQueueFilters) => {
     setAppliedQueueFilters(newFilters);
     setActiveQueueFilters(newFilters); // Also update active filters for dialog
     // PatientQueuePanel will refetch automatically because appliedQueueFilters will be part of its queryKey
     // Or, if not directly part of queryKey, invalidate here:
-    queryClient.invalidateQueries({ queryKey: ['labPendingQueue'] });
+    queryClient.invalidateQueries({ queryKey: ["labPendingQueue"] });
   };
- // --- PDF Preview Logic for Actions Pane ---
- const generateAndShowPdfForActionPane = async (
-  titleKey: string, fileNamePrefix: string, endpoint: string
-) => {
-  if(!selectedQueueItem) {
-      toast.error(t("labResults:selectPatientFromQueueFirst")); return;
-  }
-  if(isCurrentResultLocked){
-      toast.error(t("labResults:resultsLockedCannotPreview")); return;
-  }
+  // --- PDF Preview Logic for Actions Pane ---
+  const generateAndShowPdfForActionPane = async (
+    title: string,
+    fileNamePrefix: string,
+    endpoint: string
+  ) => {
+    if (!selectedQueueItem) {
+      toast.error("يرجى اختيار مريض من القائمة أولاً");
+      return;
+    }
+    if (isCurrentResultLocked) {
+      toast.error("النتائج مقفلة، لا يمكن المعاينة");
+      return;
+    }
 
-  const visitIdToUse = selectedLabRequest?.doctor_visit_id || selectedQueueItem?.visit_id;
-  if (!visitIdToUse) { toast.error("Visit context is missing."); return; }
+    const visitIdToUse =
+      selectedLabRequest?.doctor_visit_id || selectedQueueItem?.visit_id;
+    if (!visitIdToUse) {
+      toast.error("Visit context is missing.");
+      return;
+    }
 
-  setPdfPreviewData(prev => ({...prev, isLoading: true, title: t(titleKey), isOpen: true, url: null}));
-  try {
-    const response = await apiClient.get(endpoint.replace('{visitId}', String(visitIdToUse)), { responseType: 'blob' });
-    const blob = new Blob([response.data], { type: 'application/pdf' });
-    const objectUrl = URL.createObjectURL(blob);
-    setPdfPreviewData(prev => ({
+    setPdfPreviewData((prev) => ({
+      ...prev,
+      isLoading: true,
+      title,
+      isOpen: true,
+      url: null,
+    }));
+    try {
+      const response = await apiClient.get(
+        endpoint.replace("{visitId}", String(visitIdToUse)),
+        { responseType: "blob" }
+      );
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const objectUrl = URL.createObjectURL(blob);
+      setPdfPreviewData((prev) => ({
         ...prev,
         url: objectUrl,
         isLoading: false,
-        fileName: `${fileNamePrefix}_Visit${visitIdToUse}_${selectedQueueItem?.patient_name.replace(/\s+/g, '_') || 'Patient'}.pdf`
-    }));
-  } catch (error: any) {
-    console.error(`Error generating ${t(titleKey)}:`, error);
-    toast.error(t('common:error.generatePdfFailed'), { description: error.response?.data?.message || error.message });
-    setPdfPreviewData(prev => ({...prev, isLoading: false, isOpen: false}));
-  }
-};
-console.log(selectedQueueItem,'selectedQueueItem')
+        fileName: `${fileNamePrefix}_Visit${visitIdToUse}_${
+          selectedQueueItem?.patient_name.replace(/\s+/g, "_") || "Patient"
+        }.pdf`,
+      }));
+    } catch (error: any) {
+      console.error(`حدث خطأ أثناء توليد ${title}:`, error);
+      toast.error("فشل توليد ملف PDF", {
+        description: error.response?.data?.message || error.message,
+      });
+      setPdfPreviewData((prev) => ({
+        ...prev,
+        isLoading: false,
+        isOpen: false,
+      }));
+    }
+  };
+  console.log(selectedQueueItem, "selectedQueueItem");
   return (
-    <div className="flex flex-col h-screen bg-slate-100 dark:bg-slate-900 text-sm overflow-hidden">
+    <div
+      style={{ height: "100%" }}
+      className="flex flex-col  bg-slate-100 dark:bg-slate-900 text-sm overflow-hidden"
+    >
       <header className="flex-shrink-0 h-auto p-3 border-b bg-card flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4 shadow-sm dark:border-slate-800">
         <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
           <FlaskConical className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
@@ -518,7 +606,7 @@ console.log(selectedQueueItem,'selectedQueueItem')
             size="small"
             sx={{
               width: { xs: "100%", sm: 250, md: 320 },
-              "& .MuiInputLabel-root": { 
+              "& .MuiInputLabel-root": {
                 fontSize: "0.8rem",
                 color: "var(--muted-foreground)",
                 "&.Mui-focused": {
@@ -565,7 +653,6 @@ console.log(selectedQueueItem,'selectedQueueItem')
             }}
             renderInput={(params) => (
               <TextField
-              
                 {...params}
                 label={AR.searchRecentVisitsByPatientLabel}
                 variant="outlined"
@@ -589,7 +676,7 @@ console.log(selectedQueueItem,'selectedQueueItem')
             PaperComponent={(props) => (
               <Paper
                 {...props}
-                sx={{ 
+                sx={{
                   fontSize: "0.8rem",
                   backgroundColor: "var(--background)",
                   color: "var(--foreground)",
@@ -605,48 +692,51 @@ console.log(selectedQueueItem,'selectedQueueItem')
             loadingText={AR.loading}
           />
 
-          <div className="relative w-full sm:w-auto">
-            <Search className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
-            <Input
+          <div className="w-full sm:w-auto">
+            <TextField
               type="number"
+              size="small"
               placeholder={AR.searchByVisitIdPlaceholderShort}
               value={visitIdSearchTerm}
               onChange={(e) => setVisitIdSearchTerm(e.target.value)}
               onKeyDown={handleSearchByVisitIdEnter}
-              className="ps-10 rtl:pr-10 h-10 text-sm w-full sm:w-28 md:w-32"
               disabled={fetchVisitDetailsMutation.isPending}
+              sx={{ width: { xs: "100%", sm: 140, md: 160 } }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+                  </InputAdornment>
+                ),
+                endAdornment: fetchVisitDetailsMutation.isPending ? (
+                  <InputAdornment position="end">
+                    <CircularProgress color="inherit" size={16} />
+                  </InputAdornment>
+                ) : undefined,
+              }}
             />
-            {fetchVisitDetailsMutation.isPending && (
-              <Loader2 className="absolute ltr:right-2 rtl:left-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />
-            )}
           </div>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setIsFilterDialogOpen(true)}
-            title={AR.filters_openFilterDialog}
-            className="h-10 w-10"
-          >
-            <FilterIcon className="h-5 w-5" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setIsShiftFinderDialogOpen(true)}
-            title={AR.shifts_openDialogTooltip}
-            className="h-10 w-10"
-          >
-            <CalendarSearch className="h-5 w-5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleResetView}
-            title={AR.resetViewTooltip}
-            className="h-10 w-10"
-          >
-            <ListRestart className="h-5 w-5" />
-          </Button>
+          <Tooltip title={AR.filters_openFilterDialog}>
+            <IconButton
+              onClick={() => setIsFilterDialogOpen(true)}
+              size="small"
+            >
+              <FilterIcon className="h-5 w-5" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={AR.shifts_openDialogTooltip}>
+            <IconButton
+              onClick={() => setIsShiftFinderDialogOpen(true)}
+              size="small"
+            >
+              <CalendarSearch className="h-5 w-5" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={AR.resetViewTooltip}>
+            <IconButton onClick={handleResetView} size="small">
+              <ListRestart className="h-5 w-5" />
+            </IconButton>
+          </Tooltip>
         </div>
       </header>
 
@@ -654,89 +744,42 @@ console.log(selectedQueueItem,'selectedQueueItem')
       <div className="flex-grow flex overflow-hidden">
         <aside
           className={cn(
-            "w-[322px] flex-shrink-0 bg-card dark:bg-slate-800/50 flex flex-col h-full overflow-hidden shadow-lg z-10",
+            "w-[56px] flex-shrink-0 bg-card dark:bg-slate-800/50 flex flex-col h-full items-center p-1.5 space-y-1.5 shadow-md",
             isRTL
-              ? "border-l dark:border-slate-700"
-              : "border-r dark:border-slate-700"
+              ? "border-r dark:border-slate-700"
+              : "border-l dark:border-slate-700"
           )}
         >
-       <PatientQueuePanel
-        appearanceSettings={appearanceSettings}
-       
-              currentShift={currentShiftForQueue}
-              onShiftChange={handleShiftNavigationInQueue}
-              onPatientSelect={(queueItem) => {
-                  setSelectedQueueItem(queueItem);
-                  setSelectedLabRequestForEntry(null); // Reset selected test when patient changes
-                  // Trigger fetch for patient data to get lock status
-                  queryClient.prefetchQuery({ queryKey: ['patientDataForResultLock', queueItem.patient_id], queryFn: () => getPatientById(queueItem.patient_id)});
-              }}
-              selectedVisitId={selectedQueueItem?.visit_id || null}
-              globalSearchTerm={debouncedGlobalSearch}
-              queueFilters={appliedQueueFilters}
-              // Passing new context menu handlers
-              onSendWhatsAppText={handleSendWhatsAppText}
-              onSendPdfToPatient={handleSendPdfToPatient}
-              onSendPdfToCustomNumber={handleSendPdfToCustomNumber}
-              onToggleResultLock={handleToggleResultLock}
-              // Need to update PatientLabQueueItem and PatientLabRequestItem to accept these and isResultLocked
-            />
+          <LabActionsPane
+            onAppearanceSettingsChanged={handleAppearanceSettingsChanged}
+            selectedLabRequest={selectedLabRequestForEntry || null}
+            selectedVisitId={selectedQueueItem?.visit_id || null}
+            currentPatientData={patientDetailsForActionPane as Patient | null}
+            isResultLocked={isCurrentResultLocked} // Pass lock status
+            onPrintReceipt={() =>
+              generateAndShowPdfForActionPane(
+                "طباعة إيصال المختبر",
+                "LabReceipt",
+                `/visits/{visitId}/lab-thermal-receipt/pdf`
+              )
+            }
+            onPrintLabels={() =>
+              generateAndShowPdfForActionPane(
+                "طباعة ملصقات العينات",
+                "SampleLabels",
+                `/visits/{visitId}/lab-sample-labels/pdf`
+              )
+            }
+            onPreviewReport={() =>
+              generateAndShowPdfForActionPane(
+                "معاينة تقرير المختبر",
+                "LabReport",
+                `/visits/{visitId}/lab-report/pdf`
+              )
+            }
+          />
         </aside>
-
-        <section
-          className={cn(
-            "w-[240px] xl:w-[280px] flex-shrink-0 bg-slate-50 dark:bg-slate-800 border-border flex-col h-full overflow-hidden shadow-md",
-            isRTL
-              ? "border-l dark:border-slate-700"
-              : "border-r dark:border-slate-700",
-            showTestSelectionPanel
-              ? "flex"
-              : "hidden md:flex md:items-center md:justify-center"
-          )}
-        >
-          {selectedQueueItem ? (
-            <TestSelectionPanel
-              key={`test-select-${selectedQueueItem.visit_id}-${selectedQueueItem.patient_id}`} // More unique key
-              visitId={selectedQueueItem.visit_id} // This is the visit_id from queue item (which might be patient_id or actual visit ID based on queue logic)
-              patientName={selectedQueueItem.patient_name}
-              onTestSelect={handleTestSelectForEntry}
-              selectedLabRequestId={selectedLabRequestForEntry?.id || null}
-            />
-          ) : (
-            <div className="p-4 text-center text-muted-foreground hidden md:flex flex-col items-center justify-center h-full">
-              {" "}
-              <Users size={32} className="mb-2 opacity-30" />{" "}
-              <span>{AR.selectPatientPrompt}</span>{" "}
-            </div>
-          )}
-        </section>
-
-        <main className="flex-grow bg-slate-100 dark:bg-slate-900/70 flex flex-col h-full overflow-hidden relative">
-          {selectedLabRequestForEntry ? (
-            <ResultEntryPanel
-              key={`result-entry-${selectedLabRequestForEntry.id}`}
-              initialLabRequest={selectedLabRequestForEntry}
-              onResultsSaved={handleResultsSaved}
-              onClosePanel={() => setSelectedLabRequestForEntry(null)}
-              onChildTestFocus={handleChildTestFocus}
-            />
-          ) : (
-            <div className="flex-grow flex items-center justify-center p-10 text-center">
-              {" "}
-              <div className="flex flex-col items-center text-muted-foreground">
-                {" "}
-                <Microscope size={48} className="mb-4 opacity-50" />{" "}
-                <p>
-                  {selectedQueueItem
-                    ? AR.selectTestPrompt
-                    : AR.selectPatientAndTestPrompt}
-                </p>{" "}
-              </div>{" "}
-            </div>
-          )}
-        </main>
-
-        <aside
+  <aside
           className={cn(
             "w-[260px] xl:w-[300px] flex-shrink-0 bg-card dark:bg-slate-800/50 flex-col h-full overflow-hidden shadow-md",
             isRTL
@@ -766,25 +809,90 @@ console.log(selectedQueueItem,'selectedQueueItem')
             </div>
           )}
         </aside>
+        <main className="flex-grow bg-slate-100 dark:bg-slate-900/70 flex flex-col h-full overflow-hidden relative">
+          {selectedLabRequestForEntry ? (
+            <ResultEntryPanel
+              key={`result-entry-${selectedLabRequestForEntry.id}`}
+              initialLabRequest={selectedLabRequestForEntry}
+              onResultsSaved={handleResultsSaved}
+              onClosePanel={() => setSelectedLabRequestForEntry(null)}
+              onChildTestFocus={handleChildTestFocus}
+            />
+          ) : (
+            <div className="flex-grow flex items-center justify-center p-10 text-center">
+              {" "}
+              <div className="flex flex-col items-center text-muted-foreground">
+                {" "}
+                <Microscope size={48} className="mb-4 opacity-50" />{" "}
+                <p>
+                  {selectedQueueItem
+                    ? AR.selectTestPrompt
+                    : AR.selectPatientAndTestPrompt}
+                </p>{" "}
+              </div>{" "}
+            </div>
+          )}
+        </main>
 
-        <aside
+      
+        <section
           className={cn(
-            "w-[56px] flex-shrink-0 bg-card dark:bg-slate-800/50 flex flex-col h-full items-center p-1.5 space-y-1.5 shadow-md",
+            "w-[240px] xl:w-[280px] flex-shrink-0 bg-slate-50 dark:bg-slate-800 border-border flex-col h-full overflow-hidden shadow-md",
             isRTL
-              ? "border-r dark:border-slate-700"
-              : "border-l dark:border-slate-700"
+              ? "border-l dark:border-slate-700"
+              : "border-r dark:border-slate-700",
+            showTestSelectionPanel
+              ? "flex"
+              : "hidden md:flex md:items-center md:justify-center"
           )}
         >
-           <LabActionsPane
-              onAppearanceSettingsChanged={handleAppearanceSettingsChanged}
-              selectedLabRequest={selectedLabRequestForEntry || null}
-              selectedVisitId={selectedQueueItem?.visit_id || null}
-              currentPatientData={patientDetailsForActionPane as Patient | null}
-              isResultLocked={isCurrentResultLocked} // Pass lock status
-              onPrintReceipt={() => generateAndShowPdfForActionPane('common:printReceiptDialogTitle', 'LabReceipt', `/visits/{visitId}/lab-thermal-receipt/pdf`)}
-              onPrintLabels={() => generateAndShowPdfForActionPane('labResults:statusInfo.printSampleLabelsDialogTitle', 'SampleLabels', `/visits/{visitId}/lab-sample-labels/pdf`)}
-              onPreviewReport={() => generateAndShowPdfForActionPane('labResults:statusInfo.viewReportPreviewDialogTitle', 'LabReport', `/visits/{visitId}/lab-report/pdf`)}
+          {selectedQueueItem ? (
+            <TestSelectionPanel
+              key={`test-select-${selectedQueueItem.visit_id}-${selectedQueueItem.patient_id}`} // More unique key
+              visitId={selectedQueueItem.visit_id} // This is the visit_id from queue item (which might be patient_id or actual visit ID based on queue logic)
+              patientName={selectedQueueItem.patient_name}
+              onTestSelect={handleTestSelectForEntry}
+              selectedLabRequestId={selectedLabRequestForEntry?.id || null}
             />
+          ) : (
+            <div className="p-4 text-center text-muted-foreground hidden md:flex flex-col items-center justify-center h-full">
+              {" "}
+              <Users size={32} className="mb-2 opacity-30" />{" "}
+              <span>{AR.selectPatientPrompt}</span>{" "}
+            </div>
+          )}
+        </section>
+        <aside
+          className={cn(
+            "w-[322px] flex-shrink-0 bg-card dark:bg-slate-800/50 flex flex-col h-full overflow-hidden shadow-lg z-10",
+            isRTL
+              ? "border-l dark:border-slate-700"
+              : "border-r dark:border-slate-700"
+          )}
+        >
+          <PatientQueuePanel
+            appearanceSettings={appearanceSettings}
+            currentShift={currentShiftForQueue}
+            onShiftChange={handleShiftNavigationInQueue}
+            onPatientSelect={(queueItem) => {
+              setSelectedQueueItem(queueItem);
+              setSelectedLabRequestForEntry(null); // Reset selected test when patient changes
+              // Trigger fetch for patient data to get lock status
+              queryClient.prefetchQuery({
+                queryKey: ["patientDataForResultLock", queueItem.patient_id],
+                queryFn: () => getPatientById(queueItem.patient_id),
+              });
+            }}
+            selectedVisitId={selectedQueueItem?.visit_id || null}
+            globalSearchTerm={debouncedGlobalSearch}
+            queueFilters={appliedQueueFilters}
+            // Passing new context menu handlers
+            onSendWhatsAppText={handleSendWhatsAppText}
+            onSendPdfToPatient={handleSendPdfToPatient}
+            onSendPdfToCustomNumber={handleSendPdfToCustomNumber}
+            onToggleResultLock={handleToggleResultLock}
+            // Need to update PatientLabQueueItem and PatientLabRequestItem to accept these and isResultLocked
+          />
         </aside>
       </div>
       <LabQueueFilterDialog

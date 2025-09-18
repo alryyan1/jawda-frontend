@@ -4,10 +4,8 @@ import {
   useForm,
   Controller,
   useWatch,
-  type FieldPath,
   type Path,
 } from "react-hook-form";
-import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { debounce } from "lodash";
@@ -18,8 +16,6 @@ import Tabs from "@mui/material/Tabs";
 import { styled } from "@mui/material/styles";
 import Tab from "@mui/material/Tab";
 import Typography from "@mui/material/Typography";
-import Tooltip from "@mui/material/Tooltip";
-import IconButton from "@mui/material/IconButton";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -28,13 +24,8 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
 
-import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Form } from "@/components/ui/form";
-import {
-  XCircle,
-  Settings2 as SettingsIcon,
-} from "lucide-react";
 
 import type { LabRequest } from "@/types/visits";
 import type { ChildTestOption } from "@/types/labTests";
@@ -52,8 +43,7 @@ import {
 
 import ChildTestAutocompleteInput from "./ChildTestAutocompleteInput";
 import MainCommentEditor from "./MainCommentEditor";
-import FieldStatusIndicator, { type FieldSaveStatus } from "./FieldStatusIndicator";
-import ManageDeviceNormalRangeDialog from "./ManageDeviceNormalRangeDialog";
+import { type FieldSaveStatus } from "./FieldStatusIndicator";
 
 const StyledTab = styled(Tab)(({ theme }) => ({
   minHeight: "40px",
@@ -85,25 +75,20 @@ function CustomTabPanel(props: TabPanelProps) {
 interface ResultEntryPanelProps {
   initialLabRequest: LabRequest;
   onResultsSaved: (updatedLabRequest: LabRequest) => void;
-  onClosePanel?: () => void;
   onChildTestFocus: (childTest: ChildTestWithResult | null) => void;
 }
 
 const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
   initialLabRequest,
   onResultsSaved,
-  onClosePanel,
   onChildTestFocus,
 }) => {
-  const { t } = useTranslation(["labResults", "common", "labTests"]);
+  // استخدام نص عربي مباشر بدلاً من i18n
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState(0);
   const [fieldSaveStatus, setFieldSaveStatus] = useState<
     Record<string, FieldSaveStatus>
   >({});
-  const [isDeviceRangeDialogOpen, setIsDeviceRangeDialogOpen] = useState(false);
-  const [childTestForDeviceRange, setChildTestForDeviceRange] =
-    useState<ChildTestWithResult | null>(null);
 
   const {
     data: testDataForEntry,
@@ -120,7 +105,6 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
   });
   const {
     control,
-    setValue,
     reset,
     getValues,
   } = form;
@@ -144,7 +128,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
         ...prev,
         [variables.fieldNameKey]: "success",
       }));
-      toast.success(t("labResults:resultEntry.fieldSavedSuccessShort"));
+      toast.success("تم حفظ الحقل بنجاح");
 
       queryClient
         .invalidateQueries({
@@ -175,7 +159,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
         ...prev,
         [variables.fieldNameKey]: "error",
       }));
-      toast.error(t("labResults:resultEntry.fieldSavedErrorShort"), {
+      toast.error("فشل حفظ الحقل", {
         description: error?.message,
       });
       setTimeout(
@@ -279,11 +263,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
           ...prev,
           ["main_test_comment"]: "error",
         }));
-        toast.error(
-          t("labResults:resultEntry.fieldSavedError", {
-            field: t("labResults:resultEntry.mainTestComment"),
-          })
-        );
+        toast.error("فشل حفظ الحقل: تعليق الفحص الرئيسي");
         setTimeout(
           () =>
             setFieldSaveStatus((prev) => ({
@@ -299,7 +279,6 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
       initialLabRequest.id,
       onResultsSaved,
       queryClient,
-      t,
       testDataForEntry,
     ]
   );
@@ -372,24 +351,6 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) =>
     setActiveTab(newValue);
 
-  const handleOpenDeviceRangeDialog = (ct: ChildTestWithResult) => {
-    setChildTestForDeviceRange(ct);
-    setIsDeviceRangeDialogOpen(true);
-  };
-
-  const handleApplyRangeToRHF = (newRange: string, index: number) => {
-    const fieldName =
-      `results.${index}.normal_range_text` as FieldPath<ResultEntryFormValues>;
-    setValue(fieldName, newRange, { shouldDirty: true });
-    if (testDataForEntry) {
-      debouncedSaveField(
-        initialLabRequest.id,
-        testDataForEntry.child_tests_with_results[index].id!,
-        fieldName,
-        { normal_range_text: newRange }
-      );
-    }
-  };
 
   // Generate field names for consistent access
   const getFieldNames = (index: number) => ({
@@ -459,42 +420,19 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
   }, [watchedValues, testDataForEntry, control, debouncedSaveField, initialLabRequest.id]);
 
   if (isLoading && !testDataForEntry) {
-    return <div>Loading...</div>;
+    return <div>جارٍ التحميل...</div>;
   }
   if (fetchError) {
-    return <div>Error loading data</div>;
+    return <div>حدث خطأ أثناء تحميل البيانات</div>;
   }
   if (!testDataForEntry) {
-    return <div>No data available</div>;
+    return <div>لا توجد بيانات متاحة</div>;
   }
 
   return (
     <>
       <div className="h-full flex flex-col p-3 sm:p-4 bg-slate-50 dark:bg-background shadow-inner">
-        {/* Header and Tabs */}
-        <div className="flex justify-between items-center mb-2 pb-2 border-b flex-shrink-0">
-          <div>
-            <h2 className="text-lg font-semibold">
-              {t("labResults:resultEntry.title", {
-                testName: testDataForEntry?.main_test_name,
-              })}
-            </h2>
-            <p className="text-xs text-muted-foreground">
-              {t("common:labRequestId")}: {initialLabRequest.id}
-            </p>
-          </div>
-          {onClosePanel && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClosePanel}
-              className="h-8 w-8"
-            >
-              <XCircle className="h-5 w-5" />
-            </Button>
-          )}
-        </div>
-
+     
         <Box
           sx={{ borderBottom: 1, borderColor: "divider", flexShrink: 0, mb: 1 }}
         >
@@ -505,12 +443,12 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
             sx={{ minHeight: "40px" }}
           >
             <StyledTab
-              label={t("labResults:resultEntry.mainTab")}
+              label="النتائج"
               id="result-tab-0"
               aria-controls="result-tabpanel-0"
             />
             <StyledTab
-              label={t("labResults:resultEntry.otherTab")}
+              label="أخرى"
               id="result-tab-1"
               aria-controls="result-tabpanel-1"
             />
@@ -523,7 +461,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
               <ScrollArea className="h-full pr-1">
                 {testDataForEntry.child_tests_with_results.length === 0 ? (
                   <div className="text-center text-muted-foreground py-10">
-                    {t("labResults:resultEntry.noChildTestsForEntry")}
+                    لا توجد فحوصات فرعية لإدخال النتائج
                   </div>
                 ) : (
                   <TableContainer
@@ -540,10 +478,12 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                       aria-label="child test results table"
                       sx={{ 
                         "& .MuiTableCell-root": { 
-                          padding: "6px 8px",
+                          padding: "2px 4px",
                           backgroundColor: "var(--background)",
                           color: "var(--foreground)",
                           borderBottomColor: "var(--border)",
+                          fontSize: "0.75rem",
+                          lineHeight: 1.2,
                         }
                       }}
                     >
@@ -552,6 +492,9 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                         "& .MuiTableCell-root": {
                           backgroundColor: "var(--muted)",
                           color: "var(--foreground)",
+                          padding: "2px 4px",
+                          fontSize: "0.7rem",
+                          fontWeight: "medium",
                         }
                       }}>
                         <TableRow>
@@ -562,9 +505,11 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                               borderBottomColor: "var(--border)",
                               backgroundColor: "var(--muted)",
                               color: "var(--foreground)",
+                              padding: "2px 4px",
+                              fontSize: "0.7rem",
                             }}
                           >
-                            {t("labResults:resultEntry.childTestName")}
+                            اسم الفحص
                           </TableCell>
                           <TableCell
                             sx={{
@@ -573,9 +518,11 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                               borderBottomColor: "var(--border)",
                               backgroundColor: "var(--muted)",
                               color: "var(--foreground)",
+                              padding: "2px 4px",
+                              fontSize: "0.7rem",
                             }}
                           >
-                            {t("labResults:resultEntry.result")}
+                            النتيجة
                           </TableCell>
                         </TableRow>
                       </TableHead>
@@ -612,10 +559,11 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                                   component="th"
                                   scope="row"
                                   sx={{
-                                    verticalAlign: "top",
                                     borderBottomColor: "var(--border)",
                                     backgroundColor: "var(--background)",
                                     color: "var(--foreground)",
+                                    padding: "2px 4px",
+                                    fontSize: "0.75rem",
                                   }}
                                 >
                                   <Typography
@@ -623,20 +571,12 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                                     component="div"
                                     sx={{
                                       fontWeight: 500,
-                                      display: "flex",
-                                      alignItems: "center",
-                                      justifyContent: "space-between",
+                                      fontSize: "0.75rem",
+                                      lineHeight: 1.2,
                                       color: "var(--foreground)",
                                     }}
                                   >
                                     {ctResult.child_test_name}
-                                    <FieldStatusIndicator
-                                      status={
-                                        fieldSaveStatus[resultValueField] ||
-                                        "idle"
-                                      }
-                                      size="medium"
-                                    />
                                   </Typography>
                                   <Typography
                                     variant="caption"
@@ -644,50 +584,22 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                                     sx={{
                                       display: "flex",
                                       alignItems: "center",
-                                      mt: 0.25,
+                                      mt: 0.1,
                                       color: "var(--muted-foreground)",
+                                      fontSize: "0.65rem",
+                                      lineHeight: 1.1,
                                     }}
                                   >
-                                    {String(getValues(normalRangeTextField) ||
-                                      ctResult.normalRange ||
-                                      t("common:notSet"))}
-                                    {ctResult.unit_name &&
-                                      ` (${ctResult.unit_name})`}
-                                    <Tooltip
-                                      title={String(
-                                        t(
-                                          "labResults:deviceNormalRange.manageDeviceSpecificRanges"
-                                        )
-                                      )}
-                                    >
-                                      <IconButton
-                                        size="small"
-                                        onClick={() =>
-                                          handleOpenDeviceRangeDialog(ctResult)
-                                        }
-                                        sx={{ 
-                                          p: 0.25, 
-                                          ml: 0.5,
-                                          color: "var(--muted-foreground)",
-                                          "&:hover": {
-                                            backgroundColor: "var(--accent)",
-                                            color: "var(--foreground)",
-                                          }
-                                        }}
-                                      >
-                                        <SettingsIcon
-                                          style={{ fontSize: "0.8rem" }}
-                                        />
-                                      </IconButton>
-                                    </Tooltip>
+                                  
                                   </Typography>
                                 </TableCell>
                                 <TableCell
                                   sx={{
-                                    verticalAlign: "top",
                                     borderBottomColor: "var(--border)",
                                     backgroundColor: "var(--background)",
                                     color: "var(--foreground)",
+                                    padding: "2px 4px",
+                                    fontSize: "0.75rem",
                                   }}
                                 >
                                   <Controller
@@ -698,19 +610,21 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                                       fieldState: { error },
                                     }) =>
                                       
-                                        <ChildTestAutocompleteInput
-                                          value={field.value as string | ChildTestOption | null}
-                                          onChange={field.onChange}
-                                          onBlur={field.onBlur}
-                                          error={!!error}
-                                          helperText={error?.message}
-                                          childTestId={ctResult.id!}
-                                          childTestName={
-                                            ctResult.child_test_name
-                                          }
-                                          parentChildTestModel={ctResult}
-                                          onFocusChange={onChildTestFocus}
-                                        />
+                                        <div style={{ fontSize: "0.75rem" }}>
+                                          <ChildTestAutocompleteInput
+                                            value={field.value as string | ChildTestOption | null}
+                                            onChange={field.onChange}
+                                            onBlur={field.onBlur}
+                                            error={!!error}
+                                            helperText={error?.message}
+                                            childTestId={ctResult.id!}
+                                            childTestName={
+                                              ctResult.child_test_name
+                                            }
+                                            parentChildTestModel={ctResult}
+                                            onFocusChange={onChildTestFocus}
+                                          />
+                                        </div>
                                       
                                     }
                                   />
@@ -743,28 +657,6 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
         </Form>
       </div>
 
-      <ManageDeviceNormalRangeDialog
-        isOpen={isDeviceRangeDialogOpen}
-        onOpenChange={setIsDeviceRangeDialogOpen}
-        childTest={childTestForDeviceRange}
-        currentResultNormalRange={
-          childTestForDeviceRange && testDataForEntry
-            ? getValues(
-                `results.${testDataForEntry.child_tests_with_results.findIndex(
-                  (ct) => ct.id === childTestForDeviceRange.id
-                )}.normal_range_text`
-              )
-            : ""
-        }
-        onApplyRangeToResultField={(newRange) => {
-          if (childTestForDeviceRange && testDataForEntry) {
-            const idx = testDataForEntry.child_tests_with_results.findIndex(
-              (ct) => ct.id === childTestForDeviceRange.id
-            );
-            if (idx !== -1) handleApplyRangeToRHF(newRange, idx);
-          }
-        }}
-      />
     </>
   );
 };

@@ -1,10 +1,23 @@
+
 // src/components/lab/workstation/LabActionsPane.tsx
 import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next';
+// استخدام نص عربي مباشر بدلاً من i18n
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
-import { ShieldCheck, Zap, ListFilter, Settings2, Printer, Loader2, RotateCcw, Atom, Lock, Unlock, Palette } from 'lucide-react'; // Example icons
+import { Loader2 } from 'lucide-react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faBluetoothB } from '@fortawesome/free-brands-svg-icons';
+import { 
+  faWifi, 
+  faLockOpen, 
+  faCog, 
+  faDownload, 
+  faBars, 
+  faBolt, 
+  faThumbsUp, 
+  faDove
+} from '@fortawesome/free-solid-svg-icons';
 import { cn } from '@/lib/utils';
 
 import type { LabRequest } from '@/types/visits'; // Or types/visits
@@ -14,7 +27,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { populateCbcResults } from '@/services/labRequestService';
 import { togglePatientResultLock } from '@/services/patientService';
 import type { Patient } from '@/types/patients';
-import type { PatientLabQueueItem } from '@/types/labWorkflow';
 import LabAppearanceSettingsDialog from './LabAppearanceSettingsDialog';
 // import { useAuthorization } from '@/hooks/useAuthorization';
 
@@ -37,7 +49,7 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
   currentPatientData,
   onAppearanceSettingsChanged,
 }) => {
-  const { t, i18n } = useTranslation(['labResults', 'common']);
+  // استخدام نص عربي مباشر بدلاً من i18n
   // const { can } = useAuthorization();
   const queryClient = useQueryClient();
  console.log(currentPatientData,'currentPatientData')
@@ -50,7 +62,7 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
       togglePatientResultLock(params.patientId, params.lock),
     onSuccess: (updatedPatient, variables) => {
       console.log(updatedPatient,'updatedPatient')
-      toast.success(variables.lock ? t('labResults:labActions.resultsLockedSuccess') : t('labResults:labActions.resultsUnlockedSuccess'));
+      toast.success(variables.lock ? 'تم قفل النتائج بنجاح' : 'تم إلغاء قفل النتائج بنجاح');
       
       // Immediately update the query cache with the response data
       if (updatedPatient) {
@@ -58,7 +70,7 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
         queryClient.setQueryData(['patientDetailsForActionPane', variables.patientId], updatedPatient);
         
         // Also update other patient detail caches that might exist
-        queryClient.setQueryData(['patientDetailsForInfoPanel', variables.patientId], (old: any) => {
+        queryClient.setQueryData(['patientDetailsForInfoPanel', variables.patientId], (old: { data?: { result_is_locked?: boolean } } | undefined) => {
           if (old?.data) {
             return {
               ...old,
@@ -71,7 +83,7 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
           return { data: updatedPatient };
         });
 
-        queryClient.setQueryData(['patientDetailsForLabDisplay', variables.patientId], (old: any) => {
+        queryClient.setQueryData(['patientDetailsForLabDisplay', variables.patientId], (old: { data?: { result_is_locked?: boolean } } | undefined) => {
           if (old?.data) {
             return {
               ...old,
@@ -85,11 +97,11 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
         });
 
         // Update queue items if they exist
-        queryClient.setQueryData(['labPendingQueue'], (old: any) => {
+        queryClient.setQueryData(['labPendingQueue'], (old: { data?: { patient_id: number; result_is_locked?: boolean }[] } | undefined) => {
           if (old?.data) {
             return {
               ...old,
-              data: old.data.map((item: any) => 
+              data: old.data.map((item: { patient_id: number; result_is_locked?: boolean }) => 
                 item.patient_id === variables.patientId 
                   ? { ...item, result_is_locked: updatedPatient.result_is_locked }
                   : item
@@ -106,14 +118,14 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
       queryClient.invalidateQueries({ queryKey: ['patientDetailsForLabDisplay', variables.patientId] });
       queryClient.invalidateQueries({ queryKey: ['labPendingQueue'] });
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || t('common:error.operationFailed'));
+    onError: (error: Error) => {
+      toast.error((error as { response?: { data?: { message?: string } } }).response?.data?.message || 'فشلت العملية');
     }
   });
 
   const handleToggleLock = () => {
     if (!patientIdForLock) {
-      toast.error(t('labResults:labActions.selectPatientFirst'));
+      toast.error('يرجى اختيار مريض أولاً');
       return;
     }
     toggleLockMutation.mutate({ patientId: patientIdForLock, lock: !currentLockStatus });
@@ -126,7 +138,7 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
   const setDefaultMutation = useMutation({
     mutationFn: (labRequestId: number) => setLabRequestResultsToDefault(labRequestId),
     onSuccess: (updatedLabRequest) => {
-        toast.success(t('labResults:labActions.resetToDefaultSuccess'));
+        toast.success('تم إعادة تعيين النتائج إلى القيم الافتراضية بنجاح');
         queryClient.invalidateQueries({ queryKey: ['labRequestForEntry', updatedLabRequest.id] });
         queryClient.invalidateQueries({ queryKey: ['labRequestsForVisit', selectedVisitId] }); // If visitId is relevant
         queryClient.invalidateQueries({ queryKey: ['labPendingQueue'] }); // If status changes affect queue
@@ -134,14 +146,14 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
             onResultsReset(updatedLabRequest);
         }
     },
-    onError: (error: any) => {
-        toast.error(error.response?.data?.message || t('labResults:labActions.resetToDefaultError'));
+    onError: (error: Error) => {
+        toast.error((error as { response?: { data?: { message?: string } } }).response?.data?.message || 'فشل إعادة تعيين النتائج إلى القيم الافتراضية');
     }
   });
 
   const handleResetToDefault = () => {
     if (selectedLabRequest) {
-        if (window.confirm(t('labResults:labActions.confirmResetToDefault', { testName: selectedLabRequest.main_test?.main_test_name }))) {
+        if (window.confirm(`هل أنت متأكد من إعادة تعيين نتائج ${selectedLabRequest.main_test?.main_test_name} إلى القيم الافتراضية؟`)) {
             setDefaultMutation.mutate(selectedLabRequest.id);
         }
     }
@@ -152,7 +164,7 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
       populateCbcResults(payload.labRequestId, { doctor_visit_id_for_sysmex: payload.doctorVisitId,main_test_id: payload.mainTestId }),
     onSuccess: (response) => {
       if (response.status && response.data) {
-        toast.success(response.message || t('labResults:labActions.cbcPopulateSuccess'));
+        toast.success(response.message || 'تم ملء نتائج CBC بنجاح');
         queryClient.invalidateQueries({ queryKey: ['labRequestForEntry', response.data.id] });
         queryClient.invalidateQueries({ queryKey: ['labRequestsForVisit', selectedVisitId] });
         queryClient.invalidateQueries({ queryKey: ['labPendingQueue'] });
@@ -160,11 +172,11 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
           onResultsModified(response.data);
         }
       } else {
-        toast.error(response.message || t('labResults:labActions.cbcPopulateNoData'));
+        toast.error(response.message || 'لا توجد بيانات لملء نتائج CBC');
       }
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || t('labResults:labActions.cbcPopulateError'));
+    onError: (error: Error) => {
+      toast.error((error as { response?: { data?: { message?: string } } }).response?.data?.message || 'فشل ملء نتائج CBC');
     }
   });
 
@@ -184,39 +196,32 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
   };
   
   const handleBatchAuthorize = () => {
-    toast.info(t('common:featureNotImplemented', { feature: t('labResults:labActions.batchAuthorize') }));
+    toast.info('الميزة غير متاحة حالياً: التفويض المجمع');
     // TODO: Implement batch authorization logic (likely opens a new dialog/page)
   };
 
   const handleLISSync = () => {
-    toast.info(t('common:featureNotImplemented', { feature: t('labResults:labActions.lisSync') }));
+    toast.info('الميزة غير متاحة حالياً: مزامنة LIS');
     // TODO: Implement LIS sync logic
   };
   
   const handleManageQC = () => {
-    toast.info(t('common:featureNotImplemented', { feature: t('labResults:labActions.qualityControl') }));
+    toast.info('الميزة غير متاحة حالياً: مراقبة الجودة');
     // TODO: Navigate to QC page or open QC dialog
   };
   
   const handlePrintWorklist = () => {
-    toast.info(t('common:featureNotImplemented', { feature: t('labResults:labActions.printWorklist') }));
+    toast.info('الميزة غير متاحة حالياً: طباعة قائمة العمل');
     // TODO: Implement Worklist PDF generation
   };
 
-  const handlePrintSampleLabels = () => {
-    toast.info(
-      t("common:featureNotImplemented", {
-        feature: t("labResults:actions.printSampleLabels"),
-      })
-    );
-  };
  console.log(currentLockStatus,'currentLockStatus')
   return (
     <TooltipProvider delayDuration={100}>
       <aside 
         className={cn(
             "bg-card border-border p-1.5 flex flex-col items-center space-y-2 overflow-y-auto h-full shadow-md",
-            i18n.dir() === 'rtl' ? "border-r" : "border-l" // Should be the outermost border
+"border-l" // Should be the outermost border
         )}
         style={{width: '56px'}} // Fixed slim width for icons
       >
@@ -234,13 +239,13 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
                         size="icon" 
                         className="w-10 h-10"
                         onClick={handleBatchAuthorize}
-                        aria-label={t('labResults:labActions.batchAuthorize')}
+                        aria-label="التفويض المجمع"
                     >
-                        <ShieldCheck className="h-5 w-5" />
+                        <FontAwesomeIcon icon={faWifi} className="h-5 w-5 text-purple-500" />
                     </Button>
                 </TooltipTrigger>
-                <TooltipContent side={i18n.dir() === 'rtl' ? 'left' : 'right'} sideOffset={5}>
-                    <p>{t('labResults:labActions.batchAuthorize')}</p>
+                <TooltipContent side="right" sideOffset={5}>
+                    <p>التفويض المجمع</p>
                 </TooltipContent>
             </Tooltip>
         )}
@@ -252,13 +257,13 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
                         className="w-10 h-10"
                         onClick={handleResetToDefault}
                         disabled={!selectedLabRequest || setDefaultMutation.isPending}
-                        aria-label={t('labResults:labActions.resetToDefault')}
+                        aria-label="إعادة تعيين إلى القيم الافتراضية"
                     >
-                        {setDefaultMutation.isPending ? <Loader2 className="h-5 w-5 animate-spin"/> : <RotateCcw className="h-5 w-5" />}
+                        {setDefaultMutation.isPending ? <Loader2 className="h-5 w-5 animate-spin"/> : <FontAwesomeIcon icon={faBluetoothB} className="h-5 w-5" />}
                     </Button>
                 </TooltipTrigger>
-                <TooltipContent side={i18n.dir() === 'rtl' ? 'left' : 'right'} sideOffset={5}>
-                    <p>{t('labResults:labActions.resetToDefault')}</p>
+                <TooltipContent side="right" sideOffset={5}>
+                    <p>إعادة تعيين إلى القيم الافتراضية</p>
                 </TooltipContent>
             </Tooltip>
             <Tooltip>
@@ -269,24 +274,24 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
                         className="w-10 h-10"
                         onClick={handlePopulateCbc}
                         disabled={!selectedLabRequest || !selectedVisitId || populateCbcMutation.isPending}
-                        aria-label={t('labResults:labActions.populateCbc')}
+                        aria-label="ملء نتائج CBC"
                     >
-                        {populateCbcMutation.isPending ? <Loader2 className="h-5 w-5 animate-spin"/> : <Atom className="h-5 w-5" />}
+                        {populateCbcMutation.isPending ? <Loader2 className="h-5 w-5 animate-spin"/> : <FontAwesomeIcon icon={faLockOpen} className="h-5 w-5" />}
                     </Button>
                 </TooltipTrigger>
-                <TooltipContent side={i18n.dir() === 'rtl' ? 'left' : 'right'} sideOffset={5}>
-                    <p>{t('labResults:labActions.populateCbc')}</p>
+                <TooltipContent side="right" sideOffset={5}>
+                    <p>ملء نتائج CBC</p>
                 </TooltipContent>
             </Tooltip>
         {/* Placeholder for LIS Sync */}
         <Tooltip>
             <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon" className="w-10 h-10" onClick={handleLISSync} disabled={!canSyncLIS}>
-                    <Zap className="h-5 w-5" />
+                    <FontAwesomeIcon icon={faCog} className="h-5 w-5" />
                 </Button>
             </TooltipTrigger>
-            <TooltipContent side={i18n.dir() === 'rtl' ? 'left' : 'right'} sideOffset={5}>
-                <p>{t('labResults:labActions.lisSync')}</p>
+            <TooltipContent side="right" sideOffset={5}>
+                <p>مزامنة LIS</p>
             </TooltipContent>
         </Tooltip>
 
@@ -294,11 +299,11 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
             <Tooltip>
                 <TooltipTrigger asChild>
                     <Button variant="ghost" size="icon" className="w-10 h-10" onClick={handleManageQC}>
-                        <ListFilter className="h-5 w-5" />
+                        <FontAwesomeIcon icon={faDownload} className="h-5 w-5 text-orange-500" />
                     </Button>
                 </TooltipTrigger>
-                <TooltipContent side={i18n.dir() === 'rtl' ? 'left' : 'right'} sideOffset={5}>
-                    <p>{t('labResults:labActions.qualityControl')}</p>
+                <TooltipContent side="right" sideOffset={5}>
+                    <p>مراقبة الجودة</p>
                 </TooltipContent>
             </Tooltip>
         )}
@@ -308,11 +313,11 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
         <Tooltip>
             <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon" className="w-10 h-10" onClick={handlePrintWorklist}>
-                    <Printer className="h-5 w-5" />
+                    <FontAwesomeIcon icon={faBars} className="h-5 w-5" />
                 </Button>
             </TooltipTrigger>
-            <TooltipContent side={i18n.dir() === 'rtl' ? 'left' : 'right'} sideOffset={5}>
-                <p>{t('labResults:labActions.printWorklist')}</p>
+            <TooltipContent side="right" sideOffset={5}>
+                <p>طباعة قائمة العمل</p>
             </TooltipContent>
         </Tooltip>
         <Separator className="my-2" />
@@ -321,11 +326,11 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
           <Tooltip>
               <TooltipTrigger asChild>
                   <Button variant="ghost" size="icon" className="w-10 h-10" onClick={() => setIsAppearanceDialogOpen(true)}>
-                      <Palette className="h-5 w-5" />
+                      <FontAwesomeIcon icon={faBolt} className="h-5 w-5" />
                   </Button>
               </TooltipTrigger>
-              <TooltipContent side={i18n.dir() === 'rtl' ? 'left' : 'right'} sideOffset={5}>
-                  <p>{t('labResults:labActions.appearanceSettings')}</p>
+              <TooltipContent side="right" sideOffset={5}>
+                  <p>إعدادات المظهر</p>
               </TooltipContent>
           </Tooltip>
         <Tooltip>
@@ -336,19 +341,19 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
                     className="w-10 h-10"
                     onClick={handleToggleLock}
                     disabled={toggleLockMutation.isPending}
-                    aria-label={currentLockStatus === false ? t('labResults:labActions.unlockResults') : t('labResults:labActions.lockResults')}
+                    aria-label={currentLockStatus === false ? 'إلغاء قفل النتائج' : 'قفل النتائج'}
                 >
                     {toggleLockMutation.isPending ? (
                         <Loader2 className="h-5 w-5 animate-spin" />
                     ) : currentLockStatus === false ? (
-                        <Unlock className="h-5 w-5 text-green-500" />
+                        <FontAwesomeIcon icon={faThumbsUp} className="h-5 w-5 text-green-500" />
                     ) : (
-                        <Lock className="h-5 w-5 text-red-500" />
+                        <FontAwesomeIcon icon={faThumbsUp} className="h-5 w-5 text-red-500" />
                     )}
                 </Button>
                 </TooltipTrigger>
-                <TooltipContent side={i18n.dir() === 'rtl' ? 'left' : 'right'} sideOffset={5}>
-                <p>{currentLockStatus === false ? t('labResults:labActions.unlockResults') : t('labResults:labActions.lockResults')}</p>
+                <TooltipContent side="right" sideOffset={5}>
+                <p>{currentLockStatus === false ? 'إلغاء قفل النتائج' : 'قفل النتائج'}</p>
                 </TooltipContent>
             </Tooltip>
         {/* Spacer to push settings to bottom, or use flex-grow on a container above */}
@@ -357,11 +362,11 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
         <Tooltip>
             <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon" className="w-10 h-10" onClick={() => toast.info("Navigate to Lab Settings")}> {/* TODO: Navigate */}
-                    <Settings2 className="h-5 w-5" />
+                    <FontAwesomeIcon icon={faDove} className="h-5 w-5" />
                 </Button>
             </TooltipTrigger>
-            <TooltipContent side={i18n.dir() === 'rtl' ? 'left' : 'right'} sideOffset={5}>
-                <p>{t('labResults:labActions.labSettings')}</p>
+            <TooltipContent side="right" sideOffset={5}>
+                <p>إعدادات المختبر</p>
             </TooltipContent>
         </Tooltip>
 

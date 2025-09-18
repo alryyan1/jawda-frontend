@@ -1,6 +1,5 @@
 // src/components/lab/reception/LabPatientWorkspace.tsx
 import React, { useState } from "react"; // Added useState
-import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import type { DoctorVisit } from "@/types/visits";
 import { UserCircle, X, Loader2, AlertTriangle } from "lucide-react";
@@ -19,7 +18,7 @@ const LabPatientWorkspace: React.FC<LabPatientWorkspaceProps> = ({
   activeVisitId,
   onClose,
 }) => {
-  const { t } = useTranslation(["labReception", "common"]);
+  // استخدام نصوص عربية مباشرة بدلاً من i18n
 
   // --- NEW: State for the Patient Info Dialog ---
   const [isInfoDialogOpen, setIsInfoDialogOpen] = useState(false);
@@ -45,10 +44,8 @@ const LabPatientWorkspace: React.FC<LabPatientWorkspaceProps> = ({
     return (
       <div className="p-4 text-center text-destructive">
         <AlertTriangle className="mx-auto h-8 w-8 mb-2" />
-        <p className="font-semibold">{t("common:error.loadFailed")}</p>
-        <p className="text-xs mt-1">
-          {error?.message || t("common:noDataAvailable")}
-        </p>
+        <p className="font-semibold">فشل التحميل</p>
+        <p className="text-xs mt-1">{error?.message || "لا توجد بيانات متاحة"}</p>
       </div>
     );
   }
@@ -64,9 +61,7 @@ const LabPatientWorkspace: React.FC<LabPatientWorkspaceProps> = ({
               size="icon"
               className="h-8 w-8 rounded-full flex-shrink-0 p-0"
               onClick={() => setIsInfoDialogOpen(true)}
-              aria-label={t("common:viewProfileFor", {
-                name: visit.patient.name,
-              })}
+              aria-label={`عرض ملف ${visit.patient.name}`}
             >
               <UserCircle className="h-6 w-6 text-primary" />
             </Button>
@@ -79,9 +74,8 @@ const LabPatientWorkspace: React.FC<LabPatientWorkspaceProps> = ({
                 {visit.patient.name}
               </h2>
               <p className="text-xs text-muted-foreground">
-                {t("common:visitId")}
-                {visit.id} | {t("common:doctor")}:{" "}
-                {visit.doctor?.name || t("common:unassigned")}
+                رقم الزيارة: {visit.id} | الطبيب: {" "}
+                {visit.doctor?.name || "غير محدد"}
               </p>
             </div>
           </div>

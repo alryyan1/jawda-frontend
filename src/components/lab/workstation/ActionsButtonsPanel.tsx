@@ -5,10 +5,8 @@ import { FileText } from "lucide-react";
 import { toast } from "sonner";
 import type { Patient } from "@/types/patients";
 import type { PatientLabQueueItem } from "@/types/labWorkflow";
-import SendReportWhatsAppDialog from "./dialog/SendReportWhatsAppDialog";
-import PdfPreviewDialog from "@/components/common/PdfPreviewDialog";
+import LabReportPdfPreviewDialog from "@/components/common/LabReportPdfPreviewDialog";
 import apiClient from "@/services/api";
-import { WhatsApp } from "@mui/icons-material";
 
 interface ActionsButtonsPanelProps {
   visitId: number | null;
@@ -30,9 +28,6 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
   const [pdfPreviewTitle, setPdfPreviewTitle] = useState('');
   const [pdfFileName, setPdfFileName] = useState('document.pdf');
   
-  // State for WhatsApp dialog
-  const [isSendWhatsAppDialogOpen, setIsSendWhatsAppDialogOpen] = useState(false);
-  const [reportTypeForWhatsApp, setReportTypeForWhatsApp] = useState<'full_lab_report' | 'thermal_lab_receipt'>('full_lab_report');
 
   const generateAndShowPdf = useCallback(async (
     title: string,
@@ -52,8 +47,9 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
       setPdfFileName(`${fileNamePrefix}_${visitId}_${patientNameSanitized}_${new Date().toISOString().slice(0,10)}.pdf`);
     } catch (error: unknown) {
       console.error(`Error generating ${title}:`, error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       toast.error("حدث خطأ أثناء إنشاء ملف PDF", {
-        description: error.response?.data?.message || error.message,
+        description: errorMessage,
       });
       setIsPdfPreviewOpen(false); // Close dialog on error
     } finally {
@@ -73,14 +69,6 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
     );
   }, [visitId, generateAndShowPdf]);
 
-  const handleOpenWhatsAppDialog = useCallback((type: 'full_lab_report' | 'thermal_lab_receipt') => {
-    if (!visitId || !patient) {
-      toast.error("Patient or visit information is missing.");
-      return;
-    }
-    setReportTypeForWhatsApp(type);
-    setIsSendWhatsAppDialogOpen(true);
-  }, [visitId, patient]);
 
   const handlePdfDialogOpenChange = useCallback((open: boolean) => {
     setIsPdfPreviewOpen(open);
@@ -95,27 +83,9 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
       <MuiCard className="shadow-sm bg-slate-100 dark:bg-slate-900/40">
        
         <MuiCardContent className="space-y-1.5">
-          {/* WhatsApp Buttons */}
-          <MuiButton
-            variant="outlined"
-            className="w-full justify-start text-xs text-green-700 hover:text-green-800 border-green-300 hover:bg-green-50 dark:text-green-400 dark:border-green-600 dark:hover:bg-green-700/20"
-            onClick={() => handleOpenWhatsAppDialog('thermal_lab_receipt')}
-            disabled={!visitId || !patient}
-          >
-            <WhatsApp className="ltr:mr-2 rtl:ml-2 h-3.5 w-3.5" />
-            إرسال الإيصال في واتساب
-          </MuiButton>
+      
           
-          <MuiButton
-            variant="outlined"
-            className="w-full justify-start text-xs text-green-700 hover:text-green-800 border-green-300 hover:bg-green-50 dark:text-green-400 dark:border-green-600 dark:hover:bg-green-700/20"
-            onClick={() => handleOpenWhatsAppDialog('full_lab_report')}
-            disabled={!visitId || !patient}
-          >
-            <WhatsApp className="ltr:mr-2 rtl:ml-2 h-3.5 w-3.5" />
-            إرسال التقرير في واتساب
-          </MuiButton>
-          
+       
       
           
       
@@ -133,19 +103,9 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
         </MuiCardContent>
       </MuiCard>
 
-      {/* WhatsApp Dialog */}
-      {patient && visitId && (
-        <SendReportWhatsAppDialog
-          isOpen={isSendWhatsAppDialogOpen}
-          onOpenChange={setIsSendWhatsAppDialogOpen}
-          patient={patient}
-          visitId={visitId}
-          reportType={reportTypeForWhatsApp}
-        />
-      )}
 
-      {/* PDF Preview Dialog */}
-      <PdfPreviewDialog
+      {/* Lab Report PDF Preview Dialog */}
+      <LabReportPdfPreviewDialog
         isOpen={isPdfPreviewOpen}
         onOpenChange={handlePdfDialogOpenChange}
         pdfUrl={pdfUrl}

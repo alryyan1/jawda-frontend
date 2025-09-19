@@ -1,5 +1,4 @@
 // src/types/settings.ts
-import type { FinanceAccount } from './finance'; // Assuming FinanceAccount type
 
 export interface Setting {
   id?: number; // Likely always 1
@@ -26,8 +25,10 @@ export interface Setting {
   cr?: string | null;
   email: string;
   address?: string | null;
-  instance_id?: string | null; // WhatsApp instance
-  token?: string | null;       // WhatsApp token (handle with care)
+  ultramsg_instance_id?: string | null; // Ultramsg WhatsApp instance
+  ultramsg_token?: string | null;       // Ultramsg WhatsApp token (handle with care)
+  ultramsg_base_url?: string | null;    // Ultramsg base URL
+  ultramsg_default_country_code?: string | null; // Ultramsg default country code
   send_result_after_auth: boolean;
   send_result_after_result: boolean;
   edit_result_after_auth: boolean;
@@ -68,10 +69,7 @@ export interface Setting {
   report_header_email?: string | null;
   report_header_vatin?: string | null;
   report_header_cr?: string | null;
-  report_header_logo_base64?: string | null; // For display/preview
-  // For form handling (file input and clearing)
-  report_header_logo_file?: File | null;
-  clear_report_header_logo_base64?: boolean;
+  default_lab_report_template?: string | null;
 
 }
 

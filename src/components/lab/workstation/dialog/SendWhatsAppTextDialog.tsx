@@ -18,7 +18,7 @@ import { Loader2 } from "lucide-react";
 import type { Setting } from "@/types/settings";
 import type { PatientLabQueueItem } from "@/types/labWorkflow";
 import { getSettings } from "@/services/settingService";
-import { sendBackendWhatsAppText, type BackendWhatsAppTextPayload } from "@/services/backendWhatsappService";
+import { sendUltramsgText, type UltramsgTextPayload } from "@/services/ultramsgService";
 
 interface AppWhatsAppTemplate { // Static Arabic templates
   id: string;
@@ -69,19 +69,23 @@ const SendWhatsAppTextDialog: React.FC<SendWhatsAppTextDialogProps> = ({
       if (!queueItem?.phone) { // Assuming phone on queueItem
         throw new Error("رقم هاتف المريض غير متوفر");
       }
-      const payload: BackendWhatsAppTextPayload = {
-        chat_id: queueItem.phone, // Use formatted phone from queueItem
-        message: data.message_content,
+      const payload: UltramsgTextPayload = {
+        to: queueItem.phone, // Use formatted phone from queueItem
+        body: data.message_content,
       };
-      return sendBackendWhatsAppText(payload);
+      return sendUltramsgText(payload);
     },
     onSuccess: (response) => {
-      toast.success(response.message || "تم إرسال الرسالة بنجاح");
-      if (onMessageSent) onMessageSent();
-      onOpenChange(false);
+      if (response.success) {
+        toast.success("تم إرسال الرسالة بنجاح");
+        if (onMessageSent) onMessageSent();
+        onOpenChange(false);
+      } else {
+        toast.error(response.error || "فشل إرسال الرسالة");
+      }
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || error.message || "فشل إرسال الرسالة");
+      toast.error(error.response?.data?.error || error.message || "فشل إرسال الرسالة");
     },
   });
   

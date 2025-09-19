@@ -41,11 +41,11 @@ import type { Setting } from "@/types/settings"; // For app settings like clinic
 import { getSettings } from "@/services/settingService"; // To fetch clinic name for templates
 // NEW: Import your backend WhatsApp service functions
 import {
-  sendBackendWhatsAppText,
-  sendBackendWhatsAppMedia,
-  type BackendWhatsAppTextPayload,
-  type BackendWhatsAppMediaPayload,
-} from "@/services/backendWhatsappService";
+  sendUltramsgText,
+  sendUltramsgDocument,
+  type UltramsgTextPayload,
+  type UltramsgDocumentPayload,
+} from "@/services/ultramsgService";
 import { fileToBase64 } from "@/services/whatsappService"; // Utility for base64 conversion (can stay or move)
 
 // Interface for templates if fetched from your backend or defined locally
@@ -143,39 +143,29 @@ const SendWhatsAppDialog: React.FC<SendWhatsAppDialogProps> = ({
 
       if (file) {
         const mediaBase64 = await fileToBase64(file);
-        const payload: BackendWhatsAppMediaPayload = {
-          patient_id: patient.id,
-          media_base64: mediaBase64,
-          media_name: file.name,
-          media_caption: data.message_content, // Message content becomes caption for media
-          as_document:
-            file.type === "application/pdf" ||
-            file.type.startsWith("application/msword") || // .doc
-            file.type.startsWith(
-              "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            ) || // .docx
-            file.type.startsWith("application/vnd.ms-excel") || // .xls
-            file.type.startsWith(
-              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            ) || // .xlsx
-            !file.type.startsWith("image/"), // Treat as document if not clearly an image
+        const payload: UltramsgDocumentPayload = {
+          to: patient.phone,
+          document: mediaBase64,
+          filename: file.name,
+          caption: data.message_content, // Message content becomes caption for media
         };
-        return sendBackendWhatsAppMedia(payload);
+        return sendUltramsgDocument(payload);
       } else {
-        const payload: BackendWhatsAppTextPayload = {
-          patient_id: patient.id,
-          message: data.message_content,
-          // template_id: data.template_id, // Backend could handle template hydration if needed
+        const payload: UltramsgTextPayload = {
+          to: patient.phone,
+          body: data.message_content,
         };
-        return sendBackendWhatsAppText(payload);
+        return sendUltramsgText(payload);
       }
     },
     onSuccess: (response) => {
-      toast.success(
-        response.message || "تم إرسال الرسالة بنجاح"
-      );
-      if (onMessageSent) onMessageSent();
-      onOpenChange(false);
+      if (response.success) {
+        toast.success("تم إرسال الرسالة بنجاح");
+        if (onMessageSent) onMessageSent();
+        onOpenChange(false);
+      } else {
+        toast.error(response.error || "فشل إرسال الرسالة");
+      }
     },
     onError: (error: unknown) => {
       const errorMessage = error && typeof error === 'object' && 'response' in error 

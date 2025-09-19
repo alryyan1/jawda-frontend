@@ -2,7 +2,7 @@
 // src/components/lab/workstation/LabActionsPane.tsx
 import React, { useState } from 'react';
 // استخدام نص عربي مباشر بدلاً من i18n
-import { Button } from '@/components/ui/button';
+
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
 import { Loader2 } from 'lucide-react';
@@ -16,7 +16,8 @@ import {
   faBars, 
   faBolt, 
   faThumbsUp, 
-  faDove
+  faDove,
+  faLock
 } from '@fortawesome/free-solid-svg-icons';
 import { cn } from '@/lib/utils';
 
@@ -28,6 +29,9 @@ import { populateCbcResults } from '@/services/labRequestService';
 import { togglePatientResultLock } from '@/services/patientService';
 import type { Patient } from '@/types/patients';
 import LabAppearanceSettingsDialog from './LabAppearanceSettingsDialog';
+import WhatsAppWorkAreaDialog from './dialog/WhatsAppWorkAreaDialog';
+import { LisClientUrl, LisServerUrl } from '@/pages/constants';
+import { Button } from '@/components/ui/button';
 // import { useAuthorization } from '@/hooks/useAuthorization';
 
 interface LabActionsPaneProps {
@@ -56,6 +60,7 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
   const patientIdForLock =  currentPatientData?.id;
   const currentLockStatus = currentPatientData?.result_is_locked || false;
   const [isAppearanceDialogOpen, setIsAppearanceDialogOpen] = useState(false);
+  const [isWhatsAppDialogOpen, setIsWhatsAppDialogOpen] = useState(false);
 
   const toggleLockMutation = useMutation({
     mutationFn: (params: { patientId: number; lock: boolean }) =>
@@ -204,15 +209,14 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
     toast.info('الميزة غير متاحة حالياً: مزامنة LIS');
     // TODO: Implement LIS sync logic
   };
-  
-  const handleManageQC = () => {
-    toast.info('الميزة غير متاحة حالياً: مراقبة الجودة');
-    // TODO: Navigate to QC page or open QC dialog
-  };
-  
+
   const handlePrintWorklist = () => {
     toast.info('الميزة غير متاحة حالياً: طباعة قائمة العمل');
     // TODO: Implement Worklist PDF generation
+  };
+
+  const handleOpenWhatsappWorkAreaDialog = () => {
+    setIsWhatsAppDialogOpen(true);
   };
 
  console.log(currentLockStatus,'currentLockStatus')
@@ -220,7 +224,7 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
     <TooltipProvider delayDuration={100}>
       <aside 
         className={cn(
-            "bg-card border-border p-1.5 flex flex-col items-center space-y-2 overflow-y-auto h-full shadow-md",
+            "bg-card border-border p-1.5 flex flex-col items-center space-y-2 overflow-y-auto h-full shadow-md overflow-x-hidden",
 "border-l" // Should be the outermost border
         )}
         style={{width: '72px'}} // Fixed width for larger icons
@@ -238,14 +242,14 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
                         variant="ghost" 
                         size="icon" 
                         className="w-12 h-12"
-                        onClick={handleBatchAuthorize}
+                        onClick={()=>{window.open(LisServerUrl, '_blank')}}
                         aria-label="التفويض المجمع"
                     >
                         <FontAwesomeIcon icon={faWifi} className="h-7! w-7! text-purple-500" />
                     </Button>
                 </TooltipTrigger>
                 <TooltipContent side="right" sideOffset={5}>
-                    <p>التفويض المجمع</p>
+                    <p>Server Lis </p>
                 </TooltipContent>
             </Tooltip>
         )}
@@ -255,43 +259,49 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
                         variant="ghost" 
                         size="icon" 
                         className="w-12 h-12"
-                        onClick={handleResetToDefault}
-                        disabled={!selectedLabRequest || setDefaultMutation.isPending}
-                        aria-label="إعادة تعيين إلى القيم الافتراضية"
+                        onClick={
+                          ()=>{window.open(LisClientUrl, '_blank')}
+                        }
                     >
                         {setDefaultMutation.isPending ? <Loader2 className="h-7! w-7! animate-spin"/> : <FontAwesomeIcon icon={faBluetoothB} className="h-7! w-7!" />}
                     </Button>
                 </TooltipTrigger>
                 <TooltipContent side="right" sideOffset={5}>
-                    <p>إعادة تعيين إلى القيم الافتراضية</p>
+                    <p>Client Lis </p>
                 </TooltipContent>
             </Tooltip>
-            <Tooltip>
+           { selectedVisitId && <Tooltip>
                 <TooltipTrigger asChild>
                     <Button 
                         variant="ghost" 
                         size="icon" 
                         className="w-12 h-12"
-                        onClick={handlePopulateCbc}
-                        disabled={!selectedLabRequest || !selectedVisitId || populateCbcMutation.isPending}
-                        aria-label="ملء نتائج CBC"
+                        onClick={handleToggleLock}
+                        disabled={populateCbcMutation.isPending}
                     >
-                        {populateCbcMutation.isPending ? <Loader2 className="h-7! w-7! animate-spin"/> : <FontAwesomeIcon icon={faLockOpen} className="h-7! w-7!" />}
+                      {toggleLockMutation.isPending ? (
+                        <Loader2 className="h-7! w-7! animate-spin" />
+                    ) : currentLockStatus === false ? (
+                        <FontAwesomeIcon icon={faLockOpen} className="h-7! w-7! text-green-500" />
+                    ) : (
+                        <FontAwesomeIcon icon={faLock} className="h-7! w-7! text-red-500" />
+                    )}
                     </Button>
                 </TooltipTrigger>
                 <TooltipContent side="right" sideOffset={5}>
-                    <p>ملء نتائج CBC</p>
+                    <p>  منع الطباعه </p>
                 </TooltipContent>
             </Tooltip>
+        }
         {/* Placeholder for LIS Sync */}
         <Tooltip>
             <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="w-12 h-12" onClick={handleLISSync} disabled={!canSyncLIS}>
+                <Button variant="ghost" size="icon" className="w-12 h-12" onClick={handleOpenWhatsappWorkAreaDialog} >
                     <FontAwesomeIcon icon={faCog} className="h-7! w-7!" />
                 </Button>
             </TooltipTrigger>
             <TooltipContent side="right" sideOffset={5}>
-                <p>مزامنة LIS</p>
+                <p>واتساب</p>
             </TooltipContent>
         </Tooltip>
 
@@ -341,7 +351,6 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
                     className="w-12 h-12"
                     onClick={handleToggleLock}
                     disabled={toggleLockMutation.isPending}
-                    aria-label={currentLockStatus === false ? 'إلغاء قفل النتائج' : 'قفل النتائج'}
                 >
                     {toggleLockMutation.isPending ? (
                         <Loader2 className="h-7! w-7! animate-spin" />
@@ -370,11 +379,22 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
             </TooltipContent>
         </Tooltip>
 
-      {/* Render the dialog */}
+      {/* Render the dialogs */}
       <LabAppearanceSettingsDialog
         isOpen={isAppearanceDialogOpen}
         onOpenChange={setIsAppearanceDialogOpen}
         onSettingsChanged={onAppearanceSettingsChanged}
+      />
+      
+      <WhatsAppWorkAreaDialog
+        isOpen={isWhatsAppDialogOpen}
+        onOpenChange={setIsWhatsAppDialogOpen}
+        currentPatient={currentPatientData}
+        selectedLabRequest={selectedLabRequest}
+        onMessageSent={() => {
+          // Optional: Add any callback logic when message is sent
+          console.log('WhatsApp message sent successfully');
+        }}
       />
       </aside>
     </TooltipProvider>

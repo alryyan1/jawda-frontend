@@ -62,9 +62,9 @@ import PdfPreviewDialog from "@/components/common/PdfPreviewDialog";
 import SendWhatsAppTextDialog from "@/components/lab/workstation/dialog/SendWhatsAppTextDialog";
 import SendPdfToCustomNumberDialog from "@/components/lab/workstation/dialog/SendPdfToCustomNumberDialog";
 import {
-  sendBackendWhatsAppMedia,
-  type BackendWhatsAppMediaPayload,
-} from "@/services/backendWhatsappService";
+  sendUltramsgDocument,
+  type UltramsgDocumentPayload,
+} from "@/services/ultramsgService";
 import { fileToBase64 } from "@/services/whatsappService";
 import type { Patient } from "@/types/patients";
 import {
@@ -382,17 +382,20 @@ const LabWorkstationPage: React.FC = () => {
         `/visits/${queueItem.visit_id}/lab-report/pdf?base64=1&pid=${queueItem.visit_id}`
       );
       console.log(pdfResponse.data, "pdfResponse.data");
-      const payload: BackendWhatsAppMediaPayload = {
-        chat_id: queueItem.phone,
-        media_base64: pdfResponse.data,
-        media_name: `LabReport_Visit_${
+      const payload: UltramsgDocumentPayload = {
+        to: queueItem.phone,
+        document: pdfResponse.data,
+        filename: `LabReport_Visit_${
           queueItem.visit_id
         }_${queueItem.patient_name.replace(/\s+/g, "_")}.pdf`,
-        media_caption: `تقرير المختبر للزيارة ${queueItem.visit_id} - ${queueItem.patient_name}`,
-        as_document: true,
+        caption: `تقرير المختبر للزيارة ${queueItem.visit_id} - ${queueItem.patient_name}`,
       };
-      const waResponse = await sendBackendWhatsAppMedia(payload);
-      toast.success(waResponse.message || "تم إرسال ملف PDF عبر واتساب بنجاح");
+      const waResponse = await sendUltramsgDocument(payload);
+      if (waResponse.success) {
+        toast.success("تم إرسال ملف PDF عبر واتساب بنجاح");
+      } else {
+        toast.error(waResponse.error || "فشل إرسال ملف PDF");
+      }
     } catch (error: any) {
       toast.error(
         error.response?.data?.message ||

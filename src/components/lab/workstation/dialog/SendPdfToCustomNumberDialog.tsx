@@ -1,26 +1,21 @@
 // src/components/lab/workstation/dialogs/SendWhatsAppTextDialog.tsx (New file)
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { useTranslation } from "react-i18next";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { arSA, enUS } from "date-fns/locale";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose, DialogFooter } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Loader2 } from "lucide-react";
 
-import type { Patient } from "@/types/patients"; // Assuming PatientLabQueueItem has patient name and phone
 import type { Setting } from "@/types/settings";
 import type { PatientLabQueueItem } from "@/types/labWorkflow";
 import { getSettings } from "@/services/settingService";
-import { sendBackendWhatsAppText, BackendWhatsAppTextPayload } from "@/services/backendWhatsappService";
+import { sendUltramsgText, type UltramsgTextPayload } from "@/services/ultramsgService";
 
 interface AppWhatsAppTemplate { // Same as before
   id: string;
@@ -35,30 +30,25 @@ interface SendWhatsAppTextDialogProps {
   onMessageSent?: () => void;
 }
 
-const getWhatsAppSchema = (t: Function) => z.object({
-  template_id: z.string().optional(),
-  message_content: z.string().min(1, { message: t("common:validation.requiredField", { field: t("whatsapp:message") }) }).max(4096),
-});
-type WhatsAppFormValues = z.infer<ReturnType<typeof getWhatsAppSchema>>;
+type WhatsAppFormValues = {
+  message_content: string;
+  template_id?: string;
+};
 
-const getLocalizedTemplatesLab = (t: Function): AppWhatsAppTemplate[] => [
-  { id: "lab_results_ready_simple", nameKey: "whatsapp:templates.labResultsReadyName", contentKey: "whatsapp:templates.labResultsReadyContentSimple" },
-  { id: "lab_follow_up", nameKey: "whatsapp:templates.labFollowUpName", contentKey: "whatsapp:templates.labFollowUpContent" },
+const getLocalizedTemplatesLab = (): AppWhatsAppTemplate[] => [
+  { id: "lab_results_ready_simple", nameKey: "نتائج المختبر جاهزة", contentKey: "نتائج المختبر جاهزة" },
+  { id: "lab_follow_up", nameKey: "متابعة المختبر", contentKey: "متابعة المختبر" },
   // Add more lab-specific templates
 ];
 
 const SendWhatsAppTextDialog: React.FC<SendWhatsAppTextDialogProps> = ({
   isOpen, onOpenChange, queueItem, onMessageSent,
 }) => {
-  const { t, i18n } = useTranslation(["whatsapp", "common", "labResults"]);
-  const dateLocale = i18n.language.startsWith("ar") ? arSA : enUS;
 
   const form = useForm<WhatsAppFormValues>({
-    resolver: zodResolver(getWhatsAppSchema(t)),
     defaultValues: { message_content: "", template_id: "" },
   });
-  const { watch, setValue, reset, control } = form;
-  const selectedTemplateId = watch("template_id");
+  const { setValue, reset, control } = form;
 
   const { data: appSettings } = useQuery<Setting | null, Error>({
     queryKey: ["appSettingsForWhatsAppLab"],
@@ -66,26 +56,30 @@ const SendWhatsAppTextDialog: React.FC<SendWhatsAppTextDialogProps> = ({
     enabled: isOpen, staleTime: Infinity,
   });
 
-  const templates = useMemo(() => getLocalizedTemplatesLab(t), [i18n.language]);
+  const templates = useMemo(() => getLocalizedTemplatesLab(), []);
 
   const sendMutation = useMutation({
     mutationFn: async (data: WhatsAppFormValues) => {
-      if (!queueItem?.patient_phone_for_whatsapp) { // Assuming patient_phone_for_whatsapp on queueItem
-        throw new Error(t("whatsapp:errors.patientPhoneMissing"));
+      if (!queueItem?.phone) { // Use phone property from queueItem
+        throw new Error("رقم هاتف المريض غير متوفر");
       }
-      const payload: BackendWhatsAppTextPayload = {
-        chat_id: queueItem.patient_phone_for_whatsapp, // Use formatted phone from queueItem
-        message: data.message_content,
+      const payload: UltramsgTextPayload = {
+        to: queueItem.phone, // Use phone property from queueItem
+        body: data.message_content,
       };
-      return sendBackendWhatsAppText(payload);
+      return sendUltramsgText(payload);
     },
     onSuccess: (response) => {
-      toast.success(response.message || t("whatsapp:sendSuccess"));
-      if (onMessageSent) onMessageSent();
-      onOpenChange(false);
+      if (response.success) {
+        toast.success("تم إرسال الرسالة بنجاح");
+        if (onMessageSent) onMessageSent();
+        onOpenChange(false);
+      } else {
+        toast.error(response.error || "فشل إرسال الرسالة");
+      }
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || error.message || t("whatsapp:sendError"));
+      toast.error(error.response?.data?.error || error.message || "فشل إرسال الرسالة");
     },
   });
   
@@ -95,13 +89,12 @@ const SendWhatsAppTextDialog: React.FC<SendWhatsAppTextDialogProps> = ({
     }
     const selectedTemplate = templates.find((tpl) => tpl.id === templateId);
     if (selectedTemplate) {
-      const clinicName = appSettings?.hospital_name || appSettings?.lab_name || t("common:defaultClinicName");
-      const replacedContent = t(selectedTemplate.contentKey, {
-        patientName: queueItem.patient_name,
-        labVisitId: queueItem.visit_id, // or specific lab request id if more relevant
-        date: format(new Date(), "PPP", { locale: dateLocale }),
-        clinicName: clinicName,
-      });
+      const clinicName = appSettings?.hospital_name || appSettings?.lab_name || "العيادة";
+      const replacedContent = selectedTemplate.contentKey
+        .replace("{patientName}", queueItem.patient_name)
+        .replace("{labVisitId}", queueItem.visit_id.toString())
+        .replace("{date}", format(new Date(), "dd/MM/yyyy"))
+        .replace("{clinicName}", clinicName);
       setValue("message_content", replacedContent);
     }
   };
@@ -124,35 +117,34 @@ const SendWhatsAppTextDialog: React.FC<SendWhatsAppTextDialogProps> = ({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{t("whatsapp:sendDialogTitle", { patientName: queueItem.patient_name })}</DialogTitle>
-          <DialogDescription>{t("whatsapp:sendTo", { phone: queueItem.patient_phone_for_whatsapp || t("common:notAvailable_short")})}</DialogDescription>
+          <DialogTitle>إرسال رسالة واتساب - {queueItem.patient_name}</DialogTitle>
+          <DialogDescription>إرسال إلى: {queueItem.phone || "غير متوفر"}</DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(sendMutation.mutate)} className="space-y-3 py-2">
+          <form onSubmit={form.handleSubmit((data) => sendMutation.mutate(data))} className="space-y-3 py-2">
             <FormField control={control} name="template_id" render={({ field }) => (
               <FormItem>
-                <FormLabel>{t("whatsapp:selectTemplate")}</FormLabel>
+                <FormLabel>اختر قالب</FormLabel>
                 <Select onValueChange={(val) => { field.onChange(val); applyTemplateContent(val); }} value={field.value} disabled={sendMutation.isPending || templates.length === 0}>
-                  <FormControl><SelectTrigger><SelectValue placeholder={t("whatsapp:templatePlaceholder")} /></SelectTrigger></FormControl>
+                  <FormControl><SelectTrigger><SelectValue placeholder="اختر قالب" /></SelectTrigger></FormControl>
                   <SelectContent>
-                    <SelectItem value=" ">{t("whatsapp:noTemplate")}</SelectItem>
-                    {templates.map((tpl) => (<SelectItem key={tpl.id} value={tpl.id}>{t(tpl.nameKey)}</SelectItem>))}
+                    <SelectItem value=" ">بدون قالب</SelectItem>
+                    {templates.map((tpl) => (<SelectItem key={tpl.id} value={tpl.id}>{tpl.nameKey}</SelectItem>))}
                   </SelectContent>
                 </Select>
               </FormItem>
             )} />
             <FormField control={control} name="message_content" render={({ field }) => (
               <FormItem>
-                <FormLabel>{t("whatsapp:messageContent")}</FormLabel>
-                <FormControl><Textarea {...field} rows={7} placeholder={t("whatsapp:messagePlaceholder")} /></FormControl>
-                <FormMessage />
+                <FormLabel>الرسالة</FormLabel>
+                <FormControl><Textarea {...field} rows={7} placeholder="اكتب رسالتك هنا..." /></FormControl>
               </FormItem>
             )} />
             <DialogFooter className="pt-4">
-              <DialogClose asChild><Button type="button" variant="outline" disabled={sendMutation.isPending}>{t('common:cancel')}</Button></DialogClose>
-              <Button type="submit" disabled={sendMutation.isPending || !queueItem.patient_phone_for_whatsapp}>
+              <DialogClose asChild><Button type="button" variant="outline" disabled={sendMutation.isPending}>إلغاء</Button></DialogClose>
+              <Button type="submit" disabled={sendMutation.isPending || !queueItem.phone}>
                 {sendMutation.isPending && <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />}
-                {t('common:send')}
+                إرسال
               </Button>
             </DialogFooter>
           </form>

@@ -80,8 +80,7 @@ import type { Specialist } from "@/types/doctors";
 import { getDoctorsList } from "@/services/doctorService";
 import { getServices } from "@/services/serviceService";
 import { getSpecialistsList } from "@/services/doctorService";
-import { fetchPatientsForBulkMessage } from "@/services/backendWhatsappService";
-import { sendBackendWhatsAppText } from "@/services/backendWhatsappService";
+import { sendUltramsgText, type UltramsgTextPayload } from "@/services/ultramsgService";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Setting } from "@/types/settings";
 import { getSettings } from "@/services/settingService";
@@ -194,11 +193,13 @@ const BulkWhatsAppPage: React.FC = () => {
   });
 
   const sendTextMutation = useMutation({
-    mutationFn: (payload: { patientId: number; message: string }) =>
-      sendBackendWhatsAppText({
-        patient_id: payload.patientId,
-        message: payload.message,
-      }),
+    mutationFn: async (payload: { patientId: number; message: string; phone: string }) => {
+      const ultramsgPayload: UltramsgTextPayload = {
+        to: payload.phone,
+        body: payload.message,
+      };
+      return sendUltramsgText(ultramsgPayload);
+    },
     // onSuccess and onError will be handled per-patient in the sending loop
   });
 
@@ -234,13 +235,15 @@ const BulkWhatsAppPage: React.FC = () => {
         specialist_id: data.specialist_id || null,
         unique_phones_only: data.unique_phones_only,
       };
-      const result = await fetchPatientsForBulkMessage(filters);
-      setFetchedPatients(
-        result.map((p) => ({ ...p, isSelected: true, sendStatus: "idle" }))
-      );
-      toast.success(
-        t("whatsapp:bulk.patientsFetched", { count: result.length })
-      );
+      // TODO: Implement new patient fetching endpoint for Ultramsg
+      // const result = await fetchPatientsForBulkMessage(filters);
+      // setFetchedPatients(
+      //   result.map((p) => ({ ...p, isSelected: true, sendStatus: "idle" }))
+      // );
+      // toast.success(
+      //   t("whatsapp:bulk.patientsFetched", { count: result.length })
+      // );
+      toast.error("ميزة الإرسال الجماعي غير متاحة حالياً - قيد التطوير");
     } catch (error: any) {
       toast.error(t("common:error.fetchFailed"), {
         description: error.message,
@@ -345,6 +348,7 @@ const BulkWhatsAppPage: React.FC = () => {
             await sendTextMutation.mutateAsync({
               patientId: currentPatientTarget.id,
               message: finalMessage,
+              phone: currentPatientTarget.phone || "",
             });
             setFetchedPatients((prev) =>
               prev.map((p) =>

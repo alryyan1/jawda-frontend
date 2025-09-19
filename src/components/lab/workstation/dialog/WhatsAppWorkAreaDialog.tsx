@@ -141,14 +141,23 @@ const WhatsAppWorkAreaDialog: React.FC<WhatsAppWorkAreaDialogProps> = ({
   // Send document mutation (if lab request has PDF)
   const sendDocumentMutation = useMutation({
     mutationFn: async (data: WhatsAppFormValues) => {
-      // For now, we'll send a placeholder document URL
-      // In a real implementation, you'd generate the lab report PDF and get its URL
-      const documentUrl = `${window.location.origin}/api/lab-reports/${selectedLabRequest?.id}/pdf`;
+      // Check if patient has result_url from Firebase
+      if (!currentPatient?.result_url) {
+        throw new Error("لا يوجد رابط للتقرير. يرجى التأكد من رفع التقرير إلى التخزين السحابي أولاً.");
+      }
+      
+      // Use the result_url from the patient data (Firebase URL)
+      const documentUrl = currentPatient.result_url;
+      
+      // Generate filename based on patient name and visit ID
+      const patientName = currentPatient.name.replace(/[^A-Za-z0-9-_]/g, '_');
+      const visitId = selectedLabRequest?.doctor_visit_id || 'unknown';
+      const filename = `lab_result_${visitId}_${patientName}_${new Date().toISOString().slice(0, 10)}.pdf`;
       
       return sendUltramsgDocumentFromUrl({
         to: data.phoneNumber,
         document_url: documentUrl,
-        filename: `lab_report_${selectedLabRequest?.id}.pdf`,
+        filename: filename,
         caption: data.message,
       });
     },
@@ -162,7 +171,8 @@ const WhatsAppWorkAreaDialog: React.FC<WhatsAppWorkAreaDialogProps> = ({
       }
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || error.message || "فشل إرسال التقرير");
+      const errorMessage = error.message || error.response?.data?.error || "فشل إرسال التقرير";
+      toast.error(errorMessage);
     },
   });
 

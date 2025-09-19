@@ -17,7 +17,8 @@ import {
   faBolt, 
   faThumbsUp, 
   faDove,
-  faLock
+  faLock,
+  faCloudUploadAlt
 } from '@fortawesome/free-solid-svg-icons';
 import { cn } from '@/lib/utils';
 
@@ -32,6 +33,8 @@ import LabAppearanceSettingsDialog from './LabAppearanceSettingsDialog';
 import WhatsAppWorkAreaDialog from './dialog/WhatsAppWorkAreaDialog';
 import { LisClientUrl, LisServerUrl } from '@/pages/constants';
 import { Button } from '@/components/ui/button';
+import { uploadLabResultFromApi } from '@/services/firebaseStorageService';
+import apiClient from '@/services/api';
 // import { useAuthorization } from '@/hooks/useAuthorization';
 
 interface LabActionsPaneProps {
@@ -61,6 +64,7 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
   const currentLockStatus = currentPatientData?.result_is_locked || false;
   const [isAppearanceDialogOpen, setIsAppearanceDialogOpen] = useState(false);
   const [isWhatsAppDialogOpen, setIsWhatsAppDialogOpen] = useState(false);
+  const [isUploadingToFirebase, setIsUploadingToFirebase] = useState(false);
 
   const toggleLockMutation = useMutation({
     mutationFn: (params: { patientId: number; lock: boolean }) =>
@@ -219,6 +223,76 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
     setIsWhatsAppDialogOpen(true);
   };
 
+  const handleUploadToFirebase = async () => {
+    if (!currentPatientData?.id || !selectedVisitId) {
+      toast.error('يرجى اختيار مريض أولاً');
+      return;
+    }
+
+    setIsUploadingToFirebase(true);
+    try {
+      // Generate PDF from the lab report
+      const response = await apiClient.get(`/visits/${selectedVisitId}/lab-report/pdf`, { 
+        responseType: 'blob' 
+      });
+      
+      const pdfBlob = response.data;
+      
+      // Get hospital name from settings or use default
+      const hospitalName = "Jawda Medical"; // You might want to get this from settings
+      
+      const uploadResult = await uploadLabResultFromApi(
+        pdfBlob,
+        hospitalName,
+        selectedVisitId,
+        currentPatientData.name
+      );
+      
+      if (uploadResult.success && uploadResult.url) {
+        // Update patient with the result URL
+        try {
+          const updateResponse = await apiClient.patch(`/patients/${currentPatientData.id}`, {
+            result_url: uploadResult.url
+          });
+          
+          if (updateResponse.data) {
+            // Update the query cache
+            queryClient.setQueryData(['patientDetailsForActionPane', currentPatientData.id], (old: any) => {
+              if (old) {
+                return {
+                  ...old,
+                  result_url: uploadResult.url
+                };
+              }
+              return old;
+            });
+            
+            console.log('Patient result_url updated successfully:', uploadResult.url);
+          }
+          
+          toast.success("تم رفع تقرير المختبر إلى التخزين السحابي بنجاح");
+        } catch (updateError) {
+          console.error('Error updating patient result_url:', updateError);
+          toast.warning("تم رفع الملف إلى التخزين السحابي ولكن فشل تحديث رابط الملف", {
+            description: "الملف متاح على: " + uploadResult.url
+          });
+        }
+      } else {
+        toast.error("فشل رفع الملف إلى التخزين السحابي", {
+          description: uploadResult.error
+        });
+      }
+    } catch (error: unknown) {
+      console.error('Error uploading to Firebase:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      toast.error("حدث خطأ أثناء رفع الملف", {
+        description: errorMessage,
+      });
+    } finally {
+      setIsUploadingToFirebase(false);
+    }
+  };
+
  console.log(currentLockStatus,'currentLockStatus')
   return (
     <TooltipProvider delayDuration={100}>
@@ -294,7 +368,7 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
             </Tooltip>
         }
         {/* Placeholder for LIS Sync */}
-        <Tooltip>
+     {  selectedVisitId &&   <Tooltip>
             <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon" className="w-12 h-12" onClick={handleOpenWhatsappWorkAreaDialog} >
                     <FontAwesomeIcon icon={faCog} className="h-7! w-7!" />
@@ -303,7 +377,30 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
             <TooltipContent side="right" sideOffset={5}>
                 <p>واتساب</p>
             </TooltipContent>
+        </Tooltip>}
+
+        {/* Firebase Upload Button */}
+   {selectedVisitId  &&     <Tooltip>
+            <TooltipTrigger asChild>
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="w-12 h-12" 
+                    onClick={handleUploadToFirebase}
+                    disabled={isUploadingToFirebase || !currentPatientData?.id || !selectedVisitId}
+                >
+                    {isUploadingToFirebase ? (
+                        <Loader2 className="h-7! w-7! animate-spin" />
+                    ) : (
+                        <FontAwesomeIcon icon={faCloudUploadAlt} className="h-7! w-7! text-blue-500" />
+                    )}
+                </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={5}>
+                <p>رفع إلى التخزين السحابي</p>
+            </TooltipContent>
         </Tooltip>
+        }
 
         {canManageQC && (
             <Tooltip>

@@ -114,6 +114,10 @@ const LabWorkstationPage: React.FC = () => {
     setAppearanceSettings(getAppearanceSettings());
   };
 
+  const handleUploadStatusChange = (isUploading: boolean) => {
+    setIsUploadingToFirebase(isUploading);
+  };
+
   const [appliedQueueFilters, setAppliedQueueFilters] =
     useState<LabQueueFilters>({
       result_status_filter: "pending", // Default to show pending results
@@ -156,6 +160,7 @@ const LabWorkstationPage: React.FC = () => {
   const [selectedVisitFromAutocomplete, setSelectedVisitFromAutocomplete] =
     useState<RecentDoctorVisitSearchItem | null>(null);
   const [isShiftFinderDialogOpen, setIsShiftFinderDialogOpen] = useState(false);
+  const [isUploadingToFirebase, setIsUploadingToFirebase] = useState(false);
 
   const handleShiftSelectedFromFinder = (selectedShift: Shift) => {
     setIsManuallyNavigatingShifts(true);
@@ -578,6 +583,13 @@ const LabWorkstationPage: React.FC = () => {
         </div>
 
         <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto sm:flex-grow justify-end">
+          {/* Upload Status Spinner */}
+          {isUploadingToFirebase && (
+            <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="text-xs font-medium">جاري رفع الملف...</span>
+            </div>
+          )}
           <Autocomplete
             id="recent-visits-by-patient-dropdown"
             options={recentVisitsData || []}
@@ -799,6 +811,7 @@ const LabWorkstationPage: React.FC = () => {
               patientId={selectedQueueItem.patient_id}
               visitId={selectedQueueItem.visit_id} // Pass the visit_id (context ID)
               patientLabQueueItem={selectedQueueItem || null}
+              onUploadStatusChange={handleUploadStatusChange}
             />
           ) : (
             <div className="p-4 text-center text-muted-foreground hidden lg:flex flex-col items-center justify-center h-full">

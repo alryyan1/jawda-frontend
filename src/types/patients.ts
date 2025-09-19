@@ -110,6 +110,9 @@ export interface Patient {
   company_id?: number | null;
   company?: Company;
   result_is_locked: boolean;
+  result_auth: boolean;
+  result_auth_user?: number | null;
+  result_url?: string | null;
   doctor_visit?: DoctorVisit;
 
   subcompany_id?: number | null;

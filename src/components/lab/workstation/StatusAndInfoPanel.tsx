@@ -1,5 +1,5 @@
 // src/components/lab/workstation/StatusAndInfoPanel.tsx
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 
@@ -14,6 +14,7 @@ interface StatusAndInfoPanelProps {
   patientId: number | null;
   visitId: number | null;
   patientLabQueueItem: PatientLabQueueItem | null;
+  onUploadStatusChange?: (isUploading: boolean) => void;
 }
 
 
@@ -23,7 +24,13 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
   patientId,
   visitId,
   patientLabQueueItem,
+  onUploadStatusChange,
 }) => {
+  const [updatedPatient, setUpdatedPatient] = useState<Patient | null>(null);
+
+  const handlePatientUpdate = useCallback((newPatient: Patient) => {
+    setUpdatedPatient(newPatient);
+  }, []);
 
   const {
     data: patient,
@@ -38,12 +45,15 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
   });
   const resultsLocked = patient?.result_is_locked || false;
 
+  // Use updated patient data if available, otherwise use the original patient
+  const currentPatient = updatedPatient || patient;
+
   const patientStatuses = useMemo(() => ({
     payment: { done: true, by: undefined },
     collected: { time: undefined, by: undefined },
     print: { time: undefined, by: undefined },
-    authentication: { done: patient?.result_is_locked },
-  }), [patient?.result_is_locked]);
+    authentication: { done: currentPatient?.result_is_locked },
+  }), [currentPatient?.result_is_locked]);
 
   const getAgeString = useCallback(
     (p?: Patient | null): string => {
@@ -87,16 +97,16 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
   return (
     <div dir="rtl" className="h-full bg-slate-50 dark:bg-slate-800/30 overflow-y-auto">
       <div className="p-2 sm:p-3 space-y-2 sm:space-y-3">
-        {patient ? (
+        {currentPatient ? (
           <PatientDetailsLabEntry
             visitId={visitId}
-            patientName={patient.name}
-            doctorName={patient.doctor?.name ?? null}
-            date={patient.created_at as unknown as string}
-            phone={patient.phone ?? null}
+            patientName={currentPatient.name}
+            doctorName={currentPatient.doctor?.name ?? null}
+            date={currentPatient.created_at as unknown as string}
+            phone={currentPatient.phone ?? null}
             paymentMethod={null}
-            registeredBy={(patient as unknown as { registered_by?: string }).registered_by ?? null}
-            age={getAgeString(patient)}
+            registeredBy={(currentPatient as unknown as { registered_by?: string }).registered_by ?? null}
+            age={getAgeString(currentPatient)}
             statuses={patientStatuses}
             className="mb-2"
           />
@@ -108,9 +118,11 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
         
         <ActionsButtonsPanel
           visitId={visitId}
-          patient={patient || null}
+          patient={currentPatient || null}
           patientLabQueueItem={patientLabQueueItem}
           resultsLocked={resultsLocked}
+          onPatientUpdate={handlePatientUpdate}
+          onUploadStatusChange={onUploadStatusChange}
         />
       </div>
     </div>

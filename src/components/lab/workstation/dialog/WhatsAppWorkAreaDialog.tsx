@@ -104,15 +104,11 @@ const WhatsAppWorkAreaDialog: React.FC<WhatsAppWorkAreaDialogProps> = ({
   }, [isOpen, currentPatient, setValue, reset]);
 
   const generateDefaultMessage = (): string => {
-    if (!currentPatient || !selectedLabRequest) {
-      return "مرحباً، نتائج فحوصاتك جاهزة.";
-    }
 
-    const patientName = currentPatient.name;
-    const testName = selectedLabRequest.main_test?.main_test_name || "الفحص";
+
     const date = format(new Date(), "PPP", { locale: arSA });
     
-    return `عزيزي/عزيزتي ${patientName}، نتائج فحص ${testName} جاهزة بتاريخ ${date}. يمكنك مراجعة العيادة أو التواصل معنا للاستفسار.`;
+    return `عزيزي/عزيزتي ${currentPatient?.name}، نتائج فحص جاهزة بتاريخ ${date}. يمكنك مراجعة العيادة أو التواصل معنا للاستفسار.`;
   };
 
   // Send text message mutation
@@ -207,7 +203,7 @@ const WhatsAppWorkAreaDialog: React.FC<WhatsAppWorkAreaDialogProps> = ({
 
   const isConfigured = configStatus?.configured ?? false;
   const isLoading = sendTextMutation.isPending || sendDocumentMutation.isPending;
- console.log(isConfigured,'isConfigured',configStatus)
+ console.log(isConfigured,'isConfigured',configStatus,phoneNumber,currentPatient?.result_url)
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
@@ -246,6 +242,24 @@ const WhatsAppWorkAreaDialog: React.FC<WhatsAppWorkAreaDialogProps> = ({
             فحص الحالة
           </Button>
         </div>
+
+        {/* Document Status */}
+        {currentPatient && (
+          <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">حالة التقرير:</span>
+              <Badge variant={currentPatient.result_url ? "default" : "secondary"}>
+                {currentPatient.result_url ? "متوفر في السحابة" : "غير متوفر"}
+              </Badge>
+            </div>
+            {currentPatient.result_url && (
+              <div className="flex items-center gap-1 text-green-600">
+                <span className="text-xs">☁️</span>
+                <span className="text-xs">متاح للإرسال</span>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Instance Status Display */}
         {instanceStatus && (
@@ -315,20 +329,26 @@ const WhatsAppWorkAreaDialog: React.FC<WhatsAppWorkAreaDialogProps> = ({
                 disabled={isLoading || !isConfigured || !phoneNumber}
                 className="flex-1"
               >
-                {sendTextMutation.isPending && <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />}
-                إرسال نص
+                {sendTextMutation.isPending ? (
+                  <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />
+                ) : null}
+                {sendTextMutation.isPending ? "جاري الإرسال..." : "إرسال نص"}
               </Button>
 
               <Button
                 type="button"
                 variant="default"
                 onClick={form.handleSubmit(handleSendDocument)}
-                disabled={isLoading || !isConfigured || !phoneNumber }
+                disabled={isLoading || !isConfigured || !phoneNumber || !currentPatient?.result_url}
                 className="flex-1"
+                title={!currentPatient?.result_url ? "لا يوجد رابط للتقرير. يرجى رفع التقرير إلى التخزين السحابي أولاً." : ""}
               >
-                {sendDocumentMutation.isPending && <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />}
-                <FileText className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-                إرسال تقرير
+                {sendDocumentMutation.isPending ? (
+                  <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <FileText className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
+                )}
+                {sendDocumentMutation.isPending ? "جاري الإرسال..." : "إرسال تقرير"}
               </Button>
             </div>
 

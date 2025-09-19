@@ -179,7 +179,7 @@ const LabWorkstationPage: React.FC = () => {
   // Fetch global current open clinic shift
   const { data: currentClinicShiftGlobal, isLoading: isLoadingGlobalShift } =
     useQuery<Shift | null, Error>({
-      queryKey: ["currentOpenShiftForLabWorkstation"],
+      queryKey: ["currentOpenShift"],
       queryFn: getCurrentOpenShift,
       // Removed refetchInterval - fetch only once
     });
@@ -794,7 +794,7 @@ const LabWorkstationPage: React.FC = () => {
         </aside>
   <aside
           className={cn(
-            "w-[260px] xl:w-[300px] flex-shrink-0 bg-card dark:bg-slate-800/50 flex-col h-full overflow-hidden shadow-md",
+            "w-[290px] xl:w-[350px] flex-shrink-0 bg-card dark:bg-slate-800/50 flex-col h-full overflow-hidden shadow-md",
             isRTL
               ? "border-r dark:border-slate-700"
               : "border-l dark:border-slate-700",

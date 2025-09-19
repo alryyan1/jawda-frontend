@@ -47,70 +47,7 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
         onPatientUpdate(updatedPatient);
       }
       
-      toast.success("تم اعتماد النتائج بنجاح");
-      
-      // Upload PDF to Firebase if available (in background)
-      if (response.data.pdf_content && response.data.pdf_filename) {
-        // Notify parent about upload start
-        if (onUploadStatusChange) {
-          onUploadStatusChange(true);
-        }
-        
-        try {
-          // Convert base64 to blob
-          const pdfBlob = new Blob([
-            Uint8Array.from(atob(response.data.pdf_content), c => c.charCodeAt(0))
-          ], { type: 'application/pdf' });
-          
-          // Get hospital name from settings or use default
-          const hospitalName = "Jawda Medical"; // You might want to get this from settings
-          
-          const uploadResult = await uploadLabResultFromApi(
-            pdfBlob,
-            hospitalName,
-            visitId,
-            patient.name
-          );
-          
-          if (uploadResult.success && uploadResult.url) {
-            // Update patient with the result URL
-            try {
-              const updateResponse = await apiClient.patch(`/patients/${patient.id}`, {
-                result_url: uploadResult.url
-              });
-              
-              if (updateResponse.data) {
-                updatedPatient.result_url = uploadResult.url;
-                console.log('Patient result_url updated successfully:', uploadResult.url);
-                
-                // Update the patient data with the URL
-                if (onPatientUpdate) {
-                  onPatientUpdate(updatedPatient);
-                }
-              }
-              
-              toast.success("تم رفع الملف إلى التخزين السحابي بنجاح");
-            } catch (updateError) {
-              console.error('Error updating patient result_url:', updateError);
-              toast.warning("تم رفع الملف إلى التخزين السحابي ولكن فشل تحديث رابط الملف", {
-                description: "الملف متاح على: " + uploadResult.url
-              });
-            }
-          } else {
-            toast.warning("فشل رفع الملف إلى التخزين السحابي", {
-              description: uploadResult.error
-            });
-          }
-        } catch (uploadError) {
-          console.error('Error uploading to Firebase:', uploadError);
-          toast.warning("فشل رفع الملف إلى التخزين السحابي");
-        } finally {
-          // Notify parent about upload completion
-          if (onUploadStatusChange) {
-            onUploadStatusChange(false);
-          }
-        }
-      }
+      toast.success("تم اعتماد النتائج بنجاح. تم إضافة رفع الملف إلى قائمة الانتظار.");
     } catch (error: unknown) {
       console.error('Error authenticating results:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';

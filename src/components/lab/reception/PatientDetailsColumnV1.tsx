@@ -1,9 +1,12 @@
-import React, { forwardRef, useImperativeHandle } from "react";
+import React, { forwardRef, useImperativeHandle, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import apiClient from "@/services/api";
 import type { DoctorVisit } from "@/types/visits";
 import PatientCompanyDetails from "./PatientCompanyDetails";
+import PatientInfoDialog from "@/components/clinic/PatientInfoDialog";
+import { Button } from "@/components/ui/button";
+import { User } from "lucide-react";
 
 interface PatientDetailsColumnV1Props {
   activeVisitId: number | null;
@@ -21,6 +24,7 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
   onPrintReceipt,
 }, ref) => {
   const queryClient = useQueryClient();
+  const [isPatientInfoDialogOpen, setIsPatientInfoDialogOpen] = useState(false);
 
   const payAllMutation = useMutation({
     mutationFn: async () => {
@@ -71,6 +75,19 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
       <div className="w-full text-center font-bold text-base border-b border-gray-300 pb-1 mb-2">
         {patientName}
       </div>
+      
+      {/* Patient Info Button */}
+      {visit && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setIsPatientInfoDialogOpen(true)}
+          className="w-full mb-2 flex items-center justify-center gap-2"
+        >
+          <User className="h-4 w-4" />
+          تفاصيل المريض
+        </Button>
+      )}
       {/* Details Table */}
       <table className="w-full text-sm mb-2">
         <tbody>
@@ -150,6 +167,15 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
           ) : null}
           {"دفع الكل"}
         </button>
+      )}
+      
+      {/* Patient Info Dialog */}
+      {visit && (
+        <PatientInfoDialog
+          isOpen={isPatientInfoDialogOpen}
+          onOpenChange={setIsPatientInfoDialogOpen}
+          visit={visit}
+        />
       )}
     </div>
   );

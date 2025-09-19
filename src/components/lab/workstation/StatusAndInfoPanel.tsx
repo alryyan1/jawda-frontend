@@ -101,11 +101,11 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
           <PatientDetailsLabEntry
             visitId={visitId}
             patientName={currentPatient.name}
-            doctorName={currentPatient.doctor?.name ?? null}
+            doctorName={patientLabQueueItem?.doctor_name ?? null}
             date={currentPatient.created_at as unknown as string}
             phone={currentPatient.phone ?? null}
             paymentMethod={null}
-            registeredBy={(currentPatient as unknown as { registered_by?: string }).registered_by ?? null}
+            registeredBy={(patientLabQueueItem as unknown as { registered_by?: string }).registered_by ?? null}
             age={getAgeString(currentPatient)}
             statuses={patientStatuses}
             className="mb-2"

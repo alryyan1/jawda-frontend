@@ -51,7 +51,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAuthLoading, setIsAuthLoading] = useState(true); // Start as true
   const queryClient = useQueryClient();
 
-  const currentOpenShiftQueryKey = ["currentOpenShiftForContext"] as const;
+  const currentOpenShiftQueryKey = ["currentOpenShift"] as const;
   const {
     data: currentClinicShiftData,
     isLoading: isLoadingShiftData,
@@ -140,7 +140,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser(null);
           localStorage.removeItem("authToken");
           localStorage.removeItem("authUser");
-          queryClient.removeQueries({ queryKey: ["currentOpenShiftForContext"] });
+          queryClient.removeQueries({ queryKey: ["currentOpenShift"] });
           window.location.href = "/login";
         }
       })

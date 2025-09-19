@@ -1,16 +1,29 @@
 // src/components/clinic/EditPatientInfoDialog.tsx
 import React, { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Loader2, PlusCircle } from 'lucide-react';
-import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Box,
+  Typography,
+  Paper,
+  CircularProgress,
+  IconButton,
+  Grid,
+  Divider,
+} from '@mui/material';
+import { Add as PlusCircle } from '@mui/icons-material';
 
 import type { Patient, PatientFormData } from '@/types/patients';
 import type { Subcompany, CompanyRelation } from '@/types/companies';
@@ -182,108 +195,289 @@ const EditPatientInfoDialog: React.FC<EditPatientInfoDialogProps> = ({
 
   if (!isOpen) return null;
   if (isLoadingPatient && !patientData) {
-    return <Dialog open={isOpen} onOpenChange={onOpenChange}><DialogContent><div className="p-6 text-center"><Loader2 className="h-6 w-6 animate-spin"/></div></DialogContent></Dialog>;
+    return (
+      <Dialog open={isOpen} onClose={() => onOpenChange(false)} maxWidth="sm" fullWidth>
+        <DialogContent>
+          <Box display="flex" justifyContent="center" alignItems="center" p={3}>
+            <CircularProgress />
+          </Box>
+        </DialogContent>
+      </Dialog>
+    );
   }
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-lg md:max-w-xl max-h-[90vh]">
-          <DialogHeader>
-            <DialogTitle>تعديل بيانات {patientData?.name || 'المريض'}</DialogTitle>
-            <DialogDescription>تعديل المعلومات الشخصية والتأمينية للمريض</DialogDescription>
-          </DialogHeader>
-          <ScrollArea className="max-h-[calc(90vh-180px)] -mx-6 px-6"> {/* Adjust max-height considering header/footer */}
-            <Form {...form}>
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4">
-                {/* Basic Info */}
-                <FormField control={control} name="name" render={({ field }) => (
-                  <FormItem><FormLabel>الاسم</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <FormField control={control} name="phone" render={({ field }) => (
-                    <FormItem><FormLabel>الهاتف</FormLabel><FormControl><Input type="tel" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <FormField control={control} name="gender" render={({ field }) => (
-                    <FormItem><FormLabel>الجنس</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
-                        <FormControl><SelectTrigger><SelectValue placeholder="اختر الجنس" /></SelectTrigger></FormControl>
-                        <SelectContent>
-                          <SelectItem value="female">أنثى</SelectItem>
-                          <SelectItem value="male">ذكر</SelectItem>
-                          <SelectItem value="other">آخر</SelectItem>
-                        </SelectContent>
-                      </Select><FormMessage />
-                    </FormItem>
-                  )} />
-                </div>
-                <FormItem><FormLabel>العمر</FormLabel>
-                  <div className="grid grid-cols-3 gap-2">
-                    <FormField control={control} name="age_year" render={({ field }) => (<Input type="number" placeholder="سنوات" {...field} value={field.value || ''} />)} />
-                    <FormField control={control} name="age_month" render={({ field }) => (<Input type="number" placeholder="أشهر" {...field} value={field.value || ''} />)} />
-                    <FormField control={control} name="age_day" render={({ field }) => (<Input type="number" placeholder="أيام" {...field} value={field.value || ''} />)} />
-                  </div>
-                  <FormMessage>{errors.age_year?.message || errors.age_month?.message || errors.age_day?.message}</FormMessage>
-                </FormItem>
+      <Dialog 
+        open={isOpen} 
+        onClose={() => onOpenChange(false)} 
+        maxWidth="md" 
+        fullWidth
+        PaperProps={{
+          sx: { maxHeight: '90vh' }
+        }}
+      >
+        <DialogTitle>
+          تعديل بيانات {patientData?.name || 'المريض'}
+        </DialogTitle>
+        <Typography variant="body2" color="text.secondary" sx={{ px: 3, pb: 2 }}>
+          تعديل المعلومات الشخصية والتأمينية للمريض
+        </Typography>
+        <DialogContent sx={{ maxHeight: 'calc(90vh - 180px)', overflow: 'auto' }}>
+          <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ py: 2 }}>
+            {/* Basic Info */}
+            <Controller
+              name="name"
+              control={control}
+              render={({ field, fieldState: { error } }) => (
+                <TextField
+                  {...field}
+                  label="الاسم"
+                  fullWidth
+                  margin="normal"
+                  error={!!error}
+                  helperText={error?.message}
+                  required
+                />
+              )}
+            />
+            
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid item xs={12} sm={6}>
+                <Controller
+                  name="phone"
+                  control={control}
+                  render={({ field, fieldState: { error } }) => (
+                    <TextField
+                      {...field}
+                      label="الهاتف"
+                      type="tel"
+                      fullWidth
+                      margin="normal"
+                      error={!!error}
+                      helperText={error?.message}
+                      value={field.value || ''}
+                    />
+                  )}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Controller
+                  name="gender"
+                  control={control}
+                  render={({ field, fieldState: { error } }) => (
+                    <FormControl fullWidth margin="normal" error={!!error}>
+                      <InputLabel>الجنس</InputLabel>
+                      <Select
+                        {...field}
+                        label="الجنس"
+                        value={field.value || 'male'}
+                      >
+                        <MenuItem value="female">أنثى</MenuItem>
+                        <MenuItem value="male">ذكر</MenuItem>
+                        <MenuItem value="other">آخر</MenuItem>
+                      </Select>
+                      {error && <Typography variant="caption" color="error">{error.message}</Typography>}
+                    </FormControl>
+                  )}
+                />
+              </Grid>
+            </Grid>
+            
+            <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>العمر</Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={4}>
+                <Controller
+                  name="age_year"
+                  control={control}
+                  render={({ field, fieldState: { error } }) => (
+                    <TextField
+                      {...field}
+                      label="سنوات"
+                      type="number"
+                      fullWidth
+                      margin="normal"
+                      error={!!error}
+                      helperText={error?.message}
+                      value={field.value || ''}
+                    />
+                  )}
+                />
+              </Grid>
+              <Grid item xs={4}>
+                <Controller
+                  name="age_month"
+                  control={control}
+                  render={({ field, fieldState: { error } }) => (
+                    <TextField
+                      {...field}
+                      label="أشهر"
+                      type="number"
+                      fullWidth
+                      margin="normal"
+                      error={!!error}
+                      helperText={error?.message}
+                      value={field.value || ''}
+                    />
+                  )}
+                />
+              </Grid>
+              <Grid item xs={4}>
+                <Controller
+                  name="age_day"
+                  control={control}
+                  render={({ field, fieldState: { error } }) => (
+                    <TextField
+                      {...field}
+                      label="أيام"
+                      type="number"
+                      fullWidth
+                      margin="normal"
+                      error={!!error}
+                      helperText={error?.message}
+                      value={field.value || ''}
+                    />
+                  )}
+                />
+              </Grid>
+            </Grid>
 
-                {/* Insurance Info (only if company_id exists on patientData) */}
-                {isCompanyPatient && currentCompanyId && (
-                  <div className="mt-6 space-y-4 rounded-lg border border-border bg-card p-4">
-                    <div className="flex items-center gap-2 text-sm">
-                      <h3 className="font-medium text-foreground">معلومات التأمين</h3>
-                      {patientData?.company?.name && (
-                        <span className="text-xs text-muted-foreground">({patientData.company.name})</span>
+            {/* Insurance Info (only if company_id exists on patientData) */}
+            {isCompanyPatient && currentCompanyId && (
+              <Paper elevation={1} sx={{ mt: 3, p: 3, border: 1, borderColor: 'divider' }}>
+                <Box display="flex" alignItems="center" gap={1} mb={2}>
+                  <Typography variant="subtitle1" fontWeight="medium">
+                    معلومات التأمين
+                  </Typography>
+                  {patientData?.company?.name && (
+                    <Typography variant="caption" color="text.secondary">
+                      ({patientData.company.name})
+                    </Typography>
+                  )}
+                </Box>
+                
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <Controller
+                    name="insurance_no"
+                    control={control}
+                    render={({ field, fieldState: { error } }) => (
+                      <TextField
+                        {...field}
+                        label="رقم التأمين"
+                        fullWidth
+                        size="small"
+                        error={!!error}
+                        helperText={error?.message}
+                        value={field.value || ''}
+                      />
+                    )}
+                  />
+                  
+                  <Controller
+                    name="guarantor"
+                    control={control}
+                    render={({ field, fieldState: { error } }) => (
+                      <TextField
+                        {...field}
+                        label="الضامن"
+                        fullWidth
+                        size="small"
+                        error={!!error}
+                        helperText={error?.message}
+                        value={field.value || ''}
+                      />
+                    )}
+                  />
+                  
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <Controller
+                      name="subcompany_id"
+                      control={control}
+                      render={({ field, fieldState: { error } }) => (
+                        <FormControl fullWidth size="small" error={!!error}>
+                          <InputLabel>الشركة الفرعية</InputLabel>
+                          <Select
+                            {...field}
+                            label="الشركة الفرعية"
+                            value={field.value || ''}
+                            disabled={isLoadingSubcompanies}
+                          >
+                            <MenuItem value="">لا يوجد</MenuItem>
+                            {subcompanies?.map(sub => (
+                              <MenuItem key={sub.id} value={String(sub.id)}>
+                                {sub.name}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                          {error && <Typography variant="caption" color="error">{error.message}</Typography>}
+                        </FormControl>
                       )}
-                    </div>
-                    <div className="space-y-3">
-                      <FormField control={control} name="insurance_no" render={({ field }) => (
-                        <FormItem><FormLabel className="text-xs">رقم التأمين</FormLabel><FormControl><Input {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>
-                      )} />
-                      <FormField control={control} name="guarantor" render={({ field }) => (
-                        <FormItem><FormLabel className="text-xs">الضامن</FormLabel><FormControl><Input {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>
-                      )} />
-                      <FormField control={control} name="subcompany_id" render={({ field }) => (
-                        <FormItem><FormLabel className="text-xs">الشركة الفرعية</FormLabel>
-                          <div className="flex items-center gap-1">
-                            <Select onValueChange={field.onChange} value={field.value || ''} disabled={isLoadingSubcompanies}>
-                              <FormControl><SelectTrigger className="h-8 text-xs flex-grow"><SelectValue placeholder="اختر الشركة الفرعية" /></SelectTrigger></FormControl>
-                              <SelectContent>
-                                <SelectItem value=" ">لا يوجد</SelectItem>
-                                {subcompanies?.map(sub => <SelectItem key={sub.id} value={String(sub.id)}>{sub.name}</SelectItem>)}
-                              </SelectContent>
-                            </Select>
-                            <Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => setShowSubcompanyDialog(true)}><PlusCircle className="h-3.5 w-3.5"/></Button>
-                          </div><FormMessage />
-                        </FormItem>
-                      )} />
-                      <FormField control={control} name="company_relation_id" render={({ field }) => (
-                        <FormItem><FormLabel className="text-xs">العلاقة</FormLabel>
-                           <div className="flex items-center gap-1">
-                            <Select onValueChange={field.onChange} value={field.value || ''} disabled={isLoadingRelations}>
-                              <FormControl><SelectTrigger className="h-8 text-xs flex-grow"><SelectValue placeholder="اختر العلاقة" /></SelectTrigger></FormControl>
-                              <SelectContent>
-                                <SelectItem value=" ">لا يوجد</SelectItem>
-                                {companyRelations?.map(rel => <SelectItem key={rel.id} value={String(rel.id)}>{rel.name}</SelectItem>)}
-                              </SelectContent>
-                            </Select>
-                            <Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => setShowRelationDialog(true)}><PlusCircle className="h-3.5 w-3.5"/></Button>
-                          </div><FormMessage />
-                        </FormItem>
-                      )} />
-                    </div>
-                  </div>
-                )}
-                <DialogFooter className="pt-6">
-                  <DialogClose asChild><Button type="button" variant="outline" disabled={updateMutation.isPending}>إلغاء</Button></DialogClose>
-                  <Button type="submit" disabled={updateMutation.isPending}>
-                    {updateMutation.isPending && <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />}
-                    حفظ التغييرات
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </ScrollArea>
+                    />
+                    <IconButton 
+                      size="small" 
+                      onClick={() => setShowSubcompanyDialog(true)}
+                      sx={{ flexShrink: 0 }}
+                    >
+                      <PlusCircle fontSize="small" />
+                    </IconButton>
+                  </Box>
+                  
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <Controller
+                      name="company_relation_id"
+                      control={control}
+                      render={({ field, fieldState: { error } }) => (
+                        <FormControl fullWidth size="small" error={!!error}>
+                          <InputLabel>العلاقة</InputLabel>
+                          <Select
+                            {...field}
+                            label="العلاقة"
+                            value={field.value || ''}
+                            disabled={isLoadingRelations}
+                          >
+                            <MenuItem value="">لا يوجد</MenuItem>
+                            {companyRelations?.map(rel => (
+                              <MenuItem key={rel.id} value={String(rel.id)}>
+                                {rel.name}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                          {error && <Typography variant="caption" color="error">{error.message}</Typography>}
+                        </FormControl>
+                      )}
+                    />
+                    <IconButton 
+                      size="small" 
+                      onClick={() => setShowRelationDialog(true)}
+                      sx={{ flexShrink: 0 }}
+                    >
+                      <PlusCircle fontSize="small" />
+                    </IconButton>
+                  </Box>
+                </Box>
+              </Paper>
+            )}
+          </Box>
         </DialogContent>
+        
+        <DialogActions sx={{ p: 3, pt: 2 }}>
+          <Button 
+            onClick={() => onOpenChange(false)} 
+            disabled={updateMutation.isPending}
+            variant="outlined"
+          >
+            إلغاء
+          </Button>
+          <Button 
+            type="submit" 
+            variant="contained"
+            disabled={updateMutation.isPending}
+            onClick={handleSubmit(onSubmit)}
+            startIcon={updateMutation.isPending ? <CircularProgress size={16} /> : null}
+          >
+            حفظ التغييرات
+          </Button>
+        </DialogActions>
       </Dialog>
       
       {/* Quick Add Dialogs */}

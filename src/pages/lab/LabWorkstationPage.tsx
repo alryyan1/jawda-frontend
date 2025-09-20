@@ -53,6 +53,7 @@ import {
   searchRecentDoctorVisits,
   togglePatientResultLock,
 } from "@/services/patientService"; // Updated service function
+import { getLabRequestsForVisit } from "@/services/labRequestService";
 import apiClient from "@/services/api";
 import LabQueueFilterDialog, {
   type LabQueueFilters,
@@ -139,6 +140,7 @@ const LabWorkstationPage: React.FC = () => {
   const [globalSearchTerm, setGlobalSearchTerm] = useState("");
   const [debouncedGlobalSearch, setDebouncedGlobalSearch] = useState("");
   const [isResultLocked, setIsResultLocked] = useState(false);
+  const [focusedChildTestForInfo, setFocusedChildTestForInfo] = useState<ChildTestWithResult | null>(null);
   // Dialog states
   const [whatsAppTextData, setWhatsAppTextData] = useState<{
     isOpen: boolean;
@@ -420,15 +422,41 @@ const LabWorkstationPage: React.FC = () => {
   const handleToggleResultLock = (queueItem: PatientLabQueueItem) =>
     toggleResultLockMutation.mutate(queueItem.patient_id);
   const handlePatientSelectFromQueue = useCallback(
-    (queueItem: PatientLabQueueItem | null) => {
+    async (queueItem: PatientLabQueueItem | null) => {
       setSelectedQueueItem(queueItem);
       setSelectedLabRequestForEntry(null);
       setFocusedChildTestForInfo(null);
       setSelectedVisitFromAutocomplete(null);
       setVisitIdSearchTerm("");
       setAutocompleteInputValue(""); // Clear autocomplete text field
+      
+      // If a patient is selected, fetch their lab requests and auto-select the first one
+      if (queueItem) {
+        try {
+          // Trigger fetch for patient data to get lock status
+          queryClient.prefetchQuery({
+            queryKey: ["patientDataForResultLock", queueItem.patient_id],
+            queryFn: () => getPatientById(queueItem.patient_id),
+          });
+          
+          // Fetch lab requests for this visit
+          const labRequests = await queryClient.fetchQuery({
+            queryKey: ['labRequestsForVisit', queueItem.visit_id],
+            queryFn: () => getLabRequestsForVisit(queueItem.visit_id),
+            staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+          });
+          
+          // Auto-select the first lab request if available
+          if (labRequests && labRequests.length > 0) {
+            setSelectedLabRequestForEntry(labRequests[0]);
+          }
+        } catch (error) {
+          console.error('Failed to fetch lab requests for auto-selection:', error);
+          // Don't show error toast as this is automatic behavior
+        }
+      }
     },
-    []
+    [queryClient]
   );
 
   const handleTestSelectForEntry = useCallback(
@@ -440,15 +468,13 @@ const LabWorkstationPage: React.FC = () => {
   );
 
   const handleResultsSaved = useCallback(() => {
-    if (selectedQueueItem) {
-      queryClient.invalidateQueries({
-        queryKey: ["labRequestsForVisit", selectedQueueItem.visit_id],
-      });
-    }
-    queryClient.invalidateQueries({
-      queryKey: ["labPendingQueue", currentShiftForQueue?.id, ""],
-    }); // Invalidate queue using current queue shift
-  }, [queryClient, selectedQueueItem, currentShiftForQueue?.id]);
+    // Don't invalidate queries on individual result saves
+    // The data is already updated by the save operation
+    // Only invalidate if we need to refresh the entire queue status
+    // queryClient.invalidateQueries({
+    //   queryKey: ["labPendingQueue", currentShiftForQueue?.id, ""],
+    // });
+  }, []);
 
   const handleChildTestFocus = useCallback(
     (childTest: ChildTestWithResult | null) => {
@@ -886,15 +912,7 @@ const LabWorkstationPage: React.FC = () => {
             appearanceSettings={appearanceSettings}
             currentShift={currentShiftForQueue}
             onShiftChange={handleShiftNavigationInQueue}
-            onPatientSelect={(queueItem) => {
-              setSelectedQueueItem(queueItem);
-              setSelectedLabRequestForEntry(null); // Reset selected test when patient changes
-              // Trigger fetch for patient data to get lock status
-              queryClient.prefetchQuery({
-                queryKey: ["patientDataForResultLock", queueItem.patient_id],
-                queryFn: () => getPatientById(queueItem.patient_id),
-              });
-            }}
+            onPatientSelect={handlePatientSelectFromQueue}
             selectedVisitId={selectedQueueItem?.visit_id || null}
             globalSearchTerm={debouncedGlobalSearch}
             queueFilters={appliedQueueFilters}

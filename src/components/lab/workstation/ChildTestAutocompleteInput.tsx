@@ -1,8 +1,7 @@
 // src/components/lab/workstation/ChildTestAutocompleteInput.tsx
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 // استخدام نص عربي مباشر بدلاً من i18n
 import { useMutation } from "@tanstack/react-query";
-import { debounce } from "lodash";
 import Autocomplete, {
   createFilterOptions,
 } from "@mui/material/Autocomplete";
@@ -37,6 +36,8 @@ interface ChildTestAutocompleteInputProps {
   childTestName: string; // Name for dialog title
   parentChildTestModel: ChildTestWithResult; // For focus callback
   onFocusChange: (childTest: ChildTestWithResult | null) => void;
+  // Ref for auto-focus functionality
+  inputRef?: React.RefObject<HTMLInputElement | null>;
   // For autosave trigger (optional, can be handled by parent watching RHF value)
   // onValueActuallyChanged: (newValue: string | ChildTestOption | null) => void;
 }
@@ -63,6 +64,7 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
   childTestName,
   parentChildTestModel,
   onFocusChange,
+  inputRef,
 }) => {
   // استخدام نص عربي مباشر بدلاً من i18n
 
@@ -79,35 +81,27 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
   // Save status indicators
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Debounced visual feedback for save status
-  const debouncedOnChange = useCallback(
-    (value: string) => {
-      // Clear existing timeout
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
-      }
+  // Immediate onChange without debouncing
+  const handleImmediateChange = useCallback((value: string | ChildTestOption | null) => {
+    // Call onChange immediately
+    onChange(value);
+    
+    // Set saving state for visual feedback
+    setIsSaving(true);
+    setShowSuccess(false);
 
-      // Set saving state
-      setIsSaving(true);
-      setShowSuccess(false);
-
-      // Set new timeout for visual feedback only
-      debounceTimeoutRef.current = setTimeout(() => {
-        // The actual API save will be handled by the parent component's useWatch mechanism
-        // We just need to show the saving/success states
-        setIsSaving(false);
-        setShowSuccess(true);
-        
-        // Hide success indicator after 2 seconds
-        setTimeout(() => {
-          setShowSuccess(false);
-        }, 2000);
-      }, 1000); // Show success after 1 second (API call should be done by then)
-    },
-    []
-  );
+    // Show success indicator after a short delay
+    setTimeout(() => {
+      setIsSaving(false);
+      setShowSuccess(true);
+      
+      // Hide success indicator after 2 seconds
+      setTimeout(() => {
+        setShowSuccess(false);
+      }, 2000);
+    }, 500);
+  }, [onChange]);
 
   // Fetch and cache options using localStorage (from your original component)
   useEffect(() => {
@@ -150,14 +144,7 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
     setCurrentInputValue(newValue);
   }, [value]); // Watch for value changes from parent
 
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
-      }
-    };
-  }, []);
+  // No cleanup needed for immediate function
 
   const handleDialogClose = () => {
     setDialogValue("");
@@ -194,7 +181,6 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
       createOptionMutation.mutate(dialogValue.trim());
     }
   };
-
   return (
     <>
       <Autocomplete<OptionType, false, false, true>
@@ -240,7 +226,7 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
         getOptionLabel={(option) =>
           typeof option === "string" ? option : option.name
         }
-        value={value}
+        value={value || null}
         onChange={(_, newValue) => {
           if (typeof newValue === "string") {
             // User typed and pressed Enter for a new value (freeSolo)
@@ -271,27 +257,19 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
           if (reason === "input") {
             // Update local state immediately for responsive typing
             setCurrentInputValue(newInputValue);
-            // Call onChange immediately to mark field as dirty in React Hook Form
-            onChange(newInputValue);
-            // Trigger debounced onChange for visual feedback
-            debouncedOnChange(newInputValue);
+            // Use immediate onChange to trigger save on every keystroke
+            handleImmediateChange(newInputValue);
           } else if (reason === "reset") {
             // Handle reset case
             setCurrentInputValue("");
             setShowSuccess(false);
             setIsSaving(false);
-            if (debounceTimeoutRef.current) {
-              clearTimeout(debounceTimeoutRef.current);
-            }
           } else if (reason === "clear") {
             // Handle clear case
             setCurrentInputValue("");
             setShowSuccess(false);
             setIsSaving(false);
-            if (debounceTimeoutRef.current) {
-              clearTimeout(debounceTimeoutRef.current);
-            }
-            onChange(null);
+            onChange(null); // Immediately clear the value
           }
         }}
         onFocus={() => onFocusChange(parentChildTestModel)}
@@ -338,6 +316,7 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
         renderInput={(params) => (
           <TextField
             {...params}
+            inputRef={inputRef}
             variant="outlined"
             placeholder="أدخل أو اختر النتيجة"
             error={error}

@@ -89,6 +89,9 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
   const [fieldSaveStatus, setFieldSaveStatus] = useState<
     Record<string, FieldSaveStatus>
   >({});
+  
+  // Ref to track the first input field for auto-focus
+  const firstInputRef = useRef<HTMLInputElement | null>(null);
 
   const {
     data: testDataForEntry,
@@ -130,20 +133,9 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
       }));
       toast.success("تم حفظ الحقل بنجاح");
 
-      queryClient
-        .invalidateQueries({
-          queryKey: ["labRequestForEntry", initialLabRequest.id],
-        })
-        .then(() => {
-          const updatedLabRequestData =
-            queryClient.getQueryData<MainTestWithChildrenResults>([
-              "labRequestForEntry",
-              initialLabRequest.id,
-            ]);
-          if (updatedLabRequestData) {
-            onResultsSaved(initialLabRequest);
-          }
-        });
+      // Don't invalidate queries immediately - the data is already updated
+      // Just call the callback to notify parent components
+      onResultsSaved(initialLabRequest);
 
       setTimeout(
         () =>
@@ -173,24 +165,21 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
     },
   });
 
-  const debouncedSaveField = useCallback(
-    debounce(
-      (
-        labRequestId: number,
-        childTestId: number,
-        fieldNameKey: string,
-        payload: SingleResultSavePayload
-      ) => {
-        setFieldSaveStatus((prev) => ({ ...prev, [fieldNameKey]: "saving" }));
-        saveSingleResultMutation.mutate({
-          labRequestId,
-          childTestId,
-          payload,
-          fieldNameKey,
-        });
-      },
-      1500
-    ),
+  const immediateSaveField = useCallback(
+    (
+      labRequestId: number,
+      childTestId: number,
+      fieldNameKey: string,
+      payload: SingleResultSavePayload
+    ) => {
+      setFieldSaveStatus((prev) => ({ ...prev, [fieldNameKey]: "saving" }));
+      saveSingleResultMutation.mutate({
+        labRequestId,
+        childTestId,
+        payload,
+        fieldNameKey,
+      });
+    },
     [saveSingleResultMutation]
   );
 
@@ -243,9 +232,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
           processedPayload
         );
         onResultsSaved(updatedLabRequest);
-        queryClient.invalidateQueries({
-          queryKey: ["labRequestForEntry", initialLabRequest.id],
-        });
+        // Don't invalidate queries - data is already updated
         setFieldSaveStatus((prev) => ({
           ...prev,
           ["main_test_comment"]: "success",
@@ -348,6 +335,20 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
     }
   }, [testDataForEntry, reset, initialLabRequest.comment]);
 
+  // Auto-focus the first input field when data is loaded
+  useEffect(() => {
+    if (testDataForEntry && testDataForEntry.child_tests_with_results.length > 0) {
+      // Use a small delay to ensure the DOM is fully rendered
+      const timer = setTimeout(() => {
+        if (firstInputRef.current) {
+          firstInputRef.current.focus();
+        }
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [testDataForEntry]);
+
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) =>
     setActiveTab(newValue);
 
@@ -358,29 +359,28 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
     normalRangeTextField: `results.${index}.normal_range_text` as Path<ResultEntryFormValues>,
   });
 
-  // Watch all form values for autosave
+  // Watch all form values for immediate autosave
   const watchedValues = useWatch({ control });
   const prevWatchedValuesRef = useRef(watchedValues);
 
   useEffect(() => {
     if (!testDataForEntry) return;
-    // alert('save')
-    // console.log('save')
+    
     const currentValues = watchedValues as ResultEntryFormValues;
     const prevValues = prevWatchedValuesRef.current as ResultEntryFormValues;
-    // console.log(currentValues,'currentValues',prevValues,'prevValues')
+    
     // Check each result field for changes
     currentValues.results?.forEach((currentResult, index) => {
       const prevResult = prevValues.results?.[index];
       const childTest = testDataForEntry.child_tests_with_results[index];
-      // console.log(prevResult,'prevResult',currentResult,'currentResult',childTest,'childTest')
+      
       if (!prevResult || !childTest?.id) return;
-      // console.log(currentResult.result_value,'currentResult.result_value',prevResult.result_value,'prevResult.result_value')
+      
       // Check result_value changes
       if (currentResult.result_value !== prevResult.result_value) {
         const fieldName = `results.${index}.result_value`;
         const fieldState = control.getFieldState(fieldName as Path<ResultEntryFormValues>);
-        // console.log(fieldState,'fieldState',fieldName,'fieldName')
+        
         if (fieldState.isDirty) {
           // Convert result_value to string format for API
           let apiValue: string | null = null;
@@ -392,7 +392,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
             apiValue = currentResult.result_value ? "true" : "false";
           }
           
-          debouncedSaveField(
+          immediateSaveField(
             initialLabRequest.id,
             childTest.id,
             fieldName,
@@ -406,7 +406,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
         const fieldName = `results.${index}.normal_range_text`;
         const fieldState = control.getFieldState(fieldName as Path<ResultEntryFormValues>);
         if (fieldState.isDirty) {
-          debouncedSaveField(
+          immediateSaveField(
             initialLabRequest.id,
             childTest.id,
             fieldName,
@@ -417,7 +417,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
     });
 
     prevWatchedValuesRef.current = watchedValues;
-  }, [watchedValues, testDataForEntry, control, debouncedSaveField, initialLabRequest.id]);
+  }, [watchedValues, testDataForEntry, control, immediateSaveField, initialLabRequest.id]);
 
   if (isLoading && !testDataForEntry) {
     return <div>جارٍ التحميل...</div>;
@@ -541,6 +541,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                           .map(
                           (ctResult, index) => {
                             const { resultValueField, normalRangeTextField } = getFieldNames(index);
+                            const isFirstInput = index === 0;
 
                             return (
                               <TableRow
@@ -624,6 +625,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                                             }
                                             parentChildTestModel={ctResult}
                                             onFocusChange={onChildTestFocus}
+                                            inputRef={isFirstInput ? firstInputRef : undefined}
                                           />
                                         </div>
                                       

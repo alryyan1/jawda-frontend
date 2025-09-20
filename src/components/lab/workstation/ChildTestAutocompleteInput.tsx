@@ -194,25 +194,25 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
         disabled={disabled}
         sx={{
           '& .MuiAutocomplete-root': {
-            fontSize: '0.75rem',
+            // fontSize: '0.75rem',
           },
           '& .MuiInputBase-root': {
             minHeight: '28px',
-            fontSize: '0.75rem',
+            // fontSize: '0.75rem',
             padding: '2px 8px',
           },
           '& .MuiInputBase-input': {
             padding: '2px 4px',
-            fontSize: '0.75rem',
+            // fontSize: '0.75rem',
           },
           '& .MuiAutocomplete-listbox': {
             backgroundColor: 'var(--background)',
             color: 'var(--foreground)',
-            fontSize: '0.75rem',
+            // fontSize: '0.75rem',
           },
           '& .MuiAutocomplete-option': {
             color: 'var(--foreground)',
-            fontSize: '0.75rem',
+            // fontSize: '0.75rem',
             padding: '4px 8px',
             minHeight: 'auto',
             '&:hover': {
@@ -334,7 +334,7 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
                 backgroundColor: 'var(--background)',
                 color: 'var(--foreground)',
                 minHeight: '28px',
-                fontSize: '0.75rem',
+                // fontSize: '0.75rem',
                 '& fieldset': {
                   borderColor: 'var(--border)',
                 },
@@ -347,15 +347,15 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
               },
               '& .MuiInputBase-input': {
                 padding: '2px 4px',
-                fontSize: '0.75rem',
+                // fontSize: '0.75rem',
               },
               '& .MuiInputLabel-root': {
                 color: 'var(--muted-foreground)',
-                fontSize: '0.75rem',
+                // fontSize: '0.75rem',
               },
               '& .MuiFormHelperText-root': {
                 color: 'var(--muted-foreground)',
-                fontSize: '0.65rem',
+                // fontSize: '0.65rem',
                 margin: '2px 0 0 0',
               },
             }}

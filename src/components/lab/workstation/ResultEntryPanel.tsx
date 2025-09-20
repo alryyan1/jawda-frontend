@@ -433,32 +433,12 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
     <>
       <div className="h-full flex flex-col p-3 sm:p-4 bg-slate-50 dark:bg-background shadow-inner">
      
-        <Box
-          sx={{ borderBottom: 1, borderColor: "divider", flexShrink: 0, mb: 1 }}
-        >
-          <Tabs
-            value={activeTab}
-            onChange={handleTabChange}
-            aria-label="Result entry tabs"
-            sx={{ minHeight: "40px" }}
-          >
-            <StyledTab
-              label="النتائج"
-              id="result-tab-0"
-              aria-controls="result-tabpanel-0"
-            />
-            <StyledTab
-              label="أخرى"
-              id="result-tab-1"
-              aria-controls="result-tabpanel-1"
-            />
-          </Tabs>
-        </Box>
+    
 
         <Form {...form}>
           <form className="flex-grow flex flex-col overflow-hidden">
             <CustomTabPanel value={activeTab} index={0}>
-              <ScrollArea className="h-full pr-1">
+              <ScrollArea className="h-[calc(100vh-100px)] pr-1">
                 {testDataForEntry.child_tests_with_results.length === 0 ? (
                   <div className="text-center text-muted-foreground py-10">
                     لا توجد فحوصات فرعية لإدخال النتائج
@@ -482,7 +462,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                           backgroundColor: "var(--background)",
                           color: "var(--foreground)",
                           borderBottomColor: "var(--border)",
-                          fontSize: "0.75rem",
+                          // fontSize: "0.75rem",
                           lineHeight: 1.2,
                         }
                       }}
@@ -493,7 +473,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                           backgroundColor: "var(--muted)",
                           color: "var(--foreground)",
                           padding: "2px 4px",
-                          fontSize: "0.7rem",
+                          // fontSize: "0.7rem",
                           fontWeight: "medium",
                         }
                       }}>
@@ -501,15 +481,15 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                           <TableCell
                             sx={{
                               fontWeight: "medium",
-                              width: "45%",
+                              width: "30%",
                               borderBottomColor: "var(--border)",
                               backgroundColor: "var(--muted)",
                               color: "var(--foreground)",
                               padding: "2px 4px",
-                              fontSize: "0.7rem",
+                              // fontSize: "0.7rem",
                             }}
                           >
-                            اسم الفحص
+                             Test 
                           </TableCell>
                           <TableCell
                             sx={{
@@ -518,11 +498,12 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                               borderBottomColor: "var(--border)",
                               backgroundColor: "var(--muted)",
                               color: "var(--foreground)",
+                              textAlign: "center",
                               padding: "2px 4px",
-                              fontSize: "0.7rem",
+                              // fontSize: "0.7rem",
                             }}
                           >
-                            النتيجة
+                            Result 
                           </TableCell>
                         </TableRow>
                       </TableHead>
@@ -564,7 +545,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                                     backgroundColor: "var(--background)",
                                     color: "var(--foreground)",
                                     padding: "2px 4px",
-                                    fontSize: "0.75rem",
+                                    // fontSize: "0.75rem",
                                   }}
                                 >
                                   <Typography
@@ -587,7 +568,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                                       alignItems: "center",
                                       mt: 0.1,
                                       color: "var(--muted-foreground)",
-                                      fontSize: "0.65rem",
+                                      // fontSize: "0.65rem",
                                       lineHeight: 1.1,
                                     }}
                                   >
@@ -600,7 +581,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                                     backgroundColor: "var(--background)",
                                     color: "var(--foreground)",
                                     padding: "2px 4px",
-                                    fontSize: "0.75rem",
+                                    // fontSize: "0.75rem",
                                   }}
                                 >
                                   <Controller

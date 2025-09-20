@@ -24,6 +24,7 @@ import {
 } from "@mui/material";
 import dayjs from "dayjs";
 import { useAuth } from "@/contexts/AuthContext";
+import { AttachMoney } from "@mui/icons-material";
 
 interface StatusItem {
   done?: boolean;
@@ -143,10 +144,10 @@ const StatusIcon: React.FC<{
           alignItems: 'center', 
           justifyContent: 'center',
           p: 1,
-          borderRadius: 2,
-          border: 1,
-          borderColor: isCompleted ? 'success.light' : 'divider',
-          backgroundColor: isCompleted ? 'success.light' : 'background.paper',
+          // borderRadius: 2,
+          // border: 1,
+          // borderColor: isCompleted ? 'success.light' : 'divider',
+          // backgroundColor: isCompleted ? 'success.light' : 'background.paper',
           transition: 'all 0.2s ease-in-out',
           width: 50,
           height: 50,
@@ -227,7 +228,7 @@ const PatientDetailsLabEntry: React.FC<PatientDetailsLabEntryProps> = ({
       {/* Enhanced Header */}
       <Box
         sx={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          background: '#92b7ff',
           color: 'white',
           py: 1,
           px: 2,
@@ -239,18 +240,18 @@ const PatientDetailsLabEntry: React.FC<PatientDetailsLabEntryProps> = ({
             left: 0,
             right: 0,
             height: '2px',
-            background: 'linear-gradient(90deg, #4facfe 0%, #00f2fe 100%)'
+            background: '#92b7ff'
           }
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 0.5 }}>
      
-          <div className="text-white text-4xl font-bold">
+          <div className="text-black! text-4xl font-bold">
             {visitId}
           </div>
       
         </Box>
-        <Typography variant="h6" sx={{ fontWeight: 600, textAlign: 'center', fontSize: '1.2rem' }}>
+        <Typography variant="h6" sx={{ fontWeight: 600, textAlign: 'center', fontSize: '1.2rem' ,color:'black!'}}>
           {patientName || "-"}
         </Typography>
     
@@ -304,7 +305,7 @@ const PatientDetailsLabEntry: React.FC<PatientDetailsLabEntryProps> = ({
             <StatusIcon 
               label="الدفع" 
               status={statuses?.payment} 
-              icon={CreditCard}
+              icon={AttachMoney}
             />
             <StatusIcon 
               label="جمع العينة" 

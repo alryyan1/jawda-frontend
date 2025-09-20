@@ -1,13 +1,21 @@
 import React from 'react';
-import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/ui/button';
-import { TableCell, TableRow } from '@/components/ui/table';
-import { Edit, Trash2, Settings2, GripVertical, Loader2 } from 'lucide-react';
+import { 
+  TableCell, 
+  TableRow, 
+  IconButton, 
+  Tooltip, 
+  CircularProgress,
+  Box 
+} from '@mui/material';
+import { 
+  Edit as EditIcon, 
+  Delete as DeleteIcon, 
+  Settings as SettingsIcon, 
+  DragIndicator as DragIcon 
+} from '@mui/icons-material';
 import type { ChildTest } from '@/types/labTests';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface ChildTestDisplayRowProps {
   childTest: ChildTest & { _localId: string }; // Ensure _localId is present for dnd-kit
@@ -30,7 +38,6 @@ const ChildTestDisplayRow: React.FC<ChildTestDisplayRowProps> = ({
   isDeletingThisRow,
   canEdit, canDelete, canManageOptions, canReorder
 }) => {
-  const { t } = useTranslation(['labTests', 'common']);
 
   const {
     attributes,
@@ -67,87 +74,128 @@ const ChildTestDisplayRow: React.FC<ChildTestDisplayRowProps> = ({
     <TableRow 
         ref={setNodeRef} 
         style={style} 
-        className={cn(
-            "touch-none", // Important for dnd-kit pointer sensor on touch devices
-            isDragging && "shadow-xl bg-muted dark:bg-muted/50 opacity-75"
-        )}
+        sx={{
+          touchAction: 'none', // Important for dnd-kit pointer sensor on touch devices
+          opacity: isDragging ? 0.7 : 1,
+          backgroundColor: isDragging ? 'action.hover' : 'inherit',
+          boxShadow: isDragging ? 3 : 'none',
+        }}
         data-testid={`child-test-row-${childTest.id || childTest._localId}`}
     >
       {/* Drag Handle Cell */}
-      <TableCell className="py-2 w-10 text-center print:hidden">
+      <TableCell sx={{ py: 1, width: 40, textAlign: 'center', display: { xs: 'none', print: 'none' } }}>
         {canReorder ? (
-          <button 
+          <IconButton 
             {...attributes} 
             {...listeners} 
-            className="cursor-grab active:cursor-grabbing p-1"
-            aria-label={t('labTests:childTests.dragToReorderHandle')}
+            size="small"
+            sx={{ cursor: 'grab', '&:active': { cursor: 'grabbing' } }}
+            aria-label="اسحب لإعادة الترتيب"
           >
-            <GripVertical className="h-5 w-5 text-muted-foreground hover:text-foreground" />
-          </button>
+            <DragIcon />
+          </IconButton>
         ) : (
-          <div className="p-1"><GripVertical className="h-5 w-5 text-muted-foreground/30" /></div>
+          <Box sx={{ p: 1 }}>
+            <DragIcon sx={{ color: 'text.disabled' }} />
+          </Box>
         )}
       </TableCell>
 
       {/* Data Cells */}
-      <TableCell className="py-2 font-medium min-w-[180px] sm:min-w-[200px] truncate text-center" title={childTest.child_test_name}>
+      <TableCell 
+        sx={{ 
+          py: 1, 
+          fontWeight: 'medium', 
+          minWidth: { xs: 180, sm: 200 }, 
+          textAlign: 'center',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap'
+        }} 
+        title={childTest.child_test_name}
+      >
         {childTest.child_test_name}
       </TableCell>
-      <TableCell className="py-2 hidden sm:table-cell min-w-[70px] sm:min-w-[80px] truncate text-center" title={childTest.unit?.name || childTest.unit_name || ''}>
+      <TableCell 
+        sx={{ 
+          py: 1, 
+          display: { xs: 'none', sm: 'table-cell' },
+          minWidth: { xs: 70, sm: 80 }, 
+          textAlign: 'center',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap'
+        }} 
+        title={childTest.unit?.name || childTest.unit_name || ''}
+      >
         {childTest.unit?.name || childTest.unit_name || '-'}
       </TableCell>
-      <TableCell className="py-2 hidden md:table-cell min-w-[100px] sm:min-w-[120px] truncate text-center" title={childTest.child_group?.name || childTest.child_group_name || ''}>
+      <TableCell 
+        sx={{ 
+          py: 1, 
+          display: { xs: 'none', md: 'table-cell' },
+          minWidth: { xs: 100, sm: 120 }, 
+          textAlign: 'center',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap'
+        }} 
+        title={childTest.child_group?.name || childTest.child_group_name || ''}
+      >
         {childTest.child_group?.name || childTest.child_group_name || '-'}
       </TableCell>
-      <TableCell className="py-2 hidden lg:table-cell min-w-[120px] sm:min-w-[150px] truncate text-center" title={childTest.normalRange || ''}>
+      <TableCell 
+        sx={{ 
+          py: 1, 
+          display: { xs: 'none', lg: 'table-cell' },
+          minWidth: { xs: 120, sm: 150 }, 
+          textAlign: 'center',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap'
+        }} 
+        title={childTest.normalRange || ''}
+      >
         {childTest.normalRange || 
          ((childTest.low !== null && childTest.low !== undefined && String(childTest.low).trim() !== '') || 
           (childTest.upper !== null && childTest.upper !== undefined && String(childTest.upper).trim() !== '') ? 
             `${String(childTest.low || '-').trim()} - ${String(childTest.upper || '-').trim()}` 
             : '-')}
       </TableCell>
-      <TableCell className="py-2 text-center w-[70px]">{displayOrder || '-'}</TableCell>
+      <TableCell sx={{ py: 1, textAlign: 'center', width: 70 }}>
+        {displayOrder || '-'}
+      </TableCell>
       
       {/* Actions Cell */}
-      <TableCell className="py-2 text-right w-[130px] sm:w-[150px] print:hidden">
-        <div className="flex gap-0.5 sm:gap-1 justify-end items-center">
+      <TableCell sx={{ py: 1, textAlign: 'right', width: { xs: 130, sm: 150 }, display: { print: 'none' } }}>
+        <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end', alignItems: 'center' }}>
           {canManageOptions && isPotentiallyQualitative && childTest.id && ( // Only for persisted child tests
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onManageOptions(childTest)}>
-                  <Settings2 className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent><p>{t('labTests:childTests.manageOptions')}</p></TooltipContent>
+            <Tooltip title="إدارة الخيارات">
+              <IconButton size="small" onClick={() => onManageOptions(childTest)}>
+                <SettingsIcon />
+              </IconButton>
             </Tooltip>
           )}
           {canEdit && childTest.id && ( // Can only edit persisted child tests
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(childTest.id!)}>
-                  <Edit className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent><p>{t('common:edit')}</p></TooltipContent>
+            <Tooltip title="تعديل">
+              <IconButton size="small" onClick={() => onEdit(childTest.id!)}>
+                <EditIcon />
+              </IconButton>
             </Tooltip>
           )}
           {canDelete && childTest.id && ( // Can only delete persisted child tests
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-7 w-7 text-destructive hover:text-destructive" 
-                  onClick={() => onDelete(childTest.id!)} 
-                  disabled={isDeletingThisRow}
-                >
-                  {isDeletingThisRow ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent><p>{t('common:delete')}</p></TooltipContent>
+            <Tooltip title="حذف">
+              <IconButton 
+                size="small"
+                color="error"
+                onClick={() => onDelete(childTest.id!)} 
+                disabled={isDeletingThisRow}
+              >
+                {isDeletingThisRow ? <CircularProgress size={16} /> : <DeleteIcon />}
+              </IconButton>
             </Tooltip>
           )}
-        </div>
+        </Box>
       </TableCell>
     </TableRow>
   );

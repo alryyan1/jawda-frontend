@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { useTranslation } from "react-i18next";
 import {
   DndContext,
   closestCenter,
@@ -24,12 +23,18 @@ import {
 import {
   Table,
   TableBody,
+  TableCell,
+  TableContainer,
   TableHead,
-  TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Loader2, PlusCircle } from "lucide-react";
+  Paper,
+  Button,
+  CircularProgress,
+  Box,
+  Typography,
+  Alert,
+} from "@mui/material";
+import { Add as PlusIcon } from "@mui/icons-material";
 import { toast } from "sonner";
 
 import type {
@@ -64,6 +69,7 @@ interface ChildTestsTableProps {
 }
 
 const ChildTestsTable: React.FC<ChildTestsTableProps> = ({
+  mainTestId: _mainTestId, // Currently unused but kept for potential future use
   initialChildTests,
   isLoadingList,
   units,
@@ -83,7 +89,6 @@ const ChildTestsTable: React.FC<ChildTestsTableProps> = ({
   onUnitQuickAdd,
   onChildGroupQuickAdd,
 }) => {
-  const { t } = useTranslation(["labTests", "common"]);
   const [displayableChildTests, setDisplayableChildTests] = useState<ChildTest[]>([]);
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [activeFormChildTest, setActiveFormChildTest] = useState<Partial<ChildTestFormDataType> | null>(null);
@@ -92,6 +97,9 @@ const ChildTestsTable: React.FC<ChildTestsTableProps> = ({
   const [isSavingOrder, setIsSavingOrder] = useState(false);
   const [orderHasChanged, setOrderHasChanged] = useState(false);
   const [isDeletingId, setIsDeletingId] = useState<number | null>(null);
+
+  // Mark mainTestId as intentionally unused for now
+  void _mainTestId;
 
   useEffect(() => {
     const processedTests = initialChildTests
@@ -150,15 +158,15 @@ const ChildTestsTable: React.FC<ChildTestsTableProps> = ({
       setIsSavingOrder(true);
       try {
         await onOrderChange(orderedPersistedIds);
-        toast.success(t("labTests:childTests.orderSavedSuccess"));
+        toast.success("تم حفظ ترتيب الفحوصات بنجاح");
         setOrderHasChanged(false);
       } catch {
-        toast.error(t("labTests:childTests.orderSaveError"));
+        toast.error("خطأ في حفظ ترتيب الفحوصات");
       } finally {
         setIsSavingOrder(false);
       }
     } else if (displayableChildTests.some((ct) => !ct.id)) {
-      toast.info(t("labTests:childTests.saveNewItemsBeforeOrder"));
+      toast.info("يرجى حفظ العناصر الجديدة قبل تغيير الترتيب");
       setOrderHasChanged(false);
     }
   };
@@ -221,9 +229,9 @@ const ChildTestsTable: React.FC<ChildTestsTableProps> = ({
 
   if (isLoadingList && displayableChildTests.length === 0) {
     return (
-      <div className="p-6 text-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
+      <Box display="flex" justifyContent="center" alignItems="center" p={6}>
+        <CircularProgress />
+      </Box>
     );
   }
 
@@ -250,43 +258,44 @@ const ChildTestsTable: React.FC<ChildTestsTableProps> = ({
   }
 
   return (
-    <div className="space-y-3 max-w-[1200px] mx-auto">
-      <div className="flex justify-end items-center gap-2">
+    <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 2, mb: 3 }}>
         {orderHasChanged && canReorder && (
           <Button
             onClick={saveOrder}
-            size="sm"
-            variant="outline"
+            size="small"
+            variant="outlined"
             disabled={isSavingOrder || isSavingChildTest}
+            startIcon={isSavingOrder ? <CircularProgress size={16} /> : null}
           >
-            {isSavingOrder && (
-              <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2" />
-            )}
-            {t("labTests:childTests.saveOrderButton")}
+            حفظ الترتيب
           </Button>
         )}
         {canAdd && (
           <Button
             onClick={handleStartAddNew}
-            size="sm"
+            size="small"
+            variant="contained"
             disabled={isSavingChildTest}
+            startIcon={<PlusIcon />}
           >
-            <PlusCircle className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
-            {t("labTests:childTests.addParameterButton")}
+            إضافة معامل
           </Button>
         )}
-      </div>
+      </Box>
 
       {displayableChildTests.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-6">
-          {t("labTests:childTests.noChildTestsYet")}
-        </p>
+        <Typography variant="body2" color="text.secondary" textAlign="center" py={6}>
+          لا توجد فحوصات فرعية بعد
+        </Typography>
       ) : (
-        <div className="border rounded-md overflow-x-auto">
+        <Paper sx={{ overflow: 'hidden' }}>
           {canReorder && (
-            <p className="text-xs text-muted-foreground p-2 text-center bg-amber-50 dark:bg-amber-900/20 border-b">
-              {t("labTests:childTests.dragToReorder")}
-            </p>
+            <Alert severity="info" sx={{ borderRadius: 0, mb: 0 }}>
+              <Typography variant="caption">
+                اسحب العناصر لإعادة ترتيبها
+              </Typography>
+            </Alert>
           )}
           <DndContext
             sensors={sensors}
@@ -301,54 +310,48 @@ const ChildTestsTable: React.FC<ChildTestsTableProps> = ({
               )}
               strategy={verticalListSortingStrategy}
             >
-              <div className="min-w-full inline-block align-middle">
-                <div className="overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-10 print:hidden text-center"></TableHead>
-                        <TableHead className="text-center">{t("labTests:childTests.form.name")}</TableHead>
-                        <TableHead className="hidden sm:table-cell text-center">
-                          {t("labTests:childTests.form.unit")}
-                        </TableHead>
-                        <TableHead className="hidden md:table-cell text-center">
-                          {t("labTests:childTests.form.group")}
-                        </TableHead>
-                        <TableHead className="hidden lg:table-cell text-center">
-                          {t("labTests:childTests.form.normalRangeText")}
-                        </TableHead>
-                        <TableHead className="text-center">
-                          {t("labTests:childTests.form.displayOrder")}
-                        </TableHead>
-                        <TableHead className="text-center">
-                          {t("common:table.actions", "Actions")}
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {displayableChildTests.map((ct, index) => (
-                        <ChildTestDisplayRow
-                          key={ct._localId || String(ct.id)}
-                          childTest={{ ...ct, _localId: ct._localId || String(ct.id), test_order: index + 1 }}
-                          onEdit={() => handleStartEdit(ct)}
-                          onDelete={() => handleDeleteFromDisplayRow(ct.id!)}
-                          onManageOptions={onManageOptions}
-                          isDeletingThisRow={isDeletingId === ct.id}
-                          canEdit={canEdit}
-                          canDelete={canDelete}
-                          canManageOptions={canManageOptions}
-                          canReorder={canReorder}
-                        />
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ width: 40, display: { xs: 'none', print: 'none' } }}></TableCell>
+                      <TableCell align="center">الاسم</TableCell>
+                      <TableCell align="center" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
+                        الوحدة
+                      </TableCell>
+                      <TableCell align="center" sx={{ display: { xs: 'none', md: 'table-cell' } }}>
+                        المجموعة
+                      </TableCell>
+                      <TableCell align="center" sx={{ display: { xs: 'none', lg: 'table-cell' } }}>
+                        النطاق الطبيعي
+                      </TableCell>
+                      <TableCell align="center">ترتيب العرض</TableCell>
+                      <TableCell align="center">الإجراءات</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {displayableChildTests.map((ct, index) => (
+                      <ChildTestDisplayRow
+                        key={ct._localId || String(ct.id)}
+                        childTest={{ ...ct, _localId: ct._localId || String(ct.id), test_order: index + 1 }}
+                        onEdit={() => handleStartEdit(ct)}
+                        onDelete={() => handleDeleteFromDisplayRow(ct.id!)}
+                        onManageOptions={onManageOptions}
+                        isDeletingThisRow={isDeletingId === ct.id}
+                        canEdit={canEdit}
+                        canDelete={canDelete}
+                        canManageOptions={canManageOptions}
+                        canReorder={canReorder}
+                      />
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
             </SortableContext>
           </DndContext>
-        </div>
+        </Paper>
       )}
-    </div>
+    </Box>
   );
 };
 

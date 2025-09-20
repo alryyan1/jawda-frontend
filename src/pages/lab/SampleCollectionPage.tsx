@@ -1,5 +1,5 @@
 // src/pages/lab/SampleCollectionPage.tsx
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
 
 import { 
@@ -9,9 +9,11 @@ import {
   Paper, 
   CircularProgress,
   AppBar,
-  Toolbar
+  Toolbar,
+  IconButton,
+  Tooltip
 } from "@mui/material";
-import { Search, Users, Check, Clock } from "lucide-react";
+import { Search, Users, Check, Clock, Volume2, VolumeX } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 import CollectedSamples from "@/components/lab/sample_collection/CollectedSamples";
@@ -29,10 +31,61 @@ import apiClient from "@/services/api";
 import { getLabRequestsForVisit } from "@/services/labRequestService";
 import { getAppearanceSettings, type LabAppearanceSettings } from "@/lib/appearance-settings-store";
 import { getSampleCollectionQueue } from "@/services/sampleCollectionService";
+import realtimeService from "@/services/realtimeService";
+import type { Patient } from "@/types/patients";
 
 import SendWhatsAppTextDialogSC from "@/components/lab/sample_collection/SendWhatsAppTextDialogSC";
 import SendPdfToCustomNumberDialogSC from "@/components/lab/sample_collection/SendPdfToCustomNumberDialogSC";
 import { getDoctorVisitById } from "@/services/visitService";
+
+// Global event handler manager to prevent multiple handlers
+class GlobalEventManager {
+  private static instance: GlobalEventManager;
+  private activeHandlers: Set<string> = new Set();
+  private processedEvents: Set<string> = new Set();
+
+  static getInstance(): GlobalEventManager {
+    if (!GlobalEventManager.instance) {
+      GlobalEventManager.instance = new GlobalEventManager();
+    }
+    return GlobalEventManager.instance;
+  }
+
+  canRegisterHandler(handlerId: string): boolean {
+    if (this.activeHandlers.has(handlerId)) {
+      console.log('GlobalEventManager: Handler already registered:', handlerId);
+      return false;
+    }
+    this.activeHandlers.add(handlerId);
+    console.log('GlobalEventManager: Registered handler:', handlerId);
+    return true;
+  }
+
+  unregisterHandler(handlerId: string): void {
+    this.activeHandlers.delete(handlerId);
+    console.log('GlobalEventManager: Unregistered handler:', handlerId);
+  }
+
+  canProcessEvent(eventId: string): boolean {
+    if (this.processedEvents.has(eventId)) {
+      console.log('GlobalEventManager: Event already processed:', eventId);
+      return false;
+    }
+    this.processedEvents.add(eventId);
+    
+    // Remove event after 5 seconds
+    setTimeout(() => {
+      this.processedEvents.delete(eventId);
+    }, 5000);
+    
+    return true;
+  }
+
+  clear(): void {
+    this.activeHandlers.clear();
+    this.processedEvents.clear();
+  }
+}
 
 const SampleCollectionPage: React.FC = () => {
   const {
@@ -56,7 +109,227 @@ const SampleCollectionPage: React.FC = () => {
   const [allQueueItems, setAllQueueItems] = useState<PatientLabQueueItem[]>([]);
   const [isLoadingQueue, setIsLoadingQueue] = useState(false);
   const [queueError, setQueueError] = useState<string | null>(null);
+  
+  // Ref to prevent concurrent API calls
+  const isFetchingRef = useRef(false);
+  
+  // Ref to manage debounced refresh timeout
+  const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  
+  // Ref to track if shift is being loaded to prevent multiple calls
+  const shiftLoadingRef = useRef(false);
 
+  // New Payment Badge State
+  const [newPaymentBadges, setNewPaymentBadges] = useState<Set<number>>(new Set());
+
+  // Sound system state
+  const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+
+  // Function to add and remove payment badge
+  const addPaymentBadge = useCallback((visitId: number) => {
+    setNewPaymentBadges(prev => new Set(prev).add(visitId));
+    
+    // Remove badge after 15 seconds
+    setTimeout(() => {
+      setNewPaymentBadges(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(visitId);
+        return newSet;
+      });
+    }, 15000);
+  }, []);
+
+  // Debounced refresh function to prevent multiple rapid API calls
+  const debouncedRefresh = useCallback(() => {
+    // Clear any existing timeout
+    if (refreshTimeoutRef.current) {
+      console.log('SampleCollectionPage: Clearing existing refresh timeout');
+      clearTimeout(refreshTimeoutRef.current);
+    }
+    
+    // Set a new timeout
+    console.log('SampleCollectionPage: Setting new debounced refresh timeout');
+    refreshTimeoutRef.current = setTimeout(() => {
+      console.log('SampleCollectionPage: Executing debounced refresh - making API call');
+      fetchQueueDataRef.current();
+      refreshTimeoutRef.current = null;
+    }, 3000); // Wait 3 seconds before refreshing
+  }, []);
+
+  // Function to initialize audio context (call on first user interaction)
+  const initializeAudio = useCallback(() => {
+    if (!audioContext) {
+      try {
+        const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+        setAudioContext(ctx);
+        console.log('Audio context initialized');
+      } catch (error) {
+        console.warn('Could not initialize audio context:', error);
+        setSoundEnabled(false);
+      }
+    }
+  }, [audioContext]);
+
+  // Function to play payment sound
+  const playPaymentSound = useCallback(async () => {
+    if (!soundEnabled) return;
+
+    try {
+      // Initialize audio context if needed
+      if (!audioContext) {
+        initializeAudio();
+      }
+
+      const audio = new Audio('/new-payment.wav');
+      audio.volume = 0.7;
+      audio.preload = 'auto';
+      
+      // Try to play the sound
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        await playPromise;
+        console.log('Payment sound played successfully');
+      }
+    } catch (error) {
+      console.warn('Could not play payment sound:', error);
+      // If autoplay is blocked, try to enable it for future plays
+      if (error instanceof Error && error.name === 'NotAllowedError') {
+        console.warn('Autoplay blocked - user interaction required to enable sound');
+        setSoundEnabled(false);
+      }
+    }
+  }, [soundEnabled, audioContext, initializeAudio]);
+
+  // Fetch all queue data
+  const fetchQueueData = useCallback(async () => {
+    if (!currentShiftForQueue) return;
+    
+    // Prevent concurrent API calls
+    if (isFetchingRef.current) {
+      console.log('SampleCollectionPage: fetchQueueData already in progress, skipping');
+      return;
+    }
+    
+    console.log('SampleCollectionPage: fetchQueueData called', {
+      shiftId: currentShiftForQueue.id,
+      search: debouncedGlobalSearch
+    });
+    
+    isFetchingRef.current = true;
+    setIsLoadingQueue(true);
+    setQueueError(null);
+    
+    try {
+      const filters: Record<string, string | number | boolean> = {
+        search: debouncedGlobalSearch,
+        per_page: 1000, // Fetch all data without pagination
+      };
+      
+      if (currentShiftForQueue.id) {
+        filters.shift_id = currentShiftForQueue.id;
+      } else {
+        const today = new Date().toISOString().split('T')[0];
+        filters.date_from = today;
+        filters.date_to = today;
+      }
+      
+      console.log('SampleCollectionPage: Making API request with filters:', filters);
+      const response = await getSampleCollectionQueue(filters);
+      setAllQueueItems(response.data || []);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'فشل في تحميل البيانات';
+      setQueueError(errorMessage);
+      setAllQueueItems([]);
+    } finally {
+      setIsLoadingQueue(false);
+      isFetchingRef.current = false;
+    }
+  }, [currentShiftForQueue, debouncedGlobalSearch]);
+
+  // Create refs for stable function references
+  const playPaymentSoundRef = useRef(playPaymentSound);
+  const fetchQueueDataRef = useRef(fetchQueueData);
+  const addPaymentBadgeRef = useRef(addPaymentBadge);
+  const debouncedRefreshRef = useRef(debouncedRefresh);
+
+  // Update refs when functions change
+  useEffect(() => {
+    playPaymentSoundRef.current = playPaymentSound;
+  }, [playPaymentSound]);
+
+  useEffect(() => {
+    fetchQueueDataRef.current = fetchQueueData;
+  }, [fetchQueueData]);
+
+  useEffect(() => {
+    addPaymentBadgeRef.current = addPaymentBadge;
+  }, [addPaymentBadge]);
+
+  useEffect(() => {
+    debouncedRefreshRef.current = debouncedRefresh;
+  }, [debouncedRefresh]);
+
+  // Real-time event subscription for lab payments
+  useEffect(() => {
+    const eventManager = GlobalEventManager.getInstance();
+    const handlerId = 'SampleCollectionPage-LabPayment';
+    
+    // Check if we can register this handler
+    if (!eventManager.canRegisterHandler(handlerId)) {
+      console.log('SampleCollectionPage: Event handler already registered globally, skipping');
+      return;
+    }
+    
+    const handleLabPayment = async (data: { visit: DoctorVisit; patient: Patient; labRequests: LabRequest[] }) => {
+      // Create event identifier based on visit ID only (not timestamp)
+      const eventId = `lab-payment-${data.visit.id}`;
+      
+      // Check if we can process this event globally
+      if (!eventManager.canProcessEvent(eventId)) {
+        console.log('SampleCollectionPage: Duplicate lab payment event ignored for visit:', data.visit.id);
+        return;
+      }
+      
+      console.log('Lab payment event received in SampleCollectionPage:', data, 'Event ID:', eventId);
+      
+      try {
+        // Play payment notification sound
+        await playPaymentSoundRef.current();
+
+        // Add payment badge for 15 seconds
+        addPaymentBadgeRef.current(data.visit.id);
+
+        // Show a toast notification
+        toast.success(`تم دفع فحوصات المختبر للمريض: ${data.patient.name}`);
+        
+        // Use debounced refresh to prevent multiple rapid calls
+        debouncedRefreshRef.current();
+        
+      } catch (error) {
+        console.error('Error processing lab payment event:', error);
+        toast.error('فشل في تحديث قائمة جمع العينات');
+      }
+    };
+
+    console.log('SampleCollectionPage: Setting up lab payment event listener');
+    // Subscribe to lab-payment events
+    realtimeService.onLabPayment(handleLabPayment);
+
+    // Cleanup subscription on component unmount
+    return () => {
+      console.log('SampleCollectionPage: Cleaning up lab payment event listener');
+      // Clear any pending refresh timeout
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+        refreshTimeoutRef.current = null;
+      }
+      // Unregister handler from global manager
+      eventManager.unregisterHandler(handlerId);
+      realtimeService.offLabPayment(handleLabPayment);
+    };
+  }, []); // Empty dependency array - only run once on mount
 
   // Dialog states
   const [whatsAppTextData, setWhatsAppTextData] = useState<{
@@ -75,65 +348,54 @@ const SampleCollectionPage: React.FC = () => {
     isLoading: boolean;
   }>({ isOpen: false, url: null, title: "", fileName: "", isLoading: false });
 
-  // Fetch all queue data
-  const fetchQueueData = useCallback(async () => {
-    if (!currentShiftForQueue) return;
-    
-    setIsLoadingQueue(true);
-    setQueueError(null);
-    
-    try {
-      const filters: Record<string, string | number | boolean> = {
-        search: debouncedGlobalSearch,
-        per_page: 1000, // Fetch all data without pagination
-      };
-      
-      if (currentShiftForQueue.id) {
-        filters.shift_id = currentShiftForQueue.id;
-      } else {
-        const today = new Date().toISOString().split('T')[0];
-        filters.date_from = today;
-        filters.date_to = today;
-      }
-      
-      const response = await getSampleCollectionQueue(filters);
-      setAllQueueItems(response.data || []);
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'فشل في تحميل البيانات';
-      setQueueError(errorMessage);
-      setAllQueueItems([]);
-    } finally {
-      setIsLoadingQueue(false);
-    }
-  }, [currentShiftForQueue, debouncedGlobalSearch]);
-
   useEffect(() => {
     if (
       globalClinicShift &&
       (!currentShiftForQueue ||
         globalClinicShift.id !== currentShiftForQueue.id)
     ) {
+      console.log('SampleCollectionPage: Setting shift from global context', globalClinicShift.id);
       setCurrentShiftForQueue(globalClinicShift);
     } else if (
       !globalClinicShift &&
       !isLoadingGlobalShift &&
-      currentShiftForQueue === null
+      currentShiftForQueue === null &&
+      !shiftLoadingRef.current
     ) {
       // Attempt to load last open shift if no global default
+      console.log('SampleCollectionPage: Loading current open shift');
+      shiftLoadingRef.current = true;
       getCurrentOpenShift()
         .then((shift) => {
-          if (shift) setCurrentShiftForQueue(shift);
+          if (shift) {
+            console.log('SampleCollectionPage: Found open shift', shift.id);
+            setCurrentShiftForQueue(shift);
+          }
         })
         .catch(() => {
-          /* no open shift found */
+          console.log('SampleCollectionPage: No open shift found');
+        })
+        .finally(() => {
+          shiftLoadingRef.current = false;
         });
     }
   }, [globalClinicShift, currentShiftForQueue, isLoadingGlobalShift]);
 
   // Fetch data when shift or search term changes
   useEffect(() => {
+    // Only fetch if we have a valid shift and avoid duplicate calls
+    if (!currentShiftForQueue) {
+      console.log('SampleCollectionPage: No shift available, skipping fetch');
+      return;
+    }
+    
+    console.log('SampleCollectionPage: useEffect triggered for fetchQueueData', {
+      currentShiftForQueue: currentShiftForQueue?.id,
+      debouncedGlobalSearch
+    });
     fetchQueueData();
-  }, [fetchQueueData]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentShiftForQueue?.id, debouncedGlobalSearch]);
 
   // Distribute data based on sample_collected field
   const collectedItems = allQueueItems.filter(item => 
@@ -306,6 +568,7 @@ const SampleCollectionPage: React.FC = () => {
         bgcolor="grey.100" 
         fontSize="0.875rem" 
         overflow="hidden"
+        onClick={initializeAudio} // Initialize audio on first click
       >
         <AppBar
           position="static"
@@ -349,6 +612,26 @@ const SampleCollectionPage: React.FC = () => {
               />
             </Box>
             <Box sx={{ width: '16.67%', display: { xs: 'none', lg: 'block' } }} />
+            <Tooltip title={soundEnabled ? "إيقاف الصوت" : "تشغيل الصوت"}>
+              <IconButton 
+                onClick={() => {
+                  if (!soundEnabled) {
+                    setSoundEnabled(true);
+                    initializeAudio();
+                    toast.info("تم تفعيل الصوت");
+                  } else {
+                    setSoundEnabled(false);
+                    toast.info("تم إيقاف الصوت");
+                  }
+                }} 
+                size="small"
+                sx={{
+                  color: soundEnabled ? 'success.main' : 'error.main',
+                }}
+              >
+                {soundEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+              </IconButton>
+            </Tooltip>
           </Toolbar>
         </AppBar>
 
@@ -384,6 +667,7 @@ const SampleCollectionPage: React.FC = () => {
               }
               onSendPdfToCustomNumber={handleSendPdfToCustomNumber}
               onToggleResultLock={handleToggleResultLock}
+              newPaymentBadges={newPaymentBadges}
             />
           </Paper>
 
@@ -418,6 +702,7 @@ const SampleCollectionPage: React.FC = () => {
               }
               onSendPdfToCustomNumber={handleSendPdfToCustomNumber}
               onToggleResultLock={handleToggleResultLock}
+              newPaymentBadges={newPaymentBadges}
             />
           </Paper>
 

@@ -21,6 +21,7 @@ interface CollectedSamplesProps {
   appearanceSettings: LabAppearanceSettings;
   isLoading?: boolean;
   error?: string | null;
+  newPaymentBadges?: Set<number>; // Set of visit IDs that should show new payment badge
 
   // Context Menu Action Callbacks
   onSendWhatsAppText: (queueItem: PatientLabQueueItem) => void;
@@ -30,7 +31,7 @@ interface CollectedSamplesProps {
 }
 
 const CollectedSamples: React.FC<CollectedSamplesProps> = ({
-  queueItems, onPatientSelect, selectedVisitId, appearanceSettings, isLoading = false, error = null,
+  queueItems, onPatientSelect, selectedVisitId, appearanceSettings, isLoading = false, error = null, newPaymentBadges = new Set(),
   onSendWhatsAppText, onSendPdfToPatient, onSendPdfToCustomNumber, onToggleResultLock
 }) => {
 
@@ -124,6 +125,7 @@ const CollectedSamples: React.FC<CollectedSamplesProps> = ({
                   onSendPdfToPatient={onSendPdfToPatient}
                   onSendPdfToCustomNumber={onSendPdfToCustomNumber}
                   onToggleResultLock={onToggleResultLock}
+                  showNewPaymentBadge={newPaymentBadges.has(item.visit_id)}
                 />
               ))}
             </Box>

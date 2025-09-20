@@ -3,28 +3,22 @@ import React, { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useTranslation } from "react-i18next";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { TableCell, TableRow } from "@/components/ui/table";
-import { Loader2, PlusCircle, GripVertical } from "lucide-react";
+import { 
+  Button, 
+  TextField, 
+  Select, 
+  MenuItem, 
+  FormControl, 
+  InputLabel, 
+  FormHelperText,
+  TableCell, 
+  TableRow,
+  Box,
+  CircularProgress,
+  IconButton
+} from "@mui/material";
+import { Add as PlusIcon, DragIndicator as DragIcon } from "@mui/icons-material";
 
 import type {
   Unit,
@@ -48,16 +42,14 @@ interface ChildTestEditableRowProps {
   onChildGroupQuickAdd: (newGroup: ChildGroup) => void;
 }
 
-// Zod Schema (same as defined before in previous model answers for ChildTestItemRow)
-const getChildTestFormSchema = (t: (key: string, options?: any) => string) =>
+// Zod Schema with direct Arabic text
+const getChildTestFormSchema = () =>
   z
     .object({
       child_test_name: z
         .string()
         .min(1, {
-          message: t("common:validation.required", {
-            field: t("labTests:childTests.form.name"),
-          }),
+          message: "اسم الفحص مطلوب",
         })
         .max(70),
       low: z
@@ -67,7 +59,7 @@ const getChildTestFormSchema = (t: (key: string, options?: any) => string) =>
         .refine(
           (val) =>
             !val || val.trim() === "" || /^-?\d*\.?\d*$/.test(val.trim()),
-          { message: t("common:validation.mustBeNumericOptional") }
+          { message: "يجب أن تكون القيمة رقمية" }
         ),
       upper: z
         .string()
@@ -76,7 +68,7 @@ const getChildTestFormSchema = (t: (key: string, options?: any) => string) =>
         .refine(
           (val) =>
             !val || val.trim() === "" || /^-?\d*\.?\d*$/.test(val.trim()),
-          { message: t("common:validation.mustBeNumericOptional") }
+          { message: "يجب أن تكون القيمة رقمية" }
         ),
       defval: z.string().max(1000).optional().nullable(),
       unit_id: z.string().optional().nullable(),
@@ -88,7 +80,7 @@ const getChildTestFormSchema = (t: (key: string, options?: any) => string) =>
         .refine(
           (val) =>
             !val || val.trim() === "" || /^-?\d*\.?\d*$/.test(val.trim()),
-          { message: t("common:validation.mustBeNumericOptional") }
+          { message: "يجب أن تكون القيمة رقمية" }
         ),
       lowest: z
         .string()
@@ -97,7 +89,7 @@ const getChildTestFormSchema = (t: (key: string, options?: any) => string) =>
         .refine(
           (val) =>
             !val || val.trim() === "" || /^-?\d*\.?\d*$/.test(val.trim()),
-          { message: t("common:validation.mustBeNumericOptional") }
+          { message: "يجب أن تكون القيمة رقمية" }
         ),
       test_order: z
         .string()
@@ -105,7 +97,7 @@ const getChildTestFormSchema = (t: (key: string, options?: any) => string) =>
         .nullable()
         .refine(
           (val) => !val || val.trim() === "" || /^\d*$/.test(val.trim()),
-          { message: t("common:validation.mustBeIntegerOptional") }
+          { message: "يجب أن تكون القيمة رقمية صحيحة" }
         ),
       child_group_id: z.string().optional().nullable(),
     })
@@ -114,7 +106,7 @@ const getChildTestFormSchema = (t: (key: string, options?: any) => string) =>
         /* low <= upper */ return true;
       },
       {
-        message: t("labTests:childTests.validation.lowGreaterThanUpper"),
+        message: "القيمة الدنيا يجب أن تكون أقل من أو تساوي القيمة العليا",
         path: ["upper"],
       }
     )
@@ -123,7 +115,7 @@ const getChildTestFormSchema = (t: (key: string, options?: any) => string) =>
         /* lowest <= max */ return true;
       },
       {
-        message: t("labTests:childTests.validation.lowestGreaterThanMax"),
+        message: "أقل قيمة يجب أن تكون أقل من أو تساوي أعلى قيمة",
         path: ["max"],
       }
     );
@@ -143,8 +135,7 @@ const ChildTestEditableRow: React.FC<ChildTestEditableRowProps> = ({
   onUnitQuickAdd,
   onChildGroupQuickAdd,
 }) => {
-  const { t, i18n } = useTranslation(["labTests", "common"]);
-  const childTestSchema = getChildTestFormSchema(t);
+  const childTestSchema = getChildTestFormSchema();
 
   const form = useForm<ChildTestFormValues>({
     resolver: zodResolver(childTestSchema),

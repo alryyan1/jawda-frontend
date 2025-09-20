@@ -438,7 +438,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
         <Form {...form}>
           <form className="flex-grow flex flex-col overflow-hidden">
             <CustomTabPanel value={activeTab} index={0}>
-              <ScrollArea className="h-[calc(100vh-100px)] pr-1">
+              <ScrollArea className="h-[calc(100vh-200px)] pr-1">
                 {testDataForEntry.child_tests_with_results.length === 0 ? (
                   <div className="text-center text-muted-foreground py-10">
                     لا توجد فحوصات فرعية لإدخال النتائج

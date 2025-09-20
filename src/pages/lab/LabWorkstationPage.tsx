@@ -1,5 +1,5 @@
 // src/pages/lab/LabWorkstationPage.tsx
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 // Replaced shadcn with MUI
 import {
@@ -164,7 +164,7 @@ const LabWorkstationPage: React.FC = () => {
   const [soundEnabled, setSoundEnabled] = useState(true);
 
   // Function to add and remove payment badge
-  const addPaymentBadge = (visitId: number) => {
+  const addPaymentBadge = useCallback((visitId: number) => {
     setNewPaymentBadges(prev => new Set(prev).add(visitId));
     
     // Remove badge after 15 seconds
@@ -175,10 +175,10 @@ const LabWorkstationPage: React.FC = () => {
         return newSet;
       });
     }, 15000);
-  };
+  }, []);
 
   // Function to initialize audio context (call on first user interaction)
-  const initializeAudio = () => {
+  const initializeAudio = useCallback(() => {
     if (!audioContext) {
       try {
         const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -189,7 +189,7 @@ const LabWorkstationPage: React.FC = () => {
         setSoundEnabled(false);
       }
     }
-  };
+  }, [audioContext]);
 
   // Function to play payment sound
   const playPaymentSound = useCallback(async () => {
@@ -219,7 +219,7 @@ const LabWorkstationPage: React.FC = () => {
         setSoundEnabled(false);
       }
     }
-  }, [soundEnabled, audioContext]);
+  }, [soundEnabled, audioContext, initializeAudio]);
 
   const handleShiftSelectedFromFinder = (selectedShift: Shift) => {
     setIsManuallyNavigatingShifts(true);
@@ -233,10 +233,33 @@ const LabWorkstationPage: React.FC = () => {
     toast.info(`تم اختيار الوردية رقم ${selectedShift.id}`);
   };
   const [visitIdSearchTerm, setVisitIdSearchTerm] = useState("");
+  // Create refs for stable function references
+  const playPaymentSoundRef = useRef(playPaymentSound);
+  const addPaymentBadgeRef = useRef(addPaymentBadge);
+  const queryClientRef = useRef(queryClient);
+  const currentShiftForQueueRef = useRef(currentShiftForQueue);
+
+  // Update refs when values change
+  useEffect(() => {
+    playPaymentSoundRef.current = playPaymentSound;
+  }, [playPaymentSound]);
+
+  useEffect(() => {
+    addPaymentBadgeRef.current = addPaymentBadge;
+  }, [addPaymentBadge]);
+
+  useEffect(() => {
+    queryClientRef.current = queryClient;
+  }, [queryClient]);
+
+  useEffect(() => {
+    currentShiftForQueueRef.current = currentShiftForQueue;
+  }, [currentShiftForQueue]);
+
   // Real-time event subscription for lab payments
   useEffect(() => {
     const handleLabPayment = async (data: { visit: DoctorVisit; patient: Patient; labRequests: LabRequest[] }) => {
-      console.log('Lab payment event received:', data);
+      console.log('Lab payment event received in LabWorkstationPage:', data);
       
       try {
         // Convert the visit data to PatientLabQueueItem format (for reference)
@@ -264,17 +287,17 @@ const LabWorkstationPage: React.FC = () => {
         // };
 
         // Play payment notification sound
-        await playPaymentSound();
+        await playPaymentSoundRef.current();
 
         // Add payment badge for 15 seconds
-        addPaymentBadge(data.visit.id);
+        addPaymentBadgeRef.current(data.visit.id);
 
         // Show a toast notification
         toast.success(`تم دفع فحوصات المختبر للمريض: ${data.patient.name}`);
         
         // Invalidate the queue to refresh with the new paid patient
-        queryClient.invalidateQueries({
-          queryKey: ["labPendingQueue", currentShiftForQueue?.id],
+        queryClientRef.current.invalidateQueries({
+          queryKey: ["labPendingQueue", currentShiftForQueueRef.current?.id],
         });
         
       } catch (error) {
@@ -283,14 +306,16 @@ const LabWorkstationPage: React.FC = () => {
       }
     };
 
+    console.log('LabWorkstationPage: Setting up lab payment event listener');
     // Subscribe to lab-payment events
     realtimeService.onLabPayment(handleLabPayment);
 
     // Cleanup subscription on component unmount
     return () => {
+      console.log('LabWorkstationPage: Cleaning up lab payment event listener');
       realtimeService.offLabPayment(handleLabPayment);
     };
-  }, [queryClient, currentShiftForQueue?.id]);
+  }, []); // Empty dependency array - only run once on mount
 
   // Fetch global current open clinic shift
   const { data: currentClinicShiftGlobal, isLoading: isLoadingGlobalShift } =

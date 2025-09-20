@@ -1,7 +1,7 @@
 // src/components/lab/workstation/PatientQueuePanel.tsx
 import React, { useState, useEffect } from 'react';
 import { useQuery, keepPreviousData, useQueryClient } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
+// import { useTranslation } from 'react-i18next';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Loader2, AlertTriangle } from 'lucide-react';
 
@@ -21,18 +21,14 @@ interface PatientQueuePanelProps {
   selectedVisitId: number | null;
   globalSearchTerm: string;
   queueFilters?: LabQueueFilters; // Optional filters for the queue
-  onSendWhatsAppText: (queueItem: PatientLabQueueItem) => void;
-  onSendPdfToPatient: (queueItem: PatientLabQueueItem) => void;
-  onSendPdfToCustomNumber: (queueItem: PatientLabQueueItem) => void;
-  onToggleResultLock: (queueItem: PatientLabQueueItem) => void;
   appearanceSettings: LabAppearanceSettings;
 }
 
 const PatientQueuePanel: React.FC<PatientQueuePanelProps> = ({
   appearanceSettings,
-  currentShift, onShiftChange, onPatientSelect, selectedVisitId, globalSearchTerm, queueFilters = {}, onSendWhatsAppText, onSendPdfToPatient, onSendPdfToCustomNumber, onToggleResultLock
+  currentShift, onShiftChange, onPatientSelect, selectedVisitId, globalSearchTerm, queueFilters = {}
 }) => {
-  const { t } = useTranslation(['labResults', 'common']);
+  // const { t } = useTranslation(['labResults', 'common']);
   const queryClient = useQueryClient(); // For manual refresh
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -110,19 +106,19 @@ const PatientQueuePanel: React.FC<PatientQueuePanelProps> = ({
         )}
         {(isFetching && queueItems.length > 0) && (
             <div className="p-1 text-xs text-center text-muted-foreground border-b">
-                <Loader2 className="inline h-3 w-3 animate-spin"/> {t('common:updatingList')}
+                <Loader2 className="inline h-3 w-3 animate-spin"/> تحديث القائمة...
             </div>
         )}
 
         {error && ( /* Error display */
           <div className="p-2 text-xs text-center text-muted-foreground border-b">
-            <AlertTriangle className="inline h-3 w-3 animate-spin"/> {t('common:errorLoadingList')}
+            <AlertTriangle className="inline h-3 w-3 animate-spin"/> خطأ في تحميل القائمة
           </div>
         )}
         
         {!isLoading && queueItems.length === 0 && !error && ( /* No items display */
           <div className="p-2 text-xs text-center text-muted-foreground border-b">
-            {t('common:noItemsFound')}
+            لا توجد عناصر
           </div>
         )}
 
@@ -141,10 +137,6 @@ const PatientQueuePanel: React.FC<PatientQueuePanelProps> = ({
                   isSelected={selectedVisitId === item.visit_id}
                   onSelect={() => onPatientSelect(item)}
                   allRequestsPaid={(item as unknown as { all_requests_paid?: boolean }).all_requests_paid}
-                  onSendWhatsAppText={onSendWhatsAppText}
-                  onSendPdfToPatient={onSendPdfToPatient}
-                  onSendPdfToCustomNumber={onSendPdfToCustomNumber}
-                  onToggleResultLock={onToggleResultLock}
                 />
               ))}
             </div>

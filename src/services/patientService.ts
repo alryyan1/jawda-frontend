@@ -214,3 +214,30 @@ export const registerNewPatientFromLab = async (payload: Partial<PatientFormData
   const response = await apiClient.post<{ data: Patient }>('/patients', payload);
   return response.data.data;
 };
+
+// Type for lab history item
+export interface LabHistoryItem {
+  patient_id: number;
+  visit_id: number | null;
+  patient_name: string;
+  phone: string;
+  visit_date: string | null;
+  lab_request_count: number;
+  company_name: string | null;
+  autocomplete_label: string;
+}
+
+export interface LabHistoryResponse {
+  data: LabHistoryItem[];
+  meta: {
+    total_patients: number;
+    phone_searched: string;
+  };
+}
+
+export const getLabHistory = async (patientId: number, phone: string): Promise<LabHistoryResponse> => {
+  const response = await apiClient.get<LabHistoryResponse>(
+    `/patients/${patientId}/lab-history?phone=${encodeURIComponent(phone)}`
+  );
+  return response.data;
+};

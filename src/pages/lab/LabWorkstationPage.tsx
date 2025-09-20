@@ -34,7 +34,6 @@ import LabActionsPane from "@/components/lab/workstation/LabActionsPane";
 import StatusAndInfoPanel from "@/components/lab/workstation/StatusAndInfoPanel";
 
 import type {
-  ChildTestWithResult,
   PatientLabQueueItem,
 } from "@/types/labWorkflow";
 import type { Shift } from "@/types/shifts";
@@ -51,7 +50,8 @@ import { getDoctorVisitById } from "@/services/visitService";
 import {
   getPatientById,
   searchRecentDoctorVisits,
-  togglePatientResultLock,
+  getLabHistory,
+  type LabHistoryItem,
 } from "@/services/patientService"; // Updated service function
 import { getLabRequestsForVisit } from "@/services/labRequestService";
 import apiClient from "@/services/api";
@@ -60,13 +60,6 @@ import LabQueueFilterDialog, {
 } from "@/components/lab/workstation/LabQueueFilterDialog";
 import ShiftFinderDialog from "@/components/lab/workstation/ShiftFinderDialog";
 import PdfPreviewDialog from "@/components/common/PdfPreviewDialog";
-import SendWhatsAppTextDialog from "@/components/lab/workstation/dialog/SendWhatsAppTextDialog";
-import SendPdfToCustomNumberDialog from "@/components/lab/workstation/dialog/SendPdfToCustomNumberDialog";
-import {
-  sendUltramsgDocument,
-  type UltramsgDocumentPayload,
-} from "@/services/ultramsgService";
-import { fileToBase64 } from "@/services/whatsappService";
 import type { Patient } from "@/types/patients";
 import {
   getAppearanceSettings,
@@ -125,9 +118,10 @@ const LabWorkstationPage: React.FC = () => {
       print_status_filter: "all",
       // other filters undefined initially
     });
-  const { data: patientDetailsForActionPane } = useQuery<Patient | null, Error>(
+  // Single shared patient query for all components
+  const { data: patientDetails } = useQuery<Patient | null, Error>(
     {
-      queryKey: ["patientDetailsForActionPane", selectedQueueItem?.patient_id],
+      queryKey: ["patientDetails", selectedQueueItem?.patient_id],
       queryFn: () =>
         selectedQueueItem?.patient_id
           ? getPatientById(selectedQueueItem.patient_id)
@@ -137,19 +131,7 @@ const LabWorkstationPage: React.FC = () => {
     }
   );
   // Global states
-  const [globalSearchTerm, setGlobalSearchTerm] = useState("");
-  const [debouncedGlobalSearch, setDebouncedGlobalSearch] = useState("");
-  const [isResultLocked, setIsResultLocked] = useState(false);
-  const [focusedChildTestForInfo, setFocusedChildTestForInfo] = useState<ChildTestWithResult | null>(null);
-  // Dialog states
-  const [whatsAppTextData, setWhatsAppTextData] = useState<{
-    isOpen: boolean;
-    queueItem: PatientLabQueueItem | null;
-  }>({ isOpen: false, queueItem: null });
-  const [sendPdfCustomData, setSendPdfCustomData] = useState<{
-    isOpen: boolean;
-    queueItem: PatientLabQueueItem | null;
-  }>({ isOpen: false, queueItem: null });
+  const [debouncedGlobalSearch] = useState("");
   const [pdfPreviewData, setPdfPreviewData] = useState<{
     isOpen: boolean;
     url: string | null;
@@ -163,13 +145,17 @@ const LabWorkstationPage: React.FC = () => {
     useState<RecentDoctorVisitSearchItem | null>(null);
   const [isShiftFinderDialogOpen, setIsShiftFinderDialogOpen] = useState(false);
   const [isUploadingToFirebase, setIsUploadingToFirebase] = useState(false);
+  
+  // Lab History State
+  const [labHistoryData, setLabHistoryData] = useState<LabHistoryItem[]>([]);
+  const [selectedLabHistoryItem, setSelectedLabHistoryItem] = useState<LabHistoryItem | null>(null);
+  const [isLoadingLabHistory, setIsLoadingLabHistory] = useState(false);
 
   const handleShiftSelectedFromFinder = (selectedShift: Shift) => {
     setIsManuallyNavigatingShifts(true);
     setCurrentShiftForQueue(selectedShift);
     setSelectedQueueItem(null); // Clear patient selection
     setSelectedLabRequestForEntry(null);
-    setFocusedChildTestForInfo(null);
     // Clear other search inputs
     setSelectedVisitFromAutocomplete(null);
     setAutocompleteInputValue("");
@@ -248,6 +234,10 @@ const LabWorkstationPage: React.FC = () => {
                 )
               : data.created_at,
           test_count: data.lab_requests.length,
+          phone: data.patient.phone || "",
+          result_is_locked: data.patient.result_is_locked || false,
+          all_requests_paid: true, // Default to true for now
+          is_result_locked: data.patient.result_is_locked || false,
         };
 
         setSelectedQueueItem(queueItemLike); // This makes it appear "selected" in the context
@@ -292,7 +282,6 @@ const LabWorkstationPage: React.FC = () => {
           setSelectedLabRequestForEntry(null);
           toast.info("لا توجد طلبات مختبر في الزيارة المحددة");
         }
-        setFocusedChildTestForInfo(null);
         toast.success(
           `تم تحميل الزيارة رقم ${data.id} للمريض ${data.patient.name}`
         );
@@ -339,7 +328,6 @@ const LabWorkstationPage: React.FC = () => {
           setCurrentShiftForQueue(allShifts[newIndex]);
           setSelectedQueueItem(null);
           setSelectedLabRequestForEntry(null);
-          setFocusedChildTestForInfo(null);
         }
       } else {
         toast.info("لا توجد ورديات أخرى");
@@ -349,96 +337,19 @@ const LabWorkstationPage: React.FC = () => {
   );
   const isCurrentResultLocked = selectedQueueItem?.result_is_locked || false;
 
-  const toggleResultLockMutation = useMutation({
-    mutationFn: (patientId: number) => togglePatientResultLock(patientId),
-    onSuccess: (updatedPatient) => {
-      toast.success(
-        updatedPatient.result_is_locked
-          ? "تم قفل النتائج بنجاح"
-          : "تم فتح قفل النتائج بنجاح"
-      );
-      queryClient.setQueryData(
-        ["patientDataForResultLock", updatedPatient.id],
-        updatedPatient
-      );
-      queryClient.invalidateQueries({
-        queryKey: ["labPendingQueue", currentShiftForQueue?.id],
-      }); // Refresh queue if lock status affects display
-    },
-    onError: (error: any) =>
-      toast.error(error.response?.data?.message || "فشلت العملية"),
-  });
 
-  // Context Menu Action Handlers
-  const handleSendWhatsAppText = (queueItem: PatientLabQueueItem) =>
-    setWhatsAppTextData({ isOpen: true, queueItem });
-  const handleSendPdfToPatient = async (queueItem: PatientLabQueueItem) => {
-    if (!queueItem.phone) {
-      toast.error("رقم هاتف المريض غير متوفر");
-      return;
-    }
-    setPdfPreviewData((prev) => ({
-      ...prev,
-      isLoading: true,
-      title: `يتم إرسال التقرير إلى ${queueItem.patient_name}`,
-      isOpen: true,
-      url: null,
-    }));
-    try {
-      const pdfResponse = await apiClient.get(
-        `/visits/${queueItem.visit_id}/lab-report/pdf?base64=1&pid=${queueItem.visit_id}`
-      );
-      console.log(pdfResponse.data, "pdfResponse.data");
-      const payload: UltramsgDocumentPayload = {
-        to: queueItem.phone,
-        document: pdfResponse.data,
-        filename: `LabReport_Visit_${
-          queueItem.visit_id
-        }_${queueItem.patient_name.replace(/\s+/g, "_")}.pdf`,
-        caption: `تقرير المختبر للزيارة ${queueItem.visit_id} - ${queueItem.patient_name}`,
-      };
-      const waResponse = await sendUltramsgDocument(payload);
-      if (waResponse.success) {
-        toast.success("تم إرسال ملف PDF عبر واتساب بنجاح");
-      } else {
-        toast.error(waResponse.error || "فشل إرسال ملف PDF");
-      }
-    } catch (error: any) {
-      toast.error(
-        error.response?.data?.message ||
-          error.message ||
-          "فشل إرسال ملف PDF عبر واتساب"
-      );
-    } finally {
-      setPdfPreviewData((prev) => ({
-        ...prev,
-        isLoading: false,
-        isOpen: false,
-      })); // Close intermediate loading
-    }
-  };
-  const handleSendPdfToCustomNumber = (queueItem: PatientLabQueueItem) =>
-    setSendPdfCustomData({ isOpen: true, queueItem });
-  const handleToggleResultLock = (queueItem: PatientLabQueueItem) =>
-    toggleResultLockMutation.mutate(queueItem.patient_id);
   const handlePatientSelectFromQueue = useCallback(
     async (queueItem: PatientLabQueueItem | null) => {
       setSelectedQueueItem(queueItem);
       setSelectedLabRequestForEntry(null);
-      setFocusedChildTestForInfo(null);
       setSelectedVisitFromAutocomplete(null);
       setVisitIdSearchTerm("");
       setAutocompleteInputValue(""); // Clear autocomplete text field
+      setSelectedLabHistoryItem(null); // Clear lab history selection
       
       // If a patient is selected, fetch their lab requests and auto-select the first one
       if (queueItem) {
         try {
-          // Trigger fetch for patient data to get lock status
-          queryClient.prefetchQuery({
-            queryKey: ["patientDataForResultLock", queueItem.patient_id],
-            queryFn: () => getPatientById(queueItem.patient_id),
-          });
-          
           // Fetch lab requests for this visit
           const labRequests = await queryClient.fetchQuery({
             queryKey: ['labRequestsForVisit', queueItem.visit_id],
@@ -450,10 +361,28 @@ const LabWorkstationPage: React.FC = () => {
           if (labRequests && labRequests.length > 0) {
             setSelectedLabRequestForEntry(labRequests[0]);
           }
+
+          // Fetch lab history for patients with same phone number
+          if (queueItem.phone) {
+            setIsLoadingLabHistory(true);
+            try {
+              const historyResponse = await getLabHistory(queueItem.patient_id, queueItem.phone);
+              setLabHistoryData(historyResponse.data);
+            } catch (error) {
+              console.error('Failed to fetch lab history:', error);
+              setLabHistoryData([]);
+            } finally {
+              setIsLoadingLabHistory(false);
+            }
+          } else {
+            setLabHistoryData([]);
+          }
         } catch (error) {
           console.error('Failed to fetch lab requests for auto-selection:', error);
           // Don't show error toast as this is automatic behavior
         }
+      } else {
+        setLabHistoryData([]);
       }
     },
     [queryClient]
@@ -462,9 +391,19 @@ const LabWorkstationPage: React.FC = () => {
   const handleTestSelectForEntry = useCallback(
     (labRequest: LabRequest | null) => {
       setSelectedLabRequestForEntry(labRequest);
-      setFocusedChildTestForInfo(null);
     },
     []
+  );
+
+  const handleLabHistoryItemSelect = useCallback(
+    (historyItem: LabHistoryItem | null) => {
+      setSelectedLabHistoryItem(historyItem);
+      if (historyItem && historyItem.visit_id) {
+        // Load the selected visit from history
+        fetchVisitDetailsMutation.mutate(historyItem.visit_id);
+      }
+    },
+    [fetchVisitDetailsMutation]
   );
 
   const handleResultsSaved = useCallback(() => {
@@ -476,12 +415,6 @@ const LabWorkstationPage: React.FC = () => {
     // });
   }, []);
 
-  const handleChildTestFocus = useCallback(
-    (childTest: ChildTestWithResult | null) => {
-      setFocusedChildTestForInfo(childTest);
-    },
-    []
-  );
 
   const handleSearchByVisitIdEnter = (
     event: React.KeyboardEvent<HTMLInputElement>
@@ -504,7 +437,6 @@ const LabWorkstationPage: React.FC = () => {
     setCurrentShiftForQueue(currentClinicShiftGlobal || null);
     setSelectedQueueItem(null);
     setSelectedLabRequestForEntry(null);
-    setFocusedChildTestForInfo(null);
     setSelectedVisitFromAutocomplete(null);
     setAutocompleteInputValue("");
     setVisitIdSearchTerm("");
@@ -554,7 +486,7 @@ const LabWorkstationPage: React.FC = () => {
     }
 
     const visitIdToUse =
-      selectedLabRequest?.doctor_visit_id || selectedQueueItem?.visit_id;
+      selectedLabRequestForEntry?.doctor_visit_id || selectedQueueItem?.visit_id;
     if (!visitIdToUse) {
       toast.error("Visit context is missing.");
       return;
@@ -755,6 +687,105 @@ const LabWorkstationPage: React.FC = () => {
               }}
             />
           </div>
+
+          {/* Lab History Autocomplete - Only show when a patient is selected */}
+          {selectedQueueItem && labHistoryData.length > 0 && (
+            <Autocomplete
+              id="lab-history-dropdown"
+              options={labHistoryData}
+              value={selectedLabHistoryItem}
+              onChange={(event, newValue) => {
+                handleLabHistoryItemSelect(newValue);
+              }}
+              getOptionLabel={(option) => option.autocomplete_label}
+              isOptionEqualToValue={(option, value) =>
+                option.patient_id === value.patient_id && option.visit_id === value.visit_id
+              }
+              loading={isLoadingLabHistory}
+              size="small"
+              sx={{
+                width: { xs: "100%", sm: 250, md: 300 },
+                "& .MuiInputLabel-root": {
+                  fontSize: "0.8rem",
+                  color: "var(--muted-foreground)",
+                  "&.Mui-focused": {
+                    color: "var(--ring)",
+                  },
+                },
+                "& .MuiOutlinedInput-root": {
+                  fontSize: "0.8rem",
+                  backgroundColor: "var(--background)",
+                  color: "var(--foreground)",
+                  "& fieldset": {
+                    borderColor: "var(--border)",
+                  },
+                  "&:hover fieldset": {
+                    borderColor: "var(--ring)",
+                  },
+                  "&.Mui-focused fieldset": {
+                    borderColor: "var(--ring)",
+                  },
+                },
+                "& .MuiAutocomplete-inputRoot": {
+                  paddingTop: "2px",
+                  paddingBottom: "2px",
+                },
+                "& .MuiAutocomplete-listbox": {
+                  backgroundColor: "var(--background)",
+                  color: "var(--foreground)",
+                },
+                "& .MuiAutocomplete-option": {
+                  color: "var(--foreground)",
+                  "&:hover": {
+                    backgroundColor: "var(--accent)",
+                  },
+                  "&.Mui-focused": {
+                    backgroundColor: "var(--accent)",
+                  },
+                },
+                "& .MuiAutocomplete-noOptions": {
+                  color: "var(--muted-foreground)",
+                },
+                "& .MuiAutocomplete-loading": {
+                  color: "var(--muted-foreground)",
+                },
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="سجل المختبر للمريض"
+                  variant="outlined"
+                  InputProps={{
+                    ...params.InputProps,
+                    startAdornment: (
+                      <Search className="h-4 w-4 text-muted-foreground ltr:mr-2 rtl:ml-2" />
+                    ),
+                    endAdornment: (
+                      <>
+                        {isLoadingLabHistory ? (
+                          <CircularProgress color="inherit" size={18} />
+                        ) : null}
+                        {params.InputProps.endAdornment}
+                      </>
+                    ),
+                  }}
+                />
+              )}
+              PaperComponent={(props) => (
+                <Paper
+                  {...props}
+                  sx={{
+                    fontSize: "0.8rem",
+                    backgroundColor: "var(--background)",
+                    color: "var(--foreground)",
+                    border: "1px solid var(--border)",
+                  }}
+                />
+              )}
+              noOptionsText="لا توجد سجلات مختبر"
+              loadingText="جاري التحميل..."
+            />
+          )}
           <Tooltip title={AR.filters_openFilterDialog}>
             <IconButton
               onClick={() => setIsFilterDialogOpen(true)}
@@ -789,34 +820,38 @@ const LabWorkstationPage: React.FC = () => {
               : "border-l dark:border-slate-700"
           )}
         >
-          <LabActionsPane
-            onAppearanceSettingsChanged={handleAppearanceSettingsChanged}
-            selectedLabRequest={selectedLabRequestForEntry || null}
-            selectedVisitId={selectedQueueItem?.visit_id || null}
-            currentPatientData={patientDetailsForActionPane as Patient | null}
-            isResultLocked={isCurrentResultLocked} // Pass lock status
-            onPrintReceipt={() =>
-              generateAndShowPdfForActionPane(
-                "طباعة إيصال المختبر",
-                "LabReceipt",
-                `/visits/{visitId}/lab-thermal-receipt/pdf`
-              )
-            }
-            onPrintLabels={() =>
-              generateAndShowPdfForActionPane(
-                "طباعة ملصقات العينات",
-                "SampleLabels",
-                `/visits/{visitId}/lab-sample-labels/pdf`
-              )
-            }
-            onPreviewReport={() =>
-              generateAndShowPdfForActionPane(
-                "معاينة تقرير المختبر",
-                "LabReport",
-                `/visits/{visitId}/lab-report/pdf`
-              )
-            }
-          />
+          {selectedLabRequestForEntry && selectedQueueItem?.visit_id && (
+            <LabActionsPane
+              onAppearanceSettingsChanged={handleAppearanceSettingsChanged}
+              selectedLabRequest={selectedLabRequestForEntry}
+              selectedVisitId={selectedQueueItem.visit_id}
+              currentPatientData={patientDetails as Patient | null}
+              isResultLocked={isCurrentResultLocked}
+              onResultsReset={() => {}} // TODO: Implement if needed
+              onResultsModified={() => {}} // TODO: Implement if needed
+              onPrintReceipt={() =>
+                generateAndShowPdfForActionPane(
+                  "طباعة إيصال المختبر",
+                  "LabReceipt",
+                  `/visits/{visitId}/lab-thermal-receipt/pdf`
+                )
+              }
+              onPrintLabels={() =>
+                generateAndShowPdfForActionPane(
+                  "طباعة ملصقات العينات",
+                  "SampleLabels",
+                  `/visits/{visitId}/lab-sample-labels/pdf`
+                )
+              }
+              onPreviewReport={() =>
+                generateAndShowPdfForActionPane(
+                  "معاينة تقرير المختبر",
+                  "LabReport",
+                  `/visits/{visitId}/lab-report/pdf`
+                )
+              }
+            />
+          )}
         </aside>
   <aside
           className={cn(
@@ -837,6 +872,7 @@ const LabWorkstationPage: React.FC = () => {
               patientId={selectedQueueItem.patient_id}
               visitId={selectedQueueItem.visit_id} // Pass the visit_id (context ID)
               patientLabQueueItem={selectedQueueItem || null}
+              patientData={patientDetails} // Pass shared patient data
               onUploadStatusChange={handleUploadStatusChange}
             />
           ) : (
@@ -853,8 +889,7 @@ const LabWorkstationPage: React.FC = () => {
               key={`result-entry-${selectedLabRequestForEntry.id}`}
               initialLabRequest={selectedLabRequestForEntry}
               onResultsSaved={handleResultsSaved}
-              onClosePanel={() => setSelectedLabRequestForEntry(null)}
-              onChildTestFocus={handleChildTestFocus}
+              onChildTestFocus={() => {}} // Empty function since we removed the handler
             />
           ) : (
             <div className="flex-grow flex items-center justify-center p-10 text-center">
@@ -916,12 +951,6 @@ const LabWorkstationPage: React.FC = () => {
             selectedVisitId={selectedQueueItem?.visit_id || null}
             globalSearchTerm={debouncedGlobalSearch}
             queueFilters={appliedQueueFilters}
-            // Passing new context menu handlers
-            onSendWhatsAppText={handleSendWhatsAppText}
-            onSendPdfToPatient={handleSendPdfToPatient}
-            onSendPdfToCustomNumber={handleSendPdfToCustomNumber}
-            onToggleResultLock={handleToggleResultLock}
-            // Need to update PatientLabQueueItem and PatientLabRequestItem to accept these and isResultLocked
           />
         </aside>
       </div>
@@ -937,27 +966,6 @@ const LabWorkstationPage: React.FC = () => {
         onShiftSelected={handleShiftSelectedFromFinder}
       />
       {/* Dialogs */}
-      {/* Dialogs */}
-      <SendWhatsAppTextDialog
-        isOpen={whatsAppTextData.isOpen}
-        onOpenChange={(open) =>
-          setWhatsAppTextData({
-            isOpen: open,
-            queueItem: open ? whatsAppTextData.queueItem : null,
-          })
-        }
-        queueItem={whatsAppTextData.queueItem}
-      />
-      <SendPdfToCustomNumberDialog
-        isOpen={sendPdfCustomData.isOpen}
-        onOpenChange={(open) =>
-          setSendPdfCustomData({
-            isOpen: open,
-            queueItem: open ? sendPdfCustomData.queueItem : null,
-          })
-        }
-        queueItem={sendPdfCustomData.queueItem}
-      />
       <PdfPreviewDialog
         isOpen={pdfPreviewData.isOpen}
         onOpenChange={(open) => {

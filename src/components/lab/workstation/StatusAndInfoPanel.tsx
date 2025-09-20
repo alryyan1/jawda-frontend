@@ -15,6 +15,7 @@ interface StatusAndInfoPanelProps {
   patientId: number | null;
   visitId: number | null;
   patientLabQueueItem: PatientLabQueueItem | null;
+  patientData?: Patient | null; // Pass patient data from parent to avoid duplicate API calls
   onUploadStatusChange?: (isUploading: boolean) => void;
 }
 
@@ -25,6 +26,7 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
   patientId,
   visitId,
   patientLabQueueItem,
+  patientData,
   onUploadStatusChange,
 }) => {
   const [updatedPatient, setUpdatedPatient] = useState<Patient | null>(null);
@@ -46,12 +48,9 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
       setUpdatedPatient(updatedPatient);
       toast.success(updatedPatient.result_auth ? "تم اعتماد النتائج" : "تم إلغاء اعتماد النتائج");
       
-      // Invalidate related queries
+      // Invalidate the shared patient query
       queryClient.invalidateQueries({
-        queryKey: ["patientDetailsForInfoPanel", patientId],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["patientDetailsForActionPane", patientId],
+        queryKey: ["patientDetails", patientId],
       });
     },
     onError: (error: unknown) => {
@@ -67,17 +66,21 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
     toggleAuthenticationMutation.mutate(patientId);
   }, [patientId, toggleAuthenticationMutation]);
 
+  // Use passed patient data if available, otherwise fetch it
   const {
-    data: patient,
+    data: fetchedPatient,
     isLoading: isLoadingPatient,
   } = useQuery<Patient, Error>({
-    queryKey: ["patientDetailsForInfoPanel", patientId],
+    queryKey: ["patientDetails", patientId],
     queryFn: () =>
       patientId
         ? getPatientById(patientId)
         : Promise.reject(new Error("Patient ID required")),
-    enabled: !!patientId,
+    enabled: !!patientId && !patientData, // Only fetch if patientData is not provided
   });
+
+  // Use passed patient data or fetched data
+  const patient = patientData || fetchedPatient;
   const resultsLocked = patient?.result_is_locked || false;
 
   // Use updated patient data if available, otherwise use the original patient
@@ -88,7 +91,7 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
     collected: { time: undefined, by: undefined },
     print: {  done: patientLabQueueItem?.is_printed, by: null },
     authentication: { done: currentPatient?.result_auth },
-  }), [currentPatient?.result_auth]);
+  }), [currentPatient?.result_auth, patientLabQueueItem?.is_printed]);
 
   const getAgeString = useCallback(  
     (p?: Patient | null): string => {
@@ -136,7 +139,7 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
           <PatientDetailsLabEntry
             visitId={visitId}
             patientName={currentPatient.name}
-            doctorName={patientLabQueueItem?.doctor_name ?? null} // doctor_name is not available in the interface
+            doctorName={(patientLabQueueItem as any)?.doctor_name ?? null} // doctor_name is not available in the interface
             date={currentPatient.created_at as unknown as string}
             phone={currentPatient.phone ?? null}
             paymentMethod={null}

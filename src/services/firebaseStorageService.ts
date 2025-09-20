@@ -24,7 +24,7 @@ export const uploadLabResultToFirebase = async (
   try {
     // Create storage path: results/${hospitalname}/${doctorvisit.id}/
     const storagePath = `results/${hospitalName}/${doctorVisitId}/`;
-    const finalFileName = fileName || `lab_result_${doctorVisitId}_${Date.now()}.pdf`;
+    const finalFileName = fileName || 'result.pdf';
     const fullPath = `${storagePath}${finalFileName}`;
     
     // Create a reference to the file location
@@ -54,18 +54,15 @@ export const uploadLabResultToFirebase = async (
  * @param pdfBlob - PDF blob from API
  * @param hospitalName - Name of the hospital
  * @param doctorVisitId - ID of the doctor visit
- * @param patientName - Patient name for filename
  * @returns Promise with upload result
  */
 export const uploadLabResultFromApi = async (
   pdfBlob: Blob,
   hospitalName: string,
-  doctorVisitId: number,
-  patientName: string
+  doctorVisitId: number
 ): Promise<UploadResult> => {
-  // Sanitize patient name for filename
-  const sanitizedPatientName = patientName.replace(/[^A-Za-z0-9-_]/g, '_');
-  const fileName = `lab_result_${doctorVisitId}_${sanitizedPatientName}_${new Date().toISOString().slice(0, 10)}.pdf`;
+  // Use simple filename
+  const fileName = 'result.pdf';
   
   return uploadLabResultToFirebase(pdfBlob, hospitalName, doctorVisitId, fileName);
 };

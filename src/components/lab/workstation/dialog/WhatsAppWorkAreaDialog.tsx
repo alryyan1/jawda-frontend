@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { arSA } from "date-fns/locale";
@@ -27,12 +27,13 @@ import {
   type UltramsgTextPayload,
   type UltramsgInstanceStatus 
 } from "@/services/ultramsgService";
+import { getPatientById } from "@/services/patientService";
 
 interface WhatsAppWorkAreaDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   currentPatient: Patient | null;
-  selectedLabRequest: LabRequest | null;
+  selectedLabRequest?: LabRequest | null; // Made optional since it's not used
   onMessageSent?: () => void;
 }
 
@@ -47,11 +48,11 @@ const WhatsAppWorkAreaDialog: React.FC<WhatsAppWorkAreaDialogProps> = ({
   isOpen,
   onOpenChange,
   currentPatient,
-  selectedLabRequest,
   onMessageSent,
 }) => {
   const [instanceStatus, setInstanceStatus] = useState<UltramsgInstanceStatus | null>(null);
   const [isCheckingStatus, setIsCheckingStatus] = useState(false);
+  const queryClient = useQueryClient();
 
   const form = useForm<WhatsAppFormValues>({
     resolver: zodResolver(whatsappSchema),
@@ -71,11 +72,28 @@ const WhatsAppWorkAreaDialog: React.FC<WhatsAppWorkAreaDialogProps> = ({
     enabled: isOpen,
   });
 
+  // Refresh patient data when dialog opens to check for updated result_url
+  const { data: refreshedPatientData } = useQuery({
+    queryKey: ["patientDetailsForWhatsApp", currentPatient?.id],
+    queryFn: () => getPatientById(currentPatient!.id),
+    enabled: isOpen && !!currentPatient?.id,
+    staleTime: 0, // Always fetch fresh data when dialog opens
+  });
+
+  // Use refreshed patient data if available, otherwise fall back to currentPatient
+  const effectivePatientData = refreshedPatientData || currentPatient;
+
   // Initialize form with patient data when dialog opens
   useEffect(() => {
-    if (isOpen && currentPatient?.phone) {
+    const generateDefaultMessage = (): string => {
+      const date = format(new Date(), "PPP", { locale: arSA });
+      
+      return `عزيزي/عزيزتي ${effectivePatientData?.name}، نتائج فحص جاهزة بتاريخ ${date}. يمكنك مراجعة العيادة أو التواصل معنا للاستفسار.`;
+    };
+
+    if (isOpen && effectivePatientData?.phone) {
       // Format phone number to local format (remove + and country code if present)
-      let formattedPhone = currentPatient.phone;
+      let formattedPhone = effectivePatientData.phone;
       
       // Remove + if present
       if (formattedPhone.startsWith('+')) {
@@ -101,15 +119,33 @@ const WhatsAppWorkAreaDialog: React.FC<WhatsAppWorkAreaDialogProps> = ({
       reset();
       setInstanceStatus(null);
     }
-  }, [isOpen, currentPatient, setValue, reset]);
+  }, [isOpen, effectivePatientData, setValue, reset]);
 
-  const generateDefaultMessage = (): string => {
-
-
-    const date = format(new Date(), "PPP", { locale: arSA });
-    
-    return `عزيزي/عزيزتي ${currentPatient?.name}، نتائج فحص جاهزة بتاريخ ${date}. يمكنك مراجعة العيادة أو التواصل معنا للاستفسار.`;
-  };
+  // Update query cache with refreshed patient data when dialog closes
+  useEffect(() => {
+    if (!isOpen && refreshedPatientData && currentPatient?.id) {
+      // Update the main patient query cache with the refreshed data
+      queryClient.setQueryData(['patientDetailsForActionPane', currentPatient.id], refreshedPatientData);
+      queryClient.setQueryData(['patientDetailsForInfoPanel', currentPatient.id], (old: { data?: Patient } | undefined) => {
+        if (old?.data) {
+          return {
+            ...old,
+            data: refreshedPatientData
+          };
+        }
+        return { data: refreshedPatientData };
+      });
+      queryClient.setQueryData(['patientDetailsForLabDisplay', currentPatient.id], (old: { data?: Patient } | undefined) => {
+        if (old?.data) {
+          return {
+            ...old,
+            data: refreshedPatientData
+          };
+        }
+        return { data: refreshedPatientData };
+      });
+    }
+  }, [isOpen, refreshedPatientData, currentPatient?.id, queryClient]);
 
   // Send text message mutation
   const sendTextMutation = useMutation({
@@ -129,8 +165,10 @@ const WhatsAppWorkAreaDialog: React.FC<WhatsAppWorkAreaDialogProps> = ({
         toast.error(response.error || "فشل إرسال الرسالة");
       }
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || error.message || "فشل إرسال الرسالة");
+    onError: (error: unknown) => {
+      const errorMessage = error instanceof Error ? error.message : 
+        (error as { response?: { data?: { error?: string } } }).response?.data?.error || "فشل إرسال الرسالة";
+      toast.error(errorMessage);
     },
   });
 
@@ -138,17 +176,15 @@ const WhatsAppWorkAreaDialog: React.FC<WhatsAppWorkAreaDialogProps> = ({
   const sendDocumentMutation = useMutation({
     mutationFn: async (data: WhatsAppFormValues) => {
       // Check if patient has result_url from Firebase
-      if (!currentPatient?.result_url) {
+      if (!effectivePatientData?.result_url) {
         throw new Error("لا يوجد رابط للتقرير. يرجى التأكد من رفع التقرير إلى التخزين السحابي أولاً.");
       }
       
       // Use the result_url from the patient data (Firebase URL)
-      const documentUrl = currentPatient.result_url;
+      const documentUrl = effectivePatientData.result_url;
       
-      // Generate filename based on patient name and visit ID
-      const patientName = currentPatient.name.replace(/[^A-Za-z0-9-_]/g, '_');
-      const visitId = selectedLabRequest?.doctor_visit_id || 'unknown';
-      const filename = `lab_result_${visitId}_${patientName}_${new Date().toISOString().slice(0, 10)}.pdf`;
+      // Use simple filename as per the new requirement
+      const filename = 'result.pdf';
       
       return sendUltramsgDocumentFromUrl({
         to: data.phoneNumber,
@@ -166,8 +202,9 @@ const WhatsAppWorkAreaDialog: React.FC<WhatsAppWorkAreaDialogProps> = ({
         toast.error(response.error || "فشل إرسال التقرير");
       }
     },
-    onError: (error: any) => {
-      const errorMessage = error.message || error.response?.data?.error || "فشل إرسال التقرير";
+    onError: (error: unknown) => {
+      const errorMessage = error instanceof Error ? error.message : 
+        (error as { response?: { data?: { error?: string } } }).response?.data?.error || "فشل إرسال التقرير";
       toast.error(errorMessage);
     },
   });
@@ -184,7 +221,7 @@ const WhatsAppWorkAreaDialog: React.FC<WhatsAppWorkAreaDialogProps> = ({
       } else {
         toast.error(status.error || "فشل في التحقق من حالة الخدمة");
       }
-    } catch (error: any) {
+    } catch {
       toast.error("فشل في التحقق من حالة الخدمة");
       setInstanceStatus({ success: false, error: "فشل في التحقق من حالة الخدمة" });
     } finally {
@@ -203,7 +240,7 @@ const WhatsAppWorkAreaDialog: React.FC<WhatsAppWorkAreaDialogProps> = ({
 
   const isConfigured = configStatus?.configured ?? false;
   const isLoading = sendTextMutation.isPending || sendDocumentMutation.isPending;
- console.log(isConfigured,'isConfigured',configStatus,phoneNumber,currentPatient?.result_url)
+  console.log(isConfigured,'isConfigured',configStatus,phoneNumber,effectivePatientData?.result_url)
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
@@ -213,7 +250,7 @@ const WhatsAppWorkAreaDialog: React.FC<WhatsAppWorkAreaDialogProps> = ({
             إرسال واتساب - نتائج المختبر
           </DialogTitle>
           <DialogDescription>
-            {currentPatient ? `إرسال إلى: ${currentPatient.name}` : "إرسال رسالة واتساب"}
+            {effectivePatientData ? `إرسال إلى: ${effectivePatientData.name}` : "إرسال رسالة واتساب"}
           </DialogDescription>
         </DialogHeader>
 
@@ -244,15 +281,15 @@ const WhatsAppWorkAreaDialog: React.FC<WhatsAppWorkAreaDialogProps> = ({
         </div>
 
         {/* Document Status */}
-        {currentPatient && (
+        {effectivePatientData && (
           <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">حالة التقرير:</span>
-              <Badge variant={currentPatient.result_url ? "default" : "secondary"}>
-                {currentPatient.result_url ? "متوفر في السحابة" : "غير متوفر"}
+              <Badge variant={effectivePatientData.result_url ? "default" : "secondary"}>
+                {effectivePatientData.result_url ? "متوفر في السحابة" : "غير متوفر"}
               </Badge>
             </div>
-            {currentPatient.result_url && (
+            {effectivePatientData.result_url && (
               <div className="flex items-center gap-1 text-green-600">
                 <span className="text-xs">☁️</span>
                 <span className="text-xs">متاح للإرسال</span>
@@ -339,9 +376,9 @@ const WhatsAppWorkAreaDialog: React.FC<WhatsAppWorkAreaDialogProps> = ({
                 type="button"
                 variant="default"
                 onClick={form.handleSubmit(handleSendDocument)}
-                disabled={isLoading || !isConfigured || !phoneNumber || !currentPatient?.result_url}
+                disabled={isLoading || !isConfigured || !phoneNumber || !effectivePatientData?.result_url}
                 className="flex-1"
-                title={!currentPatient?.result_url ? "لا يوجد رابط للتقرير. يرجى رفع التقرير إلى التخزين السحابي أولاً." : ""}
+                title={!effectivePatientData?.result_url ? "لا يوجد رابط للتقرير. يرجى رفع التقرير إلى التخزين السحابي أولاً." : ""}
               >
                 {sendDocumentMutation.isPending ? (
                   <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />

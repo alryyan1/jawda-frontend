@@ -127,7 +127,7 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
             currentStyle.isBold ? 'font-semibold' : 'font-normal',
             isSelected && 'ring-2 ring-[var(--border-color)] shadow-lg'
           )}
-          title={`${item.patient_name}\nID: ${labIdentifier}`}
+          title={`${item.patient_name}\nID: ${item.patient_id}`}
         >
           <span className="text-lg leading-tight text-center px-1">
             {labIdentifier.length > 6 ? labIdentifier.substring(0, 5) + "…" : labIdentifier}

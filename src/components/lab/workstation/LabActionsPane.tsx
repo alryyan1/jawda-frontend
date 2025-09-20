@@ -33,7 +33,6 @@ import LabAppearanceSettingsDialog from './LabAppearanceSettingsDialog';
 import WhatsAppWorkAreaDialog from './dialog/WhatsAppWorkAreaDialog';
 import { LisClientUrl, LisServerUrl } from '@/pages/constants';
 import { Button } from '@/components/ui/button';
-import { uploadLabResultFromApi } from '@/services/firebaseStorageService';
 import apiClient from '@/services/api';
 // import { useAuthorization } from '@/hooks/useAuthorization';
 
@@ -231,55 +230,60 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
 
     setIsUploadingToFirebase(true);
     try {
-      // Generate PDF from the lab report
-      const response = await apiClient.get(`/visits/${selectedVisitId}/lab-report/pdf`, { 
-        responseType: 'blob' 
-      });
+      // Call the backend endpoint to upload to Firebase
+      const response = await apiClient.post(`/patients/${currentPatientData.id}/upload-to-firebase`);
       
-      const pdfBlob = response.data;
-      
-      // Get hospital name from settings or use default
-      const hospitalName = "Jawda Medical"; // You might want to get this from settings
-      
-      const uploadResult = await uploadLabResultFromApi(
-        pdfBlob,
-        hospitalName,
-        selectedVisitId,
-        currentPatientData.name
-      );
-      
-      if (uploadResult.success && uploadResult.url) {
-        // Update patient with the result URL
-        try {
-          const updateResponse = await apiClient.patch(`/patients/${currentPatientData.id}`, {
-            result_url: uploadResult.url
-          });
-          
-          if (updateResponse.data) {
-            // Update the query cache
-            queryClient.setQueryData(['patientDetailsForActionPane', currentPatientData.id], (old: any) => {
-              if (old) {
-                return {
-                  ...old,
-                  result_url: uploadResult.url
-                };
-              }
-              return old;
-            });
-            
-            console.log('Patient result_url updated successfully:', uploadResult.url);
-          }
-          
+      if (response.data.success) {
+        const { result_url, was_updated } = response.data;
+        
+        if (was_updated) {
+          toast.success("تم استبدال تقرير المختبر في التخزين السحابي بنجاح");
+        } else {
           toast.success("تم رفع تقرير المختبر إلى التخزين السحابي بنجاح");
-        } catch (updateError) {
-          console.error('Error updating patient result_url:', updateError);
-          toast.warning("تم رفع الملف إلى التخزين السحابي ولكن فشل تحديث رابط الملف", {
-            description: "الملف متاح على: " + uploadResult.url
-          });
         }
+        
+        // Update the query cache with the new result_url
+        queryClient.setQueryData(['patientDetailsForActionPane', currentPatientData.id], (old: Patient | undefined) => {
+          if (old) {
+            return {
+              ...old,
+              result_url: result_url
+            };
+          }
+          return old;
+        });
+        
+        // Also update other patient detail caches
+        queryClient.setQueryData(['patientDetailsForInfoPanel', currentPatientData.id], (old: { data?: { result_url?: string } } | undefined) => {
+          if (old?.data) {
+            return {
+              ...old,
+              data: {
+                ...old.data,
+                result_url: result_url
+              }
+            };
+          }
+          return { data: { ...old?.data, result_url } };
+        });
+
+        queryClient.setQueryData(['patientDetailsForLabDisplay', currentPatientData.id], (old: { data?: { result_url?: string } } | undefined) => {
+          if (old?.data) {
+            return {
+              ...old,
+              data: {
+                ...old.data,
+                result_url: result_url
+              }
+            };
+          }
+          return { data: { ...old?.data, result_url } };
+        });
+        
+        console.log('Patient result_url updated successfully:', result_url);
       } else {
         toast.error("فشل رفع الملف إلى التخزين السحابي", {
-          description: uploadResult.error
+          description: response.data.message
         });
       }
     } catch (error: unknown) {

@@ -19,9 +19,11 @@ import {
   Typography,
   Avatar,
   Paper,
-  LinearProgress
+  LinearProgress,
+  Tooltip
 } from "@mui/material";
 import dayjs from "dayjs";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface StatusItem {
   done?: boolean;
@@ -45,6 +47,7 @@ export interface PatientDetailsLabEntryProps {
     authentication?: StatusItem;
   };
   className?: string;
+  onAuthenticationToggle?: () => void;
 }
 
 const ItemRow: React.FC<{
@@ -92,7 +95,6 @@ const ItemRow: React.FC<{
         >
           {label}
         </Typography>
-        <Box sx={{ flex: 1, height: '1px', bgcolor: 'divider', mx: 1 }} />
         <Typography 
           variant="body2" 
           sx={{ 
@@ -128,32 +130,40 @@ const StatusIcon: React.FC<{
   label: string; 
   status?: StatusItem; 
   icon?: React.ElementType;
-}> = ({ label, status, icon: Icon }) => {
+  onClick?: () => void;
+  isClickable?: boolean;
+}> = ({ label, status, icon: Icon, onClick, isClickable = false }) => {
   const isCompleted = status?.done;
-  
+   console.log(label,'label',status)
   return (
-    <Box 
-      sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        p: 1,
-        borderRadius: 2,
-        border: 1,
-        borderColor: isCompleted ? 'success.light' : 'divider',
-        backgroundColor: isCompleted ? 'success.light' : 'background.paper',
-        transition: 'all 0.2s ease-in-out',
-        width: 50,
-        height: 50,
-        position: 'relative',
-        '&:hover': {
-          boxShadow: 2,
-          transform: 'translateY(-2px)',
-          borderColor: isCompleted ? 'success.main' : 'primary.light'
-        }
-      }}
-      title={label}
-    >
+    <Tooltip title={isClickable ? (isCompleted ? "انقر لإلغاء المصادقة (مدير)" : "انقر للمصادقة (مدير)") : label}>
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          p: 1,
+          borderRadius: 2,
+          border: 1,
+          borderColor: isCompleted ? 'success.light' : 'divider',
+          backgroundColor: isCompleted ? 'success.light' : 'background.paper',
+          transition: 'all 0.2s ease-in-out',
+          width: 50,
+          height: 50,
+          position: 'relative',
+          cursor: isClickable ? 'pointer' : 'default',
+          '&:hover': {
+            boxShadow: 2,
+            transform: 'translateY(-2px)',
+            borderColor: isCompleted ? 'success.main' : 'primary.light',
+            ...(isClickable && {
+              borderColor: isCompleted ? 'error.main' : 'success.main',
+              backgroundColor: isCompleted ? 'error.light' : 'success.light'
+            })
+          }
+        }}
+        onClick={isClickable ? onClick : undefined}
+      >
       <Avatar 
         sx={{ 
           width: 32, 
@@ -178,6 +188,7 @@ const StatusIcon: React.FC<{
         }}
       />
     </Box>
+    </Tooltip>
   );
 };
 
@@ -191,7 +202,10 @@ const PatientDetailsLabEntry: React.FC<PatientDetailsLabEntryProps> = ({
   age,
   statuses,
   className,
+  onAuthenticationToggle
 }) => {
+  const { user } = useAuth();
+  const isAdmin = user?.roles?.some(role => role.name === 'admin') || false;
   const completedSteps = Object.values(statuses || {}).filter(status => status?.done).length;
   const totalSteps = Object.keys(statuses || {}).length;
   const progressPercentage = totalSteps > 0 ? (completedSteps / totalSteps) * 100 : 0;
@@ -273,8 +287,6 @@ const PatientDetailsLabEntry: React.FC<PatientDetailsLabEntryProps> = ({
           sx={{ 
             p: 1.5, 
             mb: 2, 
-            borderRadius: 2,
-            border: '1px solid',
             borderColor: 'divider',
             bgcolor: 'background.default'
           }}
@@ -360,6 +372,8 @@ const PatientDetailsLabEntry: React.FC<PatientDetailsLabEntryProps> = ({
               label="المصادقة" 
               status={statuses?.authentication} 
               icon={Shield}
+              onClick={onAuthenticationToggle}
+              isClickable={isAdmin}
             />
           </Box>
         </Paper>

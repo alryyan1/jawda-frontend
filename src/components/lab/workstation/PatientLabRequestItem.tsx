@@ -19,6 +19,7 @@ interface PatientLabRequestItemProps {
   isLastResultPending?: boolean; 
   isReadyForPrint?: boolean;
   appearanceSettings: LabAppearanceSettings;
+  showNewPaymentBadge?: boolean;
 }
 
 const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
@@ -27,9 +28,10 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
   isSelected,
   onSelect,
   allRequestsPaid,
-  isResultLocked,
+  isResultLocked: _isResultLocked,
   isLastResultPending,
   isReadyForPrint,
+  showNewPaymentBadge = false,
 }) => {
   const { t } = useTranslation(["labResults", "common", "whatsapp"]);
   const labIdentifier =
@@ -73,7 +75,7 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
         '--text-color': currentStyle.textColor,
       } as React.CSSProperties}
       className={cn(
-        "w-[54px] h-[54px]  flex-shrink-0 rounded-lg cursor-pointer transition-all duration-200 ease-out",
+        "w-[54px] h-[54px]  duration-3000! flex-shrink-0 rounded-lg cursor-pointer transition-all duration-200 ease-out",
         "flex flex-col items-center justify-center relative group border",
         "hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2",
         item.is_printed && "bg-[#01b9ff] text-black! font-bold",
@@ -115,6 +117,12 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
       {item.company && (
         <div className="absolute -bottom-1 -right-1 p-0.5 bg-[var(--bg-color)] rounded-full shadow-sm border border-[var(--border-color)]">
           <Heart className="h-3 w-3 text-red-500 fill-red-500" />
+        </div>
+      )}
+
+      {showNewPaymentBadge && (
+        <div className="absolute -top-1 -left-1 h-4 w-4 bg-green-500 rounded-full shadow-lg border-2 border-white animate-pulse">
+          <div className="h-full w-full bg-green-500 rounded-full animate-ping opacity-75"></div>
         </div>
       )}
 

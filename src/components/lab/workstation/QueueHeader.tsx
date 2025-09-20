@@ -67,7 +67,7 @@ const QueueHeader: React.FC<QueueHeaderProps> = ({
         </span>
         <span className="flex items-center gap-1">
           <Users className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-          {`المرضى في الطابور: ${patientCount}`}
+          {`المرضى المعروضون: ${patientCount}`}
         </span>
       </div>
     </div>

@@ -22,11 +22,12 @@ interface PatientQueuePanelProps {
   globalSearchTerm: string;
   queueFilters?: LabQueueFilters; // Optional filters for the queue
   appearanceSettings: LabAppearanceSettings;
+  newPaymentBadges?: Set<number>; // Set of visit IDs that should show new payment badge
 }
 
 const PatientQueuePanel: React.FC<PatientQueuePanelProps> = ({
   appearanceSettings,
-  currentShift, onShiftChange, onPatientSelect, selectedVisitId, globalSearchTerm, queueFilters = {}
+  currentShift, onShiftChange, onPatientSelect, selectedVisitId, globalSearchTerm, queueFilters = {}, newPaymentBadges = new Set()
 }) => {
   // const { t } = useTranslation(['labResults', 'common']);
   const queryClient = useQueryClient(); // For manual refresh
@@ -78,7 +79,6 @@ const PatientQueuePanel: React.FC<PatientQueuePanelProps> = ({
   }, [currentShift?.id, globalSearchTerm, queueFilters]);
 
   const queueItems = paginatedQueue?.data || [];
-  const meta = paginatedQueue?.meta;
   // console.log(queueItems,'queueItems from queue')
   const handleRefresh = () => {
       // Invalidate and refetch the queue
@@ -91,7 +91,7 @@ const PatientQueuePanel: React.FC<PatientQueuePanelProps> = ({
     <div className="h-full flex flex-col">
       <QueueHeader
         currentShift={currentShift}
-        patientCount={meta?.total || 0}
+        patientCount={queueItems.length}
         onShiftChange={onShiftChange} // Passed from LabWorkstationPage
         onRefreshQueue={handleRefresh} // Use local refresh handler
         isLoading={isFetching || isLoading}
@@ -135,6 +135,7 @@ const PatientQueuePanel: React.FC<PatientQueuePanelProps> = ({
                   isSelected={selectedVisitId === item.visit_id}
                   onSelect={() => onPatientSelect(item)}
                   allRequestsPaid={(item as unknown as { all_requests_paid?: boolean }).all_requests_paid}
+                  showNewPaymentBadge={newPaymentBadges.has(item.visit_id)}
                 />
               ))}
             </div>

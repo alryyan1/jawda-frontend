@@ -1,6 +1,7 @@
 // src/services/realtimeService.ts
 import { io, Socket } from 'socket.io-client';
 import type { Patient } from '@/types/patients';
+import type { DoctorVisit, LabRequest } from '@/types/visits';
 import { realtimeUrlFromConstants } from '@/pages/constants';
 
 class RealtimeService {
@@ -76,6 +77,27 @@ class RealtimeService {
         this.socket.off('patient-registered', callback);
       } else {
         this.socket.off('patient-registered');
+      }
+    }
+  }
+
+  // Subscribe to lab-payment events
+  public onLabPayment(callback: (data: { visit: DoctorVisit; patient: Patient; labRequests: LabRequest[] }) => void): void {
+    if (this.socket) {
+      this.socket.on('lab-payment', (data: { visit: DoctorVisit; patient: Patient; labRequests: LabRequest[] }) => {
+        console.log('Received lab-payment event:', data);
+        callback(data);
+      });
+    }
+  }
+
+  // Unsubscribe from lab-payment events
+  public offLabPayment(callback?: (data: { visit: DoctorVisit; patient: Patient; labRequests: LabRequest[] }) => void): void {
+    if (this.socket) {
+      if (callback) {
+        this.socket.off('lab-payment', callback);
+      } else {
+        this.socket.off('lab-payment');
       }
     }
   }

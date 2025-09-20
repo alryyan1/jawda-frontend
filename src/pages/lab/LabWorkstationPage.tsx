@@ -14,6 +14,8 @@ import {
   CalendarSearch,
   Printer,
   Clock,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -39,7 +41,7 @@ import type {
   PatientLabQueueItem,
 } from "@/types/labWorkflow";
 import type { Shift } from "@/types/shifts";
-import type { LabRequest, DoctorVisit } from "@/types/visits";
+import type { DoctorVisit } from "@/types/visits";
 
 // Type for autocomplete items
 interface RecentDoctorVisitSearchItem {
@@ -67,7 +69,8 @@ import {
   getAppearanceSettings,
   type LabAppearanceSettings,
 } from "@/lib/appearance-settings-store";
-// Removed socket updates and service imports
+import realtimeService from "@/services/realtimeService";
+import type { LabRequest } from "@/types/visits";
 
 const LabWorkstationPage: React.FC = () => {
   // Direct Arabic labels for this page
@@ -153,6 +156,71 @@ const LabWorkstationPage: React.FC = () => {
   const [selectedLabHistoryItem, setSelectedLabHistoryItem] = useState<LabHistoryItem | null>(null);
   const [isLoadingLabHistory, setIsLoadingLabHistory] = useState(false);
 
+  // New Payment Badge State
+  const [newPaymentBadges, setNewPaymentBadges] = useState<Set<number>>(new Set());
+
+  // Sound system state
+  const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+
+  // Function to add and remove payment badge
+  const addPaymentBadge = (visitId: number) => {
+    setNewPaymentBadges(prev => new Set(prev).add(visitId));
+    
+    // Remove badge after 15 seconds
+    setTimeout(() => {
+      setNewPaymentBadges(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(visitId);
+        return newSet;
+      });
+    }, 15000);
+  };
+
+  // Function to initialize audio context (call on first user interaction)
+  const initializeAudio = () => {
+    if (!audioContext) {
+      try {
+        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        setAudioContext(ctx);
+        console.log('Audio context initialized');
+      } catch (error) {
+        console.warn('Could not initialize audio context:', error);
+        setSoundEnabled(false);
+      }
+    }
+  };
+
+  // Function to play payment sound
+  const playPaymentSound = useCallback(async () => {
+    if (!soundEnabled) return;
+
+    try {
+      // Initialize audio context if needed
+      if (!audioContext) {
+        initializeAudio();
+      }
+
+      const audio = new Audio('/new-payment.wav');
+      audio.volume = 0.7;
+      audio.preload = 'auto';
+      
+      // Try to play the sound
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        await playPromise;
+        console.log('Payment sound played successfully');
+      }
+    } catch (error) {
+      console.warn('Could not play payment sound:', error);
+      // If autoplay is blocked, try to enable it for future plays
+      if (error instanceof Error && error.name === 'NotAllowedError') {
+        console.warn('Autoplay blocked - user interaction required to enable sound');
+        setSoundEnabled(false);
+      }
+    }
+  }, [soundEnabled, audioContext]);
+
   const handleShiftSelectedFromFinder = (selectedShift: Shift) => {
     setIsManuallyNavigatingShifts(true);
     setCurrentShiftForQueue(selectedShift);
@@ -165,7 +233,65 @@ const LabWorkstationPage: React.FC = () => {
     toast.info(`تم اختيار الوردية رقم ${selectedShift.id}`);
   };
   const [visitIdSearchTerm, setVisitIdSearchTerm] = useState("");
-  // Sockets removed: no realtime lab updates listener
+  // Real-time event subscription for lab payments
+  useEffect(() => {
+    const handleLabPayment = async (data: { visit: DoctorVisit; patient: Patient; labRequests: LabRequest[] }) => {
+      console.log('Lab payment event received:', data);
+      
+      try {
+        // Convert the visit data to PatientLabQueueItem format (for reference)
+        // const queueItemLike: PatientLabQueueItem = {
+        //   visit_id: data.visit.id,
+        //   patient_id: data.patient.id,
+        //   patient_name: data.patient.name,
+        //   sample_id: data.labRequests?.find((lr) => lr.sample_id)?.sample_id || `V${data.visit.id}`,
+        //   lab_number: `L${data.visit.id}`,
+        //   lab_request_ids: data.labRequests.map((lr) => lr.id),
+        //   oldest_request_time: data.labRequests.length > 0
+        //     ? data.labRequests.reduce(
+        //         (oldest, lr) =>
+        //           new Date(lr.created_at!) < new Date(oldest)
+        //             ? lr.created_at!
+        //             : oldest,
+        //         data.labRequests[0].created_at!
+        //       )
+        //     : data.visit.created_at,
+        //   test_count: data.labRequests.length,
+        //   phone: data.patient.phone || "",
+        //   result_is_locked: data.patient.result_is_locked || false,
+        //   all_requests_paid: true, // Payment was just made
+        //   is_result_locked: data.patient.result_is_locked || false,
+        // };
+
+        // Play payment notification sound
+        await playPaymentSound();
+
+        // Add payment badge for 15 seconds
+        addPaymentBadge(data.visit.id);
+
+        // Show a toast notification
+        toast.success(`تم دفع فحوصات المختبر للمريض: ${data.patient.name}`);
+        
+        // Invalidate the queue to refresh with the new paid patient
+        queryClient.invalidateQueries({
+          queryKey: ["labPendingQueue", currentShiftForQueue?.id],
+        });
+        
+      } catch (error) {
+        console.error('Error processing lab payment event:', error);
+        toast.error('فشل في تحديث قائمة المختبر');
+      }
+    };
+
+    // Subscribe to lab-payment events
+    realtimeService.onLabPayment(handleLabPayment);
+
+    // Cleanup subscription on component unmount
+    return () => {
+      realtimeService.offLabPayment(handleLabPayment);
+    };
+  }, [queryClient, currentShiftForQueue?.id]);
+
   // Fetch global current open clinic shift
   const { data: currentClinicShiftGlobal, isLoading: isLoadingGlobalShift } =
     useQuery<Shift | null, Error>({
@@ -533,6 +659,7 @@ const LabWorkstationPage: React.FC = () => {
     <div
       style={{ height: "100%" }}
       className="flex flex-col  bg-slate-100 dark:bg-slate-900 text-sm overflow-hidden"
+      onClick={initializeAudio} // Initialize audio on first click
     >
       <header className="flex-shrink-0 h-auto p-3 border-b bg-card flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4 shadow-sm dark:border-slate-800">
         <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
@@ -858,6 +985,26 @@ const LabWorkstationPage: React.FC = () => {
               <ListRestart className="h-5 w-5" />
             </IconButton>
           </Tooltip>
+          <Tooltip title={soundEnabled ? "إيقاف الصوت" : "تشغيل الصوت"}>
+            <IconButton 
+              onClick={() => {
+                if (!soundEnabled) {
+                  setSoundEnabled(true);
+                  initializeAudio();
+                  toast.info("تم تفعيل الصوت");
+                } else {
+                  setSoundEnabled(false);
+                  toast.info("تم إيقاف الصوت");
+                }
+              }} 
+              size="small"
+              sx={{
+                color: soundEnabled ? 'success.main' : 'error.main',
+              }}
+            >
+              {soundEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+            </IconButton>
+          </Tooltip>
         </div>
       </header>
 
@@ -1002,6 +1149,7 @@ const LabWorkstationPage: React.FC = () => {
             selectedVisitId={selectedQueueItem?.visit_id || null}
             globalSearchTerm={debouncedGlobalSearch}
             queueFilters={appliedQueueFilters}
+            newPaymentBadges={newPaymentBadges}
           />
         </aside>
       </div>

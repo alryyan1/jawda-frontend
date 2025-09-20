@@ -2,11 +2,13 @@ import React, { forwardRef, useImperativeHandle, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import apiClient from "@/services/api";
-import type { DoctorVisit } from "@/types/visits";
+import type { DoctorVisit, LabRequest } from "@/types/visits";
 import PatientCompanyDetails from "./PatientCompanyDetails";
 import PatientInfoDialog from "@/components/clinic/PatientInfoDialog";
 import { Button } from "@/components/ui/button";
 import { User } from "lucide-react";
+import { getLabRequestsForVisit } from "@/services/labRequestService";
+import { realtimeUrlFromConstants } from "@/pages/constants";
 
 interface PatientDetailsColumnV1Props {
   activeVisitId: number | null;
@@ -31,9 +33,38 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
       const response = await apiClient.post(`/doctor-visits/${activeVisitId}/pay-all-lab-requests`);
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("تمت معالجة جميع المدفوعات بنجاح");
       onPrintReceipt();
+      
+      // Emit lab-payment event
+      try {
+        if (visit && visit.patient) {
+          // Fetch lab requests for this visit
+          const labRequests = await getLabRequestsForVisit(activeVisitId!);
+          
+          // Emit the lab-payment event
+          const realtimeUrl = realtimeUrlFromConstants || 'http://localhost:4001';
+          await fetch(`${realtimeUrl}/emit/lab-payment`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-internal-token': import.meta.env.VITE_SERVER_AUTH_TOKEN || 'changeme'
+            },
+            body: JSON.stringify({
+              visit: visit,
+              patient: visit.patient,
+              labRequests: labRequests
+            })
+          });
+          
+          console.log('Lab payment event emitted successfully');
+        }
+      } catch (error) {
+        console.error('Failed to emit lab-payment event:', error);
+        // Don't show error to user as payment was successful
+      }
+      
       queryClient.invalidateQueries({
         queryKey: ["activeVisitForLabRequests", activeVisitId],
       });

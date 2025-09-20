@@ -136,7 +136,7 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
           <PatientDetailsLabEntry
             visitId={visitId}
             patientName={currentPatient.name}
-            doctorName={null} // doctor_name is not available in the interface
+            doctorName={patientLabQueueItem?.doctor_name ?? null} // doctor_name is not available in the interface
             date={currentPatient.created_at as unknown as string}
             phone={currentPatient.phone ?? null}
             paymentMethod={null}

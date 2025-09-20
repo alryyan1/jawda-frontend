@@ -208,7 +208,6 @@ const PatientDetailsLabEntry: React.FC<PatientDetailsLabEntryProps> = ({
   const isAdmin = user?.roles?.some(role => role.name === 'admin') || false;
   const completedSteps = Object.values(statuses || {}).filter(status => status?.done).length;
   const totalSteps = Object.keys(statuses || {}).length;
-  const progressPercentage = totalSteps > 0 ? (completedSteps / totalSteps) * 100 : 0;
 
   return (
     <MuiCard 
@@ -244,40 +243,17 @@ const PatientDetailsLabEntry: React.FC<PatientDetailsLabEntryProps> = ({
           }
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
-          <Typography variant="h6" sx={{ fontWeight: 700, letterSpacing: '0.5px', fontSize: '1.1rem' }}>
-            #{visitId ?? "-"}
-          </Typography>
-          <Chip 
-            label={`${completedSteps}/${totalSteps}`}
-            size="small"
-            sx={{ 
-              bgcolor: 'rgba(255,255,255,0.2)', 
-              color: 'white',
-              fontWeight: 600,
-              backdropFilter: 'blur(10px)',
-              height: 20,
-              fontSize: '0.7rem'
-            }}
-          />
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 0.5 }}>
+     
+          <div className="text-white text-4xl font-bold">
+            {visitId}
+          </div>
+      
         </Box>
         <Typography variant="h6" sx={{ fontWeight: 600, textAlign: 'center', fontSize: '1.2rem' }}>
           {patientName || "-"}
         </Typography>
-        <LinearProgress 
-          variant="determinate" 
-          value={progressPercentage}
-          sx={{ 
-            mt: 1, 
-            height: 4, 
-            borderRadius: 2,
-            bgcolor: 'rgba(255,255,255,0.2)',
-            '& .MuiLinearProgress-bar': {
-              borderRadius: 2,
-              background: 'linear-gradient(90deg, #4facfe 0%, #00f2fe 100%)'
-            }
-          }}
-        />
+    
       </Box>
 
       <MuiCardContent sx={{ p: 2 }}>
@@ -291,21 +267,7 @@ const PatientDetailsLabEntry: React.FC<PatientDetailsLabEntryProps> = ({
             bgcolor: 'background.default'
           }}
         >
-          <Typography 
-            variant="subtitle1" 
-            sx={{ 
-              fontWeight: 600, 
-              mb: 1, 
-              color: 'primary.main',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
-              fontSize: '0.9rem'
-            }}
-          >
-            <User size={16} />
-            معلومات المريض
-          </Typography>
+   
 
           <Box>
             <ItemRow label="الطبيب" value={doctorName || "-"} icon={User} />
@@ -327,21 +289,7 @@ const PatientDetailsLabEntry: React.FC<PatientDetailsLabEntryProps> = ({
             bgcolor: 'background.default'
           }}
         >
-          <Typography 
-            variant="subtitle1" 
-            sx={{ 
-              fontWeight: 600, 
-              mb: 1, 
-              color: 'primary.main',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
-              fontSize: '0.9rem'
-            }}
-          >
-            <Shield size={16} />
-            حالة العملية
-          </Typography>
+      
           
           <Box 
             sx={{ 

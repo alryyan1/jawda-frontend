@@ -10,7 +10,7 @@ import PatientLabRequestItem from './PatientLabRequestItem';
 import type { Shift } from '@/types/shifts';
 import type { PatientLabQueueItem, PaginatedPatientLabQueueResponse } from '@/types/labWorkflow';
 import type { LabQueueFilters } from './LabQueueFilterDialog';
-import { getLabPendingQueue } from '@/services/labWorkflowService';
+import { getLabPendingQueue, getLabReadyForPrintQueue, getLabUnfinishedResultsQueue } from '@/services/labWorkflowService';
 import type { LabAppearanceSettings } from '@/lib/appearance-settings-store';
 // format from date-fns no longer needed here if date is not primary filter when shift is present
 
@@ -43,18 +43,7 @@ const PatientQueuePanel: React.FC<PatientQueuePanelProps> = ({
   } = useQuery<PaginatedPatientLabQueueResponse, Error>({
     queryKey: queueQueryKey,
     queryFn: () => {
-      const filters: {
-        search?: string;
-        page?: number;
-        per_page?: number;
-        shift_id?: number;
-        package_id?: string | null;
-        main_test_id?: string | null;
-        result_status_filter?: string;
-        print_status_filter?: string;
-        company_id?: string | null;
-        doctor_id?: string | null;
-      } = {
+      const filters: LabQueueFilters = {
         search: globalSearchTerm,
         page: currentPage,
         per_page: 50,
@@ -66,9 +55,18 @@ const PatientQueuePanel: React.FC<PatientQueuePanelProps> = ({
         print_status_filter: queueFilters.print_status_filter !== 'all' ? queueFilters.print_status_filter : undefined,
         company_id: queueFilters.company_id,
         doctor_id: queueFilters.doctor_id,
+        show_unfinished_only: queueFilters.show_unfinished_only,
+        ready_for_print_only: queueFilters.ready_for_print_only,
       };
       
-      return getLabPendingQueue(filters);
+      // Use the appropriate service method based on the filter
+      if (queueFilters.ready_for_print_only) {
+        return getLabReadyForPrintQueue(filters);
+      } else if (queueFilters.show_unfinished_only) {
+        return getLabUnfinishedResultsQueue(filters);
+      } else {
+        return getLabPendingQueue(filters);
+      }
     },
     placeholderData: keepPreviousData,
     enabled: !!currentShift, // Only enable if a shift is selected/available

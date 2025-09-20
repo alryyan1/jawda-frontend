@@ -62,15 +62,15 @@ const TestSelectionPanel: React.FC<TestSelectionPanelProps> = ({
 
 console.log(selectedLabRequestId,'selectedLabRequestId');
   return (
-    <Box className="h-full flex flex-col p-3 bg-background dark:bg-card/50">
+    <Box  className="h-full flex flex-col p-3 bg-background dark:bg-card/50">
  
 
  
 
       
       {!isLoading && !error && labRequests && labRequests.length > 0 && (
-         <Box className="flex-grow -mx-1 overflow-y-auto">
-            <Box className={`space-y-1.5 px-1`}>
+         <Box sx={{direction:'rtl'}} className="flex-grow  -mx-1 overflow-y-auto">
+            <Box  className={`space-y-1.5 px-1`}>
             {labRequests.map(lr => (
                 <MuiCard 
                     key={lr.id} 

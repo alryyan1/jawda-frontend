@@ -76,13 +76,14 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
         "w-[54px] h-[54px]  flex-shrink-0 rounded-lg cursor-pointer transition-all duration-200 ease-out",
         "flex flex-col items-center justify-center relative group border",
         "hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2",
+        item.is_printed && "bg-[#708deb] text-white!",
         "active:scale-95 transform-gpu",
         isLastResultPending && !isSelected && "animate-heartbeat",
         isLastResultPending && !isSelected && "animate__animated animate__heartBeat animate__infinite animate__slow",
         isReadyForPrint && !isSelected && "animate__animated animate__bounce animate__infinite animate__slow",
 
         // Use CSS variables for dynamic styling
-        "bg-[var(--bg-color)] border-[var(--border-color)] text-[var(--text-color)]",
+        "border-[var(--border-color)] text-[var(--text-color)]",
         currentStyle.isBold ? 'font-semibold' : 'font-normal',
         isSelected && 'ring-2 ring-[var(--border-color)] shadow-lg'
       )}
@@ -95,7 +96,7 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
       {item.test_count > 0 && (
         <div
           style={{
-            backgroundColor: paymentStatusBadgeStyle.backgroundColor,
+            backgroundColor: '#92b7ff',
             color: paymentStatusBadgeStyle.color,
           }}
           className="absolute -top-1.5 -right-1.5 h-5 min-w-[20px] px-1.5 text-[10px] font-bold leading-tight rounded-full shadow-sm border-2 border-[var(--bg-color)] flex items-center justify-center"
@@ -116,9 +117,7 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
         </div>
       )}
 
-      {item.is_printed && (
-         <div className="absolute top-0.5 left-0.5 w-2 h-2 rounded-full shadow-sm" style={{backgroundColor: appearanceSettings.printed.badgeBackgroundColor}}></div>
-      )}
+    
     </div>
   );
 };

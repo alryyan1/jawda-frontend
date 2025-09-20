@@ -11,6 +11,14 @@ export const getLabPendingQueue = (filters: {shift_id?: number; date?: string; s
   return apiClient.get<PaginatedPatientLabQueueResponse>('/lab/pending-queue', { params: filters }).then(res => res.data);
 };
 
+export const getLabReadyForPrintQueue = (filters: LabQueueFilters): Promise<PaginatedPatientLabQueueResponse> => {
+  return apiClient.get<PaginatedPatientLabQueueResponse>('/lab/ready-for-print-queue', { params: filters }).then(res => res.data);
+};
+
+export const getLabUnfinishedResultsQueue = (filters: LabQueueFilters): Promise<PaginatedPatientLabQueueResponse> => {
+  return apiClient.get<PaginatedPatientLabQueueResponse>('/lab/unfinished-results-queue', { params: filters }).then(res => res.data);
+};
+
 export const getLabRequestForEntry = async (labRequestId: number): Promise<MainTestWithChildrenResults> => {
   // This is the endpoint we designed for the ResultEntryPanel.
   // It hits LabRequestController@getLabRequestForEntry

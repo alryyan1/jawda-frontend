@@ -1,36 +1,25 @@
 // src/components/lab/workstation/dialogs/LabQueueFilterDialog.tsx (New file)
 import React, { useState, useEffect } from "react";
-import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
-import Autocomplete from "@mui/material/Autocomplete";
-import TextField from "@mui/material/TextField";
-import CircularProgress from "@mui/material/CircularProgress";
-import Paper from "@mui/material/Paper";
-
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogClose,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import {
+  DialogActions,
+  Button,
+  FormControl,
+  InputLabel,
   Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Filter } from "lucide-react";
+  MenuItem,
+  Box,
+  Typography,
+  Stack,
+  CircularProgress,
+  Autocomplete,
+  TextField,
+} from "@mui/material";
+import { Filter as FilterIcon } from "lucide-react";
 
-import type { MainTestStripped, Package } from "@/types/labTests";
-import type { Company } from "@/types/companies";
-import type { DoctorStripped } from "@/types/doctors";
+import type { Package } from "@/types/labTests";
 
 import { useCachedMainTestsList } from "@/hooks/useCachedData";
 import { getPackagesList } from "@/services/packageService";
@@ -43,10 +32,12 @@ export interface LabQueueFilters {
   shift_id?: number;
   result_status_filter?: "all" | "finished" | "pending";
   print_status_filter?: "all" | "printed" | "not_printed";
-  main_test_id?: string | null;
-  package_id?: string | null;
-  company_id?: string | null;
-  doctor_id?: string | null;
+  main_test_id?: number | null | 'all';
+  package_id?: number | null | 'all';
+  company_id?: number | null;
+  doctor_id?: number | null;
+  show_unfinished_only?: boolean;
+  ready_for_print_only?: boolean;
 }
 
 interface LabQueueFilterDialogProps {
@@ -62,7 +53,8 @@ const LabQueueFilterDialog: React.FC<LabQueueFilterDialogProps> = ({
   currentFilters,
   onApplyFilters,
 }) => {
-  const { t, i18n } = useTranslation(["labResults", "common", "filters"]);
+  // Set RTL direction for Arabic
+  const isRTL = true;
   const [localFilters, setLocalFilters] =
     useState<LabQueueFilters>(currentFilters);
 
@@ -127,316 +119,236 @@ const LabQueueFilterDialog: React.FC<LabQueueFilterDialogProps> = ({
       package_id: undefined,
       company_id: undefined,
       doctor_id: undefined,
+      show_unfinished_only: false,
+      ready_for_print_only: false,
     };
     setLocalFilters(defaultFilters);
   };
 
+  const handleShowUnfinishedOnly = () => {
+    setLocalFilters((prev) => ({
+      ...prev,
+      show_unfinished_only: !prev.show_unfinished_only,
+      ready_for_print_only: false, // Disable the other filter when this is enabled
+    }));
+  };
+
+  const handleShowReadyForPrintOnly = () => {
+    setLocalFilters((prev) => ({
+      ...prev,
+      ready_for_print_only: !prev.ready_for_print_only,
+      show_unfinished_only: false, // Disable the other filter when this is enabled
+    }));
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg md:max-w-xl max-h-[85vh] flex flex-col">
-        <DialogHeader className="px-6 pt-6">
-          <DialogTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5 text-primary" />
-            {t("filters:titleLabQueue")}
-          </DialogTitle>
-          <DialogDescription>
-            {t("filters:descriptionLabQueue")}
-          </DialogDescription>
-        </DialogHeader>
-
-        <ScrollArea className="flex-grow px-6 py-4">
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="filter-result-status" className="text-xs">
-                {t("filters:resultStatus")}
-              </Label>
-              <Select
-                value={localFilters.result_status_filter || "all"}
-                onValueChange={(val) =>
-                  handleFilterChange("result_status_filter", val)
-                }
-                dir={i18n.dir()}
-              >
-                <SelectTrigger id="filter-result-status" className="h-9 mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("filters:status.all")}</SelectItem>
-                  <SelectItem value="finished">
-                    {t("filters:status.finished")}
-                  </SelectItem>
-                  <SelectItem value="pending">
-                    {t("filters:status.pending")}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="filter-print-status" className="text-xs">
-                {t("filters:printStatus")}
-              </Label>
-              <Select
-                value={localFilters.print_status_filter || "all"}
-                onValueChange={(val) =>
-                  handleFilterChange("print_status_filter", val)
-                }
-                dir={i18n.dir()}
-              >
-                <SelectTrigger id="filter-print-status" className="h-9 mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("filters:status.all")}</SelectItem>
-                  <SelectItem value="printed">
-                    {t("filters:status.printed")}
-                  </SelectItem>
-                  <SelectItem value="not_printed">
-                    {t("filters:status.notPrinted")}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="filter-main-test" className="text-xs">
-                {t("filters:specificTest")}
-              </Label>
-              
-              {/* Debug info */}
-              <div className="text-xs text-muted-foreground mb-1">
-                {isLoadingMainTests ? "Loading tests..." : 
-                 mainTestsError ? `Error: ${mainTestsError.message}` :
-                 `${mainTests?.length || 0} tests loaded`}
-              </div>
-              
-              <Autocomplete
-                id="filter-main-test"
-                size="small"
-                options={mainTests || []}
-                getOptionLabel={(option) => option.main_test_name}
-                value={
-                  localFilters.main_test_id && mainTests
-                    ? mainTests.find(test => test.id === parseInt(localFilters.main_test_id!)) || null
-                    : null
-                }
-                onChange={(event, newValue) => {
-                  console.log('Autocomplete onChange:', newValue);
-                  if (newValue) {
-                    handleFilterChange("main_test_id", String(newValue.id));
-                  } else {
-                    handleFilterChange("main_test_id", undefined);
-                  }
-                }}
-                isOptionEqualToValue={(option, value) => {
-                  if (!option || !value) return false;
-                  return option.id === value.id;
-                }}
-                loading={isLoadingMainTests}
-                disabled={isLoadingMainTests}
-                disableClearable={false}
-                noOptionsText={
-                  isLoadingMainTests 
-                    ? t("common:loading")
-                    : mainTestsError 
-                      ? t("common:error.fetchFailed")
-                      : t("common:noResultsFound")
-                }
-                renderOption={(props, option) => (
-                  <li {...props} key={option.id}>
-                    {option.main_test_name}
-                  </li>
-                )}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    placeholder={t("filters:selectTestPlaceholder")}
-                    variant="outlined"
-                    error={!!mainTestsError}
-                    helperText={mainTestsError?.message}
-                    sx={{
-                      mt: 0.5,
-                      '& .MuiOutlinedInput-root': {
-                        height: '36px',
-                        fontSize: '0.875rem',
-                        backgroundColor: 'var(--background)',
-                        color: 'var(--foreground)',
-                        '& fieldset': {
-                          borderColor: 'var(--border)',
-                        },
-                        '&:hover fieldset': {
-                          borderColor: 'var(--ring)',
-                        },
-                        '&.Mui-focused fieldset': {
-                          borderColor: 'var(--ring)',
-                        },
-                        '&.Mui-error fieldset': {
-                          borderColor: 'var(--destructive)',
-                        },
-                      },
-                      '& .MuiInputLabel-root': {
-                        color: 'var(--muted-foreground)',
-                      },
-                      '& .MuiAutocomplete-clearIndicator': {
-                        color: 'var(--muted-foreground)',
-                        '&:hover': {
-                          color: 'var(--foreground)',
-                        },
-                      },
-                      '& .MuiFormHelperText-root': {
-                        color: 'var(--destructive)',
-                        fontSize: '0.75rem',
-                      },
-                    }}
-                    InputProps={{
-                      ...params.InputProps,
-                      endAdornment: (
-                        <>
-                          {isLoadingMainTests ? (
-                            <CircularProgress color="inherit" size={16} />
-                          ) : null}
-                          {params.InputProps.endAdornment}
-                        </>
-                      ),
-                    }}
-                  />
-                )}
-                PaperComponent={(props) => (
-                  <Paper
-                    {...props}
-                    sx={{
-                      backgroundColor: 'var(--background)',
-                      color: 'var(--foreground)',
-                      border: '1px solid var(--border)',
-                      '& .MuiAutocomplete-option': {
-                        color: 'var(--foreground)',
-                        '&:hover': {
-                          backgroundColor: 'var(--accent)',
-                        },
-                        '&.Mui-focused': {
-                          backgroundColor: 'var(--accent)',
-                        },
-                      },
-                      '& .MuiAutocomplete-noOptions': {
-                        color: 'var(--muted-foreground)',
-                      },
-                    }}
-                  />
-                )}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="filter-package" className="text-xs">
-                {t("filters:package")}
-              </Label>
-              <Select
-                value={localFilters.package_id || ""}
-                onValueChange={(val) => handleFilterChange("package_id", val)}
-                dir={i18n.dir()}
-                disabled={isLoadingPackages}
-              >
-                <SelectTrigger id="filter-package" className="h-9 mt-1">
-                  <SelectValue
-                    placeholder={t("filters:selectPackagePlaceholder")}
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value=" ">{t("filters:allPackages")}</SelectItem>
-                  {packages?.map((pkg) => (
-                    <SelectItem key={pkg.id} value={String(pkg.id)}>
-                      {pkg.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="filter-company" className="text-xs">
-                {t("filters:company")}
-              </Label>
-              <Select
-                value={localFilters.company_id || ""}
-                onValueChange={(val) => handleFilterChange("company_id", val)}
-                dir={i18n.dir()}
-                disabled={isLoadingCompanies}
-              >
-                <SelectTrigger id="filter-company" className="h-9 mt-1">
-                  <SelectValue
-                    placeholder={t("filters:selectCompanyPlaceholder")}
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value=" ">{t("filters:allCompanies")}</SelectItem>
-                  {companies?.map((comp) => (
-                    <SelectItem key={comp.id} value={String(comp.id)}>
-                      {comp.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="filter-doctor" className="text-xs">
-                {t("filters:referringDoctor")}
-              </Label>
-              <Select
-                value={localFilters.doctor_id || ""}
-                onValueChange={(val) => handleFilterChange("doctor_id", val)}
-                dir={i18n.dir()}
-                disabled={isLoadingDoctors}
-              >
-                <SelectTrigger id="filter-doctor" className="h-9 mt-1">
-                  <SelectValue
-                    placeholder={t("filters:selectDoctorPlaceholder")}
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value=" ">{t("filters:allDoctors")}</SelectItem>
-                  {doctors?.map((doc) => (
-                    <SelectItem key={doc.id} value={String(doc.id)}>
-                      {doc.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {isLoadingDropdowns && (
-              <div className="text-center py-2">
-                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-              </div>
-            )}
-          </div>
-        </ScrollArea>
-
-        <DialogFooter className="px-6 pt-4 pb-6 border-t flex-wrap justify-between sm:justify-between">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={handleReset}
-            className="text-xs"
-          >
-            {t("filters:resetFilters")}
-          </Button>
-          <div className="flex gap-2">
-            <DialogClose asChild>
-              <Button type="button" variant="outline">
-                {t("common:cancel")}
-              </Button>
-            </DialogClose>
+    <Dialog 
+      open={isOpen} 
+      onClose={() => onOpenChange(false)}
+      maxWidth="md"
+      fullWidth
+      PaperProps={{
+        sx: {
+          maxHeight: '85vh',
+          display: 'flex',
+          flexDirection: 'column',
+        }
+      }}
+    >
+  
+      
+      <DialogContent sx={{ flexGrow: 1, px: 3, py: 2 }}>
+        <Stack spacing={3}>
+          {/* Quick Filter Buttons */}
+          <Box sx={{ mb: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
             <Button
-              type="button"
-              onClick={handleApply}
-              disabled={isLoadingDropdowns}
+              variant={localFilters.show_unfinished_only ? "contained" : "outlined"}
+              onClick={handleShowUnfinishedOnly}
+              size="small"
+              color={localFilters.show_unfinished_only ? "primary" : "inherit"}
+              sx={{ 
+                width: '100%',
+                justifyContent: 'flex-start',
+                textAlign: 'right',
+                direction: 'rtl'
+              }}
             >
-              <Filter className="h-4 w-4 ltr:mr-2 rtl:ml-2" />{" "}
-              {t("filters:applyFilters")}
+              {localFilters.show_unfinished_only ? "إخفاء النتائج غير المكتملة" : "عرض النتائج غير المكتملة فقط"}
             </Button>
-          </div>
-        </DialogFooter>
+            
+            <Button
+              variant={localFilters.ready_for_print_only ? "contained" : "outlined"}
+              onClick={handleShowReadyForPrintOnly}
+              size="small"
+              color={localFilters.ready_for_print_only ? "success" : "inherit"}
+              sx={{ 
+                width: '100%',
+                justifyContent: 'flex-start',
+                textAlign: 'right',
+                direction: 'rtl'
+              }}
+            >
+              {localFilters.ready_for_print_only ? "إخفاء جاهز للطباعة" : "عرض جاهز للطباعة فقط"}
+            </Button>
+          </Box>
+
+          <Box>
+            <Typography variant="body2" sx={{ mb: 1, fontSize: '0.75rem' }}>
+              فلتره بالفحوصات 
+            </Typography>
+            
+            {/* Debug info */}
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+              {isLoadingMainTests ? "جاري تحميل الاختبارات..." : 
+               mainTestsError ? `خطأ: ${mainTestsError.message}` :
+               `${mainTests?.length || 0} اختبار محمل`}
+            </Typography>
+            
+            <Autocomplete
+              size="small"
+              options={mainTests || []}
+              getOptionLabel={(option) => option.main_test_name}
+              value={
+                localFilters.main_test_id && mainTests
+                  ? mainTests.find(test => test.id === localFilters.main_test_id) || null
+                  : null
+              }
+              onChange={(_, newValue) => {
+                console.log('Autocomplete onChange:', newValue);
+                if (newValue) {
+                  handleFilterChange("main_test_id", newValue.id);
+                } else {
+                  handleFilterChange("main_test_id", undefined);
+                }
+              }}
+              isOptionEqualToValue={(option, value) => {
+                if (!option || !value) return false;
+                return option.id === value.id;
+              }}
+              loading={isLoadingMainTests}
+              disabled={isLoadingMainTests}
+              disableClearable={false}
+              noOptionsText={
+                isLoadingMainTests 
+                  ? "جاري التحميل..."
+                  : mainTestsError 
+                    ? "فشل في جلب البيانات"
+                    : "لا توجد نتائج"
+              }
+              renderOption={(props, option) => (
+                <li {...props} key={option.id}>
+                  {option.main_test_name}
+                </li>
+              )}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  placeholder="فلتره بالفحوصات ..."
+                  variant="outlined"
+                  error={!!mainTestsError}
+                  helperText={mainTestsError?.message}
+                  InputProps={{
+                    ...params.InputProps,
+                    endAdornment: (
+                      <>
+                        {isLoadingMainTests ? (
+                          <CircularProgress color="inherit" size={16} />
+                        ) : null}
+                        {params.InputProps.endAdornment}
+                      </>
+                    ),
+                  }}
+                />
+              )}
+            />
+          </Box>
+
+          <FormControl fullWidth size="small" disabled={isLoadingPackages}>
+            <InputLabel>فلتره بالمجموعه</InputLabel>
+            <Select
+              value={localFilters.package_id || " "}
+              onChange={(e) => handleFilterChange("package_id", e.target.value === " " ? undefined : Number(e.target.value))}
+              label="فلتره بالمجموعه"
+              dir={isRTL ? "rtl" : "ltr"}
+            >
+              <MenuItem value=" ">جميع الباقات</MenuItem>
+              {packages?.map((pkg) => (
+                <MenuItem key={pkg.id} value={String(pkg.id)}>
+                  {pkg.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl fullWidth size="small" disabled={isLoadingCompanies}>
+            <InputLabel>فلتره بالشركة</InputLabel>
+            <Select
+              value={localFilters.company_id || " "}
+              onChange={(e) => handleFilterChange("company_id", e.target.value === " " ? undefined : Number(e.target.value))}
+              label="فلتره بالشركة"
+              dir={isRTL ? "rtl" : "ltr"}
+            >
+              <MenuItem value=" ">جميع الشركات</MenuItem>
+              {companies?.map((comp) => (
+                <MenuItem key={comp.id} value={String(comp.id)}>
+                  {comp.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl fullWidth size="small" disabled={isLoadingDoctors}>
+            <InputLabel>فلتره بالطبيب </InputLabel>
+            <Select
+              value={localFilters.doctor_id || " "}
+              onChange={(e) => handleFilterChange("doctor_id", e.target.value === " " ? undefined : Number(e.target.value))}
+              label="فلتره بالطبيب المحول"
+              dir={isRTL ? "rtl" : "ltr"}
+            >
+              <MenuItem value=" ">جميع الأطباء</MenuItem>
+              {doctors?.map((doc) => (
+                <MenuItem key={doc.id} value={String(doc.id)}>
+                  {doc.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          
+          {isLoadingDropdowns && (
+            <Box display="flex" justifyContent="center" py={2}>
+              <CircularProgress size={20} />
+            </Box>
+          )}
+        </Stack>
       </DialogContent>
+
+      <DialogActions sx={{ px: 3, py: 2, borderTop: 1, borderColor: 'divider', justifyContent: 'space-between' }}>
+        <Button
+          onClick={handleReset}
+          size="small"
+          color="inherit"
+        >
+          إعادة تعيين
+        </Button>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            onClick={() => onOpenChange(false)}
+            variant="outlined"
+            size="small"
+          >
+            إلغاء
+          </Button>
+          <Button
+            onClick={handleApply}
+            disabled={isLoadingDropdowns}
+            variant="contained"
+            size="small"
+            startIcon={<FilterIcon size={16} />}
+          >
+            تطبيق الفلاتر
+          </Button>
+        </Box>
+      </DialogActions>
     </Dialog>
   );
 };

@@ -12,6 +12,8 @@ import {
   ListRestart,
   FilterIcon,
   CalendarSearch,
+  Printer,
+  Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -786,6 +788,55 @@ const LabWorkstationPage: React.FC = () => {
               loadingText="جاري التحميل..."
             />
           )}
+          <Tooltip title={appliedQueueFilters.ready_for_print_only ? "إخفاء جاهز للطباعة" : "عرض جاهز للطباعة فقط"}>
+            <IconButton
+              onClick={() => {
+                const newFilters = {
+                  ...appliedQueueFilters,
+                  ready_for_print_only: !appliedQueueFilters.ready_for_print_only,
+                  show_unfinished_only: false, // Disable the other filter
+                };
+                setAppliedQueueFilters(newFilters);
+                setActiveQueueFilters(newFilters);
+                queryClient.invalidateQueries({ queryKey: ["labPendingQueue"] });
+              }}
+              size="small"
+              sx={{
+                backgroundColor: appliedQueueFilters.ready_for_print_only ? 'success.main' : 'transparent',
+                color: appliedQueueFilters.ready_for_print_only ? 'success.contrastText' : 'inherit',
+                '&:hover': {
+                  backgroundColor: appliedQueueFilters.ready_for_print_only ? 'success.dark' : 'action.hover',
+                }
+              }}
+            >
+              <Printer className="h-5 w-5" />
+            </IconButton>
+          </Tooltip>
+          
+          <Tooltip title={appliedQueueFilters.show_unfinished_only ? "إخفاء النتائج غير المكتملة" : "عرض النتائج غير المكتملة فقط"}>
+            <IconButton
+              onClick={() => {
+                const newFilters = {
+                  ...appliedQueueFilters,
+                  show_unfinished_only: !appliedQueueFilters.show_unfinished_only,
+                  ready_for_print_only: false, // Disable the other filter
+                };
+                setAppliedQueueFilters(newFilters);
+                setActiveQueueFilters(newFilters);
+                queryClient.invalidateQueries({ queryKey: ["labPendingQueue"] });
+              }}
+              size="small"
+              sx={{
+                backgroundColor: appliedQueueFilters.show_unfinished_only ? 'warning.main' : 'transparent',
+                color: appliedQueueFilters.show_unfinished_only ? 'warning.contrastText' : 'inherit',
+                '&:hover': {
+                  backgroundColor: appliedQueueFilters.show_unfinished_only ? 'warning.dark' : 'action.hover',
+                }
+              }}
+            >
+              <Clock className="h-5 w-5" />
+            </IconButton>
+          </Tooltip>
           <Tooltip title={AR.filters_openFilterDialog}>
             <IconButton
               onClick={() => setIsFilterDialogOpen(true)}
@@ -877,9 +928,9 @@ const LabWorkstationPage: React.FC = () => {
             />
           ) : (
             <div className="p-4 text-center text-muted-foreground hidden lg:flex flex-col items-center justify-center h-full">
-              {" "}
-              <Info size={32} className="mb-2 opacity-30" />{" "}
-              <span>{AR.noInfoToShow}</span>{" "}
+              
+              <Info size={32} className="mb-2 opacity-30" />
+              <span>{AR.noInfoToShow}</span>
             </div>
           )}
         </aside>
@@ -893,16 +944,16 @@ const LabWorkstationPage: React.FC = () => {
             />
           ) : (
             <div className="flex-grow flex items-center justify-center p-10 text-center">
-              {" "}
+              
               <div className="flex flex-col items-center text-muted-foreground">
-                {" "}
-                <Microscope size={48} className="mb-4 opacity-50" />{" "}
+                
+                <Microscope size={48} className="mb-4 opacity-50" />
                 <p>
                   {selectedQueueItem
                     ? AR.selectTestPrompt
                     : AR.selectPatientAndTestPrompt}
-                </p>{" "}
-              </div>{" "}
+                </p>
+              </div>
             </div>
           )}
         </main>
@@ -929,9 +980,9 @@ const LabWorkstationPage: React.FC = () => {
             />
           ) : (
             <div className="p-4 text-center text-muted-foreground hidden md:flex flex-col items-center justify-center h-full">
-              {" "}
-              <Users size={32} className="mb-2 opacity-30" />{" "}
-              <span>{AR.selectPatientPrompt}</span>{" "}
+              
+              <Users size={32} className="mb-2 opacity-30" />
+              <span>{AR.selectPatientPrompt}</span>
             </div>
           )}
         </section>

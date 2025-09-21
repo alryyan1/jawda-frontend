@@ -92,7 +92,7 @@ const LabReceptionPage: React.FC = () => {
     return {
       visit_id: visit.id,
       patient_id: visit.patient_id,
-      lab_number: visit.patient.visit_number?.toString() || visit.id.toString(),
+      lab_number: visit.id.toString(), // Using visit ID as lab number
       patient_name: visit.patient?.name || '',
       phone: visit.patient?.phone || '',
       sample_id: oldestRequest?.id?.toString() || visit.id.toString(),
@@ -289,7 +289,6 @@ const LabReceptionPage: React.FC = () => {
   // This function is passed to LabActionsPane to open the dialog
   const handleOpenDoctorFinder = useCallback(() => {
     setIsDoctorFinderOpen(true);
-    alert("open doctor finder");
   }, []);
 
   // This function is passed to DoctorFinderDialog to handle a selection
@@ -297,11 +296,13 @@ const LabReceptionPage: React.FC = () => {
     setFilters(prev => ({
       ...prev,
       doctor: doctorShift.doctor_id,
+      doctor_id: doctorShift.doctor_id, // Also set doctor_id for backend compatibility
       specialist: null, // Clear specialist if specific doctor is chosen
     }));
     setIsDoctorFinderOpen(false); // Close the dialog after selection
     toast.info(`تم تطبيق الفلتر: ${doctorShift.doctor_name}`);
   }, []);
+
 
   // Fetch active visit data once and share with all components
   const { data: activeVisit, isLoading: isVisitLoading } = useQuery<DoctorVisit, Error>({

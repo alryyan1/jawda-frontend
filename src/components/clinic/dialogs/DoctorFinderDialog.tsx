@@ -1,14 +1,22 @@
 // src/components/clinic/dialogs/DoctorFinderDialog.tsx
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose, DialogFooter } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'; // Vertical Tabs for side
-import { Card } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Loader2, Users2, Stethoscope } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Card,
+  Box,
+  Typography,
+  CircularProgress,
+  Tabs,
+  Tab,
+  Avatar,
+  Chip,
+} from '@mui/material';
+import { Users2, Stethoscope } from 'lucide-react';
 
 import type { DoctorShift } from '@/types/doctors';
 import { getActiveDoctorShifts } from '@/services/clinicService';
@@ -25,10 +33,8 @@ const DoctorFinderDialog: React.FC<DoctorFinderDialogProps> = ({
   isOpen, onOpenChange, onDoctorShiftSelect
 }) => {
   const { currentClinicShift } = useAuth();
-  const isRTL = true; // Always RTL for Arabic
-  const scrollViewportRef = useRef<HTMLDivElement>(null);
 
-  // NEW: State for DoctorFinderDialog visibility, now controlled by F9 too
+  // State for DoctorFinderDialog visibility, now controlled by F9 too
   const [selectedSpecialistName, setSelectedSpecialistName] = useState<string | null>(null);
   const [activeMainTab, setActiveMainTab] = useState<'allShifts' | 'bySpecialist'>('allShifts');
 
@@ -87,100 +93,223 @@ const DoctorFinderDialog: React.FC<DoctorFinderDialogProps> = ({
 
   const DoctorShiftCard: React.FC<{shift: DoctorShift}> = ({ shift }) => (
     <Card
-        className="p-2 hover:bg-muted cursor-pointer transition-colors"
-        onClick={() => handleDoctorSelectAndClose(shift)}
+      sx={{
+        p: 2,
+        cursor: 'pointer',
+        transition: 'all 0.2s ease-in-out',
+        '&:hover': {
+          backgroundColor: 'action.hover',
+          transform: 'translateY(-2px)',
+          boxShadow: 2,
+        },
+        textAlign: 'center',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 1,
+      }}
+      onClick={() => handleDoctorSelectAndClose(shift)}
     >
-        <div className="flex items-center gap-2">
-        <Avatar className="h-8 w-8">
-            {shift.doctor_avatar_url && <AvatarImage src={shift.doctor_avatar_url} alt={shift.doctor_name} />}
-            <AvatarFallback>{getInitials(shift.doctor_name)}</AvatarFallback>
-        </Avatar>
-        <div>
-            <p className="text-sm font-medium leading-tight">{shift.doctor_name}</p>
-            <p className="text-xs text-muted-foreground leading-tight">{shift.doctor_specialist_name || 'لا يوجد تخصص'}</p>
-        </div>
-        </div>
+      <Avatar
+        sx={{ width: 48, height: 48, mb: 1 }}
+        src={shift.doctor_avatar_url || undefined}
+        alt={shift.doctor_name}
+      >
+        {getInitials(shift.doctor_name)}
+      </Avatar>
+      <Typography variant="subtitle2" fontWeight="medium" textAlign="center">
+        {shift.doctor_name}
+      </Typography>
+      <Typography variant="caption" color="text.secondary" textAlign="center">
+        {shift.doctor_specialist_name || 'لا يوجد تخصص'}
+      </Typography>
     </Card>
   );
  // NEW: useEffect for F9 keyboard shortcut
 
 
   return (
-    <Dialog  open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl lg:max-w-5xl max-h-[80vh] flex flex-col p-0 sm:p-0">
-        <DialogHeader className="p-4 sm:p-6 border-b">
-          <DialogTitle>البحث عن الأطباء</DialogTitle>
-          <DialogDescription>اختر طبيباً من القائمة النشطة</DialogDescription>
-        </DialogHeader>
+    <Dialog 
+      open={isOpen} 
+      onClose={() => onOpenChange(false)}
+      maxWidth="lg"
+      fullWidth
+      dir="rtl"
+      sx={{
+        '& .MuiDialog-paper': {
+          maxHeight: '80vh',
+          direction: 'rtl',
+        }
+      }}
+    >
+      <DialogTitle sx={{ textAlign: 'center', pb: 1 }}>
+        البحث عن الأطباء
+      </DialogTitle>
+      <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', px: 3, pb: 2 }}>
+        اختر طبيباً من القائمة النشطة
+      </Typography>
 
-        <div dir="rtl" className={cn("flex-grow flex overflow-hidden", isRTL ? "flex-row-reverse" : "flex-row")}>
-          {/* Side Tabs for All Shifts / Specialists */}
-          <div className={cn("w-48 p-3 border-slate-200 dark:border-slate-700 shrink-0 bg-muted/30", isRTL ? "border-l" : "border-r")}>
-            <Tabs 
-                orientation="vertical" 
-                value={activeMainTab}
-                onValueChange={(value) => setActiveMainTab(value as 'allShifts' | 'bySpecialist')}
-                className="w-full"
-            >
-              <TabsList className="flex flex-col h-auto items-stretch w-full gap-1">
-                <TabsTrigger value="allShifts" className="justify-start px-2 py-1.5 text-xs h-auto data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                    <Users2 className="h-4 w-4 ltr:mr-2 rtl:ml-2"/>جميع النوبات النشطة
-                </TabsTrigger>
-                <TabsTrigger value="bySpecialist" className="justify-start px-2 py-1.5 text-xs h-auto data-[state=active]:bg-primary data-[state=active]:text-primary-foreground" disabled={uniqueSpecialistsOnDuty.length === 0}>
-                    <Stethoscope className="h-4 w-4 ltr:mr-2 rtl:ml-2"/>حسب التخصص
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
+      <DialogContent sx={{ p: 0, display: 'flex', flexDirection: 'row-reverse', minHeight: 400 }}>
+        {/* Side Tabs for All Shifts / Specialists */}
+        <Box sx={{ 
+          width: 200, 
+          p: 2, 
+          borderLeft: 1, 
+          borderColor: 'divider',
+          backgroundColor: 'grey.50',
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          <Tabs
+            orientation="vertical"
+            value={activeMainTab}
+            onChange={(_, value) => setActiveMainTab(value as 'allShifts' | 'bySpecialist')}
+            sx={{ flexGrow: 1 }}
+          >
+            <Tab
+              value="allShifts"
+              label={
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, textAlign: 'right' }}>
+                  <Users2 size={16} />
+                  جميع النوبات النشطة
+                </Box>
+              }
+              sx={{ 
+                textAlign: 'right',
+                alignItems: 'flex-start',
+                '&.Mui-selected': {
+                  backgroundColor: 'primary.main',
+                  color: 'primary.contrastText',
+                  borderRadius: 1,
+                }
+              }}
+            />
+            <Tab
+              value="bySpecialist"
+              label={
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, textAlign: 'right' }}>
+                  <Stethoscope size={16} />
+                  حسب التخصص
+                </Box>
+              }
+              disabled={uniqueSpecialistsOnDuty.length === 0}
+              sx={{ 
+                textAlign: 'right',
+                alignItems: 'flex-start',
+                '&.Mui-selected': {
+                  backgroundColor: 'primary.main',
+                  color: 'primary.contrastText',
+                  borderRadius: 1,
+                }
+              }}
+            />
+          </Tabs>
+        </Box>
 
-          {/* Content Area: Can show specialists list or doctors list */}
-          <div className="flex-grow flex overflow-hidden">
-            {activeMainTab === 'bySpecialist' && (
-                <>
-                <ScrollArea className={cn("w-56 p-2 shrink-0 border-slate-200 dark:border-slate-700", isRTL ? "border-l" : "border-r")}>
-                    <div className="space-y-1">
-                    {isLoading ? <Loader2 className="h-5 w-5 animate-spin mx-auto mt-4"/> :
-                        uniqueSpecialistsOnDuty.map(spec => (
-                        <Button
-                            key={spec.name}
-                            variant={selectedSpecialistName === spec.name ? "secondary" : "ghost"}
-                            className="w-full justify-start text-xs h-auto px-2 py-1.5"
-                            onClick={() => setSelectedSpecialistName(spec.name)}
-                        >
-                            {spec.name} ({spec.count})
-                        </Button>
-                        ))
-                    }
-                    { !isLoading && uniqueSpecialistsOnDuty.length === 0 && <p className="text-xs text-muted-foreground p-2 text-center">لا يوجد أطباء في النوبة</p>}
-                    </div>
-                </ScrollArea>
-                <ScrollArea className="flex-grow p-3">
-                    <div ref={scrollViewportRef} className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {filteredDoctorsBySpecialist.map(shift => <DoctorShiftCard key={shift.id} shift={shift}/>)}
-                        {!isLoading && selectedSpecialistName && filteredDoctorsBySpecialist.length === 0 && (
-                             <p className="col-span-full text-center text-sm text-muted-foreground py-4">لا يوجد أطباء لهذا التخصص</p>
-                        )}
-                    </div>
-                </ScrollArea>
-                </>
-            )}
+        {/* Content Area */}
+        <Box sx={{ flexGrow: 1, display: 'flex', overflow: 'hidden' }}>
+          {activeMainTab === 'bySpecialist' && (
+            <>
+              {/* Specialists List */}
+              <Box sx={{ 
+                width: 200, 
+                p: 2, 
+                borderLeft: 1, 
+                borderColor: 'divider',
+                overflow: 'auto'
+              }}>
+                {isLoading ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+                    <CircularProgress size={24} />
+                  </Box>
+                ) : (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    {uniqueSpecialistsOnDuty.map(spec => (
+                      <Chip
+                        key={spec.name}
+                        label={`${spec.name} (${spec.count})`}
+                        variant={selectedSpecialistName === spec.name ? "filled" : "outlined"}
+                        onClick={() => setSelectedSpecialistName(spec.name)}
+                        sx={{ 
+                          justifyContent: 'flex-start',
+                          textAlign: 'right',
+                          '& .MuiChip-label': { textAlign: 'right' }
+                        }}
+                      />
+                    ))}
+                    {!isLoading && uniqueSpecialistsOnDuty.length === 0 && (
+                      <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', p: 2 }}>
+                        لا يوجد أطباء في النوبة
+                      </Typography>
+                    )}
+                  </Box>
+                )}
+              </Box>
 
-            {activeMainTab === 'allShifts' && (
-                <ScrollArea className="flex-grow p-3">
-                    <div ref={scrollViewportRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                        {isLoading ? <div className="col-span-full text-center py-10"><Loader2 className="h-8 w-8 animate-spin"/></div> :
-                         activeDoctorShifts.map(shift => <DoctorShiftCard key={shift.id} shift={shift}/>)
-                        }
-                        {!isLoading && activeDoctorShifts.length === 0 && <p className="col-span-full text-center text-sm text-muted-foreground py-10">لا توجد نوبات نشطة</p>}
-                    </div>
-                </ScrollArea>
-            )}
-          </div>
-        </div>
-        <DialogFooter className="p-4 border-t">
-            <DialogClose asChild><Button type="button" variant="outline">إغلاق</Button></DialogClose>
-        </DialogFooter>
+              {/* Doctors Grid */}
+              <Box sx={{ flexGrow: 1, p: 2, overflow: 'auto' }}>
+                <Box sx={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', 
+                  gap: 2 
+                }}>
+                  {filteredDoctorsBySpecialist.map(shift => (
+                    <DoctorShiftCard key={shift.id} shift={shift} />
+                  ))}
+                  {!isLoading && selectedSpecialistName && filteredDoctorsBySpecialist.length === 0 && (
+                    <Typography variant="body2" color="text.secondary" sx={{ 
+                      textAlign: 'center', 
+                      py: 4, 
+                      gridColumn: '1 / -1' 
+                    }}>
+                      لا يوجد أطباء لهذا التخصص
+                    </Typography>
+                  )}
+                </Box>
+              </Box>
+            </>
+          )}
+
+          {activeMainTab === 'allShifts' && (
+            <Box sx={{ flexGrow: 1, p: 2, overflow: 'auto' }}>
+              {isLoading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}>
+                  <CircularProgress size={32} />
+                </Box>
+              ) : (
+                <Box sx={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', 
+                  gap: 2 
+                }}>
+                  {activeDoctorShifts.map(shift => (
+                    <DoctorShiftCard key={shift.id} shift={shift} />
+                  ))}
+                  {!isLoading && activeDoctorShifts.length === 0 && (
+                    <Typography variant="body2" color="text.secondary" sx={{ 
+                      textAlign: 'center', 
+                      py: 10, 
+                      gridColumn: '1 / -1' 
+                    }}>
+                      لا توجد نوبات نشطة
+                    </Typography>
+                  )}
+                </Box>
+              )}
+            </Box>
+          )}
+        </Box>
       </DialogContent>
+
+      <DialogActions sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
+        <Button 
+          variant="outlined" 
+          onClick={() => onOpenChange(false)}
+          sx={{ minWidth: 100 }}
+        >
+          إغلاق
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 };

@@ -99,7 +99,7 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
       {item.test_count > 0 && (
         <div
           style={{
-            backgroundColor: '#92b7ff',
+            backgroundColor: allRequestsPaid ? '#10B981' : 'red',
             color: paymentStatusBadgeStyle.color,
           }}
           className="absolute -top-1.5 -right-1.5 h-5 min-w-[20px] px-1.5 text-[10px] font-bold leading-tight rounded-full shadow-sm border-2 border-[var(--bg-color)] flex items-center justify-center"

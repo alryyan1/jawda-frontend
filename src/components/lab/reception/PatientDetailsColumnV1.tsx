@@ -1,14 +1,17 @@
-import React, { forwardRef, useImperativeHandle, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { forwardRef, useImperativeHandle, useState } from "react";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import apiClient from "@/services/api";
-import type { DoctorVisit, LabRequest } from "@/types/visits";
+import type { DoctorVisit } from "@/types/visits";
 import PatientCompanyDetails from "./PatientCompanyDetails";
 import PatientInfoDialog from "@/components/clinic/PatientInfoDialog";
 import { Button } from "@/components/ui/button";
-import { User } from "lucide-react";
+import { User, DollarSign, Landmark, Coins, TrendingUp, Loader2 } from "lucide-react";
 import { getLabRequestsForVisit } from "@/services/labRequestService";
 import { realtimeUrlFromConstants } from "@/pages/constants";
+import { fetchCurrentUserLabIncomeSummary, type LabUserShiftIncomeSummary } from "@/services/userService";
+import { useAuth } from "@/contexts/AuthContext";
+import { formatNumber } from "@/lib/utils";
 
 interface PatientDetailsColumnV1Props {
   activeVisitId: number | null;
@@ -26,7 +29,16 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
   onPrintReceipt,
 }, ref) => {
   const queryClient = useQueryClient();
+  const { user, currentClinicShift } = useAuth();
   const [isPatientInfoDialogOpen, setIsPatientInfoDialogOpen] = useState(false);
+
+  // Fetch lab shift summary
+  const { data: labShiftSummary, isLoading: isLoadingSummary } = useQuery<LabUserShiftIncomeSummary>({
+    queryKey: ['labUserShiftIncomeSummary', user?.id, currentClinicShift?.id],
+    queryFn: () => fetchCurrentUserLabIncomeSummary(currentClinicShift!.id),
+    enabled: !!currentClinicShift && !!user,
+    // refetchInterval: 30000, // Refetch every 30 seconds
+  });
 
   const payAllMutation = useMutation({
     mutationFn: async () => {
@@ -101,7 +113,9 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
   const balance = visit?.balance_due
 
   return (
-    <div className="flex flex-col h-full w-full items-center justify-start p-2">
+    <div className="flex flex-col h-full w-full p-2 justify-between">
+      <div>
+ <div className="flex flex-col h-full w-full items-center justify-start p-2">
       {/* Patient Name */}
       <div className="w-full text-center font-bold text-base border-b border-gray-300 pb-1 mb-2">
         {patientName}
@@ -183,6 +197,8 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
           
         </div>
       </div>
+
+    
       {/* Pay Button */}
       {activeVisitId && (
         <button
@@ -199,7 +215,8 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
           {"دفع الكل"}
         </button>
       )}
-      
+        {/* Lab Shift Summary */}
+    
       {/* Patient Info Dialog */}
       {visit && (
         <PatientInfoDialog
@@ -209,6 +226,66 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
         />
       )}
     </div>
+      </div>
+      <div>
+  {currentClinicShift && (
+        <div className="w-full mt-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200 mb-2">
+          <div className="p-3">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-blue-600" />
+                <span className="text-sm font-semibold text-blue-800"> حسابات المستخدم</span>
+              </div>
+              {isLoadingSummary && (
+                <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+              )}
+            </div>
+            
+            {labShiftSummary ? (
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-1">
+                    <Coins className="h-3 w-3 text-green-600" />
+                    <span className="text-xs text-gray-600">كاش</span>
+                  </div>
+                  <span className="text-sm font-medium text-green-700">
+                    {formatNumber(labShiftSummary.total_cash)} 
+                  </span>
+                </div>
+                
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-1">
+                    <Landmark className="h-3 w-3 text-purple-600" />
+                    <span className="text-xs text-gray-600">بنكك</span>
+                  </div>
+                  <span className="text-sm font-medium text-purple-700">
+                    {formatNumber(labShiftSummary.total_bank)}
+                  </span>
+                </div>
+                
+                <div className="border-t border-blue-200 pt-2">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-1">
+                      <DollarSign className="h-3 w-3 text-blue-600" />
+                      <span className="text-xs font-semibold text-blue-800">الإجمالي</span>
+                    </div>
+                    <span className="text-sm font-bold text-blue-800">
+                      {formatNumber(labShiftSummary.total_lab_income)} 
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ) : !isLoadingSummary ? (
+              <div className="text-center py-2">
+                <span className="text-xs text-gray-500">لا توجد بيانات</span>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      )}
+      </div>
+    </div>
+   
   );
 });
 

@@ -4,33 +4,27 @@ import { useForm, Controller } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
+  Button,
+  TextField,
   Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Switch } from "@/components/ui/switch";
-import {
+  MenuItem,
+  FormControl,
+  InputLabel,
+  FormControlLabel,
+  Switch,
+  Checkbox,
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+  Typography,
+  Box,
+  Grid,
+  FormHelperText,
+  CircularProgress,
+  Alert,
+  Paper,
+} from '@mui/material';
 import { Loader2, Key, ArrowLeft, UserPlus, UserCog } from "lucide-react";
 import { toast } from "sonner";
 
@@ -218,324 +212,325 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
 
   if (isEditMode && isLoadingUser && !userData) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />{" "}
-        جارٍ تحميل بيانات المستخدم...
-      </div>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 256 }}>
+        <CircularProgress sx={{ mr: 2 }} />
+        <Typography>جارٍ تحميل بيانات المستخدم...</Typography>
+      </Box>
     );
   }
   if (userError) {
     return (
-      <div className="p-4 text-center text-destructive">
-        {`فشل تحميل بيانات المستخدم: ${userError.message}`}
-      </div>
+      <Box sx={{ p: 2 }}>
+        <Alert severity="error" sx={{ textAlign: 'center' }}>
+          {`فشل تحميل بيانات المستخدم: ${userError.message}`}
+        </Alert>
+      </Box>
     );
   }
 
   return (
     <>
-      <div className="container mx-auto py-6 max-w-3xl">
+      <Box sx={{ maxWidth: 1200, mx: 'auto', py: 3, px: 2 }}>
         <Button
-          variant="outline"
-          size="sm"
+          variant="outlined"
+          size="small"
           onClick={() => navigate("/users")}
-          className="mb-4"
+          sx={{ mb: 2 }}
+          startIcon={<ArrowLeft size={16} />}
         >
-          <ArrowLeft className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
           العودة إلى قائمة إدارة المستخدمين
         </Button>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-            <div className="flex items-center gap-2">
+          <CardHeader 
+            sx={{ 
+              display: 'flex', 
+              flexDirection: 'row', 
+              alignItems: 'center', 
+              justifyContent: 'space-between',
+              pb: 1
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               {isEditMode ? (
-                <UserCog className="h-6 w-6 text-primary" />
+                <UserCog size={24} color="primary" />
               ) : (
-                <UserPlus className="h-6 w-6 text-primary" />
+                <UserPlus size={24} color="primary" />
               )}
-              <div>
-                <CardTitle>
+              <Box>
+                <Typography variant="h6" component="h1">
                   {isEditMode
                     ? "تعديل بيانات المستخدم"
                     : "إضافة مستخدم جديد"}
-                </CardTitle>
-                <CardDescription>
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
                   {isEditMode
                     ? "قم بتعديل بيانات المستخدم أدناه."
                     : "الرجاء ملء التفاصيل أدناه."}
-                </CardDescription>
-              </div>
-            </div>
+                </Typography>
+              </Box>
+            </Box>
             {isEditMode && numericUserId && (
               <Button
-                variant="outline"
-                size="sm"
+                variant="outlined"
+                size="small"
                 onClick={() => setShowPasswordDialog(true)}
-                className="flex items-center gap-1.5 text-xs"
+                startIcon={<Key size={14} />}
+                sx={{ fontSize: '0.75rem' }}
               >
-                <Key className="h-3.5 w-3.5" />
                 تغيير كلمة المرور
               </Button>
             )}
           </CardHeader>
           <CardContent>
-            <Form {...form}>
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
+            <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ '& > *': { mb: 3 } }}>
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={6}>
+                  <Controller
                     control={control}
                     name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>الاسم الكامل</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            disabled={dataIsLoading || mutation.isPending}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
+                    render={({ field, fieldState: { error } }) => (
+                      <TextField
+                        {...field}
+                        label="الاسم الكامل"
+                        fullWidth
+                        disabled={dataIsLoading || mutation.isPending}
+                        error={!!error}
+                        helperText={error?.message}
+                      />
                     )}
                   />
-                  <FormField
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Controller
                     control={control}
                     name="username"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>اسم المستخدم</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            disabled={dataIsLoading || mutation.isPending}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
+                    render={({ field, fieldState: { error } }) => (
+                      <TextField
+                        {...field}
+                        label="اسم المستخدم"
+                        fullWidth
+                        disabled={dataIsLoading || mutation.isPending}
+                        error={!!error}
+                        helperText={error?.message}
+                      />
                     )}
                   />
-                </div>
+                </Grid>
+              </Grid>
 
-                {!isEditMode && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
+              {!isEditMode && (
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={6}>
+                    <Controller
                       control={control}
                       name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>كلمة المرور</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="password"
-                              {...field}
-                              disabled={mutation.isPending}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            يجب أن تكون كلمة المرور 8 أحرف على الأقل.
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
+                      render={({ field, fieldState: { error } }) => (
+                        <TextField
+                          {...field}
+                          type="password"
+                          label="كلمة المرور"
+                          fullWidth
+                          disabled={mutation.isPending}
+                          error={!!error}
+                          helperText={error?.message || "يجب أن تكون كلمة المرور 8 أحرف على الأقل."}
+                        />
                       )}
                     />
-                    <FormField
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Controller
                       control={control}
                       name="password_confirmation"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>
-                            تأكيد كلمة المرور
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              type="password"
-                              {...field}
-                              disabled={mutation.isPending}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
+                      render={({ field, fieldState: { error } }) => (
+                        <TextField
+                          {...field}
+                          type="password"
+                          label="تأكيد كلمة المرور"
+                          fullWidth
+                          disabled={mutation.isPending}
+                          error={!!error}
+                          helperText={error?.message}
+                        />
                       )}
                     />
-                  </div>
+                  </Grid>
+                </Grid>
+              )}
+
+              <Controller
+                control={control}
+                name="doctor_id"
+                render={({ field, fieldState: { error } }) => (
+                  <FormControl fullWidth error={!!error}>
+                    <InputLabel>الطبيب المرتبط (اختياري)</InputLabel>
+                    <Select
+                      {...field}
+                      value={field.value || ""}
+                      disabled={dataIsLoading || mutation.isPending}
+                      label="الطبيب المرتبط (اختياري)"
+                    >
+                      <MenuItem value="">لا يوجد</MenuItem>
+                      {isLoadingDoctors ? (
+                        <MenuItem value="loading_docs" disabled>
+                          جار التحميل...
+                        </MenuItem>
+                      ) : (
+                        doctorsList?.map((doc: DoctorStripped) => (
+                          <MenuItem key={doc.id} value={String(doc.id)}>
+                            {doc.name}{" "}
+                            {doc.specialist_name
+                              ? `(${doc.specialist_name})`
+                              : ""}
+                          </MenuItem>
+                        ))
+                      )}
+                    </Select>
+                    <FormHelperText>
+                      {error?.message || "هذا المستخدم مرتبط بطبيب معين."}
+                    </FormHelperText>
+                  </FormControl>
                 )}
+              />
 
-                <FormField
-                  control={control}
-                  name="doctor_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>الطبيب المرتبط (اختياري)</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value || ""}
-                        disabled={dataIsLoading || mutation.isPending}
-                        dir="rtl"
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue
-                              placeholder="اختر طبيباً..."
-                            />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value=" ">لا يوجد</SelectItem>
-                          {isLoadingDoctors ? (
-                            <SelectItem value="loading_docs" disabled>
-                              جار التحميل...
-                            </SelectItem>
-                          ) : (
-                            doctorsList?.map((doc: DoctorStripped) => (
-                              <SelectItem key={doc.id} value={String(doc.id)}>
-                                {doc.name}{" "}
-                                {doc.specialist_name
-                                  ? `(${doc.specialist_name})`
-                                  : ""}
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>
-                        هذا المستخدم مرتبط بطبيب معين.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <FormField
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <Controller
                     control={control}
                     name="is_supervisor"
                     render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm h-full">
-                        <FormLabel className="font-normal cursor-pointer">
+                      <Paper 
+                        elevation={1} 
+                        sx={{ 
+                          p: 2, 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'space-between',
+                          height: '100%'
+                        }}
+                      >
+                        <Typography variant="body1">
                           هل هو مشرف؟
-                        </FormLabel>
-                        <FormControl>
-                          <Switch
-                            id="is_supervisor_switch"
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            disabled={dataIsLoading || mutation.isPending}
-                          />
-                        </FormControl>
-                      </FormItem>
+                        </Typography>
+                        <Switch
+                          checked={field.value}
+                          onChange={field.onChange}
+                          disabled={dataIsLoading || mutation.isPending}
+                        />
+                      </Paper>
                     )}
                   />
-                  <FormField
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Controller
                     control={control}
                     name="is_active"
                     render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm h-full">
-                        <FormLabel className="font-normal cursor-pointer">
+                      <Paper 
+                        elevation={1} 
+                        sx={{ 
+                          p: 2, 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'space-between',
+                          height: '100%'
+                        }}
+                      >
+                        <Typography variant="body1">
                           نشط
-                        </FormLabel>
-                        <FormControl>
-                          <Switch
-                            id="is_active_switch"
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            disabled={dataIsLoading || mutation.isPending}
-                          />
-                        </FormControl>
-                      </FormItem>
+                        </Typography>
+                        <Switch
+                          checked={field.value}
+                          onChange={field.onChange}
+                          disabled={dataIsLoading || mutation.isPending}
+                        />
+                      </Paper>
                     )}
                   />
-                </div>
+                </Grid>
+              </Grid>
 
                 
 
-                <FormField
-                  control={control}
-                  name="roles"
-                  render={() => (
-                    <FormItem>
-                      <FormLabel>الأدوار</FormLabel>
-                      <FormDescription>
-                        اختر صلاحيات المستخدم
-                      </FormDescription>
-                      {isLoadingRoles ? (
-                        <div className="flex items-center justify-center p-4">
-                          <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-4 gap-y-2 p-3 border rounded-md max-h-60 overflow-y-auto">
-                          {rolesList.map((role) => (
-                            <Controller
-                              key={role.id}
-                              control={control}
-                              name="roles"
-                              render={({ field: roleArrayField }) => (
-                                <FormItem className="flex flex-row items-center space-x-2 rtl:space-x-reverse space-y-0">
-                                  <FormControl>
-                                    <Checkbox
-                                      checked={roleArrayField.value?.includes(
-                                        role.name
-                                      )}
-                                      disabled={
-                                        dataIsLoading || mutation.isPending
-                                      }
-                                      onCheckedChange={(checked) => {
-                                        const currentRoles =
-                                          roleArrayField.value || [];
-                                        const newRoles = checked
-                                          ? [...currentRoles, role.name]
-                                          : currentRoles.filter(
-                                              (name) => name !== role.name
-                                            );
-                                        roleArrayField.onChange(newRoles);
-                                      }}
-                                      id={`role-${role.id}`}
-                                    />
-                                  </FormControl>
-                                  <FormLabel
-                                    htmlFor={`role-${role.id}`}
-                                    className="font-normal text-sm cursor-pointer"
-                                  >
-                                    {role.name}
-                                  </FormLabel>
-                                </FormItem>
-                              )}
-                            />
-                          ))}
-                        </div>
-                      )}
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <Box>
+                <Typography variant="h6" sx={{ mb: 1 }}>
+                  الأدوار
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  اختر صلاحيات المستخدم
+                </Typography>
+                {isLoadingRoles ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+                    <CircularProgress size={24} />
+                  </Box>
+                ) : (
+                  <Paper 
+                    elevation={1} 
+                    sx={{ 
+                      p: 2, 
+                      maxHeight: 240, 
+                      overflow: 'auto',
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                      gap: 1
+                    }}
+                  >
+                    {rolesList.map((role) => (
+                      <Controller
+                        key={role.id}
+                        control={control}
+                        name="roles"
+                        render={({ field: roleArrayField }) => (
+                          <FormControlLabel
+                            control={
+                              <Checkbox
+                                checked={roleArrayField.value?.includes(role.name)}
+                                disabled={dataIsLoading || mutation.isPending}
+                                onChange={(e) => {
+                                  const currentRoles = roleArrayField.value || [];
+                                  const newRoles = e.target.checked
+                                    ? [...currentRoles, role.name]
+                                    : currentRoles.filter((name) => name !== role.name);
+                                  roleArrayField.onChange(newRoles);
+                                }}
+                              />
+                            }
+                            label={role.name}
+                            sx={{ margin: 0 }}
+                          />
+                        )}
+                      />
+                    ))}
+                  </Paper>
+                )}
+              </Box>
 
-                <div className="flex justify-end gap-2 pt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => navigate("/users")}
-                    disabled={mutation.isPending}
-                  >
-                    إلغاء
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={
-                      dataIsLoading ||
-                      mutation.isPending ||
-                      (!isDirty && isEditMode)
-                    }
-                  >
-                    {mutation.isPending && (
-                      <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />
-                    )}
-                    {isEditMode ? "حفظ التغييرات" : "إنشاء"}
-                  </Button>
-                </div>
-              </form>
-            </Form>
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, pt: 2 }}>
+                <Button
+                  type="button"
+                  variant="outlined"
+                  onClick={() => navigate("/users")}
+                  disabled={mutation.isPending}
+                >
+                  إلغاء
+                </Button>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  disabled={
+                    dataIsLoading ||
+                    mutation.isPending ||
+                    (!isDirty && isEditMode)
+                  }
+                  startIcon={mutation.isPending ? <CircularProgress size={16} /> : null}
+                >
+                  {isEditMode ? "حفظ التغييرات" : "إنشاء"}
+                </Button>
+              </Box>
+            </Box>
           </CardContent>
         </Card>
-      </div>
+      </Box>
 
       {isEditMode && numericUserId && (
         <ChangePasswordDialog

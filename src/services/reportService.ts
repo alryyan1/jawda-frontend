@@ -1,7 +1,7 @@
 // src/services/reportService.ts
 import type { PaginatedResponse } from '@/types/common';
 import apiClient from './api';
-import type { DoctorShiftFinancialSummary, DoctorShiftReportItem, MonthlyServiceIncomeReportResponse, ServiceStatisticItem, YearlyPatientFrequencyReportResponse, MonthlyLabIncomeReportResponse, LabTestStatisticItem } from '@/types/reports';
+import type { DoctorShiftFinancialSummary, DoctorShiftReportItem, MonthlyServiceIncomeReportResponse, ServiceStatisticItem, YearlyPatientFrequencyReportResponse, MonthlyLabIncomeReportResponse, LabTestStatisticItem, LabGeneralReportItem, LabGeneralReportFilters, LabGeneralReportWithUserRevenue } from '@/types/reports';
 
 export interface DoctorShiftReportFilters {
   page?: number;
@@ -386,6 +386,22 @@ export const downloadServicesListPdf = async (filters: ServicesExportFilters): P
   const response = await apiClient.get('/reports/services-list/pdf', {
     params: filters,
     responseType: 'blob', // Important: expect binary data
+  });
+  return response.data;
+};
+
+// Lab General Report Service
+export const getLabGeneralReport = async (filters: LabGeneralReportFilters): Promise<LabGeneralReportWithUserRevenue> => {
+  const response = await apiClient.get<LabGeneralReportWithUserRevenue>('/reports/lab-general', { 
+    params: filters 
+  });
+  return response.data;
+};
+
+export const downloadLabGeneralReportPdf = async (filters: Omit<LabGeneralReportFilters, 'page' | 'per_page'>): Promise<Blob> => {
+  const response = await apiClient.get<Blob>('/reports/lab-general/pdf', {
+    params: filters,
+    responseType: 'blob',
   });
   return response.data;
 };

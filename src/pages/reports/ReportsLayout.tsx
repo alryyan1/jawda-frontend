@@ -17,6 +17,7 @@ import {
 } from '@mui/material';
 
 const reportNavItems = [
+  { to: '/reports/lab-general', label: 'تقرير المختبر العام', icon: BarChartBig },
   { to: '/reports/doctor-shifts', label: 'مناوبات الأطباء', icon: FileBarChart2 },
   { to: '/reports/service-statistics', label: 'إحصائيات الخدمات', icon: FileBarChart2 },
   { to: '/reports/clinic-shift-summary', label: 'ملخص مناوبة العيادة', icon: FileSpreadsheet },

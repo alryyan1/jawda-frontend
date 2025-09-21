@@ -1,7 +1,7 @@
 // src/types/reports.ts (or shifts.ts if DoctorShift type is there)
-import type  { DoctorStripped } from './doctors';
-import type { UserStripped } from './users'; // Assuming UserStripped type
-import type { Shift } from './shifts'; // General clinic shift type
+//  import type  { DoctorStripped } from './doctors';
+// import type { UserStripped } from './users'; // Assuming UserStripped type
+// import type { Shift } from './shifts'; // General clinic shift type
 
 export interface DoctorShiftReportItem {
   id: number;
@@ -284,4 +284,56 @@ export interface DoctorShiftReportItem {
   is_cash_reclaim_prooved?: boolean;
   is_company_revenue_prooved?: boolean;
   is_company_reclaim_prooved?: boolean;
+}
+
+// Lab General Report Types
+export interface LabGeneralReportItem {
+  id: number; // Patient ID
+  name: string; // Patient name
+  doctor_name: string; // Doctor name
+  total_lab_amount: number | string; // Total lab amount (can be string from DB)
+  total_paid_for_lab: number | string; // Total paid for lab (can be string from DB)
+  discount: number | string; // Total discount (can be string from DB)
+  total_amount_bank: number | string; // Total amount paid via bank (can be string from DB)
+  company_name?: string; // Company name if exists
+  doctorvisit_id: number; // Doctor visit ID
+  main_tests_names: string; // Main tests names (comma-separated)
+}
+
+export interface LabGeneralReportFilters {
+  shift_id?: number;
+  date_from?: string;
+  date_to?: string;
+  patient_name?: string;
+  user_id?: number;
+  page?: number;
+  per_page?: number;
+}
+
+export interface UserRevenueItem {
+  user_id: number;
+  user_name: string;
+  total_paid: number | string;
+  total_discount: number | string;
+  total_cash: number | string;
+  total_bank: number | string;
+}
+
+export interface LabGeneralReportWithUserRevenue {
+  patients: LabGeneralReportItem[];
+  user_revenues: UserRevenueItem[];
+  meta: {
+    current_page: number;
+    from: number;
+    last_page: number;
+    links: Array<{
+      url: string | null;
+      label: string;
+      active: boolean;
+    }>;
+    path: string;
+    per_page: number;
+    to: number;
+    total: number;
+  };
 }

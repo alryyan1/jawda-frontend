@@ -24,7 +24,6 @@ import PatientHistoryTable from "@/components/lab/reception/PatientHistoryTable"
 import { useDebounce } from "@/hooks/useDebounce";
 import { useAuth } from "@/contexts/AuthContext";
 import { getDoctorVisitById } from "@/services/visitService";
-import realtimeService from "@/services/realtimeService";
 
 // Types
 import type { Patient, PatientSearchResult } from "@/types/patients";
@@ -92,7 +91,7 @@ const LabReceptionPage: React.FC = () => {
     return {
       visit_id: visit.id,
       patient_id: visit.patient_id,
-      lab_number: visit.id.toString(), // Using visit ID as lab number
+      lab_number: visit.patient?.visit_number?.toString() || visit.id.toString(), // Using visit ID as lab number
       patient_name: visit.patient?.name || '',
       phone: visit.patient?.phone || '',
       sample_id: oldestRequest?.id?.toString() || visit.id.toString(),
@@ -107,52 +106,6 @@ const LabReceptionPage: React.FC = () => {
     };
   };
 
-  // Real-time event subscription for patient registration
-  useEffect(() => {
-    const handlePatientRegistered = async (patient: Patient) => {
-      console.log('Patient registered event received:', patient);
-      
-      try {
-        // If the patient has a doctor visit, fetch the visit data and convert to queue item
-        if (patient.doctor_visit?.id) {
-          console.log('Fetching visit data for visit ID:', patient.doctor_visit.id);
-          const visitData = await getDoctorVisitById(patient.doctor_visit.id);
-          const newQueueItem = convertVisitToQueueItem(visitData);
-          console.log('Converted queue item:', newQueueItem);
-          
-          // Update the lab patient queue directly using the ref
-          console.log('Current shift ID:', currentClinicShift?.id);
-          if (labPatientQueueRef.current) {
-            labPatientQueueRef.current.appendPatientToQueue(newQueueItem);
-          }
-          
-          // Show a toast notification
-          toast.success(`تم تسجيل مريض جديد: ${patient.name}`);
-        } else {
-          // Fallback: refresh the entire queue if no visit ID is available
-          if (labPatientQueueRef.current) {
-            labPatientQueueRef.current.refresh();
-          }
-          toast.success(`تم تسجيل مريض جديد: ${patient.name}`);
-        }
-      } catch (error) {
-        console.error('Error fetching new patient queue item:', error);
-        // Fallback: refresh the entire queue on error
-        if (labPatientQueueRef.current) {
-          labPatientQueueRef.current.refresh();
-        }
-        toast.success(`تم تسجيل مريض جديد: ${patient.name}`);
-      }
-    };
-
-    // Subscribe to patient-registered events
-    realtimeService.onPatientRegistered(handlePatientRegistered);
-
-    // Cleanup subscription on component unmount
-    return () => {
-      realtimeService.offPatientRegistered(handlePatientRegistered);
-    };
-  }, [queryClient, currentClinicShift?.id]);
 
   // --- State Management ---
   const [activeVisitId, setActiveVisitId] = useState<number | null>(null);
@@ -320,11 +273,27 @@ const LabReceptionPage: React.FC = () => {
       //   queryKey: ["labReceptionQueue", currentClinicShift?.id],
       // });
       
-      if (patientWithVisit.doctorVisit) {
-        setActiveVisitId(patientWithVisit.doctorVisit.id);
+      console.log('handlePatientActivated called with:', patientWithVisit);
+      console.log('patientWithVisit.doctor_visit:', patientWithVisit.doctor_visit);
+      console.log('patientWithVisit.doctorVisit:', patientWithVisit.doctorVisit);
+      
+      // Use the doctor_visit from the patient response (API response)
+      const doctorVisit = patientWithVisit.doctor_visit || patientWithVisit.doctorVisit;
+      
+      if (doctorVisit) {
+        console.log('Found doctor visit:', doctorVisit);
+        setActiveVisitId(doctorVisit.id);
         
         // Hide the form to show the queue with the selected patient
         setIsFormVisible(false);
+        
+        // Immediately add the patient to the queue using the API response data
+        const newQueueItem = convertVisitToQueueItem(doctorVisit);
+        console.log('Adding patient to queue immediately from API response:', newQueueItem);
+        
+        if (labPatientQueueRef.current) {
+          labPatientQueueRef.current.appendPatientToQueue(newQueueItem);
+        }
         
         // Focus on test selection autocomplete after patient is activated
         setTimeout(() => {
@@ -339,10 +308,13 @@ const LabReceptionPage: React.FC = () => {
         }, 100);
         
         // Show success message
-        toast.success(`تم اختيار المريض تلقائياً: ${patientWithVisit.name} (زيارة ${patientWithVisit.doctorVisit.id})`);
+        toast.success(`تم اختيار المريض تلقائياً: ${patientWithVisit.name} (زيارة ${doctorVisit.id})`);
+      } else {
+        console.error('No doctor visit found in patient response:', patientWithVisit);
+        toast.error('لم يتم العثور على بيانات الزيارة في الاستجابة');
       }
     },
-    []
+    [labPatientQueueRef]
   );
 
   // New callback to handle post-save actions

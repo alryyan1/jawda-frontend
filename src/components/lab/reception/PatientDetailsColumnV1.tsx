@@ -76,6 +76,30 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
         console.error('Failed to emit lab-payment event:', error);
         // Don't show error to user as payment was successful
       }
+
+      // Emit print lab receipt event
+      try {
+        if (visit && visit.patient) {
+          const realtimeUrl = realtimeUrlFromConstants || 'http://localhost:4001';
+          await fetch(`${realtimeUrl}/emit/print-lab-receipt`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-internal-token': import.meta.env.VITE_SERVER_AUTH_TOKEN || 'changeme'
+            },
+            body: JSON.stringify({
+              visit_id: visit.id,
+              patient_id: visit.patient.id,
+              lab_request_ids: visit.lab_requests?.map(req => req.id) || []
+            })
+          });
+          
+          console.log('Print lab receipt event emitted successfully');
+        }
+      } catch (error) {
+        console.error('Failed to emit print lab receipt event:', error);
+        // Don't show error to user as payment was successful
+      }
       
       queryClient.invalidateQueries({
         queryKey: ["activeVisitForLabRequests", activeVisitId],

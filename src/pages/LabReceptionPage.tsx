@@ -584,57 +584,56 @@ interface AutocompleteVisitOption {
             </div>
           )}
 
-          {/* Patient Queue Column */}
-          <div className="w-1/4 flex-shrink-0">
-            <Card className="bg-white dark:bg-slate-800 shadow-lg border-0 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-xl h-full">
-              <CardContent className="p-0 h-full overflow-hidden">
-                <LabPatientQueue
-                  ref={labPatientQueueRef}
-                  appearanceSettings={getAppearanceSettings()}
-                  labFilters={filters}
-                  currentShift={currentClinicShift}
-                  onShiftChange={() => toast.info('الميزة غير متاحة حالياً')}
-                  onPatientSelect={handlePatientSelectedFromQueue}
-                  selectedVisitId={activeVisitId}
-                  globalSearchTerm=""
-                />
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Lab Requests Column (takes twice the width when form is hidden) */}
-          <div className={`${
-            isFormVisible ? 'w-0' : 'w-1/2'
-          } flex-shrink-0`}>
-            <Card className="bg-white dark:bg-slate-800 shadow-lg border-0 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-xl h-full">
-              <CardContent className="p-0 h-full overflow-hidden">
-                <LabRequestsColumn
-                  activeVisitId={activeVisitId}
-                  visit={activeVisit}
-                  isLoading={isVisitLoading}
-                  onPrintReceipt={handlePrintReceipt}
-                />
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Patient Info Column - Dynamic Width */}
-          {activeVisitId && (
-            <div className={`${
-              isFormVisible ? 'w-1/4' : 'w-1/6'
-            } flex-shrink-0`}>
+          {/* Grid Layout Container */}
+          <div className="flex-1 grid grid-cols-4 gap-4 h-full">
+            {/* Patient Queue Column - 1fr when patient selected, 2fr when no patient */}
+            <div className={activeVisitId ? "col-span-1" : "col-span-2"}>
               <Card className="bg-white dark:bg-slate-800 shadow-lg border-0 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-xl h-full">
                 <CardContent className="p-0 h-full overflow-hidden">
-                  <PatientDetailsColumnV1
-                    ref={patientDetailsRef}
+                  <LabPatientQueue
+                    ref={labPatientQueueRef}
+                    appearanceSettings={getAppearanceSettings()}
+                    labFilters={filters}
+                    currentShift={currentClinicShift}
+                    onShiftChange={() => toast.info('الميزة غير متاحة حالياً')}
+                    onPatientSelect={handlePatientSelectedFromQueue}
+                    selectedVisitId={activeVisitId}
+                    globalSearchTerm=""
+                  />
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Lab Requests Column - 2fr when patient selected, 2fr when no patient */}
+            <div className="col-span-2">
+              <Card className="bg-white dark:bg-slate-800 shadow-lg border-0 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-xl h-full">
+                <CardContent className="p-0 h-full overflow-hidden">
+                  <LabRequestsColumn
                     activeVisitId={activeVisitId}
                     visit={activeVisit}
+                    isLoading={isVisitLoading}
                     onPrintReceipt={handlePrintReceipt}
                   />
                 </CardContent>
               </Card>
             </div>
-          )}
+
+            {/* Patient Details Column - 1fr when patient selected, hidden when no patient */}
+            {activeVisitId && (
+              <div className="col-span-1">
+                <Card className="bg-white dark:bg-slate-800 shadow-lg border-0 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-xl h-full">
+                  <CardContent className="p-0 h-full overflow-hidden">
+                    <PatientDetailsColumnV1
+                      ref={patientDetailsRef}
+                      activeVisitId={activeVisitId}
+                      visit={activeVisit}
+                      onPrintReceipt={handlePrintReceipt}
+                    />
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </div>
         </div>
         <PdfPreviewDialog
         widthClass="w-[350px]"

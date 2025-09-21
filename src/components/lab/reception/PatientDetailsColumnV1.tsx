@@ -251,9 +251,10 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
       )}
     </div>
       </div>
-      <div>
-  {currentClinicShift && (
-        <div className="w-full mt-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200 mb-2">
+      <div className="flex items-center justify-center">
+        <div>
+         {currentClinicShift && (
+        <div className="w-60 mt-2  bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200 mb-2">
           <div className="p-3">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
@@ -306,7 +307,9 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
             ) : null}
           </div>
         </div>
-      )}
+      )}   
+        </div>
+
       </div>
     </div>
    

@@ -76,12 +76,14 @@ interface ResultEntryPanelProps {
   initialLabRequest: LabRequest;
   onResultsSaved: (updatedLabRequest: LabRequest) => void;
   onChildTestFocus: (childTest: ChildTestWithResult | null) => void;
-}
+  patientAuthDate?: string | null;
+  }
 
 const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
   initialLabRequest,
   onResultsSaved,
   onChildTestFocus,
+  patientAuthDate,
 }) => {
   // استخدام نص عربي مباشر بدلاً من i18n
   const queryClient = useQueryClient();
@@ -184,91 +186,91 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
   );
 
   // --- Main Comment Autosave ---
-  const debouncedSaveMainComment = useCallback(
-    debounce(async (commentValue: string) => {
-      setFieldSaveStatus((prev) => ({
-        ...prev,
-        ["main_test_comment"]: "saving",
-      }));
-      try {
-        const currentFormData = getValues();
-        const payloadForBackend = {
-          ...currentFormData,
-          main_test_comment: commentValue,
-        };
+  // const debouncedSaveMainComment = useCallback(
+  //   debounce(async (commentValue: string) => {
+  //     setFieldSaveStatus((prev) => ({
+  //       ...prev,
+  //       ["main_test_comment"]: "saving",
+  //     }));
+  //     try {
+  //       const currentFormData = getValues();
+  //       const payloadForBackend = {
+  //         ...currentFormData,
+  //         main_test_comment: commentValue,
+  //       };
 
-        const processedPayload = {
-          ...payloadForBackend,
-          results: payloadForBackend.results.map((resItem, idx) => {
-            const originalChildTest =
-              testDataForEntry?.child_tests_with_results[idx];
-            if (resItem.is_boolean_result && originalChildTest?.options) {
-              const selectedOptionName =
-                Boolean(resItem.result_value) === true
-                  ? originalChildTest.options.find((o) =>
-                      o.name.match(/positive|present|yes|true/i)
-                    )?.name || "Positive"
-                  : originalChildTest.options.find((o) =>
-                      o.name.match(/negative|absent|no|false/i)
-                    )?.name || "Negative";
-              return { ...resItem, result_value: selectedOptionName };
-            }
-            if (
-              resItem.is_qualitative_with_options &&
-              typeof resItem.result_value === "object" &&
-              resItem.result_value !== null
-            ) {
-              return {
-                ...resItem,
-                result_value: (resItem.result_value as ChildTestOption).name,
-              };
-            }
-            return resItem;
-          }),
-        };
+  //       const processedPayload = {
+  //         ...payloadForBackend,
+  //         results: payloadForBackend.results.map((resItem, idx) => {
+  //           const originalChildTest =
+  //             testDataForEntry?.child_tests_with_results[idx];
+  //           if (resItem.is_boolean_result && originalChildTest?.options) {
+  //             const selectedOptionName =
+  //               Boolean(resItem.result_value) === true
+  //                 ? originalChildTest.options.find((o) =>
+  //                     o.name.match(/positive|present|yes|true/i)
+  //                   )?.name || "Positive"
+  //                 : originalChildTest.options.find((o) =>
+  //                     o.name.match(/negative|absent|no|false/i)
+  //                   )?.name || "Negative";
+  //             return { ...resItem, result_value: selectedOptionName };
+  //           }
+  //           if (
+  //             resItem.is_qualitative_with_options &&
+  //             typeof resItem.result_value === "object" &&
+  //             resItem.result_value !== null
+  //           ) {
+  //             return {
+  //               ...resItem,
+  //               result_value: (resItem.result_value as ChildTestOption).name,
+  //             };
+  //           }
+  //           return resItem;
+  //         }),
+  //       };
 
-        const updatedLabRequest = await saveLabResults(
-          initialLabRequest.id,
-          processedPayload
-        );
-        onResultsSaved(updatedLabRequest);
-        // Don't invalidate queries - data is already updated
-        setFieldSaveStatus((prev) => ({
-          ...prev,
-          ["main_test_comment"]: "success",
-        }));
-        setTimeout(
-          () =>
-            setFieldSaveStatus((prev) => ({
-              ...prev,
-              ["main_test_comment"]: "idle",
-            })),
-          2000
-        );
-      } catch {
-        setFieldSaveStatus((prev) => ({
-          ...prev,
-          ["main_test_comment"]: "error",
-        }));
-        toast.error("فشل حفظ الحقل: تعليق الفحص الرئيسي");
-        setTimeout(
-          () =>
-            setFieldSaveStatus((prev) => ({
-              ...prev,
-              ["main_test_comment"]: "idle",
-            })),
-          3000
-        );
-      }
-    }, 1500),
-    [
-      getValues,
-      initialLabRequest.id,
-      onResultsSaved,
-      queryClient,
-      testDataForEntry,
-    ]
-  );
+  //       const updatedLabRequest = await saveLabResults(
+  //         initialLabRequest.id,
+  //         processedPayload
+  //       );
+  //       onResultsSaved(updatedLabRequest);
+  //       // Don't invalidate queries - data is already updated
+  //       setFieldSaveStatus((prev) => ({
+  //         ...prev,
+  //         ["main_test_comment"]: "success",
+  //       }));
+  //       setTimeout(
+  //         () =>
+  //           setFieldSaveStatus((prev) => ({
+  //             ...prev,
+  //             ["main_test_comment"]: "idle",
+  //           })),
+  //         2000
+  //       );
+  //     } catch {
+  //       setFieldSaveStatus((prev) => ({
+  //         ...prev,
+  //         ["main_test_comment"]: "error",
+  //       }));
+  //       toast.error("فشل حفظ الحقل: تعليق الفحص الرئيسي");
+  //       setTimeout(
+  //         () =>
+  //           setFieldSaveStatus((prev) => ({
+  //             ...prev,
+  //             ["main_test_comment"]: "idle",
+  //           })),
+  //         3000
+  //       );
+  //     }
+  //   }, 1500),
+  //   [
+  //     getValues,
+  //     initialLabRequest.id,
+  //     onResultsSaved,
+  //     queryClient,
+  //     testDataForEntry,
+  //   ]
+  // );
 
   useEffect(() => {
     if (testDataForEntry) {
@@ -607,6 +609,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                                             parentChildTestModel={ctResult}
                                             onFocusChange={onChildTestFocus}
                                             inputRef={isFirstInput ? firstInputRef : undefined}
+                                            patientAuthDate={patientAuthDate}
                                           />
                                         </div>
                                       

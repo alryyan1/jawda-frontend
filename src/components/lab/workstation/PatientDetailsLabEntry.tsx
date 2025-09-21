@@ -251,7 +251,7 @@ const PatientDetailsLabEntry: React.FC<PatientDetailsLabEntryProps> = ({
           </div>
       
         </Box>
-        <Typography variant="h6" sx={{ fontWeight: 600, textAlign: 'center', fontSize: '1.2rem' ,color:'black!'}}>
+        <Typography className="text-black!" variant="h6"  sx={{ fontWeight: 600, textAlign: 'center', fontSize: '1.6rem' }}>
           {patientName || "-"}
         </Typography>
     

@@ -88,7 +88,7 @@ const PatientQueuePanel: React.FC<PatientQueuePanelProps> = ({
   };
   
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-[calc(100vh-150px)] flex flex-col">
       <QueueHeader
         currentShift={currentShift}
         patientCount={queueItems.length}

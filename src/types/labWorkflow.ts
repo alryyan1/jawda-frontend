@@ -1,4 +1,4 @@
-import type { ChildGroup, ChildTest, ChildTestOption, Unit } from "./labTests";
+import type { ChildGroup, ChildTestOption, Unit } from "./labTests";
 
 export interface PatientLabQueueItem { // For the leftmost list
   visit_id: number; // DoctorVisit ID
@@ -17,7 +17,7 @@ export interface PatientLabQueueItem { // For the leftmost list
   is_last_result_pending?: boolean; 
   is_ready_for_print?: boolean;
   company?: any; // Company information from backend
-
+  auth_date?: string | null;
   // status_summary?: string; // e.g. "3 Pending, 1 Complete"
 }
 

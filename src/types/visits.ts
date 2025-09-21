@@ -44,7 +44,7 @@ export interface LabRequest {
   main_test?: MainTest; // Eager loaded with childTests for result entry
   pid: number; // Patient ID
   patient_name?: string; // Denormalized for quick display in some lists
-  patient?: PatientStripped; // Eager loaded patient summary
+  patient?: PatientStripped | Patient; // Eager loaded patient summary or full patient data
   doctor_visit_id?: number | null; // Link to the DoctorVisit
 
   hidden: boolean;

@@ -366,6 +366,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
     );
   }
 
+  console.log(visit?.patient,'visit?.patient?.result_print_date')
   return (
     <div className="h-full flex flex-col">
       {/* Header with Print Receipt and Remove All Pending buttons */}
@@ -389,7 +390,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
             //add red border
             className="  hover:bg-red-600 hover:text-white !border-red-200 !border-2"
             size="sm"
-            disabled={removeAllPendingMutation.isPending || (visit?.lab_requests?.length ?? 0) === 0}
+            disabled={removeAllPendingMutation.isPending || (visit?.lab_requests?.length ?? 0) === 0 || visit?.patient?.result_print_date != null}
           >
             {removeAllPendingMutation.isPending ? (
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -561,7 +562,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                       {visit?.patient?.company && (
                         <TableCell>
                           <Badge variant={request.approve ? "success" : "destructive"}>
-                            {request.approve ? t("labRequestsColumn.approved", "Approved") : t("labRequestsColumn.pendingApproval", "Pending Approval")}
+                            {request.approve ? "موافق عليه" : "في انتظار الموافقة"}
                           </Badge>
                         </TableCell>
                       )}
@@ -620,7 +621,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                               <DropdownMenuItem
                                 onClick={() => handleUnpayLabRequest(request.id)}
                                 className="text-yellow-600"
-                                disabled={unpayLabRequestMutation.isPending}
+                                disabled={unpayLabRequestMutation.isPending || visit?.patient?.result_print_date != null}
                               >
                                 <AlertCircle className="h-4 w-4 mr-2" />
                                 {"إلغاء الدفع"}
@@ -630,7 +631,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                             <DropdownMenuItem
                               onClick={() => handleDeleteRequest(request.id)}
                               className="text-red-600"
-                              disabled={deleteRequestMutation.isPending}
+                              disabled={deleteRequestMutation.isPending || visit?.patient?.result_print_date != null}
                             >
                               <Trash2 className="h-4 w-4 mr-2" />
                               {"حذف"}

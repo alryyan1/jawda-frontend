@@ -113,6 +113,8 @@ export interface Patient {
   result_auth: boolean;
   result_auth_user?: number | null;
   result_url?: string | null;
+  result_print_date?: string | null;
+  auth_date?: string | null;
   doctor_visit?: DoctorVisit;
 
   subcompany_id?: number | null;

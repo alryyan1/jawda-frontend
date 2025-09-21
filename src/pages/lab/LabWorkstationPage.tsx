@@ -1112,6 +1112,7 @@ const LabWorkstationPage: React.FC = () => {
               key={`result-entry-${selectedLabRequestForEntry.id}`}
               initialLabRequest={selectedLabRequestForEntry}
               onResultsSaved={handleResultsSaved}
+              patientAuthDate={selectedQueueItem?.auth_date}
               onChildTestFocus={() => {}} // Empty function since we removed the handler
             />
           ) : (

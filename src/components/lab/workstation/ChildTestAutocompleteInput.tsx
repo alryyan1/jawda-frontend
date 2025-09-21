@@ -38,6 +38,8 @@ interface ChildTestAutocompleteInputProps {
   onFocusChange: (childTest: ChildTestWithResult | null) => void;
   // Ref for auto-focus functionality
   inputRef?: React.RefObject<HTMLInputElement | null>;
+  // Patient data for authorization check
+  patientAuthDate?: string | null;
   // For autosave trigger (optional, can be handled by parent watching RHF value)
   // onValueActuallyChanged: (newValue: string | ChildTestOption | null) => void;
 }
@@ -65,8 +67,13 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
   parentChildTestModel,
   onFocusChange,
   inputRef,
+  patientAuthDate,
 }) => {
   // استخدام نص عربي مباشر بدلاً من i18n
+
+  // Check if patient is authorized (auth_date is not null)
+  const isPatientAuthorized = patientAuthDate != null;
+  const isDisabled = disabled || isPatientAuthorized;
 
   const [isAutocompleteOpen, setIsAutocompleteOpen] = useState(false);
   const [currentInputValue, setCurrentInputValue] = useState(""); // For the text field part
@@ -191,7 +198,7 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
         onClose={() => setIsAutocompleteOpen(false)}
         options={options as OptionType[]} // Use locally managed options (with localStorage caching)
         loading={isLoadingOptions}
-        disabled={disabled}
+        disabled={isDisabled}
         sx={{
           '& .MuiAutocomplete-root': {
             // fontSize: '0.75rem',

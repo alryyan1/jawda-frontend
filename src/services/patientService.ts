@@ -209,9 +209,11 @@ export const createLabVisitForExistingPatient = async (
 
 
 
-export const registerNewPatientFromLab = async (payload: Partial<PatientFormData>): Promise<Patient> => {
-  // CHANGE THIS LINE: from '/patients/register-lab' to just '/patients'
-  const response = await apiClient.post<{ data: Patient }>('/patients', payload);
+export const registerNewPatientFromLab = async (
+  payload: Partial<PatientFormData>,
+  config?: { headers?: Record<string, string> }
+): Promise<Patient> => {
+  const response = await apiClient.post<{ data: Patient }>('/patients', payload, config);
   return response.data.data;
 };
 

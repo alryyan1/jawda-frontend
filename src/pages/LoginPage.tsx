@@ -91,7 +91,7 @@ const LoginPage: React.FC = () => {
         {/* Medical glowing background effect */}
         <div className="absolute -inset-1 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-3xl blur opacity-20 dark:opacity-30 animate-pulse"></div>
         
-        <div className="relative bg-white dark:bg-slate-800 backdrop-blur-xl border border-teal-200 dark:border-slate-700 rounded-3xl shadow-2xl p-8 transition-all duration-300">
+        <div className="relative bg-white dark:bg-slate-800 backdrop-blur-xl border border-teal-200 dark:border-slate-700 rounded-3xl p-8 transition-all duration-300">
           {/* Header */}
           <div className="text-center mb-8">
             {/* System Logo */}
@@ -141,7 +141,7 @@ const LoginPage: React.FC = () => {
                   onBlur={() => setFocusedField(null)}
                   className={`w-full pr-11 pl-4 py-3 bg-teal-50 dark:bg-slate-700 border rounded-xl text-slate-900 dark:text-white placeholder-teal-500 dark:placeholder-slate-400 transition-all duration-300 focus:outline-none focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed ${
                     focusedField === "username"
-                      ? 'border-teal-400 dark:border-teal-500 focus:ring-teal-500/20 focus:border-teal-500 shadow-lg bg-teal-100 dark:bg-slate-600'
+                      ? 'border-teal-400 dark:border-teal-500 focus:ring-teal-500/20 focus:border-teal-500  bg-teal-100 dark:bg-slate-600'
                       : 'border-teal-200 dark:border-slate-600 hover:border-teal-300 dark:hover:border-slate-500'
                   }`}
                 />

@@ -165,7 +165,8 @@ const LabRegistrationForm: React.FC<LabRegistrationFormProps> = React.memo(({
         subcompany_id: isCompanySelected && data.subcompany_id ? data.subcompany_id : undefined,
         company_relation_id: isCompanySelected && data.company_relation_id ? data.company_relation_id : undefined,
       };
-      return registerNewPatientFromLab(submissionData);
+      // Pass header so global interceptor does not show another toast
+      return registerNewPatientFromLab(submissionData, { headers: { 'X-Suppress-Error-Toast': '1' } });
     },
     onSuccess: (newPatientWithVisit) => {
       toast.success('تم تسجيل المريض بنجاح');
@@ -184,6 +185,9 @@ const LabRegistrationForm: React.FC<LabRegistrationFormProps> = React.memo(({
       }
     },
     onError: (error: AxiosError) => {
+      // Let the global axios interceptor show the toast to avoid duplicates
+      // If we want a custom message here, suppress global toast and show local one instead
+      (error.config as any) = { ...(error.config || {}), headers: { ...(error.config?.headers || {}), 'X-Suppress-Error-Toast': true } };
       const apiError = error as { response?: { data?: { message?: string } } };
       toast.error(apiError.response?.data?.message || 'فشل تسجيل المريض');
     },

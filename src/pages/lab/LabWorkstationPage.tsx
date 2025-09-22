@@ -579,6 +579,7 @@ const LabWorkstationPage: React.FC = () => {
         setSelectedVisitFromAutocomplete(null); // Clear autocomplete selection
         setAutocompleteInputValue("");
         fetchVisitDetailsMutation.mutate(id);
+        setVisitIdSearchTerm("");
       } else {
         toast.error("رقم الزيارة غير صالح");
       }
@@ -692,16 +693,6 @@ const LabWorkstationPage: React.FC = () => {
           <h1 className="text-lg sm:text-xl font-bold text-slate-800 dark:text-slate-100">
             {AR.pageTitle}
           </h1>
-        </div>
-
-        <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto sm:flex-grow justify-end">
-          {/* Upload Status Spinner */}
-          {isUploadingToFirebase && (
-            <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span className="text-xs font-medium">جاري رفع الملف...</span>
-            </div>
-          )}
           <Autocomplete
             id="recent-visits-by-patient-dropdown"
             options={recentVisitsData || []}
@@ -816,8 +807,7 @@ const LabWorkstationPage: React.FC = () => {
             }
             loadingText={AR.loading}
           />
-
-          <div className="w-full sm:w-auto">
+             <div className="w-full sm:w-auto">
             <TextField
               type="number"
               size="small"
@@ -841,6 +831,19 @@ const LabWorkstationPage: React.FC = () => {
               }}
             />
           </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto sm:flex-grow justify-end">
+          {/* Upload Status Spinner */}
+          {isUploadingToFirebase && (
+            <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="text-xs font-medium">جاري رفع الملف...</span>
+            </div>
+          )}
+       
+
+       
 
           {/* Lab History Autocomplete - Only show when a patient is selected */}
           {selectedQueueItem && labHistoryData.length > 0 && (
@@ -907,7 +910,7 @@ const LabWorkstationPage: React.FC = () => {
               renderInput={(params) => (
                 <TextField
                   {...params}
-                  label="سجل المختبر للمريض"
+                  label="الهستوري"
                   variant="outlined"
                   InputProps={{
                     ...params.InputProps,
@@ -1112,7 +1115,7 @@ const LabWorkstationPage: React.FC = () => {
               key={`result-entry-${selectedLabRequestForEntry.id}`}
               initialLabRequest={selectedLabRequestForEntry}
               onResultsSaved={handleResultsSaved}
-              patientAuthDate={selectedQueueItem?.auth_date}
+              patientAuthDate={selectedQueueItem?.result_auth}
               onChildTestFocus={() => {}} // Empty function since we removed the handler
             />
           ) : (

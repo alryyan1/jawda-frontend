@@ -228,7 +228,6 @@ const LabReceptionPage: React.FC = () => {
         company_id: payload.companyId 
       }),
     onSuccess: (newPatientWithVisit) => {
-      toast.success(`تم إنشاء زيارة للمريض ${newPatientWithVisit.name}`);
       handlePatientActivated(newPatientWithVisit);
       setSearchQuery(''); // Clear phone search query after success
       setNameSearchQuery(''); // Clear name search query after success
@@ -276,6 +275,8 @@ const LabReceptionPage: React.FC = () => {
       console.log('handlePatientActivated called with:', patientWithVisit);
       console.log('patientWithVisit.doctor_visit:', patientWithVisit.doctor_visit);
       console.log('patientWithVisit.doctorVisit:', patientWithVisit.doctorVisit);
+      // testSelectionAutocompleteRef.current?.focus();
+      // alert("focusing on test selection autocomplete");
       
       // Use the doctor_visit from the patient response (API response)
       const doctorVisit = patientWithVisit.doctor_visit || patientWithVisit.doctorVisit;
@@ -343,6 +344,18 @@ const LabReceptionPage: React.FC = () => {
       setActiveVisitId(queueItem.visit_id);
       // Hide form when patient is selected
       setIsFormVisible(false);
+      setTimeout(() => {
+        if (testSelectionAutocompleteRef.current) {
+          console.log(testSelectionAutocompleteRef.current, "testSelectionAutocompleteRef.current");
+          console.log("Focusing on test selection autocomplete after patient save");
+          // Find the input element within the Autocomplete
+          const inputElement = testSelectionAutocompleteRef.current.querySelector('input');
+          if (inputElement) {
+            inputElement.focus();
+          }
+        }
+      }, 200);
+      
     },
     []
   );

@@ -76,7 +76,7 @@ interface ResultEntryPanelProps {
   initialLabRequest: LabRequest;
   onResultsSaved: (updatedLabRequest: LabRequest) => void;
   onChildTestFocus: (childTest: ChildTestWithResult | null) => void;
-  patientAuthDate?: string | null;
+  patientAuthDate?: boolean | null;
   }
 
 const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({

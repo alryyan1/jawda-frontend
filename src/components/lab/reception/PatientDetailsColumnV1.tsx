@@ -6,7 +6,7 @@ import type { DoctorVisit } from "@/types/visits";
 import PatientCompanyDetails from "./PatientCompanyDetails";
 import PatientInfoDialog from "@/components/clinic/PatientInfoDialog";
 import { Button } from "@/components/ui/button";
-import { User, DollarSign, Landmark, Coins, TrendingUp, Loader2 } from "lucide-react";
+import { User, DollarSign, Landmark, Coins, TrendingUp, Loader2, Mail } from "lucide-react";
 import { getLabRequestsForVisit } from "@/services/labRequestService";
 import { realtimeUrlFromConstants } from "@/pages/constants";
 import { fetchCurrentUserLabIncomeSummary, type LabUserShiftIncomeSummary } from "@/services/userService";
@@ -31,6 +31,9 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
   const queryClient = useQueryClient();
   const { user, currentClinicShift } = useAuth();
   const [isPatientInfoDialogOpen, setIsPatientInfoDialogOpen] = useState(false);
+  const [isSmsDialogOpen, setIsSmsDialogOpen] = useState(false);
+  const [smsMessage, setSmsMessage] = useState("");
+  const [isSendingSms, setIsSendingSms] = useState(false);
 
   // Fetch lab shift summary
   const { data: labShiftSummary, isLoading: isLoadingSummary } = useQuery<LabUserShiftIncomeSummary>({
@@ -145,18 +148,39 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
         {patientName}
       </div>
       
-      {/* Patient Info Button */}
-      {visit && (
+      {/* Patient Info + SMS Buttons */}
+      <div className="w-full grid grid-cols-2 gap-2 mb-2">
+        {visit && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsPatientInfoDialogOpen(true)}
+            className="w-full flex items-center justify-center gap-2"
+          >
+            <User className="h-4 w-4" />
+            تفاصيل المريض
+          </Button>
+        )}
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setIsPatientInfoDialogOpen(true)}
-          className="w-full mb-2 flex items-center justify-center gap-2"
+          onClick={() => {
+            if (!phone) {
+              toast.error("رقم الهاتف غير متوفر");
+              return;
+            }
+            const defaultMsg = `مرحباً ${patientName || ''}`.trim() + (patientName ? "، " : " ") + "نتمنى لك صحة جيدة.";
+            setSmsMessage(defaultMsg);
+            setIsSmsDialogOpen(true);
+          }}
+          className="w-full flex items-center justify-center gap-2"
+          disabled={!phone}
+          title={!phone ? "لا يوجد رقم هاتف" : "إرسال رسالة SMS"}
         >
-          <User className="h-4 w-4" />
-          تفاصيل المريض
+          <Mail className="h-4 w-4" />
+          SMS
         </Button>
-      )}
+      </div>
       {/* Details Table */}
       <table className="w-full text-sm mb-2">
         <tbody>
@@ -248,6 +272,80 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
           onOpenChange={setIsPatientInfoDialogOpen}
           visit={visit}
         />
+      )}
+
+      {/* SMS Dialog */}
+      {isSmsDialogOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="w-[92%] max-w-md bg-white rounded-md shadow-lg p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Mail className="h-4 w-4" />
+                <span className="font-semibold">إرسال رسالة SMS</span>
+              </div>
+              <button
+                onClick={() => setIsSmsDialogOpen(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="text-sm text-gray-600 mb-2">إلى: {phone || 'غير متوفر'}</div>
+            <textarea
+              className="w-full border rounded-md p-2 min-h-[120px] mb-3"
+              value={smsMessage}
+              onChange={(e) => setSmsMessage(e.target.value)}
+              placeholder="اكتب نص الرسالة هنا"
+            />
+            <div className="flex items-center justify-end gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsSmsDialogOpen(false)}
+                disabled={isSendingSms}
+              >
+                إلغاء
+              </Button>
+              <Button
+                size="sm"
+                onClick={async () => {
+                  if (!phone) {
+                    toast.error("رقم الهاتف غير متوفر");
+                    return;
+                  }
+                  if (!smsMessage.trim()) {
+                    toast.error("الرسالة مطلوبة");
+                    return;
+                  }
+                  try {
+                    setIsSendingSms(true);
+                    await apiClient.post('/sms/send', {
+                      messages: [
+                        { to: phone.startsWith('249') ? phone : `249${phone.replace(/^0/, '')}`, message: smsMessage }
+                      ]
+                    });
+                    toast.success("تم إرسال الرسالة بنجاح");
+                    setIsSmsDialogOpen(false);
+                  } catch (e) {
+                    toast.error("فشل إرسال الرسالة");
+                  } finally {
+                    setIsSendingSms(false);
+                  }
+                }}
+                disabled={isSendingSms}
+              >
+                {isSendingSms ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    جاري الإرسال...
+                  </span>
+                ) : (
+                  'إرسال'
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
       </div>

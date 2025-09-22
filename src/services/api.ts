@@ -46,8 +46,11 @@ apiClient.interceptors.response.use(
       return Promise.reject(error);
     }
 
+    // Respect per-request suppression flag to avoid duplicate toasts
+    const suppressToast = Boolean(error.config?.headers?.['X-Suppress-Error-Toast'] || error.config?.suppressToast);
+
     // Show toast for other API errors
-    if (error.response?.status >= 400) {
+    if (!suppressToast && error.response?.status >= 400) {
       const errorMessage = error.response?.data?.message || 
                           error.response?.data?.error || 
                           `خطأ في الخادم (${error.response?.status})`;
@@ -59,10 +62,10 @@ apiClient.interceptors.response.use(
         // Fallback for generic server errors
         toast.error(`خطأ في الخادم (${error.response?.status})`);
       }
-    } else if (!error.response) {
+    } else if (!suppressToast && !error.response) {
       // Network error (no response from server)
       toast.error('خطأ في الاتصال بالخادم - تحقق من اتصال الإنترنت');
-    } else {
+    } else if (!suppressToast) {
       // Other errors
       toast.error('حدث خطأ غير متوقع');
     }

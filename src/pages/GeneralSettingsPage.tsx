@@ -431,10 +431,53 @@ const SettingsPage: React.FC = () => {
               <Card>
                 <CardHeader>
                   <CardTitle>إعدادات سير العمل</CardTitle>
-                  <CardDescription>إعدادات تدفق العمل في المختبر</CardDescription>
+                  <CardDescription>إعدادات تدفق العمل والرسائل</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">إعدادات سير العمل ستكون متاحة قريباً...</p>
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={control}
+                      name="send_welcome_message"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>إرسال رسالة ترحيبية تلقائياً</FormLabel>
+                          <FormControl>
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="checkbox"
+                                checked={!!field.value}
+                                onChange={(e) => field.onChange(e.target.checked)}
+                              />
+                              <span className="text-sm text-muted-foreground">
+                                عند تفعيل هذا الخيار سيتم إرسال رسالة ترحيبية عند تسجيل زيارة جديدة
+                              </span>
+                            </div>
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={control}
+                    name="welcome_message"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>نص الرسالة الترحيبية</FormLabel>
+                        <FormControl>
+                          <textarea
+                            className="w-full border rounded-md p-2 min-h-[100px]"
+                            placeholder="مرحباً {name}، نرحب بكم في مستشفى {hospital}. تم تسجيل زيارتكم بنجاح."
+                            value={field.value || ''}
+                            onChange={(e) => field.onChange(e.target.value)}
+                          />
+                        </FormControl>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          يمكنك استخدام المتغيرات: {`{name}`} ، {`{hospital}`}
+                        </p>
+                      </FormItem>
+                    )}
+                  />
                 </CardContent>
               </Card>
             </TabsContent>

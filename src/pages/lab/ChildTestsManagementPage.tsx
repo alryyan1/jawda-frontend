@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogTitle, DialogContent } from '@mui/material';
 import { Loader2, ArrowLeft } from 'lucide-react';
 
 import type { MainTest, ChildTest, Unit, ChildGroup, ChildTestFormData as ChildTestFormDataType } from '@/types/labTests';
@@ -17,6 +18,7 @@ import { getChildGroups } from '@/services/childGroupService';
 
 import ChildTestsTable from '@/components/lab/management/ChildTestsTable';
 import ManageChildTestOptionsDialog from '@/components/lab/ManageChildTestOptionsDialog';
+import ChildTestEditableRow from '@/components/lab/management/ChildTestEditableRow';
 
 // import { useAuthorization } from '@/hooks/useAuthorization';
 
@@ -28,6 +30,12 @@ const ChildTestsManagementPage: React.FC = () => {
   // const { can } = useAuthorization(); // For permissions
 
   const [managingOptionsFor, setManagingOptionsFor] = useState<ChildTest | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingChildTest, setEditingChildTest] = useState<ChildTest | null>(null);
+  const [isAddingNew, setIsAddingNew] = useState(false);
+  const [dialogInitialData, setDialogInitialData] = useState<Partial<ChildTestFormDataType> | undefined>(undefined);
+  const [isSavingChildTest, setIsSavingChildTest] = useState(false);
+  const [lastSavedId, setLastSavedId] = useState<number | null>(null);
 
   // --- Main Test Info ---
   const { data: mainTest, isLoading: isLoadingMainTest } = useQuery<MainTest, Error>({
@@ -122,6 +130,61 @@ const ChildTestsManagementPage: React.FC = () => {
     queryClient.invalidateQueries({ queryKey: childTestsQueryKey }); // Refetch all child tests as options might affect display
   };
   
+  const openAddDialog = () => {
+    setIsAddingNew(true);
+    setEditingChildTest(null);
+    setDialogInitialData({
+      child_test_name: '',
+      test_order: String((childTestsList?.length || 0) + 1),
+    });
+    setEditDialogOpen(true);
+  };
+
+  const openEditDialog = (ct: ChildTest) => {
+    setIsAddingNew(false);
+    setEditingChildTest(ct);
+    setDialogInitialData({
+      child_test_name: ct.child_test_name,
+      low: ct.low !== null ? String(ct.low) : '',
+      upper: ct.upper !== null ? String(ct.upper) : '',
+      defval: ct.defval || '',
+      unit_id: ct.unit_id ? String(ct.unit_id) : undefined,
+      normalRange: ct.normalRange || '',
+      max: ct.max !== null ? String(ct.max) : '',
+      lowest: ct.lowest !== null ? String(ct.lowest) : '',
+      test_order: String(ct.test_order || 0),
+      child_group_id: ct.child_group_id ? String(ct.child_group_id) : undefined,
+    });
+    setEditDialogOpen(true);
+  };
+
+  const closeEditDialog = () => {
+    setEditDialogOpen(false);
+    setEditingChildTest(null);
+    setDialogInitialData(undefined);
+  };
+
+  const handleSaveFromEditableRow = async (data: ChildTestFormDataType) => {
+    setIsSavingChildTest(true);
+    try {
+      if (!isAddingNew && editingChildTest?.id) {
+        await handleUpdateChildTest(editingChildTest.id, data);
+        setLastSavedId(editingChildTest.id);
+      } else {
+        const res = await handleSaveNewChildTest(data);
+        if (res && (res as any).id) {
+          setLastSavedId((res as any).id as number);
+        }
+      }
+      closeEditDialog();
+      queryClient.invalidateQueries({ queryKey: childTestsQueryKey });
+    } catch (e) {
+      console.error("Save child test failed from table", e);
+    } finally {
+      setIsSavingChildTest(false);
+    }
+  };
+
 
   // Placeholder permissions
   const canAddChild = true; // can('edit lab_tests');
@@ -169,6 +232,9 @@ const ChildTestsManagementPage: React.FC = () => {
         canDelete={canDeleteChild}
         canManageOptions={canManageChildOptions}
         canReorder={canReorderChild}
+        onStartAddNew={openAddDialog}
+        onStartEdit={openEditDialog}
+        highlightedId={lastSavedId}
       />
 
       {managingOptionsFor && (
@@ -178,6 +244,24 @@ const ChildTestsManagementPage: React.FC = () => {
           childTest={managingOptionsFor}
         />
       )}
+
+      <Dialog open={editDialogOpen} onClose={closeEditDialog} fullWidth maxWidth="md">
+        <DialogTitle>{isAddingNew ? 'إضافة فحص فرعي' : 'تعديل فحص فرعي'}</DialogTitle>
+        <DialogContent>
+          <ChildTestEditableRow
+            initialData={dialogInitialData}
+            units={units}
+            isLoadingUnits={isLoadingUnits}
+            childGroups={childGroups}
+            isLoadingChildGroups={isLoadingChildGroups}
+            onSave={handleSaveFromEditableRow}
+            onCancel={closeEditDialog}
+            isSaving={isSavingChildTest}
+            onUnitQuickAdd={() => {}}
+            onChildGroupQuickAdd={() => {}}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

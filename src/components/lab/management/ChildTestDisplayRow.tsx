@@ -31,12 +31,13 @@ interface ChildTestDisplayRowProps {
   canDelete: boolean;
   canManageOptions: boolean;
   canReorder: boolean; // To show/hide drag handle or make it active
+  isHighlighted?: boolean;
 }
 
 const ChildTestDisplayRow: React.FC<ChildTestDisplayRowProps> = ({
   childTest, onEdit, onDelete, onManageOptions,
   isDeletingThisRow,
-  canEdit, canDelete, canManageOptions, canReorder
+  canEdit, canDelete, canManageOptions, canReorder, isHighlighted
 }) => {
 
   const {
@@ -78,9 +79,16 @@ const ChildTestDisplayRow: React.FC<ChildTestDisplayRowProps> = ({
         sx={{
           touchAction: 'none', // Important for dnd-kit pointer sensor on touch devices
           opacity: isDragging ? 0.7 : 1,
-          backgroundColor: isDragging ? 'action.hover' : 'inherit',
+          backgroundColor: isDragging ? 'action.hover' : (isHighlighted ? 'success.light' : 'inherit'),
           boxShadow: isDragging ? 3 : 'none',
           cursor: 'pointer',
+          transition: 'background-color 600ms ease',
+          '@keyframes rowPulse': {
+            '0%': { backgroundColor: 'transparent' },
+            '30%': { backgroundColor: 'rgba(76,175,80,0.3)' },
+            '100%': { backgroundColor: 'transparent' }
+          },
+          animation: isHighlighted ? 'rowPulse 1200ms ease-out' : 'none',
         }}
         data-testid={`child-test-row-${childTest.id || childTest._localId}`}
     >

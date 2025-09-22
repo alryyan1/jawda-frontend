@@ -113,91 +113,87 @@ const ChildTestEditableRow: React.FC<ChildTestEditableRowProps> = ({
   };
 
   return (
-    <TableRow className="bg-primary/5 dark:bg-primary/10 hover:bg-primary/10 dark:hover:bg-primary/15 !shadow-lg relative z-10">
-      <TableCell className="py-1 w-10 text-center align-top pt-3">
-        <DragIcon className="h-5 w-5 text-muted-foreground/30 cursor-not-allowed" />
-      </TableCell>
-      <TableCell colSpan={6} className="p-0 align-top">
-        <form onSubmit={handleSubmit(processSubmit)}>
-          <Box sx={{ display: 'grid', gap: 1.5, p: 1 }}>
-            <TextField
-              size="small"
-              placeholder="اسم الفحص"
-              {...register('child_test_name')}
+    <form onSubmit={handleSubmit(processSubmit)}>
+      <Box sx={{ display: 'grid', gap: 1.5 }}>
+        <TextField
+          size="small"
+          label="اسم الفحص"
+          placeholder="اسم الفحص"
+          {...register('child_test_name')}
+          onFocus={(e) => e.target.select()}
+          onMouseUp={(e) => e.preventDefault()}
+        />
+
+        <Box sx={{ display: 'grid', gap: 1, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' } }}>
+          <TextField size="small" label="الحد الأدنى" placeholder="الحد الأدنى" {...register('low')} onFocus={(e) => e.target.select()} onMouseUp={(e) => e.preventDefault()} />
+          <TextField size="small" label="الحد الأعلى" placeholder="الحد الأعلى" {...register('upper')} onFocus={(e) => e.target.select()} onMouseUp={(e) => e.preventDefault()} />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <FormControl fullWidth size="small">
+              <InputLabel id="unit-label">الوحدة</InputLabel>
+              <Controller
+                control={control}
+                name="unit_id"
+                render={({ field }) => (
+                  <Select labelId="unit-label" label="الوحدة" value={field.value || ''} onChange={(e) => field.onChange(e.target.value)} disabled={isLoadingUnits || isSaving}>
+                    <MenuItem value=" ">بدون</MenuItem>
+                    {units.map((u) => (
+                      <MenuItem key={u.id} value={String(u.id)}>{u.name}</MenuItem>
+                    ))}
+                  </Select>
+                )}
+              />
+            </FormControl>
+            <AddUnitDialog
+              onUnitAdded={onUnitQuickAdd}
+              triggerButton={
+                <Button type="button" variant="outlined" size="small" disabled={isSaving}>
+                  <PlusIcon fontSize="small" />
+                </Button>
+              }
             />
-
-            <Box sx={{ display: 'grid', gap: 1, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' } }}>
-              <TextField size="small" placeholder="الحد الأدنى" {...register('low')} />
-              <TextField size="small" placeholder="الحد الأعلى" {...register('upper')} />
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <FormControl fullWidth size="small">
-                  <InputLabel id="unit-label">الوحدة</InputLabel>
-                  <Controller
-                    control={control}
-                    name="unit_id"
-                    render={({ field }) => (
-                      <Select labelId="unit-label" label="الوحدة" value={field.value || ''} onChange={(e) => field.onChange(e.target.value)} disabled={isLoadingUnits || isSaving}>
-                        <MenuItem value=" ">بدون</MenuItem>
-                        {units.map((u) => (
-                          <MenuItem key={u.id} value={String(u.id)}>{u.name}</MenuItem>
-                        ))}
-                      </Select>
-                    )}
-                  />
-                </FormControl>
-                <AddUnitDialog
-                  onUnitAdded={onUnitQuickAdd}
-                  triggerButton={
-                    <Button type="button" variant="outlined" size="small" disabled={isSaving}>
-                      <PlusIcon fontSize="small" />
-                    </Button>
-                  }
-                />
-              </Box>
-            </Box>
-
-            <TextField size="small" placeholder="المدى الطبيعي (نص)" {...register('normalRange')} />
-
-            <Box sx={{ display: 'grid', gap: 1, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' } }}>
-              <TextField size="small" placeholder="أقل قيمة حرجة" {...register('lowest')} />
-              <TextField size="small" placeholder="أعلى قيمة حرجة" {...register('max')} />
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <FormControl fullWidth size="small">
-                  <InputLabel id="group-label">المجموعة</InputLabel>
-                  <Controller
-                    control={control}
-                    name="child_group_id"
-                    render={({ field }) => (
-                      <Select labelId="group-label" label="المجموعة" value={field.value || ''} onChange={(e) => field.onChange(e.target.value)} disabled={isLoadingChildGroups || isSaving}>
-                        <MenuItem value=" ">بدون</MenuItem>
-                        {childGroups.map((g) => (
-                          <MenuItem key={g.id} value={String(g.id)}>{g.name}</MenuItem>
-                        ))}
-                      </Select>
-                    )}
-                  />
-                </FormControl>
-                <AddChildGroupDialog
-                  onChildGroupAdded={onChildGroupQuickAdd}
-                  triggerButton={
-                    <Button type="button" variant="outlined" size="small" disabled={isSaving}>
-                      <PlusIcon fontSize="small" />
-                    </Button>
-                  }
-                />
-              </Box>
-            </Box>
-
-            <TextField size="small" placeholder="القيمة الافتراضية" {...register('defval')} />
-
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, pt: 1 }}>
-              <Button type="button" variant="outlined" size="small" onClick={onCancel} disabled={isSaving}>إلغاء</Button>
-              <Button type="submit" variant="contained" size="small" disabled={isSaving}>حفظ</Button>
-            </Box>
           </Box>
-        </form>
-      </TableCell>
-    </TableRow>
+        </Box>
+
+        <TextField size="small" label="المدى الطبيعي (نص)" placeholder="المدى الطبيعي (نص)" multiline rows={6} {...register('normalRange')} onFocus={(e) => e.target.select()} onMouseUp={(e) => e.preventDefault()} />
+
+        <Box sx={{ display: 'grid', gap: 1, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' } }}>
+          <TextField size="small" label="أقل قيمة حرجة" placeholder="أقل قيمة حرجة" {...register('lowest')} onFocus={(e) => e.target.select()} onMouseUp={(e) => e.preventDefault()} />
+          <TextField size="small" label="أعلى قيمة حرجة" placeholder="أعلى قيمة حرجة" {...register('max')} onFocus={(e) => e.target.select()} onMouseUp={(e) => e.preventDefault()} />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <FormControl fullWidth size="small">
+              <InputLabel id="group-label">المجموعة</InputLabel>
+              <Controller
+                control={control}
+                name="child_group_id"
+                render={({ field }) => (
+                  <Select labelId="group-label" label="المجموعة" value={field.value || ''} onChange={(e) => field.onChange(e.target.value)} disabled={isLoadingChildGroups || isSaving}>
+                    <MenuItem value=" ">بدون</MenuItem>
+                    {childGroups.map((g) => (
+                      <MenuItem key={g.id} value={String(g.id)}>{g.name}</MenuItem>
+                    ))}
+                  </Select>
+                )}
+              />
+            </FormControl>
+            <AddChildGroupDialog
+              onChildGroupAdded={onChildGroupQuickAdd}
+              triggerButton={
+                <Button type="button" variant="outlined" size="small" disabled={isSaving}>
+                  <PlusIcon fontSize="small" />
+                </Button>
+              }
+            />
+          </Box>
+        </Box>
+
+        <TextField size="small" label="القيمة الافتراضية" placeholder="القيمة الافتراضية" {...register('defval')} onFocus={(e) => e.target.select()} onMouseUp={(e) => e.preventDefault()} />
+
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, pt: 1 }}>
+          <Button type="button" variant="outlined" size="small" onClick={onCancel} disabled={isSaving}>إلغاء</Button>
+          <Button type="submit" variant="contained" size="small" disabled={isSaving}>حفظ</Button>
+        </Box>
+      </Box>
+    </form>
   );
 };
 export default ChildTestEditableRow;

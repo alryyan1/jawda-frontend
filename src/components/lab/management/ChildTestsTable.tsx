@@ -66,6 +66,9 @@ interface ChildTestsTableProps {
   canDelete: boolean;
   canManageOptions: boolean;
   canReorder: boolean;
+  onStartAddNew?: () => void;
+  onStartEdit?: (ct: ChildTest) => void;
+  highlightedId?: number | null;
 }
 
 const ChildTestsTable: React.FC<ChildTestsTableProps> = ({
@@ -88,6 +91,9 @@ const ChildTestsTable: React.FC<ChildTestsTableProps> = ({
   canReorder,
   onUnitQuickAdd,
   onChildGroupQuickAdd,
+  onStartAddNew,
+  onStartEdit,
+  highlightedId,
 }) => {
   const [displayableChildTests, setDisplayableChildTests] = useState<ChildTest[]>([]);
   const [isAddingNew, setIsAddingNew] = useState(false);
@@ -97,6 +103,7 @@ const ChildTestsTable: React.FC<ChildTestsTableProps> = ({
   const [isSavingOrder, setIsSavingOrder] = useState(false);
   const [orderHasChanged, setOrderHasChanged] = useState(false);
   const [isDeletingId, setIsDeletingId] = useState<number | null>(null);
+  const [lastSavedId, setLastSavedId] = useState<number | null>(null);
 
   // Mark mainTestId as intentionally unused for now
   void _mainTestId;
@@ -172,28 +179,15 @@ const ChildTestsTable: React.FC<ChildTestsTableProps> = ({
   };
 
   const handleStartAddNew = () => {
-    setActiveFormChildTest({
-      child_test_name: "",
-      test_order: String(displayableChildTests.length + 1),
-    });
-    setIsAddingNew(true);
+    if (typeof onStartAddNew === 'function') {
+      onStartAddNew();
+    }
   };
 
   const handleStartEdit = (ct: ChildTest) => {
-    setEditingId(ct.id!);
-    setActiveFormChildTest({
-      child_test_name: ct.child_test_name,
-      low: ct.low !== null ? String(ct.low) : "",
-      upper: ct.upper !== null ? String(ct.upper) : "",
-      defval: ct.defval || "",
-      unit_id: ct.unit_id ? String(ct.unit_id) : undefined,
-      normalRange: ct.normalRange || "",
-      max: ct.max !== null ? String(ct.max) : "",
-      lowest: ct.lowest !== null ? String(ct.lowest) : "",
-      test_order: String(ct.test_order || 0),
-      child_group_id: ct.child_group_id ? String(ct.child_group_id) : undefined,
-    });
-    setIsAddingNew(false);
+    if (typeof onStartEdit === 'function') {
+      onStartEdit(ct);
+    }
   };
 
   const handleCancelEditOrAdd = () => {
@@ -207,8 +201,12 @@ const ChildTestsTable: React.FC<ChildTestsTableProps> = ({
     try {
       if (!isAddingNew && editingId) {
         await onUpdateChildTest(editingId, data);
+        setLastSavedId(editingId);
       } else {
-        await onSaveNewChildTest(data);
+        const res = await onSaveNewChildTest(data);
+        if (res && (res as any).id) {
+          setLastSavedId((res as any).id as number);
+        }
       }
       handleCancelEditOrAdd();
     } catch (e) {
@@ -217,6 +215,13 @@ const ChildTestsTable: React.FC<ChildTestsTableProps> = ({
       setIsSavingChildTest(false);
     }
   };
+
+  useEffect(() => {
+    if (lastSavedId) {
+      const timer = setTimeout(() => setLastSavedId(null), 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [lastSavedId]);
 
   const handleDeleteFromDisplayRow = async (id: number) => {
     setIsDeletingId(id);
@@ -279,7 +284,7 @@ const ChildTestsTable: React.FC<ChildTestsTableProps> = ({
             disabled={isSavingChildTest}
             startIcon={<PlusIcon />}
           >
-            إضافة معامل
+            إضافة باراميتر
           </Button>
         )}
       </Box>
@@ -334,6 +339,7 @@ const ChildTestsTable: React.FC<ChildTestsTableProps> = ({
                       <ChildTestDisplayRow
                         key={ct._localId || String(ct.id)}
                         childTest={{ ...ct, _localId: ct._localId || String(ct.id), test_order: index + 1 }}
+                        isHighlighted={ct.id != null && (highlightedId ?? lastSavedId) === ct.id}
                         onEdit={(id) => {
                           const found = displayableChildTests.find((x) => x.id === id);
                           if (found) {

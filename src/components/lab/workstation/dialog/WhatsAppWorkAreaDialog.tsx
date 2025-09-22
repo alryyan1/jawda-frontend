@@ -240,7 +240,7 @@ const WhatsAppWorkAreaDialog: React.FC<WhatsAppWorkAreaDialogProps> = ({
 
   const isConfigured = configStatus?.configured ?? false;
   const isLoading = sendTextMutation.isPending || sendDocumentMutation.isPending;
-  console.log(isConfigured,'isConfigured',configStatus,phoneNumber,effectivePatientData?.result_url)
+  // console.log(isConfigured,'isConfigured',configStatus,phoneNumber,effectivePatientData?.result_url)
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">

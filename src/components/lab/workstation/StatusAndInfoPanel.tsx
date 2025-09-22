@@ -2,6 +2,7 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import type { Patient } from "@/types/patients";
 import { getPatientById } from "@/services/patientService";
@@ -85,7 +86,7 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
 
   // Use updated patient data if available, otherwise use the original patient
   const currentPatient = updatedPatient || patient;
-  console.log(patientLabQueueItem,'patientLabQueueItem')
+  // console.log(patientLabQueueItem,'patientLabQueueItem')
   const patientStatuses = useMemo(() => ({
     payment: { done: true, by: undefined },
     collected: { time: undefined, by: undefined },
@@ -130,7 +131,7 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
       </div>
     );
   }
-  console.log(patientLabQueueItem,'patientLabQueueItem')
+  // console.log(patientLabQueueItem,'patientLabQueueItem')
 
   return (
     <div dir="rtl" className="h-full bg-slate-50 dark:bg-slate-800/30 overflow-y-auto">
@@ -149,11 +150,49 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
             className="mb-2"
             onAuthenticationToggle={handleAuthenticationToggle}
           />
-        ) : !isLoadingPatient ? (
+        ) : isLoadingPatient ? (
+          <div className="mb-2">
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
+              <div className="bg-blue-200 p-3">
+                <div className="flex items-center justify-center mb-2">
+                  <Skeleton className="h-8 w-24" />
+                </div>
+                <div className="flex items-center justify-center">
+                  <Skeleton className="h-6 w-40" />
+                </div>
+              </div>
+              <div className="p-3 space-y-3">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-6 w-6 rounded-full" />
+                    <Skeleton className="h-4 w-2/3" />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-6 w-6 rounded-full" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-6 w-6 rounded-full" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-6 w-6 rounded-full" />
+                    <Skeleton className="h-4 w-1/3" />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  {Array.from({ length: 4 }).map((_, idx) => (
+                    <Skeleton key={idx} className="h-12 w-12 rounded-full" />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
           <p className="text-xs text-muted-foreground py-2 text-center">
             بيانات المريض غير متوفرة
           </p>
-        ) : null}
+        )}
         
         <ActionsButtonsPanel
           visitId={visitId}

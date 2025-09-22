@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
 // Removed shadcn Toaster import
 
 // MUI Autocomplete for "Recent Visits" dropdown
@@ -95,6 +96,7 @@ const LabWorkstationPage: React.FC = () => {
   // --- Core State ---
   const [selectedQueueItem, setSelectedQueueItem] =
     useState<PatientLabQueueItem | null>(null);
+    console.log(selectedQueueItem, "selectedQueueItem");
   const [selectedLabRequestForEntry, setSelectedLabRequestForEntry] =
     useState<LabRequest | null>(null);
   const [currentShiftForQueue, setCurrentShiftForQueue] =
@@ -183,7 +185,7 @@ const LabWorkstationPage: React.FC = () => {
       try {
         const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
         setAudioContext(ctx);
-        console.log('Audio context initialized');
+        // console.log('Audio context initialized');
       } catch (error) {
         console.warn('Could not initialize audio context:', error);
         setSoundEnabled(false);
@@ -209,13 +211,13 @@ const LabWorkstationPage: React.FC = () => {
       const playPromise = audio.play();
       if (playPromise !== undefined) {
         await playPromise;
-        console.log('Payment sound played successfully');
+        // console.log('Payment sound played successfully');
       }
     } catch (error) {
       console.warn('Could not play payment sound:', error);
       // If autoplay is blocked, try to enable it for future plays
       if (error instanceof Error && error.name === 'NotAllowedError') {
-        console.warn('Autoplay blocked - user interaction required to enable sound');
+        // console.warn('Autoplay blocked - user interaction required to enable sound');
         setSoundEnabled(false);
       }
     }
@@ -259,7 +261,7 @@ const LabWorkstationPage: React.FC = () => {
   // Real-time event subscription for lab payments
   useEffect(() => {
     const handleLabPayment = async (data: { visit: DoctorVisit; patient: Patient; labRequests: LabRequest[] }) => {
-      console.log('Lab payment event received in LabWorkstationPage:', data);
+      // console.log('Lab payment event received in LabWorkstationPage:', data);
       
       try {
         // Convert the visit data to PatientLabQueueItem format (for reference)
@@ -301,18 +303,18 @@ const LabWorkstationPage: React.FC = () => {
         });
         
       } catch (error) {
-        console.error('Error processing lab payment event:', error);
+        // console.error('Error processing lab payment event:', error);
         toast.error('فشل في تحديث قائمة المختبر');
       }
     };
 
-    console.log('LabWorkstationPage: Setting up lab payment event listener');
+    // console.log('LabWorkstationPage: Setting up lab payment event listener');
     // Subscribe to lab-payment events
     realtimeService.onLabPayment(handleLabPayment);
 
     // Cleanup subscription on component unmount
     return () => {
-      console.log('LabWorkstationPage: Cleaning up lab payment event listener');
+      // console.log('LabWorkstationPage: Cleaning up lab payment event listener');
       realtimeService.offLabPayment(handleLabPayment);
     };
   }, []); // Empty dependency array - only run once on mount
@@ -364,7 +366,7 @@ const LabWorkstationPage: React.FC = () => {
     mutationFn: async (targetVisitId: number) =>
       getDoctorVisitById(targetVisitId),
     onSuccess: (data: DoctorVisit) => {
-      console.log(data, "data");
+      // console.log(data, "data");
       if (data && data.patient && data.lab_requests) {
         // alert("data")
         const queueItemLike: PatientLabQueueItem = {
@@ -394,7 +396,7 @@ const LabWorkstationPage: React.FC = () => {
         };
 
         setSelectedQueueItem(queueItemLike); // This makes it appear "selected" in the context
-        console.log(queueItemLike, "queueItemLike");
+        // console.log(queueItemLike, "queueItemLike");
         // Update currentShiftForQueue if the loaded visit is from a different shift
         if (
           data.shift_id &&
@@ -680,7 +682,7 @@ const LabWorkstationPage: React.FC = () => {
       }));
     }
   };
-  console.log(selectedQueueItem, "selectedQueueItem");
+  // console.log(selectedQueueItem, "selectedQueueItem");
   return (
     <div
       style={{ height: "100%" }}
@@ -845,103 +847,111 @@ const LabWorkstationPage: React.FC = () => {
 
        
 
-          {/* Lab History Autocomplete - Only show when a patient is selected */}
-          {selectedQueueItem && labHistoryData.length > 0 && (
-            <Autocomplete
-              id="lab-history-dropdown"
-              options={labHistoryData}
-              value={selectedLabHistoryItem}
-              onChange={(event, newValue) => {
-                handleLabHistoryItemSelect(newValue);
-              }}
-              getOptionLabel={(option) => option.autocomplete_label}
-              isOptionEqualToValue={(option, value) =>
-                option.patient_id === value.patient_id && option.visit_id === value.visit_id
-              }
-              loading={isLoadingLabHistory}
-              size="small"
-              sx={{
-                width: { xs: "100%", sm: 250, md: 300 },
-                "& .MuiInputLabel-root": {
-                  fontSize: "0.8rem",
-                  color: "var(--muted-foreground)",
-                  "&.Mui-focused": {
-                    color: "var(--ring)",
-                  },
-                },
-                "& .MuiOutlinedInput-root": {
-                  fontSize: "0.8rem",
-                  backgroundColor: "var(--background)",
-                  color: "var(--foreground)",
-                  "& fieldset": {
-                    borderColor: "var(--border)",
-                  },
-                  "&:hover fieldset": {
-                    borderColor: "var(--ring)",
-                  },
-                  "&.Mui-focused fieldset": {
-                    borderColor: "var(--ring)",
-                  },
-                },
-                "& .MuiAutocomplete-inputRoot": {
-                  paddingTop: "2px",
-                  paddingBottom: "2px",
-                },
-                "& .MuiAutocomplete-listbox": {
-                  backgroundColor: "var(--background)",
-                  color: "var(--foreground)",
-                },
-                "& .MuiAutocomplete-option": {
-                  color: "var(--foreground)",
-                  "&:hover": {
-                    backgroundColor: "var(--accent)",
-                  },
-                  "&.Mui-focused": {
-                    backgroundColor: "var(--accent)",
-                  },
-                },
-                "& .MuiAutocomplete-noOptions": {
-                  color: "var(--muted-foreground)",
-                },
-                "& .MuiAutocomplete-loading": {
-                  color: "var(--muted-foreground)",
-                },
-              }}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="الهستوري"
-                  variant="outlined"
-                  InputProps={{
-                    ...params.InputProps,
-                    startAdornment: (
-                      <Search className="h-4 w-4 text-muted-foreground ltr:mr-2 rtl:ml-2" />
-                    ),
-                    endAdornment: (
-                      <>
-                        {isLoadingLabHistory ? (
-                          <CircularProgress color="inherit" size={18} />
-                        ) : null}
-                        {params.InputProps.endAdornment}
-                      </>
-                    ),
+          {/* Lab History Autocomplete - Show skeleton when loading, autocomplete when data is ready */}
+          {selectedQueueItem && (
+            <>
+              {isLoadingLabHistory ? (
+                <div className="w-[250px] md:w-[300px]">
+                  <Skeleton className="h-10 w-full rounded-md" />
+                </div>
+              ) : labHistoryData.length > 0 ? (
+                <Autocomplete
+                  id="lab-history-dropdown"
+                  options={labHistoryData}
+                  value={selectedLabHistoryItem}
+                  onChange={(event, newValue) => {
+                    handleLabHistoryItemSelect(newValue);
                   }}
-                />
-              )}
-              PaperComponent={(props) => (
-                <Paper
-                  {...props}
+                  getOptionLabel={(option) => option.autocomplete_label}
+                  isOptionEqualToValue={(option, value) =>
+                    option.patient_id === value.patient_id && option.visit_id === value.visit_id
+                  }
+                  loading={isLoadingLabHistory}
+                  size="small"
                   sx={{
-                    fontSize: "0.8rem",
-                    backgroundColor: "var(--background)",
-                    color: "var(--foreground)",
-                    border: "1px solid var(--border)",
+                    width: { xs: "100%", sm: 250, md: 300 },
+                    "& .MuiInputLabel-root": {
+                      fontSize: "0.8rem",
+                      color: "var(--muted-foreground)",
+                      "&.Mui-focused": {
+                        color: "var(--ring)",
+                      },
+                    },
+                    "& .MuiOutlinedInput-root": {
+                      fontSize: "0.8rem",
+                      backgroundColor: "var(--background)",
+                      color: "var(--foreground)",
+                      "& fieldset": {
+                        borderColor: "var(--border)",
+                      },
+                      "&:hover fieldset": {
+                        borderColor: "var(--ring)",
+                      },
+                      "&.Mui-focused fieldset": {
+                        borderColor: "var(--ring)",
+                      },
+                    },
+                    "& .MuiAutocomplete-inputRoot": {
+                      paddingTop: "2px",
+                      paddingBottom: "2px",
+                    },
+                    "& .MuiAutocomplete-listbox": {
+                      backgroundColor: "var(--background)",
+                      color: "var(--foreground)",
+                    },
+                    "& .MuiAutocomplete-option": {
+                      color: "var(--foreground)",
+                      "&:hover": {
+                        backgroundColor: "var(--accent)",
+                      },
+                      "&.Mui-focused": {
+                        backgroundColor: "var(--accent)",
+                      },
+                    },
+                    "& .MuiAutocomplete-noOptions": {
+                      color: "var(--muted-foreground)",
+                    },
+                    "& .MuiAutocomplete-loading": {
+                      color: "var(--muted-foreground)",
+                    },
                   }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="الهستوري"
+                      variant="outlined"
+                      InputProps={{
+                        ...params.InputProps,
+                        startAdornment: (
+                          <Search className="h-4 w-4 text-muted-foreground ltr:mr-2 rtl:ml-2" />
+                        ),
+                        endAdornment: (
+                          <>
+                            {isLoadingLabHistory ? (
+                              <CircularProgress color="inherit" size={18} />
+                            ) : null}
+                            {params.InputProps.endAdornment}
+                          </>
+                        ),
+                      }}
+                    />
+                  )}
+                  PaperComponent={(props) => (
+                    <Paper
+                      {...props}
+                      sx={{
+                        fontSize: "0.8rem",
+                        backgroundColor: "var(--background)",
+                        color: "var(--foreground)",
+                        border: "1px solid var(--border)",
+                      }}
+                    />
+                  )}
+                  noOptionsText="لا توجد سجلات مختبر"
+                  loadingText="جاري التحميل..."
                 />
-              )}
-              noOptionsText="لا توجد سجلات مختبر"
-              loadingText="جاري التحميل..."
-            />
+              ) : null}
+            </>
           )}
           <Tooltip title={appliedQueueFilters.ready_for_print_only ? "إخفاء جاهز للطباعة" : "عرض جاهز للطباعة فقط"}>
             <IconButton

@@ -135,7 +135,7 @@ const StatusIcon: React.FC<{
   isClickable?: boolean;
 }> = ({ label, status, icon: Icon, onClick, isClickable = false }) => {
   const isCompleted = status?.done;
-   console.log(label,'label',status)
+  //  console.log(label,'label',status)
   return (
     <Tooltip title={isClickable ? (isCompleted ? "انقر لإلغاء المصادقة (مدير)" : "انقر للمصادقة (مدير)") : label}>
       <Box 

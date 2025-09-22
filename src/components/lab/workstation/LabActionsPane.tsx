@@ -58,7 +58,7 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
   // استخدام نص عربي مباشر بدلاً من i18n
   // const { can } = useAuthorization();
   const queryClient = useQueryClient();
- console.log(currentPatientData,'currentPatientData')
+ // console.log(currentPatientData,'currentPatientData')
   const patientIdForLock =  currentPatientData?.id;
   const currentLockStatus = currentPatientData?.result_is_locked || false;
   const [isAppearanceDialogOpen, setIsAppearanceDialogOpen] = useState(false);
@@ -69,7 +69,7 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
     mutationFn: (params: { patientId: number; lock: boolean }) =>
       togglePatientResultLock(params.patientId, params.lock),
     onSuccess: (updatedPatient, variables) => {
-      console.log(updatedPatient,'updatedPatient')
+      // console.log(updatedPatient,'updatedPatient')
       toast.success(variables.lock ? 'تم قفل النتائج بنجاح' : 'تم إلغاء قفل النتائج بنجاح');
       
       // Immediately update the query cache with the response data
@@ -280,14 +280,14 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
           return { data: { ...old?.data, result_url } };
         });
         
-        console.log('Patient result_url updated successfully:', result_url);
+        // console.log('Patient result_url updated successfully:', result_url);
       } else {
         toast.error("فشل رفع الملف إلى التخزين السحابي", {
           description: response.data.message
         });
       }
     } catch (error: unknown) {
-      console.error('Error uploading to Firebase:', error);
+      // console.error('Error uploading to Firebase:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       toast.error("حدث خطأ أثناء رفع الملف", {
         description: errorMessage,
@@ -297,7 +297,7 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
     }
   };
 
- console.log(currentLockStatus,'currentLockStatus')
+ // console.log(currentLockStatus,'currentLockStatus')
   return (
     <TooltipProvider delayDuration={100}>
       <aside 
@@ -494,7 +494,7 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
         selectedLabRequest={selectedLabRequest}
         onMessageSent={() => {
           // Optional: Add any callback logic when message is sent
-          console.log('WhatsApp message sent successfully');
+          // console.log('WhatsApp message sent successfully');
         }}
       />
       </aside>

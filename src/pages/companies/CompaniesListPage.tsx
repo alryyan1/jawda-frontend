@@ -7,7 +7,7 @@ import {
   useQueryClient,
   keepPreviousData,
 } from "@tanstack/react-query";
-import { getCompanies, deleteCompany } from "@/services/companyService";
+import { getCompanies, deleteCompany, activateAllCompanies } from "@/services/companyService";
 import {
   Button,
   Card,
@@ -27,6 +27,10 @@ import {
   CircularProgress,
   Box,
   Typography,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import {
   MoreHorizontal,
@@ -38,6 +42,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthorization } from "@/hooks/useAuthorization"; // For permission checks
+import { webUrl } from "../constants";
 
 export default function CompaniesListPage() {
   // i18n removed
@@ -76,10 +81,33 @@ export default function CompaniesListPage() {
     },
   });
 
+  const activateAllMutation = useMutation({
+    mutationFn: activateAllCompanies,
+    onSuccess: (res) => {
+      toast.success('تم تفعيل جميع الشركات', { description: `${res.updated_count} شركة` });
+      queryClient.invalidateQueries({ queryKey: ["companies"] });
+    },
+    onError: (err: any) => {
+      toast.error('فشل التفعيل الجماعي', { description: err.response?.data?.message || err.message });
+    },
+  });
+
   const handleDelete = (companyId: number, companyName: string) => {
     if (window.confirm(`هل تريد حذف الشركة "${companyName}"؟`)) {
       deleteMutation.mutate(companyId);
     }
+  };
+
+  // New: row-click dialog state
+  const [rowDialogOpen, setRowDialogOpen] = useState(false);
+  const [selectedCompany, setSelectedCompany] = useState<any | null>(null);
+  const handleRowClick = (company: any) => {
+    setSelectedCompany(company);
+    setRowDialogOpen(true);
+  };
+  const handleCloseRowDialog = () => {
+    setRowDialogOpen(false);
+    setSelectedCompany(null);
   };
 
   if (isLoading && !isFetching)
@@ -108,17 +136,43 @@ export default function CompaniesListPage() {
           <Building className="h-7 w-7 text-primary" />
           <h1 className="text-2xl sm:text-3xl font-bold">الشركات</h1>
         </div>
-        {canCreateCompany && (
+        <div className="flex items-center gap-2">
+          {canCreateCompany && (
+            <Button
+              component={Link}
+              to="/settings/companies/new"
+              size="small"
+              variant="contained"
+              sx={{ textDecoration: 'none' }}
+            >
+              إضافة شركة
+            </Button>
+          )}
           <Button
-            component={Link}
-            to="/settings/companies/new"
             size="small"
-            variant="contained"
-            sx={{ textDecoration: 'none' }}
+            variant="outlined"
+            color="primary"
+            onClick={() => window.open(`${webUrl}reports/companies/pdf`, '_blank')}
           >
-            إضافة شركة
+            طباعة الكل (PDF)
           </Button>
-        )}
+          <Button
+            size="small"
+            variant="outlined"
+            color="success"
+            onClick={() => activateAllMutation.mutate()}
+            disabled={activateAllMutation.isPending}
+          >
+            {activateAllMutation.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 rtl:ml-2 ltr:mr-2 animate-spin" />
+                جارِ التفعيل...
+              </>
+            ) : (
+              'تفعيل جميع الشركات'
+            )}
+          </Button>
+        </div>
       </div>
       {isFetching && (
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
@@ -179,7 +233,7 @@ export default function CompaniesListPage() {
                 </TableHead>
                 <TableBody>
                   {companies.map((company) => (
-                    <TableRow key={company.id}>
+                    <TableRow key={company.id} hover onClick={() => handleRowClick(company)} sx={{ cursor: 'pointer' }}>
                       <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' }, textAlign: 'center' }}>
                         {company.id}
                       </TableCell>
@@ -210,7 +264,7 @@ export default function CompaniesListPage() {
                       <TableCell sx={{ textAlign: 'center' }}>
                         <IconButton
                           size="small"
-                          onClick={(event) => setAnchorEl(event.currentTarget)}
+                          onClick={(event) => { event.stopPropagation(); setAnchorEl(event.currentTarget); }}
                         >
                           <MoreHorizontal className="h-4 w-4" />
                         </IconButton>
@@ -270,12 +324,12 @@ export default function CompaniesListPage() {
                                 }}
                                 disabled={
                                   deleteMutation.isPending &&
-                                  deleteMutation.variables === company.id
+                                  (deleteMutation.variables as any) === company.id
                                 }
                                 sx={{ color: 'error.main' }}
                               >
                                 {deleteMutation.isPending &&
-                                deleteMutation.variables === company.id ? (
+                                (deleteMutation.variables as any) === company.id ? (
                                   <CircularProgress size={16} className="rtl:ml-2 ltr:mr-2" />
                                 ) : (
                                   <Trash2 className="rtl:ml-2 ltr:mr-2 h-4 w-4" />
@@ -294,6 +348,67 @@ export default function CompaniesListPage() {
           </CardContent>
         </Card>
       )}
+      {/* Dialog with same actions as dropdown */}
+      <Dialog open={rowDialogOpen} onClose={handleCloseRowDialog} fullWidth maxWidth="xs">
+        <DialogTitle>إجراءات الشركة {selectedCompany?.name ? `- ${selectedCompany.name}` : ''}</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25, mt: 1 }}>
+            {canManageContracts && selectedCompany && (
+              <Button
+                component={Link}
+                to={`/settings/companies/${selectedCompany.id}/contracts`}
+                variant="outlined"
+                onClick={handleCloseRowDialog}
+              >
+                إدارة عقود الخدمات
+              </Button>
+            )}
+            {canManageContracts && selectedCompany && (
+              <Button
+                component={Link}
+                to={`/settings/companies/${selectedCompany.id}/test-contracts`}
+                variant="outlined"
+                onClick={handleCloseRowDialog}
+              >
+                إدارة عقود التحاليل
+              </Button>
+            )}
+            {canEditCompany && selectedCompany && (
+              <Button
+                component={Link}
+                to={`/settings/companies/${selectedCompany.id}/edit`}
+                variant="outlined"
+                onClick={handleCloseRowDialog}
+              >
+                تعديل الشركة
+              </Button>
+            )}
+            {canDeleteCompany && selectedCompany && (
+              <Button
+                color="error"
+                variant="outlined"
+                onClick={() => {
+                  handleDelete(selectedCompany.id, selectedCompany.name);
+                  handleCloseRowDialog();
+                }}
+                disabled={deleteMutation.isPending && (deleteMutation.variables as any) === selectedCompany?.id}
+              >
+                {deleteMutation.isPending && (deleteMutation.variables as any) === selectedCompany?.id ? (
+                  <>
+                    <CircularProgress size={16} className="rtl:ml-2 ltr:mr-2" />
+                    جارٍ الحذف...
+                  </>
+                ) : (
+                  'حذف الشركة'
+                )}
+              </Button>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseRowDialog}>إغلاق</Button>
+        </DialogActions>
+      </Dialog>
       {meta && meta.last_page > 1 && (
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 3 }}>
           <Button

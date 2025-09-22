@@ -152,6 +152,12 @@ export const removeServiceFromCompanyContract = (companyId: number, serviceId: n
   return apiClient.delete(`${API_URL}/${companyId}/contracted-services/${serviceId}`).then(res => res.data);
 };
 
+// --- Bulk operations ---
+export const activateAllCompanies = async (): Promise<{ message: string; updated_count: number }> => {
+  const response = await apiClient.post<{ message: string; updated_count: number }>(`${API_URL}/activate-all`);
+  return response.data;
+};
+
 
 // --- Company Main Test Contract Management ---
 export const getCompanyContractedMainTests = (

@@ -26,6 +26,7 @@ import Paper from "@mui/material/Paper";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Form } from "@/components/ui/form";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import type { LabRequest } from "@/types/visits";
 import type { ChildTestOption } from "@/types/labTests";
@@ -422,13 +423,58 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
   }, [watchedValues, testDataForEntry, control, immediateSaveField, initialLabRequest.id]);
 
   if (isLoading && !testDataForEntry) {
-    return <div>جارٍ التحميل...</div>;
+    return (
+      <div className="h-full flex flex-col p-3 sm:p-4 bg-slate-50 dark:bg-background shadow-inner">
+        <div className="flex-grow flex flex-col overflow-hidden">
+          <div className="h-[calc(100vh-200px)] pr-1">
+            <div className="bg-card border border-border rounded-lg p-4">
+              <div className="space-y-4">
+                {/* Header skeleton */}
+                <div className="flex justify-between items-center">
+                  <Skeleton className="h-6 w-32" />
+                  <Skeleton className="h-6 w-24" />
+                </div>
+                
+                {/* Table skeleton */}
+                <div className="space-y-3">
+                  {Array.from({ length: 6 }).map((_, index) => (
+                    <div key={index} className="flex items-center space-x-4">
+                      <Skeleton className="h-8 w-1/3" />
+                      <Skeleton className="h-8 w-1/2" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
   if (fetchError) {
-    return <div>حدث خطأ أثناء تحميل البيانات</div>;
+    return (
+      <div className="h-full flex flex-col p-3 sm:p-4 bg-slate-50 dark:bg-background shadow-inner">
+        <div className="flex-grow flex items-center justify-center">
+          <div className="text-center text-red-500">
+            <p>حدث خطأ أثناء تحميل البيانات</p>
+            <p className="text-sm text-muted-foreground mt-2">
+              {fetchError.message}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
   }
   if (!testDataForEntry) {
-    return <div>لا توجد بيانات متاحة</div>;
+    return (
+      <div className="h-full flex flex-col p-3 sm:p-4 bg-slate-50 dark:bg-background shadow-inner">
+        <div className="flex-grow flex items-center justify-center">
+          <div className="text-center text-muted-foreground">
+            <p>لا توجد بيانات متاحة</p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (

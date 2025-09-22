@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -25,7 +24,6 @@ const ChildTestsManagementPage: React.FC = () => {
   const { mainTestId: mainTestIdParam } = useParams<{ mainTestId: string }>();
   const mainTestId = Number(mainTestIdParam);
   const navigate = useNavigate();
-  const { t } = useTranslation(['labTests', 'common']);
   const queryClient = useQueryClient();
   // const { can } = useAuthorization(); // For permissions
 
@@ -70,28 +68,28 @@ const ChildTestsManagementPage: React.FC = () => {
   const createChildTestMutation = useMutation({
     mutationFn: (formData: ChildTestFormDataType) => createChildTest(mainTestId, formData),
     onSuccess: () => {
-      toast.success(t('labTests:childTests.addedSuccess'));
+      toast.success('تمت إضافة الفحص الفرعي بنجاح');
       queryClient.invalidateQueries({ queryKey: childTestsQueryKey });
     },
-    onError: (error: Error) => toast.error(error.message || t('labTests:childTests.addError'))
+    onError: (error: Error) => toast.error(error.message || 'فشل إضافة الفحص الفرعي')
   });
 
   const updateChildTestMutation = useMutation({
     mutationFn: (vars: { childTestId: number, data: Partial<ChildTestFormDataType>}) => updateChildTest(vars.childTestId, vars.data),
     onSuccess: () => {
-      toast.success(t('labTests:childTests.updatedSuccess'));
+      toast.success('تم تحديث الفحص الفرعي بنجاح');
       queryClient.invalidateQueries({ queryKey: childTestsQueryKey });
     },
-    onError: (error: Error) => toast.error(error.message || t('labTests:childTests.updateError'))
+    onError: (error: Error) => toast.error(error.message || 'فشل تحديث الفحص الفرعي')
   });
   
   const deleteChildTestMutation = useMutation({
     mutationFn: deleteChildTest,
     onSuccess: () => {
-      toast.success(t('labTests:childTests.deletedSuccess'));
+      toast.success('تم حذف الفحص الفرعي بنجاح');
       queryClient.invalidateQueries({ queryKey: childTestsQueryKey });
     },
-    onError: (error: Error) => toast.error(error.message || t('labTests:childTests.deleteError'))
+    onError: (error: Error) => toast.error(error.message || 'فشل حذف الفحص الفرعي')
   });
 
   const updateOrderMutation = useMutation({
@@ -144,9 +142,9 @@ const ChildTestsManagementPage: React.FC = () => {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
-          <h1 className="text-2xl font-bold">{t('labTests:childTests.managePageTitle')}</h1>
+          <h1 className="text-2xl font-bold">إدارة الفحوصات الفرعية</h1>
           <p className="text-sm text-muted-foreground">
-            {t('labTests:childTests.forMainTest', { testName: mainTest?.main_test_name || t('common:loading') })}
+            للفحص الرئيسي: {mainTest?.main_test_name || 'جاري التحميل...'}
           </p>
         </div>
       </div>

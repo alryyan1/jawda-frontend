@@ -74,31 +74,30 @@ const ChildTestDisplayRow: React.FC<ChildTestDisplayRowProps> = ({
     <TableRow 
         ref={setNodeRef} 
         style={style} 
+        onClick={() => onEdit(childTest.id!)}
         sx={{
           touchAction: 'none', // Important for dnd-kit pointer sensor on touch devices
           opacity: isDragging ? 0.7 : 1,
           backgroundColor: isDragging ? 'action.hover' : 'inherit',
           boxShadow: isDragging ? 3 : 'none',
+          cursor: 'pointer',
         }}
         data-testid={`child-test-row-${childTest.id || childTest._localId}`}
     >
       {/* Drag Handle Cell */}
-      <TableCell sx={{ py: 1, width: 40, textAlign: 'center', display: { xs: 'none', print: 'none' } }}>
-        {canReorder ? (
+      <TableCell >
+  
           <IconButton 
             {...attributes} 
             {...listeners} 
             size="small"
+            onClick={(e) => e.stopPropagation()}
             sx={{ cursor: 'grab', '&:active': { cursor: 'grabbing' } }}
             aria-label="اسحب لإعادة الترتيب"
           >
             <DragIcon />
           </IconButton>
-        ) : (
-          <Box sx={{ p: 1 }}>
-            <DragIcon sx={{ color: 'text.disabled' }} />
-          </Box>
-        )}
+       
       </TableCell>
 
       {/* Data Cells */}
@@ -169,32 +168,32 @@ const ChildTestDisplayRow: React.FC<ChildTestDisplayRowProps> = ({
       {/* Actions Cell */}
       <TableCell sx={{ py: 1, textAlign: 'right', width: { xs: 130, sm: 150 }, display: { print: 'none' } }}>
         <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end', alignItems: 'center' }}>
-          {canManageOptions && isPotentiallyQualitative && childTest.id && ( // Only for persisted child tests
             <Tooltip title="إدارة الخيارات">
-              <IconButton size="small" onClick={() => onManageOptions(childTest)}>
+              <IconButton size="small" onClick={(e) => { e.stopPropagation(); onManageOptions(childTest); }} onPointerDown={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
                 <SettingsIcon />
               </IconButton>
             </Tooltip>
-          )}
-          {canEdit && childTest.id && ( // Can only edit persisted child tests
+          
             <Tooltip title="تعديل">
-              <IconButton size="small" onClick={() => onEdit(childTest.id!)}>
+              <IconButton size="small" onClick={(e) => { e.stopPropagation(); onEdit(childTest.id!); }} onPointerDown={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
                 <EditIcon />
               </IconButton>
             </Tooltip>
-          )}
-          {canDelete && childTest.id && ( // Can only delete persisted child tests
+        
             <Tooltip title="حذف">
               <IconButton 
                 size="small"
                 color="error"
-                onClick={() => onDelete(childTest.id!)} 
+                onClick={(e) => { e.stopPropagation(); onDelete(childTest.id!); }} 
+                onPointerDown={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
                 disabled={isDeletingThisRow}
               >
                 {isDeletingThisRow ? <CircularProgress size={16} /> : <DeleteIcon />}
               </IconButton>
             </Tooltip>
-          )}
+          
         </Box>
       </TableCell>
     </TableRow>

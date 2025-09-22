@@ -227,7 +227,7 @@ const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
                       onClick={() => navigate(`/settings/laboratory/${currentMainTestId}/parameters`)}
                       startIcon={<Settings2 size={16} />}
                     >
-                      إدارة المعاملات
+                      إدارة الباراميترات
                     </Button>
                   )}
                   <Button 

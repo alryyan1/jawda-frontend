@@ -4,14 +4,22 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
-import { Loader2, PlusCircle, Edit, Trash2 } from 'lucide-react';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import TextField from '@mui/material/TextField';
+import Button from '@mui/material/Button';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import IconButton from '@mui/material/IconButton';
+import Box from '@mui/material/Box';
+import CircularProgress from '@mui/material/CircularProgress';
+import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 
 import type { ChildTest, ChildTestOption } from '@/types/labTests';
 import { getChildTestOptionsList, createChildTestOption, updateChildTestOption, deleteChildTestOption } from '@/services/childTestOptionService';
@@ -22,14 +30,13 @@ interface ManageChildTestOptionsDialogProps {
   childTest: ChildTest | null;
 }
 
-const optionSchema = (t: (key: string) => string) => z.object({
-  name: z.string().min(1, t('common:validation.required')).max(255)
+const optionSchema = z.object({
+  name: z.string().min(1, 'هذا الحقل مطلوب').max(255)
 });
 
 type OptionFormValues = z.infer<ReturnType<typeof optionSchema>>;
 
 const ManageChildTestOptionsDialog: React.FC<ManageChildTestOptionsDialogProps> = ({ isOpen, onOpenChange, childTest }) => {
-  const { t } = useTranslation(['labTests', 'common']);
   const queryClient = useQueryClient();
   const [editingOption, setEditingOption] = useState<ChildTestOption | null>(null);
 
@@ -41,7 +48,7 @@ const ManageChildTestOptionsDialog: React.FC<ManageChildTestOptionsDialogProps> 
   });
 
   const form = useForm<OptionFormValues>({
-    resolver: zodResolver(optionSchema(t)),
+    resolver: zodResolver(optionSchema),
     defaultValues: { name: '' }
   });
 
@@ -51,10 +58,10 @@ const ManageChildTestOptionsDialog: React.FC<ManageChildTestOptionsDialogProps> 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: optionsQueryKey });
       form.reset();
-      toast.success(t('labTests:childTests.options.addedSuccess'));
+      toast.success('تمت إضافة الخيار بنجاح');
     },
     onError: (error: Error) => {
-      toast.error(error.message || t('labTests:childTests.options.addError'));
+      toast.error(error.message || 'فشل إضافة الخيار');
     }
   });
 
@@ -65,10 +72,10 @@ const ManageChildTestOptionsDialog: React.FC<ManageChildTestOptionsDialogProps> 
       queryClient.invalidateQueries({ queryKey: optionsQueryKey });
       form.reset();
       setEditingOption(null);
-      toast.success(t('labTests:childTests.options.updatedSuccess'));
+      toast.success('تم تحديث الخيار بنجاح');
     },
     onError: (error: Error) => {
-      toast.error(error.message || t('labTests:childTests.options.updateError'));
+      toast.error(error.message || 'فشل تحديث الخيار');
     }
   });
 
@@ -76,10 +83,10 @@ const ManageChildTestOptionsDialog: React.FC<ManageChildTestOptionsDialogProps> 
     mutationFn: (optionId: number) => deleteChildTestOption(optionId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: optionsQueryKey });
-      toast.success(t('labTests:childTests.options.deletedSuccess'));
+      toast.success('تم حذف الخيار بنجاح');
     },
     onError: (error: Error) => {
-      toast.error(error.message || t('labTests:childTests.options.deleteError'));
+      toast.error(error.message || 'فشل حذف الخيار');
     }
   });
 
@@ -98,90 +105,75 @@ const ManageChildTestOptionsDialog: React.FC<ManageChildTestOptionsDialogProps> 
   };
 
   const handleDeleteOption = (optionId: number) => {
-    if (window.confirm(t('labTests:childTests.options.confirmDelete'))) {
+    if (window.confirm('هل أنت متأكد من حذف هذا الخيار؟')) {
       deleteMutation.mutate(optionId);
     }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>{t('labTests:childTests.options.dialogTitle')}</DialogTitle>
-        </DialogHeader>
-
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSaveOption)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormControl>
-                    <div className="flex gap-2">
-                      <Input {...field} placeholder={t('labTests:childTests.options.namePlaceholder')} />
-                      <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
-                        {(createMutation.isPending || updateMutation.isPending) ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : editingOption ? (
-                          <Edit className="h-4 w-4" />
-                        ) : (
-                          <PlusCircle className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+    <Dialog open={isOpen} onClose={() => onOpenChange(false)} fullWidth maxWidth="sm">
+      <DialogTitle>خيارات الفحص الفرعي</DialogTitle>
+      <DialogContent>
+        <Box component="form" onSubmit={form.handleSubmit(handleSaveOption)} sx={{ mt: 1, mb: 2 }}>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <TextField
+              fullWidth
+              size="small"
+              placeholder="اسم الخيار"
+              {...form.register('name')}
+              error={!!form.formState.errors.name}
+              helperText={form.formState.errors.name?.message}
             />
-          </form>
-        </Form>
+            <Button type="submit" variant="contained" disabled={createMutation.isPending || updateMutation.isPending}>
+              {(createMutation.isPending || updateMutation.isPending) ? (
+                <CircularProgress size={18} sx={{ color: 'white' }} />
+              ) : editingOption ? (
+                <Edit className="h-4 w-4" />
+              ) : (
+                <PlusCircle className="h-4 w-4" />
+              )}
+            </Button>
+          </Box>
+        </Box>
 
         {isLoading ? (
-          <div className="flex justify-center p-4">
-            <Loader2 className="h-6 w-6 animate-spin" />
-          </div>
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+            <CircularProgress size={24} />
+          </Box>
         ) : options.length === 0 ? (
-          <p className="text-center text-sm text-muted-foreground py-4">
-            {t('labTests:childTests.options.noOptions')}
-          </p>
+          <Box sx={{ textAlign: 'center', py: 2, color: 'text.secondary', fontSize: 14 }}>
+            لا توجد خيارات مسجلة
+          </Box>
         ) : (
-          <Table>
-            <TableHeader>
+          <Table size="small">
+            <TableHead>
               <TableRow>
-                <TableHead>{t('labTests:childTests.options.nameColumn')}</TableHead>
-                <TableHead className="w-[100px]">{t('common:actions')}</TableHead>
+                <TableCell>الاسم</TableCell>
+                <TableCell align="right">الإجراءات</TableCell>
               </TableRow>
-            </TableHeader>
+            </TableHead>
             <TableBody>
               {options.map((option) => (
-                <TableRow key={option.id}>
+                <TableRow key={option.id} hover>
                   <TableCell>{option.name}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEditOption(option)}
-                        className="h-8 w-8"
-                      >
+                  <TableCell align="right">
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                      <IconButton size="small" onClick={() => handleEditOption(option)}>
                         <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        color="error"
                         onClick={() => handleDeleteOption(option.id)}
-                        className="h-8 w-8 text-destructive"
                         disabled={deleteMutation.isPending}
                       >
                         {deleteMutation.isPending ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <CircularProgress size={16} />
                         ) : (
                           <Trash2 className="h-4 w-4" />
                         )}
-                      </Button>
-                    </div>
+                      </IconButton>
+                    </Box>
                   </TableCell>
                 </TableRow>
               ))}
@@ -189,6 +181,9 @@ const ManageChildTestOptionsDialog: React.FC<ManageChildTestOptionsDialogProps> 
           </Table>
         )}
       </DialogContent>
+      <DialogActions>
+        <Button onClick={() => onOpenChange(false)} variant="outlined">إغلاق</Button>
+      </DialogActions>
     </Dialog>
   );
 };

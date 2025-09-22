@@ -1,6 +1,6 @@
 // src/pages/lab/MainTestsListPage.tsx
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -57,6 +57,7 @@ interface MainTestWithContainer {
 
 export default function MainTestsListPage() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   // const { can } = useAuthorization();
   const canCreateTests = true; // Placeholder: can('create lab_tests');
   const canEditTests = true;   // Placeholder: can('edit lab_tests');
@@ -144,7 +145,7 @@ export default function MainTestsListPage() {
           <Stack direction="row" alignItems="center" spacing={1}>
             <Science color="primary" sx={{ fontSize: 28 }} />
             <Typography variant="h4" component="h1" fontWeight="bold">
-              قائمة الاختبارات الرئيسية
+              قائمة التحاليل الرئيسية
             </Typography>
           </Stack>
           
@@ -228,7 +229,12 @@ export default function MainTestsListPage() {
               </TableHead>
               <TableBody>
                 {tests.map((test) => (
-                  <TableRow key={test.id}>
+                  <TableRow 
+                    key={test.id}
+                    hover
+                    onClick={() => navigate(`/settings/laboratory/${test.id}/edit`)}
+                    sx={{ cursor: 'pointer' }}
+                  >
                     <TableCell align="center" sx={{ fontWeight: 'medium' }}>
                       {test.id}
                     </TableCell>
@@ -250,7 +256,7 @@ export default function MainTestsListPage() {
                     </TableCell>
                     <TableCell align="right">
                       <IconButton
-                        onClick={(e) => handleMenuOpen(e, test.id)}
+                        onClick={(e) => { e.stopPropagation(); handleMenuOpen(e, test.id); }}
                         size="small"
                       >
                         <MoreVert />

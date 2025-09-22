@@ -72,6 +72,7 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
     try {
       const blob = await fetchFunction();
       const objectUrl = URL.createObjectURL(blob);
+      console.log(patient, "patient");
       setPdfUrl(objectUrl);
       const patientNameSanitized = patient?.name.replace(/[^A-Za-z0-9-_]/g, '_') || 'patient';
       setPdfFileName(`${fileNamePrefix}_${visitId}_${patientNameSanitized}_${new Date().toISOString().slice(0,10)}.pdf`);

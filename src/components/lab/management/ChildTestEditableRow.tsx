@@ -1,8 +1,6 @@
 // src/components/lab/management/ChildTestEditableRow.tsx
 import React, { useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+import { useForm, Controller } from "react-hook-form";
 
 import { 
   Button, 
@@ -25,7 +23,6 @@ import type {
   ChildGroup,
   ChildTestFormData,
 } from "@/types/labTests";
-import { Card, CardContent } from "@/components/ui/card";
 import AddUnitDialog from "../AddUnitDialog";
 import AddChildGroupDialog from "../AddChildGroupDialog";
 
@@ -42,86 +39,18 @@ interface ChildTestEditableRowProps {
   onChildGroupQuickAdd: (newGroup: ChildGroup) => void;
 }
 
-// Zod Schema with direct Arabic text
-const getChildTestFormSchema = () =>
-  z
-    .object({
-      child_test_name: z
-        .string()
-        .min(1, {
-          message: "اسم الفحص مطلوب",
-        })
-        .max(70),
-      low: z
-        .string()
-        .optional()
-        .nullable()
-        .refine(
-          (val) =>
-            !val || val.trim() === "" || /^-?\d*\.?\d*$/.test(val.trim()),
-          { message: "يجب أن تكون القيمة رقمية" }
-        ),
-      upper: z
-        .string()
-        .optional()
-        .nullable()
-        .refine(
-          (val) =>
-            !val || val.trim() === "" || /^-?\d*\.?\d*$/.test(val.trim()),
-          { message: "يجب أن تكون القيمة رقمية" }
-        ),
-      defval: z.string().max(1000).optional().nullable(),
-      unit_id: z.string().optional().nullable(),
-      normalRange: z.string().max(1000).optional().nullable(),
-      max: z
-        .string()
-        .optional()
-        .nullable()
-        .refine(
-          (val) =>
-            !val || val.trim() === "" || /^-?\d*\.?\d*$/.test(val.trim()),
-          { message: "يجب أن تكون القيمة رقمية" }
-        ),
-      lowest: z
-        .string()
-        .optional()
-        .nullable()
-        .refine(
-          (val) =>
-            !val || val.trim() === "" || /^-?\d*\.?\d*$/.test(val.trim()),
-          { message: "يجب أن تكون القيمة رقمية" }
-        ),
-      test_order: z
-        .string()
-        .optional()
-        .nullable()
-        .refine(
-          (val) => !val || val.trim() === "" || /^\d*$/.test(val.trim()),
-          { message: "يجب أن تكون القيمة رقمية صحيحة" }
-        ),
-      child_group_id: z.string().optional().nullable(),
-    })
-    .refine(
-      () => {
-        /* low <= upper */ return true;
-      },
-      {
-        message: "القيمة الدنيا يجب أن تكون أقل من أو تساوي القيمة العليا",
-        path: ["upper"],
-      }
-    )
-    .refine(
-      () => {
-        /* lowest <= max */ return true;
-      },
-      {
-        message: "أقل قيمة يجب أن تكون أقل من أو تساوي أعلى قيمة",
-        path: ["max"],
-      }
-    );
-// Add normalRange required if low/upper empty refinement if needed
-
-type ChildTestFormValues = z.infer<ReturnType<typeof getChildTestFormSchema>>;
+type ChildTestFormValues = {
+  child_test_name: string;
+  low?: string | null;
+  upper?: string | null;
+  defval?: string | null;
+  unit_id?: string | null;
+  normalRange?: string | null;
+  max?: string | null;
+  lowest?: string | null;
+  test_order?: string | null;
+  child_group_id?: string | null;
+};
 
 const ChildTestEditableRow: React.FC<ChildTestEditableRowProps> = ({
   initialData,
@@ -135,10 +64,7 @@ const ChildTestEditableRow: React.FC<ChildTestEditableRowProps> = ({
   onUnitQuickAdd,
   onChildGroupQuickAdd,
 }) => {
-  const childTestSchema = getChildTestFormSchema();
-
   const form = useForm<ChildTestFormValues>({
-    resolver: zodResolver(childTestSchema),
     defaultValues: {
       child_test_name: initialData?.child_test_name || "",
       low: initialData?.low || "",
@@ -152,7 +78,7 @@ const ChildTestEditableRow: React.FC<ChildTestEditableRowProps> = ({
       child_group_id: initialData?.child_group_id || undefined,
     },
   });
-  const { control, handleSubmit, reset } = form;
+  const { control, handleSubmit, reset, register, formState: { errors } } = form;
 
   // Re-initialize form if initialData changes (e.g., switching which item is being edited)
   useEffect(() => {
@@ -188,305 +114,88 @@ const ChildTestEditableRow: React.FC<ChildTestEditableRowProps> = ({
 
   return (
     <TableRow className="bg-primary/5 dark:bg-primary/10 hover:bg-primary/10 dark:hover:bg-primary/15 !shadow-lg relative z-10">
-      {" "}
-      {/* Highlight & elevate editable row */}
-      {/* Drag handle placeholder cell - not actually draggable while editing */}
       <TableCell className="py-1 w-10 text-center align-top pt-3">
-        <GripVertical className="h-5 w-5 text-muted-foreground/30 cursor-not-allowed" />
+        <DragIcon className="h-5 w-5 text-muted-foreground/30 cursor-not-allowed" />
       </TableCell>
-      {/* We need to wrap the form around the cells OR provide form context to each cell */}
-      {/* For simplicity and direct use with RHF, one <Form> wrapping all FormFields is easier */}
-      {/* This requires the Form to be outside TableRow or for TableRow to accept a form prop */}
-      {/* The provided solution places Form inside a single TableCell spanning columns */}
       <TableCell colSpan={6} className="p-0 align-top">
-        {" "}
-        {/* One cell to contain the form card */}
-        <Form {...form}>
-          <form onSubmit={handleSubmit(processSubmit)}>
-            <Card className="p-3 sm:p-4 my-0 shadow-none border-0 rounded-none bg-transparent">
-              {" "}
-              {/* Transparent card */}
-              <CardContent className="p-0 space-y-3">
-                {/* Row 1: Name */}
-                <FormField
-                  control={control}
-                  name="child_test_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs sr-only">
-                        {t("labTests:childTests.form.name")}
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          className="h-8 text-xs"
-                          placeholder={t("labTests:childTests.form.name")}
-                        />
-                      </FormControl>
-                      <FormMessage className="text-[10px]" />
-                    </FormItem>
-                  )}
-                />
+        <form onSubmit={handleSubmit(processSubmit)}>
+          <Box sx={{ display: 'grid', gap: 1.5, p: 1 }}>
+            <TextField
+              size="small"
+              placeholder="اسم الفحص"
+              {...register('child_test_name')}
+            />
 
-                {/* Grouping for Range, Unit, Group */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-2 gap-y-3 items-start">
-                  <FormField
-                    control={control}
-                    name="low"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs">
-                          {t("labTests:childTests.form.low")}
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            type="text"
-                            {...field}
-                            value={field.value || ""}
-                            className="h-8 text-xs"
-                          />
-                        </FormControl>
-                        <FormMessage className="text-xs" />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={control}
-                    name="upper"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs">
-                          {t("labTests:childTests.form.upper")}
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            type="text"
-                            {...field}
-                            value={field.value || ""}
-                            className="h-8 text-xs"
-                          />
-                        </FormControl>
-                        <FormMessage className="text-xs" />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
+            <Box sx={{ display: 'grid', gap: 1, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' } }}>
+              <TextField size="small" placeholder="الحد الأدنى" {...register('low')} />
+              <TextField size="small" placeholder="الحد الأعلى" {...register('upper')} />
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <FormControl fullWidth size="small">
+                  <InputLabel id="unit-label">الوحدة</InputLabel>
+                  <Controller
                     control={control}
                     name="unit_id"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs">
-                          {t("labTests:childTests.form.unit")}
-                        </FormLabel>
-                        <div className="flex items-center gap-1">
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value || ""}
-                            defaultValue={field.value || ""}
-                            dir={i18n.dir()}
-                            disabled={isLoadingUnits || isSaving}
-                          >
-                            <FormControl className="flex-grow">
-                              <SelectTrigger className="h-8 text-xs">
-                                <SelectValue
-                                  placeholder={t(
-                                    "labTests:childTests.form.selectUnit"
-                                  )}
-                                />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value=" ">
-                                {t("common:none")}
-                              </SelectItem>
-                              {units.map((u) => (
-                                <SelectItem key={u.id} value={String(u.id)}>
-                                  {u.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <AddUnitDialog
-                            onUnitAdded={onUnitQuickAdd}
-                            triggerButton={
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 shrink-0"
-                                disabled={isSaving}
-                              >
-                                <PlusCircle className="h-3.5 w-3.5" />
-                              </Button>
-                            }
-                          />
-                        </div>
-                        <FormMessage className="text-xs" />
-                      </FormItem>
+                      <Select labelId="unit-label" label="الوحدة" value={field.value || ''} onChange={(e) => field.onChange(e.target.value)} disabled={isLoadingUnits || isSaving}>
+                        <MenuItem value=" ">بدون</MenuItem>
+                        {units.map((u) => (
+                          <MenuItem key={u.id} value={String(u.id)}>{u.name}</MenuItem>
+                        ))}
+                      </Select>
                     )}
                   />
-                </div>
-                <FormField
-                  control={control}
-                  name="normalRange"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs">
-                        {t("labTests:childTests.form.normalRangeText")}
-                      </FormLabel>
-                      <FormControl>
-                        <Textarea
-                          rows={1}
-                          {...field}
-                          value={field.value || ""}
-                          className="h-8 text-xs resize-none"
-                          placeholder={t(
-                            "labTests:childTests.form.normalRangePlaceholder"
-                          )}
-                        />
-                      </FormControl>
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
+                </FormControl>
+                <AddUnitDialog
+                  onUnitAdded={onUnitQuickAdd}
+                  triggerButton={
+                    <Button type="button" variant="outlined" size="small" disabled={isSaving}>
+                      <PlusIcon fontSize="small" />
+                    </Button>
+                  }
                 />
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-2 gap-y-3 items-start">
-                  <FormField
-                    control={control}
-                    name="lowest"
-                    render={({ field }) => (
-                      /* Critical Low */ <FormItem>
-                        <FormLabel className="text-xs">
-                          {t("labTests:childTests.form.criticalLow")}
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            type="text"
-                            {...field}
-                            value={field.value || ""}
-                            className="h-8 text-xs"
-                          />
-                        </FormControl>
-                        <FormMessage className="text-xs" />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={control}
-                    name="max"
-                    render={({ field }) => (
-                      /* Critical High */ <FormItem>
-                        <FormLabel className="text-xs">
-                          {t("labTests:childTests.form.criticalHigh")}
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            type="text"
-                            {...field}
-                            value={field.value || ""}
-                            className="h-8 text-xs"
-                          />
-                        </FormControl>
-                        <FormMessage className="text-xs" />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
+              </Box>
+            </Box>
+
+            <TextField size="small" placeholder="المدى الطبيعي (نص)" {...register('normalRange')} />
+
+            <Box sx={{ display: 'grid', gap: 1, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' } }}>
+              <TextField size="small" placeholder="أقل قيمة حرجة" {...register('lowest')} />
+              <TextField size="small" placeholder="أعلى قيمة حرجة" {...register('max')} />
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <FormControl fullWidth size="small">
+                  <InputLabel id="group-label">المجموعة</InputLabel>
+                  <Controller
                     control={control}
                     name="child_group_id"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs">
-                          {t("labTests:childTests.form.group")}
-                        </FormLabel>
-                        <div className="flex items-center gap-1">
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value || ""}
-                            defaultValue={field.value || ""}
-                            dir={i18n.dir()}
-                            disabled={isLoadingChildGroups || isSaving}
-                          >
-                            <FormControl className="flex-grow">
-                              <SelectTrigger className="h-8 text-xs">
-                                <SelectValue
-                                  placeholder={t(
-                                    "labTests:childTests.form.selectGroup"
-                                  )}
-                                />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value=" ">
-                                {t("common:none")}
-                              </SelectItem>
-                              {childGroups.map((g) => (
-                                <SelectItem key={g.id} value={String(g.id)}>
-                                  {g.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <AddChildGroupDialog
-                            onChildGroupAdded={onChildGroupQuickAdd}
-                            triggerButton={
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 shrink-0"
-                                disabled={isSaving}
-                              >
-                                <PlusCircle className="h-3.5 w-3.5" />
-                              </Button>
-                            }
-                          />
-                        </div>
-                        <FormMessage className="text-xs" />
-                      </FormItem>
+                      <Select labelId="group-label" label="المجموعة" value={field.value || ''} onChange={(e) => field.onChange(e.target.value)} disabled={isLoadingChildGroups || isSaving}>
+                        <MenuItem value=" ">بدون</MenuItem>
+                        {childGroups.map((g) => (
+                          <MenuItem key={g.id} value={String(g.id)}>{g.name}</MenuItem>
+                        ))}
+                      </Select>
                     )}
                   />
-                </div>
-                <FormField
-                  control={control}
-                  name="defval"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs">
-                        {t("labTests:childTests.form.defaultValue")}
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          value={field.value || ""}
-                          className="h-8 text-xs"
-                        />
-                      </FormControl>
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
+                </FormControl>
+                <AddChildGroupDialog
+                  onChildGroupAdded={onChildGroupQuickAdd}
+                  triggerButton={
+                    <Button type="button" variant="outlined" size="small" disabled={isSaving}>
+                      <PlusIcon fontSize="small" />
+                    </Button>
+                  }
                 />
-                {/* test_order is removed from form */}
-                <div className="flex justify-end gap-2 pt-2">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={onCancel}
-                    disabled={isSaving}
-                  >
-                    {t("common:cancel")}
-                  </Button>
-                  <Button type="submit" size="sm" disabled={isSaving}>
-                    {isSaving && (
-                      <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />
-                    )}
-                    {t("common:save")}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </form>
-        </Form>
+              </Box>
+            </Box>
+
+            <TextField size="small" placeholder="القيمة الافتراضية" {...register('defval')} />
+
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, pt: 1 }}>
+              <Button type="button" variant="outlined" size="small" onClick={onCancel} disabled={isSaving}>إلغاء</Button>
+              <Button type="submit" variant="contained" size="small" disabled={isSaving}>حفظ</Button>
+            </Box>
+          </Box>
+        </form>
       </TableCell>
     </TableRow>
   );

@@ -334,9 +334,18 @@ const ChildTestsTable: React.FC<ChildTestsTableProps> = ({
                       <ChildTestDisplayRow
                         key={ct._localId || String(ct.id)}
                         childTest={{ ...ct, _localId: ct._localId || String(ct.id), test_order: index + 1 }}
-                        onEdit={() => handleStartEdit(ct)}
-                        onDelete={() => handleDeleteFromDisplayRow(ct.id!)}
-                        onManageOptions={onManageOptions}
+                        onEdit={(id) => {
+                          const found = displayableChildTests.find((x) => x.id === id);
+                          if (found) {
+                            handleStartEdit(found);
+                          }
+                        }}
+                        onDelete={(id) => {
+                          if (typeof id === 'number') {
+                            void handleDeleteFromDisplayRow(id);
+                          }
+                        }}
+                        onManageOptions={(child) => onManageOptions(child)}
                         isDeletingThisRow={isDeletingId === ct.id}
                         canEdit={canEdit}
                         canDelete={canDelete}

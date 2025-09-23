@@ -332,7 +332,14 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
     }
 
     try {
-      const response = await apiClient.post(`/patients/${patientId}/create-clinic-visit-from-history`, { 
+      // First, we need to get the doctor visit ID from the search results
+      const patientSearchResult = searchResults.find(p => p.id === patientId);
+      if (!patientSearchResult?.last_visit_id) {
+        setAlert({ type: 'error', message: 'لم يتم العثور على زيارة سابقة للمريض' });
+        return;
+      }
+
+      const response = await apiClient.post(`/doctor-visits/${patientSearchResult.last_visit_id}/create-clinic-visit-from-history`, { 
         doctor_id: activeDoctorShift.doctor_id,
         doctor_shift_id: activeDoctorShift.id,
         company_id: companyId,

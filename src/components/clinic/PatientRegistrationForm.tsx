@@ -106,7 +106,6 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<PatientSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [showSearchResults, setShowSearchResults] = useState(false);
   const [showPatientHistory, setShowPatientHistory] = useState(false);
 
   // Dialog state
@@ -218,13 +217,11 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
     if (field === 'name' || field === 'phone') {
       setSearchQuery(value);
       if (value.length >= 2) {
-        setShowSearchResults(true);
         // Show patient history table when typing in phone field
         if (field === 'phone') {
           setShowPatientHistory(true);
         }
       } else {
-        setShowSearchResults(false);
         setShowPatientHistory(false);
       }
     }
@@ -327,44 +324,6 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
     }
   };
 
-  const handleSelectPatientFromSearch = async (patientId: number, previousVisitId?: number | null) => {
-    void previousVisitId;
-    if (!activeDoctorShift?.doctor_id) {
-      setAlert({ type: 'error', message: 'حدث خطأ' });
-      return;
-    }
-
-    try {
-      const response = await apiClient.post('/visits', { patient_id: patientId, doctor_shift_id: activeDoctorShift.id });
-
-      const newDoctorVisit = response.data.data;
-      setAlert({ type: 'error', message: 'حدث خطأ' });
-      onPatientRegistered(newDoctorVisit.patient as Patient);
-      
-      // Reset form
-      setFormData({
-        name: '',
-        phone: '0',
-        gender: 'female',
-        age_year: '',
-        age_month: '',
-        age_day: '',
-        address: '',
-        company_id: '',
-        insurance_no: '',
-        guarantor: '',
-        subcompany_id: '',
-        company_relation_id: '',
-      });
-      setShowSearchResults(false);
-      setShowPatientHistory(false);
-      setSearchQuery('');
-      
-    } catch (error: unknown) {
-      console.error('Failed to create visit:', error);
-      setAlert({ type: 'error', message: 'حدث خطأ' });
-    }
-  };
 
   const handleSelectPatientFromHistory = async (patientId: number, _doctorId: number, companyId?: number) => {
     if (!activeDoctorShift?.doctor_id) {
@@ -397,7 +356,6 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
         subcompany_id: '',
         company_relation_id: '',
       });
-      setShowSearchResults(false);
       setShowPatientHistory(false);
       setSearchQuery('');
       
@@ -654,41 +612,6 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
         </Box>
       )}
 
-      {/* Search Results Dialog */}
-      <Dialog 
-        open={showSearchResults && searchResults.length > 0} 
-        onClose={() => setShowSearchResults(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>نتائج البحث</DialogTitle>
-        <DialogContent>
-          {isSearching ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
-              <CircularProgress />
-            </Box>
-          ) : (
-            <Box sx={{ mt: 1 }}>
-              {searchResults.map((result) => (
-                <Card key={result.id} sx={{ mb: 1, cursor: 'pointer' }} 
-                      onClick={() => handleSelectPatientFromSearch(result.id, result.last_visit_id)}>
-                  <CardContent sx={{ p: 2 }}>
-                    <Typography variant="subtitle1">{result.name}</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      الهاتف: {result.phone}
-                    </Typography>
-                    {result.last_visit_date && (
-                      <Typography variant="body2" color="text.secondary">
-                        آخر زيارة: {new Date(result.last_visit_date).toLocaleDateString('ar-SA')}
-                      </Typography>
-                    )}
-                  </CardContent>
-            </Card>
-              ))}
-            </Box>
-          )}
-        </DialogContent>
-      </Dialog>
 
       {/* Add Subcompany Dialog */}
       <Dialog open={showSubcompanyDialog} onClose={() => setShowSubcompanyDialog(false)}>

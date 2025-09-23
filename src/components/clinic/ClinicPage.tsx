@@ -1,5 +1,6 @@
 // src/pages/ClinicPage.tsx
 import React, { useState, useCallback, useEffect } from 'react';
+import { toast } from 'sonner';
 import './clinicpage.css';
 
 // Import Child Components (we will create/update these)
@@ -56,6 +57,10 @@ const handleDoctorShiftSelectedFromFinder = useCallback((shift: DoctorShift) => 
     if (visitId) {
       setSelectedPatientVisit({ patient, visitId });
       setShowRegistrationForm(false);
+    }
+    // Backend queues a welcome SMS job; show user feedback
+    if (patient.phone) {
+      toast.success('تمت جدولة رسالة ترحيب للمريض');
     }
   }, []);
 

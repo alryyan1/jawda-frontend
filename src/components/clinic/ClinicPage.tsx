@@ -14,7 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import realtimeService from '@/services/realtimeService';
 import ActionsPane from './ActionsPane';
 import SelectedPatientWorkspace from './SelectedPatientWorkspace';
-import PatientDetailsColumnClinic from './PatientDetailsColumnClinic';
+import PatientDetailsColumnClinic, { type PatientDetailsColumnClinicRef } from './PatientDetailsColumnClinic';
 import DoctorFinderDialog from './dialogs/DoctorFinderDialog';
 import UserShiftIncomeDialog from './UserShiftIncomeDialog';
 
@@ -33,6 +33,7 @@ const ClinicPage: React.FC = () => {
 const [isDoctorFinderDialogOpen, setIsDoctorFinderDialogOpen] = useState(false);
 // NEW: State for UserShiftIncomeDialog visibility, controlled by F8
 const [isIncomeDialogOpen, setIsIncomeDialogOpen] = useState(false);
+  const patientDetailsRef = React.useRef<PatientDetailsColumnClinicRef>(null);
 
 const handleDoctorShiftSelectedFromFinder = useCallback((shift: DoctorShift) => {
   setActiveDoctorShift(shift);
@@ -103,6 +104,15 @@ const handleDoctorShiftSelectedFromFinder = useCallback((shift: DoctorShift) => 
       } else if (event.key === 'F10') {
         event.preventDefault();
         setIsDoctorFinderDialogOpen(true);
+      } else if (event.key === 'Enter') {
+        if (selectedPatientVisit && !showRegistrationForm) {
+          const target = event.target as HTMLElement | null;
+          const isTextInput = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.getAttribute('contenteditable') === 'true');
+          if (!isTextInput) {
+            event.preventDefault();
+            patientDetailsRef.current?.triggerPayAll();
+          }
+        }
       } else if (
         event.key === '+' ||
         event.key === '=' && event.shiftKey ||
@@ -119,7 +129,7 @@ const handleDoctorShiftSelectedFromFinder = useCallback((shift: DoctorShift) => 
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [selectedPatientVisit, showRegistrationForm]);
 
   // Subscribe to realtime patient-registered events
   useEffect(() => {
@@ -223,6 +233,7 @@ const handleDoctorShiftSelectedFromFinder = useCallback((shift: DoctorShift) => 
         {/* Section 5: Patient Details Column (Always visible) */}
        { <section className="clinic-panel details">
          <PatientDetailsColumnClinic
+            ref={patientDetailsRef}
             visitId={selectedPatientVisit?.visitId || null}
             currentClinicShiftId={activeDoctorShift?.id || null}
             activeTab={activeWorkspaceTab}

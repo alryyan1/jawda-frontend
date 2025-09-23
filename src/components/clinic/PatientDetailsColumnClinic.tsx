@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState, forwardRef, useImperativeHandle } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { getDoctorVisitById, recordServicePayment } from "@/services/visitService";
@@ -10,19 +10,23 @@ import { Button } from "@/components/ui/button";
 import { Loader2, DollarSign, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface PatientDetailsColumnClinicProps {
+export interface PatientDetailsColumnClinicProps {
   visitId: number | null;
   onPrintReceipt?: () => void;
   currentClinicShiftId?: number | null;
   activeTab?: 'services' | 'lab';
 }
 
-const PatientDetailsColumnClinic: React.FC<PatientDetailsColumnClinicProps> = ({
+export interface PatientDetailsColumnClinicRef {
+  triggerPayAll: () => void;
+}
+
+const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, PatientDetailsColumnClinicProps>(({ 
   visitId,
   onPrintReceipt,
   currentClinicShiftId,
   activeTab = 'services',
-}) => {
+}, ref) => {
   const queryClient = useQueryClient();
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isPdfDialogOpen, setIsPdfDialogOpen] = useState(false);
@@ -100,6 +104,15 @@ const PatientDetailsColumnClinic: React.FC<PatientDetailsColumnClinicProps> = ({
     },
   });
 
+  // Expose imperative handle to parent
+  useImperativeHandle(ref, () => ({
+    triggerPayAll: () => {
+      if (!payAllMutation.isPending) {
+        payAllMutation.mutate();
+      }
+    }
+  }), [payAllMutation]);
+
   // Generate PDF mutation
   const generatePdfMutation = useMutation({
     mutationFn: async () => {
@@ -142,14 +155,14 @@ const PatientDetailsColumnClinic: React.FC<PatientDetailsColumnClinicProps> = ({
     return netPrice - amountPaid;
   };
 
-  const handleViewPdf = () => {
-    if (pdfUrl) {
-      setIsPdfDialogOpen(true);
-    } else {
-      setIsGeneratingPdf(true);
-      generatePdfMutation.mutate();
-    }
-  };
+  // const handleViewPdf = () => {
+  //   if (pdfUrl) {
+  //     setIsPdfDialogOpen(true);
+  //   } else {
+  //     setIsGeneratingPdf(true);
+  //     generatePdfMutation.mutate();
+  //   }
+  // };
 
   if (!visitId) {
     return (
@@ -300,20 +313,6 @@ const PatientDetailsColumnClinic: React.FC<PatientDetailsColumnClinicProps> = ({
             </Button>
           )}
 
-          {/* View PDF Button */}
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={handleViewPdf}
-            disabled={isGeneratingPdf || generatePdfMutation.isPending}
-          >
-            {(isGeneratingPdf || generatePdfMutation.isPending) ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <FileText className="h-4 w-4 mr-2" />
-            )}
-            عرض الإيصال
-          </Button>
         </div>
       </div>
 
@@ -328,6 +327,8 @@ const PatientDetailsColumnClinic: React.FC<PatientDetailsColumnClinicProps> = ({
       />
     </>
   );
-};
+});
 
-export default PatientDetailsColumnClinic; 
+PatientDetailsColumnClinic.displayName = 'PatientDetailsColumnClinic';
+
+export default PatientDetailsColumnClinic;

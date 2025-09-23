@@ -381,7 +381,7 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
   // };
 
   return (
-    <Box sx={{ width: '100%', maxWidth: 380, mx: 'auto' }}>
+    <Box sx={{ width: '100%', maxWidth: 380, mx: 'auto', position: 'relative' }}>
       {alert && (
         <Alert 
           severity={alert.type} 
@@ -600,9 +600,18 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
         </CardContent>
       </Card>
 
-      {/* Patient History Table - shown when typing in phone field */}
+      {/* Patient History Table - positioned opposite to the form */}
       {showPatientHistory && (
-        <Box sx={{ mt: 2 }}>
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 0,
+            right: '100%',
+            transform: 'translateX(-16px)',
+            width: 520,
+            zIndex: 10,
+          }}
+        >
           <PatientHistoryTable
             searchResults={searchResults}
             isLoading={isSearching}

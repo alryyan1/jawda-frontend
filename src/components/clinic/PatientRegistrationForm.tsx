@@ -28,7 +28,7 @@ import type { Patient, PatientSearchResult } from '@/types/patients';
 import type { Company, CompanyRelation, Subcompany } from '@/types/companies';
 import type { DoctorShift } from '@/types/doctors';
 import apiClient from '@/services/api';
-import PatientHistoryTable from '@/components/lab/reception/PatientHistoryTable';
+import PatientistorytableClinc from '@/components/clinic/PatientistorytableClinc';
 
 interface PatientRegistrationFormProps {
   onPatientRegistered: (patient: Patient) => void;
@@ -608,11 +608,11 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
             top: 0,
             left: '100%',
             transform: 'translateX(16px)',
-            width: 720,
+            width: 850,
             zIndex: 10,
           }}
         >
-          <PatientHistoryTable
+          <PatientistorytableClinc
             searchResults={searchResults}
             isLoading={isSearching}
             onSelectPatient={handleSelectPatientFromHistory}

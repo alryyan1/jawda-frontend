@@ -14,7 +14,6 @@ import { getCompanyContractedServices } from '@/services/companyService';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import RequestedServicesTable from './RequestedServicesTable';
-import RequestedServicesSummary from './RequestedServicesSummary';
 import { useAuth } from '@/contexts/AuthContext';
 import { getServiceById } from '@/services/serviceService';
 
@@ -36,10 +35,9 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ vis
   const queryClient = useQueryClient();
   const { currentClinicShift } = useAuth();
   const [showServiceSelectionGrid, setShowServiceSelectionGrid] = useState(visit?.requested_services?.length === 0);
-  const [selectedIdsInGrid, setSelectedIdsInGrid] = useState<number[]>([]);
+  // We don't persist selected IDs here; only notify parent about count
   // Stable callback declared unconditionally to keep hooks order fixed
   const handleSelectedIdsChange = useCallback((ids: number[]) => {
-    setSelectedIdsInGrid(ids);
     onSelectionCountChange?.(ids.length);
   }, [onSelectionCountChange]);
   const requestedServicesQueryKey = ['requestedServicesForVisit', visitId] as const;
@@ -73,9 +71,12 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ vis
     isLoading: isLoadingCatalog,
     error: catalogError
   } = useQuery<ServiceGroupWithServices[], Error>({
-    queryKey: ['baseServiceCatalogForAll'], // General catalog
-    queryFn: () => getServiceGroupsWithServices(undefined), // Fetch all, no visitId filter here
-    staleTime: 1000 * 60 * 10, // Cache for 10 mins
+    queryKey: ['baseServiceCatalogForAll'],
+    queryFn: async () => {
+      const res = await getServiceGroupsWithServices(undefined);
+      return res as unknown as ServiceGroupWithServices[];
+    },
+    staleTime: 1000 * 60 * 10,
   });
   
   // Fetch company-specific contracted services if it's a company patient
@@ -85,23 +86,23 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ vis
     enabled: isCompanyPatient && !!patient?.company_id && showServiceSelectionGrid,
   });
 
-  const serviceCatalogForGrid = useMemo(() => {
+  const serviceCatalogForGrid = useMemo<ServiceGroupWithServices[] | undefined>(() => {
     if (!baseServiceCatalog) return [];
     if (isCompanyPatient && companyContracts) {
       const contractMap = new Map<number, CompanyServiceContract>();
       companyContracts.forEach(contract => {
-        contractMap.set(contract.company_id, contract);
+        contractMap.set((contract as CompanyServiceContract).service_id, contract);
       });
 
-      return baseServiceCatalog.map(group => ({
+      return (baseServiceCatalog as ServiceGroupWithServices[]).map((group: ServiceGroupWithServices) => ({
         ...group,
-        services: group.services.map(service => {
-          const contractDetails = contractMap.get(service.id);
+        services: group.services.map((service) => {
+          const contractDetails = contractMap.get((service as unknown as { id: number }).id);
           if (contractDetails) {
             return {
               ...service,
-              contract_price: parseFloat(contractDetails.price),
-              contract_requires_approval: contractDetails.approval,
+              contract_price: parseFloat(String(contractDetails.price)),
+              contract_requires_approval: Boolean(contractDetails.approval),
             };
           }
           return service;
@@ -126,7 +127,7 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ vis
         exact: true 
       });
       setShowServiceSelectionGrid(false);
-      setSelectedIdsInGrid([]);
+      // selection is managed within the grid; no local state to clear
     },
     onError: (error: unknown) => {
       const apiError = error as { response?: { data?: { message?: string } } };
@@ -140,7 +141,7 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ vis
     }
   };
    // NEW: Handler for adding a single service by ID from the input field
-   const handleAddSingleServiceById = async (serviceId: number): Promise<boolean> => {
+  const handleAddSingleServiceById = async (serviceId: number): Promise<boolean> => {
     if (!serviceId) return false;
 
     // Check if service is already requested for this visit
@@ -163,9 +164,10 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ vis
       addMultipleServicesMutation.mutate([serviceId]); 
       // The mutation's onSuccess will handle toast, invalidation, and hiding the grid
       return true; // Indicate success
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
       toast.error('فشل في جلب الخدمة', {
-        description: error.response?.data?.message || error.message,
+        description: err.response?.data?.message || (error instanceof Error ? error.message : 'Unknown error'),
       });
       return false;
     }
@@ -178,20 +180,7 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ vis
     }
   }, [openSelectionGridCommand]);
 
-  // If parent requests to add selected
-  // Avoid re-triggering on same command value
-  const lastAddCmdRef = React.useRef(0);
-  React.useEffect(() => {
-    if (
-      addSelectedCommand > 0 &&
-      addSelectedCommand !== lastAddCmdRef.current &&
-      showServiceSelectionGrid &&
-      selectedIdsInGrid.length > 0
-    ) {
-      lastAddCmdRef.current = addSelectedCommand;
-      addMultipleServicesMutation.mutate(selectedIdsInGrid);
-    }
-  }, [addSelectedCommand, showServiceSelectionGrid, selectedIdsInGrid]);
+  // Add-selected is handled inside ServiceSelectionGrid to avoid double triggering here
   if (isLoadingRequested || isLoadingCatalog || (patientId && isLoadingPatient) || (isCompanyPatient && showServiceSelectionGrid && isLoadingCompanyContracts)) {
     return <div className="py-4 text-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
   }
@@ -210,7 +199,6 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ vis
             onAddServices={handleAddMultipleServices}
             isLoading={addMultipleServicesMutation.isPending}
             onCancel={() => setShowServiceSelectionGrid(false)}
-            isCompanyPatient={isCompanyPatient} // Pass this down
             onSelectedIdsChange={handleSelectedIdsChange}
             externalAddSelectedCommand={addSelectedCommand}
         />

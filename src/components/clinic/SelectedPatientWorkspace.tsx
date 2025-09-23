@@ -181,7 +181,7 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
                 onClick={() => setAddSelectedCommand(c => c + 1)}
                 variant="secondary"
                 size="sm"
-                className="animate-pulse"
+                className="animate-bounce bg-blue-500"
               >
                 <ListOrdered className="h-4 w-4 ltr:mr-2 rtl:ml-2"/>
                 إضافة المحدد

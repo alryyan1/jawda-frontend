@@ -332,16 +332,15 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
     }
 
     try {
-      const response = await apiClient.post('/doctor-visits', { 
-        patient_id: patientId, 
-        doctor_shift_id: activeDoctorShift.id,
+      const response = await apiClient.post(`/patients/${patientId}/create-clinic-visit-from-history`, { 
         doctor_id: activeDoctorShift.doctor_id,
-        visit_date: new Date().toISOString().split('T')[0],
-        company_id: companyId
+        doctor_shift_id: activeDoctorShift.id,
+        company_id: companyId,
+        reason_for_visit: 'متابعة'
       });
 
-      const newDoctorVisit = response.data.data;
-      onPatientRegistered(newDoctorVisit.patient as Patient);
+      const newPatient = response.data.data;
+      onPatientRegistered(newPatient as Patient);
       
       // Reset form
       setFormData({

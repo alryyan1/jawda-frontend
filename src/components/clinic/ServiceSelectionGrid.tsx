@@ -137,6 +137,24 @@ const ServiceSelectionGrid: React.FC<ServiceSelectionGridProps> = ({
     }
   }, [onAddServices, selectedServiceIds]);
 
+  // Pressing Enter anywhere (except in the numeric ID input which has its own handler)
+  // should trigger adding selected services if any are selected
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Enter') return;
+      const target = e.target as HTMLElement | null;
+      const isTextInput = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.getAttribute('contenteditable') === 'true');
+      const isServiceIdInput = target instanceof HTMLInputElement && target.type === 'number' && target.placeholder?.includes('رقم الخدمة');
+      if (isServiceIdInput) return; // allow the ID input's own Enter handler
+      if (selectedServiceIds.size > 0) {
+        e.preventDefault();
+        handleAddClick();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedServiceIds, handleAddClick]);
+
   // Bubble selection up
   const lastSelectionRef = useRef<string>("[]");
   useEffect(() => {

@@ -3,6 +3,7 @@ import type { Subcompany } from "@/types/companies";
 import type { CompanyRelation } from "@/types/companies";
 import type { DoctorStripped } from "./doctors";
 import type { DoctorVisit } from "./visits";
+import type { UserStripped } from "./auth";
 // import type { Doctor } from "./doctors"; // Assuming this type is defined
 // import { User } from "./index"; // Assuming User type from a general index.ts or auth types
 // import { Country } from './locations'; // If you have a Country type
@@ -28,6 +29,8 @@ export interface PatientFormData {
   subcompany_id?: string | undefined;
   company_relation_id?: string | undefined;
   expire_date?: Date | undefined; // For shadcn DatePicker
+  // Discount comment (patient-level)
+  discount_comment?: string | null;
 }
 // src/types/patients.ts
 // ... (Patient, PatientFormData) ...
@@ -119,6 +122,7 @@ export interface Patient {
 
   subcompany_id?: number | null;
   subcompany?: Subcompany;
+  user:UserStripped;
 
   company_relation_id?: number | null;
   company_relation?: CompanyRelation;
@@ -126,6 +130,8 @@ export interface Patient {
   insurance_no?: string | null;
   expire_date?: string | null; // YYYY-MM-DD
   guarantor?: string | null; // If you want to display this too
+  // Patient-level discount comment
+  discount_comment?: string | null;
 
   // ... other existing patient fields ...
   created_at: string;
@@ -165,6 +171,7 @@ export interface UpdatePatientApiPayload {
   guarantor?: string | null;
   subcompany_id?: number | null;
   company_relation_id?: number | null;
+  discount_comment?: string | null;
 }
 // src/types/visits.ts (or wherever you keep visit related types)
 

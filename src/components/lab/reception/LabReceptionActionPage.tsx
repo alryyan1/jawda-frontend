@@ -6,8 +6,10 @@ import { Separator } from '@/components/ui/separator';
 import { 
     UserPlus, 
     LayoutGrid, 
-    Calculator, // Icon from image
-    Eye,        // Icon from image
+    Calculator,
+    Eye,
+    ListChecks,
+    Printer,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -18,12 +20,20 @@ interface LabReceptionActionPageProps {
   isFormVisible: boolean;
   onToggleView: () => void;
   onOpenDoctorFinder: () => void; // Parent (LabReceptionPage) will handle the DoctorFinderDialog visibility
+  onOpenPriceList: () => void;
+  activeVisitId?: number | null;
+  hasLabRequests?: boolean;
+  onPrintInvoice?: () => void;
 }
 
 const LabReceptionActionPage: React.FC<LabReceptionActionPageProps> = ({
   isFormVisible,
   onToggleView,
   onOpenDoctorFinder,
+  onOpenPriceList,
+  activeVisitId,
+  hasLabRequests,
+  onPrintInvoice,
 }) => {
   const { currentClinicShift } = useAuth();
   
@@ -33,7 +43,7 @@ const LabReceptionActionPage: React.FC<LabReceptionActionPageProps> = ({
   return (
     <TooltipProvider delayDuration={200}>
       <aside
-        className="bg-card border-border p-2 flex flex-col items-center space-y-2 overflow-y-auto h-full shadow-md border-l"
+        className="bg-card border-border p-2 flex flex-col items-center space-y-2 overflow-y-auto overflow-x-hidden h-full shadow-md border-l"
         style={{ width: "60px" }}
       >
         {/* Button 1: Toggle Registration Form / Queue View */}
@@ -68,7 +78,45 @@ const LabReceptionActionPage: React.FC<LabReceptionActionPageProps> = ({
 
         <Separator className="my-1" />
 
- 
+        {/* Button: Print Invoice (visible only when a patient is selected and has lab requests) */}
+        {activeVisitId && hasLabRequests && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="w-11 h-11"
+                onClick={() => onPrintInvoice && onPrintInvoice()}
+                aria-label="طباعة فاتورة المختبر"
+              >
+                <Printer className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">
+              <p>طباعة فاتورة المختبر</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
+
+        {/* Button: Price list of main tests */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="w-11 h-11"
+              onClick={onOpenPriceList}
+              aria-label="قائمة أسعار التحاليل"
+            >
+              <ListChecks className="h-5 w-5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="left">
+            <p>قائمة أسعار التحاليل</p>
+          </TooltipContent>
+        </Tooltip>
+
+        <Separator className="my-1" />
 
         {/* Button 3 (Eye): Open Doctor Finder to filter the queue */}
         <Tooltip>

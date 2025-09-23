@@ -320,7 +320,7 @@ export interface UserRevenueItem {
 }
 
 export interface LabGeneralReportWithUserRevenue {
-  patients: LabGeneralReportItem[];
+  data: LabGeneralReportItem[];
   user_revenues: UserRevenueItem[];
   meta: {
     current_page: number;

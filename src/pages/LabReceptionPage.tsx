@@ -40,6 +40,7 @@ import apiClient from "@/services/api";
 import { addLabTestsToVisit } from "@/services/labRequestService";
 // Removed getSinglePatientQueueItem import - using getDoctorVisitById instead
 import PdfPreviewDialog from "@/components/common/PdfPreviewDialog";
+import MainTestsPriceListDialog from "@/components/lab/reception/MainTestsPriceListDialog";
 
 // Material Theme
 const materialTheme = createTheme({
@@ -125,6 +126,7 @@ const LabReceptionPage: React.FC = () => {
   });
 
   const [isDoctorFinderOpen, setIsDoctorFinderOpen] = useState(false);
+  const [isPriceListOpen, setIsPriceListOpen] = useState(false);
 
   // State lifted from LabRegistrationForm
   const [searchQuery, setSearchQuery] = useState('');
@@ -440,6 +442,15 @@ const LabReceptionPage: React.FC = () => {
     );
   };
 
+  const handlePrintInvoice = () => {
+    if (!activeVisitId) return;
+    generateAndShowPdf(
+      `فاتورة المختبر للزيارة ${activeVisitId}`,
+      'LabInvoice',
+      () => apiClient.get(`/visits/${activeVisitId}/lab-invoice/pdf`, { responseType: 'blob' }).then(res => res.data)
+    );
+  };
+
   // Debug logging
   useEffect(() => {
     console.log('Available tests:', availableTests);
@@ -541,6 +552,10 @@ interface AutocompleteVisitOption {
               isFormVisible={isFormVisible}
               onToggleView={handleToggleForm}
               onOpenDoctorFinder={handleOpenDoctorFinder}
+            onOpenPriceList={() => setIsPriceListOpen(true)}
+            activeVisitId={activeVisitId}
+            hasLabRequests={(activeVisit?.lab_requests?.length ?? 0) > 0}
+            onPrintInvoice={handlePrintInvoice}
             />
           </div>
 
@@ -664,6 +679,11 @@ interface AutocompleteVisitOption {
         fileName={pdfFileName}
       />
       </div>
+      <MainTestsPriceListDialog
+        isOpen={isPriceListOpen}
+        onOpenChange={setIsPriceListOpen}
+        tests={availableTests}
+      />
       {/* === RENDER THE DIALOG HERE === */}
       {/* It's controlled by the state within this page component */}
       <DoctorFinderDialog

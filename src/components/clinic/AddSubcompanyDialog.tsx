@@ -1,32 +1,25 @@
 // src/components/clinic/AddSubcompanyDialog.tsx
 import React, { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import type { SubmitHandler } from "react-hook-form";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
   DialogTitle,
-  DialogTrigger,
-  DialogClose,
-} from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Loader2, PlusCircle } from "lucide-react";
+  DialogContent,
+  DialogActions,
+  TextField,
+  Button,
+  IconButton,
+  Stack,
+  Typography,
+  CircularProgress,
+  Tooltip,
+} from "@mui/material";
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 
 import { createSubcompany } from "@/services/companyService";
 import type { Subcompany } from "@/types/companies";
@@ -47,8 +40,6 @@ interface SubcompanyFormValues {
   service_endurance: string;
 }
 
-// Removed Zod schema - using manual validation
-
 const AddSubcompanyDialog: React.FC<AddSubcompanyDialogProps> = ({
   companyId,
   companyName,
@@ -58,11 +49,9 @@ const AddSubcompanyDialog: React.FC<AddSubcompanyDialogProps> = ({
   open,
   onOpenChange,
 }) => {
-  // Translation hook removed since we're not using translations
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
 
-  // Use controlled state if provided
   const dialogOpen = open ?? isOpen;
   const setDialogOpen = onOpenChange ?? setIsOpen;
 
@@ -76,7 +65,7 @@ const AddSubcompanyDialog: React.FC<AddSubcompanyDialogProps> = ({
 
   const mutation = useMutation({
     mutationFn: async (formData: SubcompanyFormValues) => {
-      if (!companyId) throw new Error("Parent company ID is required.");
+      if (!companyId) throw new Error("معرّف الشركة الأم مطلوب.");
       const result = await createSubcompany({
         name: formData.name,
         lab_endurance: parseFloat(formData.lab_endurance),
@@ -86,7 +75,7 @@ const AddSubcompanyDialog: React.FC<AddSubcompanyDialogProps> = ({
       return result;
     },
     onSuccess: (newSubcompany) => {
-      toast.success("subcompany.addedSuccess");
+      toast.success("تمت إضافة الشركة الفرعية بنجاح");
       queryClient.invalidateQueries({
         queryKey: ["subcompaniesList", companyId],
       });
@@ -95,25 +84,19 @@ const AddSubcompanyDialog: React.FC<AddSubcompanyDialogProps> = ({
       setIsOpen(false);
     },
     onError: (error: Error & { response?: { data?: { message?: string } } }) => {
-      toast.error(
-        error.response?.data?.message ||
-          "error.saveFailed"
-      );
+      toast.error(error.response?.data?.message || "فشل الحفظ");
     },
   });
 
   const onSubmit: SubmitHandler<SubcompanyFormValues> = (data) => {
-    // Basic validation
     if (!data.name.trim()) {
       toast.error("اسم الشركة الفرعية مطلوب");
       return;
     }
-    
     if (!companyId) {
-      toast.error("معرف الشركة الأم مطلوب");
+      toast.error("معرّف الشركة الأم مطلوب");
       return;
     }
-    
     mutation.mutate(data);
   };
 
@@ -122,109 +105,93 @@ const AddSubcompanyDialog: React.FC<AddSubcompanyDialogProps> = ({
   }, [isOpen, form]);
 
   const defaultTrigger = (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon"
-      className="h-7 w-7 shrink-0 disabled:opacity-50"
-      aria-label={"subcompany.addButton"}
-      disabled={disabled || !companyId}
-      title={
-        !companyId
-          ? "subcompany.selectParentCompanyFirst"
-          : "subcompany.addButton"
-      }
-    >
-      <PlusCircle className="h-3.5 w-3.5" />
-    </Button>
+    <Tooltip title={!companyId ? "اختر الشركة الأم أولاً" : "إضافة شركة فرعية"}>
+      <span>
+        <IconButton
+          size="small"
+          aria-label="إضافة شركة فرعية"
+          disabled={disabled || !companyId}
+          onClick={() => setDialogOpen(true)}
+          sx={{ width: 28, height: 28 }}
+        >
+          <AddCircleOutlineIcon fontSize="small" />
+        </IconButton>
+      </span>
+    </Tooltip>
   );
 
   return (
-    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-      <DialogTrigger asChild disabled={disabled || !companyId}>
-        {triggerButton || defaultTrigger}
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>
-            {"subcompany.addDialogTitle"}{" "}
-            {companyName && `(${companyName})`}
-          </DialogTitle>
-          <DialogDescription>
-            {"subcompany.addDialogDescription"}
-          </DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="space-y-4 py-2"
-          >
-            <FormField
+    <>
+      {triggerButton ? (
+        <span onClick={() => !disabled && companyId && setDialogOpen(true)}>{triggerButton}</span>
+      ) : (
+        defaultTrigger
+      )}
+
+      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>إضافة شركة فرعية{companyName ? ` (${companyName})` : ""}</DialogTitle>
+        <DialogContent dividers>
+          <Stack component="form" spacing={2} sx={{ pt: 1 }} onSubmit={form.handleSubmit(onSubmit)}>
+            <Controller
               control={form.control}
               name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{"fields.subCompanyName"}</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+              render={({ field, fieldState }) => (
+                <TextField
+                  {...field}
+                  label="اسم الشركة الفرعية"
+                  error={!!fieldState.error}
+                  helperText={fieldState.error?.message}
+                  fullWidth
+                />
               )}
             />
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
+            <Stack direction="row" spacing={2}>
+              <Controller
                 control={form.control}
                 name="lab_endurance"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      {"fields.labEnduranceShort"}
-                    </FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.01" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+                render={({ field, fieldState }) => (
+                  <TextField
+                    {...field}
+                    label="تحمل المختبر"
+                    type="number"
+                    inputProps={{ step: "0.01" }}
+                    error={!!fieldState.error}
+                    helperText={fieldState.error?.message}
+                    fullWidth
+                  />
                 )}
               />
-              <FormField
+              <Controller
                 control={form.control}
                 name="service_endurance"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      {"fields.serviceEnduranceShort"}
-                    </FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.01" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+                render={({ field, fieldState }) => (
+                  <TextField
+                    {...field}
+                    label="تحمل الخدمة"
+                    type="number"
+                    inputProps={{ step: "0.01" }}
+                    error={!!fieldState.error}
+                    helperText={fieldState.error?.message}
+                    fullWidth
+                  />
                 )}
               />
-            </div>
-            <DialogFooter className="pt-3">
-              <DialogClose asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={mutation.isPending}
-                >
-                  {"إلغاء"}
-                </Button>
-              </DialogClose>
-              <Button type="submit" disabled={mutation.isPending || !companyId}>
-                {mutation.isPending && (
-                  <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />
-                )}
-                {"add"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+            </Stack>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDialogOpen(false)} disabled={mutation.isPending} variant="outlined">إلغاء</Button>
+          <Button onClick={form.handleSubmit(onSubmit)} disabled={mutation.isPending || !companyId} variant="contained">
+            {mutation.isPending && (
+              <Typography component="span" sx={{ mr: 1, display: 'inline-flex', alignItems: 'center' }}>
+                <CircularProgress size={16} sx={{ mr: 1 }} />
+              </Typography>
+            )}
+            إضافة
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 };
 

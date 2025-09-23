@@ -158,8 +158,8 @@ const CompanyFormPage: React.FC<{ mode: CompanyFormMode }> = ({ mode }) => {
               )} />
             </Grid>
             <Grid item xs={12} md={6}>
-              <Controller name="email" control={control} rules={{ required: 'البريد الإلكتروني مطلوب' }} render={({ field, fieldState }) => (
-                <TextField fullWidth label="البريد الإلكتروني" type="email" placeholder="example@email.com" {...field} disabled={dataIsLoading || formIsSubmitting} error={!!fieldState.error} helperText={fieldState.error?.message} />
+              <Controller name="email" control={control}  render={({ field, fieldState }) => (
+                <TextField fullWidth label="البريد الإلكتروني" placeholder="example@email.com" {...field} disabled={dataIsLoading || formIsSubmitting} error={!!fieldState.error} helperText={fieldState.error?.message} />
               )} />
             </Grid>
           </Grid>
@@ -183,7 +183,9 @@ const CompanyFormPage: React.FC<{ mode: CompanyFormMode }> = ({ mode }) => {
           <Grid container spacing={2}>
             <Grid item xs={12} md={6}>
               <Controller name="lab_endurance" control={control} render={({ field }) => (
-                <TextField fullWidth label="تحمل المختبر %" type="number" inputProps={{ step: '0.01' }} {...field} disabled={dataIsLoading || formIsSubmitting} />
+                <TextField onFocus={
+                  (e)=>e.target.select()
+                } fullWidth label="تحمل المختبر %" type="number" inputProps={{ step: '0.01' }} {...field} disabled={dataIsLoading || formIsSubmitting} />
               )} />
             </Grid>
             <Grid item xs={12} md={6}>

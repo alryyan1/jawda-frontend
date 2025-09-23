@@ -6,12 +6,21 @@ import * as z from 'zod';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { format } from 'date-fns';
 
-import { Loader2, Search, CheckCircle, FileDown, Eye } from 'lucide-react';
+import { Loader2, Search, CheckCircle, Eye, Info } from 'lucide-react';
 
-import type { LabGeneralReportItem, LabGeneralReportFilters, LabGeneralReportWithUserRevenue } from '@/types/reports';
-import type { PaginatedResponse } from '@/types/common';
+// Helper function to format numbers with thousand separators
+const formatNumber = (num: number | string): string => {
+  const number = typeof num === 'string' ? parseFloat(num) : num;
+  if (isNaN(number)) return '0.00';
+  return number.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+};
+
+import type { LabGeneralReportFilters, LabGeneralReportWithUserRevenue, LabGeneralReportItem } from '@/types/reports';
 import type { Shift } from '@/types/shifts';
-import { getLabGeneralReport, downloadLabGeneralReportPdf } from '@/services/reportService';
+import { getLabGeneralReport } from '@/services/reportService';
 import { getShiftsList } from '@/services/shiftService';
 import { getUsers } from '@/services/userService';
 
@@ -30,6 +39,13 @@ import {
   TableRow as MUITableRow,
   TableCell as MUITableCell,
   Autocomplete,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Box,
+  Divider,
+  Chip,
 } from '@mui/material';
 import { webUrl } from '../constants';
 
@@ -63,6 +79,8 @@ const LabGeneralReportPage: React.FC = () => {
     date_from: defaultDateFrom,
     date_to: defaultDateTo,
   });
+  const [selectedPatient, setSelectedPatient] = useState<LabGeneralReportItem | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   // Fetch data for filters
   const { data: shifts, isLoading: isLoadingShifts } = useQuery<Shift[], Error>({
@@ -113,22 +131,6 @@ const LabGeneralReportPage: React.FC = () => {
     });
   };
 
-  const handleDownloadPdf = async () => {
-    try {
-      const blob = await downloadLabGeneralReportPdf(appliedFilters);
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `lab_general_report_${format(new Date(), 'yyyy-MM-dd_HH-mm-ss')}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Error downloading PDF:', error);
-      // You can add toast notification here if needed
-    }
-  };
 
   const handleOpenPdfInNewTab = () => {
     // Build query parameters
@@ -144,7 +146,17 @@ const LabGeneralReportPage: React.FC = () => {
     window.open(pdfUrl, '_blank');
   };
 
-  const patients = reportData?.data || [];
+  const handleShowPatientDetails = (patient: LabGeneralReportItem) => {
+    setSelectedPatient(patient);
+    setIsDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false);
+    setSelectedPatient(null);
+  };
+
+  const patients = (reportData as LabGeneralReportWithUserRevenue & { data: LabGeneralReportItem[] })?.data || [];
   const userRevenues = reportData?.user_revenues || [];
   const meta = reportData?.meta;
   const isLoadingDropdowns = isLoadingShifts || isLoadingUsers;
@@ -283,17 +295,7 @@ const LabGeneralReportPage: React.FC = () => {
                 {isFetching ? <Loader2 className="h-4 w-4 animate-spin" /> : 'تطبيق المرشحات'}
               </Button>
               
-              <Button 
-                type="button" 
-                variant="outlined" 
-                className="h-9" 
-                onClick={handleDownloadPdf}
-                disabled={isFetching || isLoadingDropdowns || patients.length === 0}
-                startIcon={<FileDown className="h-4 w-4" />}
-              >
-                تحميل PDF
-              </Button>
-              
+         
               <Button 
                 type="button" 
                 variant="outlined" 
@@ -325,14 +327,14 @@ const LabGeneralReportPage: React.FC = () => {
             <Typography variant="h6">ايراد حسب المستخدم</Typography>
           </CardHeader>
           <CardContent>
-            <MUITable size="small">
+            <MUITable size="medium" sx={{ fontSize: '1.1rem' }}>
               <MUITableHead>
                 <MUITableRow>
-                  <MUITableCell align="center">اسم المستخدم</MUITableCell>
-                  <MUITableCell align="center">إجمالي المدفوع</MUITableCell>
-                  <MUITableCell align="center">إجمالي التخفيض</MUITableCell>
-                  <MUITableCell align="center">إجمالي كاش</MUITableCell>
-                  <MUITableCell align="center">إجمالي بنك</MUITableCell>
+                  <MUITableCell align="center" sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>اسم المستخدم</MUITableCell>
+                  <MUITableCell align="center" sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>إجمالي المدفوع</MUITableCell>
+                  <MUITableCell align="center" sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>إجمالي التخفيض</MUITableCell>
+                  <MUITableCell align="center" sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>إجمالي كاش</MUITableCell>
+                  <MUITableCell align="center" sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>إجمالي بنك</MUITableCell>
                 </MUITableRow>
               </MUITableHead>
               <MUITableBody>
@@ -349,30 +351,30 @@ const LabGeneralReportPage: React.FC = () => {
                         backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'inherit',
                       }}
                     >
-                      <MUITableCell align="center" className="font-medium">{userRevenue.user_name}</MUITableCell>
-                      <MUITableCell align="center">{totalPaid.toFixed(2)}</MUITableCell>
-                      <MUITableCell align="center">{totalDiscount.toFixed(2)}</MUITableCell>
-                      <MUITableCell align="center">{totalCash.toFixed(2)}</MUITableCell>
-                      <MUITableCell align="center" sx={{ color: totalBank > 0 ? 'red' : 'inherit' }}>
-                        {totalBank.toFixed(2)}
+                      <MUITableCell align="center" className="font-medium" sx={{ fontSize: '1.1rem' }}>{userRevenue.user_name}</MUITableCell>
+                      <MUITableCell align="center" sx={{ fontSize: '1.1rem' }}>{formatNumber(totalPaid)}</MUITableCell>
+                      <MUITableCell align="center" sx={{ fontSize: '1.1rem' }}>{formatNumber(totalDiscount)}</MUITableCell>
+                      <MUITableCell align="center" sx={{ fontSize: '1.1rem' }}>{formatNumber(totalCash)}</MUITableCell>
+                      <MUITableCell align="center" sx={{ color: totalBank > 0 ? 'red' : 'inherit', fontSize: '1.1rem' }}>
+                        {formatNumber(totalBank)}
                       </MUITableCell>
                     </MUITableRow>
                   );
                 })}
                 {/* Totals Row */}
-                <MUITableRow sx={{ backgroundColor: '#323232', color: 'white' }}>
-                  <MUITableCell align="center" className="font-bold text-white">الإجمالي</MUITableCell>
-                  <MUITableCell align="center" className="font-bold text-white">
-                    {userRevenues.reduce((sum, u) => sum + Number(u.total_paid || 0), 0).toFixed(2)}
+                <MUITableRow sx={{ backgroundColor: '#3498db',fontSize: '1.1rem', color: 'white' }}>
+                  <MUITableCell align="center" className="font-bold text-white!" sx={{ fontSize: '1.1rem' }}>الإجمالي</MUITableCell>
+                  <MUITableCell align="center" className="font-bold text-white! text-2xl" sx={{ fontSize: '1.1rem' }}>
+                    {formatNumber(userRevenues.reduce((sum, u) => sum + Number(u.total_paid || 0), 0))}
                   </MUITableCell>
-                  <MUITableCell align="center" className="font-bold text-white">
-                    {userRevenues.reduce((sum, u) => sum + Number(u.total_discount || 0), 0).toFixed(2)}
+                  <MUITableCell align="center" className="font-bold text-white! text-2xl" sx={{ fontSize: '1.1rem' }}>
+                    {formatNumber(userRevenues.reduce((sum, u) => sum + Number(u.total_discount || 0), 0))}
                   </MUITableCell>
-                  <MUITableCell align="center" className="font-bold text-white">
-                    {userRevenues.reduce((sum, u) => sum + Number(u.total_cash || 0), 0).toFixed(2)}
+                  <MUITableCell align="center" className="font-bold text-white! text-2xl" sx={{ fontSize: '1.1rem' }}>
+                    {formatNumber(userRevenues.reduce((sum, u) => sum + Number(u.total_cash || 0), 0))}
                   </MUITableCell>
-                  <MUITableCell align="center" className="font-bold text-white">
-                    {userRevenues.reduce((sum, u) => sum + Number(u.total_bank || 0), 0).toFixed(2)}
+                  <MUITableCell align="center" className="font-bold text-white! text-2xl" sx={{ fontSize: '1.1rem' }}>
+                    {formatNumber(userRevenues.reduce((sum, u) => sum + Number(u.total_bank || 0), 0))}
                   </MUITableCell>
                 </MUITableRow>
               </MUITableBody>
@@ -393,17 +395,18 @@ const LabGeneralReportPage: React.FC = () => {
                 <MUITableCell align="center">الرقم</MUITableCell>
                 <MUITableCell align="center">الاسم</MUITableCell>
                 <MUITableCell align="center">الطبيب</MUITableCell>
-                <MUITableCell align="center">إجمالي مبلغ المختبر</MUITableCell>
-                <MUITableCell align="center">إجمالي المدفوع للمختبر</MUITableCell>
+                <MUITableCell align="center"> مبلغ </MUITableCell>
+                <MUITableCell align="center"> المدفوع </MUITableCell>
                 <MUITableCell align="center">الخصم</MUITableCell>
-                <MUITableCell align="center">إجمالي المبلغ البنك</MUITableCell>
+                <MUITableCell align="center">  البنك</MUITableCell>
                 <MUITableCell align="center">اسم الشركة</MUITableCell>
-                <MUITableCell align="center">أسماء التحاليل الرئيسية</MUITableCell>
+                <MUITableCell align="center"> التحاليل </MUITableCell>
                 <MUITableCell align="center">الحالة</MUITableCell>
+                <MUITableCell align="center">التفاصيل</MUITableCell>
               </MUITableRow>
             </MUITableHead>
             <MUITableBody>
-              {patients.map((patient) => {
+              {patients.map((patient: LabGeneralReportItem) => {
                 const totalLabAmount = Number(patient.total_lab_amount || 0);
                 const totalPaid = Number(patient.total_paid_for_lab || 0);
                 const discount = Number(patient.discount || 0);
@@ -421,11 +424,11 @@ const LabGeneralReportPage: React.FC = () => {
                     <MUITableCell align="center" className="font-medium">{patient.doctorvisit_id}</MUITableCell>
                     <MUITableCell align="center">{patient.name}</MUITableCell>
                     <MUITableCell align="center">{patient.doctor_name}</MUITableCell>
-                    <MUITableCell align="center">{totalLabAmount.toFixed(2)}</MUITableCell>
-                    <MUITableCell align="center">{totalPaid.toFixed(2)}</MUITableCell>
-                    <MUITableCell align="center">{discount.toFixed(2)}</MUITableCell>
+                    <MUITableCell align="center">{formatNumber(totalLabAmount)}</MUITableCell>
+                    <MUITableCell align="center">{formatNumber(totalPaid)}</MUITableCell>
+                    <MUITableCell align="center">{formatNumber(discount)}</MUITableCell>
                     <MUITableCell align="center" sx={{ color: bankAmount > 0 ? 'red' : 'inherit' }}>
-                      {bankAmount.toFixed(2)}
+                      {formatNumber(bankAmount)}
                     </MUITableCell>
                     <MUITableCell align="center">{patient.company_name || '-'}</MUITableCell>
                     <MUITableCell align="center" className="max-w-xs truncate" title={patient.main_tests_names}>
@@ -433,6 +436,17 @@ const LabGeneralReportPage: React.FC = () => {
                     </MUITableCell>
                     <MUITableCell align="center">
                       {isFullyPaid && <CheckCircle className="h-5 w-5 text-green-500" />}
+                    </MUITableCell>
+                    <MUITableCell align="center">
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={<Info className="h-4 w-4" />}
+                        onClick={() => handleShowPatientDetails(patient)}
+                        sx={{ fontSize: '0.75rem' }}
+                      >
+                        عرض
+                      </Button>
                     </MUITableCell>
                   </MUITableRow>
                 );
@@ -443,9 +457,9 @@ const LabGeneralReportPage: React.FC = () => {
               <div className="border-t pt-3 text-sm">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                 <div className="font-semibold">إجمالي المرضى: <span className="font-normal">{meta.total}</span></div>
-                <div className="font-semibold">إجمالي مبلغ المختبر: <span className="font-normal">{patients.reduce((sum, p) => sum + Number(p.total_lab_amount || 0), 0).toFixed(2)}</span></div>
-                <div className="font-semibold">إجمالي المدفوع: <span className="font-normal">{patients.reduce((sum, p) => sum + Number(p.total_paid_for_lab || 0), 0).toFixed(2)}</span></div>
-                <div className="font-semibold">إجمالي الخصم: <span className="font-normal">{patients.reduce((sum, p) => sum + Number(p.discount || 0), 0).toFixed(2)}</span></div>
+                <div className="font-semibold">إجمالي مبلغ المختبر: <span className="font-normal">{formatNumber(patients.reduce((sum: number, p: LabGeneralReportItem) => sum + Number(p.total_lab_amount || 0), 0))}</span></div>
+                <div className="font-semibold">إجمالي المدفوع: <span className="font-normal">{formatNumber(patients.reduce((sum: number, p: LabGeneralReportItem) => sum + Number(p.total_paid_for_lab || 0), 0))}</span></div>
+                <div className="font-semibold">إجمالي الخصم: <span className="font-normal">{formatNumber(patients.reduce((sum: number, p: LabGeneralReportItem) => sum + Number(p.discount || 0), 0))}</span></div>
               </div>
               </div>
             )}
@@ -478,6 +492,150 @@ const LabGeneralReportPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Patient Details Dialog */}
+      <Dialog 
+        open={isDialogOpen} 
+        onClose={handleCloseDialog}
+        maxWidth="md"
+        fullWidth
+        dir="rtl"
+      >
+        <DialogTitle>
+          <Typography variant="h6" component="div">
+            تفاصيل المريض
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          {selectedPatient && (
+            <Box sx={{ mt: 2 }}>
+              {/* Patient Basic Info */}
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h6" gutterBottom color="primary">
+                  المعلومات الأساسية
+                </Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">رقم الزيارة</Typography>
+                    <Typography variant="body1" fontWeight="bold">{selectedPatient.doctorvisit_id}</Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">اسم المريض</Typography>
+                    <Typography variant="body1" fontWeight="bold">{selectedPatient.name}</Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">اسم الطبيب</Typography>
+                    <Typography variant="body1" fontWeight="bold">{selectedPatient.doctor_name}</Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">اسم الشركة</Typography>
+                    <Typography variant="body1" fontWeight="bold">{selectedPatient.company_name || 'غير محدد'}</Typography>
+                  </Box>
+                </Box>
+              </Box>
+
+              <Divider sx={{ my: 2 }} />
+
+              {/* Financial Information */}
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h6" gutterBottom color="primary">
+                  المعلومات المالية
+                </Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">إجمالي مبلغ المختبر</Typography>
+                    <Typography variant="h6" color="primary" fontWeight="bold">
+                      {formatNumber(selectedPatient.total_lab_amount)}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">المبلغ المدفوع</Typography>
+                    <Typography variant="h6" color="success.main" fontWeight="bold">
+                      {formatNumber(selectedPatient.total_paid_for_lab)}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">الخصم</Typography>
+                    <Typography variant="h6" color="warning.main" fontWeight="bold">
+                      {formatNumber(selectedPatient.discount)}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">المبلغ البنكي</Typography>
+                    <Typography variant="h6" color="error.main" fontWeight="bold">
+                      {formatNumber(selectedPatient.total_amount_bank)}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Box>
+
+              <Divider sx={{ my: 2 }} />
+
+              {/* Payment Status */}
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h6" gutterBottom color="primary">
+                  حالة الدفع
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                  {Number(selectedPatient.total_paid_for_lab) >= Number(selectedPatient.total_lab_amount) ? (
+                    <Chip 
+                      label="مدفوع بالكامل" 
+                      color="success" 
+                      icon={<CheckCircle className="h-4 w-4" />}
+                      size="medium"
+                    />
+                  ) : (
+                    <Chip 
+                      label="غير مدفوع بالكامل" 
+                      color="warning" 
+                      size="medium"
+                    />
+                  )}
+                  {Number(selectedPatient.discount) > 0 && (
+                    <Chip 
+                      label="يحتوي على خصم" 
+                      color="info" 
+                      size="medium"
+                    />
+                  )}
+                  {Number(selectedPatient.total_amount_bank) > 0 && (
+                    <Chip 
+                      label="يحتوي على دفع بنكي" 
+                      color="error" 
+                      size="medium"
+                    />
+                  )}
+                </Box>
+              </Box>
+
+              <Divider sx={{ my: 2 }} />
+
+              {/* Lab Tests */}
+              <Box>
+                <Typography variant="h6" gutterBottom color="primary">
+                  التحاليل المطلوبة
+                </Typography>
+                <Box sx={{ 
+                  p: 2, 
+                  backgroundColor: 'grey.50', 
+                  borderRadius: 1,
+                  border: '1px solid',
+                  borderColor: 'grey.200'
+                }}>
+                  <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
+                    {selectedPatient.main_tests_names}
+                  </Typography>
+                </Box>
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog} variant="outlined">
+            إغلاق
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };

@@ -12,6 +12,7 @@ import { realtimeUrlFromConstants } from "@/pages/constants";
 import { fetchCurrentUserLabIncomeSummary, type LabUserShiftIncomeSummary } from "@/services/userService";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatNumber } from "@/lib/utils";
+// import { showJsonDialog } from "@/lib/showJsonDialog";
 
 interface PatientDetailsColumnV1Props {
   activeVisitId: number | null;
@@ -21,6 +22,13 @@ interface PatientDetailsColumnV1Props {
 
 export interface PatientDetailsColumnV1Ref {
   triggerPayment: () => void;
+}
+const getAge = (visit: DoctorVisit) => {
+  const age_year = visit?.patient?.age_year || 0
+  const age_month = visit?.patient?.age_month || 0
+  const age_day = visit?.patient?.age_day || 0
+
+  return `${age_year} سنة ${age_month} شهر ${age_day} يوم`
 }
 
 const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDetailsColumnV1Props>(({
@@ -133,18 +141,21 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
   const phone = visit?.patient?.phone 
   const date = visit?.created_at ? visit.created_at.slice(0, 10) : "";
   const serial = visit?.id?.toString() 
-  const registeredBy = visit?.created_by_user?.name
+  const registeredBy = visit?.patient?.user?.username
   const paymentMethod = "cash"
   const total = visit?.total_amount
   const received = visit?.total_paid
   const balance = visit?.balance_due
+  const age = getAge(visit!)
 
+  // alert(JSON.stringify(visit,null,2))
+  // showJsonDialog(visit, { title: 'Visit JSON' });  
   return (
     <div className="flex flex-col h-full w-full p-2 justify-between">
       <div>
  <div className="flex flex-col h-full w-full items-center justify-start p-2">
       {/* Patient Name */}
-      <div className="w-full text-center font-bold text-base border-b border-gray-300 pb-1 mb-2">
+      <div className="w-full text-center font-bold text-xl border-b border-gray-300 pb-1 mb-2">
         {patientName}
       </div>
       
@@ -182,7 +193,7 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
         </Button>
       </div>
       {/* Details Table */}
-      <table className="w-full text-sm mb-2">
+      <table className="w-full text-base mb-2">
         <tbody>
           <tr>
             <td className="text-right text-gray-700">الطبيب</td>
@@ -209,6 +220,13 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
             <td className="text-right text-gray-700">طريقة الدفع</td>
             <td className="text-left font-medium">{paymentMethod}</td>
           </tr>
+          <tr>
+            <td className="text-right text-gray-700">العمر</td>
+            <td className="text-left font-medium">{age}</td>
+          </tr>
+          <tr>
+       
+          </tr>
         </tbody>
       </table>
 
@@ -217,30 +235,29 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
         <PatientCompanyDetails patient={visit.patient} />
       )}
 
-      {/* Operations Title */}
-      <div className="w-full text-center text-gray-700 font-semibold border-b border-gray-200 pb-1 mb-2">
-        العمليات
-      </div>
-      {/* Icon Row */}
-      <div className="w-full flex justify-start mb-2">
-        <span className="inline-block bg-gray-100 p-2 rounded">
-          <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-        </span>
-      </div>
+      {/* Patient Discount Comment (if any) */}
+      {visit?.patient?.discount_comment && (
+        <div className="w-full bg-yellow-50 rounded border border-yellow-200 p-2 mb-2 text-sm text-yellow-800">
+          <div className="font-semibold mb-1">تعليق الخصم</div>
+          <div className="whitespace-pre-wrap">{visit.patient.discount_comment}</div>
+        </div>
+      )}
+
+   
       {/* Financial Summary */}
       <div className="w-full bg-gray-50 rounded-lg border border-gray-200 flex flex-col items-center mb-2">
         <div className="flex w-full">
           <div className="flex-1 text-center p-2 border-l border-gray-200">
-            <div className="text-xs text-gray-500">TOTAL</div>
-            <div className="text-lg font-bold">{total?.toLocaleString()}</div>
+            <div className="text-sm text-gray-500">TOTAL</div>
+            <div className="text-xl font-bold">{total?.toLocaleString()}</div>
           </div>
           <div className="flex-1 text-center p-2 border-l border-gray-200">
-            <div className="text-xs text-gray-500">Paid</div>
-            <div className="text-lg text-green-600 font-bold">{received?.toLocaleString()}</div>
+            <div className="text-sm text-gray-500">Paid</div>
+            <div className="text-xl text-green-600 font-bold">{received?.toLocaleString()}</div>
           </div>
           <div className="flex-1 text-center p-2">
-            <div className="text-xs text-gray-500">Balance</div>
-            <div className="text-lg font-bold text-red-600">{balance?.toLocaleString()}</div>
+            <div className="text-sm text-gray-500">Balance</div>
+            <div className="text-xl font-bold text-red-600">{balance?.toLocaleString()}</div>
           </div>
           
         </div>
@@ -326,7 +343,7 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
                     });
                     toast.success("تم إرسال الرسالة بنجاح");
                     setIsSmsDialogOpen(false);
-                  } catch (e) {
+                  } catch {
                     toast.error("فشل إرسال الرسالة");
                   } finally {
                     setIsSendingSms(false);

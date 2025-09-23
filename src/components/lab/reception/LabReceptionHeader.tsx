@@ -90,7 +90,6 @@ const LabReceptionHeader: React.FC<LabReceptionHeaderProps> = ({
       sx={{
         flexShrink: 0,
         height: 'auto',
-        p: 2,
         bgcolor: 'background.paper',
         boxShadow: 2,
         borderBottom: 1,
@@ -103,13 +102,12 @@ const LabReceptionHeader: React.FC<LabReceptionHeaderProps> = ({
           flexWrap: 'wrap',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: 2,
+          gap: 1,
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexShrink: 0 }}>
           <Box
             sx={{
-              p: 1,
               bgcolor: 'primary.light',
               borderRadius: 1,
             }}

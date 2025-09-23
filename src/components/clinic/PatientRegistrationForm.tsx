@@ -608,7 +608,7 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
             top: 0,
             left: '100%',
             transform: 'translateX(16px)',
-            width: 520,
+            width: 720,
             zIndex: 10,
           }}
         >

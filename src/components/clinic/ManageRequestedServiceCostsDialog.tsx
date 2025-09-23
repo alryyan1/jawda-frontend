@@ -1,19 +1,27 @@
 // src/components/clinic/ManageRequestedServiceCostsDialog.tsx
 import React, { useEffect, useCallback, useMemo } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
-  Dialog, DialogContent, DialogDescription, DialogFooter,
-  DialogHeader, DialogTitle, DialogClose,
-} from '@/components/ui/dialog';
-import { Form, FormField } from "@/components/ui/form";
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Box,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+} from '@mui/material';
 import { Loader2, PlusCircle, Trash2, Save } from 'lucide-react';
 
 import type { RequestedService, ServiceCost, SubServiceCost } from '@/types/services';
@@ -225,100 +233,99 @@ const ManageRequestedServiceCostsDialog: React.FC<ManageRequestedServiceCostsDia
   if (!isOpen) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="!max-w-3xl max-h-[85vh] flex flex-col"> {/* Adjusted width */}
-        <DialogHeader>
-          <DialogTitle>{"إدارة تكاليف الخدمة"}</DialogTitle>
-          <DialogDescription>{"إضافة وتعديل تكاليف الخدمة المطلوبة"}</DialogDescription>
-        </DialogHeader>
-        
+    <Dialog open={isOpen} onClose={() => onOpenChange(false)} fullWidth maxWidth="md">
+      <DialogTitle>{"إدارة تكاليف الخدمة"}</DialogTitle>
+      <DialogContent dividers>
         {isLoadingExisting || isLoadingSubTypes || isLoadingDefinitions ? (
-          <div className="flex justify-center items-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+          <Box display="flex" justifyContent="center" alignItems="center" py={4}><Loader2 className="h-8 w-8 animate-spin" /></Box>
         ) : (
-          <Form {...form}>
-            <form onSubmit={handleSubmit(onSubmit)} className="flex-grow flex flex-col overflow-hidden">
-              <ScrollArea style={{direction: true}} className="flex-grow pr-1 -mr-2">
-                <Table className="text-xs">
-                  <TableHeader>
-                    <TableRow>
-                      {/* <TableHead className="w-[180px]">{"نص"}</TableHead> */}
-                      <TableHead className="w-[200px]">{"نوع التكلفة"}</TableHead>
-                      <TableHead className="w-[150px]">{"التعريف"}</TableHead>
-                      <TableHead className="w-[120px] text-center">{"المبلغ"}</TableHead>
-                      <TableHead className="w-[90px] text-center">{"الإجراءات"}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {fields.map((fieldItem, index) => (
-                      <TableRow key={fieldItem.id}>
-                        {/* <TableCell className="py-1">
-                          <FormField control={control} name={`costs.${index}.name`} render={({ field: f }) => (
-                            <Input {...f} className="h-7 text-xs" placeholder={"اسم التكلفة"} />
-                          )}/>
-                        </TableCell> */}
-                        <TableCell className="py-1">
-                           <FormField control={control} name={`costs.${index}.service_cost_id`} render={({ field: f }) => (
-                              <Select 
-                                value={f.value || ""} 
-                                onValueChange={(value) => {
-                                  f.onChange(value);
-                                  handleDefinitionChange(index, value);
-                                }} 
-                                dir={true}
+          <form onSubmit={handleSubmit(onSubmit)}>
+            <Box sx={{ overflow: 'auto', maxHeight: '60vh' }}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ width: 200 }}>نوع التكلفة</TableCell>
+                    <TableCell sx={{ width: 180 }}>التعريف</TableCell>
+                    <TableCell align="center" sx={{ width: 120 }}>المبلغ</TableCell>
+                    <TableCell align="center" sx={{ width: 100 }}>الإجراءات</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {fields.map((fieldItem, index) => (
+                    <TableRow key={fieldItem.id}>
+                      <TableCell>
+                        <Controller
+                          control={control}
+                          name={`costs.${index}.service_cost_id`}
+                          render={({ field }) => (
+                            <FormControl size="small" fullWidth>
+                              <InputLabel id={`service-cost-${index}`}>اختر التعريف</InputLabel>
+                              <Select
+                                labelId={`service-cost-${index}`}
+                                label="اختر التعريف"
+                                value={field.value || ''}
+                                onChange={(e) => {
+                                  field.onChange(e.target.value);
+                                  handleDefinitionChange(index, String(e.target.value));
+                                }}
                               >
-                                 <SelectTrigger className="h-7 text-xs"><SelectValue placeholder={"اختر التعريف"} /></SelectTrigger>
-                                 <SelectContent>
-                                    {serviceCostDefinitions.map(def => (
-                                       <SelectItem key={def.id} value={String(def.id)}>{def.name} ({def.sub_service_cost?.name || def.sub_service_cost_id})</SelectItem>
-                                    ))}
-                                 </SelectContent>
+                                {serviceCostDefinitions.map(def => (
+                                  <MenuItem key={def.id} value={String(def.id)}>{def.name} ({def.sub_service_cost?.name || def.sub_service_cost_id})</MenuItem>
+                                ))}
                               </Select>
-                           )}/>
-                        </TableCell>
-                        <TableCell className="py-1">
-                           <FormField control={control} name={`costs.${index}.sub_service_cost_id`} render={({ field: f }) => (
-                              <Select value={f.value || ""} onValueChange={f.onChange} dir={true} disabled>
-                                 <SelectTrigger className="h-7 text-xs bg-muted/50">
-                                    <SelectValue placeholder={"نوع التكلفة"} />
-                                 </SelectTrigger>
-                                 <SelectContent>
-                                    {subServiceCostTypes.map(type => (
-                                       <SelectItem key={type.id} value={String(type.id)}>{type.name}</SelectItem>
-                                    ))}
-                                 </SelectContent>
+                            </FormControl>
+                          )}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Controller
+                          control={control}
+                          name={`costs.${index}.sub_service_cost_id`}
+                          render={({ field }) => (
+                            <FormControl size="small" fullWidth>
+                              <InputLabel id={`sub-service-cost-${index}`}>نوع التكلفة</InputLabel>
+                              <Select labelId={`sub-service-cost-${index}`} label="نوع التكلفة" value={field.value || ''} onChange={field.onChange} disabled>
+                                {subServiceCostTypes.map(type => (
+                                  <MenuItem key={type.id} value={String(type.id)}>{type.name}</MenuItem>
+                                ))}
                               </Select>
-                           )}/>
-                        </TableCell>
-                        <TableCell className="py-1">
-                          <FormField control={control} name={`costs.${index}.amount`} render={({ field: f }) => (
-                            <Input type="number" {...f} value={f.value || ''} className="h-7 text-xs text-center" placeholder={"المبلغ"} />
-                          )}/>
-                        </TableCell>
-                        <TableCell className="py-1 text-center">
-                            <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleSaveRow(index)} disabled={saveOrUpdateMutation.isPending}>
-                                {saveOrUpdateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4 text-green-600"/>}
-                            </Button>
-                            <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => fieldItem.id ? deleteReqServiceCostMutation.mutate(Number(fieldItem.id)) : remove(index)} disabled={deleteReqServiceCostMutation.isPending && deleteReqServiceCostMutation.variables === Number(fieldItem.id)}>
-                                {deleteReqServiceCostMutation.isPending && deleteReqServiceCostMutation.variables === Number(fieldItem.id) ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4"/>}
-                            </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </ScrollArea>
-              <div className="pt-2 flex justify-start">
-                <Button type="button" variant="outline" size="sm" onClick={addNewCostField} className="text-xs">
-                  <PlusCircle className="h-3.5 w-3.5 ltr:mr-1 rtl:ml-1"/> {"إضافة تكلفة"}
-                </Button>
-              </div>
-              <DialogFooter className="mt-auto pt-4">
-                <DialogClose asChild><Button type="button" variant="outline">{"إغلاق"}</Button></DialogClose>
-              </DialogFooter>
-            </form>
-          </Form>
+                            </FormControl>
+                          )}
+                        />
+                      </TableCell>
+                      <TableCell align="center">
+                        <Controller
+                          control={control}
+                          name={`costs.${index}.amount`}
+                          render={({ field }) => (
+                            <TextField type="number" size="small" value={field.value || ''} onChange={field.onChange} placeholder="المبلغ" inputProps={{ inputMode: 'decimal' }} />
+                          )}
+                        />
+                      </TableCell>
+                      <TableCell align="center">
+                        <Button type="button" onClick={() => handleSaveRow(index)} disabled={saveOrUpdateMutation.isPending} size="small" variant="outlined" sx={{ mr: 1 }}>
+                          {saveOrUpdateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4" />}
+                        </Button>
+                        <Button type="button" color="error" variant="outlined" size="small" onClick={() => fieldItem.id ? deleteReqServiceCostMutation.mutate(Number(fieldItem.id)) : remove(index)} disabled={deleteReqServiceCostMutation.isPending && deleteReqServiceCostMutation.variables === Number(fieldItem.id)}>
+                          {deleteReqServiceCostMutation.isPending && deleteReqServiceCostMutation.variables === Number(fieldItem.id) ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4" />}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Box>
+            <Box mt={2} display="flex" justifyContent="flex-start">
+              <Button type="button" variant="outlined" size="small" onClick={addNewCostField}>
+                <PlusCircle className="h-4 w-4" style={{ marginInlineEnd: 6 }} /> {"إضافة تكلفة"}
+              </Button>
+            </Box>
+          </form>
         )}
       </DialogContent>
+      <DialogActions>
+        <Button onClick={() => onOpenChange(false)} variant="outlined">إغلاق</Button>
+      </DialogActions>
     </Dialog>
   );
 };

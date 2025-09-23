@@ -28,6 +28,7 @@ import type { Patient, PatientSearchResult } from '@/types/patients';
 import type { Company, CompanyRelation, Subcompany } from '@/types/companies';
 import type { DoctorShift } from '@/types/doctors';
 import apiClient from '@/services/api';
+import PatientHistoryTable from '@/components/lab/reception/PatientHistoryTable';
 
 interface PatientRegistrationFormProps {
   onPatientRegistered: (patient: Patient) => void;
@@ -106,6 +107,7 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
   const [searchResults, setSearchResults] = useState<PatientSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const [showPatientHistory, setShowPatientHistory] = useState(false);
 
   // Dialog state
   const [showSubcompanyDialog, setShowSubcompanyDialog] = useState(false);
@@ -217,8 +219,13 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
       setSearchQuery(value);
       if (value.length >= 2) {
         setShowSearchResults(true);
+        // Show patient history table when typing in phone field
+        if (field === 'phone') {
+          setShowPatientHistory(true);
+        }
       } else {
         setShowSearchResults(false);
+        setShowPatientHistory(false);
       }
     }
   };
@@ -350,6 +357,48 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
         company_relation_id: '',
       });
       setShowSearchResults(false);
+      setShowPatientHistory(false);
+      setSearchQuery('');
+      
+    } catch (error: unknown) {
+      console.error('Failed to create visit:', error);
+      setAlert({ type: 'error', message: 'حدث خطأ' });
+    }
+  };
+
+  const handleSelectPatientFromHistory = async (patientId: number, doctorId: number, companyId?: number) => {
+    if (!activeDoctorShift?.doctor_id) {
+      setAlert({ type: 'error', message: 'حدث خطأ' });
+      return;
+    }
+
+    try {
+      const response = await axios.post('/api/visits', { 
+        patient_id: patientId, 
+        doctor_shift_id: activeDoctorShift.id,
+        company_id: companyId
+      });
+
+      const newDoctorVisit = response.data.data;
+      onPatientRegistered(newDoctorVisit.patient as Patient);
+      
+      // Reset form
+      setFormData({
+        name: '',
+        phone: '0',
+        gender: 'female',
+        age_year: '',
+        age_month: '',
+        age_day: '',
+        address: '',
+        company_id: '',
+        insurance_no: '',
+        guarantor: '',
+        subcompany_id: '',
+        company_relation_id: '',
+      });
+      setShowSearchResults(false);
+      setShowPatientHistory(false);
       setSearchQuery('');
       
     } catch (error: unknown) {
@@ -592,6 +641,18 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
           </Box>
         </CardContent>
       </Card>
+
+      {/* Patient History Table - shown when typing in phone field */}
+      {showPatientHistory && (
+        <Box sx={{ mt: 2 }}>
+          <PatientHistoryTable
+            searchResults={searchResults}
+            isLoading={isSearching}
+            onSelectPatient={handleSelectPatientFromHistory}
+            referringDoctor={activeDoctorShift ? { id: activeDoctorShift.doctor_id || 0, name: activeDoctorShift.doctor_name || '' } : null}
+          />
+        </Box>
+      )}
 
       {/* Search Results Dialog */}
       <Dialog 

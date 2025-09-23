@@ -225,11 +225,11 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ vis
             currentClinicShiftId={currentClinicShift?.id ?? null}
             onAddMoreServices={() => setShowServiceSelectionGrid(true)}
           />
-          <RequestedServicesSummary
+          {/* <RequestedServicesSummary
             requestedServices={requestedServices || []}
             visit={visit}
             className="max-w-sm ml-auto mr-auto sm:mr-0 sm:ml-auto"
-          />
+          /> */}
         </div>
       )}
     </div>

@@ -253,7 +253,12 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                      
                         </TableCell>
                         <TableCell align="center" sx={{ py: 1.25 }}>
-                          {formatNumber(price)}
+                          <Box display="inline-flex" alignItems="center" gap={0.75}>
+                            <span>{formatNumber(price)}</span>
+                            {Number(rs.count) > 0 && (
+                              <Typography component="span" variant="caption" color="text.secondary">x {Number(rs.count)}</Typography>
+                            )}
+                          </Box>
                         </TableCell>
                         <TableCell align="center" sx={{ py: 1.25, color: 'success.main' }}>
                           {formatNumber(rs.amount_paid)}

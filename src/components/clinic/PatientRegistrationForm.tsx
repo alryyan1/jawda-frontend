@@ -332,7 +332,7 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
     }
 
     try {
-      const response = await apiClient.post('/visits', { 
+      const response = await apiClient.post('/doctor-visits', { 
         patient_id: patientId, 
         doctor_shift_id: activeDoctorShift.id,
         company_id: companyId

@@ -196,7 +196,7 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
   const searchPatients = async (query: string) => {
     try {
       setIsSearching(true);
-      const response = await apiClient.get(`/patients/search-existing?q=${encodeURIComponent(query)}`);
+      const response = await apiClient.get(`/patients/search-existing?term=${encodeURIComponent(query)}`);
       setSearchResults(response.data.data || []);
     } catch (error) {
       console.error('Error searching patients:', error);

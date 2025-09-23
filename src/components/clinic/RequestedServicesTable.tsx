@@ -253,10 +253,12 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                      
                         </TableCell>
                         <TableCell align="center" sx={{ py: 1.25 }}>
-                          <Box display="inline-flex" alignItems="center" gap={0.75}>
+                          <Box display="flex" flexDirection="column" alignItems="center" lineHeight={1}>
                             <span>{formatNumber(price)}</span>
-                            {Number(rs.count) > 0 && (
-                              <Typography component="span" variant="caption" color="text.secondary">x {Number(rs.count)}</Typography>
+                            {Number(rs.count) > 1 && (
+                              <Typography component="span" variant="caption" color="error" sx={{ mt: 0.25 }}>
+                                x {Number(rs.count)}
+                              </Typography>
                             )}
                           </Box>
                         </TableCell>

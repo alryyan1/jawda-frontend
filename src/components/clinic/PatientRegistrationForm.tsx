@@ -183,7 +183,7 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
   const loadCompanyRelations = async () => {
     try {
       setIsLoadingRelations(true);
-      const response = await axios.get('/api/company-relations');
+      const response = await apiClient.get('/company-relations');
       setCompanyRelations(response.data.data || []);
     } catch (error) {
       console.error('Error loading company relations:', error);
@@ -196,7 +196,7 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
   const searchPatients = async (query: string) => {
     try {
       setIsSearching(true);
-      const response = await axios.get(`/api/patients/search?q=${encodeURIComponent(query)}`);
+      const response = await apiClient.get(`/patients/search-existing?q=${encodeURIComponent(query)}`);
       setSearchResults(response.data.data || []);
     } catch (error) {
       console.error('Error searching patients:', error);
@@ -335,7 +335,7 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
     }
 
     try {
-      const response = await axios.post('/api/visits', { patient_id: patientId, doctor_shift_id: activeDoctorShift.id });
+      const response = await apiClient.post('/visits', { patient_id: patientId, doctor_shift_id: activeDoctorShift.id });
 
       const newDoctorVisit = response.data.data;
       setAlert({ type: 'error', message: 'حدث خطأ' });
@@ -366,14 +366,14 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
     }
   };
 
-  const handleSelectPatientFromHistory = async (patientId: number, doctorId: number, companyId?: number) => {
+  const handleSelectPatientFromHistory = async (patientId: number, _doctorId: number, companyId?: number) => {
     if (!activeDoctorShift?.doctor_id) {
       setAlert({ type: 'error', message: 'حدث خطأ' });
       return;
     }
 
     try {
-      const response = await axios.post('/api/visits', { 
+      const response = await apiClient.post('/visits', { 
         patient_id: patientId, 
         doctor_shift_id: activeDoctorShift.id,
         company_id: companyId

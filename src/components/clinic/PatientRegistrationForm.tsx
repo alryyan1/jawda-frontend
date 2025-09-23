@@ -335,6 +335,8 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
       const response = await apiClient.post('/doctor-visits', { 
         patient_id: patientId, 
         doctor_shift_id: activeDoctorShift.id,
+        doctor_id: activeDoctorShift.doctor_id,
+        visit_date: new Date().toISOString().split('T')[0],
         company_id: companyId
       });
 

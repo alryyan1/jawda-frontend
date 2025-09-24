@@ -234,6 +234,16 @@ const response = await apiClient.post<{ message: string; imported_count: number 
 return response.data;
 };
 
+export const copyMainTestContractsFromCompany = async (
+  targetCompanyId: number,
+  sourceCompanyId: number
+): Promise<{ message: string; copied_count: number }> => {
+  const response = await apiClient.post<{ message: string; copied_count: number }>(
+    `${API_URL}/${targetCompanyId}/copy-main-test-contracts-from/${sourceCompanyId}`
+  );
+  return response.data;
+};
+
 export const createSubcompany = async (data: SubcompanyCreateData): Promise<Subcompany> => {
   const response = await apiClient.post<{ data: Subcompany }>(`${API_URL}/${data.company_id}/subcompanies`, data);
   return response.data.data;

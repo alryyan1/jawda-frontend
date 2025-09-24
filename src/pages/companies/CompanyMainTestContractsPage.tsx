@@ -25,6 +25,14 @@ import {
   Pagination,
   Stack,
   CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import {
   ArrowBack as ArrowLeft,
@@ -32,6 +40,8 @@ import {
   Delete as Trash2,
   Refresh as RefreshCw,
   Print as Printer,
+  FileUpload as ImportIcon,
+  ContentCopy as CopyIcon,
 } from '@mui/icons-material';
 
 // Services & Types
@@ -41,6 +51,9 @@ import {
   updateCompanyMainTestContract,
   removeMainTestFromCompanyContract,
   generateCompanyMainTestContractPdf,
+  importAllMainTestsToCompanyContract,
+  copyMainTestContractsFromCompany,
+  getCompaniesList,
   // ... other service imports
 } from '@/services/companyService';
 import type { Company, CompanyMainTestFormData, PaginatedCompanyMainTestContractsResponse } from '@/types/companies';
@@ -74,6 +87,10 @@ const CompanyMainTestContractsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
   const [isPrinting, setIsPrinting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [isCopying, setIsCopying] = useState(false);
+  const [isCopyDialogOpen, setIsCopyDialogOpen] = useState(false);
+  const [selectedSourceCompanyId, setSelectedSourceCompanyId] = useState<number | ''>('');
   // const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 
   // Reset to page 1 when search term changes
@@ -95,6 +112,13 @@ const CompanyMainTestContractsPage: React.FC = () => {
     queryFn: () => getCompanyContractedMainTests(Number(companyId), currentPage, { search: debouncedSearchTerm }),
     placeholderData: keepPreviousData,
     enabled: !!companyId,
+  });
+
+  // Fetch companies list for copy dialog
+  const { data: companiesList } = useQuery<Company[], Error>({
+    queryKey: ['companiesList'],
+    queryFn: () => getCompaniesList({ status: true }), // Only active companies
+    enabled: isCopyDialogOpen,
   });
 
   // --- React Hook Form Setup ---
@@ -214,6 +238,51 @@ const CompanyMainTestContractsPage: React.FC = () => {
     }
   };
 
+  // Import tests function
+  const handleImportTests = async () => {
+    if (!companyId) return;
+    
+    setIsImporting(true);
+    try {
+      const result = await importAllMainTestsToCompanyContract(Number(companyId));
+      toast.success(result.message);
+      // Refresh the contracts list to show the newly imported tests
+      queryClient.invalidateQueries({ queryKey: contractsQueryKey });
+    } catch (error) {
+      console.error('Import error:', error);
+      const errorMessage = (error as Error & { response?: { data?: { message?: string } } }).response?.data?.message || "فشل في استيراد الفحوصات";
+      toast.error(errorMessage);
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  // Copy contract function
+  const handleCopyContract = () => {
+    setIsCopyDialogOpen(true);
+  };
+
+  // Execute copy contract
+  const handleExecuteCopy = async () => {
+    if (!companyId || !selectedSourceCompanyId) return;
+    
+    setIsCopying(true);
+    try {
+      const result = await copyMainTestContractsFromCompany(Number(companyId), Number(selectedSourceCompanyId));
+      toast.success(result.message);
+      // Refresh the contracts list to show the newly copied tests
+      queryClient.invalidateQueries({ queryKey: contractsQueryKey });
+      setIsCopyDialogOpen(false);
+      setSelectedSourceCompanyId('');
+    } catch (error) {
+      console.error('Copy error:', error);
+      const errorMessage = (error as Error & { response?: { data?: { message?: string } } }).response?.data?.message || "فشل في نسخ العقد";
+      toast.error(errorMessage);
+    } finally {
+      setIsCopying(false);
+    }
+  };
+
   // Pagination handlers
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -264,6 +333,24 @@ const CompanyMainTestContractsPage: React.FC = () => {
             startIcon={isLoading ? <CircularProgress size={16} /> : <RefreshCw />}
           >
             تحديث
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={handleImportTests}
+            disabled={isImporting || isLoading}
+            startIcon={isImporting ? <CircularProgress size={16} /> : <ImportIcon />}
+          >
+            استيراد الفحوصات
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={handleCopyContract}
+            disabled={isCopying || isLoading}
+            startIcon={isCopying ? <CircularProgress size={16} /> : <CopyIcon />}
+          >
+            نسخ العقد
           </Button>
           <Button
             size="small"
@@ -511,6 +598,57 @@ const CompanyMainTestContractsPage: React.FC = () => {
           عرض {meta.from} إلى {meta.to} من أصل {meta.total} نتيجة
         </Typography>
       )}
+
+      {/* Copy Contract Dialog */}
+      <Dialog 
+        open={isCopyDialogOpen} 
+        onClose={() => setIsCopyDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>نسخ عقود الفحوصات</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            اختر الشركة التي تريد نسخ عقود الفحوصات منها إلى {company?.name}
+          </Typography>
+          <FormControl fullWidth>
+            <InputLabel>الشركة المصدر</InputLabel>
+            <Select
+              value={selectedSourceCompanyId}
+              onChange={(e) => setSelectedSourceCompanyId(e.target.value as number)}
+              label="الشركة المصدر"
+            >
+              {companiesList?.filter(c => c.id !== Number(companyId)).map((company) => (
+                <MenuItem key={company.id} value={company.id}>
+                  {company.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <Typography variant="body2" color="warning.main" sx={{ mt: 2 }}>
+            ⚠️ سيتم استبدال جميع عقود الفحوصات الحالية للشركة المستهدفة
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => {
+              setIsCopyDialogOpen(false);
+              setSelectedSourceCompanyId('');
+            }}
+            disabled={isCopying}
+          >
+            إلغاء
+          </Button>
+          <Button 
+            onClick={handleExecuteCopy}
+            variant="contained"
+            disabled={!selectedSourceCompanyId || isCopying}
+            startIcon={isCopying ? <CircularProgress size={16} /> : <CopyIcon />}
+          >
+            {isCopying ? 'جاري النسخ...' : 'نسخ العقود'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* <AddMainTestToContractDialog
         isOpen={isAddDialogOpen}

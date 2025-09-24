@@ -183,7 +183,6 @@ const DoctorShiftsReportPage: React.FC = () => {
   const { data: usersForFilterResponse, isLoading: isLoadingUsers } = useQuery({
     queryKey: ["usersListForDSRFilter"],
     queryFn: () => getUsers(1, { per_page: 200 }),
-    enabled: canViewAllUsersShifts,
   });
   const usersForFilter = useMemo(
     () => usersForFilterResponse?.data || [],

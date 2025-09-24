@@ -13,6 +13,7 @@ import type { Patient } from '@/types/patients';
 import { getActiveDoctorShifts } from '@/services/clinicService';
 import './DoctorsTabs.css';
 import showJsonDialog from '@/lib/showJsonDialog';
+import { useAuthorization } from '@/hooks/useAuthorization';
 
 interface DoctorsTabsProps {
   onShiftSelect: (shift: DoctorShift | null) => void;
@@ -23,7 +24,7 @@ interface DoctorsTabsProps {
 const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId }) => {
   const { currentClinicShift, user } = useAuth();
   const tabRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
-
+  const { hasRole } = useAuthorization();
   // Use React Query to fetch doctor shifts
   // This will automatically update when shifts are opened/closed from ManageDoctorShiftsDialog
   const { 
@@ -109,7 +110,7 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId 
       }} className="doctors-tabs-flex-wrapper">
     
           <Box className="doctors-tabs-flex-container">
-            {doctorShifts.filter(shift =>shift.user_id_opened == user?.id).map((shift) => {
+            {doctorShifts.filter(shift =>shift.user_id_opened == user?.id || hasRole('admin')).map((shift) => {
               const isActive = activeShiftId === shift.id;
               const isExamining = shift.is_examining;
 

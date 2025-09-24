@@ -7,6 +7,7 @@ import { Typography } from "@mui/material";
 import type { Doctor } from "@/types/doctors";
 import type { User } from "@/types/auth";
 import type { Shift as GeneralShiftType } from "@/types/shifts";
+import showJsonDialog from "@/lib/showJsonDialog";
 
 interface Filters {
   userIdOpened: string;
@@ -45,14 +46,14 @@ const DoctorShiftsReportFilters: React.FC<DoctorShiftsReportFiltersProps> = ({
   canViewAllUsersShifts,
 }) => {
   const dateLocale = arSA;
-
+//  showJsonDialog(usersForFilter, "usersForFilter");
   return (
     <Card>
       <CardHeader title={<Typography variant="h6">مرشحات التقرير</Typography>} />
       <CardContent>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 items-end">
           {/* User Opened By Filter */}
-          {canViewAllUsersShifts && (
+          
             <div className="min-w-[150px]">
               <Autocomplete<AutocompleteOption>
                 id="dsr-user-filter"
@@ -100,7 +101,7 @@ const DoctorShiftsReportFilters: React.FC<DoctorShiftsReportFiltersProps> = ({
                 )}
               />
             </div>
-          )}
+          
           
           {/* Doctor Filter */}
           <div className="min-w-[150px]">

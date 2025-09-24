@@ -5,6 +5,9 @@ import {
   Divider,
   Box,
   IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
 } from "@mui/material";
 import {
   GridView as LayoutGrid,
@@ -20,7 +23,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import ManageDoctorShiftsDialog from "./ManageDoctorShiftsDialog";
 import DoctorCredits from "./DoctorCredits";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+// Removed shadcn dialog in favor of MUI Dialog
 import { useAuth } from "@/contexts/AuthContext";
 import ShiftSummaryDialog from "./ShiftSummaryDialog";
 import type { DoctorShift } from "@/types/doctors";
@@ -37,7 +40,7 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
   showRegistrationForm,
   onToggleRegistrationForm,
 }) => {
-  const { currentClinicShift } = useAuth();
+  const { currentClinicShift, user: authUser } = useAuth();
     // Placeholder permissions
   const canRegisterPatient = true;
   const canManageDoctorShifts = true;
@@ -146,13 +149,14 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
         />
       )}
 
-      {/* Doctor Credits Dialog */}
-      <Dialog open={isDoctorCreditsOpen} onOpenChange={setIsDoctorCreditsOpen}>
-        <DialogContent className="sm:max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>استحقاقات الأطباء</DialogTitle>
-          </DialogHeader>
-          <DoctorCredits />
+      {/* Doctor Credits Dialog (MUI) */}
+      <Dialog open={isDoctorCreditsOpen} onClose={() => setIsDoctorCreditsOpen(false)} fullWidth maxWidth="lg">
+        <DialogTitle>استحقاقات الأطباء</DialogTitle>
+        <DialogContent dividers>
+          <DoctorCredits
+            setAllMoneyUpdatedLab={() => {}}
+            user={{ id: authUser?.id ?? 0, isAdmin: !!authUser?.roles?.some(r => r.name === 'admin') }}
+          />
         </DialogContent>
       </Dialog>
       

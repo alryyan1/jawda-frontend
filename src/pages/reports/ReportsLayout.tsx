@@ -20,7 +20,7 @@ const reportNavItems = [
   { to: '/reports/lab-general', label: 'تقرير المختبر العام', icon: BarChartBig },
   { to: '/reports/doctor-shifts', label: 'مناوبات الأطباء', icon: FileBarChart2 },
   { to: '/reports/service-statistics', label: 'إحصائيات الخدمات', icon: FileBarChart2 },
-  { to: '/reports/clinic-shift-summary', label: 'ملخص مناوبة العيادة', icon: FileSpreadsheet },
+  { to: '/reports/clinic-shift-summary', label: 'التقرير العام للعيادات', icon: FileSpreadsheet },
   { to: '/reports/costs', label: 'تقرير التكاليف', icon: FileSpreadsheet },
   { to: '/reports/monthly-service-income', label: 'دخل الخدمات الشهري', icon: BarChartBig },
   { to: '/reports/service-cost-breakdown', label: 'تفصيل تكلفة الخدمات', icon: BarChartBig },

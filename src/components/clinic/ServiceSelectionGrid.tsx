@@ -137,11 +137,11 @@ const ServiceSelectionGrid: React.FC<ServiceSelectionGridProps> = ({
     }
   }, [onAddServices, selectedServiceIds]);
 
-  // Pressing Enter anywhere (except in the numeric ID input which has its own handler)
+  // Pressing Plus key anywhere (except in the numeric ID input which has its own handler)
   // should trigger adding selected services if any are selected
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== 'Enter') return;
+      if (e.key !== '+' && e.key !== '=') return; // Support both + and = keys (same key on most keyboards)
       const target = e.target as HTMLElement | null;
       const isTextInput = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.getAttribute('contenteditable') === 'true');
       const isServiceIdInput = target instanceof HTMLInputElement && target.type === 'number' && target.placeholder?.includes('رقم الخدمة');

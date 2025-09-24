@@ -158,6 +158,7 @@ const LabWorkstationPage: React.FC = () => {
   const [selectedLabHistoryItem, setSelectedLabHistoryItem] = useState<LabHistoryItem | null>(null);
   const [isLoadingLabHistory, setIsLoadingLabHistory] = useState(false);
 
+
   // New Payment Badge State
   const [newPaymentBadges, setNewPaymentBadges] = useState<Set<number>>(new Set());
 
@@ -569,6 +570,7 @@ const LabWorkstationPage: React.FC = () => {
     //   queryKey: ["labPendingQueue", currentShiftForQueue?.id, ""],
     // });
   }, []);
+
 
 
   const handleSearchByVisitIdEnter = (
@@ -1126,7 +1128,7 @@ const LabWorkstationPage: React.FC = () => {
               initialLabRequest={selectedLabRequestForEntry}
               onResultsSaved={handleResultsSaved}
               patientAuthDate={selectedQueueItem?.result_auth}
-              onChildTestFocus={() => {}} // Empty function since we removed the handler
+              onChildTestFocus={() => {}} // Empty function since we're handling focus internally
             />
           ) : (
             <div className="flex-grow flex items-center justify-center p-10 text-center">

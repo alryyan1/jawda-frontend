@@ -347,9 +347,12 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                   <Box>
                     <Typography variant="caption" fontWeight={600}>نسبة الخصم</Typography>
                     <Select size="small" value={rowOptionsData.discount_per} onChange={(e) => setRowOptionsData({ ...rowOptionsData, discount_per: Number(e.target.value) })}>
-                      {Array.from({ length: 101 }).map((_, i) => (
-                        <MenuItem key={i} value={i}>{i}%</MenuItem>
-                      ))}
+                      {Array.from({ length: 11 }).map((_, i) => {
+                        const value = i * 10;
+                        return (
+                          <MenuItem key={value} value={value}>{value}%</MenuItem>
+                        );
+                      })}
                     </Select>
                   </Box>
                 )}

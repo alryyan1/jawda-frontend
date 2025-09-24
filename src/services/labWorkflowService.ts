@@ -73,9 +73,34 @@ export const saveSingleChildTestResult = async (
   );
   return response.data.data; // Assuming Laravel Resource wrapping
 };
+
+// Dedicated method to update normal range in requested_results table
+export const updateNormalRange = async (
+  labRequestId: number,
+  childTestId: number,
+  normalRange: string
+): Promise<RequestedResult> => {
+  const response = await apiClient.patch<{ data: RequestedResult }>(
+    `/labrequests/${labRequestId}/childtests/${childTestId}/normal-range`,
+    { normal_range: normalRange }
+  );
+  return response.data.data;
+};
 export const setLabRequestResultsToDefault = async (labRequestId: number): Promise<LabRequest> => {
   const response = await apiClient.post<{ data: LabRequest }>(
     `/labrequests/${labRequestId}/set-default-results`
   );
   return response.data.data; // Assuming Laravel Resource wrapping
+};
+
+// Update lab request comment
+export const updateLabRequestComment = async (
+  labRequestId: number,
+  comment: string
+): Promise<LabRequest> => {
+  const response = await apiClient.patch<{ data: LabRequest }>(
+    `/labrequests/${labRequestId}/comment`,
+    { comment }
+  );
+  return response.data.data;
 };

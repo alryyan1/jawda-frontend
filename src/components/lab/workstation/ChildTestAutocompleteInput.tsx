@@ -282,7 +282,7 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
         onFocus={() => onFocusChange(parentChildTestModel)}
         onBlur={() => {
           onBlur();
-          onFocusChange(null);
+          // Don't call onFocusChange(null) to keep the normal range persistent
         }}
         isOptionEqualToValue={(option, val) => {
           // Handles both string and object values

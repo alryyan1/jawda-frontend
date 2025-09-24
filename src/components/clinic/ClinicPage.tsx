@@ -118,15 +118,6 @@ const handleDoctorShiftSelectedFromFinder = useCallback((shift: DoctorShift) => 
             patientDetailsRef.current?.triggerPayAll();
           }
         }
-      } else if (
-        event.key === '+' ||
-        event.key === '=' && event.shiftKey ||
-        event.code === 'NumpadAdd'
-      ) {
-        // Plus key should open the registration form like the ActionsPane button
-        event.preventDefault();
-        setShowRegistrationForm(true);
-        setSelectedPatientVisit(null);
       }
     };
 

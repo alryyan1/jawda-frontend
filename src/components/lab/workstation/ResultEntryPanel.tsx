@@ -23,10 +23,17 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
+import CircularProgress from "@mui/material/CircularProgress";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
+import Button from "@mui/material/Button";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Form } from "@/components/ui/form";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 
 import type { LabRequest } from "@/types/visits";
 import type { ChildTestOption } from "@/types/labTests";
@@ -39,6 +46,8 @@ import {
   getLabRequestForEntry,
   saveSingleChildTestResult,
   saveLabResults,
+  updateNormalRange,
+  updateLabRequestComment,
   type SingleResultSavePayload,
 } from "@/services/labWorkflowService";
 
@@ -92,6 +101,12 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
   const [fieldSaveStatus, setFieldSaveStatus] = useState<
     Record<string, FieldSaveStatus>
   >({});
+  const [selectedChildTestIndex, setSelectedChildTestIndex] = useState<number | null>(null);
+  const [normalRangeInput, setNormalRangeInput] = useState<string>("");
+  const [isSavingNormalRange, setIsSavingNormalRange] = useState(false);
+  const [commentDialogOpen, setCommentDialogOpen] = useState(false);
+  const [commentInput, setCommentInput] = useState<string>("");
+  const [isSavingComment, setIsSavingComment] = useState(false);
   
   // Ref to track the first input field for auto-focus
   const firstInputRef = useRef<HTMLInputElement | null>(null);
@@ -352,8 +367,100 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
     }
   }, [testDataForEntry]);
 
+  // Clear selected child test index when test data changes (new lab request)
+  useEffect(() => {
+    setSelectedChildTestIndex(null);
+    setNormalRangeInput("");
+  }, [testDataForEntry]);
+
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) =>
     setActiveTab(newValue);
+
+  // Custom handler for child test focus that sets the selected index
+  const handleChildTestFocus = useCallback((childTest: ChildTestWithResult | null, index: number) => {
+    if (childTest) {
+      setSelectedChildTestIndex(index);
+      // Set the current normal range value when selecting a child test
+      // Use normal_range from requested_results table as the default value
+      setNormalRangeInput(childTest.normal_range || "");
+    }
+    // Don't clear the selected index on blur - keep it persistent
+    // Also call the parent's onChildTestFocus for any other functionality
+    onChildTestFocus(childTest);
+  }, [onChildTestFocus]);
+
+  // Handler for row click to show normal range
+  const handleRowClick = useCallback((childTest: ChildTestWithResult, index: number) => {
+    setSelectedChildTestIndex(index);
+    setNormalRangeInput(childTest.normal_range || "");
+    onChildTestFocus(childTest);
+  }, [onChildTestFocus]);
+
+  // Debounced save function for normal range updates
+  const debouncedSaveNormalRange = useCallback(
+    debounce(async (newNormalRange: string) => {
+      if (!initialLabRequest.id || selectedChildTestIndex === null || !testDataForEntry?.child_tests_with_results[selectedChildTestIndex]) return;
+      
+      const childTest = testDataForEntry.child_tests_with_results[selectedChildTestIndex];
+      if (!childTest.id) return;
+      
+      setIsSavingNormalRange(true);
+      try {
+        await updateNormalRange(initialLabRequest.id, childTest.id, newNormalRange);
+        toast.success("تم حفظ النطاق الطبيعي بنجاح");
+        // Update the local state to reflect the saved value
+        childTest.normal_range = newNormalRange;
+      } catch (error: unknown) {
+        console.error('Failed to save normal range:', error);
+        const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Unknown error';
+        toast.error("فشل حفظ النطاق الطبيعي", {
+          description: errorMessage,
+        });
+      } finally {
+        setIsSavingNormalRange(false);
+      }
+    }, 1000),
+    [initialLabRequest.id, selectedChildTestIndex, testDataForEntry]
+  );
+
+  // Handle normal range input change
+  const handleNormalRangeChange = useCallback((value: string) => {
+    setNormalRangeInput(value);
+    debouncedSaveNormalRange(value);
+  }, [debouncedSaveNormalRange]);
+
+  // Comment dialog handlers
+  const handleOpenCommentDialog = useCallback(() => {
+    setCommentInput(initialLabRequest.comment || "");
+    setCommentDialogOpen(true);
+  }, [initialLabRequest.comment]);
+
+  const handleCloseCommentDialog = useCallback(() => {
+    setCommentDialogOpen(false);
+    setCommentInput("");
+  }, []);
+
+  const handleSaveComment = useCallback(async () => {
+    if (!initialLabRequest.id) return;
+    
+    setIsSavingComment(true);
+    try {
+      await updateLabRequestComment(initialLabRequest.id, commentInput);
+      toast.success("تم حفظ التعليق بنجاح");
+      setCommentDialogOpen(false);
+      // Update the local lab request object
+      initialLabRequest.comment = commentInput;
+      onResultsSaved(initialLabRequest);
+    } catch (error: unknown) {
+      console.error('Failed to save comment:', error);
+      const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Unknown error';
+      toast.error("فشل حفظ التعليق", {
+        description: errorMessage,
+      });
+    } finally {
+      setIsSavingComment(false);
+    }
+  }, [initialLabRequest, commentInput, onResultsSaved]);
 
 
   // Generate field names for consistent access
@@ -485,6 +592,22 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
 
         <Form {...form}>
           <form className="flex-grow flex flex-col overflow-hidden">
+            {/* Comment Button */}
+            <div className="mb-3 flex justify-end">
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={handleOpenCommentDialog}
+                sx={{
+                  fontSize: "0.75rem",
+                  padding: "4px 12px",
+                  minWidth: "auto",
+                }}
+              >
+                {initialLabRequest.comment ? "تعديل التعليق" : "إضافة تعليق"}
+              </Button>
+            </div>
+            
             <CustomTabPanel value={activeTab} index={0}>
               <ScrollArea className="h-[calc(100vh-200px)] pr-1">
                 {testDataForEntry.child_tests_with_results.length === 0 ? (
@@ -575,14 +698,19 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                             return (
                               <TableRow
                                 key={ctResult.id || `new-${index}`}
+                                onClick={() => handleRowClick(ctResult, index)}
                                 sx={{
                                   "&:last-child td, &:last-child th": {
                                     border: 0,
                                   },
                                   "&:hover": {
                                     backgroundColor: "var(--muted)",
+                                    cursor: "pointer",
                                   },
                                   backgroundColor: "var(--background)",
+                                  cursor: "pointer",
+                                  borderLeft: selectedChildTestIndex === index ? "4px solid #3b82f6" : "4px solid transparent",
+                                  transition: "all 0.2s ease-in-out",
                                 }}
                               >
                                 <TableCell
@@ -640,7 +768,10 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                                       fieldState: { error },
                                     }) =>
                                       
-                                        <div style={{ fontSize: "0.75rem" }}>
+                                        <div 
+                                          style={{ fontSize: "0.75rem" }}
+                                          onClick={(e) => e.stopPropagation()}
+                                        >
                                           <ChildTestAutocompleteInput
                                             key={`${ctResult.id}-${ctResult.result_id}`}
                                             value={field.value as string | ChildTestOption | null}
@@ -653,7 +784,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                                               ctResult.child_test_name
                                             }
                                             parentChildTestModel={ctResult}
-                                            onFocusChange={onChildTestFocus}
+                                            onFocusChange={(childTest) => handleChildTestFocus(childTest, index)}
                                             inputRef={isFirstInput ? firstInputRef : undefined}
                                             patientAuthDate={patientAuthDate}
                                           />
@@ -668,9 +799,53 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                         )}
                       </TableBody>
                     </Table>
+                        {/* Normal Range Display */}
+             
                   </TableContainer>
                 )}
+
+{selectedChildTestIndex !== null && testDataForEntry?.child_tests_with_results[selectedChildTestIndex] && (
+                <div className="mt-4 p-3 bg-muted/50 rounded-lg border mt-2">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Typography
+                      variant="subtitle2"
+                      sx={{
+                        fontWeight: 600,
+                        fontSize: "0.8rem",
+                        color: "var(--foreground)",
+                      }}
+                    >
+                      النطاق الطبيعي لـ {testDataForEntry.child_tests_with_results[selectedChildTestIndex].child_test_name}
+                    </Typography>
+                  </div>
+                  <div className="relative">
+                    <Textarea
+                      value={normalRangeInput}
+                      onChange={(e) => handleNormalRangeChange(e.target.value)}
+                      className="min-h-[60px] text-sm bg-background border-border pr-8"
+                      placeholder="أدخل النطاق الطبيعي..."
+                      style={{
+                        resize: "vertical",
+                        fontSize: "0.75rem",
+                        lineHeight: "1.4",
+                      }}
+                    />
+                    {isSavingNormalRange && (
+                      <div className="absolute top-2 right-2">
+                        <CircularProgress size={16} color="primary" />
+                      </div>
+                    )}
+                  </div>
+                  {testDataForEntry.child_tests_with_results[selectedChildTestIndex].unit_name && (
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      الوحدة: {testDataForEntry.child_tests_with_results[selectedChildTestIndex].unit_name}
+                    </div>
+                  )}
+                </div>
+              )}
               </ScrollArea>
+              
+          
             </CustomTabPanel>
 
             <CustomTabPanel value={activeTab} index={1}>
@@ -681,6 +856,56 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
           </form>
         </Form>
       </div>
+
+      {/* Comment Dialog */}
+      <Dialog
+        open={commentDialogOpen}
+        onClose={handleCloseCommentDialog}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            backgroundColor: "var(--background)",
+            border: "1px solid var(--border)",
+          },
+        }}
+      >
+        <DialogTitle sx={{ fontSize: "1rem", fontWeight: 600 }}>
+          {initialLabRequest.comment ? "تعديل تعليق طلب المختبر" : "إضافة تعليق لطلب المختبر"}
+        </DialogTitle>
+        <DialogContent>
+          <Textarea
+            value={commentInput}
+            onChange={(e) => setCommentInput(e.target.value)}
+            placeholder="أدخل تعليقك هنا..."
+            className="min-h-[120px] text-sm bg-background border-border"
+            style={{
+              resize: "vertical",
+              fontSize: "0.875rem",
+              lineHeight: "1.5",
+            }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ padding: "16px 24px" }}>
+          <Button
+            onClick={handleCloseCommentDialog}
+            variant="outlined"
+            size="small"
+            disabled={isSavingComment}
+          >
+            إلغاء
+          </Button>
+          <Button
+            onClick={handleSaveComment}
+            variant="contained"
+            size="small"
+            disabled={isSavingComment}
+            startIcon={isSavingComment ? <CircularProgress size={16} /> : null}
+          >
+            {isSavingComment ? "جاري الحفظ..." : "حفظ"}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
     </>
   );

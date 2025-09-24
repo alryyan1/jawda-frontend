@@ -72,6 +72,7 @@ export interface ChildTestWithResult { // Was part of MainTestWithChildrenResult
   result_flags?: string | null;
   result_comment?: string | null;
   is_result_authorized?: boolean;
+  normal_range?: string | null; // The normal_range from requested_results table
   // ... other result-specific fields
 }
 // ... (MainTestWithChildrenResults and ResultEntryFormValues remain similar)

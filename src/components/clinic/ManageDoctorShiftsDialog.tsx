@@ -249,6 +249,7 @@ const ManageDoctorShiftsDialog: React.FC<ManageDoctorShiftsDialogProps> = ({ tri
                               size="small"
                               variant="outlined"
                               color="primary"
+                              disabled={doc.current_doctor_shift_id == null}
                               onClick={() => handleViewReport(doc.current_doctor_shift_id!)}
                               startIcon={<PdfIcon />}
                             >

@@ -1,19 +1,40 @@
 // src/types/users.ts (or part of src/types/index.ts)
-import type { Permission, Role } from './auth';
-import type { Doctor } from './doctors'; // Assuming this is defined
+// Removed unused imports to satisfy linter
 
-// Define Role and Permission if not already in auth.ts
-// src/types/auth.ts
-
-// End of auth.ts example parts
-// src/types/users.ts (or a new reports.ts or dashboard.ts)
 export interface UserShiftIncomeSummary {
   user_id: number;
   user_name: string;
   shift_id: number;
-  total_income: number;
-  total_cash: number;
-  total_bank: number;
+
+  // Aggregated overall totals
+  total: number;            // overall income total (services + lab)
+  total_cash: number;       // overall cash collected
+  total_bank: number;       // overall bank collected
+
+  // Expenses and costs
+  total_cash_expenses: number;
+  total_bank_expenses: number;
+  total_cost: number;
+
+  // Net flows
+  net_cash: number;
+  net_bank: number;
+
+  // Nested breakdowns
+  expenses: {
+    total_cash_expenses: number;
+    total_bank_expenses: number;
+  };
+  lab_income: {
+    total: number;
+    bank: number;
+    cash: number;
+  };
+  service_income: {
+    total: number;
+    bank: number;
+    cash: number;
+  };
 }
 
 export interface Role {
@@ -65,7 +86,5 @@ export interface PaginatedUsersResponse {
   };
 }
 
-export enum UserFormMode {
-  CREATE = 'create',
-  EDIT = 'edit'
-}
+export const UserFormMode = { CREATE: 'create', EDIT: 'edit' } as const;
+export type UserFormMode = typeof UserFormMode[keyof typeof UserFormMode];

@@ -18,6 +18,13 @@ import SelectedPatientWorkspace from './SelectedPatientWorkspace';
 import PatientDetailsColumnClinic, { type PatientDetailsColumnClinicRef } from './PatientDetailsColumnClinic';
 import DoctorFinderDialog from './dialogs/DoctorFinderDialog';
 import UserShiftIncomeDialog from './UserShiftIncomeDialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 
 const ClinicPage: React.FC = () => {
   const { requestSelection } = useClinicSelection();
@@ -158,6 +165,51 @@ const handleDoctorShiftSelectedFromFinder = useCallback((shift: DoctorShift) => 
 
   const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<'services' | 'lab'>('services');
 
+  // Shift status dialog state
+  const [isShiftStatusDialogOpen, setIsShiftStatusDialogOpen] = useState(false);
+  const [shiftStatusMessage, setShiftStatusMessage] = useState<string>('');
+  const [countdown, setCountdown] = useState<number>(3);
+
+  // Subscribe to open/close general shift realtime events
+  useEffect(() => {
+    const handleOpen = (data: { user_name?: string }) => {
+      setShiftStatusMessage(`تم فتح الوردية بواسطة ${data.user_name || 'مستخدم'}. سيتم تحديث الصفحة خلال 3 ثوانٍ.`);
+      setIsShiftStatusDialogOpen(true);
+      setCountdown(3);
+    };
+    const handleClose = (data: { user_name?: string }) => {
+      setShiftStatusMessage(`تم إغلاق الوردية بواسطة ${data.user_name || 'مستخدم'}. سيتم تحديث الصفحة خلال 3 ثوانٍ.`);
+      setIsShiftStatusDialogOpen(true);
+      setCountdown(3);
+    };
+
+    realtimeService.onOpenGeneralShift(handleOpen);
+    realtimeService.onCloseGeneralShift(handleClose);
+
+    return () => {
+      realtimeService.offOpenGeneralShift(handleOpen);
+      realtimeService.offCloseGeneralShift(handleClose);
+    };
+  }, []);
+
+  // Countdown and reload effect when dialog opens
+  useEffect(() => {
+    if (!isShiftStatusDialogOpen) return;
+    setCountdown(3);
+    const interval = setInterval(() => {
+      setCountdown((c) => {
+        if (c <= 1) {
+          clearInterval(interval);
+          // Reload the page
+          window.location.reload();
+          return 0;
+        }
+        return c - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isShiftStatusDialogOpen]);
+
   return (
     <div className="clinic-page-container" dir="rtl">
       {/* Top Section: Doctors Tabs Only */}
@@ -259,6 +311,21 @@ const handleDoctorShiftSelectedFromFinder = useCallback((shift: DoctorShift) => 
           currentClinicShiftId={currentClinicShift?.id ?? null}
         />
       )}
+
+      {/* Shift Status Dialog */}
+      <Dialog open={isShiftStatusDialogOpen} onOpenChange={setIsShiftStatusDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>حالة الوردية</DialogTitle>
+            <DialogDescription>
+              {shiftStatusMessage}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="text-center text-sm text-muted-foreground mt-2">
+            سيتم إعادة تحميل الصفحة خلال {countdown} ثانية...
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

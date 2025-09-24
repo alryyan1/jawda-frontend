@@ -238,6 +238,9 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                     <TableRow>
                       <TableCell align="center">اسم الخدمة</TableCell>
                       <TableCell align="center" sx={{ width: 90 }}>السعر</TableCell>
+                      {isCompanyPatient && (
+                        <TableCell align="center" sx={{ width: 110 }}>التحمل</TableCell>
+                      )}
                       <TableCell align="center" sx={{ width: 120 }}>المبلغ المدفوع</TableCell>
                       <TableCell align="center" sx={{ width: 80 }}>دفع</TableCell>
                     </TableRow>
@@ -262,6 +265,11 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                             )}
                           </Box>
                         </TableCell>
+                        {isCompanyPatient && (
+                          <TableCell align="center" sx={{ py: 1.25, color: 'warning.main' }}>
+                            {formatNumber(Number(rs.endurance) || 0)}
+                          </TableCell>
+                        )}
                         <TableCell align="center" sx={{ py: 1.25, color: 'success.main' }}>
                           {formatNumber(rs.amount_paid)}
                         </TableCell>

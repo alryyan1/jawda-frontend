@@ -47,6 +47,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 // import { AxiosError } from "axios";
+import { realtimeUrlFromConstants } from "@/pages/constants";
 
 // --- Reusable Stat Card Component ---
 interface StatCardProps {
@@ -458,6 +459,26 @@ const HomePage: React.FC = () => {
       refetchShift();
       refetchSummary();
       toast.success('تم فتح الوردية بنجاح');
+      // Emit realtime event: open-general-shift
+      try {
+        const realtimeUrl = import.meta.env.VITE_REALTIME_URL || realtimeUrlFromConstants;
+        fetch(`${realtimeUrl}/emit/open-general-shift`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-internal-token': import.meta.env.VITE_SERVER_AUTH_TOKEN || 'changeme'
+          },
+          body: JSON.stringify({
+            user_id: user?.id,
+            user_name: user?.name,
+            opened_at: new Date().toISOString()
+          })
+        }).catch(() => {
+          // Silent fail; the shift was opened successfully
+        });
+      } catch {
+        // Ignore realtime emit errors
+      }
     },
     onError: () => {
       toast.error('فشل فتح الوردية');
@@ -471,6 +492,27 @@ const HomePage: React.FC = () => {
       refetchShift();
       refetchSummary();
       toast.success('تم إغلاق الوردية بنجاح');
+      // Emit realtime event: close-general-shift
+      try {
+        const realtimeUrl = import.meta.env.VITE_REALTIME_URL || realtimeUrlFromConstants;
+        fetch(`${realtimeUrl}/emit/close-general-shift`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-internal-token': import.meta.env.VITE_SERVER_AUTH_TOKEN || 'changeme'
+          },
+          body: JSON.stringify({
+            user_id: user?.id,
+            user_name: user?.name,
+            shift_id: currentOpenShift?.id,
+            closed_at: new Date().toISOString()
+          })
+        }).catch(() => {
+          // Silent fail; the shift was closed successfully
+        });
+      } catch {
+        // Ignore realtime emit errors
+      }
     },
     onError: () => {
       toast.error('فشل إغلاق الوردية');

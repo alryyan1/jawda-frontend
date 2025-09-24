@@ -123,6 +123,26 @@ export interface DoctorShift {
   // New fields for UI
   is_examining: boolean; // Is the doctor currently with a patient in this shift
   patients_count: number; // Number of patients waiting or with this doctor in this shift
+
+  // Additional fields from backend payload (keep optional for compatibility)
+  user_id_opened?: number;
+  user_name_opened?: string;
+  shift_id?: number;
+  general_shift_name?: string;
+  status_text?: string;
+  formatted_start_time?: string;
+  formatted_end_time?: string | null;
+  duration?: string;
+  total_doctor_entitlement?: number;
+  cash_entitlement?: number;
+  insurance_entitlement?: number;
+  static_wage_applied?: number;
+  is_cash_revenue_prooved?: boolean;
+  is_cash_reclaim_prooved?: boolean;
+  is_company_revenue_prooved?: boolean;
+  is_company_reclaim_prooved?: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
 // src/types/doctors.ts

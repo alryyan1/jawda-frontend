@@ -295,7 +295,7 @@ const AppLayout: React.FC = () => {
     queryFn: getCurrentOpenShift,
     // Removed refetchInterval - fetch only once
   });
-
+ console.log(currentOpenShift,'currentOpenShift')
   // Monitor realtime connection status
   useEffect(() => {
     const checkConnection = () => {
@@ -493,12 +493,12 @@ const AppLayout: React.FC = () => {
                       <div className="h-3 w-3 rounded-full" aria-label="shift-status">
                         <div className={cn(
                           "h-3 w-3 rounded-full",
-                          currentOpenShift ? "bg-green-500" : "bg-red-500"
+                          currentOpenShift?.is_closed ==false ? "bg-green-500" : "bg-red-500"
                         )} />
                       </div>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>{currentOpenShift ? 'الوردية مفتوحة' : 'لا توجد وردية مفتوحة'}</p>
+                      <p>{currentOpenShift?.is_closed == false ? 'الوردية مفتوحة' : 'لا توجد وردية مفتوحة'}</p>
                     </TooltipContent>
                   </Tooltip>
 

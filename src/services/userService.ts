@@ -24,7 +24,7 @@ export interface LabUserShiftIncomeSummary {
 }
 export const getUsers = (
   page = 1,
-  filters: Record<string, any> = {}
+  filters: { [key: string]: unknown } = {}
 ): Promise<PaginatedUsersResponse> => {
   return apiClient
     .get<PaginatedUsersResponse>('get-users', { params: { page, ...filters } })

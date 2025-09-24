@@ -1,7 +1,7 @@
 // src/components/clinic/ServicePaymentDialog.tsx
 import React, { useEffect, useMemo, useCallback } from 'react';
 import { useForm, Controller } from 'react-hook-form';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 import { 
@@ -24,6 +24,7 @@ import type { RequestedService } from '@/types/services';
 import { recordServicePayment } from '@/services/visitService';
 import { formatNumber } from '@/lib/utils'; // Assuming you have this
 import type { DoctorVisit } from '@/types/visits';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ServicePaymentDialogProps {
   visit?: DoctorVisit;
@@ -46,7 +47,8 @@ const ServicePaymentDialog: React.FC<ServicePaymentDialogProps> = ({
   visit,
   isOpen, onOpenChange, requestedService, visitId, currentClinicShiftId, onPaymentSuccess 
 }) => {
-  
+    const queryClient = useQueryClient();
+    const { user } = useAuth();
   // const { data: patient, isLoading: isLoadingPatient } = useQuery<Patient, Error>({
   //   queryKey: ['patientDetailsForPaymentDialog', visitId],
   //   queryFn: () => getPatientById(visitId),
@@ -126,6 +128,8 @@ const ServicePaymentDialog: React.FC<ServicePaymentDialogProps> = ({
       toast.success("تم الدفع بنجاح");
       handlePrintReceipt();
       onPaymentSuccess();
+      const key = ["userShiftIncomeSummary", user?.id, currentClinicShiftId] as const;
+      queryClient.invalidateQueries({ queryKey: key });
     },
     onError: (error: Error & { response?: { data?: { message?: string } } }) => {
       toast.error(error.response?.data?.message || "حدث خطأ في الدفع");
@@ -179,15 +183,15 @@ const ServicePaymentDialog: React.FC<ServicePaymentDialogProps> = ({
       <MUIDialogContent>
         <Box mb={1.5}>
           <Typography variant="body2">
-            المبلغ الإجمالي: <strong>{formatNumber(fullNetPrice)}</strong> ريال
+            المبلغ الإجمالي: <strong>{formatNumber(fullNetPrice)}</strong> 
           </Typography>
           {isCompanyPatient && requestedService.endurance > 0 && (
             <Typography variant="caption" color="text.secondary">
-              (التأمين: {formatNumber(Number(requestedService.endurance) * (Number(requestedService.count) || 1))} ريال)
+              (التأمين: {formatNumber(Number(requestedService.endurance) * (Number(requestedService.count) || 1))} )
             </Typography>
           )}
           <Typography variant="body2">
-            المبلغ المتبقي: <strong>{formatNumber(displayBalance)}</strong> ريال
+            المبلغ المتبقي: <strong>{formatNumber(displayBalance)}</strong> 
           </Typography>
         </Box>
 

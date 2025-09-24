@@ -7,8 +7,11 @@ import type { RequestedService } from "@/types/services";
 import PatientCompanyDetails from "../lab/reception/PatientCompanyDetails";
 import PdfPreviewDialog from "../common/PdfPreviewDialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, DollarSign, FileText } from "lucide-react";
+import { Loader2, DollarSign, FileText, Coins, Landmark, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { fetchCurrentUserShiftIncomeSummary } from "@/services/userService";
+import { formatNumber } from "@/lib/utils";
 
 export interface PatientDetailsColumnClinicProps {
   visitId: number | null;
@@ -28,6 +31,7 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
   activeTab = 'services',
 }, ref) => {
   const queryClient = useQueryClient();
+  const { user, currentClinicShift } = useAuth();
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isPdfDialogOpen, setIsPdfDialogOpen] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
@@ -54,6 +58,13 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
       return getLabRequestsForVisit(visitId!);
     },
     enabled: !!visitId,
+  });
+
+  // Services income summary for current user/shift (cash/bank/total)
+  const { data: servicesShiftSummary, isLoading: isLoadingServicesSummary } = useQuery({
+    queryKey: ["userShiftIncomeSummary", user?.id, currentClinicShift?.id],
+    queryFn: () => fetchCurrentUserShiftIncomeSummary(currentClinicShift!.id),
+    enabled: !!currentClinicShift && !!user && activeTab === 'services',
   });
 
   // Pay all unpaid services mutation
@@ -98,6 +109,12 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
       queryClient.invalidateQueries({
         queryKey: ["doctorVisit", visitId],
       });
+      // Refresh Services Income Summary (cash/bank/total)
+      if (user?.id && currentClinicShift?.id) {
+        const key = ["userShiftIncomeSummary", user.id, currentClinicShift.id] as const;
+        queryClient.invalidateQueries({ queryKey: key });
+        queryClient.refetchQueries({ queryKey: key, type: 'active' });
+      }
     },
     onError: (error: Error) => {
       toast.error(error.message || "فشل في المعالجة");
@@ -138,7 +155,7 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
     },
   });
 
-  // Calculate item balance (same logic as RequestedServicesTable)
+  // Calculate item balance
   const calculateItemBalance = (rs: RequestedService) => {
     const price = Number(rs.price) || 0;
     const count = Number(rs.count) || 1;
@@ -149,9 +166,13 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
     const subTotal = price * count;
     const discountAmountFromPercentage = (subTotal * itemDiscountPer) / 100;
     const totalItemDiscount = discountAmountFromPercentage + itemFixedDiscount;
-    const netPrice = subTotal - totalItemDiscount - itemEndurance;
+    const isCompanyPatient = Boolean(visit?.patient?.company_id || visit?.patient?.company);
+    const netPrice = subTotal - totalItemDiscount - (isCompanyPatient ? 0 : itemEndurance);
     const amountPaid = Number(rs.amount_paid) || 0;
-    
+    if (isCompanyPatient) {
+      const remaining = itemEndurance - amountPaid;
+      return remaining > 0 ? remaining : 0;
+    }
     return netPrice - amountPaid;
   };
 
@@ -218,9 +239,16 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
     totalPaid = requestedServices.reduce((sum, service) => {
       return sum + (Number(service.amount_paid) || 0);
     }, 0);
-    totalBalance = requestedServices.reduce((sum, service) => {
-      return sum + calculateItemBalance(service);
-    }, 0);
+    // For company patients, remaining balance is sum of (endurance - amount_paid)
+    const isCompanyPatient = Boolean(visit.patient?.company_id || visit.patient?.company);
+    totalBalance = isCompanyPatient
+      ? requestedServices.reduce((sum, service) => {
+          const endurance = Number(service.endurance) || 0;
+          const paid = Number(service.amount_paid) || 0;
+          const remaining = endurance - paid;
+          return sum + (remaining > 0 ? remaining : 0);
+        }, 0)
+      : requestedServices.reduce((sum, service) => sum + calculateItemBalance(service), 0);
   }
 
   const patientName = visit.patient?.name;
@@ -233,7 +261,8 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
   return (
     <>
       <div className="flex flex-col h-full w-full items-center justify-start p-4 bg-background">
-        {/* Patient Name */}
+        <div className="flex flex-col h-full w-full items-center justify-between p-4 bg-background">
+            {/* Patient Name */}
         <div className="w-full text-center font-bold text-lg border-b border-border pb-2 mb-4 text-foreground">
           {patientName}
         </div>
@@ -295,6 +324,8 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
           </div>
         </div>
 
+     
+
         {/* Action Buttons */}
         <div className="w-full space-y-2">
           {/* Pay All Button */}
@@ -314,6 +345,67 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
           )}
 
         </div>
+        </div>
+        <div>
+                  {/* Services Income Summary (Total paid split into Cash / Bank) */}
+           {activeTab === 'services' && currentClinicShift && (
+          <div className="w-60 mt-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200 mb-4">
+            <div className="p-3">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-semibold text-blue-800">حسابات الخدمات</span>
+                </div>
+                {isLoadingServicesSummary && (
+                  <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                )}
+              </div>
+
+              {servicesShiftSummary ? (
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-1">
+                      <Coins className="h-3 w-3 text-green-600" />
+                      <span className="text-xs text-gray-600">كاش</span>
+                    </div>
+                    <span className="text-sm font-medium text-green-700">
+                      {formatNumber(servicesShiftSummary.service_income.cash)}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-1">
+                      <Landmark className="h-3 w-3 text-purple-600" />
+                      <span className="text-xs text-gray-600">بنكك</span>
+                    </div>
+                    <span className="text-sm font-medium text-purple-700">
+                      {formatNumber(servicesShiftSummary.service_income.bank)}
+                    </span>
+                  </div>
+
+                  <div className="border-t border-blue-200 pt-2">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-1">
+                        <DollarSign className="h-3 w-3 text-blue-600" />
+                        <span className="text-xs font-semibold text-blue-800">الإجمالي المدفوع</span>
+                      </div>
+                      <span className="text-sm font-bold text-blue-800">
+                        {formatNumber(servicesShiftSummary.service_income.total)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ) : !isLoadingServicesSummary ? (
+                <div className="text-center py-2">
+                  <span className="text-xs text-gray-500">لا توجد بيانات</span>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        )}
+        </div>
+      
+   
       </div>
 
       {/* PDF Preview Dialog */}

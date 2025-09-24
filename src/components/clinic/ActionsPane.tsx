@@ -13,20 +13,19 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faSitemap,
-  faUsers,
   faUserPlus,
-  faAddressBook,
-  faIdBadge,
   faClockRotateLeft,
   faGlobe,
-  faLock,
   faUserDoctor
 } from "@fortawesome/free-solid-svg-icons";
 import ManageDoctorShiftsDialog from "./ManageDoctorShiftsDialog";
+import DoctorCredits from "./DoctorCredits";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import ShiftSummaryDialog from "./ShiftSummaryDialog";
 import type { DoctorShift } from "@/types/doctors";
 import { webUrl } from "@/pages/constants";
+import dayjs from "dayjs";
  
 interface ActionsPaneProps {
   showRegistrationForm: boolean;
@@ -39,11 +38,11 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
   onToggleRegistrationForm,
 }) => {
   const { currentClinicShift } = useAuth();
-  
-  // Placeholder permissions
+    // Placeholder permissions
   const canRegisterPatient = true;
   const canManageDoctorShifts = true;
   const [showShiftSummaryDialog, setShowShiftSummaryDialog] = useState(false);
+  const [isDoctorCreditsOpen, setIsDoctorCreditsOpen] = useState(false);
   return (
     <>
     <Box
@@ -66,7 +65,8 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
        <Tooltip title="التقرير العام" placement="left">
           <IconButton
             onClick={() => {
-              const url = `${webUrl}reports/clinic-shift-summary/pdf`;
+              const url = `${webUrl}reports/doctor-shifts/pdf?shift_id=${currentClinicShift?.id}&date_from=${dayjs().format('YYYY-MM-DD')}&date_to=${dayjs().format('YYYY-MM-DD')}&user_opened=${currentClinicShift?.user_opened}`;
+              window.open(url, '_blank', 'noopener,noreferrer');
               window.open(url, '_blank', 'noopener,noreferrer');
             }}
             sx={{ width: 44, height: 44, color: "success.main" }}
@@ -99,6 +99,16 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
             />
           </Tooltip>
         )}
+        {/* Doctor Credits Button */}
+        <Tooltip title="استحقاقات الأطباء" placement="left">
+          <IconButton
+            onClick={() => setIsDoctorCreditsOpen(true)}
+            sx={{ width: 44, height: 44, color: "info.main" }}
+            aria-label="استحقاقات الأطباء"
+          >
+            <BriefcaseMedical />
+          </IconButton>
+        </Tooltip>
         
         
     
@@ -135,6 +145,16 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
           shift={currentClinicShift}
         />
       )}
+
+      {/* Doctor Credits Dialog */}
+      <Dialog open={isDoctorCreditsOpen} onOpenChange={setIsDoctorCreditsOpen}>
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>استحقاقات الأطباء</DialogTitle>
+          </DialogHeader>
+          <DoctorCredits />
+        </DialogContent>
+      </Dialog>
       
     </>
   );

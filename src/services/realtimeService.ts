@@ -102,6 +102,48 @@ class RealtimeService {
     }
   }
 
+  // Subscribe to general shift open event
+  public onOpenGeneralShift(callback: (data: { user_id?: number; user_name?: string; opened_at?: string }) => void): void {
+    if (this.socket) {
+      this.socket.on('open-general-shift', (data: any) => {
+        console.log('Received open-general-shift event:', data);
+        callback(data || {});
+      });
+    }
+  }
+
+  // Unsubscribe from general shift open event
+  public offOpenGeneralShift(callback?: (data: { user_id?: number; user_name?: string; opened_at?: string }) => void): void {
+    if (this.socket) {
+      if (callback) {
+        this.socket.off('open-general-shift', callback as any);
+      } else {
+        this.socket.off('open-general-shift');
+      }
+    }
+  }
+
+  // Subscribe to general shift close event
+  public onCloseGeneralShift(callback: (data: { user_id?: number; user_name?: string; shift_id?: number; closed_at?: string }) => void): void {
+    if (this.socket) {
+      this.socket.on('close-general-shift', (data: any) => {
+        console.log('Received close-general-shift event:', data);
+        callback(data || {});
+      });
+    }
+  }
+
+  // Unsubscribe from general shift close event
+  public offCloseGeneralShift(callback?: (data: { user_id?: number; user_name?: string; shift_id?: number; closed_at?: string }) => void): void {
+    if (this.socket) {
+      if (callback) {
+        this.socket.off('close-general-shift', callback as any);
+      } else {
+        this.socket.off('close-general-shift');
+      }
+    }
+  }
+
   // Check if connected
   public getConnectionStatus(): boolean {
     return this.isConnected;

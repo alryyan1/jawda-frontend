@@ -12,6 +12,7 @@ import type { DoctorShift } from '@/types/doctors';
 import type { Patient } from '@/types/patients';
 import { getActiveDoctorShifts } from '@/services/clinicService';
 import './DoctorsTabs.css';
+import showJsonDialog from '@/lib/showJsonDialog';
 
 interface DoctorsTabsProps {
   onShiftSelect: (shift: DoctorShift | null) => void;
@@ -20,7 +21,7 @@ interface DoctorsTabsProps {
 }
 
 const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId }) => {
-  const { currentClinicShift } = useAuth();
+  const { currentClinicShift, user } = useAuth();
   const tabRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
 
   // Use React Query to fetch doctor shifts
@@ -100,7 +101,7 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId 
       </Paper>
     );
   }
-
+  // showJsonDialog(user,'user')
   return (
       <Box sx={{
         width:`${window.innerWidth - 300}px`,
@@ -108,9 +109,11 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId 
       }} className="doctors-tabs-flex-wrapper">
     
           <Box className="doctors-tabs-flex-container">
-            {doctorShifts.map((shift) => {
+            {doctorShifts.filter(shift =>shift.user_id_opened == user?.id).map((shift) => {
               const isActive = activeShiftId === shift.id;
               const isExamining = shift.is_examining;
+
+              // showJsonDialog(shift,'shift')
               // Determine CSS class based on state
               const getTabClassName = () => {
                 if (isActive) {

@@ -156,7 +156,7 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
   const loadCompanies = async () => {
     try {
       setIsLoadingCompanies(true);
-      const response = await axios.get('/api/companies');
+      const response = await apiClient.get('/companies');
       setCompanies(response.data.data || []);
     } catch (error) {
       console.error('Error loading companies:', error);
@@ -169,7 +169,7 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
   const loadSubcompanies = async (companyId: number) => {
     try {
       setIsLoadingSubcompanies(true);
-      const response = await axios.get(`/api/companies/${companyId}/subcompanies`);
+      const response = await apiClient.get(`/companies/${companyId}/subcompanies`);
       setSubcompanies(response.data.data || []);
     } catch (error) {
       console.error('Error loading subcompanies:', error);
@@ -389,7 +389,7 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
   // };
 
   return (
-    <Box sx={{ width: '100%', maxWidth: 380, mx: 'auto', position: 'relative' }}>
+    <Box sx={{ width: '100%', maxWidth: 380, mx: 'auto', position: 'relative',overflow:'auto'}}>
       {alert && (
         <Alert 
           severity={alert.type} 

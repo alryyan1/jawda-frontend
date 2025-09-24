@@ -42,6 +42,8 @@ import SettingsLayout from "./pages/settings/SettingsLayout";
 import GeneralSettingsPage from "./pages/GeneralSettingsPage";
 import ChildTestsManagementPage from "./pages/lab/ChildTestsManagementPage";
 import LabPriceListPage from "./pages/settings/LabPriceListPage";
+import LabToLab from "./pages/settings/LabToLab.tsx";
+import LabtoLabDashBoard from "./pages/settings/LabtoLabDashBoard.tsx";
 import CompanyMainTestContractsPage from "./pages/companies/CompanyMainTestContractsPage";
 import LabWorkstationPage from "./pages/lab/LabWorkstationPage";
 import NotFoundPage from "./pages/NotFoundPage";
@@ -416,6 +418,15 @@ const router = createBrowserRouter([
                     path: "price-list",
                     element: <LabPriceListPage />,
                   },
+                ],
+              },
+              {
+                path: "lab-to-lab",
+                element: <Outlet />,
+                children: [
+                  { index: true, element: <LabToLab /> },
+                  { path: ":labId", element: <LabtoLabDashBoard /> },
+                  { path: ":labId/price-list", element: <LabPriceListPage /> },
                 ],
               },
               {

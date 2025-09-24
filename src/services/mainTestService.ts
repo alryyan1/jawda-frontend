@@ -21,11 +21,15 @@ export const getMainTestById = (id: number): Promise<{ data: MainTest }> => {
 // src/services/mainTestService.ts
 // ... (getMainTests, etc.)
 
-export const getAllActiveMainTestsForPriceList = async (searchTerm?: string): Promise<MainTest[]> => {
+export const getAllActiveMainTestsForPriceList = async (searchTerm?: string, packageId?: string | number | null): Promise<MainTest[]> => {
   // Backend MainTestController@index should handle returning all if no pagination params are sent
   // and filter by name. Or create a dedicated endpoint.
   const params: Record<string, any> = { available: true }; // Fetch only available tests
   if (searchTerm) params.search = searchTerm;
+  if (packageId !== undefined && packageId !== null && packageId !== '' && packageId !== 'all') {
+    const parsed = typeof packageId === 'string' ? parseInt(packageId, 10) : packageId;
+    if (!isNaN(Number(parsed))) params.pack_id = parsed;
+  }
   // This might fetch paginated data. If you need ALL, backend needs to support no pagination.
   // For now, assume it can return many if per_page is high.
   params.per_page = 1000; // Fetch a large number, or implement proper "all" fetch
@@ -48,6 +52,7 @@ export interface MainTestFormData {
   price?: string | null;
   available?: boolean;
   description?: string | null;
+  is_special_test?: boolean | null;
 }
 
 export const createMainTest = (data: MainTestFormData): Promise<{ data: MainTest }> => {

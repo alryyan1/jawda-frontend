@@ -1,3 +1,4 @@
+
 import apiClient from './api';
 import type { ChildTest, ChildTestFormData } from '../types/labTests';
 
@@ -9,24 +10,14 @@ export const getChildTestsForMainTest = async (mainTestId: number): Promise<Chil
 };
 
 export const createChildTest = async (mainTestId: number, data: ChildTestFormData): Promise<ChildTest> => {
-  const payload = { /* ... transform string numbers to actual numbers if needed ... */ ...data };
-  // Example transformation:
-  // const payload = {
-  //   ...data,
-  //   low: data.low ? parseFloat(data.low) : null,
-  //   upper: data.upper ? parseFloat(data.upper) : null,
-  //   // ... etc. for numeric fields
-  //   test_order: data.test_order ? parseInt(data.test_order) : null,
-  // };
-  // alert('createChildTest')
+  // If needed, transform string numbers to actual numbers here.
   const response = await apiClient.post<{ data: ChildTest }>(getBaseUrl(mainTestId), data);
   return response.data.data;
 };
 
 // Note: Update and Delete use the shallow routes /child-tests/{child_test_id}
 export const updateChildTest = async (childTestId: number, data: Partial<ChildTestFormData>): Promise<ChildTest> => {
-  const payload = { /* ... transform data ... */ ...data };
-  const response = await apiClient.put<{ data: ChildTest }>(`/child-tests/${childTestId}`, payload);
+  const response = await apiClient.put<{ data: ChildTest }>(`/child-tests/${childTestId}`, data);
   return response.data.data;
 };
 
@@ -39,4 +30,19 @@ export const batchUpdateChildTestOrder = async (mainTestId: number, orderedChild
     child_test_ids: orderedChildTestIds,
   });
   return response.data;
+};
+
+export const getChildTestById = async (childTestId: number): Promise<ChildTest> => {
+  const response = await apiClient.get<{ data: ChildTest }>(`/child-tests/${childTestId}`);
+  return response.data.data;
+};
+
+export const getChildTestJsonParams = async (childTestId: number): Promise<unknown> => {
+  const response = await apiClient.get<{ data: { json_params: unknown } }>(`/child-tests/${childTestId}/json-params`);
+  return response.data.data.json_params;
+};
+
+export const updateChildTestJsonParams = async (childTestId: number, json: unknown): Promise<unknown> => {
+  const response = await apiClient.put<{ data: { json_params: unknown } }>(`/child-tests/${childTestId}/json-params`, { json_params: json, json_parameter: json });
+  return response.data.data.json_params;
 };

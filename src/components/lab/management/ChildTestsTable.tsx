@@ -97,7 +97,7 @@ const ChildTestsTable: React.FC<ChildTestsTableProps> = ({
 }) => {
   const [displayableChildTests, setDisplayableChildTests] = useState<ChildTest[]>([]);
   const [isAddingNew, setIsAddingNew] = useState(false);
-  const [activeFormChildTest, setActiveFormChildTest] = useState<Partial<ChildTestFormDataType> | null>(null);
+  const [activeFormChildTest, setActiveFormChildTest] = useState<(Partial<ChildTestFormDataType> & { id?: number }) | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [isSavingChildTest, setIsSavingChildTest] = useState(false);
   const [isSavingOrder, setIsSavingOrder] = useState(false);
@@ -188,6 +188,20 @@ const ChildTestsTable: React.FC<ChildTestsTableProps> = ({
     if (typeof onStartEdit === 'function') {
       onStartEdit(ct);
     }
+    setActiveFormChildTest({
+      id: ct.id,
+      child_test_name: ct.child_test_name,
+      low: typeof ct.low === 'number' ? String(ct.low) : (ct.low ?? ''),
+      upper: typeof ct.upper === 'number' ? String(ct.upper) : (ct.upper ?? ''),
+      defval: ct.defval ?? '',
+      unit_id: ct.unit_id ? String(ct.unit_id) : undefined,
+      normalRange: ct.normalRange ?? '',
+      max: typeof ct.max === 'number' ? String(ct.max) : (ct.max ?? ''),
+      lowest: typeof ct.lowest === 'number' ? String(ct.lowest) : (ct.lowest ?? ''),
+      test_order: ct.test_order != null ? String(ct.test_order) : undefined,
+      child_group_id: ct.child_group_id ? String(ct.child_group_id) : undefined,
+    });
+    setEditingId(ct.id ?? null);
   };
 
   const handleCancelEditOrAdd = () => {
@@ -204,8 +218,9 @@ const ChildTestsTable: React.FC<ChildTestsTableProps> = ({
         setLastSavedId(editingId);
       } else {
         const res = await onSaveNewChildTest(data);
-        if (res && (res as any).id) {
-          setLastSavedId((res as any).id as number);
+        const newId = (res && typeof (res as unknown) === 'object' && (res as ChildTest).id) ? (res as ChildTest).id : null;
+        if (newId) {
+          setLastSavedId(newId);
         }
       }
       handleCancelEditOrAdd();
@@ -221,6 +236,7 @@ const ChildTestsTable: React.FC<ChildTestsTableProps> = ({
       const timer = setTimeout(() => setLastSavedId(null), 1500);
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [lastSavedId]);
 
   const handleDeleteFromDisplayRow = async (id: number) => {

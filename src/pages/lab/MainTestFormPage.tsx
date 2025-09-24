@@ -16,8 +16,7 @@ import {
   Typography,
   Button,
   CircularProgress,
-  Stack,
-  Paper
+  Stack
 } from '@mui/material';
 import { FormProvider } from 'react-hook-form';
 
@@ -26,7 +25,7 @@ import { createMainTest, updateMainTest, getMainTestById } from '@/services/main
 import { getContainers } from '@/services/containerService';
 
 import MainTestFormFields from '@/components/lab/MainTestFormFields';
-import ChildTestsSection from '@/components/lab/ChildTestsSection';
+// import ChildTestsSection from '@/components/lab/ChildTestsSection';
 import { getPackagesList } from '@/services/packageService';
 
 const TestFormMode = {
@@ -46,7 +45,8 @@ const mainTestFormSchema = z.object({
   container_id: z.string().min(1),
   price: z.string().optional(),
   divided: z.boolean(),
-  available: z.boolean()
+  available: z.boolean(),
+  is_special_test: z.boolean()
 });
 
 type MainTestFormValues = z.infer<typeof mainTestFormSchema>;
@@ -59,6 +59,7 @@ interface MainTestSubmissionData {
   price?: string;
   divided: boolean;
   available: boolean;
+  is_special_test?: boolean;
 }
 
 const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
@@ -94,7 +95,8 @@ const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
       container_id: '',
       price: '',
       divided: false,
-      available: true
+      available: true,
+      is_special_test: false
     }
   });
   
@@ -106,7 +108,7 @@ const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
  };
  
  const dataIsLoading = isLoadingMainTestInitial || isLoadingContainers || isLoadingPackages; // Add isLoadingPackages
- const { control, handleSubmit, reset, setValue: setMainValue } = form;
+  const { control, handleSubmit, reset, setValue: setMainValue } = form;
 
   useEffect(() => {
     if (isEditMode && routeTestId) {
@@ -119,7 +121,8 @@ const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
         container_id: '',
         price: '',
         divided: false,
-        available: true
+        available: true,
+        is_special_test: false
       });
       setCurrentMainTestId(null);
     }
@@ -135,6 +138,7 @@ const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
         price: mainTestData.price ? String(mainTestData.price) : '',
         divided: mainTestData.divided,
         available: mainTestData.available,
+        is_special_test: Boolean((mainTestData as unknown as { is_special_test?: boolean }).is_special_test)
       });
     }
   }, [mainTestData, currentMainTestId, reset]);
@@ -149,6 +153,7 @@ const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
         price: data.price?.trim() || undefined,
         divided: data.divided,
         available: data.available,
+        is_special_test: data.is_special_test,
       };
       return isEditMode && currentMainTestId 
         ? updateMainTest(currentMainTestId, submissionData) 

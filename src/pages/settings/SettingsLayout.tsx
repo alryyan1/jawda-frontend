@@ -3,9 +3,8 @@ import React from 'react';
 import { Outlet, NavLink, /* useLocation */ } from 'react-router-dom';
 import { 
     Settings, Building, FlaskConical, ListOrdered, CreditCard,
-    ClockIcon,
-    PartyPopperIcon,
-    Layers
+    Layers,
+    Link2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 // Removed i18n usage
@@ -27,6 +26,7 @@ const settingsNavItems: SettingsNavItem[] = [
   { to: 'services', labelKey: 'tabs.servicesConfig', icon: ListOrdered, permission: 'manage service_settings' },
   { to: '/settings/laboratory/price-list', labelKey: 'laboratoryTestsPriceList', icon: CreditCard, permission: 'manage price_list' },
   { to: 'insurance-audit', labelKey: 'insuranceAudit', icon: CreditCard, permission: 'manage insurance_audit' },
+  { to: 'lab-to-lab', labelKey: 'labToLab', icon: Link2, permission: 'manage laboratory_settings' },
   // Example settingsNavItems update
 // { to: 'attendance/shift-definitions', labelKey: 'settings:tabs.shiftDefinitions', icon: ClockIcon, permission: 'manage_shift_definitions' },
 // { to: 'attendance/holidays', labelKey: 'settings:tabs.holidays', icon: PartyPopperIcon, permission: 'manage_holidays' },
@@ -44,7 +44,8 @@ const getSettingsLabel = (labelKey: string): string => {
     'insuranceAudit': 'مراجعة التأمين',
     'settings:tabs.shiftDefinitions': 'تعريفات المناوبات',
     'settings:tabs.holidays': 'العطل',
-    'tabs.serviceGroups': 'مجموعات الخدمات'
+    'tabs.serviceGroups': 'مجموعات الخدمات',
+    'labToLab': 'المعامل المتعاقده'
   };
   return labels[labelKey] || labelKey;
 };

@@ -134,6 +134,7 @@ const ChildTestsManagementPage: React.FC = () => {
     setIsAddingNew(true);
     setEditingChildTest(null);
     setDialogInitialData({
+      id: undefined,
       child_test_name: '',
       test_order: String((childTestsList?.length || 0) + 1),
     });
@@ -144,6 +145,7 @@ const ChildTestsManagementPage: React.FC = () => {
     setIsAddingNew(false);
     setEditingChildTest(ct);
     setDialogInitialData({
+      id: ct.id,
       child_test_name: ct.child_test_name,
       low: ct.low !== null ? String(ct.low) : '',
       upper: ct.upper !== null ? String(ct.upper) : '',
@@ -172,8 +174,8 @@ const ChildTestsManagementPage: React.FC = () => {
         setLastSavedId(editingChildTest.id);
       } else {
         const res = await handleSaveNewChildTest(data);
-        if (res && (res as any).id) {
-          setLastSavedId((res as any).id as number);
+        if (res && (res as ChildTest).id) {
+          setLastSavedId((res as ChildTest).id as number);
         }
       }
       closeEditDialog();

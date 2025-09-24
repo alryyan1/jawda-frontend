@@ -8,15 +8,10 @@ import {
   Select, 
   MenuItem, 
   FormControl, 
-  InputLabel, 
-  FormHelperText,
-  TableCell, 
-  TableRow,
-  Box,
-  CircularProgress,
-  IconButton
+  InputLabel,
+  Box
 } from "@mui/material";
-import { Add as PlusIcon, DragIndicator as DragIcon } from "@mui/icons-material";
+import { Add as PlusIcon, DataObject as JsonIcon } from "@mui/icons-material";
 
 import type {
   Unit,
@@ -25,9 +20,12 @@ import type {
 } from "@/types/labTests";
 import AddUnitDialog from "../AddUnitDialog";
 import AddChildGroupDialog from "../AddChildGroupDialog";
+import JsonParamsDialog from "./JsonParamsDialog";
+import { getChildTestJsonParams, updateChildTestJsonParams } from "@/services/childTestService";
+import { toast } from 'sonner';
 
 interface ChildTestEditableRowProps {
-  initialData?: Partial<ChildTestFormData>; // For pre-filling (new row or edit)
+  initialData?: (Partial<ChildTestFormData> & { id?: number }); // Include optional id for edit ops
   units: Unit[];
   isLoadingUnits: boolean;
   childGroups: ChildGroup[];
@@ -64,6 +62,9 @@ const ChildTestEditableRow: React.FC<ChildTestEditableRowProps> = ({
   onUnitQuickAdd,
   onChildGroupQuickAdd,
 }) => {
+  const [jsonOpen, setJsonOpen] = React.useState(false);
+  const [isSavingJson, setIsSavingJson] = React.useState(false);
+  const [jsonInitial, setJsonInitial] = React.useState<unknown>({});
   const form = useForm<ChildTestFormValues>({
     defaultValues: {
       child_test_name: initialData?.child_test_name || "",
@@ -78,7 +79,7 @@ const ChildTestEditableRow: React.FC<ChildTestEditableRowProps> = ({
       child_group_id: initialData?.child_group_id || undefined,
     },
   });
-  const { control, handleSubmit, reset, register, formState: { errors } } = form;
+  const { control, handleSubmit, reset, register } = form;
 
   // Re-initialize form if initialData changes (e.g., switching which item is being edited)
   useEffect(() => {
@@ -110,6 +111,38 @@ const ChildTestEditableRow: React.FC<ChildTestEditableRowProps> = ({
       child_group_id: data.child_group_id || undefined,
     };
     onSave(submissionData);
+  };
+
+  const handleOpenJson = async () => {
+    console.log('handleOpenJson', initialData);
+    // Fetch first, then open to avoid flicker/empty state
+    if (initialData && 'id' in initialData && initialData.id) {
+      try {
+        const fresh = await getChildTestJsonParams(initialData.id as number);
+        setJsonInitial(fresh ?? {});
+      } catch {
+        toast.error('تعذر تحميل بيانات JSON');
+        setJsonInitial((initialData as { json_params?: unknown })?.json_params ?? {});
+      }
+    } else {
+      setJsonInitial((initialData as { json_params?: unknown })?.json_params ?? {});
+    }
+    setJsonOpen(true);
+  };
+  const handleCloseJson = () => setJsonOpen(false);
+  const handleSaveJson = async (value: unknown) => {
+    if (!initialData || !('id' in initialData) || !initialData.id) {
+      // Cannot save without an id; close only
+      setJsonOpen(false);
+      return;
+    }
+    try {
+      setIsSavingJson(true);
+      await updateChildTestJsonParams(initialData.id as number, value);
+      setJsonOpen(false);
+    } finally {
+      setIsSavingJson(false);
+    }
   };
 
   return (
@@ -188,10 +221,12 @@ const ChildTestEditableRow: React.FC<ChildTestEditableRowProps> = ({
 
         <TextField size="small" label="القيمة الافتراضية" placeholder="القيمة الافتراضية" {...register('defval')} onFocus={(e) => e.target.select()} onMouseUp={(e) => e.preventDefault()} />
 
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, pt: 1 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, pt: 1 }}>
+          <Button type="button" variant="outlined" size="small" startIcon={<JsonIcon fontSize="small" />} onClick={handleOpenJson} disabled={isSaving || isSavingJson}>باراميترات JSON</Button>
           <Button type="button" variant="outlined" size="small" onClick={onCancel} disabled={isSaving}>إلغاء</Button>
           <Button type="submit" variant="contained" size="small" disabled={isSaving}>حفظ</Button>
         </Box>
+        <JsonParamsDialog open={jsonOpen} initialJson={jsonInitial} onClose={handleCloseJson} onSave={handleSaveJson} />
       </Box>
     </form>
   );

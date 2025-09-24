@@ -16,6 +16,7 @@ export interface Container {
     price?: number | string | null; // Can be string from form
     divided: boolean;
     available: boolean;
+    is_special_test?: boolean;
     child_tests?: ChildTest[];
 
     // created_at?: string; // If timestamps are enabled
@@ -65,6 +66,7 @@ export interface ChildTestFormData {
   lowest?: string;
   test_order?: string;
   child_group_id?: string | undefined;
+  json_params?: any;
 }
 
   export interface ChildTest {
@@ -85,6 +87,7 @@ export interface ChildTestFormData {
     child_group_name?: string;
     child_group?: ChildGroup;
     options?: ChildTestOption[]; // For later
+  json_params?: any;
     // For local form state, might need a temp ID
     _localId?: string; // e.g., for new items not yet saved
     isEditing?: boolean;

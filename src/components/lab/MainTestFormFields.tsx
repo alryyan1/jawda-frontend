@@ -21,12 +21,13 @@ import AddPackageDialog from './AddPackageDialog';
 
 interface MainTestFormValues {
   main_test_name: string;
-  pack_id: string;
+  pack_id?: string;
   pageBreak: boolean;
   container_id: string;
-  price: string;
+  price?: string;
   divided: boolean;
   available: boolean;
+  is_special_test: boolean;
 }
 
 interface MainTestFormFieldsProps {
@@ -205,6 +206,23 @@ const MainTestFormFields: React.FC<MainTestFormFieldsProps> = ({
                   />
                 }
                 label="متاح"
+              />
+            )}
+          />
+
+          <Controller
+            control={control}
+            name="is_special_test"
+            render={({ field }) => (
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={!!field.value}
+                    onChange={field.onChange}
+                    disabled={disabled}
+                  />
+                }
+                label="اختبار خاص"
               />
             )}
           />

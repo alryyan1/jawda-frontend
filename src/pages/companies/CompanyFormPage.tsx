@@ -179,7 +179,7 @@ const CompanyFormPage: React.FC<{ mode: CompanyFormMode }> = ({ mode }) => {
               </Select>
             </FormControl>
           )} />
-
+        <h1>تتحمل الشركه النسب التاليه</h1>
           <Grid container spacing={2}>
             <Grid item xs={12} md={6}>
               <Controller name="lab_endurance" control={control} render={({ field }) => (

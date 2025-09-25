@@ -46,7 +46,7 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
       }
       return (response as ActivePatientVisit[]) || [];
     },
-    placeholderData: keepPreviousData,
+    // placeholderData: keepPreviousData,
     enabled: !!doctorShiftId,
   });
   const [showPatientInfoDialog, setShowPatientInfoDialog] = useState(false);
@@ -75,6 +75,7 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
   }
 
   const visitsList = Array.isArray(visits) ? visits : [];
+  console.log(visitsList,'visitsList')
 
   return (
     <div className="h-full flex flex-col">

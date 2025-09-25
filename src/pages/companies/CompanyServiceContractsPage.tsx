@@ -504,7 +504,7 @@ export default function CompanyServiceContractsPage() {
                         التحمل الثابت
                       </TableCell>
                       <TableCell sx={{ width: 120, textAlign: 'center', display: { xs: 'none', md: 'table-cell' } }}>
-                        التحمل النسبي
+                        التحمل (الشركه)
                       </TableCell>
                       <TableCell sx={{ width: 120, textAlign: 'center', display: { xs: 'none', lg: 'table-cell' } }}>
                         الأجر الثابت

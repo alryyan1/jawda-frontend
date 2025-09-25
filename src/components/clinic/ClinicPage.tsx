@@ -106,11 +106,24 @@ const handleDoctorShiftSelectedFromFinder = useCallback((shift: DoctorShift) => 
     setSelectedPatientVisit(null); // Clear selected patient
   }
 
+  const handleDoctorShiftClosed = (doctorShiftId: number) => {
+console.log('doctor shift closed', doctorShiftId);
+console.log('active doctor shift', activeDoctorShift);
+    // If the closed shift is the currently active one, deselect it
+    if (activeDoctorShift?.id === doctorShiftId) {
+      alert('doctor shift closed');
+      setActiveDoctorShift(null);
+      setSelectedPatientVisit(null); // Clear selected patient
+      setShowRegistrationForm(false); // Hide registration form
+    }
+  };
+
   // Ensure the registration form remains hidden for unified cashier users
   useEffect(() => {
     if (isUnifiedCashier && showRegistrationForm) {
       setShowRegistrationForm(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isUnifiedCashier]);
 
   // F8 and F10 keyboard listeners
@@ -343,6 +356,7 @@ const handleDoctorShiftSelectedFromFinder = useCallback((shift: DoctorShift) => 
           showRegistrationForm={showRegistrationForm}
           onToggleRegistrationForm={toggleRegistrationForm}
           onDoctorShiftSelectedFromFinder={handleDoctorShiftSelectedFromFinder}
+          onDoctorShiftClosed={handleDoctorShiftClosed}
         />
       </div>
 

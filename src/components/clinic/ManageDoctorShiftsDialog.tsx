@@ -45,9 +45,10 @@ interface ManageDoctorShiftsDialogProps {
   triggerButton: React.ReactNode;
   currentClinicShiftId: number | null; // The ID of the general clinic shift
   currentUserId: number | null; // The current user ID for favorite doctors
+  onDoctorShiftClosed?: (doctorShiftId: number) => void; // Callback when a shift is closed
 }
 
-const ManageDoctorShiftsDialog: React.FC<ManageDoctorShiftsDialogProps> = ({ triggerButton, currentClinicShiftId, currentUserId }) => {
+const ManageDoctorShiftsDialog: React.FC<ManageDoctorShiftsDialogProps> = ({ triggerButton, currentClinicShiftId, currentUserId, onDoctorShiftClosed }) => {
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -119,7 +120,7 @@ const ManageDoctorShiftsDialog: React.FC<ManageDoctorShiftsDialogProps> = ({ tri
 
   const closeShiftMutation = useMutation({
     mutationFn: (doctorShiftId: number) => endDoctorShift({ doctor_shift_id: doctorShiftId }),
-    onSuccess: () => {
+    onSuccess: (_, doctorShiftId) => {
       toast.success('تم إغلاق الورديه بنجاح');
       queryClient.invalidateQueries({ queryKey: doctorsQueryKey });
       // Invalidate all active doctor shifts queries
@@ -129,6 +130,10 @@ const ManageDoctorShiftsDialog: React.FC<ManageDoctorShiftsDialogProps> = ({ tri
       // queryClient.invalidateQueries({ queryKey: ['activeDoctorShiftsForCostDialog'] });
       // queryClient.invalidateQueries({ queryKey: ['activeDoctorShiftsForFinderDialog'] });
       // queryClient.invalidateQueries({ queryKey: ['favoriteDoctors'] });
+      // Notify parent component that a shift was closed
+      if (onDoctorShiftClosed) {
+        onDoctorShiftClosed(doctorShiftId);
+      }
     },
     onError: (error: unknown) => {
       const errorMessage = error instanceof Error && 'response' in error 

@@ -28,17 +28,18 @@ import { useAuth } from "@/contexts/AuthContext";
 import ShiftSummaryDialog from "./ShiftSummaryDialog";
 import type { DoctorShift } from "@/types/doctors";
 import { webUrl } from "@/pages/constants";
-import dayjs from "dayjs";
  
 interface ActionsPaneProps {
   showRegistrationForm: boolean;
   onToggleRegistrationForm: () => void;
   onDoctorShiftSelectedFromFinder: (shift: DoctorShift) => void;
+  onDoctorShiftClosed?: (doctorShiftId: number) => void;
 }
 
 const ActionsPane: React.FC<ActionsPaneProps> = ({
   showRegistrationForm,
   onToggleRegistrationForm,
+  onDoctorShiftClosed,
 }) => {
   const { currentClinicShift, user: authUser } = useAuth();
     // Placeholder permissions
@@ -94,6 +95,7 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
             <ManageDoctorShiftsDialog
               currentClinicShiftId={currentClinicShift?.id ?? null}
               currentUserId={1} // TODO: Get from auth context when available
+              onDoctorShiftClosed={onDoctorShiftClosed}
               triggerButton={
                 <IconButton sx={{ width: 44, height: 44 }}>
                   <FontAwesomeIcon icon={faUserDoctor} />
@@ -150,7 +152,7 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
       )}
 
       {/* Doctor Credits Dialog (MUI) */}
-      <Dialog open={isDoctorCreditsOpen} onClose={() => setIsDoctorCreditsOpen(false)} fullWidth maxWidth="">
+      <Dialog open={isDoctorCreditsOpen} onClose={() => setIsDoctorCreditsOpen(false)} fullWidth maxWidth="lg">
         <DialogTitle>استحقاقات الأطباء</DialogTitle>
         <DialogContent dividers>
           <DoctorCredits

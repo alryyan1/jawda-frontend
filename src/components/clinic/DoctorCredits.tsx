@@ -20,6 +20,7 @@ import { Eye } from "lucide-react";
 import { formatNumber } from "@/lib/utils";
 import type { DoctorShift as DoctorShiftType, Doctor } from "@/types/doctors";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAuthorization } from "@/hooks/useAuthorization";
 
 interface UserPropShape {
   id: number;
@@ -66,7 +67,7 @@ function ValueLoader({ api, field }: { api: string; field?: string }) {
     const num = Number(value);
     return isNaN(num) ? String(value) : formatNumber(num);
   }, [value]);
-  return <TableCell>{formatted}</TableCell>;
+  return <TableCell className="text-xl!">{formatted}</TableCell>;
 }
 
 function DoctorCredits({ setAllMoneyUpdatedLab, user }: DoctorsCreditsProps) {
@@ -193,14 +194,14 @@ function DoctorCredits({ setAllMoneyUpdatedLab, user }: DoctorsCreditsProps) {
       .catch(() => {})
       .finally(() => setIsLoading(false));
   };
-
+  const {hasRole}= useAuthorization();
 
   return (
     <Paper elevation={2} sx={{ p: 1 }}>
       <Typography variant="h6" sx={{ mb: 1 }}>
         استحقاقات الأطباء - الورديات المفتوحة
       </Typography>
-      <Table style={{ direction: "rtl" }} size="small">
+        <Table style={{ direction: "rtl" }} className="text-xl!" size="small">
         <TableHead>
           <TableRow>
             <TableCell>الاسم</TableCell>
@@ -216,25 +217,25 @@ function DoctorCredits({ setAllMoneyUpdatedLab, user }: DoctorsCreditsProps) {
         <TableBody>
           {doctorShifts
             .filter((d) => {
-              if (!user?.isAdmin) {
-                return d.user_id === user?.id;
+              if(hasRole('admin')){
+                return true;
               }
-              return true;
+              return d.user_id_opened === user?.id;
             })
             .map((shift) => {
               return (
                 <TableRow key={shift.id}>
-                  <TableCell>{shift.doctor?.name || shift.doctor_name}</TableCell>
+                  <TableCell className="text-xl!">{shift.doctor?.name || shift.doctor_name}</TableCell>
                   <ValueLoader api={`doctor-shifts/${shift.id}/financial-summary`} field="total_doctor_share" />
-                  <TableCell>{formatNumber(Number(shift.doctor?.static_wage || 0))}</TableCell>
+                  <TableCell className="text-xl!">{formatNumber(Number(shift.doctor?.static_wage || 0))}</TableCell>
                   <ValueLoader api={`doctor-shifts/${shift.id}/financial-summary`} field="doctor_cash_share_total" />
                   <ValueLoader api={`doctor-shifts/${shift.id}/financial-summary`} field="doctor_insurance_share_total" />
-                  <TableCell>
+                  <TableCell className="text-xl!">
                     {shift.created_at
                       ? dayjs(Date.parse(shift.created_at)).format("H:m A")
                       : "-"}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-xl!">
                     <Button
                       disabled={ Boolean(shift.is_cash_reclaim_prooved)}
                       onClick={() => {
@@ -247,7 +248,7 @@ function DoctorCredits({ setAllMoneyUpdatedLab, user }: DoctorsCreditsProps) {
                       اثبات الاستحقاق النقدي
                     </Button>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-xl!">
                     <Button
                       onClick={() => {
                         setSelectedDoctorShift(shift);

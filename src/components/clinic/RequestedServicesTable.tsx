@@ -80,7 +80,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
   // Row options dialog
   const [isRowOptionsDialogOpen, setIsRowOptionsDialogOpen] = useState(false);
   const [rowOptionsService, setRowOptionsService] = useState<RequestedService | null>(null);
-  const [rowOptionsData, setRowOptionsData] = useState<{ count: number; discount_per: number }>({ count: 1, discount_per: 0 });
+  const [rowOptionsData, setRowOptionsData] = useState<{ count: number; discount_per: number; endurance?: number }>({ count: 1, discount_per: 0 });
 
   const [isManageServiceCostsDialogOpen, setIsManageServiceCostsDialogOpen] = useState(false);
   const [selectedRequestedServiceForCosts, setSelectedRequestedServiceForCosts] = useState<RequestedService | null>(null);
@@ -147,7 +147,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
 
   const handleOpenRowOptions = (rs: RequestedService) => {
     setRowOptionsService(rs);
-    setRowOptionsData({ count: rs.count || 1, discount_per: rs.discount_per || 0 });
+    setRowOptionsData({ count: rs.count || 1, discount_per: rs.discount_per || 0, endurance: Number(rs.endurance) || 0 });
     setIsRowOptionsDialogOpen(true);
   };
 
@@ -158,6 +158,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
       payload: {
         count: rowOptionsData.count,
         discount_per: isCompanyPatient ? 0 : rowOptionsData.discount_per,
+        ...(isCompanyPatient ? { endurance: Number(rowOptionsData.endurance) || 0 } : {}),
       },
     });
     setIsRowOptionsDialogOpen(false);
@@ -351,6 +352,13 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                   <TextField type="number" size="small" inputProps={{ min: 1 }} value={rowOptionsData.count}
                     onChange={(e) => setRowOptionsData({ ...rowOptionsData, count: parseInt(e.target.value || '1') || 1 })} />
                 </Box>
+                {isCompanyPatient && (
+                  <Box>
+                    <Typography variant="caption" fontWeight={600}>التحمل</Typography>
+                    <TextField type="number" size="small" inputProps={{ min: 0 }} value={rowOptionsData.endurance ?? 0}
+                      onChange={(e) => setRowOptionsData({ ...rowOptionsData, endurance: parseFloat(e.target.value || '0') || 0 })} />
+                  </Box>
+                )}
                 {!isCompanyPatient && (
                   <Box>
                     <Typography variant="caption" fontWeight={600}>نسبة الخصم</Typography>

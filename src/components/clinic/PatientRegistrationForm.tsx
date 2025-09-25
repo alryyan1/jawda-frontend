@@ -228,6 +228,7 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
   };
 
   const handleSelectChange = (field: keyof FormData) => (event: SelectChangeEvent) => {
+    setOverflow(true);
     const value = event.target.value;
     setFormData(prev => ({ ...prev, [field]: value }));
     
@@ -347,6 +348,7 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
       });
 
       const newPatient = response.data.data;
+      setOverflow(false);
       onPatientRegistered(newPatient as Patient);
       
       // Reset form
@@ -388,8 +390,9 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
   //   setShowRelationDialog(false);
   // };
 
+  const [overflow, setOverflow] = useState(false);
   return (
-    <Box sx={{ width: '100%', maxWidth: 380, mx: 'auto', position: 'relative',overflow:'auto'}}>
+    <Box sx={{ width: '100%', maxWidth: 380, mx: 'auto', position: 'relative',overflowY: overflow ? 'auto' : 'unset'}}>
       {alert && (
         <Alert 
           severity={alert.type} 
@@ -400,10 +403,10 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
         </Alert>
       )}
 
-      <Card>
-        <CardContent>
+      <Card >
+        <CardContent >
        
-          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
+          <Box component="form" onSubmit={handleSubmit}  sx={{ mt: 2 }}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               {/* Phone Number Field */}
               <TextField

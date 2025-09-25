@@ -20,12 +20,15 @@ export interface SpecialistFormData {
 export interface Specialist {
   id: number;
   name: string;
+  firestore_id?: string | null; // Firestore document ID
   doctors_count?: number; // From withCount('doctors')
 }
 export interface Doctor {
   id: number;
   name: string;
+  firebase_id?: string | null; // Firebase document ID
   phone: string;
+  specialist_firestore_id?: string | null; // Firestore document ID
   cash_percentage: number | string; // string if API returns it as string, number if casted
   company_percentage: number | string;
   static_wage: number | string;
@@ -167,4 +170,17 @@ export interface DoctorServiceFormData {
   service_id: string; // From select
   percentage?: string; // Input as string
   fixed?: string;      // Input as string
+}
+
+// Firestore Online Appointment structure
+export interface OnlineAppointment {
+  id?: string; // Firestore document ID
+  createdAt: Date;
+  date: string;
+  isConfirmed: boolean;
+  patientId: string;
+  patientName: string;
+  patientPhone: string;
+  period: 'morning' | 'evening';
+  time: string;
 }

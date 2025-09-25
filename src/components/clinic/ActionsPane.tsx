@@ -26,6 +26,7 @@ import DoctorCredits from "./DoctorCredits";
 // Removed shadcn dialog in favor of MUI Dialog
 import { useAuth } from "@/contexts/AuthContext";
 import ShiftSummaryDialog from "./ShiftSummaryDialog";
+import OnlineAppointmentsDialog from "./OnlineAppointmentsDialog";
 import type { DoctorShift } from "@/types/doctors";
 import { webUrl } from "@/pages/constants";
  
@@ -34,12 +35,14 @@ interface ActionsPaneProps {
   onToggleRegistrationForm: () => void;
   onDoctorShiftSelectedFromFinder: (shift: DoctorShift) => void;
   onDoctorShiftClosed?: (doctorShiftId: number) => void;
+  activeDoctorShift: DoctorShift | null;
 }
 
 const ActionsPane: React.FC<ActionsPaneProps> = ({
   showRegistrationForm,
   onToggleRegistrationForm,
   onDoctorShiftClosed,
+  activeDoctorShift,
 }) => {
   const { currentClinicShift, user: authUser } = useAuth();
     // Placeholder permissions
@@ -47,6 +50,9 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
   const canManageDoctorShifts = true;
   const [showShiftSummaryDialog, setShowShiftSummaryDialog] = useState(false);
   const [isDoctorCreditsOpen, setIsDoctorCreditsOpen] = useState(false);
+  const [isOnlineAppointmentsOpen, setIsOnlineAppointmentsOpen] = useState(false);
+ console.log(activeDoctorShift,'activeDoctorShift')
+
   return (
     <>
     <Box
@@ -131,9 +137,10 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
    
      
         <Divider sx={{ width: "100%", my: 1 }} />
-          <Tooltip title="الحجوزات اونلاين " placement="left">
+          <Tooltip title="الحجوزات الإلكترونية" placement="left">
           <IconButton
-            onClick={() => {/* TODO: Add language/settings functionality */}}
+            onClick={() => setIsOnlineAppointmentsOpen(true)}
+            disabled={!activeDoctorShift}
             sx={{ width: 44, height: 44, color: "secondary.main" }}
           >
             <FontAwesomeIcon icon={faGlobe} />
@@ -161,6 +168,13 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
           />
         </DialogContent>
       </Dialog>
+
+      {/* Online Appointments Dialog */}
+      <OnlineAppointmentsDialog
+        isOpen={isOnlineAppointmentsOpen}
+        onClose={() => setIsOnlineAppointmentsOpen(false)}
+        activeDoctorShift={activeDoctorShift}
+      />
       
     </>
   );

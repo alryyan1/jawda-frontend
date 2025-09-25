@@ -33,8 +33,11 @@ import {
   getDoctorById,
   getSpecialistsList,
   getFinanceAccountsList,
+  updateDoctorFirebaseId,
   DoctorFormMode,
 } from "@/services/doctorService";
+import { fetchFirestoreDoctors, type FirestoreDoctor } from "@/services/firestoreDoctorService";
+import { DarkThemeAutocomplete } from "@/components/ui/mui-autocomplete";
 import AddSpecialistDialog from "./AddSpecialistDialog";
 
 interface DoctorFormValues {
@@ -63,6 +66,7 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
   const { doctorId } = useParams<{ doctorId?: string }>();
   const queryClient = useQueryClient();
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [selectedFirestoreDoctor, setSelectedFirestoreDoctor] = useState<FirestoreDoctor | null>(null);
 
   const isEditMode = mode === DoctorFormMode.EDIT;
   const { data: specialists, isLoading: isLoadingSpecialists } = useQuery<
@@ -77,6 +81,8 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
     queryFn: () => getDoctorById(Number(doctorId)).then((res) => res.data),
     enabled: isEditMode && !!doctorId,
   });
+
+  // showJsonDialog(doctorData);
 
   // Handle image preview side effect when doctorData changes
   useEffect(() => {
@@ -98,6 +104,17 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
       queryKey: ["financeAccountsList"],
       queryFn: getFinanceAccountsList,
     });
+
+  // Get the specialist's firestore_id to fetch Firestore doctors
+  const specialistFirestoreId = doctorData?.specialist_firestore_id;
+  
+  // Fetch Firestore doctors based on specialist's firestore_id
+  const { data: firestoreDoctors, isLoading: isLoadingFirestoreDoctors } = useQuery<FirestoreDoctor[], Error>({
+    queryKey: ['firestoreDoctors', specialistFirestoreId],
+    queryFn: () => fetchFirestoreDoctors(specialistFirestoreId!),
+    enabled: !!specialistFirestoreId && isEditMode,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 
   const form = useForm<DoctorFormValues>({
     defaultValues: {
@@ -142,10 +159,19 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
           doctorData.finanace_account_id_insurance
         ),
         calc_insurance: doctorData.calc_insurance,
-        is_default: Boolean((doctorData as any).is_default),
+        is_default: Boolean((doctorData as Doctor & { is_default?: boolean }).is_default),
       });
     }
   }, [isEditMode, doctorData, reset]);
+ console.log(doctorData,'doctorData')
+  // Set the selected Firestore doctor when doctor data loads
+  useEffect(() => {
+    if (isEditMode && doctorData?.firebase_id && firestoreDoctors) {
+      const linkedFirestoreDoctor = firestoreDoctors.find(fd => fd.centralDoctorId === doctorData.firebase_id);
+      console.log(linkedFirestoreDoctor,'linked')
+      setSelectedFirestoreDoctor(linkedFirestoreDoctor || null);
+    }
+  }, [isEditMode, doctorData, firestoreDoctors]);
 
   const imageFileWatch = watch("image_file");
   useEffect(() => {
@@ -185,6 +211,18 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
       }
       const fallback = (error as { message?: string })?.message;
       toast.error(respMessage || fallback || 'فشل حفظ بيانات الطبيب');
+    },
+  });
+
+  const updateFirebaseIdMutation = useMutation({
+    mutationFn: ({ doctorId, firebaseId }: { doctorId: number; firebaseId: string }) =>
+      updateDoctorFirebaseId(doctorId, firebaseId),
+    onSuccess: () => {
+      toast.success("تم ربط الطبيب بـ Firestore بنجاح!");
+      queryClient.invalidateQueries({ queryKey: ["doctor", doctorId] });
+    },
+    onError: (error: Error & { response?: { data?: { message?: string } } }) => {
+      toast.error(error.response?.data?.message || "فشل ربط الطبيب بـ Firestore.");
     },
   });
 
@@ -262,6 +300,15 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
     });
     // The specialistsList query is already invalidated by the dialog, so the dropdown will update.
   };
+
+  const handleFirestoreDoctorSelect = (firestoreDoctor: FirestoreDoctor | null) => {
+    if (firestoreDoctor && doctorId) {
+      updateFirebaseIdMutation.mutate({
+        doctorId: Number(doctorId),
+        firebaseId: firestoreDoctor.centralDoctorId
+      });
+    }
+  };
   const isLoading =
     isLoadingDoctor ||
     isLoadingSpecialists ||
@@ -318,6 +365,75 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
               {fieldState.error && <FormHelperText error>{fieldState.error.message}</FormHelperText>}
             </Box>
           )} />
+
+          {/* Firestore Doctor Selection - Only show in edit mode when specialist has firestore_id */}
+          {isEditMode && specialistFirestoreId && (
+            <Box>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                ربط بـ Firestore
+              </Typography>
+              <DarkThemeAutocomplete
+                options={firestoreDoctors || []}
+                getOptionLabel={(option) => option.docName}
+                value={selectedFirestoreDoctor}
+                onChange={(_, newValue) => handleFirestoreDoctorSelect(newValue)}
+                loading={isLoadingFirestoreDoctors || updateFirebaseIdMutation.isPending}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="اختر طبيب من Firestore"
+                    placeholder="ابحث في الأطباء..."
+                    size="small"
+                    helperText="اختر طبيب من Firestore لربطه بالطبيب المحلي"
+                  />
+                )}
+                renderOption={(props, option) => (
+                  <li {...props} key={option.id}>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{option.docName}</span>
+                      <span className="text-sm text-muted-foreground">
+                        الهاتف: {option.phoneNumber || 'غير محدد'} | 
+                        الحد الصباحي: {option.morningPatientLimit} | 
+                        الحد المسائي: {option.eveningPatientLimit}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        المعرف المركزي: {option.centralDoctorId}
+                      </span>
+                    </div>
+                  </li>
+                )}
+                isOptionEqualToValue={(option, value) => option.centralDoctorId === value?.centralDoctorId}
+                noOptionsText="لا توجد أطباء متاحة"
+                loadingText="جاري التحميل..."
+                disabled={updateFirebaseIdMutation.isPending}
+              />
+              {/* {selectedFirestoreDoctor && (
+                <Box sx={{ mt: 1, p: 2, bgcolor: 'background.paper', borderRadius: 1, border: 1, borderColor: 'divider' }}>
+                  <Typography variant="subtitle2" color="primary" gutterBottom>
+                    الطبيب المحدد من Firestore:
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>الاسم:</strong> {selectedFirestoreDoctor.docName}
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>الهاتف:</strong> {selectedFirestoreDoctor.phoneNumber || 'غير محدد'}
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>الحد الصباحي:</strong> {selectedFirestoreDoctor.morningPatientLimit} مريض
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>الحد المسائي:</strong> {selectedFirestoreDoctor.eveningPatientLimit} مريض
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>الحالة:</strong> {selectedFirestoreDoctor.isActive ? 'نشط' : 'غير نشط'}
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>الحجز متاح:</strong> {selectedFirestoreDoctor.isBookingEnabled ? 'نعم' : 'لا'}
+                  </Typography>
+                </Box>
+              )} */}
+            </Box>
+          )}
 
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr 1fr' }, gap: 2 }}>
             <Controller name="cash_percentage" control={control} render={({ field }) => (

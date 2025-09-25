@@ -153,3 +153,8 @@ export const removeServiceConfigurationFromDoctor = async (
 ): Promise<void> => {
   await apiClient.delete(`${DOCTOR_API_URL}/${doctorId}/configure-service/${serviceId}`);
 };
+
+export const updateDoctorFirebaseId = async (id: number, firebaseId: string): Promise<Doctor> => {
+  const response = await apiClient.put<{ data: Doctor }>(`${API_URL}/${id}`, { firebase_id: firebaseId });
+  return response.data.data;
+};

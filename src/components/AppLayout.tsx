@@ -99,7 +99,7 @@ const utilityNavItems: NavItem[] = [
   { to: '/users', label: 'المستخدمون', icon: Users, permission: 'list users' },
   { to: '/roles', label: 'الأدوار', icon: ShieldCheck, permission: 'list roles' },
   { to: '/settings/general', label: 'الإعدادات', icon: Settings, permission: 'view settings' },
-  // { to: '/specialists', label: 'الأخصائيون', icon: Users, permission: 'list specialists' },
+  { to: '/specialists', label: 'التخصصات الطبيه', icon: Users, permission: 'list specialists' },
 ];
 
 

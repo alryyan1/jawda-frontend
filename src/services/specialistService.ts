@@ -25,3 +25,8 @@ export const updateSpecialist = async (id: number, data: Partial<SpecialistFormD
 export const deleteSpecialist = async (id: number): Promise<void> => {
   await apiClient.delete(`${API_URL}/${id}`);
 };
+
+export const updateSpecialistFirestoreId = async (id: number, firestoreId: string): Promise<Specialist> => {
+  const response = await apiClient.put<{ data: Specialist }>(`${API_URL}/${id}`, { firestore_id: firestoreId });
+  return response.data.data;
+};

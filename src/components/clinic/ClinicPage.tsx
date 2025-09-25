@@ -111,7 +111,7 @@ console.log('doctor shift closed', doctorShiftId);
 console.log('active doctor shift', activeDoctorShift);
     // If the closed shift is the currently active one, deselect it
     if (activeDoctorShift?.id === doctorShiftId) {
-      alert('doctor shift closed');
+      // alert('doctor shift closed');
       setActiveDoctorShift(null);
       setSelectedPatientVisit(null); // Clear selected patient
       setShowRegistrationForm(false); // Hide registration form
@@ -125,7 +125,7 @@ console.log('active doctor shift', activeDoctorShift);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isUnifiedCashier]);
-
+  const [showPatientHistory, setShowPatientHistory] = useState(false);
   // F8 and F10 keyboard listeners
   // F8: Open income dialog, F10: Open doctor finder dialog
   useEffect(() => {
@@ -353,6 +353,7 @@ console.log('active doctor shift', activeDoctorShift);
         )}
 
         <ActionsPane
+          activeDoctorShift={activeDoctorShift}
           showRegistrationForm={showRegistrationForm}
           onToggleRegistrationForm={toggleRegistrationForm}
           onDoctorShiftSelectedFromFinder={handleDoctorShiftSelectedFromFinder}

@@ -54,6 +54,7 @@ export interface User {
   is_supervisor?: boolean;
   is_active?: boolean;
   user_money_collector_type?: "lab" | "company" | "clinic" | "all";
+  user_type?: string; // Arabic enum from backend
   roles?: Role[];
   created_at?: string;
   updated_at?: string;
@@ -69,6 +70,7 @@ export interface UserFormData {
   is_supervisor?: boolean;
   is_active?: boolean;
   user_money_collector_type?: "lab" | "company" | "clinic" | "all";
+  user_type?: string;
   roles: string[];
 }
 

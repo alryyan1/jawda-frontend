@@ -70,7 +70,7 @@ function ValueLoader({ api, field }: { api: string; field?: string }) {
   return <TableCell className="text-xl!">{formatted}</TableCell>;
 }
 
-function DoctorCredits({ setAllMoneyUpdatedLab, user }: DoctorsCreditsProps) {
+function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
   const { currentClinicShift } = useAuth();
   const [cashAmount, setCashAmount] = useState<number>(0);
   const [temp, setTemp] = useState<number>(0);
@@ -82,7 +82,7 @@ function DoctorCredits({ setAllMoneyUpdatedLab, user }: DoctorsCreditsProps) {
   const [selectedDoctorShift, setSelectedDoctorShift] = useState<DoctorShiftItem | null>(null);
   const [isAddingCost, setIsAddingCost] = useState(false);
   // Removed fetching of last shift as it is not used currently
-
+  const { user } = useAuth();
   useEffect(() => {
     document.title = "استحقاق الاطباء";
   }, []);
@@ -218,6 +218,9 @@ function DoctorCredits({ setAllMoneyUpdatedLab, user }: DoctorsCreditsProps) {
           {doctorShifts
             .filter((d) => {
               if(hasRole('admin')){
+                return true;
+              }
+              if(user?.user_type == 'خزنه موحده'){
                 return true;
               }
               return d.user_id_opened === user?.id;

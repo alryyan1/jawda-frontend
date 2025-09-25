@@ -88,7 +88,7 @@ const mainNavItems: NavItem[] = [
   { to: '/doctors', label: 'الأطباء', icon: Stethoscope, permission: 'list doctors' },
   // { to: '/analysis', label: 'التحليل', icon: FileBarChart2, permission: 'view analysis' },
   // { to: '/schedules-appointments', label: 'المواعيد والجداول', icon: CalendarClock, permission: 'view doctor_schedules' },
-  // { to: '/cash-reconciliation', label: 'التسوية النقدية', icon: Banknote, permission: 'access cash_reconciliation' },
+  { to: '/cash-reconciliation', label: 'الفئات', icon: Banknote, permission: 'access cash_reconciliation' },
 
   // { to: '/bulk-whatsapp', label: 'الواتساب الجماعي', icon: MessageCircle, permission: 'send bulk whatsapp' },
 ];
@@ -99,7 +99,7 @@ const utilityNavItems: NavItem[] = [
   { to: '/users', label: 'المستخدمون', icon: Users, permission: 'list users' },
   { to: '/roles', label: 'الأدوار', icon: ShieldCheck, permission: 'list roles' },
   { to: '/settings/general', label: 'الإعدادات', icon: Settings, permission: 'view settings' },
-  { to: '/specialists', label: 'الأخصائيون', icon: Users, permission: 'list specialists' },
+  // { to: '/specialists', label: 'الأخصائيون', icon: Users, permission: 'list specialists' },
 ];
 
 

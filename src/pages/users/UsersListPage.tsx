@@ -1,6 +1,6 @@
 // src/pages/users/UsersListPage.tsx
 import React, { useState, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   useQuery,
   useMutation,
@@ -49,6 +49,7 @@ import {
 export default function UsersListPage() {
   const queryClient = useQueryClient();
   const { user: currentUser } = useAuth();
+  const navigate = useNavigate();
 
   const canCreateUsers = true;
   const canEditUsers = true;
@@ -215,6 +216,8 @@ export default function UsersListPage() {
                     <TableRow
                       key={u.id}
                       hover
+                      onClick={() => navigate(`/users/${u.id}/edit`)}
+                      sx={{ cursor: 'pointer' }}
                     >
                       <TableCell align="center" sx={{ display: { xs: 'none', sm: 'table-cell' }, py: 1.25 }}>{u.id}</TableCell>
                       <TableCell sx={{ py: 1.25 }}>
@@ -261,7 +264,7 @@ export default function UsersListPage() {
                       <TableCell align="right" sx={{ py: 1.25 }}>
                         <IconButton
                           size="small"
-                          onClick={(e: React.MouseEvent<HTMLButtonElement>) => openMenuFor(e, u.id)}
+                          onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); openMenuFor(e, u.id); }}
                           disabled={deleteMutation.isPending && deleteMutation.variables === u.id}
                           aria-label="فتح القائمة"
                         >

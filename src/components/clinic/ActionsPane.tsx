@@ -68,7 +68,7 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
        <Tooltip title="التقرير العام" placement="left">
           <IconButton
             onClick={() => {
-              const url = `${webUrl}reports/doctor-shifts/pdf?shift_id=${currentClinicShift?.id}&date_from=${dayjs().format('YYYY-MM-DD')}&date_to=${dayjs().format('YYYY-MM-DD')}&user_opened=${currentClinicShift?.user_opened}`;
+              const url = `${webUrl}reports/doctor-shifts/pdf?shift_id=${currentClinicShift?.id}&user_opened=${authUser?.id}`;
               window.open(url, '_blank', 'noopener,noreferrer');
               window.open(url, '_blank', 'noopener,noreferrer');
             }}

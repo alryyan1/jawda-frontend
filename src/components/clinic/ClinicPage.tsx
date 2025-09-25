@@ -31,7 +31,23 @@ const ClinicPage: React.FC = () => {
   // Removed React Query client; using local refresh key instead
   const [activePatientsRefreshKey, setActivePatientsRefreshKey] = useState(0);
    
-  const { currentClinicShift } = useAuth();
+  const { currentClinicShift, user } = useAuth();
+  const isUnifiedCashier = (user?.user_type || '').trim() === 'خزنه موحده';
+  const DETAILS_COLLAPSE_KEY = 'clinic_patient_details_collapsed';
+  const [isDetailsCollapsed, setIsDetailsCollapsed] = useState<boolean>(() => {
+    const saved = localStorage.getItem(DETAILS_COLLAPSE_KEY);
+    if (saved === 'true' || saved === 'false') return saved === 'true';
+    return isUnifiedCashier ? true : false; // default collapsed for unified cashier, otherwise expanded
+  });
+
+  useEffect(() => {
+    localStorage.setItem(DETAILS_COLLAPSE_KEY, String(isDetailsCollapsed));
+  }, [isDetailsCollapsed]);
+
+  const toggleDetailsCollapsed = () => {
+    if (!isUnifiedCashier) return; // Only collapsible for unified cashier
+    setIsDetailsCollapsed((prev) => !prev);
+  };
   const [showRegistrationForm, setShowRegistrationForm] = useState(true);
   const [selectedPatientVisit, setSelectedPatientVisit] = useState<{ patient: Patient; visitId: number } | null>(null);
   const [activeDoctorShift, setActiveDoctorShift] = useState<DoctorShift | null>(null); // For DoctorsTabs interaction
@@ -77,6 +93,7 @@ const handleDoctorShiftSelectedFromFinder = useCallback((shift: DoctorShift) => 
   }, []);
 
   const toggleRegistrationForm = () => {
+    if (isUnifiedCashier) return; // Prevent showing for unified cashier users
     setShowRegistrationForm(prev => !prev);
     if (!showRegistrationForm) { // If we are about to show the form
       setSelectedPatientVisit(null); // Clear selected patient
@@ -85,9 +102,16 @@ const handleDoctorShiftSelectedFromFinder = useCallback((shift: DoctorShift) => 
   
   const onShiftSelect = (shift: DoctorShift | null) => {
     setActiveDoctorShift(shift);
-    setShowRegistrationForm(true);
+    setShowRegistrationForm(isUnifiedCashier ? false : true);
     setSelectedPatientVisit(null); // Clear selected patient
   }
+
+  // Ensure the registration form remains hidden for unified cashier users
+  useEffect(() => {
+    if (isUnifiedCashier && showRegistrationForm) {
+      setShowRegistrationForm(false);
+    }
+  }, [isUnifiedCashier]);
 
   // F8 and F10 keyboard listeners
   // F8: Open income dialog, F10: Open doctor finder dialog
@@ -224,12 +248,12 @@ const handleDoctorShiftSelectedFromFinder = useCallback((shift: DoctorShift) => 
       </header>
 
       {/* Main Content Area */}
-      <div className={`clinic-main-content ${showRegistrationForm ? 'with-registration' : 'without-registration'}`}>
+      <div className={`clinic-main-content ${showRegistrationForm ? 'with-registration' : 'without-registration'} ${selectedPatientVisit ? '' : ' without-patient-selected'}`}>
         {/* Section 1: Actions Pane (Fixed width, always visible) */}
       
 
         {/* Section 2: Patient Registration Form Panel (Conditional Visibility) */}
-        {showRegistrationForm && (
+        {showRegistrationForm && !isUnifiedCashier && (
           
             <PatientRegistrationForm 
               isVisible={showRegistrationForm} 
@@ -278,8 +302,8 @@ const handleDoctorShiftSelectedFromFinder = useCallback((shift: DoctorShift) => 
           </section>
         )}
 
-        {/* Section 5: Patient Details Column (Always visible) */}
-       { <section className="clinic-panel details">
+        {/* Section 5: Patient Details Column (Collapsible for unified cashier) */}
+       { <section className={`clinic-panel details ${isUnifiedCashier && isDetailsCollapsed ? 'collapsed' : ''}`}>
          <PatientDetailsColumnClinic
             ref={patientDetailsRef}
             visitId={selectedPatientVisit?.visitId || null}
@@ -290,6 +314,30 @@ const handleDoctorShiftSelectedFromFinder = useCallback((shift: DoctorShift) => 
             }}
           />
         </section>}
+
+        {isUnifiedCashier && (
+          <button
+            type="button"
+            onClick={toggleDetailsCollapsed}
+            className="details-toggle-btn"
+            aria-label={isDetailsCollapsed ? 'إظهار تفاصيل المريض' : 'إخفاء تفاصيل المريض'}
+            title={isDetailsCollapsed ? 'إظهار تفاصيل المريض' : 'إخفاء تفاصيل المريض'}
+            style={{
+              position: 'absolute',
+              right: 8,
+              bottom: 8,
+              zIndex: 50,
+              padding: '6px 10px',
+              background: 'var(--primary, #0ea5e9)',
+              color: '#fff',
+              borderRadius: 6,
+              border: 'none',
+              cursor: 'pointer'
+            }}
+          >
+            {isDetailsCollapsed ? 'عرض التفاصيل' : 'إخفاء التفاصيل'}
+          </button>
+        )}
 
         <ActionsPane
           showRegistrationForm={showRegistrationForm}

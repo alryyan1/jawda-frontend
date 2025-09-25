@@ -5,6 +5,7 @@ import AppLayout from "./components/AppLayout";
 
 // Page Components
 import HomePage from "./pages/HomePage";
+import RedirectByUserType from "./components/RedirectByUserType";
 import ErrorPage from "./pages/ErrorPage";
 
 // Doctors Module Pages (ensure these files exist, even if as placeholders)
@@ -110,8 +111,8 @@ const router = createBrowserRouter([
         errorElement: <ErrorPage />,
         children: [
           {
-            index: true, // Default route for '/' after login
-            element: <HomePage />,
+            index: true, // After login, redirect based on user_type
+            element: <RedirectByUserType />,
           },
           {
             path: "lab-sample-collection",

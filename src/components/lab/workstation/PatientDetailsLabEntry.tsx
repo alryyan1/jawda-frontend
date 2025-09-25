@@ -51,7 +51,7 @@ export interface PatientDetailsLabEntryProps {
   onAuthenticationToggle?: () => void;
 }
 
-const ItemRow: React.FC<{
+ export const ItemRow: React.FC<{
   label: string;
   value?: React.ReactNode;
   icon?: React.ElementType;

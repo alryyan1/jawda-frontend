@@ -110,7 +110,7 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId 
       }} className="doctors-tabs-flex-wrapper">
     
           <Box className="doctors-tabs-flex-container">
-            {doctorShifts.filter(shift =>shift.user_id_opened == user?.id || hasRole('admin')).map((shift) => {
+            {doctorShifts.filter(shift =>shift.user_id_opened == user?.id || hasRole('admin') || user?.user_type == 'خزنه موحده').map((shift) => {
               const isActive = activeShiftId === shift.id;
               const isExamining = shift.is_examining;
 

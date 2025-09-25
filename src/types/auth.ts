@@ -30,6 +30,7 @@ export interface User {
   doctor?: Doctor; // If you eager load and want to display doctor name
   is_nurse: boolean;
   user_money_collector_type: 'lab' | 'company' | 'clinic' | 'all';
+  user_type?: string; // Arabic enum from backend migration
   created_at: string;
   updated_at: string;
   roles?: Role[];

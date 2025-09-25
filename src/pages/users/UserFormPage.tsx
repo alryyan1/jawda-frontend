@@ -25,7 +25,7 @@ import {
   Alert,
   Paper,
 } from '@mui/material';
-import { Loader2, Key, ArrowLeft, UserPlus, UserCog } from "lucide-react";
+import { Key, ArrowLeft, UserPlus, UserCog } from "lucide-react";
 import { toast } from "sonner";
 
 import type {
@@ -56,6 +56,7 @@ type UserFormValues = {
   doctor_id?: string | undefined;
   is_supervisor: boolean;
   is_active: boolean;
+  user_type?: string;
   roles: string[];
 };
 
@@ -81,6 +82,7 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
       doctor_id: undefined,
       is_supervisor: false,
       is_active: true,
+      user_type: "",
       roles: [],
     },
   });
@@ -131,6 +133,7 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
         is_supervisor: !!userData.is_supervisor,
         is_active:
           userData.is_active === undefined ? true : !!userData.is_active,
+        user_type: (userData as unknown as { user_type?: string })?.user_type || "",
         roles: userData.roles?.map((role) => role.name) || [],
       });
     } else if (!isEditMode) {
@@ -142,6 +145,7 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
         doctor_id: undefined,
         is_supervisor: false,
         is_active: true,
+        user_type: "",
         roles: [],
       });
     }
@@ -196,6 +200,7 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
       is_nurse: false,
       is_supervisor: formData.is_supervisor,
       is_active: formData.is_active,
+      user_type: formData.user_type || undefined,
       roles: formData.roles || [],
       user_money_collector_type: 'all',
     };
@@ -314,6 +319,34 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
                         error={!!error}
                         helperText={error?.message}
                       />
+                    )}
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Controller
+                    control={control}
+                    name="user_type"
+                    render={({ field, fieldState: { error } }) => (
+                      <FormControl fullWidth error={!!error}>
+                        <InputLabel>نوع المستخدم</InputLabel>
+                        <Select
+                        sx={{
+                          width:'300px'
+                        }}
+                          {...field}
+                          value={field.value || ""}
+                          disabled={dataIsLoading || mutation.isPending}
+                          label="نوع المستخدم"
+                        >
+                          <MenuItem value="">بدون</MenuItem>
+                          <MenuItem value="استقبال معمل">استقبال معمل</MenuItem>
+                          <MenuItem value="ادخال نتائج">ادخال نتائج</MenuItem>
+                          <MenuItem value="استقبال عياده">استقبال عياده</MenuItem>
+                          <MenuItem value="خزنه موحده">خزنه موحده</MenuItem>
+                          <MenuItem value="تامين">تامين</MenuItem>
+                        </Select>
+                        <FormHelperText>{error?.message}</FormHelperText>
+                      </FormControl>
                     )}
                   />
                 </Grid>

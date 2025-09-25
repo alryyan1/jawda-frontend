@@ -110,6 +110,9 @@
   grid-template-columns: 362px  minmax(700px, 1fr) 320px 60px;
 }
 
+.clinic-page-container[dir="rtl"] .clinic-main-content.without-registration.without-patient-selected {
+  grid-template-columns: 362px  minmax(700px, 1fr) 0px 60px;
+}
 .clinic-page-container[dir="rtl"] .clinic-panel.registration {
   border-left: 1px solid #e0e0e0;
   border-right: none;

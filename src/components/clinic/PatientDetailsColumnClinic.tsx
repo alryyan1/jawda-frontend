@@ -12,7 +12,18 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { fetchCurrentUserShiftIncomeSummary } from "@/services/userService";
 import { formatNumber } from "@/lib/utils";
-
+import { ItemRow } from "../lab/workstation/PatientDetailsLabEntry";
+import { 
+  CheckCircle2, 
+  Phone, 
+  CalendarDays, 
+  User, 
+  UserCircle2, 
+  Clock,
+  Shield,
+  Printer,
+  CreditCard
+} from "lucide-react";
 export interface PatientDetailsColumnClinicProps {
   visitId: number | null;
   onPrintReceipt?: () => void;
@@ -260,15 +271,23 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
 
   return (
     <>
-      <div className="flex flex-col h-full w-full items-center justify-start p-4 bg-background">
-        <div className="flex flex-col h-full w-full items-center justify-between p-4 bg-background">
+      <div className="flex flex-col h-full w-full items-center justify-start p-1 bg-background">
+        <div className="flex flex-col h-full w-full justify-between p-1 bg-background">
             {/* Patient Name */}
-        <div className="w-full text-center font-bold text-lg border-b border-border pb-2 mb-4 text-foreground">
+        <div className="w-full text-center font-bold text-lg border-b border-border pb-1 mb-1 text-foreground">
           {patientName}
         </div>
-
+ {/* TODO: Add icons */}
+ <div className="patient-details"><ItemRow label="المتسلسل" value={serial}  icon={FileText}/>
+        <ItemRow label="الطبيب" value={doctorName} />
+        <ItemRow label="الهاتف" value={phone} icon={Phone}/>
+        <ItemRow label="التاريخ" value={date} icon={CalendarDays}/>
+        <ItemRow label="المتسلسل" value={serial} icon={FileText}/>
+        <ItemRow label="بواسطة" value={registeredBy} />
+</div>
+        
         {/* Details Table */}
-        <table className="w-full text-sm mb-4 text-foreground">
+        {/* <table className="w-full text-sm mb-4 text-foreground">
           <tbody>
             <tr>
               <td className="text-right text-muted-foreground py-1">الطبيب</td>
@@ -283,15 +302,15 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
               <td className="text-left font-medium px-2">{date}</td>
             </tr>
             <tr>
-              <td className="text-right text-muted-foreground py-1">رقم الزيارة</td>
+              <td className="text-right text-muted-foreground py-1">المتسلسل </td>
               <td className="text-left font-medium px-2">{serial}</td>
             </tr>
             <tr>
-              <td className="text-right text-muted-foreground py-1">مسجل بواسطة</td>
+              <td className="text-right text-muted-foreground py-1"> بواسطة</td>
               <td className="text-left font-medium px-2">{registeredBy}</td>
             </tr>
           </tbody>
-        </table>
+        </table> */}
 
         {/* Patient Company Details */}
         {visit.patient && (

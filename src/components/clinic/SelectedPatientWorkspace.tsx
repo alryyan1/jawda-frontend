@@ -25,6 +25,7 @@ import LabRequestComponent from "./LabRequestComponent";
 import { toast } from "sonner";
 import apiClient from "@/services/api";
 import PdfPreviewDialog from "../common/PdfPreviewDialog";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface SelectedPatientWorkspaceProps {
   selectedPatientVisit: DoctorVisit;
@@ -41,6 +42,8 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
   onClose,
   onActiveTabChange,
 }) => {
+  const { user } = useAuth();
+  const isUnifiedCashier = (user?.user_type || '').trim() === 'خزنه موحده';
   const visitQueryKey = ["doctorVisit", visitId];
   const [activeTab, setActiveTab] = useState<'services' | 'lab'>("services");
   const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false);
@@ -172,10 +175,12 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
               {isGeneratingPdf ? <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2"/> : <PrinterIcon className="h-4 w-4 ltr:mr-2 rtl:ml-2"/>}
               طباعة الإيصال
             </Button>
-            <Button onClick={() => setOpenSelectionGridCommand(c => c + 1)} variant="default" size="sm">
-              <PlusCircle className="h-4 w-4 ltr:mr-2 rtl:ml-2"/>
-              إضافة خدمات
-            </Button>
+            {!isUnifiedCashier && (
+              <Button onClick={() => setOpenSelectionGridCommand(c => c + 1)} variant="default" size="sm">
+                <PlusCircle className="h-4 w-4 ltr:mr-2 rtl:ml-2"/>
+                إضافة خدمات
+              </Button>
+            )}
             {hasSelectedServices && (
               <Button
                 onClick={() => setAddSelectedCommand(c => c + 1)}

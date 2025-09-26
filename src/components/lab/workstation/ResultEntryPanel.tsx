@@ -728,9 +728,8 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                                     variant="body2"
                                     component="div"
                                     sx={{
-                                      fontWeight: 500,
-                                      fontSize: "0.75rem",
-                                      lineHeight: 1.2,
+                                      fontWeight: 900,
+                                      textAlign: "center",
                                       color: "var(--foreground)",
                                     }}
                                   >

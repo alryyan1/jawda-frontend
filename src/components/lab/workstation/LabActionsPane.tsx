@@ -161,9 +161,9 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
 
   const handleResetToDefault = () => {
     if (selectedLabRequest) {
-        if (window.confirm(`هل أنت متأكد من إعادة تعيين نتائج ${selectedLabRequest.main_test?.main_test_name} إلى القيم الافتراضية؟`)) {
+        // if (window.confirm(`هل أنت متأكد من إعادة تعيين نتائج ${selectedLabRequest.main_test?.main_test_name} إلى القيم الافتراضية؟`)) {
             setDefaultMutation.mutate(selectedLabRequest.id);
-        }
+        // }
     }
   };
   

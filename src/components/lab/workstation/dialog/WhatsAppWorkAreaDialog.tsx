@@ -28,6 +28,7 @@ import {
   type UltramsgInstanceStatus 
 } from "@/services/ultramsgService";
 import { getPatientById } from "@/services/patientService";
+import type { AxiosError } from "axios";
 
 interface WhatsAppWorkAreaDialogProps {
   isOpen: boolean;
@@ -165,10 +166,9 @@ const WhatsAppWorkAreaDialog: React.FC<WhatsAppWorkAreaDialogProps> = ({
         toast.error(response.error || "فشل إرسال الرسالة");
       }
     },
-    onError: (error: unknown) => {
-      const errorMessage = error instanceof Error ? error.message : 
-        (error as { response?: { data?: { error?: string } } }).response?.data?.error || "فشل إرسال الرسالة";
-      toast.error(errorMessage);
+    onError: (error: AxiosError) => {
+      console.log(error,'error');
+      toast.error(error.response?.data?.data.error || "فشل إرسال الرسالة");
     },
   });
 
@@ -202,9 +202,9 @@ const WhatsAppWorkAreaDialog: React.FC<WhatsAppWorkAreaDialogProps> = ({
         toast.error(response.error || "فشل إرسال التقرير");
       }
     },
-    onError: (error: unknown) => {
+    onError: (error: AxiosError) => {
       const errorMessage = error instanceof Error ? error.message : 
-        (error as { response?: { data?: { error?: string } } }).response?.data?.error || "فشل إرسال التقرير";
+        (error as { response?: { data?: { data?: { error?: string } } } }).response?.data?.data?.error || "فشل إرسال التقرير";
       toast.error(errorMessage);
     },
   });

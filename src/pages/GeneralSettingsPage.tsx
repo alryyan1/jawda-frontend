@@ -3,15 +3,32 @@ import { useForm } from "react-hook-form";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
-import { Loader2, Building2, MessageSquare, FileText, Settings, Bell } from "lucide-react";
+import { Building2, MessageSquare, Settings } from "lucide-react";
+import { 
+  Box, 
+  Paper, 
+  Typography, 
+  Stack, 
+  Avatar,
+  IconButton,
+  Chip,
+  TextField,
+  Button,
+  Tabs,
+  Tab,
+  FormControlLabel,
+  Checkbox,
+  Container,
+  CircularProgress
+} from '@mui/material';
+import { CloudUpload } from '@mui/icons-material';
 
 import type { Setting } from "@/types/settings";
 import { getSettings, updateSettings } from "@/services/settingService";
+import { api } from "@/lib/axios";
+import apiClient from "@/services/api";
+import showJsonDialog from "@/lib/showJsonDialog";
+import { webUrl } from "./constants";
 
 // Settings form data type
 type SettingsFormData = {
@@ -59,6 +76,9 @@ type SettingsFormData = {
   report_header_vatin?: string;
   report_header_cr?: string;
   default_lab_report_template?: string;
+  // Report assets (paths in storage)
+  header_base64?: string;
+  footer_base64?: string;
 };
 
 const SettingsPage: React.FC = () => {
@@ -121,10 +141,19 @@ const SettingsPage: React.FC = () => {
       report_header_vatin: undefined,
       report_header_cr: undefined,
       default_lab_report_template: undefined,
+      header_base64: undefined,
+      footer_base64: undefined,
     },
   });
-  const { control, handleSubmit, reset } = form;
+  const { control, handleSubmit, reset, watch } = form;
+  const { setValue } = form;
+  const [headerPreview, setHeaderPreview] = useState<string | null>(null);
+  const [footerPreview, setFooterPreview] = useState<string | null>(null);
 
+  // Watch form values for immediate updates
+  const watchedValues = watch();
+  // showJsonDialog(watchedValues);
+  console.log(`${webUrl}${watchedValues.header_base64}`);
   useEffect(() => {
     if (settings) {
       reset({
@@ -172,6 +201,8 @@ const SettingsPage: React.FC = () => {
         report_header_vatin: settings.report_header_vatin || undefined,
         report_header_cr: settings.report_header_cr || undefined,
         default_lab_report_template: settings.default_lab_report_template || undefined,
+        header_base64: (settings as Setting & { header_base64?: string }).header_base64 || undefined,
+        footer_base64: (settings as Setting & { footer_base64?: string }).footer_base64 || undefined,
       });
     }
   }, [settings, reset]);
@@ -195,341 +226,413 @@ const SettingsPage: React.FC = () => {
     mutation.mutate(data);
   };
 
+  // Upload helper for report header/footer assets
+  const uploadSettingAsset = async (field: 'header_base64' | 'footer_base64', file: File) => {
+    // Show preview immediately
+    const localUrl = URL.createObjectURL(file);
+    if (field === 'header_base64') setHeaderPreview(localUrl);
+    if (field === 'footer_base64') setFooterPreview(localUrl);
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('field', field);
+    try {
+      const res = await apiClient.post('/settings/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      const data = res.data;
+      const path: string = data?.path || data?.url || '';
+      if (!path) throw new Error('Invalid upload response');
+      setValue(field, path);
+      await mutation.mutateAsync({ [field]: path } as unknown as SettingsFormData);
+      toast.success(field === 'header_base64' ? 'تم رفع ترويسة التقرير' : 'تم رفع تذييل التقرير');
+    } catch (e: unknown) {
+      const error = e as { response?: { data?: { message?: string } }; message?: string };
+      const msg = error?.response?.data?.message || error?.message || 'فشل رفع الملف';
+      toast.error(msg);
+      // Clear preview on error
+      if (field === 'header_base64') setHeaderPreview(null);
+      if (field === 'footer_base64') setFooterPreview(null);
+    }
+  };
+
   if (isLoadingSettings)
     return (
-      <div className="flex justify-center items-center h-[calc(100vh-10rem)]">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="ml-2">جاري تحميل الإعدادات...</p>
-      </div>
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
+          <Stack direction="row" spacing={2} alignItems="center">
+            <CircularProgress />
+            <Typography>جاري تحميل الإعدادات...</Typography>
+          </Stack>
+        </Box>
+      </Container>
     );
 
   if (isError || !settings)
     return (
-      <div className="p-6 text-center text-destructive">
-        فشل جلب الإعدادات
-        <pre className="text-xs">{error?.message}</pre>
-      </div>
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Box textAlign="center" color="error.main">
+          <Typography variant="h6" gutterBottom>فشل جلب الإعدادات</Typography>
+          <Typography variant="body2" component="pre">
+            {error?.message}
+          </Typography>
+        </Box>
+      </Container>
     );
 
   return (
-    <div className="container mx-auto py-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">الإعدادات العامة</h1>
-        <p className="text-muted-foreground mt-2">إدارة جميع إعدادات النظام والمختبر</p>
-      </div>
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Box mb={4}>
+        <Typography variant="h3" component="h1" gutterBottom>
+          الإعدادات العامة
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          إدارة جميع إعدادات النظام والمختبر
+        </Typography>
+      </Box>
 
-      <Form {...form}>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="basic" className="flex items-center gap-2">
-                <Building2 className="h-4 w-4" />
-                الأساسية
-              </TabsTrigger>
-              <TabsTrigger value="whatsapp" className="flex items-center gap-2">
-                <MessageSquare className="h-4 w-4" />
-                واتساب
-              </TabsTrigger>
-              <TabsTrigger value="workflow" className="flex items-center gap-2">
-                <Settings className="h-4 w-4" />
-                سير العمل
-              </TabsTrigger>
-              <TabsTrigger value="notifications" className="flex items-center gap-2">
-                <Bell className="h-4 w-4" />
-                الإشعارات
-              </TabsTrigger>
-              <TabsTrigger value="reports" className="flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                التقارير
-              </TabsTrigger>
-            </TabsList>
+      <Box component="form" onSubmit={handleSubmit(onSubmit)}>
+        <Paper elevation={1} sx={{ mb: 3 }}>
+          <Tabs 
+            value={activeTab} 
+            onChange={(_, newValue) => setActiveTab(newValue)}
+            variant="fullWidth"
+            sx={{ borderBottom: 1, borderColor: 'divider' }}
+          >
+            <Tab 
+              value="basic" 
+              label={
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Building2 size={16} />
+                  <span>الأساسية</span>
+                </Stack>
+              } 
+            />
+            <Tab 
+              value="whatsapp" 
+              label={
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <MessageSquare size={16} />
+                  <span>واتساب</span>
+                </Stack>
+              } 
+            />
+            <Tab 
+              value="workflow" 
+              label={
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Settings size={16} />
+                  <span>سير العمل</span>
+                </Stack>
+              } 
+            />
+          </Tabs>
+        </Paper>
 
             {/* Basic Information Tab */}
-            <TabsContent value="basic" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>المعلومات الأساسية</CardTitle>
-                  <CardDescription>المعلومات الأساسية للمستشفى والمختبر</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={control}
-                      name="phone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>رقم الهاتف</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="0xxxxxxxxx" />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>البريد الإلكتروني</FormLabel>
-                          <FormControl>
-                            <Input {...field} type="email" placeholder="example@mail.com" />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <FormField
-                    control={control}
-                    name="address"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>العنوان</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="العنوان الكامل" />
-                        </FormControl>
-                      </FormItem>
-                    )}
+        {activeTab === "basic" && (
+          <Stack spacing={3}>
+            <Paper elevation={2} sx={{ p: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                المعلومات الأساسية
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                المعلومات الأساسية للمستشفى والمختبر
+              </Typography>
+              
+              <Stack spacing={3}>
+                <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
+                  <TextField
+                    {...control.register("phone")}
+                    label="رقم الهاتف"
+                    placeholder="0xxxxxxxxx"
+                    fullWidth
+                    variant="outlined"
                   />
+                  <TextField
+                    {...control.register("email")}
+                    label="البريد الإلكتروني"
+                    type="email"
+                    placeholder="example@mail.com"
+                    fullWidth
+                    variant="outlined"
+                  />
+                </Stack>
+                
+                <TextField
+                  {...control.register("address")}
+                  label="العنوان"
+                  placeholder="العنوان الكامل"
+                  fullWidth
+                  variant="outlined"
+                />
+                
+                <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
+                  <TextField
+                    {...control.register("hospital_name")}
+                    label="اسم المستشفى"
+                    placeholder="اسم المستشفى"
+                    fullWidth
+                    variant="outlined"
+                  />
+                  <TextField
+                    {...control.register("lab_name")}
+                    label="اسم المختبر"
+                    placeholder="اسم المختبر"
+                    fullWidth
+                    variant="outlined"
+                  />
+                </Stack>
+                
+                <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
+                  <TextField
+                    {...control.register("currency")}
+                    label="العملة"
+                    placeholder="SDG"
+                    fullWidth
+                    variant="outlined"
+                  />
+                  <TextField
+                    {...control.register("vatin")}
+                    label="الرقم الضريبي"
+                    placeholder="الرقم الضريبي"
+                    fullWidth
+                    variant="outlined"
+                  />
+                  <TextField
+                    {...control.register("cr")}
+                    label="رقم السجل التجاري"
+                    placeholder="رقم السجل التجاري"
+                    fullWidth
+                    variant="outlined"
+                  />
+                </Stack>
+              </Stack>
+            </Paper>
+            <Paper elevation={2} sx={{ p: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                ملفات تقرير المختبر
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                رفع صور الترويسة والتذييل لاستخدامها في تقارير النتائج
+              </Typography>
+              
+              <Stack spacing={3}>
+                {/* Header Image Upload */}
+                <Box>
+                  <Typography variant="subtitle1" gutterBottom>
+                    صورة  (Header)
+                  </Typography>
+                  <Stack direction="row" spacing={2} alignItems="center">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      id="header-upload"
+                      style={{ display: 'none' }}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) uploadSettingAsset('header_base64', file);
+                      }}
+                    />
+                    <label htmlFor="header-upload">
+                      <IconButton
+                        color="primary"
+                        component="span"
+                        sx={{ 
+                          border: '2px dashed',
+                          borderColor: 'primary.main',
+                          borderRadius: 2,
+                          p: 2
+                        }}
+                      >
+                        <CloudUpload sx={{ fontSize: 32 }} />
+                      </IconButton>
+                    </label>
+                    {(headerPreview || watchedValues.header_base64) && (
+                      <Stack direction="row" spacing={2} alignItems="center">
+                        <Avatar
+                          src={headerPreview || `${webUrl}${watchedValues.header_base64}`}
+                          variant="rounded"
+                          sx={{ width: 80, height: 60 }}
+                        />
+                        <Box>
+                          <Chip 
+                            label="تم الرفع" 
+                            color="success" 
+                            size="small" 
+                            sx={{ mb: 1 }}
+                          />
+                          <Typography variant="caption" display="block" color="text.secondary">
+                            {watchedValues.header_base64}
+                          </Typography>
+                        </Box>
+                      </Stack>
+                    )}
+                  </Stack>
+                </Box>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={control}
-                      name="hospital_name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>اسم المستشفى</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="اسم المستشفى" />
-                          </FormControl>
-                        </FormItem>
-                      )}
+                {/* Footer Image Upload */}
+                <Box>
+                  <Typography variant="subtitle1" gutterBottom>
+                    صورة الفوتر (Footer)
+                  </Typography>
+                  <Stack direction="row" spacing={2} alignItems="center">
+                              <input
+                      type="file"
+                      accept="image/*"
+                      id="footer-upload"
+                      style={{ display: 'none' }}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) uploadSettingAsset('footer_base64', file);
+                      }}
                     />
-                    <FormField
-                      control={control}
-                      name="lab_name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>اسم المختبر</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="اسم المختبر" />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <FormField
-                      control={control}
-                      name="currency"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>العملة</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="SDG" />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={control}
-                      name="vatin"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>الرقم الضريبي</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="الرقم الضريبي" />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={control}
-                      name="cr"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>رقم السجل التجاري</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="رقم السجل التجاري" />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
+                    <label htmlFor="footer-upload">
+                      <IconButton
+                        color="primary"
+                        component="span"
+                        sx={{ 
+                          border: '2px dashed',
+                          borderColor: 'primary.main',
+                          borderRadius: 2,
+                          p: 2
+                        }}
+                      >
+                        <CloudUpload sx={{ fontSize: 32 }} />
+                      </IconButton>
+                    </label>
+                    {(footerPreview || watchedValues.footer_base64) && (
+                      <Stack direction="row" spacing={2} alignItems="center">
+                        <Avatar
+                          src={footerPreview || watchedValues.footer_base64!}
+                          variant="rounded"
+                          sx={{ width: 80, height: 60 }}
+                        />
+                        <Box>
+                          <Chip 
+                            label="تم الرفع" 
+                            color="success" 
+                            size="small" 
+                            sx={{ mb: 1 }}
+                          />
+                          <Typography variant="caption" display="block" color="text.secondary">
+                            {watchedValues.footer_base64}
+                          </Typography>
+                        </Box>
+                      </Stack>
+                    )}
+                  </Stack>
+                </Box>
+              </Stack>
+            </Paper>
+          </Stack>
+        )}
 
             {/* WhatsApp Settings Tab */}
-            <TabsContent value="whatsapp" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>إعدادات واتساب</CardTitle>
-                  <CardDescription>إعدادات خدمة واتساب</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={control}
-                      name="ultramsg_instance_id"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>instance id</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="instance140877" />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={control}
-                      name="ultramsg_token"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>token</FormLabel>
-                          <FormControl>
-                            <Input {...field} type="password" placeholder="df2r46jz82otkegg" />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={control}
-                      name="ultramsg_base_url"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>رابط الخدمة</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="https://api.ultramsg.com" />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={control}
-                      name="ultramsg_default_country_code"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>رمز الدولة الافتراضي</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="249" />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
+        {activeTab === "whatsapp" && (
+          <Paper elevation={2} sx={{ p: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              إعدادات واتساب
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              إعدادات خدمة واتساب
+            </Typography>
+            
+            <Stack spacing={3}>
+              <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
+                <TextField
+                  {...control.register("ultramsg_instance_id")}
+                  label="instance id"
+                  placeholder="instance140877"
+                  fullWidth
+                  variant="outlined"
+                />
+                <TextField
+                  {...control.register("ultramsg_token")}
+                  label="token"
+                  type="password"
+                  placeholder="df2r46jz82otkegg"
+                  fullWidth
+                  variant="outlined"
+                />
+              </Stack>
+              <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
+                <TextField
+                  {...control.register("ultramsg_base_url")}
+                  label="رابط الخدمة"
+                  placeholder="https://api.ultramsg.com"
+                  fullWidth
+                  variant="outlined"
+                />
+                <TextField
+                  {...control.register("ultramsg_default_country_code")}
+                  label="رمز الدولة الافتراضي"
+                  placeholder="249"
+                  fullWidth
+                  variant="outlined"
+                />
+              </Stack>
+            </Stack>
+          </Paper>
+        )}
 
-            {/* Other tabs will be added in separate edits */}
-            <TabsContent value="workflow" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>إعدادات سير العمل</CardTitle>
-                  <CardDescription>إعدادات تدفق العمل والرسائل</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={control}
-                      name="send_welcome_message"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>إرسال رسالة ترحيبية تلقائياً</FormLabel>
-                          <FormControl>
-                            <div className="flex items-center gap-3">
-                              <input
-                                type="checkbox"
-                                checked={!!field.value}
-                                onChange={(e) => field.onChange(e.target.checked)}
-                              />
-                              <span className="text-sm text-muted-foreground">
+        {/* Workflow Settings Tab */}
+        {activeTab === "workflow" && (
+          <Paper elevation={2} sx={{ p: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              إعدادات سير العمل
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              إعدادات تدفق العمل والرسائل
+            </Typography>
+            
+            <Stack spacing={3}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    {...control.register("send_welcome_message")}
+                    checked={!!watchedValues.send_welcome_message}
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography variant="body1">
+                      إرسال رسالة ترحيبية تلقائياً
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
                                 عند تفعيل هذا الخيار سيتم إرسال رسالة ترحيبية عند تسجيل زيارة جديدة
-                              </span>
-                            </div>
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <FormField
-                    control={control}
-                    name="welcome_message"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>نص الرسالة الترحيبية</FormLabel>
-                        <FormControl>
-                          <textarea
-                            className="w-full border rounded-md p-2 min-h-[100px]"
+                    </Typography>
+                  </Box>
+                }
+              />
+              
+              <TextField
+                {...control.register("welcome_message")}
+                label="نص الرسالة الترحيبية"
                             placeholder="مرحباً {name}، نرحب بكم في مستشفى {hospital}. تم تسجيل زيارتكم بنجاح."
-                            value={field.value || ''}
-                            onChange={(e) => field.onChange(e.target.value)}
-                          />
-                        </FormControl>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          يمكنك استخدام المتغيرات: {`{name}`} ، {`{hospital}`}
-                        </p>
-                      </FormItem>
-                    )}
-                  />
-                </CardContent>
-              </Card>
-            </TabsContent>
+                multiline
+                rows={4}
+                fullWidth
+                variant="outlined"
+                helperText="يمكنك استخدام المتغيرات: {name} ، {hospital}"
+              />
+            </Stack>
+          </Paper>
+        )}
 
-            <TabsContent value="notifications" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>إعدادات الإشعارات</CardTitle>
-                  <CardDescription>إعدادات الإشعارات والرسائل الترحيبية</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">إعدادات الإشعارات ستكون متاحة قريباً...</p>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="reports" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>إعدادات التقارير</CardTitle>
-                  <CardDescription>إعدادات تنسيق وعرض التقارير</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <FormField
-                    control={control}
-                    name="default_lab_report_template"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>قالب تقرير المختبر الافتراضي</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="اسم القالب الافتراضي" />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-          </Tabs>
-
-          <div className="flex justify-end pt-6">
-            <Button type="submit" disabled={mutation.isPending} size="lg">
-              {mutation.isPending && (
-                <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />
-              )}
+        <Box display="flex" justifyContent="flex-end" pt={3}>
+          <Button 
+            type="submit" 
+            variant="contained" 
+            size="large"
+            disabled={mutation.isPending}
+            startIcon={mutation.isPending ? <CircularProgress size={20} /> : null}
+          >
               حفظ الإعدادات
             </Button>
-          </div>
-        </form>
-      </Form>
-    </div>
+        </Box>
+      </Box>
+    </Container>
   );
 };
 

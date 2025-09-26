@@ -1,4 +1,4 @@
-import { collection, getDocs, query, orderBy, doc } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, doc, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { OnlineAppointment } from '@/types/doctors';
 
@@ -97,7 +97,11 @@ export const fetchAllFirestoreDoctors = async (specializationId: string): Promis
   }
 };
 
-export const fetchDoctorAppointments = async (specializationId: string, doctorId: string): Promise<OnlineAppointment[]> => {
+export const fetchDoctorAppointments = async (
+  specializationId: string,
+  doctorId: string,
+  date?: string
+): Promise<OnlineAppointment[]> => {
   try {
     if (!specializationId || !doctorId) {
       return [];
@@ -106,12 +110,12 @@ export const fetchDoctorAppointments = async (specializationId: string, doctorId
     // Reference to the appointments collection: medicalFacilities/{facilityId}/specializations/{specializationId}/doctors/{doctorId}/appointments
     const doctorDocRef = doc(db, 'medicalFacilities', FACILITY_ID, 'specializations', specializationId, 'doctors', doctorId);
     const appointmentsRef = collection(doctorDocRef, 'appointments');
-    
+    const datePart = (date && new Date(date).toISOString().split('T')[0]) || new Date().toISOString().split('T')[0];
     // Query to get all appointments, ordered by date and time
     const q = query(
       appointmentsRef,
-      orderBy('date', 'asc'),
-      orderBy('time', 'asc')
+      where('date', '==', datePart),
+      orderBy('date', 'desc')
     );
     
     const querySnapshot = await getDocs(q);

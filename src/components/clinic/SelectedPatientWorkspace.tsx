@@ -1,6 +1,6 @@
 // src/components/clinic/SelectedPatientWorkspace.tsx
-import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import React, { useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type { Patient } from "@/types/patients";
 import type { DoctorVisit } from "@/types/visits";
@@ -21,11 +21,17 @@ import {
 } from "lucide-react";
 
 import ServicesRequestComponent from "./ServicesRequestComponent";
-import LabRequestComponent from "./LabRequestComponent";
+import LabRequestsColumn from "@/components/lab/reception/LabRequestsColumn";
 import { toast } from "sonner";
 import apiClient from "@/services/api";
 import PdfPreviewDialog from "../common/PdfPreviewDialog";
 import { useAuth } from "@/contexts/AuthContext";
+import Autocomplete from "@mui/material/Autocomplete";
+import TextField from "@mui/material/TextField";
+import Box from "@mui/material/Box";
+import type { MainTestStripped } from "@/types/labTests";
+import { addLabTestsToVisit } from "@/services/labRequestService";
+import { useCachedMainTestsList } from "@/hooks/useCachedData";
 
 interface SelectedPatientWorkspaceProps {
   selectedPatientVisit: DoctorVisit;
@@ -36,7 +42,6 @@ interface SelectedPatientWorkspaceProps {
 }
 
 const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
-  selectedPatientVisit,
   initialPatient,
   visitId,
   onClose,
@@ -65,6 +70,36 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
   const [openSelectionGridCommand, setOpenSelectionGridCommand] = useState(0);
   const [addSelectedCommand, setAddSelectedCommand] = useState(0);
   const [hasSelectedServices, setHasSelectedServices] = useState(false);
+  const [selectedTests, setSelectedTests] = useState<MainTestStripped[]>([]);
+  const testSelectionAutocompleteRef = useRef<HTMLDivElement | null>(null);
+  const queryClient = useQueryClient();
+
+  // Fetch all available tests for Autocomplete (cached)
+  const { data: availableTests = [], isLoading: isLoadingTests } = useCachedMainTestsList(visit?.id || 0);
+
+  // Add selected tests mutation
+  const addTestsMutation = useMutation({
+    mutationFn: (payload: { main_test_ids: number[]; comment?: string }) =>
+      addLabTestsToVisit({ visitId: visit!.id, ...payload }),
+    onSuccess: () => {
+      toast.success("تم إضافة الفحوصات بنجاح");
+      queryClient.invalidateQueries({ queryKey: ["labRequestsForVisit", visit?.id] });
+      queryClient.invalidateQueries({ queryKey: ["activeVisitForLabRequests", visit?.id] });
+      queryClient.invalidateQueries({ queryKey: ["doctorVisit", visit?.id] });
+      setSelectedTests([]);
+    },
+    onError: (error: Error) => {
+      const apiError = error as { response?: { data?: { message?: string } } };
+      toast.error(apiError.response?.data?.message || "فشل إضافة الفحوصات");
+    },
+  });
+
+  const activeVisitId = visit?.id || null;
+
+  const onAddTests = () => {
+    if (!visit || selectedTests.length === 0) return;
+    addTestsMutation.mutate({ main_test_ids: selectedTests.map(t => t.id) });
+  };
 
 
   const handlePrintReceipt = async () => {
@@ -215,7 +250,75 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
           value="lab" 
           className="flex-grow overflow-y-auto p-3 sm:p-4 focus-visible:ring-0 focus-visible:ring-offset-0"
         >
-          <LabRequestComponent visitId={visit.id} selectedPatientVisit={selectedPatientVisit} patientId={patient.id}/>
+
+          
+        {/* Test Selection Autocomplete - moved to the right */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexShrink: 0 }}>
+          <Autocomplete
+            ref={testSelectionAutocompleteRef}
+            multiple
+            options={availableTests || []}
+            value={selectedTests}
+            onChange={(_, newValue) => {
+              console.log('Autocomplete onChange:', newValue);
+              setSelectedTests(newValue);
+            }}
+            getOptionKey={(option) => option.id}
+            getOptionLabel={(option) => option.main_test_name}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            loading={isLoadingTests}
+            size="small"
+            sx={{ width: 320 }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label={"اختر الفحوصات لإضافتها"}
+                variant="outlined"
+                placeholder={"ابحث واختر الفحوصات..."}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    const enteredId = (e.target as HTMLInputElement).value;
+                    const foundTest = availableTests?.find(
+                      (test) => test.id === parseInt(enteredId)
+                    );
+                    if (foundTest) {
+                      setSelectedTests([...selectedTests, foundTest]);
+                    }
+                  } else if (e.key === "+" || e.key === "=") {
+                    // Trigger add tests when + or = key is pressed
+                    e.preventDefault();
+                    if (selectedTests.length > 0 && activeVisitId && !addTestsMutation.isPending) {
+                      onAddTests();
+                      // Remove focus from the input after adding tests
+                      (e.target as HTMLInputElement).blur();
+                    }
+                  }
+                }}
+              />
+            )}
+            noOptionsText={"لا توجد نتائج"}
+            loadingText={"جاري التحميل"}
+          />
+          <Button
+            onClick={onAddTests}
+            disabled={selectedTests.length === 0 || !activeVisitId || addTestsMutation.isPending}
+            variant="default"
+            className="px-3 py-2"
+          >
+            {addTestsMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2" />
+            ) : (
+              <PlusCircle className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+            )}
+            إضافة فحص {selectedTests.length > 0 && `(${selectedTests.length})`}
+          </Button>
+        </Box>
+          <LabRequestsColumn
+            activeVisitId={visit.id}
+            visit={visit}
+            isLoading={isLoading}
+            onPrintReceipt={handlePrintReceipt}
+          />
         </TabsContent>
       </Tabs>
       <PdfPreviewDialog

@@ -107,6 +107,9 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
       queryClient.invalidateQueries({
         queryKey: ["doctorVisit", activeVisitId],
       });
+      queryClient.invalidateQueries({
+        queryKey: ["labRequestsForVisit", activeVisitId],
+      });
     },
     onError: (error: Error) => {
       const apiError = error as { response?: { data?: { message?: string } } };
@@ -130,6 +133,9 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
       queryClient.invalidateQueries({
         queryKey: ["doctorVisit", activeVisitId],
       });
+      queryClient.invalidateQueries({
+        queryKey: ["labRequestsForVisit", activeVisitId],
+      });
     },
     onError: (error: Error) => {
       const apiError = error as { response?: { data?: { message?: string } } };
@@ -151,6 +157,9 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
       queryClient.invalidateQueries({
         queryKey: ["doctorVisit", activeVisitId],
       });
+      queryClient.invalidateQueries({
+        queryKey: ["labRequestsForVisit", activeVisitId],
+      });
     },
     onError: (error: Error) => {
       const apiError = error as { response?: { data?: { message?: string } } };
@@ -169,6 +178,9 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
       queryClient.invalidateQueries({
         queryKey: ["doctorVisit", activeVisitId],
       });
+      queryClient.invalidateQueries({
+        queryKey: ["labRequestsForVisit", activeVisitId],
+      });
     },
     onError: (error: Error) => {
       const apiError = error as { response?: { data?: { message?: string } } };
@@ -186,6 +198,9 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
       });
       queryClient.invalidateQueries({
         queryKey: ["doctorVisit", activeVisitId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["labRequestsForVisit", activeVisitId],
       });
     },
     onError: (error: Error) => {
@@ -213,6 +228,9 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
       queryClient.invalidateQueries({
         queryKey: ["doctorVisit", activeVisitId],
       });
+      queryClient.invalidateQueries({
+        queryKey: ["labRequestsForVisit", activeVisitId],
+      });
     },
     onError: (error: Error) => {
       const apiError = error as { response?: { data?: { message?: string } } };
@@ -230,6 +248,9 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
       });
       queryClient.invalidateQueries({
         queryKey: ["doctorVisit", activeVisitId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["labRequestsForVisit", activeVisitId],
       });
     },
     onError: (error: Error) => {

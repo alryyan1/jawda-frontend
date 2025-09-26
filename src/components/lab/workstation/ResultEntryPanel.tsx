@@ -149,7 +149,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
         ...prev,
         [variables.fieldNameKey]: "success",
       }));
-      toast.success("تم حفظ الحقل بنجاح");
+      // toast.success("تم حفظ الحقل بنجاح");
 
       // Don't invalidate queries immediately - the data is already updated
       // Just call the callback to notify parent components
@@ -593,7 +593,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
         <Form {...form}>
           <form className="flex-grow flex flex-col overflow-hidden">
             {/* Comment Button */}
-            <div className="mb-3 flex justify-end">
+            {/* <div className="mb-3 flex justify-end">
               <Button
                 variant="outlined"
                 size="small"
@@ -606,7 +606,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
               >
                 {initialLabRequest.comment ? "تعديل التعليق" : "إضافة تعليق"}
               </Button>
-            </div>
+            </div> */}
             
             <CustomTabPanel value={activeTab} index={0}>
               <ScrollArea className="h-[calc(100vh-200px)] pr-1">
@@ -656,7 +656,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                               borderBottomColor: "var(--border)",
                               backgroundColor: "var(--muted)",
                               color: "var(--foreground)",
-                              padding: "2px 4px",
+                              padding: "10حء",
                               // fontSize: "0.7rem",
                             }}
                           >
@@ -734,7 +734,9 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                                       color: "var(--foreground)",
                                     }}
                                   >
-                                    {ctResult.child_test_name}
+                                    {ctResult.child_test_name
+                                      ? ctResult.child_test_name.charAt(0).toUpperCase() + ctResult.child_test_name.slice(1)
+                                      : ""}
                                   </Typography>
                                   <Typography
                                     variant="caption"

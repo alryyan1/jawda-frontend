@@ -198,7 +198,7 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
         onClose={() => setIsAutocompleteOpen(false)}
         options={options as OptionType[]} // Use locally managed options (with localStorage caching)
         loading={isLoadingOptions}
-        disabled={isDisabled}
+        readOnly={isDisabled}
         sx={{
           '& .MuiAutocomplete-root': {
             // fontSize: '0.75rem',
@@ -325,7 +325,7 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
             {...params}
             inputRef={inputRef}
             variant="outlined"
-            placeholder="أدخل أو اختر النتيجة"
+            placeholder="  "
             error={error}
             helperText={helperText}
             onKeyDown={(event) => {

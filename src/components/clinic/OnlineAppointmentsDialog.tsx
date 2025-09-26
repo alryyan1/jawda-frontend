@@ -1,5 +1,5 @@
 // src/components/clinic/OnlineAppointmentsDialog.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   Dialog,
@@ -20,9 +20,14 @@ import {
   CircularProgress,
   Alert
 } from '@mui/material';
-import { Refresh as RefreshIcon } from '@mui/icons-material';
+import { Refresh as RefreshIcon, Search as SearchIcon } from '@mui/icons-material';
+import { TextField, InputAdornment } from '@mui/material';
+import type { ChipProps } from '@mui/material';
 import { fetchDoctorAppointments } from '@/services/firestoreDoctorService';
-import type { OnlineAppointment, DoctorShift } from '@/types/doctors';
+import { registerNewPatientFromLab } from '@/services/patientService';
+import { toast } from 'sonner';
+import type { DoctorShift } from '@/types/doctors';
+import dayjs from 'dayjs';
 
 interface OnlineAppointmentsDialogProps {
   isOpen: boolean;
@@ -36,10 +41,17 @@ const OnlineAppointmentsDialog: React.FC<OnlineAppointmentsDialogProps> = ({
   activeDoctorShift
 }) => {
   const [refreshKey, setRefreshKey] = useState(0);
+  const [selectedDate, setSelectedDate] = useState<string>(dayjs().format('YYYY-MM-DD'));
+  const [searchName, setSearchName] = useState<string>('');
+  const [savingAppointmentId, setSavingAppointmentId] = useState<string | null>(null);
 
   // Get the required IDs from the active doctor shift
-  const specialistFirestoreId = activeDoctorShift?.specialist_firestore_id;
-  const doctorFirebaseId = activeDoctorShift?.firebase_id;
+  type ShiftWithFirestoreIds = DoctorShift & {
+    specialist_firestore_id?: string;
+    firebase_id?: string;
+  };
+  const specialistFirestoreId = (activeDoctorShift as ShiftWithFirestoreIds | null)?.specialist_firestore_id;
+  const doctorFirebaseId = (activeDoctorShift as ShiftWithFirestoreIds | null)?.firebase_id;
 
   const {
     data: appointments = [],
@@ -47,12 +59,12 @@ const OnlineAppointmentsDialog: React.FC<OnlineAppointmentsDialogProps> = ({
     error,
     refetch
   } = useQuery({
-    queryKey: ['doctorAppointments', specialistFirestoreId, doctorFirebaseId, refreshKey],
+    queryKey: ['doctorAppointments', specialistFirestoreId, doctorFirebaseId, selectedDate, searchName, refreshKey],
     queryFn: () => {
       if (!specialistFirestoreId || !doctorFirebaseId) {
         return Promise.resolve([]);
       }
-      return fetchDoctorAppointments(specialistFirestoreId, doctorFirebaseId);
+      return fetchDoctorAppointments(specialistFirestoreId, doctorFirebaseId, selectedDate);
     },
     enabled: isOpen && !!specialistFirestoreId && !!doctorFirebaseId,
     staleTime: 30000, // 30 seconds
@@ -66,12 +78,7 @@ const OnlineAppointmentsDialog: React.FC<OnlineAppointmentsDialogProps> = ({
   const formatDate = (dateString: string) => {
     try {
       const date = new Date(dateString);
-      return date.toLocaleDateString('ar-SA', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        weekday: 'long'
-      });
+      return dayjs(date).format('DD/MM/YYYY');
     } catch {
       return dateString;
     }
@@ -85,16 +92,43 @@ const OnlineAppointmentsDialog: React.FC<OnlineAppointmentsDialogProps> = ({
     return period === 'morning' ? 'صباحي' : 'مسائي';
   };
 
-  const getPeriodColor = (period: string) => {
+  const getPeriodColor = (period: string): ChipProps['color'] => {
     return period === 'morning' ? 'primary' : 'secondary';
   };
 
-  const getConfirmationStatus = (isConfirmed: boolean) => {
-    return isConfirmed ? 'مؤكد' : 'غير مؤكد';
-  };
+  const filteredAppointments = appointments.filter((appointment) => {
+    const appointmentDate = dayjs(appointment.date).format('YYYY-MM-DD');
+    const matchesDate = selectedDate ? appointmentDate === selectedDate : true;
+    const matchesName = searchName
+      ? (appointment.patientName || '').toLowerCase().includes(searchName.toLowerCase())
+      : true;
+    return matchesDate && matchesName;
+  });
 
-  const getConfirmationColor = (isConfirmed: boolean) => {
-    return isConfirmed ? 'success' : 'warning';
+  const handleSaveToShift = async (appointment: { id: string; patientName: string; patientPhone: string }) => {
+    if (!activeDoctorShift) {
+      toast.error('لا توجد وردية نشطة محددة');
+      return;
+    }
+    try {
+      setSavingAppointmentId(appointment.id);
+      await registerNewPatientFromLab({
+        name: appointment.patientName || 'بدون اسم',
+        phone: appointment.patientPhone || '',
+        gender: 'male',
+        age_year: null,
+        age_month: null,
+        age_day: null,
+        doctor_id: activeDoctorShift.doctor_id,
+        doctor_shift_id: activeDoctorShift.id,
+      });
+      toast.success('تم حفظ المريض وإضافته للوردية');
+    } catch (error: unknown) {
+      const message = typeof error === 'object' && error && 'message' in error ? String((error as { message?: string }).message) : null;
+      toast.error(message || 'فشل حفظ المريض');
+    } finally {
+      setSavingAppointmentId(null);
+    }
   };
 
   return (
@@ -106,18 +140,43 @@ const OnlineAppointmentsDialog: React.FC<OnlineAppointmentsDialogProps> = ({
       dir="rtl"
     >
       <DialogTitle>
-        <Box display="flex" justifyContent="space-between" alignItems="center">
-          <Typography variant="h6">
+        <Box display="flex" justifyContent="space-between" alignItems="center" gap={2}>
+          <Typography variant="h6" sx={{ flexShrink: 0 }}>
             الحجوزات الإلكترونية - {activeDoctorShift?.doctor_name}
           </Typography>
-          <Button
-            startIcon={<RefreshIcon />}
-            onClick={handleRefresh}
-            disabled={isLoading}
-            size="small"
-          >
-            تحديث
-          </Button>
+          <Box display="flex" gap={2} alignItems="center" flexGrow={1} justifyContent="flex-end">
+            <TextField
+              label="التاريخ"
+              type="date"
+              size="small"
+              value={selectedDate}
+              
+              onChange={(e) => { setSelectedDate(e.target.value); }}
+              InputLabelProps={{ shrink: true }}
+            />
+            <TextField
+              label="بحث بالاسم"
+              placeholder="اكتب اسم المريض"
+              size="small"
+              value={searchName}
+              onChange={(e) => { setSearchName(e.target.value); }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                )
+              }}
+            />
+            <Button
+              startIcon={<RefreshIcon />}
+              onClick={handleRefresh}
+              disabled={isLoading}
+              size="small"
+            >
+              تحديث
+            </Button>
+          </Box>
         </Box>
       </DialogTitle>
       
@@ -135,8 +194,10 @@ const OnlineAppointmentsDialog: React.FC<OnlineAppointmentsDialogProps> = ({
             حدث خطأ في تحميل الحجوزات: {(error as Error).message}
           </Alert>
         ) : (
-          <TableContainer component={Paper} sx={{ maxHeight: 600 }}>
-            <Table stickyHeader>
+          <>
+            {/* Filters moved to header */}
+            <TableContainer component={Paper} sx={{ maxHeight: 600 }}>
+              <Table stickyHeader>
               <TableHead>
                 <TableRow>
                   <TableCell>اسم المريض</TableCell>
@@ -144,7 +205,7 @@ const OnlineAppointmentsDialog: React.FC<OnlineAppointmentsDialogProps> = ({
                   <TableCell>التاريخ</TableCell>
                   <TableCell>الوقت</TableCell>
                   <TableCell>الفترة</TableCell>
-                  <TableCell>الحالة</TableCell>
+              
                   <TableCell>تاريخ الإنشاء</TableCell>
                 </TableRow>
               </TableHead>
@@ -158,7 +219,7 @@ const OnlineAppointmentsDialog: React.FC<OnlineAppointmentsDialogProps> = ({
                       </Box>
                     </TableCell>
                   </TableRow>
-                ) : appointments.length === 0 ? (
+                ) : filteredAppointments.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} align="center">
                       <Typography color="text.secondary" py={2}>
@@ -167,7 +228,7 @@ const OnlineAppointmentsDialog: React.FC<OnlineAppointmentsDialogProps> = ({
                     </TableCell>
                   </TableRow>
                 ) : (
-                  appointments.map((appointment) => (
+                  filteredAppointments.map((appointment) => (
                     <TableRow key={appointment.id} hover>
                       <TableCell>
                         <Typography variant="body2" fontWeight="medium">
@@ -192,28 +253,33 @@ const OnlineAppointmentsDialog: React.FC<OnlineAppointmentsDialogProps> = ({
                       <TableCell>
                         <Chip
                           label={getPeriodText(appointment.period)}
-                          color={getPeriodColor(appointment.period) as any}
+                          color={getPeriodColor(appointment.period)}
                           size="small"
                         />
                       </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={getConfirmationStatus(appointment.isConfirmed)}
-                          color={getConfirmationColor(appointment.isConfirmed) as any}
-                          size="small"
-                        />
-                      </TableCell>
+                    
                       <TableCell>
                         <Typography variant="body2" color="text.secondary">
-                          {appointment.createdAt.toLocaleDateString('ar-SA')}
+                          {dayjs(appointment.createdAt).format('DD/MM/YYYY')}
                         </Typography>
+                      </TableCell>
+                      <TableCell align="center">
+                        <Button
+                          variant="contained"
+                          size="small"
+                          disabled={savingAppointmentId === appointment.id}
+                          onClick={() => handleSaveToShift({ id: String(appointment.id), patientName: String(appointment.patientName || ''), patientPhone: String(appointment.patientPhone || '') })}
+                        >
+                          {savingAppointmentId === appointment.id ? 'جاري الحفظ...' : 'حفظ للوردية'}
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))
                 )}
               </TableBody>
-            </Table>
-          </TableContainer>
+              </Table>
+            </TableContainer>
+          </>
         )}
       </DialogContent>
       

@@ -34,6 +34,7 @@ import InputAdornment from "@mui/material/InputAdornment";
 // Import Panel Components
 import PatientQueuePanel from "@/components/lab/workstation/PatientQueuePanel";
 import TestSelectionPanel from "./TestSelectionPanel";
+import DiscountCommentDialog from "@/components/lab/reception/DiscountCommentDialog";
 import ResultEntryPanel from "@/components/lab/workstation/ResultEntryPanel";
 import LabActionsPane from "@/components/lab/workstation/LabActionsPane";
 import StatusAndInfoPanel from "@/components/lab/workstation/StatusAndInfoPanel";
@@ -77,11 +78,11 @@ const LabWorkstationPage: React.FC = () => {
   // Direct Arabic labels for this page
   const AR = {
     pageTitle: "نتائج المختبر",
-    searchRecentVisitsByPatientLabel: "زيارات حديثة حسب اسم المريض",
+    searchRecentVisitsByPatientLabel: "بحث بالاسم ",
     typeMoreChars: "اكتب مزيدًا من الأحرف",
     noResultsFound: "لا توجد نتائج",
     loading: "جاري التحميل",
-    searchByVisitIdPlaceholderShort: "ابحث برقم الزيارة",
+    searchByVisitIdPlaceholderShort: "بحث بالكود",
     filters_openFilterDialog: "فتح خيارات التصفية",
     shifts_openDialogTooltip: "فتح نافذة اختيار الوردية",
     resetViewTooltip: "إعادة تعيين العرض",
@@ -109,6 +110,9 @@ const LabWorkstationPage: React.FC = () => {
   );
   const [appearanceSettings, setAppearanceSettings] =
     useState<LabAppearanceSettings>(getAppearanceSettings);
+  const [showDiscountCommentDialog, setShowDiscountCommentDialog] = useState(false);
+  const [selectedLabRequestForComment, setSelectedLabRequestForComment] = useState<number | null>(null);
+  const [isSavingPatientDiscountComment, setIsSavingPatientDiscountComment] = useState(false);
 
   // Callback function to force a re-render of this page, which will re-read settings and pass them down
   const handleAppearanceSettingsChanged = () => {
@@ -1162,9 +1166,15 @@ const LabWorkstationPage: React.FC = () => {
             <TestSelectionPanel
               key={`test-select-${selectedQueueItem.visit_id}-${selectedQueueItem.patient_id}`} // More unique key
               visitId={selectedQueueItem.visit_id} // This is the visit_id from queue item (which might be patient_id or actual visit ID based on queue logic)
-              patientName={selectedQueueItem.patient_name}
               onTestSelect={handleTestSelectForEntry}
+              
               selectedLabRequestId={selectedLabRequestForEntry?.id || null}
+              onOpenComment={(labRequestId) => {
+                // Reuse DiscountCommentDialog pattern from reception
+                // Keep currently selected request as-is; dialog works with id
+                setShowDiscountCommentDialog(true);
+                setSelectedLabRequestForComment(labRequestId);
+              }}
             />
           ) : (
             <div className="p-4 text-center text-muted-foreground hidden md:flex flex-col items-center justify-center h-full">
@@ -1202,10 +1212,33 @@ const LabWorkstationPage: React.FC = () => {
       />
       <ShiftFinderDialog
         isOpen={isShiftFinderDialogOpen}
-        onOpenChange={setIsShiftFinderDialogOpen}
+          onOpenChange={setIsShiftFinderDialogOpen}
         onShiftSelected={handleShiftSelectedFromFinder}
       />
       {/* Dialogs */}
+      {selectedQueueItem && (
+        <DiscountCommentDialog
+          isOpen={showDiscountCommentDialog}
+          onOpenChange={setShowDiscountCommentDialog}
+          currentComment={selectedLabRequestForEntry?.comment}
+          onSave={async (comment: string) => {
+            if (!selectedLabRequestForComment) return;
+            try {
+              setIsSavingPatientDiscountComment(true);
+              const { updateLabRequestDetails } = await import('@/services/labRequestService');
+              await updateLabRequestDetails(selectedLabRequestForComment, { comment });
+              toast.success('تم حفظ الملاحظة');
+              queryClient.invalidateQueries({ queryKey: ['labRequestsForVisit', selectedQueueItem.visit_id] });
+            } catch {
+              toast.error('فشل حفظ الملاحظة');
+            } finally {
+              setIsSavingPatientDiscountComment(false);
+            }
+          }}
+          isSaving={isSavingPatientDiscountComment}
+          labRequestId={selectedLabRequestForComment || 0}
+        />
+      )}
       <PdfPreviewDialog
         isOpen={pdfPreviewData.isOpen}
         onOpenChange={(open) => {

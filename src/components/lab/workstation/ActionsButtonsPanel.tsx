@@ -111,7 +111,6 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
 
   return (
     <>
-      <MuiCard className="shadow-sm bg-slate-100 dark:bg-slate-900/40">
        
         <MuiCardContent className="space-y-1.5">
           {/* Show authenticate button if results are not authenticated */}
@@ -145,7 +144,6 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
             </MuiButton>
           )}
         </MuiCardContent>
-      </MuiCard>
 
 
       {/* Lab Report PDF Preview Dialog */}

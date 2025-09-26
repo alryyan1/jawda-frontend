@@ -88,7 +88,7 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
   const currentPatient = updatedPatient || patient;
   // console.log(patientLabQueueItem,'patientLabQueueItem')
   const patientStatuses = useMemo(() => ({
-    payment: { done: true, by: undefined },
+    payment: { done: patientLabQueueItem?.all_requests_paid , by: patientLabQueueItem?.all_requests_paid },
     collected: { time: undefined, by: undefined },
     print: {  done: patientLabQueueItem?.is_printed, by: null },
     authentication: { done: currentPatient?.result_auth },

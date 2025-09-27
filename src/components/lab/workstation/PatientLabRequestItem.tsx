@@ -75,7 +75,7 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
         '--text-color': currentStyle.textColor,
       } as React.CSSProperties}
       className={cn(
-        "w-[54px] h-[54px]  duration-3000! flex-shrink-0 rounded-lg cursor-pointer transition-all duration-200 ease-out",
+        "w-[54px] h-[54px]  duration-1000! flex-shrink-0 rounded-lg cursor-pointer transition-all duration-200 ease-out",
         "flex flex-col items-center justify-center relative group border",
         "hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-[#f0f5f7]",
         item.is_printed && "bg-[#01b9ff] text-black! font-bold",

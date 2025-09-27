@@ -182,7 +182,7 @@ const SampleCollectionPage: React.FC = () => {
         initializeAudio();
       }
 
-      const audio = new Audio('/new-payment.wav');
+      const audio = new Audio('/new-payment.mp3');
       audio.volume = 0.7;
       audio.preload = 'auto';
       

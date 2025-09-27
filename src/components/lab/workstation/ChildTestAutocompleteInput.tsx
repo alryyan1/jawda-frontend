@@ -258,6 +258,7 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
           } else {
             // User selected an existing option or cleared
             const newInputValue = newValue ? (newValue as ChildTestOption).name : "";
+            saveSingleChildTestResult(resultId, newInputValue);
             setCurrentInputValue(newInputValue);
             onChange(newValue as ChildTestOption | null);
           }
@@ -267,6 +268,7 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
           if (reason === "input") {
             // Update local state immediately for responsive typing
             setCurrentInputValue(newInputValue);
+
             // Use immediate onChange to trigger save on every keystroke
             handleImmediateChange(newInputValue);
           } else if (reason === "reset") {

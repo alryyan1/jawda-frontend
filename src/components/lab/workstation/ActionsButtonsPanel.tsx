@@ -112,7 +112,7 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
   return (
     <>
        
-        <MuiCardContent className="space-y-1.5">
+        <div className="mt-2">
           {/* Show authenticate button if results are not authenticated */}
           {patient && !patient.result_auth && (
             <MuiButton
@@ -143,7 +143,7 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
               )}
             </MuiButton>
           )}
-        </MuiCardContent>
+        </div>
 
 
       {/* Lab Report PDF Preview Dialog */}

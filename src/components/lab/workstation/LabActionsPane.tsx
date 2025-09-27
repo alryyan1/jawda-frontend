@@ -34,6 +34,7 @@ import WhatsAppWorkAreaDialog from './dialog/WhatsAppWorkAreaDialog';
 import { LisClientUrl, LisServerUrl } from '@/pages/constants';
 import { Button } from '@/components/ui/button';
 import apiClient from '@/services/api';
+import { updateFirestoreDocumentViaBackend } from '@/services/firestorePatientService';
 // import { useAuthorization } from '@/hooks/useAuthorization';
 
 interface LabActionsPaneProps {
@@ -234,12 +235,30 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
       const response = await apiClient.post(`/patients/${currentPatientData.id}/upload-to-firebase`);
       
       if (response.data.success) {
-        const { result_url, was_updated } = response.data;
+        const { result_url, was_updated, lab_to_lab_object_id } = response.data;
+        console.log(currentPatientData,'currentPatientData.lab_to_lab_object_id')
         
-        if (was_updated) {
-          toast.success("تم استبدال تقرير المختبر في التخزين السحابي بنجاح");
+        // Now update the Firestore document via backend using the response data
+        if (lab_to_lab_object_id && result_url) {
+          const firestoreUpdateResult = await updateFirestoreDocumentViaBackend(
+            lab_to_lab_object_id,
+            result_url,
+            currentPatientData.id
+          );
+          
+          if (firestoreUpdateResult.success) {
+            if (was_updated) {
+              toast.success("تم استبدال تقرير المختبر في التخزين السحابي بنجاح");
+            } else {
+              toast.success("تم رفع تقرير المختبر إلى التخزين السحابي بنجاح");
+            }
+          } else {
+            toast.error("تم رفع الملف بنجاح ولكن فشل تحديث قاعدة البيانات السحابية", {
+              description: firestoreUpdateResult.error
+            });
+          }
         } else {
-          toast.success("تم رفع تقرير المختبر إلى التخزين السحابي بنجاح");
+          toast.error("فشل الحصول على البيانات المطلوبة لتحديث قاعدة البيانات السحابية");
         }
         
         // Update the query cache with the new result_url

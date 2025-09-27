@@ -82,8 +82,8 @@ const TestSelectionPanel: React.FC<TestSelectionPanelProps> = ({
                     onClick={() => handleSelectTestForEntry(lr)}
                 >
                     <Box className="flex items-center justify-between gap-2">
-                        <Box className="flex-grow min-w-0">
-                            <Typography variant="body2" className={cn("text-sm font-medium truncate", lr.hidden ===  false && "line-through")} title={lr.main_test?.main_test_name}>
+                        <Box className="flex-grow min-w-0 ">
+                            <Typography  className={cn(" font-medium truncate", lr.hidden ===  false && "line-through")} title={lr.main_test?.main_test_name}>
                                 {lr.main_test?.main_test_name || 'تحليل غير معروف'}
                             </Typography>
                            
@@ -97,16 +97,9 @@ const TestSelectionPanel: React.FC<TestSelectionPanelProps> = ({
                                 inputProps={{ 'aria-label': 'تحديد ' }}
                                 size="small"
                             />
-                            <MuiIconButton
-                              size="small"
-                              onClick={() => onOpenComment?.(lr.id)}
-                              title={lr.comment ? 'عرض/تعديل الملاحظة' : 'إضافة ملاحظة'}
-                              disabled={!onOpenComment}
-                            >
-                              <MessageSquare className="h-4 w-4" />
-                            </MuiIconButton>
+                       
                         </Box>
-                        <ArrowIcon className="h-5 w-5 text-muted-foreground flex-shrink-0 opacity-70"/>
+                        <ArrowIcon className="h-5 w-5 flex-shrink-0"/>
                     </Box>
                 </MuiCard>
             ))}

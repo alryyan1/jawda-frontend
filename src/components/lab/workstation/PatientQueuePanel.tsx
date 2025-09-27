@@ -123,7 +123,7 @@ const PatientQueuePanel: React.FC<PatientQueuePanelProps> = ({
         {queueItems.length > 0 && (
           <ScrollArea className="h-full">
             {/* Flexbox layout for patient squares */}
-            <div className="p-2 flex flex-wrap gap-2 justify-start items-start content-start">
+            <div className="p-1 flex flex-wrap gap-2 justify-start items-start content-start">
               {queueItems.map((item) => (
                 <PatientLabRequestItem
                   isLastResultPending={item.is_last_result_pending}

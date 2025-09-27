@@ -103,6 +103,7 @@ export interface ActivePatientVisit {
 export interface Patient {
   id: number;
   name: string;
+  lab_to_lab_object_id?: string | null;
   phone: string;
   gender: 'male' | 'female' | 'other'; // Or string if backend doesn't strictly enforce enum
   age_year?: number | null;

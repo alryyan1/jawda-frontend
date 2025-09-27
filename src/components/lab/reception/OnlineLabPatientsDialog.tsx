@@ -383,6 +383,7 @@ const OnlineLabPatientsDialog: React.FC<OnlineLabPatientsDialogProps> = ({
                   <TableRow>
                     <TableCell align="right" sx={{ fontWeight: 'bold' }}>الكود</TableCell>
                     <TableCell align="right" sx={{ fontWeight: 'bold' }}>الاسم</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>الهاتف</TableCell>
                     <TableCell align="right" sx={{ fontWeight: 'bold' }}>المعمل</TableCell>
                     <TableCell align="right" sx={{ fontWeight: 'bold' }}>المبلغ </TableCell>
                     <TableCell align="right" sx={{ fontWeight: 'bold' }}>الوقت</TableCell>
@@ -400,6 +401,9 @@ const OnlineLabPatientsDialog: React.FC<OnlineLabPatientsDialogProps> = ({
                       </TableCell>
                       <TableCell sx={{ fontWeight: 'bold' }}>
                         {patient.name}
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>
+                        {patient.phone}
                       </TableCell>
                       <TableCell>
                         {labToLap.find(lab => lab.id === patient.labId)?.name || 'غير محدد'}

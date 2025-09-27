@@ -3,6 +3,7 @@ import { initializeApp } from "firebase/app";
 import { getStorage } from "firebase/storage";
 import { getFirestore } from "firebase/firestore";
 import { getAnalytics } from "firebase/analytics";
+import { getAuth, signInAnonymously } from "firebase/auth";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -26,5 +27,21 @@ export const db = getFirestore(app);
 
 // Initialize Analytics (optional)
 export const analytics = getAnalytics(app);
+
+// Initialize Auth
+export const auth = getAuth(app);
+
+// Function to get Firebase access token
+export const getFirebaseAccessToken = async (): Promise<string | null> => {
+  try {
+    // Sign in anonymously to get access token
+    const userCredential = await signInAnonymously(auth);
+    const token = await userCredential.user.getIdToken();
+    return token;
+  } catch (error) {
+    console.error('Error getting Firebase access token:', error);
+    return null;
+  }
+};
 
 export default app;

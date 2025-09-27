@@ -275,7 +275,6 @@ const EditPatientInfoDialog: React.FC<EditPatientInfoDialogProps> = ({
                       >
                         <MenuItem value="female">أنثى</MenuItem>
                         <MenuItem value="male">ذكر</MenuItem>
-                        <MenuItem value="other">آخر</MenuItem>
                       </Select>
                       {error && <Typography variant="caption" color="error">{error.message}</Typography>}
                     </FormControl>

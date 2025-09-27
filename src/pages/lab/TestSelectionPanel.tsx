@@ -3,7 +3,7 @@ import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
-import { Box, Card as MuiCard, Typography, Checkbox as MuiCheckbox, IconButton as MuiIconButton } from '@mui/material';
+import { Box, Card as MuiCard, Typography, Checkbox as MuiCheckbox, IconButton as MuiIconButton, Button } from '@mui/material';
 import { MessageSquare } from 'lucide-react';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -61,8 +61,6 @@ const TestSelectionPanel: React.FC<TestSelectionPanelProps> = ({
   };
   
   const ArrowIcon = (typeof document !== 'undefined' && document?.dir === 'ltr') ? ChevronRightIcon : ChevronLeftIcon;
-
-console.log(selectedLabRequestId,'selectedLabRequestId');
   return (
     <Box  className="h-full flex flex-col p-3 bg-background dark:bg-card/50">
  
@@ -76,9 +74,9 @@ console.log(selectedLabRequestId,'selectedLabRequestId');
                 <MuiCard 
                     key={lr.id} 
                     className={cn(
-                        "p-2 cursor-pointer hover:bg-muted dark:hover:bg-muted/40 transition-colors",
+                        "p-2 cursor-pointer  hover:bg-muted dark:hover:bg-muted/40 transition-colors",
                         selectedLabRequestId === lr.id && "ring-2 ring-primary bg-primary/20 dark:bg-primary/30 border-primary/50",
-                        lr.hidden == false && "opacity-60 hover:opacity-80",
+                        lr.hidden == false && "",
                         selectedLabRequestId === lr.id && "bg-amber-200!"
                     )}
                     onClick={() => handleSelectTestForEntry(lr)}
@@ -114,6 +112,30 @@ console.log(selectedLabRequestId,'selectedLabRequestId');
             ))}
             </Box>
          </Box>
+      )}
+
+
+      {/* Comment Button - Shows when a test is selected */}
+      {selectedLabRequestId && onOpenComment && (
+        <Box className="mt-3 pt-3 border-t border-border">
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<MessageSquare className="h-4 w-4" />}
+            onClick={() => onOpenComment(selectedLabRequestId)}
+            className="w-full"
+            sx={{ 
+              justifyContent: 'flex-start',
+              textAlign: 'right',
+              direction: 'rtl'
+            }}
+          >
+            {labRequests?.find(lr => lr.id === selectedLabRequestId)?.comment 
+              ? 'عرض/تعديل الملاحظة' 
+              : 'إضافة ملاحظة'
+            }
+          </Button>
+        </Box>
       )}
     </Box>
   );

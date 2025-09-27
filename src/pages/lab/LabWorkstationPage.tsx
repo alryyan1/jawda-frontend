@@ -37,6 +37,7 @@ import TestSelectionPanel from "./TestSelectionPanel";
 import ResultEntryPanel from "@/components/lab/workstation/ResultEntryPanel";
 import LabActionsPane from "@/components/lab/workstation/LabActionsPane";
 import StatusAndInfoPanel from "@/components/lab/workstation/StatusAndInfoPanel";
+import MainCommentDialog from "@/components/lab/workstation/MainCommentDialog";
 
 import type {
   PatientLabQueueItem,
@@ -58,7 +59,7 @@ import {
   getLabHistory,
   type LabHistoryItem,
 } from "@/services/patientService"; // Updated service function
-import { getLabRequestsForVisit } from "@/services/labRequestService";
+import { getLabRequestsForVisit, updateLabRequestDetails } from "@/services/labRequestService";
 import apiClient from "@/services/api";
 import LabQueueFilterDialog, {
   type LabQueueFilters,
@@ -152,6 +153,17 @@ const LabWorkstationPage: React.FC = () => {
     useState<RecentDoctorVisitSearchItem | null>(null);
   const [isShiftFinderDialogOpen, setIsShiftFinderDialogOpen] = useState(false);
   const [isUploadingToFirebase, setIsUploadingToFirebase] = useState(false);
+  
+  // Comment Dialog State
+  const [isCommentDialogOpen, setIsCommentDialogOpen] = useState(false);
+  const [selectedLabRequestForComment, setSelectedLabRequestForComment] = useState<number | null>(null);
+
+  // Get lab requests for comment dialog
+  const { data: labRequestsForComment } = useQuery<LabRequest[], Error>({
+    queryKey: ['labRequestsForVisit', selectedQueueItem?.visit_id],
+    queryFn: () => getLabRequestsForVisit(selectedQueueItem!.visit_id),
+    enabled: !!selectedQueueItem?.visit_id,
+  });
   
   // Lab History State
   const [labHistoryData, setLabHistoryData] = useState<LabHistoryItem[]>([]);
@@ -549,6 +561,34 @@ const LabWorkstationPage: React.FC = () => {
       setSelectedLabRequestForEntry(labRequest);
     },
     []
+  );
+
+  const handleOpenComment = useCallback(
+    (labRequestId: number) => {
+      setSelectedLabRequestForComment(labRequestId);
+      setIsCommentDialogOpen(true);
+    },
+    []
+  );
+
+  const handleSaveComment = useCallback(
+    async (comment: string) => {
+      if (!selectedLabRequestForComment) return;
+      
+      try {
+        await updateLabRequestDetails(selectedLabRequestForComment, { comment });
+        toast.success('تم حفظ الملاحظة بنجاح');
+        
+        // Invalidate the lab requests query to refresh the data
+        queryClient.invalidateQueries({
+          queryKey: ['labRequestsForVisit', selectedQueueItem?.visit_id]
+        });
+      } catch (error) {
+        const errorMessage = (error as { response?: { data?: { message?: string } } }).response?.data?.message || 'فشل حفظ الملاحظة';
+        toast.error(errorMessage);
+      }
+    },
+    [selectedLabRequestForComment, selectedQueueItem?.visit_id, queryClient]
   );
 
   const handleLabHistoryItemSelect = useCallback(
@@ -1162,9 +1202,8 @@ const LabWorkstationPage: React.FC = () => {
             <TestSelectionPanel
               key={`test-select-${selectedQueueItem.visit_id}-${selectedQueueItem.patient_id}`} // More unique key
               visitId={selectedQueueItem.visit_id} // This is the visit_id from queue item (which might be patient_id or actual visit ID based on queue logic)
-              patientName={selectedQueueItem.patient_name}
               onTestSelect={handleTestSelectForEntry}
-              
+              onOpenComment={handleOpenComment}
               selectedLabRequestId={selectedLabRequestForEntry?.id || null}
             />
           ) : (
@@ -1220,6 +1259,15 @@ const LabWorkstationPage: React.FC = () => {
         isLoading={pdfPreviewData.isLoading}
         title={pdfPreviewData.title}
         fileName={pdfPreviewData.fileName}
+      />
+      <MainCommentDialog
+        isOpen={isCommentDialogOpen}
+        onOpenChange={setIsCommentDialogOpen}
+        currentComment={selectedLabRequestForComment ? 
+          labRequestsForComment?.find(lr => lr.id === selectedLabRequestForComment)?.comment : 
+          null
+        }
+        onSave={handleSaveComment}
       />
     </div>
   );

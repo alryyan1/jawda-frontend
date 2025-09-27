@@ -1,11 +1,16 @@
 // src/components/lab/workstation/MainCommentDialog.tsx
 import React, { useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
-import { useTranslation } from 'react-i18next';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Loader2 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogActions,
+  Button,
+  TextField,
+  Box,
+  CircularProgress
+} from '@mui/material';
 
 interface MainCommentDialogProps {
   isOpen: boolean;
@@ -22,7 +27,6 @@ const MainCommentDialog: React.FC<MainCommentDialogProps> = ({
   onSave,
   isSaving
 }) => {
-  const { t } = useTranslation(['labResults', 'common']);
   const { control, setValue, watch } = useForm<{ comment: string }>({
     defaultValues: { comment: currentComment || '' },
   });
@@ -44,7 +48,7 @@ const MainCommentDialog: React.FC<MainCommentDialogProps> = ({
   
   const handleDialogClose = () => {
     if (currentComment !== commentText) {
-        if(window.confirm(t('common:confirmDiscardChanges'))) {
+        if(window.confirm('هل تريد تجاهل التغييرات؟')) {
              onOpenChange(false);
         }
     } else {
@@ -53,35 +57,57 @@ const MainCommentDialog: React.FC<MainCommentDialogProps> = ({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleDialogClose}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{t('labResults:resultEntry.editMainTestComment')}</DialogTitle>
-        </DialogHeader>
-        <div className="py-4">
+    <Dialog 
+      open={isOpen} 
+      onClose={handleDialogClose}
+      maxWidth="sm"
+      fullWidth
+      sx={{ direction: 'rtl' }}
+    >
+      <DialogTitle sx={{ textAlign: 'right', fontWeight: 'bold' }}>
+        تعديل ملاحظة التحليل الرئيسي
+      </DialogTitle>
+      <DialogContent>
+        <Box sx={{ py: 2 }}>
           <Controller
             name="comment"
             control={control}
             render={({ field }) => (
-              <Textarea
+              <TextField
                 {...field}
+                multiline
                 rows={8}
-                placeholder={t('labResults:resultEntry.mainTestCommentPlaceholder')}
-                className="text-sm"
+                fullWidth
+                placeholder="أدخل ملاحظة للتحليل الرئيسي..."
+                variant="outlined"
+                sx={{
+                  '& .MuiInputBase-input': {
+                    textAlign: 'right',
+                    direction: 'rtl'
+                  }
+                }}
               />
             )}
           />
-        </div>
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={handleDialogClose}>
-            {t('common:cancel')}
-          </Button>
-          <Button type="button" onClick={handleSave} disabled={isSaving || commentText === currentComment}>
-            {isSaving && <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2" />}
-            {t('common:save')}
-          </Button>
-        </DialogFooter>
+        </Box>
       </DialogContent>
+      <DialogActions sx={{ justifyContent: 'flex-start', px: 3, pb: 2 }}>
+        <Button 
+          variant="outlined" 
+          onClick={handleDialogClose}
+          sx={{ ml: 1 }}
+        >
+          إلغاء
+        </Button>
+        <Button 
+          variant="contained" 
+          onClick={handleSave} 
+          disabled={isSaving || commentText === currentComment}
+          startIcon={isSaving ? <CircularProgress size={16} /> : null}
+        >
+          حفظ
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 };

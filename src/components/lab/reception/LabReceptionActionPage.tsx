@@ -6,15 +6,16 @@ import { Separator } from '@/components/ui/separator';
 import { 
     UserPlus, 
     LayoutGrid, 
-    Calculator,
     Eye,
     ListChecks,
     Printer,
+    Globe,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 // Import the dialogs that will be opened by the new buttons
 import LabUserShiftSummaryDialog from './LabUserShiftSummaryDialog';
+import OnlineLabPatientsDialog from './OnlineLabPatientsDialog';
 
 interface LabReceptionActionPageProps {
   isFormVisible: boolean;
@@ -39,6 +40,9 @@ const LabReceptionActionPage: React.FC<LabReceptionActionPageProps> = ({
   
   // State to control the visibility of the user's income summary dialog
   const [isIncomeDialogOpen, setIsIncomeDialogOpen] = useState(false);
+  
+  // State to control the visibility of the online lab patients dialog
+  const [isOnlineLabPatientsDialogOpen, setIsOnlineLabPatientsDialogOpen] = useState(false);
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -139,6 +143,28 @@ const LabReceptionActionPage: React.FC<LabReceptionActionPageProps> = ({
             </TooltipContent>
         </Tooltip>
 
+        <Separator className="my-1" />
+
+        {/* Button 4 (Globe): Open Online Lab Patients Dialog */}
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="w-11 h-11" 
+                    onClick={() => {
+                        console.log('Globe button clicked');
+                        setIsOnlineLabPatientsDialogOpen(true);
+                    }} 
+                    aria-label="المرضى من المختبرات الأخرى"
+                >
+                    <Globe className="h-5 w-5" />
+                </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">
+                <p>المرضى من المختبرات الأخرى</p>
+            </TooltipContent>
+        </Tooltip>
 
       </aside>
 
@@ -150,6 +176,11 @@ const LabReceptionActionPage: React.FC<LabReceptionActionPageProps> = ({
              currentClinicShiftId={currentClinicShift?.id ?? null}
          />
       )}
+      
+      <OnlineLabPatientsDialog
+          isOpen={isOnlineLabPatientsDialogOpen}
+          onOpenChange={setIsOnlineLabPatientsDialogOpen}
+      />
     </TooltipProvider>
   );
 };

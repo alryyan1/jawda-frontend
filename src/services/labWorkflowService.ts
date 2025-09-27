@@ -63,13 +63,12 @@ export interface SingleResultSavePayload {
 }
 
 export const saveSingleChildTestResult = async (
-  labRequestId: number,
-  childTestId: number,
-  payload: SingleResultSavePayload
+  requestedResultId: number,
+  result: string
 ): Promise<RequestedResult> => { // Expect the updated RequestedResult back
-  const response = await apiClient.patch<{ data: RequestedResult }>(
-    `/labrequests/${labRequestId}/childtests/${childTestId}/result`,
-    payload
+  const response = await apiClient.post<{ data: RequestedResult }>(
+    `/labrequests/${requestedResultId}/results`,
+    { result }
   );
   return response.data.data; // Assuming Laravel Resource wrapping
 };

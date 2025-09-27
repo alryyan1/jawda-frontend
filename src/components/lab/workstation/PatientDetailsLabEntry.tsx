@@ -88,8 +88,7 @@ export interface PatientDetailsLabEntryProps {
         <Typography 
           variant="body2" 
           sx={{ 
-            color: 'text.secondary', 
-            fontWeight: 500,
+            fontWeight: 900,
             flex: '0 0 auto',
             mr: 2
           }}

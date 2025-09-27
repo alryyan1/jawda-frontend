@@ -22,10 +22,12 @@ import {
   getChildTestOptionsList,
   createChildTestOption,
 } from "@/services/childTestOptionService";
+import { saveSingleChildTestResult } from "@/services/labWorkflowService";
 
 interface ChildTestAutocompleteInputProps {
   // RHF field props
   value: ChildTestOption | string | null; // Can be an object or a string (from freeSolo)
+  resultId: number;
   onChange: (value: ChildTestOption | string | null) => void; // RHF's onChange
   onBlur: () => void; // RHF's onBlur
   disabled?: boolean;
@@ -57,6 +59,7 @@ function isNumeric(str: unknown): boolean {
 
 const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
   value,
+  resultId,
   onChange,
   onBlur,
   disabled,
@@ -329,43 +332,17 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
             error={error}
             helperText={helperText}
             onKeyDown={(event) => {
+              console.log(event.target.value, 'event.target.value')
               // Prevent form submission when Enter is pressed
               if (event.key === 'Enter') {
                 event.preventDefault();
                 event.stopPropagation();
               }
             }}
-            sx={{
-              // Dark theme styling
-              '& .MuiOutlinedInput-root': {
-                backgroundColor: 'var(--background)',
-                color: 'var(--foreground)',
-                minHeight: '28px',
-                // fontSize: '0.75rem',
-                '& fieldset': {
-                  borderColor: 'var(--border)',
-                },
-                '&:hover fieldset': {
-                  borderColor: 'var(--ring)',
-                },
-                '&.Mui-focused fieldset': {
-                  borderColor: 'var(--ring)',
-                },
-              },
-              '& .MuiInputBase-input': {
-                padding: '2px 4px',
-                // fontSize: '0.75rem',
-              },
-              '& .MuiInputLabel-root': {
-                color: 'var(--muted-foreground)',
-                // fontSize: '0.75rem',
-              },
-              '& .MuiFormHelperText-root': {
-                color: 'var(--muted-foreground)',
-                // fontSize: '0.65rem',
-                margin: '2px 0 0 0',
-              },
-            }}
+          onChange={(event) => {
+            console.log(resultId, 'resultId')
+            saveSingleChildTestResult(resultId, event.target.value)
+          }}
             InputProps={{
               ...params.InputProps,
               endAdornment: (

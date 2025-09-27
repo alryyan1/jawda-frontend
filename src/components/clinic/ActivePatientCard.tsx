@@ -275,7 +275,7 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
                 
                 {visit.company != null && (
                   <div className="flex-shrink-0 ltr:ml-1 rtl:mr-1">
-                    <Heart className="h-3 w-3 text-pink-500" />
+                    <Heart className="h-6 w-6 text-pink-500" />
                   </div>
                 )}
               </div>

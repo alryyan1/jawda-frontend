@@ -196,11 +196,11 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
         <ScrollArea className="flex-shrink-0 border-b">
           <div className="mx-3 my-2 flex items-center justify-between gap-2">
           <TabsList className="grid w-auto grid-flow-col auto-cols-max gap-2 p-1 h-auto">
-            <TabsTrigger value="services" className="text-xs px-3 py-1.5">
+            <TabsTrigger value="services" className="text-xs px-3 py-1.5 data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700">
               <ListOrdered className="h-4 w-4 ltr:mr-1 rtl:ml-1" />
               الخدمات
             </TabsTrigger>
-            <TabsTrigger value="lab" className="text-xs px-3 py-1.5">
+            <TabsTrigger value="lab" className="text-xs px-3 py-1.5 data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700">
               <Microscope className="h-4 w-4 ltr:mr-1 rtl:ml-1" />
               المختبر
             </TabsTrigger>

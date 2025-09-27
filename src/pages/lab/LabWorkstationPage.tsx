@@ -119,7 +119,7 @@ const LabWorkstationPage: React.FC = () => {
   const handleUploadStatusChange = (isUploading: boolean) => {
     setIsUploadingToFirebase(isUploading);
   };
-
+console.log(selectedLabRequestForEntry,'selectedLabRequestForEntry')
   const [appliedQueueFilters, setAppliedQueueFilters] =
     useState<LabQueueFilters>({
       result_status_filter: "pending", // Default to show pending results

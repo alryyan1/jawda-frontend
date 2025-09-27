@@ -347,8 +347,8 @@ const AppLayout: React.FC = () => {
 
     const linkContent = (
       <>
-        <item.icon className={cn("h-5 w-5 flex-shrink-0", !isCollapsed && "ml-3")} />
-        {!isCollapsed && <span>{item.label}</span>}
+        <item.icon className={cn("h-5 w-5 flex-shrink-0 ", !isCollapsed && "ml-3")} />
+        {!isCollapsed && <span className="text-black! font-bold" style={{fontWeight:'bold'}}>{item.label}</span>}
       </>
     );
 
@@ -361,8 +361,8 @@ const AppLayout: React.FC = () => {
             "flex items-center rounded-md text-sm font-medium transition-colors h-10",
             isCollapsed ? "justify-center px-2" : "px-3 py-2.5",
             isActive
-              ? "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
-              : "text-foreground/70 hover:bg-muted hover:text-foreground"
+              ? "bg-blue-300 text-white!  shadow-sm "
+              : "text-foreground/70 "
           )
         }
         end={item.to === '/'} // `end` prop for exact match, esp. for home '/'

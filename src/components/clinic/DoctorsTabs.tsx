@@ -139,8 +139,8 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId 
                 >
                   {/* Doctor Name */}
                   <Typography
-                    variant="body2"
-                    className={`doctor-name ${isActive ? 'doctor-name--active' : ''}`}
+                  style={{fontWeight:'bold'}}
+                    className={`text-black! doctor-name ${isActive ? 'doctor-name--active text-2xl font-bold' : ''}`}
                     title={shift.doctor_name}
                   >
                     {shift.doctor_name}

@@ -309,7 +309,7 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
                           inputProps={{ "aria-label": "طريقة الدفع بنكاك" }}
                         />
                       ) : lr.is_bankak ? (
-                        "بنكاك"
+                        "بنكك"
                       ) : (
                         "نقدي"
                       )}

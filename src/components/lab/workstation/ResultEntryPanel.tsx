@@ -169,9 +169,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
         ...prev,
         [variables.fieldNameKey]: "error",
       }));
-      toast.error("فشل حفظ الحقل", {
-        description: error?.message,
-      });
+  
       setTimeout(
         () =>
           setFieldSaveStatus((prev) => ({
@@ -429,11 +427,6 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
     debouncedSaveNormalRange(value);
   }, [debouncedSaveNormalRange]);
 
-  // Comment dialog handlers
-  const handleOpenCommentDialog = useCallback(() => {
-    setCommentInput(initialLabRequest.comment || "");
-    setCommentDialogOpen(true);
-  }, [initialLabRequest.comment]);
 
   const handleCloseCommentDialog = useCallback(() => {
     setCommentDialogOpen(false);
@@ -469,65 +462,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
     normalRangeTextField: `results.${index}.normal_range_text` as Path<ResultEntryFormValues>,
   });
 
-  // Watch all form values for immediate autosave
-  const watchedValues = useWatch({ control });
-  const prevWatchedValuesRef = useRef(watchedValues);
 
-  useEffect(() => {
-    if (!testDataForEntry) return;
-    
-    const currentValues = watchedValues as ResultEntryFormValues;
-    const prevValues = prevWatchedValuesRef.current as ResultEntryFormValues;
-    
-    // Check each result field for changes
-    currentValues.results?.forEach((currentResult, index) => {
-      const prevResult = prevValues.results?.[index];
-      const childTest = testDataForEntry.child_tests_with_results[index];
-      
-      if (!prevResult || !childTest?.id) return;
-      
-      // Check result_value changes
-      if (currentResult.result_value !== prevResult.result_value) {
-        const fieldName = `results.${index}.result_value`;
-        const fieldState = control.getFieldState(fieldName as Path<ResultEntryFormValues>);
-        
-        if (fieldState.isDirty) {
-          // Convert result_value to string format for API
-          let apiValue: string | null = null;
-          if (typeof currentResult.result_value === "string") {
-            apiValue = currentResult.result_value;
-          } else if (typeof currentResult.result_value === "object" && currentResult.result_value !== null) {
-            apiValue = (currentResult.result_value as ChildTestOption).name;
-          } else if (typeof currentResult.result_value === "boolean") {
-            apiValue = currentResult.result_value ? "true" : "false";
-          }
-          
-          immediateSaveField(
-            initialLabRequest.id,
-            childTest.id,
-            fieldName,
-            { result_value: apiValue }
-          );
-        }
-      }
-
-      // Check normal_range_text changes
-      if (currentResult.normal_range_text !== prevResult.normal_range_text) {
-        const fieldName = `results.${index}.normal_range_text`;
-        const fieldState = control.getFieldState(fieldName as Path<ResultEntryFormValues>);
-        if (fieldState.isDirty) {
-          immediateSaveField(
-            initialLabRequest.id,
-            childTest.id,
-            fieldName,
-            { normal_range_text: currentResult.normal_range_text }
-          );
-        }
-      }
-    });
-
-    prevWatchedValuesRef.current = watchedValues;
-  }, [watchedValues, testDataForEntry, control, immediateSaveField, initialLabRequest.id]);
 
   if (isLoading && !testDataForEntry) {
     return (
@@ -679,6 +614,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                         </TableRow>
                       </TableHead>
                       <TableBody>
+                        {console.log(testDataForEntry,'testDataForEntry')}
                         {testDataForEntry.child_tests_with_results
                           .sort((a, b) => {
                             // First sort by test_order
@@ -694,7 +630,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                           (ctResult, index) => {
                             const { resultValueField, normalRangeTextField } = getFieldNames(index);
                             const isFirstInput = index === 0;
-
+                              console.log(ctResult, 'ctResult.result_id')
                             return (
                               <TableRow
                                 key={ctResult.id || `new-${index}`}
@@ -778,6 +714,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                                             value={field.value as string | ChildTestOption | null}
                                             onChange={field.onChange}
                                             onBlur={field.onBlur}
+                                            resultId={ctResult.result_id}
                                             error={!!error}
                                             helperText={error?.message}
                                             childTestId={ctResult.id!}

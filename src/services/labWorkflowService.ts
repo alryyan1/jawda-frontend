@@ -2,7 +2,7 @@
 import apiClient from './api';
 
 import type { ChildTestOption } from '../types/labTests';
-import type { LabQueueFilters, MainTestWithChildrenResults, PaginatedPatientLabQueueResponse, ResultEntryFormValues } from '@/types/labWorkflow';
+import type { LabQueueFilters, MainTestWithChildrenResults, PaginatedPatientLabQueueResponse, ResultEntryFormValues, PatientLabQueueItem } from '@/types/labWorkflow';
 import type { LabRequest, RequestedResult } from '@/types/visits';
 
 const LABREQUEST_BASE_URL = '/labrequests';
@@ -17,6 +17,12 @@ export const getLabReadyForPrintQueue = (filters: LabQueueFilters): Promise<Pagi
 
 export const getLabUnfinishedResultsQueue = (filters: LabQueueFilters): Promise<PaginatedPatientLabQueueResponse> => {
   return apiClient.get<PaginatedPatientLabQueueResponse>('/lab/unfinished-results-queue', { params: filters }).then(res => res.data);
+};
+
+// Fetch a single PatientLabQueueItem by visit_id
+export const getSinglePatientLabQueueItem = async (visitId: number): Promise<PatientLabQueueItem> => {
+  const response = await apiClient.get<{ data: PatientLabQueueItem }>(`/lab/queue-item/${visitId}`);
+  return response.data.data;
 };
 
 export const getLabRequestForEntry = async (labRequestId: number): Promise<MainTestWithChildrenResults> => {

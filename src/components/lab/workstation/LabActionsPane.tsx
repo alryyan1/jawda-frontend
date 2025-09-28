@@ -442,12 +442,22 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
 
         <Tooltip>
             <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="w-12 h-12" onClick={handlePrintWorklist}>
-                    <FontAwesomeIcon icon={faBars} className="h-7! w-7!" />
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="w-12 h-12" 
+                    onClick={handlePopulateCbc}
+                    disabled={populateCbcMutation.isPending}
+                >
+                    {populateCbcMutation.isPending ? (
+                        <Loader2 className="h-7! w-7! animate-spin" />
+                    ) : (
+                        <FontAwesomeIcon icon={faBars} className="h-7! w-7!" />
+                    )}
                 </Button>
             </TooltipTrigger>
             <TooltipContent side="right" sideOffset={5}>
-                <p>طباعة قائمة العمل</p>
+                <p> ملء نتائج CBC من Sysmex</p>
             </TooltipContent>
         </Tooltip>
         <Separator className="my-2" />

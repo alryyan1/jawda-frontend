@@ -97,7 +97,7 @@ const LabWorkstationPage: React.FC = () => {
   // --- Core State ---
   const [selectedQueueItem, setSelectedQueueItem] =
     useState<PatientLabQueueItem | null>(null);
-    console.log(selectedQueueItem, "selectedQueueItem");
+    // console.log(selectedQueueItem, "selectedQueueItem");
   const [selectedLabRequestForEntry, setSelectedLabRequestForEntry] =
     useState<LabRequest | null>(null);
   const [currentShiftForQueue, setCurrentShiftForQueue] =
@@ -119,7 +119,7 @@ const LabWorkstationPage: React.FC = () => {
   const handleUploadStatusChange = (isUploading: boolean) => {
     setIsUploadingToFirebase(isUploading);
   };
-console.log(selectedLabRequestForEntry,'selectedLabRequestForEntry')
+// console.log(selectedLabRequestForEntry,'selectedLabRequestForEntry')
   const [appliedQueueFilters, setAppliedQueueFilters] =
     useState<LabQueueFilters>({
       result_status_filter: "pending", // Default to show pending results
@@ -173,6 +173,9 @@ console.log(selectedLabRequestForEntry,'selectedLabRequestForEntry')
 
   // New Payment Badge State
   const [newPaymentBadges, setNewPaymentBadges] = useState<Set<number>>(new Set());
+  
+  // Updated item state for PatientQueuePanel
+  const [updatedQueueItem, setUpdatedQueueItem] = useState<PatientLabQueueItem | null>(null);
 
   // Sound system state
   const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
@@ -308,7 +311,7 @@ console.log(selectedLabRequestForEntry,'selectedLabRequestForEntry')
         addPaymentBadgeRef.current(data.visit.id);
 
         // Show a toast notification
-        toast.success(`تم دفع فحوصات المختبر للمريض: ${data.patient.name}`);
+        // toast.success(`تم دفع فحوصات المختبر للمريض: ${data.patient.name}`);
         
         // Invalidate the queue to refresh with the new paid patient
         queryClientRef.current.invalidateQueries({
@@ -406,6 +409,8 @@ console.log(selectedLabRequestForEntry,'selectedLabRequestForEntry')
           result_is_locked: data.patient.result_is_locked || false,
           all_requests_paid: true, // Default to true for now
           is_result_locked: data.patient.result_is_locked || false,
+          total_result_count: 0, // Will be updated by backend
+          pending_result_count: 0, // Will be updated by backend
         };
 
         setSelectedQueueItem(queueItemLike); // This makes it appear "selected" in the context
@@ -610,6 +615,22 @@ console.log(selectedLabRequestForEntry,'selectedLabRequestForEntry')
     //   queryKey: ["labPendingQueue", currentShiftForQueue?.id, ""],
     // });
   }, []);
+
+  // Handle single item updates from result entry
+  const handleItemUpdated = useCallback((updatedItem: PatientLabQueueItem) => {
+    // Update the selected queue item if it matches
+    if (selectedQueueItem && selectedQueueItem.visit_id === updatedItem.visit_id) {
+      setSelectedQueueItem(updatedItem);
+    }
+    
+    // Set the updated item for PatientQueuePanel to use
+    setUpdatedQueueItem(updatedItem);
+    
+    // Clear the updated item after a short delay to allow the update to be processed
+    setTimeout(() => {
+      setUpdatedQueueItem(null);
+    }, 1000);
+  }, [selectedQueueItem]);
 
 
 
@@ -1169,6 +1190,8 @@ console.log(selectedLabRequestForEntry,'selectedLabRequestForEntry')
               onResultsSaved={handleResultsSaved}
               patientAuthDate={selectedQueueItem?.result_auth}
               onChildTestFocus={() => {}} // Empty function since we're handling focus internally
+              visitId={selectedQueueItem?.visit_id}
+              onItemUpdated={handleItemUpdated}
             />
           ) : (
             <div className="flex-grow flex items-center justify-center p-10 text-center">
@@ -1231,6 +1254,7 @@ console.log(selectedLabRequestForEntry,'selectedLabRequestForEntry')
             globalSearchTerm={debouncedGlobalSearch}
             queueFilters={appliedQueueFilters}
             newPaymentBadges={newPaymentBadges}
+            updatedItem={updatedQueueItem}
           />
         </aside>
       </div>

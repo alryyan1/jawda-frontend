@@ -10,8 +10,12 @@ import {
     ListChecks,
     Printer,
     Globe,
+    Loader2,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import apiClient from '@/services/api';
 
 // Import the dialogs that will be opened by the new buttons
 import LabUserShiftSummaryDialog from './LabUserShiftSummaryDialog';
@@ -25,6 +29,8 @@ interface LabReceptionActionPageProps {
   activeVisitId?: number | null;
   hasLabRequests?: boolean;
   onPrintInvoice?: () => void;
+  activeLabRequestId?: number | null;
+  activeMainTestId?: number | null;
 }
 
 const LabReceptionActionPage: React.FC<LabReceptionActionPageProps> = ({
@@ -35,14 +41,54 @@ const LabReceptionActionPage: React.FC<LabReceptionActionPageProps> = ({
   activeVisitId,
   hasLabRequests,
   onPrintInvoice,
+  activeLabRequestId,
+  activeMainTestId,
 }) => {
   const { currentClinicShift } = useAuth();
+  const queryClient = useQueryClient();
   
   // State to control the visibility of the user's income summary dialog
   const [isIncomeDialogOpen, setIsIncomeDialogOpen] = useState(false);
   
   // State to control the visibility of the online lab patients dialog
   const [isOnlineLabPatientsDialogOpen, setIsOnlineLabPatientsDialogOpen] = useState(false);
+
+  // CBC Populate mutation
+  const populateCbcMutation = useMutation({
+    mutationFn: async ({ labRequestId, doctorVisitId, mainTestId }: { 
+      labRequestId: number; 
+      doctorVisitId: number; 
+      mainTestId: number; 
+    }) => {
+      const response = await apiClient.post(`/labrequests/${labRequestId}/populate-cbc-from-sysmex`, {
+        doctor_visit_id_for_sysmex: doctorVisitId,
+        main_test_id: mainTestId
+      });
+      return response.data;
+    },
+    onSuccess: (data) => {
+      if (data.status) {
+        toast.success(data.message || 'تم ملء نتائج CBC بنجاح');
+        
+        // Invalidate relevant queries to refresh the data
+        queryClient.invalidateQueries({
+          queryKey: ["labRequestsForVisit", activeVisitId],
+        });
+        queryClient.invalidateQueries({
+          queryKey: ["activeVisitForLabRequests", activeVisitId],
+        });
+        queryClient.invalidateQueries({
+          queryKey: ["doctorVisit", activeVisitId],
+        });
+      } else {
+        toast.error(data.message || 'فشل في ملء نتائج CBC');
+      }
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.message || error.message || 'فشل في ملء نتائج CBC';
+      toast.error(errorMessage);
+    },
+  });
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -109,14 +155,41 @@ const LabReceptionActionPage: React.FC<LabReceptionActionPageProps> = ({
               variant="ghost"
               size="icon"
               className="w-11 h-11"
-              onClick={onOpenPriceList}
-              aria-label="قائمة أسعار التحاليل"
+              disabled={populateCbcMutation.isPending}
+              onClick={() => {
+                if (!activeVisitId) {
+                  toast.error('يرجى اختيار زيارة أولاً');
+                  return;
+                }
+                
+                if (!activeLabRequestId) {
+                  toast.error('يرجى اختيار طلب مختبر أولاً');
+                  return;
+                }
+                
+                if (!activeMainTestId) {
+                  toast.error('يرجى اختيار فحص CBC أولاً');
+                  return;
+                }
+                
+                // Call the CBC populate API
+                populateCbcMutation.mutate({
+                  labRequestId: activeLabRequestId,
+                  doctorVisitId: activeVisitId,
+                  mainTestId: activeMainTestId
+                });
+              }}
+              aria-label="CBC Populate"
             >
-              <ListChecks className="h-5 w-5" />
+              {populateCbcMutation.isPending ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <ListChecks className="h-5 w-5" />
+              )}
             </Button>
           </TooltipTrigger>
           <TooltipContent side="left">
-            <p>قائمة أسعار التحاليل</p>
+            <p>ملء نتائج CBC من Sysmex</p>
           </TooltipContent>
         </Tooltip>
 

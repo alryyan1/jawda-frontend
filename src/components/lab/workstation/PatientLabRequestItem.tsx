@@ -28,7 +28,6 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
   isSelected,
   onSelect,
   allRequestsPaid,
-  isResultLocked: _isResultLocked,
   isLastResultPending,
   isReadyForPrint,
   showNewPaymentBadge = false,
@@ -59,10 +58,21 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
      : { backgroundColor: '#EF4444', color: '#FFFFFF' }; // Hardcode Red for unpaid
  }, [allRequestsPaid, appearanceSettings]);
 
+  // console.log(item,'item')
 
+  // Calculate progress percentage
+  const progressPercentage = useMemo(() => {
+    if (item.total_result_count === 0) return 0;
+    const completedCount = item.total_result_count - item.pending_result_count;
+    return Math.round((completedCount / item.total_result_count) * 100);
+  }, [item.total_result_count, item.pending_result_count]);
 
+  // showJsonDialog(item)
 //  console.log(isLastResultPending,'isLastResultPending',isSelected,'isSelected',isReadyForPrint,'isReadyForPrint')
-
+if(item.visit_id === 34218){
+  console.log(item,'item')
+  console.log(progressPercentage,'progressPercentage')
+}
   return (
     <div
       onClick={onSelect}
@@ -81,9 +91,9 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
         item.is_printed && "bg-[#01b9ff] text-black! font-bold",
         isSelected && "bg-[#fee685]",
         "active:scale-95 transform-gpu",
-        isLastResultPending && !isSelected && "animate-heartbeat",
-        isLastResultPending && !isSelected && "animate__animated animate__heartBeat animate__infinite animate__slow",
-        isReadyForPrint && !isSelected && "animate__animated animate__bounce animate__infinite animate__slow",
+        isLastResultPending &&   "animate-heartbeat",
+        isLastResultPending  && "animate__animated animate__heartBeat animate__infinite animate__slow",
+        isReadyForPrint  && "animate__animated animate__bounce animate__infinite animate__slow",
 
         // Use CSS variables for dynamic styling
         "border-[var(--border-color)] text-[var(--text-color)]",
@@ -126,6 +136,15 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
         </div>
       )}
 
+      {/* Progress Bar */}
+      {item.total_result_count > 0 && (
+        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-200 rounded-b-lg overflow-hidden">
+          <div 
+            className="h-full bg-gradient-to-r from-blue-500 to-blue-500 transition-all duration-300 ease-out"
+            style={{ width: `${progressPercentage}%` }}
+          />
+        </div>
+      )}
     
     </div>
   );

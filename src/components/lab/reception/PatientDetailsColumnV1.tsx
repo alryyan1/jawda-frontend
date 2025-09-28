@@ -57,7 +57,7 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
       return response.data;
     },
     onSuccess: async () => {
-      toast.success("تمت معالجة جميع المدفوعات بنجاح");
+      // toast.success("تمت معالجة جميع المدفوعات بنجاح");
       onPrintReceipt();
       
       // Emit lab-payment event

@@ -109,16 +109,32 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
     setIsPdfPreviewOpen(true); // Open dialog to show loader
 
     try {
-      const response = await apiClient.get(`visits/${visit.id}/thermal-receipt/pdf`, {
-        responseType: 'blob',
-        headers: { Accept: 'application/pdf' },
-      });
+      let response;
+      let receiptType;
+      
+      if (activeTab === 'lab') {
+        // Lab receipt endpoint
+        response = await apiClient.get(`visits/${visit.id}/lab-thermal-receipt/pdf`, {
+          responseType: 'blob',
+          headers: { Accept: 'application/pdf' },
+        });
+        receiptType = 'lab';
+      } else {
+        // Services receipt endpoint
+        response = await apiClient.get(`visits/${visit.id}/thermal-receipt/pdf`, {
+          responseType: 'blob',
+          headers: { Accept: 'application/pdf' },
+        });
+        receiptType = 'services';
+      }
+      
       const blob = new Blob([response.data], { type: 'application/pdf' });
       const objectUrl = URL.createObjectURL(blob);
       setPdfUrl(objectUrl);
-      // Construct a more descriptive filename
+      
+      // Construct a more descriptive filename based on tab
       const patientNameSanitized = visit.patient.name.replace(/[^A-Za-z0-9\-_]/g, '_');
-      setPdfFileName(`Receipt_Visit_${visit.id}_${patientNameSanitized}.pdf`);
+      setPdfFileName(`${receiptType === 'lab' ? 'Lab_Receipt' : 'Services_Receipt'}_Visit_${visit.id}_${patientNameSanitized}.pdf`);
 
     } catch (error: unknown) {
       console.error("Error generating PDF receipt:", error);
@@ -332,7 +348,7 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
         }}
         pdfUrl={pdfUrl}
         isLoading={isGeneratingPdf && !pdfUrl} // Show loader while generating before URL is ready
-        title={`معاينة الإيصال - زيارة ${visit?.id}`}
+        title={`معاينة ${activeTab === 'lab' ? 'إيصال المختبر' : 'إيصال الخدمات'} - زيارة ${visit?.id}`}
         fileName={pdfFileName}
       />
     </div>

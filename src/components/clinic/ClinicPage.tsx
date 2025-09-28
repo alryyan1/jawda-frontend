@@ -18,6 +18,7 @@ import SelectedPatientWorkspace from './SelectedPatientWorkspace';
 import PatientDetailsColumnClinic, { type PatientDetailsColumnClinicRef } from './PatientDetailsColumnClinic';
 import DoctorFinderDialog from './dialogs/DoctorFinderDialog';
 import UserShiftIncomeDialog from './UserShiftIncomeDialog';
+import ClinicFinancialSummary from './ClinicFinancialSummary';
 import {
   Dialog,
   DialogContent,
@@ -57,6 +58,8 @@ const ClinicPage: React.FC = () => {
 const [isDoctorFinderDialogOpen, setIsDoctorFinderDialogOpen] = useState(false);
 // NEW: State for UserShiftIncomeDialog visibility, controlled by F8
 const [isIncomeDialogOpen, setIsIncomeDialogOpen] = useState(false);
+// NEW: State for ClinicFinancialSummary dialog visibility
+const [isFinancialSummaryDialogOpen, setIsFinancialSummaryDialogOpen] = useState(false);
   const patientDetailsRef = React.useRef<PatientDetailsColumnClinicRef>(null);
 
 const handleDoctorShiftSelectedFromFinder = useCallback((shift: DoctorShift) => {
@@ -358,6 +361,7 @@ console.log('active doctor shift', activeDoctorShift);
           onToggleRegistrationForm={toggleRegistrationForm}
           onDoctorShiftSelectedFromFinder={handleDoctorShiftSelectedFromFinder}
           onDoctorShiftClosed={handleDoctorShiftClosed}
+          onOpenFinancialSummary={() => setIsFinancialSummaryDialogOpen(true)}
         />
       </div>
 
@@ -374,6 +378,16 @@ console.log('active doctor shift', activeDoctorShift);
           currentClinicShiftId={currentClinicShift?.id ?? null}
         />
       )}
+
+      {/* Financial Summary Dialog */}
+      <Dialog open={isFinancialSummaryDialogOpen} onOpenChange={setIsFinancialSummaryDialogOpen}>
+        <DialogContent className="!max-w-3xl max-h-[90vh] overflow-y-auto w-[95vw] ">
+          <DialogHeader>
+       
+          </DialogHeader>
+          <ClinicFinancialSummary currentClinicShiftId={currentClinicShift?.id ?? null} />
+        </DialogContent>
+      </Dialog>
 
       {/* Shift Status Dialog */}
       <Dialog open={isShiftStatusDialogOpen} onOpenChange={setIsShiftStatusDialogOpen}>

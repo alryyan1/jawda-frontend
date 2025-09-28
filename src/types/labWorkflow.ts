@@ -19,6 +19,8 @@ export interface PatientLabQueueItem { // For the leftmost list
   company?: any; // Company information from backend
   auth_date?: string | null;
   result_auth?: boolean | null;
+  total_result_count: number; // Total number of results for this patient
+  pending_result_count: number; // Number of pending results
   // status_summary?: string; // e.g. "3 Pending, 1 Complete"
 }
 

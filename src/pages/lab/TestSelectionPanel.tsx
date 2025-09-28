@@ -77,14 +77,14 @@ const TestSelectionPanel: React.FC<TestSelectionPanelProps> = ({
                         "p-2 cursor-pointer  hover:bg-muted dark:hover:bg-muted/40 transition-colors",
                         selectedLabRequestId === lr.id && "ring-2 ring-primary bg-primary/20 dark:bg-primary/30 border-primary/50",
                         lr.hidden == false && "",
-                        selectedLabRequestId === lr.id && "bg-amber-200!"
+                        selectedLabRequestId === lr.id && "bg-blue-200! "
                     )}
                     onClick={() => handleSelectTestForEntry(lr)}
                 >
                     <Box className="flex items-center justify-between gap-2">
-                        <Box className="flex-grow min-w-0 ">
-                            <Typography  className={cn(" font-medium truncate", lr.hidden ===  false && "line-through")} title={lr.main_test?.main_test_name}>
-                                {lr.main_test?.main_test_name || 'تحليل غير معروف'}
+                        <Box className="flex-grow min-w-0  font-bold">
+                            <Typography sx={{fontWeight: 'bold',color: 'black'}}  className={cn("  truncate", lr.hidden ===  false && "line-through")} title={lr.main_test?.main_test_name}>
+                                {lr.main_test?.main_test_name }
                             </Typography>
                            
                         </Box>

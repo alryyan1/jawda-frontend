@@ -1,7 +1,7 @@
 // src/components/lab/workstation/ChildTestAutocompleteInput.tsx
 import React, { useState, useEffect, useCallback } from "react";
 // استخدام نص عربي مباشر بدلاً من i18n
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Autocomplete, {
   createFilterOptions,
 } from "@mui/material/Autocomplete";
@@ -17,12 +17,12 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import { toast } from "sonner";
 
 import type { ChildTestOption } from "@/types/labTests";
-import type { ChildTestWithResult } from "@/types/labWorkflow";
+import type { ChildTestWithResult, PatientLabQueueItem } from "@/types/labWorkflow";
 import {
   getChildTestOptionsList,
   createChildTestOption,
 } from "@/services/childTestOptionService";
-import { saveSingleChildTestResult } from "@/services/labWorkflowService";
+import { saveSingleChildTestResult, getSinglePatientLabQueueItem } from "@/services/labWorkflowService";
 
 interface ChildTestAutocompleteInputProps {
   // RHF field props
@@ -42,6 +42,9 @@ interface ChildTestAutocompleteInputProps {
   inputRef?: React.RefObject<HTMLInputElement | null>;
   // Patient data for authorization check
   patientAuthDate?: boolean | null;
+  // For queue invalidation when results are saved
+  visitId?: number; // Visit ID to invalidate the correct queue
+  onItemUpdated?: (updatedItem: PatientLabQueueItem) => void; // Callback to update the item in parent
   // For autosave trigger (optional, can be handled by parent watching RHF value)
   // onValueActuallyChanged: (newValue: string | ChildTestOption | null) => void;
 }
@@ -71,6 +74,8 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
   onFocusChange,
   inputRef,
   patientAuthDate,
+  visitId,
+  onItemUpdated,
 }) => {
   // استخدام نص عربي مباشر بدلاً من i18n
 
@@ -102,16 +107,26 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
     setShowSuccess(false);
 
     // Show success indicator after a short delay
-    setTimeout(() => {
+    setTimeout(async () => {
       setIsSaving(false);
       setShowSuccess(true);
+      
+      // Fetch the updated single item to update progress bars
+      if (visitId && onItemUpdated) {
+        try {
+          const updatedItem = await getSinglePatientLabQueueItem(visitId);
+          onItemUpdated(updatedItem);
+        } catch (error) {
+          console.error('Failed to fetch updated item:', error);
+        }
+      }
       
       // Hide success indicator after 2 seconds
       setTimeout(() => {
         setShowSuccess(false);
       }, 2000);
     }, 500);
-  }, [onChange]);
+  }, [onChange, visitId, onItemUpdated]);
 
   // Fetch and cache options using localStorage (from your original component)
   useEffect(() => {
@@ -343,7 +358,7 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
             }}
           onChange={(event) => {
             console.log(resultId, 'resultId')
-            saveSingleChildTestResult(resultId, event.target.value)
+            saveSingleChildTestResult(resultId, (event.target as HTMLInputElement).value)
           }}
             InputProps={{
               ...params.InputProps,

@@ -1,5 +1,6 @@
 import React from "react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { 
   CheckCircle2, 
   Phone, 
@@ -9,7 +10,8 @@ import {
   Clock,
   Shield,
   Printer,
-  CreditCard
+  CreditCard,
+  Copy
 } from "lucide-react";
 import { 
   Card as MuiCard, 
@@ -209,6 +211,25 @@ const PatientDetailsLabEntry: React.FC<PatientDetailsLabEntryProps> = ({
   const completedSteps = Object.values(statuses || {}).filter(status => status?.done).length;
   const totalSteps = Object.keys(statuses || {}).length;
 
+  // Function to copy visit ID to clipboard
+  const handleCopyVisitId = async () => {
+    if (visitId) {
+      try {
+        await navigator.clipboard.writeText(visitId.toString());
+        toast.success("تم نسخ رقم الزيارة");
+      } catch (error) {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = visitId.toString();
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        toast.success("تم نسخ رقم الزيارة");
+      }
+    }
+  };
+
   return (
     <MuiCard 
       dir="rtl" 
@@ -244,11 +265,18 @@ const PatientDetailsLabEntry: React.FC<PatientDetailsLabEntryProps> = ({
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 0.5 }}>
-     
-          <div className="text-black! text-4xl font-bold">
-            {visitId}
+          <div className="flex items-center gap-2">
+            <div className="text-black! text-4xl font-bold">
+              {visitId}
+            </div>
+            <button
+              onClick={handleCopyVisitId}
+              className="p-1 hover:bg-white/20 rounded transition-colors"
+              title="نسخ رقم الزيارة"
+            >
+              <Copy size={16} className="text-black/70 hover:text-black" />
+            </button>
           </div>
-      
         </Box>
         <Typography className="text-black!" variant="h6"  sx={{ fontWeight: 600, textAlign: 'center', fontSize: '1.6rem' }}>
           {patientName || "-"}

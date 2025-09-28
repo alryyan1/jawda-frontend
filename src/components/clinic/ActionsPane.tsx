@@ -19,7 +19,8 @@ import {
   faUserPlus,
   faClockRotateLeft,
   faGlobe,
-  faUserDoctor
+  faUserDoctor,
+  faCalculator
 } from "@fortawesome/free-solid-svg-icons";
 import ManageDoctorShiftsDialog from "./ManageDoctorShiftsDialog";
 import DoctorCredits from "./DoctorCredits";
@@ -36,6 +37,7 @@ interface ActionsPaneProps {
   onDoctorShiftSelectedFromFinder: (shift: DoctorShift) => void;
   onDoctorShiftClosed?: (doctorShiftId: number) => void;
   activeDoctorShift: DoctorShift | null;
+  onOpenFinancialSummary: () => void;
 }
 
 const ActionsPane: React.FC<ActionsPaneProps> = ({
@@ -43,6 +45,7 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
   onToggleRegistrationForm,
   onDoctorShiftClosed,
   activeDoctorShift,
+  onOpenFinancialSummary,
 }) => {
   const { currentClinicShift, user: authUser } = useAuth();
     // Placeholder permissions
@@ -118,6 +121,17 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
             aria-label="استحقاقات الأطباء"
           >
             <BriefcaseMedical />
+          </IconButton>
+        </Tooltip>
+
+        {/* Financial Summary Button */}
+        <Tooltip title="الملخص المالي" placement="left">
+          <IconButton
+            onClick={onOpenFinancialSummary}
+            sx={{ width: 44, height: 44, color: "warning.main" }}
+            aria-label="الملخص المالي"
+          >
+            <FontAwesomeIcon icon={faCalculator} />
           </IconButton>
         </Tooltip>
         

@@ -23,11 +23,12 @@ interface PatientQueuePanelProps {
   queueFilters?: LabQueueFilters; // Optional filters for the queue
   appearanceSettings: LabAppearanceSettings;
   newPaymentBadges?: Set<number>; // Set of visit IDs that should show new payment badge
+  updatedItem?: PatientLabQueueItem | null; // Updated item to replace in the list
 }
 
 const PatientQueuePanel: React.FC<PatientQueuePanelProps> = ({
   appearanceSettings,
-  currentShift, onShiftChange, onPatientSelect, selectedVisitId, globalSearchTerm, queueFilters = {}, newPaymentBadges = new Set()
+  currentShift, onShiftChange, onPatientSelect, selectedVisitId, globalSearchTerm, queueFilters = {}, newPaymentBadges = new Set(), updatedItem
 }) => {
   // const { t } = useTranslation(['labResults', 'common']);
   const queryClient = useQueryClient(); // For manual refresh
@@ -78,7 +79,28 @@ const PatientQueuePanel: React.FC<PatientQueuePanelProps> = ({
     setCurrentPage(1);
   }, [currentShift?.id, globalSearchTerm, queueFilters]);
 
-  const queueItems = paginatedQueue?.data || [];
+  const [queueItems, setQueueItems] = useState<PatientLabQueueItem[]>([]);
+  
+  // Initialize queueItems when paginatedQueue data changes
+  React.useEffect(() => {
+    if (paginatedQueue?.data) {
+      console.log('Initializing queue items:', paginatedQueue.data.length, 'items');
+      setQueueItems(paginatedQueue.data);
+    }
+  }, [paginatedQueue?.data]);
+  
+  // Update the specific item in the queue when updatedItem is provided
+  React.useEffect(() => {
+    if (updatedItem) {
+      console.log('Updating queue item for visit_id:', updatedItem.visit_id, 'with progress:', updatedItem.total_result_count, '/', updatedItem.pending_result_count);
+      setQueueItems(prevItems => 
+        prevItems.map(item => 
+          item.visit_id === updatedItem.visit_id ? updatedItem : item
+        )
+      );
+    }
+  }, [updatedItem]);
+  
   // console.log(queueItems,'queueItems from queue')
   const handleRefresh = () => {
       // Invalidate and refetch the queue
@@ -87,6 +109,11 @@ const PatientQueuePanel: React.FC<PatientQueuePanelProps> = ({
       // refetchQueue();
   };
   
+  // Debug: Log current queue items
+  console.log('Current queueItems:', queueItems.length, 'items');
+  if (queueItems.length > 0) {
+    console.log('First item progress:', queueItems[0].visit_id, 'has', queueItems[0].total_result_count, 'total,', queueItems[0].pending_result_count, 'pending');
+  }
   return (
     <div className="h-[calc(100vh-150px)] flex flex-col">
       <QueueHeader

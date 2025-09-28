@@ -41,6 +41,7 @@ import type {
   MainTestWithChildrenResults,
   ResultEntryFormValues,
   ChildTestWithResult,
+  PatientLabQueueItem,
 } from "@/types/labWorkflow";
 import {
   getLabRequestForEntry,
@@ -48,6 +49,7 @@ import {
   saveLabResults,
   updateNormalRange,
   updateLabRequestComment,
+  getSinglePatientLabQueueItem,
   type SingleResultSavePayload,
 } from "@/services/labWorkflowService";
 
@@ -87,6 +89,8 @@ interface ResultEntryPanelProps {
   onResultsSaved: (updatedLabRequest: LabRequest) => void;
   onChildTestFocus: (childTest: ChildTestWithResult | null) => void;
   patientAuthDate?: boolean | null;
+  visitId?: number; // Visit ID for queue invalidation
+  onItemUpdated?: (updatedItem: PatientLabQueueItem) => void; // Callback to update the item in parent
   }
 
 const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
@@ -94,6 +98,8 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
   onResultsSaved,
   onChildTestFocus,
   patientAuthDate,
+  visitId,
+  onItemUpdated,
 }) => {
   // استخدام نص عربي مباشر بدلاً من i18n
   const queryClient = useQueryClient();
@@ -139,17 +145,26 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
       fieldNameKey: string;
     }) =>
       saveSingleChildTestResult(
-        params.labRequestId,
         params.childTestId,
-        params.payload
+        params.payload.result_value || ""
       ),
-    onSuccess: (updatedResultData, variables) => {
+    onSuccess: async (updatedResultData, variables) => {
       if (!updatedResultData) return;
       setFieldSaveStatus((prev) => ({
         ...prev,
         [variables.fieldNameKey]: "success",
       }));
       // toast.success("تم حفظ الحقل بنجاح");
+
+      // Fetch the updated single item to update progress bars
+      if (visitId && onItemUpdated) {
+        try {
+          const updatedItem = await getSinglePatientLabQueueItem(visitId);
+          onItemUpdated(updatedItem);
+        } catch (error) {
+          console.error('Failed to fetch updated item:', error);
+        }
+      }
 
       // Don't invalidate queries immediately - the data is already updated
       // Just call the callback to notify parent components
@@ -614,7 +629,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {console.log(testDataForEntry,'testDataForEntry')}
+                        {/* {console.log(testDataForEntry,'testDataForEntry')} */}
                         {testDataForEntry.child_tests_with_results
                           .sort((a, b) => {
                             // First sort by test_order
@@ -630,7 +645,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                           (ctResult, index) => {
                             const { resultValueField, normalRangeTextField } = getFieldNames(index);
                             const isFirstInput = index === 0;
-                              console.log(ctResult, 'ctResult.result_id')
+                              // console.log(ctResult, 'ctResult.result_id')
                             return (
                               <TableRow
                                 key={ctResult.id || `new-${index}`}
@@ -714,7 +729,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                                             value={field.value as string | ChildTestOption | null}
                                             onChange={field.onChange}
                                             onBlur={field.onBlur}
-                                            resultId={ctResult.result_id}
+                                            resultId={ctResult.result_id || 0}
                                             error={!!error}
                                             helperText={error?.message}
                                             childTestId={ctResult.id!}
@@ -725,6 +740,8 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                                             onFocusChange={(childTest) => handleChildTestFocus(childTest, index)}
                                             inputRef={isFirstInput ? firstInputRef : undefined}
                                             patientAuthDate={patientAuthDate}
+                                            visitId={visitId}
+                                            onItemUpdated={onItemUpdated}
                                           />
                                         </div>
                                       
@@ -753,7 +770,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                         color: "var(--foreground)",
                       }}
                     >
-                      النطاق الطبيعي لـ {testDataForEntry.child_tests_with_results[selectedChildTestIndex].child_test_name}
+                      Normal Range for {testDataForEntry.child_tests_with_results[selectedChildTestIndex].child_test_name}
                     </Typography>
                   </div>
                   <div className="relative">
@@ -761,7 +778,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                       value={normalRangeInput}
                       onChange={(e) => handleNormalRangeChange(e.target.value)}
                       className="min-h-[60px] text-sm bg-background border-border pr-8"
-                      placeholder="أدخل النطاق الطبيعي..."
+                      placeholder="Enter Normal Range..."
                       style={{
                         resize: "vertical",
                         fontSize: "0.75rem",
@@ -776,7 +793,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                   </div>
                   {testDataForEntry.child_tests_with_results[selectedChildTestIndex].unit_name && (
                     <div className="mt-2 text-xs text-muted-foreground">
-                      الوحدة: {testDataForEntry.child_tests_with_results[selectedChildTestIndex].unit_name}
+                      Unit: {testDataForEntry.child_tests_with_results[selectedChildTestIndex].unit_name}
                     </div>
                   )}
                 </div>
@@ -809,13 +826,13 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
         }}
       >
         <DialogTitle sx={{ fontSize: "1rem", fontWeight: 600 }}>
-          {initialLabRequest.comment ? "تعديل تعليق طلب المختبر" : "إضافة تعليق لطلب المختبر"}
+          {initialLabRequest.comment ? "Edit Lab Request Comment" : "Add Lab Request Comment"}
         </DialogTitle>
         <DialogContent>
           <Textarea
             value={commentInput}
             onChange={(e) => setCommentInput(e.target.value)}
-            placeholder="أدخل تعليقك هنا..."
+            placeholder="Enter your comment here..."
             className="min-h-[120px] text-sm bg-background border-border"
             style={{
               resize: "vertical",

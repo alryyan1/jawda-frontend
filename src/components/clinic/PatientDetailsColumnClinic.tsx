@@ -22,7 +22,8 @@ import {
   Clock,
   Shield,
   Printer,
-  CreditCard
+  CreditCard,
+  Copy
 } from "lucide-react";
 export interface PatientDetailsColumnClinicProps {
   visitId: number | null;
@@ -78,49 +79,67 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
     enabled: !!currentClinicShift && !!user && activeTab === 'services',
   });
 
-  // Pay all unpaid services mutation
+  // Pay all unpaid services/lab requests mutation
   const payAllMutation = useMutation({
     mutationFn: async () => {
       if (!visitId || !currentClinicShiftId) {
         throw new Error("Missing visit ID or clinic shift ID");
       }
 
-      // Find all unpaid services
-      const unpaidServices = requestedServices.filter(service => {
-        const balance = calculateItemBalance(service);
-        return balance > 0.009; // Services with remaining balance
-      });
-
-      if (unpaidServices.length === 0) {
-        throw new Error("لا توجد خدمات غير مدفوعة");
-      }
-
-      // Process payments for all unpaid services
-      const paymentPromises = unpaidServices.map(service => {
-        const balance = calculateItemBalance(service);
-        return recordServicePayment({
-          requested_service_id: service.id,
-          amount: balance,
-          is_bank: false,
-          shift_id: currentClinicShiftId
+      if (activeTab === 'lab') {
+        // Handle lab requests payment
+        const { default: apiClient } = await import("@/services/api");
+        const response = await apiClient.post(`/doctor-visits/${visitId}/pay-all-lab-requests`);
+        return response.data;
+      } else {
+        // Handle services payment
+        // Find all unpaid services
+        const unpaidServices = requestedServices.filter(service => {
+          const balance = calculateItemBalance(service);
+          return balance > 0.009; // Services with remaining balance
         });
-      });
 
-      await Promise.all(paymentPromises);
-      return unpaidServices;
+        if (unpaidServices.length === 0) {
+          throw new Error("لا توجد خدمات غير مدفوعة");
+        }
+
+        // Process payments for all unpaid services
+        const paymentPromises = unpaidServices.map(service => {
+          const balance = calculateItemBalance(service);
+          return recordServicePayment({
+            requested_service_id: service.id,
+            amount: balance,
+            is_bank: false,
+            shift_id: currentClinicShiftId
+          });
+        });
+
+        await Promise.all(paymentPromises);
+        return unpaidServices;
+      }
     },
     onSuccess: () => {
       toast.success("تم معالجة جميع المدفوعات بنجاح");
       if (onPrintReceipt) {
         onPrintReceipt();
       }
-      queryClient.invalidateQueries({
-        queryKey: ["requestedServicesForVisit", visitId],
-      });
+      
+      // Invalidate relevant queries based on active tab
+      if (activeTab === 'lab') {
+        queryClient.invalidateQueries({
+          queryKey: ["labRequestsForVisit", visitId],
+        });
+      } else {
+        queryClient.invalidateQueries({
+          queryKey: ["requestedServicesForVisit", visitId],
+        });
+      }
+      
       queryClient.invalidateQueries({
         queryKey: ["doctorVisit", visitId],
       });
-      // Refresh Services Income Summary (cash/bank/total)
+      
+      // Refresh Income Summary (cash/bank/total)
       if (user?.id && currentClinicShift?.id) {
         const key = ["userShiftIncomeSummary", user.id, currentClinicShift.id] as const;
         queryClient.invalidateQueries({ queryKey: key });
@@ -269,20 +288,61 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
   const serial = visit.id?.toString();
   const registeredBy = visit.created_by_user?.name;
 
+  // Function to copy serial number to clipboard
+  const handleCopySerial = async () => {
+    if (serial) {
+      try {
+        await navigator.clipboard.writeText(serial);
+        toast.success("تم نسخ المتسلسل");
+      } catch (error) {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = serial;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        toast.success("تم نسخ المتسلسل");
+      }
+    }
+  };
+
   return (
     <>
       <div className="flex flex-col h-full w-full items-center justify-start p-1 bg-background">
-        <div className="flex flex-col h-full w-full justify-between p-1 bg-background">
+        <div className="flex flex-col h-full w-full justify-start p-1 bg-background">
             {/* Patient Name */}
         <div className="w-full text-center font-bold text-lg border-b border-border pb-1 mb-1 text-foreground">
           {patientName}
         </div>
  {/* TODO: Add icons */}
- <div className="patient-details"><ItemRow label="المتسلسل" value={serial}  icon={FileText}/>
+ <div className="patient-details">
+        {/* Custom Serial Row with Copy Button */}
+        <div className="flex items-center py-1 px-0.5 rounded hover:bg-muted/50 transition-colors">
+          <div className="w-6 h-6 bg-primary/20 rounded-full flex items-center justify-center mr-1.5">
+            <FileText size={12} className="text-primary" />
+          </div>
+          <div className="flex-1 min-w-0 flex items-center justify-between">
+            <span className="font-bold text-sm mr-2">المتسلسل</span>
+            <div className="flex items-center gap-1">
+              <span className="font-semibold text-sm text-foreground truncate max-w-[60%]" title={serial}>
+                {serial ?? "-"}
+              </span>
+              <button
+                onClick={handleCopySerial}
+                className="p-1 hover:bg-muted rounded transition-colors"
+                title="نسخ المتسلسل"
+              >
+                <Copy size={14} className="text-muted-foreground hover:text-foreground" />
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="h-px bg-border my-1" />
+        
         <ItemRow label="الطبيب" value={doctorName} />
         <ItemRow label="الهاتف" value={phone} icon={Phone}/>
         <ItemRow label="التاريخ" value={date} icon={CalendarDays}/>
-        <ItemRow label="المتسلسل" value={serial} icon={FileText}/>
         <ItemRow label="بواسطة" value={registeredBy} />
 </div>
         
@@ -347,8 +407,8 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
 
         {/* Action Buttons */}
         <div className="w-full space-y-2">
-          {/* Pay All Button */}
-          {totalBalance > 0.009 && currentClinicShiftId && (
+          {/* Pay All Button - Services Tab */}
+          {activeTab === 'services' && totalBalance > 0.009 && currentClinicShiftId && (
             <Button
               className="w-full bg-green-600 hover:bg-green-700 text-white"
               onClick={() => payAllMutation.mutate()}
@@ -363,10 +423,27 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
             </Button>
           )}
 
+          {/* Lab Payment Button - Lab Tab */}
+          {activeTab === 'lab' && totalBalance > 0.009 && currentClinicShiftId && (
+            <button
+              className={`w-full bg-blue-600 text-white py-2 rounded-lg font-bold hover:bg-blue-700 transition flex items-center justify-center ${totalBalance === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
+              onClick={() => payAllMutation.mutate()}
+              disabled={payAllMutation.isPending || totalBalance === 0}
+            >
+              {payAllMutation.isPending ? (
+                <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                </svg>
+              ) : null}
+              {"دفع الكل"}
+            </button>
+          )}
+
         </div>
         </div>
         <div>
-                  {/* Services Income Summary (Total paid split into Cash / Bank) */}
+                  {/* Services Income Summary (Total paid split into Cash / Bank)
            {activeTab === 'services' && currentClinicShift && (
           <div className="w-60 mt-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200 mb-4">
             <div className="p-3">
@@ -421,7 +498,7 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
               ) : null}
             </div>
           </div>
-        )}
+        )} */}
         </div>
       
    

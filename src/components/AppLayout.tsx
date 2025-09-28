@@ -78,7 +78,7 @@ export interface NavItem {
 
 // Main Navigation Items
 const mainNavItems: NavItem[] = [
-  { to: '/', label: 'لوحة التحكم', icon: Home, permission: 'view dashboard' },
+  { to: '/dashboard', label: 'لوحة التحكم', icon: Home, permission: 'view dashboard' },
   { to: '/clinic', label: 'العيادة', icon: BriefcaseMedical, permission: 'access clinic_workspace' },
   { to: '/lab-reception', label: 'استقبال المختبر', icon: Microscope, permission: 'access lab_reception' },
   { to: '/lab-sample-collection', label: 'جمع العينات', icon: Syringe, permission: 'access lab_sample_collection' },
@@ -422,7 +422,7 @@ const AppLayout: React.FC = () => {
               isDesktopSidebarCollapsed && "justify-center px-2"
             )}
           >
-            <Link to="/" className={cn("flex items-center gap-2 font-bold text-primary truncate", isDesktopSidebarCollapsed ? "text-xl" : "text-lg")}>
+            <Link to="/dashboard" className={cn("flex items-center gap-2 font-bold text-primary truncate", isDesktopSidebarCollapsed ? "text-xl" : "text-lg")}>
               <img src="/logo.png" alt="شعار النظام" className={cn("rounded-md", isDesktopSidebarCollapsed ? "h-8 w-8" : "h-7 w-7")} />
               {!isDesktopSidebarCollapsed && <span>نظام جودة الطبي</span>}
             </Link>

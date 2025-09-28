@@ -586,12 +586,8 @@ interface AutocompleteVisitOption {
           {showPatientHistory && (
             <div className="absolute top-4 left-4 z-50 w-1/2 max-h-[600px]" ref={patientHistoryRef}>
               <Card className="bg-white dark:bg-slate-800 shadow-2xl border-0 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
-                <CardContent className="p-4 h-full overflow-hidden">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-lg font-semibold">سجل المريض</h3>
-                      <p className="text-sm text-muted-foreground">نتائج البحث عن المريض</p>
-                    </div>
+                <CardContent className="p-1 h-full overflow-hidden">
+                  <div className="flex justify-between items-start mb-1">
                     <Button
                       variant="ghost"
                       size="sm"

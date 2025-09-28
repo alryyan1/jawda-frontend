@@ -9,7 +9,6 @@ import {
   TableBody,
   TableCell,
   TableHead,
-  TableHeader,
   TableRow,
   TableContainer,
   Paper,
@@ -90,23 +89,23 @@ const PatientHistoryTable: React.FC<PatientHistoryTableProps> = ({
   // console.log(searchResults,'searchResults');
   // The component is now just the content, without its own Card or Header
   return (
-    <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
-      <Table stickyHeader>
+    <TableContainer component={Paper} sx={{ maxHeight: 400, padding: 0, margin: 0 }}>
+      <Table stickyHeader sx={{ '& .MuiTableCell-root': { padding: '4px 8px' } }}>
         <TableHead>
           <TableRow>
-            <TableCell sx={{ width: 150, fontWeight: 'bold' }}>
+            <TableCell sx={{ width: 190, fontWeight: 'bold', padding: '4px 8px' }}>
               اسم المريض
             </TableCell>
-            <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' }, textAlign: 'center', fontWeight: 'bold' }}>
+            <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' }, textAlign: 'center', fontWeight: 'bold', padding: '4px 8px' }}>
               آخر زيارة
             </TableCell>
-            <TableCell sx={{ width: 200, textAlign: 'center', fontWeight: 'bold' }}>
+            <TableCell sx={{ width: 200, textAlign: 'center', fontWeight: 'bold', padding: '4px 8px' }}>
               الطبيب
             </TableCell>
-            <TableCell sx={{ width: 200, textAlign: 'center', fontWeight: 'bold' }}>
+            <TableCell sx={{ width: 200, textAlign: 'center', fontWeight: 'bold', padding: '4px 8px' }}>
               الشركة
             </TableCell>
-            <TableCell sx={{ textAlign: 'right', fontWeight: 'bold' }}>
+            <TableCell sx={{ textAlign: 'right', fontWeight: 'bold', padding: '4px 8px' }}>
               الإجراءات
             </TableCell>
           </TableRow>
@@ -114,7 +113,7 @@ const PatientHistoryTable: React.FC<PatientHistoryTableProps> = ({
         <TableBody>
           {isLoading && (
             <TableRow>
-              <TableCell colSpan={5} sx={{ height: 96, textAlign: 'center' }}>
+              <TableCell colSpan={5} sx={{ height: 48, textAlign: 'center', padding: '4px 8px' }}>
                 <CircularProgress size={24} />
               </TableCell>
             </TableRow>
@@ -123,7 +122,7 @@ const PatientHistoryTable: React.FC<PatientHistoryTableProps> = ({
             <TableRow>
               <TableCell
                 colSpan={5}
-                sx={{ height: 96, textAlign: 'center', color: 'text.secondary' }}
+                sx={{ height: 48, textAlign: 'center', color: 'text.secondary', padding: '4px 8px' }}
               >
                 لم يتم العثور على تاريخ للمريض
               </TableCell>
@@ -139,25 +138,25 @@ const PatientHistoryTable: React.FC<PatientHistoryTableProps> = ({
                 }}
                 onClick={() => handleSelect(patient.id)}
               >
-                <TableCell sx={{ fontWeight: 'medium' }}>
-                  <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                    <Typography variant="body2" component="span">
+                <TableCell sx={{ fontWeight: 'medium', padding: '4px 8px' }}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', margin: 0, padding: 0 }}>
+                    <Typography variant="body2" component="span" sx={{ margin: 0, lineHeight: 1.2 }}>
                       {patient.name}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" color="text.secondary" sx={{ margin: 0, lineHeight: 1.2 }}>
                       {patient.phone}
                     </Typography>
                   </Box>
                 </TableCell>
-                <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' }, textAlign: 'center' }}>
+                <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' }, textAlign: 'center', padding: '4px 8px' }}>
                   {patient.last_visit_date
                     ? format(parseISO(patient.last_visit_date), "P", {
                         locale: dateLocale,
                       })
                     : "-"}
                 </TableCell>
-                <TableCell sx={{ textAlign: 'center' }}>
-                  <Box onClick={(e) => e.stopPropagation()}>
+                <TableCell sx={{ textAlign: 'center', padding: '4px 8px' }}>
+                  <Box onClick={(e) => e.stopPropagation()} sx={{ margin: 0, padding: 0 }}>
                     <Autocomplete
                       options={doctors || []}
                       getOptionLabel={(option) => option.name}
@@ -169,6 +168,10 @@ const PatientHistoryTable: React.FC<PatientHistoryTableProps> = ({
                           {...params}
                           size="small"
                           placeholder="اختر الطبيب"
+                          sx={{ 
+                            '& .MuiInputBase-root': { padding: '2px 4px' },
+                            '& .MuiInputBase-input': { padding: '4px 8px' }
+                          }}
                           InputProps={{
                             ...params.InputProps,
                             endAdornment: (
@@ -207,8 +210,8 @@ const PatientHistoryTable: React.FC<PatientHistoryTableProps> = ({
                     />
                   </Box>
                 </TableCell>
-                <TableCell sx={{ textAlign: 'center' }}>
-                  <Box onClick={(e) => e.stopPropagation()}>
+                <TableCell sx={{ textAlign: 'center', padding: '4px 8px' }}>
+                  <Box onClick={(e) => e.stopPropagation()} sx={{ margin: 0, padding: 0 }}>
                     <Autocomplete
                       options={companies || []}
                       getOptionLabel={(option) => option.name}
@@ -220,6 +223,10 @@ const PatientHistoryTable: React.FC<PatientHistoryTableProps> = ({
                           {...params}
                           size="small"
                           placeholder="اختر الشركة"
+                          sx={{ 
+                            '& .MuiInputBase-root': { padding: '2px 4px' },
+                            '& .MuiInputBase-input': { padding: '4px 8px' }
+                          }}
                           InputProps={{
                             ...params.InputProps,
                             endAdornment: (
@@ -258,11 +265,12 @@ const PatientHistoryTable: React.FC<PatientHistoryTableProps> = ({
                     />
                   </Box>
                 </TableCell>
-                <TableCell sx={{ textAlign: 'right' }}>
+                <TableCell sx={{ textAlign: 'right', padding: '4px 8px' }}>
                   <Button
                     size="small"
                     variant="text"
                     disabled={!referringDoctor}
+                    sx={{ minWidth: 'auto', padding: '2px 4px' }}
                     title={
                       !referringDoctor
                         ? "يرجى اختيار الطبيب أولاً"

@@ -123,6 +123,7 @@ const LabRegistrationForm: React.FC<LabRegistrationFormProps> = React.memo(({
 
   const { data: doctorsList = [], isLoading: isLoadingDoctors } = useCachedDoctorsList();
   const { data: companies = [], isLoading: isLoadingCompanies } = useCachedCompaniesList();
+  console.log(companies, "companies");
 
   // Auto-select default doctor if available and none selected yet
   const selectedDoctor = watch("doctor");

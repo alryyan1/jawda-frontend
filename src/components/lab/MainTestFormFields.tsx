@@ -159,7 +159,7 @@ const MainTestFormFields: React.FC<MainTestFormFieldsProps> = ({
 
       <Paper elevation={1} sx={{ p: 2, mt: 2 }}>
         <Stack direction="row" spacing={4} justifyContent="space-around" alignItems="center">
-          <Controller
+          {/* <Controller
             control={control}
             name="pageBreak"
             render={({ field }) => (
@@ -175,7 +175,7 @@ const MainTestFormFields: React.FC<MainTestFormFieldsProps> = ({
               />
             )}
           />
-          
+           */}
           <Controller
             control={control}
             name="divided"
@@ -188,7 +188,7 @@ const MainTestFormFields: React.FC<MainTestFormFieldsProps> = ({
                     disabled={disabled}
                   />
                 }
-                label="مقسم"
+                label="قسم النتيجة"
               />
             )}
           />
@@ -210,7 +210,7 @@ const MainTestFormFields: React.FC<MainTestFormFieldsProps> = ({
             )}
           />
 
-          <Controller
+          {/* <Controller
             control={control}
             name="is_special_test"
             render={({ field }) => (
@@ -225,7 +225,7 @@ const MainTestFormFields: React.FC<MainTestFormFieldsProps> = ({
                 label="اختبار خاص"
               />
             )}
-          />
+          /> */}
         </Stack>
       </Paper>
     </Stack>

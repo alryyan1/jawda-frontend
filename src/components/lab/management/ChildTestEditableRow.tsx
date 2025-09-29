@@ -147,7 +147,7 @@ const ChildTestEditableRow: React.FC<ChildTestEditableRowProps> = ({
 
   return (
     <form onSubmit={handleSubmit(processSubmit)}>
-      <Box sx={{ display: 'grid', gap: 1.5 }}>
+      <Box className="text-2xl! max-w-2xl mx-auto p-2" sx={{ display: 'grid', gap: 1.5,direction: 'rtl' }}>
         <TextField
           size="small"
           label="اسم الفحص"

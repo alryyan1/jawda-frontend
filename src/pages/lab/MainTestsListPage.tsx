@@ -1,7 +1,7 @@
 // src/pages/lab/MainTestsListPage.tsx
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { useQuery, useMutation, keepPreviousData } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 import {
@@ -14,34 +14,32 @@ import {
   TableBody,
   TableCell,
   TableHead,
-  TableHeader,
   TableRow,
   IconButton,
   Menu,
   MenuItem,
   ListItemIcon,
   ListItemText,
-  Divider,
   Typography,
   CircularProgress,
   Stack,
   Container,
   InputAdornment,
-  Chip,
   Pagination
 } from '@mui/material';
 import {
   Edit,
-  Delete,
   MoreVert,
   Science,
   CheckCircle,
   Cancel,
   Search,
-  Add
+  Add,
+  PictureAsPdf
 } from '@mui/icons-material';
 
-import { getMainTests, deleteMainTest } from '@/services/mainTestService';
+import { getMainTests, updateMainTest } from '@/services/mainTestService';
+import apiClient from '@/services/api';
 // import { useAuthorization } from '@/hooks/useAuthorization';
 
 interface MainTestWithContainer {
@@ -56,18 +54,16 @@ interface MainTestWithContainer {
 }
 
 export default function MainTestsListPage() {
-  const queryClient = useQueryClient();
   const navigate = useNavigate();
   // const { can } = useAuthorization();
   const canCreateTests = true; // Placeholder: can('create lab_tests');
-  const canEditTests = true;   // Placeholder: can('edit lab_tests');
-  const canDeleteTests = true; // Placeholder: can('delete lab_tests');
 
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedTestId, setSelectedTestId] = useState<number | null>(null);
+  const [priceInputs, setPriceInputs] = useState<Record<number, string>>({});
 
   useEffect(() => {
     const handler = setTimeout(() => setDebouncedSearchTerm(searchTerm), 500);
@@ -84,22 +80,25 @@ export default function MainTestsListPage() {
     placeholderData: keepPreviousData,
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: deleteMainTest,
+  useEffect(() => {
+    const currentTests = (paginatedData?.data || []) as MainTestWithContainer[];
+    const nextMap: Record<number, string> = {};
+    currentTests.forEach(t => {
+      nextMap[t.id] = t.price !== undefined && t.price !== null ? String(t.price) : '';
+    });
+    setPriceInputs(nextMap);
+  }, [paginatedData]);
+
+  const updatePriceMutation = useMutation({
+    mutationFn: ({ id, price }: { id: number; price: string }) => updateMainTest(id, { price }),
     onSuccess: () => {
-      toast.success('تم حذف الاختبار بنجاح');
-      queryClient.invalidateQueries({ queryKey: ['mainTests'] });
+      toast.success('تم تحديث السعر بنجاح');
+      // queryClient.invalidateQueries({ queryKey: ['mainTests'] });
     },
     onError: (err: { response?: { data?: { message?: string } }; message?: string }) => {
-      toast.error('خطأ في حذف الاختبار', { description: err.response?.data?.message || err.message });
+      toast.error('خطأ في تحديث السعر', { description: err.response?.data?.message || err.message });
     },
   });
-
-  const handleDelete = (testId: number, testName: string) => {
-    if (window.confirm(`هل أنت متأكد من حذف الاختبار "${testName}"؟`)) {
-      deleteMutation.mutate(testId);
-    }
-  };
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, testId: number) => {
     setAnchorEl(event.currentTarget);
@@ -109,6 +108,55 @@ export default function MainTestsListPage() {
   const handleMenuClose = () => {
     setAnchorEl(null);
     setSelectedTestId(null);
+  };
+
+  const handlePriceKeyDown = (e: React.KeyboardEvent, testId: number, currentIndex: number) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const value = (priceInputs[testId] ?? '').trim();
+      const priceToSave = value === '' ? '0' : value;
+
+      // Focus next input first for fast data entry
+      const nextIndex = currentIndex + 1;
+      const nextInput = document.querySelector<HTMLInputElement>(`input[data-price-index="${nextIndex}"]`);
+      if (nextInput) {
+        nextInput.focus();
+        nextInput.select();
+      }
+
+      updatePriceMutation.mutate({ id: testId, price: priceToSave });
+    }
+  };
+
+  const handlePriceFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.target.select();
+  };
+
+  const handleGeneratePDF = async () => {
+    try {
+      const response = await apiClient.get('/reports/price-list-pdf', {
+        responseType: 'blob'
+      });
+
+      if (response.status !== 200) {
+        throw new Error('Failed to generate PDF');
+      }
+
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `price-list-${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('تم إنشاء قائمة الأسعار بنجاح');
+    } catch (error) {
+      toast.error('خطأ في إنشاء قائمة الأسعار');
+      console.error('PDF generation error:', error);
+    }
   };
 
   if (isLoading && !isFetching && currentPage === 1) {
@@ -134,7 +182,10 @@ export default function MainTestsListPage() {
   const meta = paginatedData?.meta;
 
   return (
-    <Container maxWidth="xl" sx={{ py: { xs: 2, sm: 3, md: 4 } }}>
+    <Container  className="text-2xl! p-2 max-w-2xl mx-auto" sx={{ py: { xs: 2, sm: 3, md: 4 } }}>
+      <p className="text-sm!  animate-bounce">
+        اضغط <kbd>Enter</kbd> <span style={{fontSize: '1.1em'}}>⏎</span> لتحديث السعر
+      </p>
       <Stack spacing={3}>
         <Stack 
           direction={{ xs: 'column', sm: 'row' }} 
@@ -169,17 +220,28 @@ export default function MainTestsListPage() {
                 ),
               }}
             />
-            {canCreateTests && (
+            <Stack direction="row" spacing={1}>
               <Button 
-                component={Link} 
-                to="/settings/laboratory/new"
-                variant="contained"
+                onClick={handleGeneratePDF}
+                variant="outlined"
                 size="small"
-                startIcon={<Add />}
+                startIcon={<PictureAsPdf />}
+                color="error"
               >
-                إضافة اختبار
+                قائمة الأسعار PDF
               </Button>
-            )}
+              {canCreateTests && (
+                <Button 
+                  component={Link} 
+                  to="/settings/laboratory/new"
+                  variant="contained"
+                  size="small"
+                  startIcon={<Add />}
+                >
+                  إضافة اختبار
+                </Button>
+              )}
+            </Stack>
           </Stack>
         </Stack>
         
@@ -215,46 +277,71 @@ export default function MainTestsListPage() {
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell align="center">المعرف</TableCell>
-                  <TableCell align="center">اسم الاختبار</TableCell>
-                  <TableCell align="center" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
+                  <TableCell className="text-2xl!" align="center">الكود</TableCell>
+                  <TableCell className="text-2xl!" align="center">اسم </TableCell>
+                  <TableCell className="text-2xl!" align="center" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
                     الوعاء
                   </TableCell>
-                  <TableCell align="center" sx={{ display: { xs: 'none', md: 'table-cell' } }}>
+                  <TableCell className="text-2xl!" align="center" sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                     السعر
                   </TableCell>
-                  <TableCell align="center">متاح</TableCell>
-                  <TableCell align="right">الإجراءات</TableCell>
+                  <TableCell className="text-2xl!" align="center">متاح</TableCell>
+                  <TableCell className="text-2xl!" align="right">الإجراءات</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {tests.map((test) => (
+                {tests.map((test, index) => (
                   <TableRow 
                     key={test.id}
                     hover
                     onClick={() => navigate(`/settings/laboratory/${test.id}/edit`)}
                     sx={{ cursor: 'pointer' }}
                   >
-                    <TableCell align="center" sx={{ fontWeight: 'medium' }}>
+                    <TableCell className="text-2xl!" align="center" sx={{ fontWeight: 'medium' }}>
                       {test.id}
                     </TableCell>
-                    <TableCell align="center" sx={{ fontWeight: 'medium' }}>
+                    <TableCell className="text-2xl!" align="center" sx={{ fontWeight: 'medium' }}>
                       {test.main_test_name}
                     </TableCell>
-                    <TableCell align="center" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
+                    <TableCell className="text-2xl!" align="center" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
                       {test.container?.container_name || test.container_name || '-'}
                     </TableCell>
-                    <TableCell align="center" sx={{ display: { xs: 'none', md: 'table-cell' } }}>
-                      {test.price ? Number(test.price).toFixed(2) : '-'}
+                    <TableCell 
+                      className="text-2xl!" 
+                      align="center" 
+                      sx={{ display: { xs: 'none', md: 'table-cell' } }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <TextField
+                        value={priceInputs[test.id] ?? ''}
+                        onChange={(e) => setPriceInputs(prev => ({ ...prev, [test.id]: e.target.value }))}
+                        onKeyDown={(e) => handlePriceKeyDown(e, test.id, index)}
+                        onFocus={handlePriceFocus}
+                        size="small"
+                        type="number"
+                        inputProps={{ 
+                          step: "0.01",
+                          min: "0",
+                          style: { textAlign: 'center', fontSize: '1.25rem' },
+                          'data-price-index': index,
+                        }}
+                        sx={{ 
+                          width: 100,
+                          '& .MuiInputBase-input': {
+                            textAlign: 'center',
+                            fontSize: '1.25rem'
+                          }
+                        }}
+                      />
                     </TableCell>
-                    <TableCell align="center">
+                    <TableCell className="text-2xl!" align="center">
                       {test.available ? (
                         <CheckCircle color="success" />
                       ) : (
                         <Cancel color="error" />
                       )}
                     </TableCell>
-                    <TableCell align="right">
+                    <TableCell className="text-2xl!" align="right">
                       <IconButton
                         onClick={(e) => { e.stopPropagation(); handleMenuOpen(e, test.id); }}
                         size="small"
@@ -296,7 +383,7 @@ export default function MainTestsListPage() {
             horizontal: 'right',
           }}
         >
-          {canEditTests && (
+      
             <MenuItem 
               component={Link} 
               to={`/settings/laboratory/${selectedTestId}/edit`}
@@ -307,30 +394,8 @@ export default function MainTestsListPage() {
               </ListItemIcon>
               <ListItemText>تعديل</ListItemText>
             </MenuItem>
-          )}
-          {canDeleteTests && (
-            <>
-              <Divider />
-              <MenuItem 
-                onClick={() => {
-                  if (selectedTestId) {
-                    const test = tests.find(t => t.id === selectedTestId);
-                    if (test) {
-                      handleDelete(test.id, test.main_test_name);
-                    }
-                  }
-                  handleMenuClose();
-                }}
-                disabled={deleteMutation.isPending && deleteMutation.variables === selectedTestId}
-                sx={{ color: 'error.main' }}
-              >
-                <ListItemIcon>
-                  <Delete fontSize="small" color="error" />
-                </ListItemIcon>
-                <ListItemText>حذف</ListItemText>
-              </MenuItem>
-            </>
-          )}
+       
+         
         </Menu>
       </Stack>
     </Container>

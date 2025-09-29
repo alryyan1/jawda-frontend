@@ -332,22 +332,22 @@ const ChildTestsTable: React.FC<ChildTestsTableProps> = ({
               strategy={verticalListSortingStrategy}
             >
               <TableContainer>
-                <Table>
+                <Table className="text-2xl!">
                   <TableHead>
                     <TableRow>
                       <TableCell sx={{ width: 40, display: { xs: 'none', print: 'none' } }}></TableCell>
-                      <TableCell align="center">الاسم</TableCell>
-                      <TableCell align="center" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
+                      <TableCell className="text-2xl!" align="center">الاسم</TableCell>
+                      <TableCell className="text-2xl!" align="center" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
                         الوحدة
                       </TableCell>
-                      <TableCell align="center" sx={{ display: { xs: 'none', md: 'table-cell' } }}>
+                      <TableCell className="text-2xl!" align="center" sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                         المجموعة
                       </TableCell>
-                      <TableCell align="center" sx={{ display: { xs: 'none', lg: 'table-cell' } }}>
+                      <TableCell className="text-2xl!" align="center" sx={{ display: { xs: 'none', lg: 'table-cell' } }}>
                         النطاق الطبيعي
                       </TableCell>
-                      <TableCell align="center">ترتيب العرض</TableCell>
-                      <TableCell align="center">الإجراءات</TableCell>
+                      <TableCell className="text-2xl!" align="center">ترتيب العرض</TableCell>
+                      <TableCell className="text-2xl!" align="center">الإجراءات</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>

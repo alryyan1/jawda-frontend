@@ -157,7 +157,7 @@ const ChildTestsManagementPage: React.FC = () => {
       test_order: String(ct.test_order || 0),
       child_group_id: ct.child_group_id ? String(ct.child_group_id) : undefined,
     });
-    setEditDialogOpen(true);
+    // setEditDialogOpen(true);
   };
 
   const closeEditDialog = () => {

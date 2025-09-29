@@ -199,7 +199,7 @@ const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
   }
 
   return (
-    <Box sx={{ py: 2, pb: 5 }}>
+    <Box className="max-w-2xl mx-auto" sx={{ py: 2, pb: 5 }}>
       <Card>
         <CardHeader>
           <Typography variant="h5" component="h1">

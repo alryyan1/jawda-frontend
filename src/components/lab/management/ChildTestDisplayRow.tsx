@@ -16,6 +16,7 @@ import {
 import type { ChildTest } from '@/types/labTests';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { List } from 'lucide-react';
 
 interface ChildTestDisplayRowProps {
   childTest: ChildTest & { _localId: string }; // Ensure _localId is present for dnd-kit
@@ -93,7 +94,7 @@ const ChildTestDisplayRow: React.FC<ChildTestDisplayRowProps> = ({
         data-testid={`child-test-row-${childTest.id || childTest._localId}`}
     >
       {/* Drag Handle Cell */}
-      <TableCell >
+      <TableCell  >
   
           <IconButton 
             {...attributes} 
@@ -109,7 +110,7 @@ const ChildTestDisplayRow: React.FC<ChildTestDisplayRowProps> = ({
       </TableCell>
 
       {/* Data Cells */}
-      <TableCell 
+      <TableCell className="text-2xl!"
         sx={{ 
           py: 1, 
           fontWeight: 'medium', 
@@ -123,7 +124,7 @@ const ChildTestDisplayRow: React.FC<ChildTestDisplayRowProps> = ({
       >
         {childTest.child_test_name}
       </TableCell>
-      <TableCell 
+      <TableCell className="text-2xl!"
         sx={{ 
           py: 1, 
           display: { xs: 'none', sm: 'table-cell' },
@@ -137,7 +138,7 @@ const ChildTestDisplayRow: React.FC<ChildTestDisplayRowProps> = ({
       >
         {childTest.unit?.name || childTest.unit_name || '-'}
       </TableCell>
-      <TableCell 
+      <TableCell className="text-2xl!"
         sx={{ 
           py: 1, 
           display: { xs: 'none', md: 'table-cell' },
@@ -151,7 +152,7 @@ const ChildTestDisplayRow: React.FC<ChildTestDisplayRowProps> = ({
       >
         {childTest.child_group?.name || childTest.child_group_name || '-'}
       </TableCell>
-      <TableCell 
+      <TableCell className="text-2xl!"
         sx={{ 
           py: 1, 
           display: { xs: 'none', lg: 'table-cell' },
@@ -169,16 +170,16 @@ const ChildTestDisplayRow: React.FC<ChildTestDisplayRowProps> = ({
             `${String(childTest.low || '-').trim()} - ${String(childTest.upper || '-').trim()}` 
             : '-')}
       </TableCell>
-      <TableCell sx={{ py: 1, textAlign: 'center', width: 70 }}>
+      <TableCell className="text-2xl!" sx={{ py: 1, textAlign: 'center', width: 70 }}>
         {displayOrder || '-'}
       </TableCell>
       
       {/* Actions Cell */}
-      <TableCell sx={{ py: 1, textAlign: 'right', width: { xs: 130, sm: 150 }, display: { print: 'none' } }}>
+      <TableCell className="text-2xl!" sx={{ py: 1, textAlign: 'right', width: { xs: 130, sm: 150 }, display: { print: 'none' } }}>
         <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end', alignItems: 'center' }}>
             <Tooltip title="إدارة الخيارات">
               <IconButton size="small" onClick={(e) => { e.stopPropagation(); onManageOptions(childTest); }} onPointerDown={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
-                <SettingsIcon />
+                <List />
               </IconButton>
             </Tooltip>
           

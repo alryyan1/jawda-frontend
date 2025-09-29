@@ -1,6 +1,6 @@
 // src/pages/companies/CompaniesListPage.tsx
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { Link } from "react-router-dom";
 import {
   useQuery,
   useMutation,
@@ -31,14 +31,16 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  TextField,
+  Stack,
 } from "@mui/material";
 import {
   MoreHorizontal,
-  Trash2,
   Edit,
   Loader2,
   FileText,
   Building,
+  Download,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthorization } from "@/hooks/useAuthorization"; // For permission checks
@@ -56,7 +58,7 @@ export default function CompaniesListPage() {
   const canCreateCompany = can("create companies" ) || true;
   const canEditCompany = can("edit companies" ) || true;
   const canDeleteCompany = can("delete companies" ) || true;
-  const canManageContracts = can("manage company_contracts" ) || true; // Example permission for contracts
+  const canManageContracts = can("manage company_contracts" as never) || true; // Example permission for contracts
   console.log(canCreateCompany,'canCreateCompany','user',user)
   console.log(canManageContracts,'canManageContracts','user',user)
   const {
@@ -76,7 +78,7 @@ export default function CompaniesListPage() {
       toast.success('تم حذف الشركة بنجاح');
       queryClient.invalidateQueries({ queryKey: ["companies"] });
     },
-    onError: (err: any) => {
+    onError: (err: { response?: { data?: { message?: string } }; message?: string }) => {
       toast.error('فشل الحذف', { description: err.response?.data?.message || err.message });
     },
   });
@@ -87,7 +89,7 @@ export default function CompaniesListPage() {
       toast.success('تم تفعيل جميع الشركات', { description: `${res.updated_count} شركة` });
       queryClient.invalidateQueries({ queryKey: ["companies"] });
     },
-    onError: (err: any) => {
+    onError: (err: { response?: { data?: { message?: string } }; message?: string }) => {
       toast.error('فشل التفعيل الجماعي', { description: err.response?.data?.message || err.message });
     },
   });
@@ -100,14 +102,55 @@ export default function CompaniesListPage() {
 
   // New: row-click dialog state
   const [rowDialogOpen, setRowDialogOpen] = useState(false);
-  const [selectedCompany, setSelectedCompany] = useState<any | null>(null);
-  const handleRowClick = (company: any) => {
+  const [selectedCompany, setSelectedCompany] = useState<{ id: number; name: string } | null>(null);
+  
+  // Insurance reclaim dialog state
+  const [reclaimDialogOpen, setReclaimDialogOpen] = useState(false);
+  const [reclaimCompany, setReclaimCompany] = useState<{ id: number; name: string } | null>(null);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const handleRowClick = (company: { id: number; name: string }) => {
     setSelectedCompany(company);
     setRowDialogOpen(true);
   };
   const handleCloseRowDialog = () => {
     setRowDialogOpen(false);
     setSelectedCompany(null);
+  };
+
+  const handleOpenReclaimDialog = (company: { id: number; name: string }) => {
+    setReclaimCompany(company);
+    setReclaimDialogOpen(true);
+    // Set default dates (current month)
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    setStartDate(firstDay.toISOString().split('T')[0]);
+    setEndDate(lastDay.toISOString().split('T')[0]);
+  };
+
+  const handleCloseReclaimDialog = () => {
+    setReclaimDialogOpen(false);
+    setReclaimCompany(null);
+    setStartDate('');
+    setEndDate('');
+  };
+
+  const handleGenerateReclaim = async () => {
+    if (!reclaimCompany || !startDate || !endDate) {
+      toast.error('يرجى اختيار الشركة وتاريخ البداية والنهاية');
+      return;
+    }
+
+    try {
+      const url = `${webUrl}excel/reclaim?company=${reclaimCompany.id}&first=${startDate}&second=${endDate}`;
+      window.open(url, '_blank');
+      handleCloseReclaimDialog();
+      toast.success('تم إنشاء مطالبة التأمين بنجاح');
+    } catch (error) {
+      toast.error('خطأ في إنشاء مطالبة التأمين');
+      console.error('Reclaim generation error:', error);
+    }
   };
 
   if (isLoading && !isFetching)
@@ -201,32 +244,32 @@ export default function CompaniesListPage() {
           </CardContent>
         </Card>
       ) : (
-        <Card>
+        <Card className="text-2xl!">
           <CardContent sx={{ p: 0 }}>
             <TableContainer component={Paper} elevation={0}>
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ width: 50, display: { xs: 'none', sm: 'table-cell' }, textAlign: 'center' }}>
+                    <TableCell className="text-2xl!" sx={{ width: 50, display: { xs: 'none', sm: 'table-cell' }, textAlign: 'center' }}>
                       المعرف
                     </TableCell>
-                    <TableCell sx={{ textAlign: 'center' }}>الإسم</TableCell>
+                    <TableCell className="text-2xl!" sx={{ textAlign: 'center' }}>الإسم</TableCell>
                     <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }, textAlign: 'center' }}>
                       الهاتف
                     </TableCell>
-                    <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' }, textAlign: 'center' }}>
+                    <TableCell className="text-2xl!" sx={{ display: { xs: 'none', lg: 'table-cell' }, textAlign: 'center' }}>
                       تحمل الخدمات
                     </TableCell>
-                    <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' }, textAlign: 'center' }}>
+                    <TableCell className="text-2xl!" sx={{ display: { xs: 'none', lg: 'table-cell' }, textAlign: 'center' }}>
                       تحمل المختبر
                     </TableCell>
-                    <TableCell sx={{ textAlign: 'center' }}>
+                    <TableCell className="text-2xl!" sx={{ textAlign: 'center' }}>
                       الحالة
                     </TableCell>
-                    <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' }, textAlign: 'center' }}>
+                    <TableCell className="text-2xl!" sx={{ display: { xs: 'none', sm: 'table-cell' }, textAlign: 'center' }}>
                       العقود
                     </TableCell>
-                    <TableCell sx={{ textAlign: 'center' }}>
+                    <TableCell className="text-2xl!" sx={{ textAlign: 'center' }}>
                       الإجراءات
                     </TableCell>
                   </TableRow>
@@ -234,22 +277,22 @@ export default function CompaniesListPage() {
                 <TableBody>
                   {companies.map((company) => (
                     <TableRow key={company.id} hover onClick={() => handleRowClick(company)} sx={{ cursor: 'pointer' }}>
-                      <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' }, textAlign: 'center' }}>
+                      <TableCell className="text-2xl!" sx={{ display: { xs: 'none', sm: 'table-cell' }, textAlign: 'center' }}>
                         {company.id}
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 'medium', textAlign: 'center' }}>{company.name}</TableCell>
+                      <TableCell className="text-2xl!" sx={{ fontWeight: 'medium', textAlign: 'center' }}>{company.name}</TableCell>
                       <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }, textAlign: 'center' }}>
                         {company.phone || "-"}
                       </TableCell>
-                      <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' }, textAlign: 'center' }}>
+                      <TableCell className="text-2xl!" sx={{ display: { xs: 'none', lg: 'table-cell' }, textAlign: 'center' }}>
                         {company.service_endurance || "-"}
                       </TableCell>
-                      <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' }, textAlign: 'center' }}>
+                      <TableCell className="text-2xl!" sx={{ display: { xs: 'none', lg: 'table-cell' }, textAlign: 'center' }}>
                         {company.lab_endurance || "-"}
                       </TableCell>
 
 
-                      <TableCell sx={{ textAlign: 'center' }}>
+                      <TableCell className="text-2xl!" sx={{ textAlign: 'center' }}>
                         <Chip
                           label={company.status ? "نشط" : "غير نشط"}
                           color={company.status ? "success" : "error"}
@@ -281,7 +324,7 @@ export default function CompaniesListPage() {
                             horizontal: 'right',
                           }}
                         >
-                          {canManageContracts && (
+                         
                             <MenuItem
                               component={Link}
                               to={`/settings/companies/${company.id}/contracts`}
@@ -291,8 +334,8 @@ export default function CompaniesListPage() {
                               <FileText className="rtl:ml-2 ltr:mr-2 h-4 w-4" />
                               إدارة عقود الخدمات
                             </MenuItem>
-                          )}
-                          {canManageContracts && (
+                     
+                        
                             <MenuItem
                               component={Link}
                               to={`/settings/companies/${company.id}/test-contracts`}
@@ -302,8 +345,19 @@ export default function CompaniesListPage() {
                               <FileText className="rtl:ml-2 ltr:mr-2 h-4 w-4" />
                               إدارة عقود التحاليل
                             </MenuItem>
-                          )}
-                          {canEditCompany && (
+                        
+                            <Divider />
+                            <MenuItem
+                              onClick={() => {
+                                handleOpenReclaimDialog(company);
+                                setAnchorEl(null);
+                              }}
+                              sx={{ textDecoration: 'none', color: 'inherit' }}
+                            >
+                              <Download className="rtl:ml-2 ltr:mr-2 h-4 w-4" />
+                              المطالبات
+                            </MenuItem>
+                        
                             <MenuItem
                               component={Link}
                               to={`/settings/companies/${company.id}/edit`}
@@ -313,31 +367,8 @@ export default function CompaniesListPage() {
                               <Edit className="rtl:ml-2 ltr:mr-2 h-4 w-4" />
                               تعديل
                             </MenuItem>
-                          )}
-                          {canDeleteCompany && (
-                            <>
-                              <Divider />
-                              <MenuItem
-                                onClick={() => {
-                                  handleDelete(company.id, company.name);
-                                  setAnchorEl(null);
-                                }}
-                                disabled={
-                                  deleteMutation.isPending &&
-                                  (deleteMutation.variables as any) === company.id
-                                }
-                                sx={{ color: 'error.main' }}
-                              >
-                                {deleteMutation.isPending &&
-                                (deleteMutation.variables as any) === company.id ? (
-                                  <CircularProgress size={16} className="rtl:ml-2 ltr:mr-2" />
-                                ) : (
-                                  <Trash2 className="rtl:ml-2 ltr:mr-2 h-4 w-4" />
-                                )}
-                                حذف
-                              </MenuItem>
-                            </>
-                          )}
+                        
+                     
                         </Menu>
                       </TableCell>
                     </TableRow>
@@ -373,6 +404,19 @@ export default function CompaniesListPage() {
                 إدارة عقود التحاليل
               </Button>
             )}
+            {selectedCompany && (
+              <Button
+                variant="outlined"
+                color="primary"
+                onClick={() => {
+                  handleOpenReclaimDialog(selectedCompany);
+                  handleCloseRowDialog();
+                }}
+                startIcon={<Download />}
+              >
+                المطالبات
+              </Button>
+            )}
             {canEditCompany && selectedCompany && (
               <Button
                 component={Link}
@@ -391,9 +435,9 @@ export default function CompaniesListPage() {
                   handleDelete(selectedCompany.id, selectedCompany.name);
                   handleCloseRowDialog();
                 }}
-                disabled={deleteMutation.isPending && (deleteMutation.variables as any) === selectedCompany?.id}
+                disabled={deleteMutation.isPending && (deleteMutation.variables as number) === selectedCompany?.id}
               >
-                {deleteMutation.isPending && (deleteMutation.variables as any) === selectedCompany?.id ? (
+                {deleteMutation.isPending && (deleteMutation.variables as number) === selectedCompany?.id ? (
                   <>
                     <CircularProgress size={16} className="rtl:ml-2 ltr:mr-2" />
                     جارٍ الحذف...
@@ -409,6 +453,43 @@ export default function CompaniesListPage() {
           <Button onClick={handleCloseRowDialog}>إغلاق</Button>
         </DialogActions>
       </Dialog>
+
+      {/* Insurance Reclaim Dialog */}
+      <Dialog open={reclaimDialogOpen} onClose={handleCloseReclaimDialog} fullWidth maxWidth="sm">
+        <DialogTitle>إنشاء مطالبة تأمين - {reclaimCompany?.name}</DialogTitle>
+        <DialogContent>
+          <Stack spacing={3} sx={{ mt: 2 }}>
+            <TextField
+              label="تاريخ البداية"
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              fullWidth
+            />
+            <TextField
+              label="تاريخ النهاية"
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              fullWidth
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseReclaimDialog}>إلغاء</Button>
+          <Button 
+            onClick={handleGenerateReclaim}
+            variant="contained"
+            color="primary"
+            startIcon={<Download />}
+          >
+            إنشاء المطالبة
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {meta && meta.last_page > 1 && (
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 3 }}>
           <Button

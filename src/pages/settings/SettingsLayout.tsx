@@ -24,7 +24,7 @@ const settingsNavItems: SettingsNavItem[] = [
   { to: 'laboratory', labelKey: 'laboratory', icon: FlaskConical, permission: 'manage laboratory_settings' },
   { to: 'service-groups', labelKey: 'tabs.serviceGroups', icon: Layers, permission: 'manage service_groups' }, // NEW
   { to: 'services', labelKey: 'tabs.servicesConfig', icon: ListOrdered, permission: 'manage service_settings' },
-  // { to: '/settings/laboratory/price-list', labelKey: 'laboratoryTestsPriceList', icon: CreditCard, permission: 'manage price_list' },
+  { to: '/settings/laboratory/price-list', labelKey: 'laboratoryTestsPriceList', icon: CreditCard, permission: 'manage price_list' },
   // { to: 'insurance-audit', labelKey: 'insuranceAudit', icon: CreditCard, permission: 'manage insurance_audit' },
   { to: 'lab-to-lab', labelKey: 'labToLab', icon: Link2, permission: 'manage laboratory_settings' },
   // Example settingsNavItems update

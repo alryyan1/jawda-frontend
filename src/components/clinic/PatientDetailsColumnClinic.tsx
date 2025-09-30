@@ -248,18 +248,9 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
   let totalBalance = 0;
 
   if (activeTab === 'lab') {
-    total = labRequests.reduce((sum, lr) => {
-      const price = Number(lr.price) || 0;
-      const count = Number(lr.count) || 1;
-      const discountPer = Number(lr.discount_per) || 0;
-      const endurance = Number(lr.endurance) || 0;
-      const subTotal = price * count;
-      const discountAmount = (subTotal * discountPer) / 100;
-      const net = subTotal - discountAmount - endurance;
-      return sum + net;
-    }, 0);
-    totalPaid = labRequests.reduce((sum, lr) => sum + (Number(lr.amount_paid) || 0), 0);
-    totalBalance = total - totalPaid;
+    total = visit.total_amount!;
+    totalPaid = visit.total_paid!;
+    totalBalance = visit.balance_due!;
   } else {
     total = requestedServices.reduce((sum, service) => {
       const price = Number(service.price) || 0;

@@ -242,7 +242,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
   const updateAllBankakMutation = useMutation({
     mutationFn: (isBankak: boolean) => updateAllLabRequestsBankak(activeVisitId!, isBankak),
     onSuccess: () => {
-      toast.success("تم تعيين جميع الطلبات كبنكاك");
+      toast.success("تم تعيين جميع الطلبات بنكك");
       queryClient.invalidateQueries({
         queryKey: ["activeVisitForLabRequests", activeVisitId],
       });
@@ -307,7 +307,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
   };
 
   const handleUpdateAllBankak = () => {
-    if (window.confirm("هل تريد تعيين كل الطلبات كبنكاك؟")) {
+    if (window.confirm("هل تريد تعيين كل الطلبات بنكك")) {
       updateAllBankakMutation.mutate(true);
     }
   };
@@ -428,7 +428,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
             ) : (
               <Banknote className="h-4 w-4 mr-2" />
             )}
-            <span className="hidden sm:inline">تعيين الكل بنكاك</span>
+            <span className="hidden sm:inline">تعيين الكل بنكك</span>
           </Button>
         </div>
       </div>
@@ -519,7 +519,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                             <Badge
                               className={`mt-1 w-fit ${request.is_paid ? "bg-green-600 text-white" : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"}`}
                             >
-                              {"بنكاك"}
+                              {"بنكك"}
                             </Badge>
                           )}
                           {/* Mobile-only info */}
@@ -625,7 +625,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                                 disabled={toggleBankakMutation.isPending}
                                 className="mr-2"
                               />
-                              {request.is_bankak ? "إلغاء بنكاك" : "تعيين بنكاك"}
+                              {request.is_bankak ? "إلغاء بنكك" : "تعيين بنكك"}
                             </DropdownMenuItem>
                             {/* Payment Button */}
                             {!request.is_paid && (
@@ -745,7 +745,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
 
               {/* Bankak Toggle */}
               <div className="flex items-center justify-between">
-                <span className="text-sm">بنكاك</span>
+                <span className="text-sm">بنكك</span>
                 <div className="flex items-center gap-2">
                   <Checkbox
                     checked={!!selectedRequestForRowDialog.is_bankak}

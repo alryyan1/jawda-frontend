@@ -306,7 +306,7 @@ const RequestedLabTestsTable: React.FC<RequestedLabTestsTableProps> = ({
                               is_bankak: !!checked,
                             }))
                           }
-                          inputProps={{ "aria-label": "طريقة الدفع بنكاك" }}
+                          inputProps={{ "aria-label": "طريقة الدفع بنكك" }}
                         />
                       ) : lr.is_bankak ? (
                         "بنكك"

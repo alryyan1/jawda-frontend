@@ -414,7 +414,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
             ) : (
               <Trash2 className="h-4 w-4 mr-2" />
             )}
-            <span className="hidden sm:inline">حذف جميع المعلّق</span>
+            <span className="hidden sm:inline">حذف  التحاليل </span>
           </Button>
           
           <Button
@@ -585,7 +585,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                       {visit?.patient?.company && (
                         <TableCell>
                           <span className="font-medium text-red-600">
-                            ${((request.price || 0) - (request.endurance || 0)).toFixed(2)}
+                            ${request.endurance || 0}
                           </span>
                         </TableCell>
                       )}

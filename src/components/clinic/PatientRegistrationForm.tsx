@@ -14,21 +14,18 @@ import {
   CircularProgress,
   Alert,
   IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   FormHelperText
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material/Select';
 import { Add as AddIcon } from '@mui/icons-material';
-import axios from 'axios';
 
 import type { Patient, PatientSearchResult } from '@/types/patients';
 import type { Company, CompanyRelation, Subcompany } from '@/types/companies';
 import type { DoctorShift } from '@/types/doctors';
 import apiClient from '@/services/api';
 import PatientistorytableClinc from '@/components/clinic/PatientistorytableClinc';
+import AddSubcompanyDialog from '@/components/companies/AddSubcompanyDialog';
+import AddCompanyRelationDialog from '@/components/companies/AddCompanyRelationDialog';
 
 interface PatientRegistrationFormProps {
   onPatientRegistered: (patient: Patient) => void;
@@ -634,40 +631,26 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
 
 
       {/* Add Subcompany Dialog */}
-      <Dialog open={showSubcompanyDialog} onClose={() => setShowSubcompanyDialog(false)}>
-        <DialogTitle>إضافة شركة فرعية</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="اسم الشركة الفرعية"
-            fullWidth
-            variant="outlined"
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowSubcompanyDialog(false)}>إلغاء</Button>
-          <Button variant="contained">إضافة</Button>
-        </DialogActions>
-      </Dialog>
+      <AddSubcompanyDialog 
+        open={showSubcompanyDialog}
+        companyId={formData.company_id ? Number(formData.company_id) : undefined}
+        onClose={() => setShowSubcompanyDialog(false)}
+        onCreated={() => {
+          if (formData.company_id) {
+            loadSubcompanies(Number(formData.company_id));
+          }
+        }}
+      />
 
       {/* Add Company Relation Dialog */}
-      <Dialog open={showRelationDialog} onClose={() => setShowRelationDialog(false)}>
-        <DialogTitle>إضافة علاقة</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="اسم العلاقة"
-            fullWidth
-            variant="outlined"
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowRelationDialog(false)}>إلغاء</Button>
-          <Button variant="contained">إضافة</Button>
-        </DialogActions>
-      </Dialog>
+      <AddCompanyRelationDialog 
+        open={showRelationDialog}
+        companyId={formData.company_id ? Number(formData.company_id) : undefined}
+        onClose={() => setShowRelationDialog(false)}
+        onCreated={() => {
+          loadCompanyRelations();
+        }}
+      />
     </Box>
   );
 };

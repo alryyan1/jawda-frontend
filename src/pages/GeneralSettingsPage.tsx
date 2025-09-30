@@ -611,7 +611,7 @@ const SettingsPage: React.FC = () => {
                 label="نص الرسالة الترحيبية"
                             placeholder="مرحباً {name}، نرحب بكم في مستشفى {hospital}. تم تسجيل زيارتكم بنجاح."
                 multiline
-                rows={4}
+                rows={8}
                 fullWidth
                 variant="outlined"
                 helperText="يمكنك استخدام المتغيرات: {name} ، {hospital}"

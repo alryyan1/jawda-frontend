@@ -19,9 +19,7 @@ const formatNumber = (num: number | string): string => {
 };
 
 import type { LabGeneralReportFilters, LabGeneralReportWithUserRevenue, LabGeneralReportItem } from '@/types/reports';
-import type { Shift } from '@/types/shifts';
 import { getLabGeneralReport } from '@/services/reportService';
-import { getShiftsList } from '@/services/shiftService';
 import { getUsers } from '@/services/userService';
 
 // MUI imports
@@ -50,7 +48,6 @@ import {
 import { webUrl } from '../constants';
 
 const getLabGeneralReportFilterSchema = () => z.object({
-  shift_id: z.string().optional(),
   date_from: z.string().optional(),
   date_to: z.string().optional(),
   patient_name: z.string().optional(),
@@ -66,7 +63,6 @@ const LabGeneralReportPage: React.FC = () => {
   const filterForm = useForm<LabGeneralReportFilterFormValues>({
     resolver: zodResolver(getLabGeneralReportFilterSchema()),
     defaultValues: {
-      shift_id: '',
       date_from: defaultDateFrom,
       date_to: defaultDateTo,
       patient_name: '',
@@ -81,31 +77,15 @@ const LabGeneralReportPage: React.FC = () => {
   });
   const [selectedPatient, setSelectedPatient] = useState<LabGeneralReportItem | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isTableDialogOpen, setIsTableDialogOpen] = useState(false);
 
   // Fetch data for filters
-  const { data: shifts, isLoading: isLoadingShifts } = useQuery<Shift[], Error>({
-    queryKey: ['shiftsListForReport'],
-    queryFn: () => getShiftsList({ per_page: 0 }),
-  });
 
   const { data: users, isLoading: isLoadingUsers } = useQuery({
     queryKey: ['usersListForReport'],
     queryFn: () => getUsers(1, { per_page: 200 }),
   });
 
-  // Set default shift when shifts are loaded
-  React.useEffect(() => {
-    if (shifts && shifts.length > 0) {
-      // const lastShift = shifts[shifts.length - 1]; // Get the last (most recent) shift
-      const lastShift = shifts[0]; // Get the last (most recent) shift
-      console.log(lastShift.id, appliedFilters.shift_id, 'APPLIED FILTERS')
-      setAppliedFilters(prev => ({
-        ...prev,
-        shift_id: lastShift.id
-      }));
-      filterForm.setValue('shift_id', lastShift.id.toString());
-    }
-  }, [shifts, appliedFilters.shift_id, filterForm]);
 
   const reportQueryKey = ['labGeneralReport', currentPage, appliedFilters] as const;
   const {
@@ -117,13 +97,12 @@ const LabGeneralReportPage: React.FC = () => {
     queryKey: reportQueryKey,
     queryFn: () => getLabGeneralReport({ page: currentPage, per_page: 20, ...appliedFilters }),
     placeholderData: keepPreviousData,
-    enabled: !!appliedFilters.shift_id, // Only run when we have a shift_id
+    enabled: true, // Always enabled since we removed shift filter
   });
 
   const handleFilterSubmit = (data: LabGeneralReportFilterFormValues) => {
     setCurrentPage(1);
     setAppliedFilters({
-      shift_id: data.shift_id ? parseInt(data.shift_id) : undefined,
       date_from: data.date_from || undefined,
       date_to: data.date_to || undefined,
       patient_name: data.patient_name || undefined,
@@ -135,7 +114,6 @@ const LabGeneralReportPage: React.FC = () => {
   const handleOpenPdfInNewTab = () => {
     // Build query parameters
     const params = new URLSearchParams();
-    if (appliedFilters.shift_id) params.append('shift_id', appliedFilters.shift_id.toString());
     if (appliedFilters.date_from) params.append('date_from', appliedFilters.date_from);
     if (appliedFilters.date_to) params.append('date_to', appliedFilters.date_to);
     if (appliedFilters.patient_name) params.append('patient_name', appliedFilters.patient_name);
@@ -156,10 +134,18 @@ const LabGeneralReportPage: React.FC = () => {
     setSelectedPatient(null);
   };
 
+  const handleOpenTableDialog = () => {
+    setIsTableDialogOpen(true);
+  };
+
+  const handleCloseTableDialog = () => {
+    setIsTableDialogOpen(false);
+  };
+
   const patients = (reportData as LabGeneralReportWithUserRevenue & { data: LabGeneralReportItem[] })?.data || [];
   const userRevenues = reportData?.user_revenues || [];
   const meta = reportData?.meta;
-  const isLoadingDropdowns = isLoadingShifts || isLoadingUsers;
+  const isLoadingDropdowns = isLoadingUsers;
 
   if (error) {
     return (
@@ -180,33 +166,6 @@ const LabGeneralReportPage: React.FC = () => {
         <CardContent>
           <form onSubmit={filterForm.handleSubmit(handleFilterSubmit)} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 items-end">
-              <Controller 
-                control={filterForm.control} 
-                name="shift_id" 
-                render={({ field }) => {
-                  // Set default to last shift if no value is set
-                  const defaultShift = shifts && shifts.length > 0 && !field.value ? shifts[shifts.length - 1] : null;
-                  const currentValue = shifts?.find(shift => shift.id.toString() === field.value) || defaultShift;
-                  
-                  return (
-                    <Autocomplete
-                      size="small"
-                      options={shifts || []}
-                      getOptionLabel={(option) => option ? `مناوبة ${option.id} - ${format(new Date(option.created_at), 'yyyy-MM-dd')}` : ''}
-                      value={currentValue}
-                      onChange={(_, newValue) => field.onChange(newValue?.id.toString() || '')}
-                      disabled={isLoadingDropdowns || isFetching}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label="المناوبة"
-                          placeholder="اختر المناوبة"
-                        />
-                      )}
-                    />
-                  );
-                }} 
-              />
               
               <Controller 
                 control={filterForm.control} 
@@ -306,6 +265,17 @@ const LabGeneralReportPage: React.FC = () => {
               >
                 عرض PDF
               </Button>
+              
+              <Button 
+                type="button" 
+                variant="contained" 
+                className="h-9" 
+                onClick={handleOpenTableDialog}
+                disabled={isFetching || isLoadingDropdowns || patients.length === 0}
+                startIcon={<Search className="h-4 w-4" />}
+              >
+                عرض التفاصيل
+              </Button>
             </div>
           </form>
         </CardContent>
@@ -383,89 +353,6 @@ const LabGeneralReportPage: React.FC = () => {
         </Card>
       )}
 
-      {patients.length > 0 && (
-        <Card>
-          <CardHeader>
-            <Typography variant="h6">تفاصيل المرضى</Typography>
-          </CardHeader>
-          <CardContent>
-            <MUITable size="small">
-            <MUITableHead>
-              <MUITableRow>
-                <MUITableCell align="center">الرقم</MUITableCell>
-                <MUITableCell align="center">الاسم</MUITableCell>
-                <MUITableCell align="center">الطبيب</MUITableCell>
-                <MUITableCell align="center"> مبلغ </MUITableCell>
-                <MUITableCell align="center"> المدفوع </MUITableCell>
-                <MUITableCell align="center">الخصم</MUITableCell>
-                <MUITableCell align="center">  البنك</MUITableCell>
-                <MUITableCell align="center">اسم الشركة</MUITableCell>
-                <MUITableCell align="center"> التحاليل </MUITableCell>
-                <MUITableCell align="center">الحالة</MUITableCell>
-                <MUITableCell align="center">التفاصيل</MUITableCell>
-              </MUITableRow>
-            </MUITableHead>
-            <MUITableBody>
-              {patients.map((patient: LabGeneralReportItem) => {
-                const totalLabAmount = Number(patient.total_lab_amount || 0);
-                const totalPaid = Number(patient.total_paid_for_lab || 0);
-                const discount = Number(patient.discount || 0);
-                const bankAmount = Number(patient.total_amount_bank || 0);
-                const isFullyPaid = totalPaid >= totalLabAmount;
-                const hasDiscount = discount > 0;
-                
-                return (
-                  <MUITableRow 
-                    key={patient.id}
-                    sx={{
-                      backgroundColor: hasDiscount ? '#fff3cd' : 'inherit', // Light yellow for discount rows
-                    }}
-                  >
-                    <MUITableCell align="center" className="font-medium">{patient.doctorvisit_id}</MUITableCell>
-                    <MUITableCell align="center">{patient.name}</MUITableCell>
-                    <MUITableCell align="center">{patient.doctor_name}</MUITableCell>
-                    <MUITableCell align="center">{formatNumber(totalLabAmount)}</MUITableCell>
-                    <MUITableCell align="center">{formatNumber(totalPaid)}</MUITableCell>
-                    <MUITableCell align="center">{formatNumber(discount)}</MUITableCell>
-                    <MUITableCell align="center" sx={{ color: bankAmount > 0 ? 'red' : 'inherit' }}>
-                      {formatNumber(bankAmount)}
-                    </MUITableCell>
-                    <MUITableCell align="center">{patient.company_name || '-'}</MUITableCell>
-                    <MUITableCell align="center" className="max-w-xs truncate" title={patient.main_tests_names}>
-                      {patient.main_tests_names}
-                    </MUITableCell>
-                    <MUITableCell align="center">
-                      {isFullyPaid && <CheckCircle className="h-5 w-5 text-green-500" />}
-                    </MUITableCell>
-                    <MUITableCell align="center">
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        startIcon={<Info className="h-4 w-4" />}
-                        onClick={() => handleShowPatientDetails(patient)}
-                        sx={{ fontSize: '0.75rem' }}
-                      >
-                        عرض
-                      </Button>
-                    </MUITableCell>
-                  </MUITableRow>
-                );
-              })}
-            </MUITableBody>
-            </MUITable>
-            {meta && (patients.length > 0) && (
-              <div className="border-t pt-3 text-sm">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                <div className="font-semibold">إجمالي المرضى: <span className="font-normal">{meta.total}</span></div>
-                <div className="font-semibold">إجمالي مبلغ المختبر: <span className="font-normal">{formatNumber(patients.reduce((sum: number, p: LabGeneralReportItem) => sum + Number(p.total_lab_amount || 0), 0))}</span></div>
-                <div className="font-semibold">إجمالي المدفوع: <span className="font-normal">{formatNumber(patients.reduce((sum: number, p: LabGeneralReportItem) => sum + Number(p.total_paid_for_lab || 0), 0))}</span></div>
-                <div className="font-semibold">إجمالي الخصم: <span className="font-normal">{formatNumber(patients.reduce((sum: number, p: LabGeneralReportItem) => sum + Number(p.discount || 0), 0))}</span></div>
-              </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
 
       {meta && meta.last_page > 1 && (
         <div className="mt-4 flex items-center justify-between px-2">
@@ -632,6 +519,115 @@ const LabGeneralReportPage: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog} variant="outlined">
+            إغلاق
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Patient Details Table Dialog */}
+      <Dialog 
+        open={isTableDialogOpen} 
+        onClose={handleCloseTableDialog}
+        maxWidth="xl"
+        fullWidth
+        dir="rtl"
+      >
+        <DialogTitle>
+          <Typography variant="h6" component="div">
+            تفاصيل المرضى
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          {patients.length > 0 ? (
+            <Box sx={{ mt: 2 }}>
+              <MUITable size="small">
+                <MUITableHead>
+                  <MUITableRow>
+                    <MUITableCell align="center">الرقم</MUITableCell>
+                    <MUITableCell align="center">الاسم</MUITableCell>
+                    <MUITableCell align="center">الطبيب</MUITableCell>
+                    <MUITableCell align="center"> مبلغ </MUITableCell>
+                    <MUITableCell align="center"> المدفوع </MUITableCell>
+                    <MUITableCell align="center">الخصم</MUITableCell>
+                    <MUITableCell align="center">  البنك</MUITableCell>
+                    <MUITableCell align="center">اسم الشركة</MUITableCell>
+                    <MUITableCell align="center"> التحاليل </MUITableCell>
+                    <MUITableCell align="center">الحالة</MUITableCell>
+                    <MUITableCell align="center">التفاصيل</MUITableCell>
+                  </MUITableRow>
+                </MUITableHead>
+                <MUITableBody>
+                  {patients.map((patient: LabGeneralReportItem) => {
+                    const totalLabAmount = Number(patient.total_lab_amount || 0);
+                    const totalPaid = Number(patient.total_paid_for_lab || 0);
+                    const discount = Number(patient.discount || 0);
+                    const bankAmount = Number(patient.total_amount_bank || 0);
+                    const isFullyPaid = totalPaid >= totalLabAmount;
+                    const hasDiscount = discount > 0;
+                    
+                    return (
+                      <MUITableRow 
+                        key={patient.id}
+                        sx={{
+                          backgroundColor: hasDiscount ? '#fff3cd' : 'inherit', // Light yellow for discount rows
+                        }}
+                      >
+                        <MUITableCell align="center" className="font-medium">{patient.doctorvisit_id}</MUITableCell>
+                        <MUITableCell align="center">{patient.name}</MUITableCell>
+                        <MUITableCell align="center">{patient.doctor_name}</MUITableCell>
+                        <MUITableCell align="center">{formatNumber(totalLabAmount)}</MUITableCell>
+                        <MUITableCell align="center">{formatNumber(totalPaid)}</MUITableCell>
+                        <MUITableCell align="center">{formatNumber(discount)}</MUITableCell>
+                        <MUITableCell align="center" sx={{ color: bankAmount > 0 ? 'red' : 'inherit' }}>
+                          {formatNumber(bankAmount)}
+                        </MUITableCell>
+                        <MUITableCell align="center">{patient.company_name || '-'}</MUITableCell>
+                        <MUITableCell align="center" className="max-w-xs truncate" title={patient.main_tests_names}>
+                          {patient.main_tests_names}
+                        </MUITableCell>
+                        <MUITableCell align="center">
+                          {isFullyPaid && <CheckCircle className="h-5 w-5 text-green-500" />}
+                        </MUITableCell>
+                        <MUITableCell align="center">
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<Info className="h-4 w-4" />}
+                            onClick={() => {
+                              handleShowPatientDetails(patient);
+                              handleCloseTableDialog();
+                            }}
+                            sx={{ fontSize: '0.75rem' }}
+                          >
+                            عرض
+                          </Button>
+                        </MUITableCell>
+                      </MUITableRow>
+                    );
+                  })}
+                </MUITableBody>
+              </MUITable>
+              {meta && (patients.length > 0) && (
+                <Box sx={{ borderTop: 1, borderColor: 'divider', pt: 2, mt: 2 }}>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <div className="font-semibold">إجمالي المرضى: <span className="font-normal">{meta.total}</span></div>
+                    <div className="font-semibold">إجمالي مبلغ المختبر: <span className="font-normal">{formatNumber(patients.reduce((sum: number, p: LabGeneralReportItem) => sum + Number(p.total_lab_amount || 0), 0))}</span></div>
+                    <div className="font-semibold">إجمالي المدفوع: <span className="font-normal">{formatNumber(patients.reduce((sum: number, p: LabGeneralReportItem) => sum + Number(p.total_paid_for_lab || 0), 0))}</span></div>
+                    <div className="font-semibold">إجمالي الخصم: <span className="font-normal">{formatNumber(patients.reduce((sum: number, p: LabGeneralReportItem) => sum + Number(p.discount || 0), 0))}</span></div>
+                  </div>
+                </Box>
+              )}
+            </Box>
+          ) : (
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <Typography variant="body1" color="text.secondary">
+                لا توجد بيانات للعرض
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseTableDialog} variant="outlined">
             إغلاق
           </Button>
         </DialogActions>

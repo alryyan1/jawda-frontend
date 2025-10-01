@@ -35,17 +35,16 @@ import {
   Moon,
   FileBarChart2,
   ShieldCheck,
-  CalendarClock,
   BriefcaseMedical,
   ChevronsLeft,
   ChevronsRight,
   FlaskConical,
-  ClipboardEditIcon,
   Syringe,
   Microscope,
   Banknote,
   Wifi,
   WifiOff,
+  FileText,
 } from "lucide-react";
 import { Toaster } from "sonner";
 import { useQuery } from "@tanstack/react-query";
@@ -89,6 +88,7 @@ const mainNavItems: NavItem[] = [
   // { to: '/analysis', label: 'التحليل', icon: FileBarChart2, permission: 'view analysis' },
   // { to: '/schedules-appointments', label: 'المواعيد والجداول', icon: CalendarClock, permission: 'view doctor_schedules' },
   { to: '/cash-reconciliation', label: 'الفئات', icon: Banknote, permission: 'access cash_reconciliation' },
+  { to: '/hl7-parser', label: 'محلل HL7', icon: FileText, permission: 'access hl7_parser' },
 
   // { to: '/bulk-whatsapp', label: 'الواتساب الجماعي', icon: MessageCircle, permission: 'send bulk whatsapp' },
 ];

@@ -80,6 +80,7 @@ import CashReconciliationPage from "./pages/CashReconciliationPage";
 // import NotFoundPage from './pages/NotFoundPage'; // Optional: For 404 handling
 
 import AppointmentsPlaceholderPage from "./pages/AppointmentsPlaceholderPage";
+import HL7ParserPage from "./pages/HL7ParserPage";
 
 const router = createBrowserRouter([
   // --- PUBLIC ROUTES ---
@@ -137,6 +138,10 @@ const router = createBrowserRouter([
           {
             path: "bulk-whatsapp",
             element: <BulkWhatsAppPage />,
+          },
+          {
+            path: "hl7-parser",
+            element: <HL7ParserPage />,
           },
           {
             path: "dashboard", // Explicit dashboard route if needed, often same as index

@@ -35,6 +35,7 @@ import { LisClientUrl, LisServerUrl } from '@/pages/constants';
 import { Button } from '@/components/ui/button';
 import apiClient from '@/services/api';
 import { updateFirestoreDocumentViaBackend } from '@/services/firestorePatientService';
+import type { PatientLabQueueItem } from '@/types/labWorkflow';
 // import { useAuthorization } from '@/hooks/useAuthorization';
 
 interface LabActionsPaneProps {
@@ -43,7 +44,7 @@ interface LabActionsPaneProps {
   onResultsReset: (labRequest: LabRequest) => void;
   onResultsModified: (labRequest: LabRequest) => void;
   isResultLocked: boolean;
-  currentPatientData  : Patient | null;
+  currentPatientData  : PatientLabQueueItem | null;
   onAppearanceSettingsChanged: () => void;
     // Add other props if actions depend on more context
 }
@@ -204,20 +205,7 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
     }
   };
   
-  const handleBatchAuthorize = () => {
-    toast.info('الميزة غير متاحة حالياً: التفويض المجمع');
-    // TODO: Implement batch authorization logic (likely opens a new dialog/page)
-  };
 
-  const handleLISSync = () => {
-    toast.info('الميزة غير متاحة حالياً: مزامنة LIS');
-    // TODO: Implement LIS sync logic
-  };
-
-  const handlePrintWorklist = () => {
-    toast.info('الميزة غير متاحة حالياً: طباعة قائمة العمل');
-    // TODO: Implement Worklist PDF generation
-  };
 
   const handleOpenWhatsappWorkAreaDialog = () => {
     setIsWhatsAppDialogOpen(true);
@@ -439,13 +427,13 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
         )}
         
         <Separator className="my-2" />
-
+ {console.log(currentPatientData,'currentPatientData')}
         <Tooltip>
             <TooltipTrigger asChild>
                 <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="w-12 h-12" 
+                    className={cn("w-12 h-12", currentPatientData?.has_cbc ? "text-red-500" : "")} 
                     onClick={handlePopulateCbc}
                     disabled={populateCbcMutation.isPending}
                 >

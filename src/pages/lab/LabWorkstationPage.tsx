@@ -60,6 +60,7 @@ import {
   type LabHistoryItem,
 } from "@/services/patientService"; // Updated service function
 import { getLabRequestsForVisit, updateLabRequestDetails } from "@/services/labRequestService";
+import { getSinglePatientLabQueueItem } from "@/services/labWorkflowService";
 import apiClient from "@/services/api";
 import LabQueueFilterDialog, {
   type LabQueueFilters,
@@ -73,6 +74,7 @@ import {
 } from "@/lib/appearance-settings-store";
 import realtimeService from "@/services/realtimeService";
 import type { LabRequest } from "@/types/visits";
+import type { SysmexResultEventData } from "@/types/sysmex";
 
 const LabWorkstationPage: React.FC = () => {
   // Direct Arabic labels for this page
@@ -199,7 +201,7 @@ const LabWorkstationPage: React.FC = () => {
   const initializeAudio = useCallback(() => {
     if (!audioContext) {
       try {
-        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
         setAudioContext(ctx);
         // console.log('Audio context initialized');
       } catch (error) {
@@ -256,6 +258,7 @@ const LabWorkstationPage: React.FC = () => {
   const addPaymentBadgeRef = useRef(addPaymentBadge);
   const queryClientRef = useRef(queryClient);
   const currentShiftForQueueRef = useRef(currentShiftForQueue);
+  const selectedQueueItemRef = useRef(selectedQueueItem);
 
   // Update refs when values change
   useEffect(() => {
@@ -273,6 +276,10 @@ const LabWorkstationPage: React.FC = () => {
   useEffect(() => {
     currentShiftForQueueRef.current = currentShiftForQueue;
   }, [currentShiftForQueue]);
+
+  useEffect(() => {
+    selectedQueueItemRef.current = selectedQueueItem;
+  }, [selectedQueueItem]);
 
   // Real-time event subscription for lab payments
   useEffect(() => {
@@ -319,7 +326,7 @@ const LabWorkstationPage: React.FC = () => {
         });
         
       } catch (error) {
-        // console.error('Error processing lab payment event:', error);
+        console.error('Error processing lab payment event:', error);
         toast.error('فشل في تحديث قائمة المختبر');
       }
     };
@@ -334,6 +341,86 @@ const LabWorkstationPage: React.FC = () => {
       realtimeService.offLabPayment(handleLabPayment);
     };
   }, []); // Empty dependency array - only run once on mount
+
+  // Real-time event subscription for sysmex results
+  useEffect(() => {
+    // Debounce map to prevent duplicate processing of the same event
+    const processedEvents = new Set<string>();
+    
+    const handleSysmexResultInserted = async (data: SysmexResultEventData) => {
+      // Create a unique key for this event to prevent duplicate processing
+      const eventKey = `sysmex-${data.doctorVisit.id}-${data.patient.id}`;
+      
+      // Check if we've already processed this event recently
+      if (processedEvents.has(eventKey)) {
+        console.log('Skipping duplicate sysmex result event:', eventKey);
+        return;
+      }
+      
+      // Mark this event as processed
+      processedEvents.add(eventKey);
+      
+      // Clean up old processed events after 5 seconds
+      setTimeout(() => {
+        processedEvents.delete(eventKey);
+      }, 5000);
+      
+      console.log('Sysmex result inserted event received in LabWorkstationPage:', data);
+      
+      try {
+        // Play notification sound
+        await playPaymentSoundRef.current();
+
+        // Show a toast notification
+        toast.success(`تم استلام نتائج Sysmex للمريض: ${data.patient.name}`, {
+          description: `زيارة رقم ${data.doctorVisit.id} - CBC Results Available`
+        });
+
+        // Fetch the updated queue item for this specific patient
+        try {
+          const updatedQueueItem = await getSinglePatientLabQueueItem(data.doctorVisit.id);
+          console.log('Fetched updated queue item for sysmex result:', updatedQueueItem);
+          
+          // Update the queue item in the PatientQueuePanel
+          setUpdatedQueueItem(updatedQueueItem);
+          
+          // Use refs to get current values to avoid stale closures
+          const currentSelectedQueueItem = selectedQueueItemRef.current;
+          if (currentSelectedQueueItem && currentSelectedQueueItem.visit_id === data.doctorVisit.id) {
+            setSelectedQueueItem(updatedQueueItem);
+            
+            // Refresh lab requests and patient details for the current patient
+            queryClientRef.current.invalidateQueries({
+              queryKey: ['labRequestsForVisit', data.doctorVisit.id]
+            });
+            queryClientRef.current.invalidateQueries({
+              queryKey: ["patientDetails", data.patient.id]
+            });
+          }
+        } catch (fetchError) {
+          console.error('Error fetching updated queue item:', fetchError);
+          // Fallback to invalidating the entire queue if single fetch fails
+          queryClientRef.current.invalidateQueries({
+            queryKey: ["labPendingQueue", currentShiftForQueueRef.current?.id],
+          });
+        }
+        
+      } catch (error) {
+        console.error('Error processing sysmex result event:', error);
+        toast.error('فشل في تحديث بيانات المختبر');
+      }
+    };
+
+    console.log('LabWorkstationPage: Setting up sysmex result event listener');
+    // Subscribe to sysmex-result-inserted events
+    realtimeService.onSysmexResultInserted(handleSysmexResultInserted);
+
+    // Cleanup subscription on component unmount
+    return () => {
+      console.log('LabWorkstationPage: Cleaning up sysmex result event listener');
+      realtimeService.offSysmexResultInserted(handleSysmexResultInserted);
+    };
+  }, []); // Empty dependency array - only run once on mount to prevent multiple subscriptions
 
   // Fetch global current open clinic shift
   const { data: currentClinicShiftGlobal, isLoading: isLoadingGlobalShift } =
@@ -690,61 +777,63 @@ const LabWorkstationPage: React.FC = () => {
     queryClient.invalidateQueries({ queryKey: ["labPendingQueue"] });
   };
   // --- PDF Preview Logic for Actions Pane ---
-  const generateAndShowPdfForActionPane = async (
-    title: string,
-    fileNamePrefix: string,
-    endpoint: string
-  ) => {
-    if (!selectedQueueItem) {
-      toast.error("يرجى اختيار مريض من القائمة أولاً");
-      return;
-    }
-    if (isCurrentResultLocked) {
-      toast.error("النتائج مقفلة، لا يمكن المعاينة");
-      return;
-    }
+  // Note: This function is kept for potential future use with LabActionsPane
+  // const generateAndShowPdfForActionPane = async (
+  //   title: string,
+  //   fileNamePrefix: string,
+  //   endpoint: string
+  // ) => {
+  //   if (!selectedQueueItem) {
+  //     toast.error("يرجى اختيار مريض من القائمة أولاً");
+  //     return;
+  //   }
+  //   if (isCurrentResultLocked) {
+  //     toast.error("النتائج مقفلة، لا يمكن المعاينة");
+  //     return;
+  //   }
 
-    const visitIdToUse =
-      selectedLabRequestForEntry?.doctor_visit_id || selectedQueueItem?.visit_id;
-    if (!visitIdToUse) {
-      toast.error("Visit context is missing.");
-      return;
-    }
+  //   const visitIdToUse =
+  //     selectedLabRequestForEntry?.doctor_visit_id || selectedQueueItem?.visit_id;
+  //   if (!visitIdToUse) {
+  //     toast.error("Visit context is missing.");
+  //     return;
+  //   }
 
-    setPdfPreviewData((prev) => ({
-      ...prev,
-      isLoading: true,
-      title,
-      isOpen: true,
-      url: null,
-    }));
-    try {
-      const response = await apiClient.get(
-        endpoint.replace("{visitId}", String(visitIdToUse)),
-        { responseType: "blob" }
-      );
-      const blob = new Blob([response.data], { type: "application/pdf" });
-      const objectUrl = URL.createObjectURL(blob);
-      setPdfPreviewData((prev) => ({
-        ...prev,
-        url: objectUrl,
-        isLoading: false,
-        fileName: `${fileNamePrefix}_Visit${visitIdToUse}_${
-          selectedQueueItem?.patient_name.replace(/\s+/g, "_") || "Patient"
-        }.pdf`,
-      }));
-    } catch (error: any) {
-      console.error(`حدث خطأ أثناء توليد ${title}:`, error);
-      toast.error("فشل توليد ملف PDF", {
-        description: error.response?.data?.message || error.message,
-      });
-      setPdfPreviewData((prev) => ({
-        ...prev,
-        isLoading: false,
-        isOpen: false,
-      }));
-    }
-  };
+  //   setPdfPreviewData((prev) => ({
+  //     ...prev,
+  //     isLoading: true,
+  //     title,
+  //     isOpen: true,
+  //     url: null,
+  //   }));
+  //   try {
+  //     const response = await apiClient.get(
+  //       endpoint.replace("{visitId}", String(visitIdToUse)),
+  //       { responseType: "blob" }
+  //     );
+  //     const blob = new Blob([response.data], { type: "application/pdf" });
+  //     const objectUrl = URL.createObjectURL(blob);
+  //     setPdfPreviewData((prev) => ({
+  //       ...prev,
+  //       url: objectUrl,
+  //       isLoading: false,
+  //       fileName: `${fileNamePrefix}_Visit${visitIdToUse}_${
+  //         selectedQueueItem?.patient_name.replace(/\s+/g, "_") || "Patient"
+  //       }.pdf`,
+  //     }));
+  //   } catch (error: unknown) {
+  //     console.error(`حدث خطأ أثناء توليد ${title}:`, error);
+  //     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+  //     toast.error("فشل توليد ملف PDF", {
+  //       description: errorMessage,
+  //     });
+  //     setPdfPreviewData((prev) => ({
+  //       ...prev,
+  //       isLoading: false,
+  //       isOpen: false,
+  //     }));
+  //   }
+  // };
   // console.log(selectedQueueItem, "selectedQueueItem");
   return (
     <div
@@ -762,7 +851,7 @@ const LabWorkstationPage: React.FC = () => {
             id="recent-visits-by-patient-dropdown"
             options={recentVisitsData || []}
             value={selectedVisitFromAutocomplete}
-            onChange={(event, newValue) => {
+            onChange={(_event, newValue) => {
               // This is the Autocomplete's selected item, not PatientLabQueueItem
               setSelectedVisitFromAutocomplete(newValue);
               if (newValue?.visit_id) {
@@ -771,7 +860,7 @@ const LabWorkstationPage: React.FC = () => {
               }
             }}
             inputValue={autocompleteInputValue}
-            onInputChange={(event, newInputValue, reason) => {
+            onInputChange={(_event, newInputValue, reason) => {
               if (reason === "input") {
                 setAutocompleteInputValue(newInputValue);
               } else if (reason === "clear") {
@@ -922,7 +1011,7 @@ const LabWorkstationPage: React.FC = () => {
                   id="lab-history-dropdown"
                   options={labHistoryData}
                   value={selectedLabHistoryItem}
-                  onChange={(event, newValue) => {
+                  onChange={(_event, newValue) => {
                     handleLabHistoryItemSelect(newValue);
                   }}
                   getOptionLabel={(option) => option.autocomplete_label}
@@ -1124,31 +1213,10 @@ const LabWorkstationPage: React.FC = () => {
               onAppearanceSettingsChanged={handleAppearanceSettingsChanged}
               selectedLabRequest={selectedLabRequestForEntry}
               selectedVisitId={selectedQueueItem.visit_id}
-              currentPatientData={patientDetails as Patient | null}
+              currentPatientData={selectedQueueItem}
               isResultLocked={isCurrentResultLocked}
               onResultsReset={() => {}} // TODO: Implement if needed
               onResultsModified={() => {}} // TODO: Implement if needed
-              onPrintReceipt={() =>
-                generateAndShowPdfForActionPane(
-                  "طباعة إيصال المختبر",
-                  "LabReceipt",
-                  `/visits/{visitId}/lab-thermal-receipt/pdf`
-                )
-              }
-              onPrintLabels={() =>
-                generateAndShowPdfForActionPane(
-                  "طباعة ملصقات العينات",
-                  "SampleLabels",
-                  `/visits/{visitId}/lab-sample-labels/pdf`
-                )
-              }
-              onPreviewReport={() =>
-                generateAndShowPdfForActionPane(
-                  "معاينة تقرير المختبر",
-                  "LabReport",
-                  `/visits/{visitId}/lab-report/pdf`
-                )
-              }
             />
           )}
         </aside>
@@ -1170,7 +1238,7 @@ const LabWorkstationPage: React.FC = () => {
               }-${selectedLabRequestForEntry?.id || "none"}`}
               patientId={selectedQueueItem.patient_id}
               visitId={selectedQueueItem.visit_id} // Pass the visit_id (context ID)
-              patientLabQueueItem={selectedQueueItem || null}
+              patientLabQueueItem={selectedQueueItem}
               patientData={patientDetails} // Pass shared patient data
               onUploadStatusChange={handleUploadStatusChange}
             />

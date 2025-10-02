@@ -1,6 +1,6 @@
 // src/components/lab/workstation/PatientLabRequestItem.tsx
 import React, { useMemo } from "react";
-import { useTranslation } from "react-i18next";
+// import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import {
   Lock,
@@ -32,12 +32,25 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
   isReadyForPrint,
   showNewPaymentBadge = false,
 }) => {
-  const { t } = useTranslation(["labResults", "common", "whatsapp"]);
+  // Debounce click handler to prevent rapid successive clicks
+  const [isClicking, setIsClicking] = React.useState(false);
+  
+  const handleClick = React.useCallback(() => {
+    if (isClicking) return; // Prevent multiple rapid clicks
+    
+    setIsClicking(true);
+    onSelect();
+    
+    // Reset clicking state after 300ms
+    setTimeout(() => {
+      setIsClicking(false);
+    }, 300);
+  }, [onSelect, isClicking]);
+  
+  // const { t } = useTranslation(["labResults", "common", "whatsapp"]);
   const labIdentifier =
     item.lab_number ||
-    `${t("labResults:patientLabItem.requestIdShort")}${
-      item.lab_request_ids?.[0] || item.visit_id
-    }`;
+    `L${item.lab_request_ids?.[0] || item.visit_id}`;
 
 
 
@@ -75,7 +88,7 @@ if(item.visit_id === 34218){
 }
   return (
     <div
-      onClick={onSelect}
+      onClick={handleClick}
       role="button"
       tabIndex={0}
       // APPLY STYLES DYNAMICALLY USING CSS VARIABLES
@@ -94,6 +107,7 @@ if(item.visit_id === 34218){
         isLastResultPending &&   "animate-heartbeat",
         isLastResultPending  && "animate__animated animate__heartBeat animate__infinite animate__slow",
         isReadyForPrint  && "animate__animated animate__bounce animate__infinite animate__slow",
+        isClicking && "opacity-50 cursor-not-allowed", // Visual feedback when clicking
 
         // Use CSS variables for dynamic styling
         "border-[var(--border-color)] text-[var(--text-color)]",

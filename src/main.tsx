@@ -1,5 +1,5 @@
 // src/main.tsx
-import React, { Suspense } from 'react';
+import { Suspense } from 'react';
 import ReactDOM from 'react-dom/client';
 import { RouterProvider } from 'react-router-dom';
 import router from './router';
@@ -31,7 +31,8 @@ const theme = createTheme({
 document.documentElement.setAttribute('dir', 'rtl');
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
+  // Temporarily disabled StrictMode to prevent double execution in development
+  // <React.StrictMode>
     <Suspense  fallback={<div className="flex items-center justify-center min-h-screen">جار التحميل...</div>}>
       <QueryClientProvider client={queryClient}> {/* Wrap */}
         <CacheProvider value={rtlCache}>
@@ -45,5 +46,5 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <ReactQueryDevtools initialIsOpen={false} /> 
       </QueryClientProvider>
     </Suspense>
-  </React.StrictMode>
+  // </React.StrictMode>
 );

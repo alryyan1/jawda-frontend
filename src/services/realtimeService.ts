@@ -2,6 +2,7 @@
 import { io, Socket } from 'socket.io-client';
 import type { Patient } from '@/types/patients';
 import type { DoctorVisit, LabRequest } from '@/types/visits';
+import type { SysmexResultEventData } from '@/types/sysmex';
 import { realtimeUrlFromConstants } from '@/pages/constants';
 
 class RealtimeService {
@@ -140,6 +141,27 @@ class RealtimeService {
         this.socket.off('close-general-shift', callback as any);
       } else {
         this.socket.off('close-general-shift');
+      }
+    }
+  }
+
+  // Subscribe to sysmex-result-inserted events
+  public onSysmexResultInserted(callback: (data: SysmexResultEventData) => void): void {
+    if (this.socket) {
+      this.socket.on('sysmex-result-inserted', (data: SysmexResultEventData) => {
+        console.log('Received sysmex-result-inserted event:', data);
+        callback(data);
+      });
+    }
+  }
+
+  // Unsubscribe from sysmex-result-inserted events
+  public offSysmexResultInserted(callback?: (data: SysmexResultEventData) => void): void {
+    if (this.socket) {
+      if (callback) {
+        this.socket.off('sysmex-result-inserted', callback);
+      } else {
+        this.socket.off('sysmex-result-inserted');
       }
     }
   }

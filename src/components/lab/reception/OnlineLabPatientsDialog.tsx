@@ -244,6 +244,7 @@ const OnlineLabPatientsDialog: React.FC<OnlineLabPatientsDialogProps> = ({
   };
 
   const handleSavePatient = async (patient: OnlineLabPatient) => {
+    // showJsonDialog(patient)
     setSavingPatientId(patient.id);
     try {
       const response = await apiClient.post('/patients/save-from-online-lab', {
@@ -254,6 +255,7 @@ const OnlineLabPatientsDialog: React.FC<OnlineLabPatientsDialogProps> = ({
         external_patient_id: patient.id,
         created_at: patient.createdAt,
         lab_to_lab_object_id: patient.id,
+        labId: patient.labId,
       });
 
       // Show success message or handle success

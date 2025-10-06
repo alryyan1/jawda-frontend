@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import {
   Lock,
   Heart,
+  Globe,
 } from "lucide-react";
 import type { PatientLabQueueItem } from "@/types/labWorkflow";
 
@@ -138,9 +139,15 @@ if(item.visit_id === 34218){
         </div>
       )}
 
-      {item.company && (
+      {Boolean(item.company) && (
         <div className="absolute -bottom-1 -right-1 p-0.5 bg-[var(--bg-color)] rounded-full shadow-sm border border-[var(--border-color)]">
           <Heart className="h-3 w-3 text-red-500 fill-red-500" />
+        </div>
+      )}
+
+      {item.lab_to_lab_object_id && (
+        <div className="absolute -top-1 -left-1 p-0.5 bg-[var(--bg-color)] rounded-full shadow-sm border border-[var(--border-color)]">
+          <Globe className="h-3 w-3 text-blue-500" />
         </div>
       )}
 

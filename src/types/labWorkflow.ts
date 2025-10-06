@@ -16,11 +16,12 @@ export interface PatientLabQueueItem { // For the leftmost list
   is_result_locked: boolean;
   is_last_result_pending?: boolean; 
   is_ready_for_print?: boolean;
-  company?: any; // Company information from backend
+  company?: unknown; // Company information from backend
   auth_date?: string | null;
   result_auth?: boolean | null;
   total_result_count: number; // Total number of results for this patient
   pending_result_count: number; // Number of pending results
+  lab_to_lab_object_id?: string | null; // Present if this patient came from lab-to-lab integration
   // status_summary?: string; // e.g. "3 Pending, 1 Complete"
 }
 
@@ -43,7 +44,7 @@ export interface LabQueueFilters {
   isBankak?: boolean | null;
   company_id?: number | null;
   doctor_id?: number | null;
-  specialist?: any | null; // Keep as object for now to match LabFilterDialog
+  specialist?: unknown | null; // Keep as object for now to match LabFilterDialog
   // Legacy properties for compatibility
   company?: number | null;
   doctor?: number | null;
@@ -117,7 +118,7 @@ export interface ResultEntryItemFormValue { // For each item in useFieldArray
     is_numeric?: boolean; // Helper flag based on child_test properties (low/upper vs options)
     is_boolean_result?: boolean; // Helper flag for boolean-like results
 
-    result_value: string | null; // The actual input value
+    result_value: string | ChildTestOption | null; // The actual input value
     result_flags?: string;
     result_comment?: string;
     // Keep original values if needed for comparison or reset

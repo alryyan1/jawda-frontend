@@ -35,12 +35,15 @@ import {
   Cancel,
   Search,
   Add,
-  PictureAsPdf
+  PictureAsPdf,
+  CloudUpload
 } from '@mui/icons-material';
 
 import { getMainTests, updateMainTest } from '@/services/mainTestService';
 import apiClient from '@/services/api';
 // import { useAuthorization } from '@/hooks/useAuthorization';
+import { db } from '@/lib/firebase';
+import { writeBatch, doc, collection } from 'firebase/firestore';
 
 interface MainTestWithContainer {
   id: number;
@@ -64,6 +67,7 @@ export default function MainTestsListPage() {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedTestId, setSelectedTestId] = useState<number | null>(null);
   const [priceInputs, setPriceInputs] = useState<Record<number, string>>({});
+  const [isUploadingPriceList, setIsUploadingPriceList] = useState(false);
 
   useEffect(() => {
     const handler = setTimeout(() => setDebouncedSearchTerm(searchTerm), 500);
@@ -159,6 +163,42 @@ export default function MainTestsListPage() {
     }
   };
 
+  const handleUploadCashPriceList = async () => {
+    try {
+      setIsUploadingPriceList(true);
+      const tests = (paginatedData?.data || []) as MainTestWithContainer[];
+      if (!tests.length) {
+        toast.info('لا توجد اختبارات في الصفحة الحالية لرفعها');
+        return;
+      }
+
+      const batch = writeBatch(db);
+      const priceListCol = collection(db, 'labToLap', 'global', 'cashPriceList');
+
+      tests.forEach((t) => {
+        const priceValue = priceInputs[t.id] ?? (t.price !== undefined && t.price !== null ? String(t.price) : '');
+        const priceNum = priceValue === '' ? 0 : Number(priceValue);
+        const docRef = doc(priceListCol, String(t.id));
+        batch.set(docRef, {
+          id: t.id,
+          name: t.main_test_name,
+          container_name: t.container?.container_name ?? t.container_name ?? null,
+          price: isNaN(priceNum) ? 0 : priceNum,
+          available: Boolean(t.available),
+          updated_at: new Date().toISOString(),
+        }, { merge: true });
+      });
+
+      await batch.commit();
+      toast.success('تم رفع قائمة الأسعار النقدية إلى Firestore (الصفحة الحالية)');
+    } catch (err) {
+      console.error('Firestore upload error:', err);
+      toast.error('فشل رفع قائمة الأسعار إلى Firestore');
+    } finally {
+      setIsUploadingPriceList(false);
+    }
+  };
+
   if (isLoading && !isFetching && currentPage === 1) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" height={256}>
@@ -229,6 +269,15 @@ export default function MainTestsListPage() {
                 color="error"
               >
                 قائمة الأسعار PDF
+              </Button>
+              <Button
+                onClick={handleUploadCashPriceList}
+                variant="contained"
+                size="small"
+                startIcon={<CloudUpload />}
+                disabled={isUploadingPriceList}
+              >
+                {isUploadingPriceList ? 'جاري الرفع...' : 'رفع الأسعار إلى Firestore'}
               </Button>
               {canCreateTests && (
                 <Button 

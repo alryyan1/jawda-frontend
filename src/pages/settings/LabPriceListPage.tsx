@@ -1,186 +1,88 @@
 // src/pages/settings/LabPriceListPage.tsx
-import React, { useState, useEffect, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
-import { useForm, useFieldArray, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import {
   Box,
-  Button,
   TextField,
-  Checkbox,
   Card,
+  CardContent,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  IconButton,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
   Typography,
   CircularProgress,
   Stack,
   Container,
   InputAdornment,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Grid,
-  Paper,
-  Skeleton
+  Pagination,
+  Button
 } from '@mui/material';
 import {
-  Search,
-  Save,
-  Delete,
-  Print,
-  Science
+  Edit,
+  MoreVert,
+  Science,
+  CheckCircle,
+  Cancel,
+  Search
 } from '@mui/icons-material';
-import { FormProvider } from 'react-hook-form';
+
+// Removed local DB fetching; Firestore only
 import { db } from '@/lib/firebase';
-import { writeBatch, doc, collection, getDocs, query as fsQuery, orderBy, startAt, endAt, where, getDoc } from 'firebase/firestore';
+import { doc, setDoc, collection, getDoc, getDocs, writeBatch } from 'firebase/firestore';
+import { getAllActiveMainTestsForPriceList } from '@/services/mainTestService';
 
-import type { MainTest, Package } from '@/types/labTests';
-import { 
-    getAllActiveMainTestsForPriceList, 
-    batchUpdateTestPrices, 
-    batchDeleteMainTests 
-} from '@/services/mainTestService';
-import { downloadLabPriceListPdf } from '@/services/reportService';
-import { getPackagesList } from '@/services/packageService';
-
-// Zod schema for the form managing an array of price list items
-const priceListItemSchema = z.object({
-  id: z.number(),
-  main_test_name: z.string(),
-  price: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, { message: "يجب أن يكون السعر رقمًا موجبًا."}),
-  isSelectedForDelete: z.boolean().optional(), // For mass delete
-});
-
-const priceListSchema = z.object({
-  tests: z.array(priceListItemSchema),
-});
-type PriceListFormValues = z.infer<typeof priceListSchema>;
-
-interface ErrorResponse {
-  response?: {
-    data?: {
-      message?: string;
-    };
+interface MainTestWithContainer {
+  id: number;
+  main_test_name: string;
+  container_name?: string;
+  container?: {
+    container_name: string;
   };
+  price?: string | number;
+  available: boolean;
 }
 
-const LabPriceListPage: React.FC = () => {
+const LabPriceListPage = () => {
+  const navigate = useNavigate();
   const { labId } = useParams();
-  const queryClient = useQueryClient();
-
-  const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-  const [selectedPackageId, setSelectedPackageId] = useState<string>('');
-  const [numColumns, setNumColumns] = useState(3); // Default columns
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-  const [isUploadingPriceList, setIsUploadingPriceList] = useState(false);
   const [labName, setLabName] = useState<string>('');
 
-  // Debounce search term
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [selectedTestId, setSelectedTestId] = useState<number | null>(null);
+  const [priceInputs, setPriceInputs] = useState<Record<number, string>>({});
+  const [testsAll, setTestsAll] = useState<MainTestWithContainer[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [reloadTs, setReloadTs] = useState(0);
+
   useEffect(() => {
     const handler = setTimeout(() => setDebouncedSearchTerm(searchTerm), 500);
     return () => clearTimeout(handler);
   }, [searchTerm]);
 
-  // Calculate number of columns based on screen width
   useEffect(() => {
-     const calculateCols = () => {
-         // Approx width per item (name + price input)
-         const itemWidth = 280; // Adjust as needed (e.g., 250px for name + 100px for price + gap)
-         const screenWidth = window.innerWidth - 240 - 64; // Subtract sidebar and padding approx
-         setNumColumns(Math.max(1, Math.floor(screenWidth / itemWidth)));
-     };
-     calculateCols();
-     window.addEventListener('resize', calculateCols);
-     return () => window.removeEventListener('resize', calculateCols);
-  }, []);
+    setCurrentPage(1);
+  }, [debouncedSearchTerm]);
 
-  const { data: allTests, isLoading: isLoadingTests } = useQuery<MainTest[], Error>({
-    queryKey: ['allActiveMainTestsForPriceList', debouncedSearchTerm, selectedPackageId],
-    queryFn: () => getAllActiveMainTestsForPriceList(debouncedSearchTerm, selectedPackageId as string | number | null),
-    enabled: !labId, // Disable backend fetching when viewing contracted lab price list
-  });
-
-  const { data: packages, isLoading: isLoadingPackages } = useQuery<Package[], Error>({
-    queryKey: ['packagesList'], 
-    queryFn: getPackagesList,
-  });
-
-  const form = useForm<PriceListFormValues>({
-    resolver: zodResolver(priceListSchema),
-    defaultValues: { tests: [] },
-  });
-  const { control, handleSubmit, reset, getValues, formState: { dirtyFields, errors, isDirty } } = form;
-
-  const { fields } = useFieldArray({
-    control,
-    name: "tests",
-    keyName: "fieldId" // Important for React key
-  });
-
-  // Populate form with fetched tests (backend) when not in lab view
-  useEffect(() => {
-    if (!labId && allTests) {
-      const formattedTests = allTests.map(test => ({
-        id: test.id,
-        main_test_name: test.main_test_name,
-        price: test.price !== null && test.price !== undefined ? String(test.price) : '0',
-        isSelectedForDelete: false,
-      }));
-      reset({ tests: formattedTests });
-    }
-  }, [labId, allTests, reset]);
-
-  // Populate form with Firestore price list when viewing a contracted lab
-  const [isLoadingFs, setIsLoadingFs] = useState(false);
-  useEffect(() => {
-    const loadFs = async () => {
-      if (!labId) return;
-      setIsLoadingFs(true);
-      try {
-        const colRef = collection(db, 'labToLap', String(labId), 'pricelist');
-        // Search by name using orderBy + startAt/endAt for prefix match
-        let q = fsQuery(colRef);
-        // Filter by pack if selected
-        const packId = selectedPackageId ? parseInt(String(selectedPackageId), 10) : null;
-        if (packId && !Number.isNaN(packId)) {
-          q = fsQuery(colRef, where('pack_id', '==', packId));
-        }
-        const term = debouncedSearchTerm?.trim();
-        if (term) {
-          // Firestore requires ordering by the field used in range.
-          // If both pack filter and name search are applied, include where + orderBy.
-          if (packId && !Number.isNaN(packId)) {
-            q = fsQuery(colRef, where('pack_id', '==', packId), orderBy('name'), startAt(term), endAt(term + '\uf8ff'));
-          } else {
-            q = fsQuery(colRef, orderBy('name'), startAt(term), endAt(term + '\uf8ff'));
-          }
-        }
-        const snap = await getDocs(q);
-        const formatted = snap.docs.map(d => {
-          const data = d.data() as { id?: number; name?: string; price?: number | string };
-          return {
-            id: data.id ?? Number(d.id),
-            main_test_name: String(data.name ?? d.id),
-            price: data.price != null ? String(data.price) : '0',
-            isSelectedForDelete: false,
-          };
-        });
-        reset({ tests: formatted });
-      } finally {
-        setIsLoadingFs(false);
-      }
-    };
-    loadFs();
-  }, [labId, debouncedSearchTerm, selectedPackageId, reset]);
-
-  // Load lab name for header when in lab context
   useEffect(() => {
     const run = async () => {
-      if (!labId) return setLabName('');
+      if (!labId) {
+        setLabName('');
+        return;
+      }
       try {
         const ref = doc(db, 'labToLap', String(labId));
         const snap = await getDoc(ref);
@@ -193,48 +95,108 @@ const LabPriceListPage: React.FC = () => {
     run();
   }, [labId]);
 
-  const updatePricesMutation = useMutation({
-    mutationFn: batchUpdateTestPrices,
-    onSuccess: (data) => {
-      toast.success(data.message || 'تم حفظ أسعار التحاليل بنجاح');
-      queryClient.invalidateQueries({ queryKey: ['allActiveMainTestsForPriceList'] });
-      form.reset(getValues(), { keepValues: true, keepDirty: false, keepDefaultValues: false }); // Reset dirty state
-    },
-    onError: (error: ErrorResponse) => toast.error(error.response?.data?.message || 'فشل حفظ الأسعار'),
-  });
-
-  const deleteMutation = useMutation({
-     mutationFn: batchDeleteMainTests,
-     onSuccess: (data) => {
-         toast.success(data.message || `تم حذف ${data.deleted_count} عنصر/عناصر بنجاح`);
-         if (data.errors && data.errors.length > 0) {
-             data.errors.forEach(errMsg => toast.warning(errMsg));
-         }
-         queryClient.invalidateQueries({ queryKey: ['allActiveMainTestsForPriceList'] });
-     },
-     onError: (error: ErrorResponse) => toast.error(error.response?.data?.message || 'فشل الحذف الجماعي'),
-  });
-
-  const onSubmit = (data: PriceListFormValues) => {
-    const dirtyTestUpdates: Array<{ id: number; price: number }> = [];
-    data.tests.forEach((test, index) => {
-      if (dirtyFields.tests?.[index]?.price) {
-        dirtyTestUpdates.push({ id: test.id, price: parseFloat(test.price) });
+  useEffect(() => {
+    const load = async () => {
+      if (!labId) {
+        setTestsAll([]);
+        return;
       }
-    });
+      setIsLoading(true);
+      setError(null);
+      try {
+        const colRef = collection(db, 'labToLap', String(labId), 'pricelist');
+        const snap = await getDocs(colRef);
+        let items: MainTestWithContainer[] = snap.docs.map(d => {
+          const data = d.data() as { id?: number; name?: string; price?: number | string };
+          return {
+            id: data.id ?? Number(d.id),
+            main_test_name: String(data.name ?? d.id),
+            price: data.price != null ? String(data.price) : '0',
+            available: true,
+          };
+        });
+        // sort by id asc
+        items.sort((a, b) => a.id - b.id);
+        const term = debouncedSearchTerm.trim().toLowerCase();
+        if (term) {
+          items = items.filter(item => item.main_test_name.toLowerCase().includes(term));
+        }
+        setTestsAll(items);
+        // Reset priceInputs map to current values
+        const nextMap: Record<number, string> = {};
+        items.forEach(t => {
+          nextMap[t.id] = t.price !== undefined && t.price !== null ? String(t.price) : '';
+        });
+        setPriceInputs(nextMap);
+      } catch (e) {
+        const err = e as Error;
+        setError(err);
+        toast.error('فشل تحميل قائمة الأسعار من Firestore', { description: err.message });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
+  }, [labId, debouncedSearchTerm, reloadTs]);
 
-    if (dirtyTestUpdates.length > 0) {
-      updatePricesMutation.mutate(dirtyTestUpdates);
-    } else {
-      toast.info('لا توجد تغييرات للحفظ');
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, testId: number) => {
+    setAnchorEl(event.currentTarget);
+    setSelectedTestId(testId);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setSelectedTestId(null);
+  };
+
+  const handlePriceKeyDown = async (e: React.KeyboardEvent, testId: number, currentIndex: number) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const value = (priceInputs[testId] ?? '').trim();
+      const priceToSave = value === '' ? '0' : value;
+
+      // Focus next input first for fast data entry
+      const nextIndex = currentIndex + 1;
+      const nextInput = document.querySelector<HTMLInputElement>(`input[data-price-index="${nextIndex}"]`);
+      if (nextInput) {
+        nextInput.focus();
+        nextInput.select();
+      }
+
+      try {
+        if (!labId) {
+          toast.error('لم يتم تحديد المختبر (labId)');
+          return;
+        }
+        const test = testsAll.find(t => t.id === testId);
+        const name = test?.main_test_name || String(testId);
+        const colRef = collection(db, 'labToLap', String(labId), 'pricelist');
+        const ref = doc(colRef, String(testId));
+        await setDoc(ref, {
+          id: testId,
+          name,
+          price: parseFloat(priceToSave) || 0,
+        }, { merge: true });
+        toast.success('تم تحديث سعر Firestore بنجاح');
+      } catch (err) {
+        const message = (err as { message?: string })?.message || 'خطأ غير معروف';
+        toast.error('فشل تحديث سعر Firestore', { description: message });
+      }
     }
   };
 
+  const handlePriceFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.target.select();
+  };
+
   const handleUploadPriceListToFirestore = async () => {
-    if (!labId) return;
+    if (!labId) {
+      toast.error('لا يمكن الرفع بدون labId');
+      return;
+    }
     try {
-      setIsUploadingPriceList(true);
-      // Fetch latest main tests from backend (local DB), not from Firestore form
+      setIsUploading(true);
+      // Fetch latest main tests from backend (local DB)
       const freshTests = await getAllActiveMainTestsForPriceList('');
       if (!Array.isArray(freshTests) || freshTests.length === 0) {
         toast.error('لا توجد تحاليل لرفعها من قاعدة البيانات');
@@ -242,7 +204,6 @@ const LabPriceListPage: React.FC = () => {
       }
       const colRef = collection(db, 'labToLap', String(labId), 'pricelist');
       const BATCH_LIMIT = 450;
-      let uploaded = 0;
       for (let i = 0; i < freshTests.length; i += BATCH_LIMIT) {
         const slice = freshTests.slice(i, i + BATCH_LIMIT);
         const batch = writeBatch(db);
@@ -258,77 +219,44 @@ const LabPriceListPage: React.FC = () => {
           }, { merge: true });
         });
         await batch.commit();
-        uploaded += slice.length;
       }
-      toast.success(`تم رفع ${uploaded} عنصرًا إلى Firestore بنجاح`);
+      toast.success('تم رفع قائمة الأسعار إلى Firestore');
+      setReloadTs(Date.now());
     } catch (error: unknown) {
       const message = error && typeof error === 'object' && 'message' in error ? String((error as { message?: unknown }).message) : 'حدث خطأ أثناء الرفع';
       toast.error('فشل رفع قائمة الأسعار', { description: message });
     } finally {
-      setIsUploadingPriceList(false);
+      setIsUploading(false);
     }
   };
 
-  const handleDeleteSelected = () => {
-     const selectedIds = getValues().tests.filter(t => t.isSelectedForDelete).map(t => t.id);
-     if (selectedIds.length === 0) {
-         toast.info('يرجى اختيار عناصر للحذف أولاً');
-         return;
-     }
-     if (window.confirm(`هل أنت متأكد من حذف ${selectedIds.length} عنصرًا؟ هذا الإجراء لا يمكن التراجع عنه.`)) {
-         deleteMutation.mutate(selectedIds);
-     }
-  };
+  if (error) {
+    return (
+      <Typography color="error" sx={{ p: 2 }}>
+        خطأ في تحميل قائمة الاختبارات: {(error as Error).message}
+      </Typography>
+    );
+  }
 
-  const handleGeneratePdf = async () => {
-    setIsGeneratingPdf(true);
-    try {
-        const filters: { search_service_name?: string } = {};
-        if (debouncedSearchTerm) {
-            filters.search_service_name = debouncedSearchTerm;
-        }
-        // Add other active filters if your UI has them (e.g., service_group_id)
-
-        const blob = await downloadLabPriceListPdf(filters);
-        
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `lab_price_list_${new Date().toISOString().slice(0,10)}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        a.remove();
-        toast.success('تم توليد ملف PDF لقائمة الأسعار بنجاح');
-
-    } catch (error: unknown) {
-        const message = error && typeof error === 'object' && 'message' in error ? String((error as { message?: unknown }).message) : 'unknown error';
-        console.error("PDF generation error:", message);
-        toast.error('فشل توليد ملف PDF لقائمة الأسعار', {
-            description: message
-        });
-    } finally {
-        setIsGeneratingPdf(false);
-    }
-};
-
-
-  const testsToDisplay = fields;
-
-  // Split tests into chunks for multi-column display
-  const testChunks = useMemo(() => {
-     const chunks = [];
-     if (!testsToDisplay) return [];
-     for (let i = 0; i < testsToDisplay.length; i += numColumns) {
-         chunks.push(testsToDisplay.slice(i, i + numColumns));
-     }
-     return chunks;
-  }, [testsToDisplay, numColumns]);
-
-  const isLoadingTable = (isLoadingTests && !allTests) || isLoadingFs;
+  // Client-side pagination
+  const perPage = 20;
+  const total = testsAll.length;
+  const lastPage = Math.max(1, Math.ceil(total / perPage));
+  const startIndex = (currentPage - 1) * perPage;
+  const tests = testsAll.slice(startIndex, startIndex + perPage);
 
   return (
-    <Container maxWidth="xl" sx={{ py: 3 }}>
+    <Container  className="text-2xl! p-2 max-w-2xl mx-auto" sx={{ py: { xs: 2, sm: 3, md: 4 } }}>
+      {labId && (
+        <Box sx={{ textAlign: 'center', mb: 1 }}>
+          <Typography variant="h3" component="div" fontWeight="bold">
+            {labName}
+          </Typography>
+        </Box>
+      )}
+      <p className="text-sm!  animate-bounce">
+        اضغط <kbd>Enter</kbd> <span style={{fontSize: '1.1em'}}>⏎</span> لتحديث السعر
+      </p>
       <Stack spacing={3}>
         <Stack 
           direction={{ xs: 'column', sm: 'row' }} 
@@ -342,219 +270,181 @@ const LabPriceListPage: React.FC = () => {
               قائمة أسعار التحاليل
             </Typography>
           </Stack>
-          {labId && (
-            <Typography variant="subtitle1" color="text.secondary">
-              المختبر: {labName}
-            </Typography>
-          )}
           
-          <Stack direction="row" spacing={2}>
-            {labId && (
-              <Button 
-                onClick={handleUploadPriceListToFirestore}
-                variant="contained"
-                size="small"
-                disabled={isUploadingPriceList}
-                startIcon={isUploadingPriceList ? <CircularProgress size={16} /> : <Save />}
-              >
-                رفع قائمة الأسعار للمختبر
-              </Button>
-            )}
-            <Button 
-              onClick={handleGeneratePdf} 
-              variant="outlined" 
-              size="small" 
-              disabled={isGeneratingPdf}
-              startIcon={isGeneratingPdf ? <CircularProgress size={16} /> : <Print />}
-            >
-              توليد قائمة الأسعار PDF
-            </Button>
-            {!labId && (
-              <Button 
-                onClick={handleSubmit(onSubmit)} 
-                size="small" 
-                disabled={updatePricesMutation.isPending || !isDirty}
-                startIcon={updatePricesMutation.isPending ? <CircularProgress size={16} /> : <Save />}
-              >
-                حفظ جميع الأسعار
-              </Button>
-            )}
-          </Stack>
-        </Stack>
-        
-        <Typography variant="body2" color="text.secondary">
-          تحديث أسعار التحاليل بشكل مجمّع والبحث عن التحاليل
-        </Typography>
-
-        <Paper elevation={1} sx={{ p: 3 }}>
           <Stack 
             direction={{ xs: 'column', sm: 'row' }} 
             spacing={2} 
-            alignItems="center"
-            justifyContent="space-between"
+            sx={{ width: { xs: '100%', sm: 'auto' } }}
           >
-            <Stack 
-              direction={{ xs: 'column', sm: 'row' }} 
-              spacing={2} 
-              sx={{ flexGrow: 1 }}
-            >
-              <TextField
-                type="search"
-                placeholder="ابحث عن اسم التحليل"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                size="small"
-                sx={{ minWidth: { xs: '100%', sm: 250 } }}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Search />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-              
-              <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 200 } }}>
-                <InputLabel>فلترة حسب الحزمة</InputLabel>
-                <Select
-                  value={selectedPackageId}
-                  onChange={(e) => setSelectedPackageId(e.target.value)}
-                  label="فلترة حسب الحزمة"
-                  disabled={isLoadingPackages}
-                >
-                  <MenuItem value="">جميع الحزم</MenuItem>
-                  {isLoadingPackages ? (
-                    <MenuItem value="loading" disabled>جاري التحميل...</MenuItem>
-                  ) : (
-                    packages?.map(pkg => (
-                      <MenuItem key={pkg.id} value={String(pkg.id)}>{pkg.name}</MenuItem>
-                    ))
-                  )}
-                </Select>
-              </FormControl>
-            </Stack>
+            <TextField
+              type="search"
+              placeholder="البحث في الاختبارات..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              size="small"
+              sx={{ minWidth: { xs: '100%', sm: 256 } }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search />
+                  </InputAdornment>
+                ),
+              }}
+            />
             
-            <Button 
-              variant="contained" 
-              color="error"
-              size="small" 
-              onClick={handleDeleteSelected}
-              disabled={deleteMutation.isPending || getValues().tests.filter(t => t.isSelectedForDelete).length === 0}
-              startIcon={<Delete />}
-            >
-              حذف المحدد ({getValues().tests.filter(t => t.isSelectedForDelete).length})
-            </Button>
           </Stack>
-        </Paper>
-
-        {isLoadingTable ? (
-          <Grid container spacing={1}>
-            {Array.from({ length: 8 }).map((_, idx) => (
-              <Grid key={idx} item xs={12} sm={6} md={4} lg={3}>
-                <Card sx={{ p: 1.5 }}>
-                  <Skeleton variant="text" width="80%" height={24} />
-                  <Skeleton variant="rectangular" height={36} sx={{ mt: 1 }} />
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-        ) : !isLoadingTests && testsToDisplay.length === 0 ? (
-          <Paper elevation={1} sx={{ p: 5, textAlign: 'center' }}>
-            <Typography variant="h6" color="text.secondary">
-              {searchTerm || selectedPackageId ? 'لا توجد نتائج' : 'لا توجد تحاليل للعرض'}
-            </Typography>
-          </Paper>
+        </Stack>
+        
+        {/* Table area with inline loading */}
+        {(!isLoading && tests.length === 0) ? (
+          <Card>
+            <CardContent sx={{ textAlign: 'center', py: 8 }}>
+              <Science sx={{ fontSize: 48, color: 'text.secondary', opacity: 0.3, mb: 2 }} />
+              <Typography variant="h6" color="text.secondary" gutterBottom>
+                {searchTerm ? 'لم يتم العثور على نتائج' : 'لا توجد اختبارات'}
+              </Typography>
+              {labId && (
+                <Button 
+                  onClick={handleUploadPriceListToFirestore} 
+                  variant="contained" 
+                  size="small"
+                  disabled={isUploading}
+                  startIcon={isUploading ? <CircularProgress size={16} /> : undefined}
+                  sx={{ mt: 2 }}
+                >
+                  رفع قائمة الأسعار للمختبر
+                </Button>
+              )}
+            </CardContent>
+          </Card>
         ) : (
-          <FormProvider {...form}>
-            <Box component="form" onSubmit={handleSubmit(onSubmit)}>
-              <Box sx={{ maxHeight: 'calc(100vh - 300px)', overflow: 'auto' }}>
-                <Stack spacing={1}>
-                  {testChunks.map((chunk, rowIndex) => (
-                    <Grid key={`row-${rowIndex}`} container spacing={1}>
-                      {chunk.map((field, colIndex) => {
-                        const actualIndex = rowIndex * numColumns + colIndex;
-                        return (
-                          <Grid key={field.fieldId} item xs={12} sm={6} md={4} lg={3}>
-                            <Card 
-                              sx={{ 
-                                p: 1.5, 
-                                border: errors.tests?.[actualIndex]?.price ? '1px solid' : 'none',
-                                borderColor: errors.tests?.[actualIndex]?.price ? 'error.main' : 'transparent'
-                              }}
-                            >
-                              <Stack direction="row" spacing={1} alignItems="flex-start">
-                                <Controller
-                                  control={control}
-                                  name={`tests.${actualIndex}.isSelectedForDelete`}
-                                  render={({ field: checkboxField }) => (
-                                    <Checkbox
-                                      id={`delete-${field.id}`}
-                                      checked={checkboxField.value}
-                                      onChange={checkboxField.onChange}
-                                      size="small"
-                                      sx={{ mt: 0.5 }}
-                                    />
-                                  )}
-                                />
-                                <Box sx={{ flexGrow: 1 }}>
-                                  <Typography 
-                                    variant="body2" 
-                                    component="label" 
-                                    htmlFor={`price-${field.id}`}
-                                    sx={{ 
-                                      display: 'block', 
-                                      fontWeight: 'medium', 
-                                      mb: 1,
-                                      overflow: 'hidden',
-                                      textOverflow: 'ellipsis',
-                                      whiteSpace: 'nowrap'
-                                    }}
-                                    title={field.main_test_name}
-                                  >
-                                    {field.main_test_name}
-                                  </Typography>
-                                  <Controller
-                                    control={control}
-                                    name={`tests.${actualIndex}.price`}
-                                    render={({ field: priceField }) => (
-                                      <TextField
-                                        id={`price-${field.id}`}
-                                        type="number"
-                                        inputProps={{ step: "0.01" }}
-                                        size="small"
-                                        onFocus={
-                                          (e) => e.target.select()
-                                        }
-                                        fullWidth
-                                        {...priceField}
-                                        error={!!errors.tests?.[actualIndex]?.price}
-                                        helperText={errors.tests?.[actualIndex]?.price?.message}
-                                        sx={{ 
-                                          '& .MuiInputBase-input': { 
-                                            fontSize: '0.75rem',
-                                            py: 0.5
-                                          }
-                                        }}
-                                      />
-                                    )}
-                                  />
-                                </Box>
-                              </Stack>
-                            </Card>
-                          </Grid>
-                        );
-                      })}
-                      {/* Fill empty cells in the last row if chunk is not full */}
-                      {Array(numColumns - chunk.length).fill(0).map((_, emptyIndex) => (
-                        <Grid key={`empty-${rowIndex}-${emptyIndex}`} item xs={12} sm={6} md={4} lg={3} />
-                      ))}
-                    </Grid>
-                  ))}
-                </Stack>
+          <Card>
+            {isLoading ? (
+              <Box display="flex" justifyContent="center" alignItems="center" py={6}>
+                <CircularProgress />
               </Box>
-            </Box>
-          </FormProvider>
+            ) : (
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell className="text-2xl!" align="center">الكود</TableCell>
+                    <TableCell className="text-2xl!" align="center">اسم </TableCell>
+                    <TableCell className="text-2xl!" align="center" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
+                      الوعاء
+                    </TableCell>
+                    <TableCell className="text-2xl!" align="center" sx={{ display: { xs: 'none', md: 'table-cell' } }}>
+                      السعر
+                    </TableCell>
+                    <TableCell className="text-2xl!" align="center">متاح</TableCell>
+                    <TableCell className="text-2xl!" align="right">الإجراءات</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {tests.map((test, index) => (
+                    <TableRow 
+                      key={test.id}
+                      hover
+                      onClick={() => navigate(`/settings/laboratory/${test.id}/edit`)}
+                      sx={{ cursor: 'pointer' }}
+                    >
+                      <TableCell className="text-2xl!" align="center" sx={{ fontWeight: 'medium' }}>
+                        {test.id}
+                      </TableCell>
+                      <TableCell className="text-2xl!" align="center" sx={{ fontWeight: 'medium' }}>
+                        {test.main_test_name}
+                      </TableCell>
+                      <TableCell className="text-2xl!" align="center" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
+                        {test.container?.container_name || test.container_name || '-'}
+                      </TableCell>
+                      <TableCell 
+                        className="text-2xl!" 
+                        align="center" 
+                        sx={{ display: { xs: 'none', md: 'table-cell' } }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <TextField
+                          value={priceInputs[test.id] ?? ''}
+                          onChange={(e) => setPriceInputs(prev => ({ ...prev, [test.id]: e.target.value }))}
+                          onKeyDown={(e) => handlePriceKeyDown(e, test.id, index)}
+                          onFocus={handlePriceFocus}
+                          size="small"
+                          type="number"
+                          inputProps={{ 
+                            step: "0.01",
+                            min: "0",
+                            style: { textAlign: 'center', fontSize: '1.25rem' },
+                            'data-price-index': index,
+                          }}
+                          sx={{ 
+                            width: 150,
+                            '& .MuiInputBase-input': { 
+                              textAlign: 'center',
+                              fontSize: '1.25rem'
+                            }
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell className="text-2xl!" align="center">
+                        {test.available ? (
+                          <CheckCircle color="success" />
+                        ) : (
+                          <Cancel color="error" />
+                        )}
+                      </TableCell>
+                      <TableCell className="text-2xl!" align="right">
+                        <IconButton
+                          onClick={(e) => { e.stopPropagation(); handleMenuOpen(e, test.id); }}
+                          size="small"
+                        >
+                          <MoreVert />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </Card>
         )}
+        {lastPage > 1 && (
+          <Box display="flex" justifyContent="center" mt={2}>
+            <Pagination
+              count={lastPage}
+              page={currentPage}
+              onChange={(_, page) => setCurrentPage(page)}
+              disabled={isLoading}
+              color="primary"
+              showFirstButton
+              showLastButton
+            />
+          </Box>
+        )}
+
+        {/* Dropdown Menu */}
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={handleMenuClose}
+          anchorOrigin={{
+            vertical: 'bottom',
+            horizontal: 'right',
+          }}
+          transformOrigin={{
+            vertical: 'top',
+            horizontal: 'right',
+          }}
+        >
+          <MenuItem 
+            component={Link} 
+            to={`/settings/laboratory/${selectedTestId}/edit`}
+            onClick={handleMenuClose}
+          >
+            <ListItemIcon>
+              <Edit fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>تعديل</ListItemText>
+          </MenuItem>
+        </Menu>
       </Stack>
     </Container>
   );

@@ -1,8 +1,6 @@
 // src/pages/reports/LabGeneralReportPage.tsx
 import React, { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { format } from 'date-fns';
 
@@ -47,24 +45,24 @@ import {
 } from '@mui/material';
 import { webUrl } from '../constants';
 
-const getLabGeneralReportFilterSchema = () => z.object({
-  date_from: z.string().optional(),
-  date_to: z.string().optional(),
-  patient_name: z.string().optional(),
-  user_id: z.string().optional(),
-});
-
-type LabGeneralReportFilterFormValues = z.infer<ReturnType<typeof getLabGeneralReportFilterSchema>>;
+type LabGeneralReportFilterFormValues = {
+  date_from?: string;
+  date_to?: string;
+  start_time?: string;
+  end_time?: string;
+  patient_name?: string;
+  user_id?: string;
+};
 
 const LabGeneralReportPage: React.FC = () => {
   const defaultDateTo = format(new Date(), 'yyyy-MM-dd');
-  const defaultDateFrom = format(new Date(new Date().setDate(new Date().getDate() - 30)), 'yyyy-MM-dd');
 
   const filterForm = useForm<LabGeneralReportFilterFormValues>({
-    resolver: zodResolver(getLabGeneralReportFilterSchema()),
     defaultValues: {
-      date_from: defaultDateFrom,
+      date_from: defaultDateTo,
       date_to: defaultDateTo,
+      start_time: '00:00',
+      end_time: '23:59',
       patient_name: '',
       user_id: 'all',
     },
@@ -72,7 +70,7 @@ const LabGeneralReportPage: React.FC = () => {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [appliedFilters, setAppliedFilters] = useState<Omit<LabGeneralReportFilters, 'page' | 'per_page'>>({
-    date_from: defaultDateFrom,
+    date_from: defaultDateTo,
     date_to: defaultDateTo,
   });
   const [selectedPatient, setSelectedPatient] = useState<LabGeneralReportItem | null>(null);
@@ -102,9 +100,12 @@ const LabGeneralReportPage: React.FC = () => {
 
   const handleFilterSubmit = (data: LabGeneralReportFilterFormValues) => {
     setCurrentPage(1);
+    // alert('s')
     setAppliedFilters({
       date_from: data.date_from || undefined,
       date_to: data.date_to || undefined,
+      start_time: data.start_time || undefined,
+      end_time: data.end_time || undefined,
       patient_name: data.patient_name || undefined,
       user_id: data.user_id && data.user_id !== 'all' ? parseInt(data.user_id) : undefined,
     });
@@ -116,6 +117,10 @@ const LabGeneralReportPage: React.FC = () => {
     const params = new URLSearchParams();
     if (appliedFilters.date_from) params.append('date_from', appliedFilters.date_from);
     if (appliedFilters.date_to) params.append('date_to', appliedFilters.date_to);
+    const currentStartTime = filterForm.getValues('start_time') || '00:00';
+    const currentEndTime = filterForm.getValues('end_time') || '23:59';
+    params.append('start_time', currentStartTime);
+    params.append('end_time', currentEndTime);
     if (appliedFilters.patient_name) params.append('patient_name', appliedFilters.patient_name);
     if (appliedFilters.user_id) params.append('user_id', appliedFilters.user_id.toString());
 
@@ -165,13 +170,14 @@ const LabGeneralReportPage: React.FC = () => {
         </CardHeader>
         <CardContent>
           <form onSubmit={filterForm.handleSubmit(handleFilterSubmit)} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 items-end">
+            <div className="flex gap-4 items-end">
               
               <Controller 
                 control={filterForm.control} 
                 name="date_from" 
                 render={({ field }) => (
                   <TextField 
+                  sx={{width:'150px'}}
                     label="من تاريخ" 
                     type="date" 
                     size="small" 
@@ -185,8 +191,10 @@ const LabGeneralReportPage: React.FC = () => {
               <Controller 
                 control={filterForm.control} 
                 name="date_to" 
+
                 render={({ field }) => (
                   <TextField 
+                  sx={{width:'150px'}}
                     label="إلى تاريخ" 
                     type="date" 
                     size="small" 
@@ -196,24 +204,42 @@ const LabGeneralReportPage: React.FC = () => {
                   />
                 )} 
               />
-              
+
               <Controller 
                 control={filterForm.control} 
-                name="patient_name" 
+                name="start_time" 
                 render={({ field }) => (
                   <TextField 
-                    label="اسم المريض" 
-                    type="search" 
+                  sx={{width:'130px'}}
+                    label="من وقت" 
+                    type="time" 
                     size="small" 
                     value={field.value} 
                     onChange={field.onChange} 
-                    disabled={isFetching} 
-                    InputProps={{ 
-                      startAdornment: <Search className="h-4 w-4 mr-2" /> 
-                    }} 
+                    disabled={isFetching || isLoadingDropdowns} 
+                    inputProps={{ step: 60 }}
                   />
                 )} 
               />
+
+              <Controller 
+                control={filterForm.control} 
+                name="end_time" 
+                render={({ field }) => (
+                  <TextField 
+                  sx={{width:'130px'}}
+                    label="إلى وقت" 
+                    type="time" 
+                    size="small" 
+                    value={field.value} 
+                    onChange={field.onChange} 
+                    disabled={isFetching || isLoadingDropdowns} 
+                    inputProps={{ step: 60 }}
+                  />
+                )} 
+              />
+              
+           
               
               <Controller 
                 control={filterForm.control} 
@@ -228,6 +254,7 @@ const LabGeneralReportPage: React.FC = () => {
                   return (
                     <Autocomplete
                       size="small"
+                      sx={{width:'200px'}}
                       options={userOptions}
                       getOptionLabel={(option) => option ? option.name : ''}
                       value={currentValue}
@@ -251,7 +278,7 @@ const LabGeneralReportPage: React.FC = () => {
                 className="h-9" 
                 disabled={isFetching || isLoadingDropdowns}
               >
-                {isFetching ? <Loader2 className="h-4 w-4 animate-spin" /> : 'تطبيق المرشحات'}
+                {isFetching ? <Loader2 className="h-4 w-4 animate-spin" /> : ' بحث '}
               </Button>
               
          
@@ -543,17 +570,17 @@ const LabGeneralReportPage: React.FC = () => {
               <MUITable size="small">
                 <MUITableHead>
                   <MUITableRow>
-                    <MUITableCell align="center">الرقم</MUITableCell>
-                    <MUITableCell align="center">الاسم</MUITableCell>
-                    <MUITableCell align="center">الطبيب</MUITableCell>
-                    <MUITableCell align="center"> مبلغ </MUITableCell>
-                    <MUITableCell align="center"> المدفوع </MUITableCell>
-                    <MUITableCell align="center">الخصم</MUITableCell>
-                    <MUITableCell align="center">  البنك</MUITableCell>
-                    <MUITableCell align="center">اسم الشركة</MUITableCell>
-                    <MUITableCell align="center"> التحاليل </MUITableCell>
-                    <MUITableCell align="center">الحالة</MUITableCell>
-                    <MUITableCell align="center">التفاصيل</MUITableCell>
+                    <MUITableCell className="font-medium text-xl!" align="center">الرقم</MUITableCell>
+                    <MUITableCell className="font-medium text-xl!" align="center">الاسم</MUITableCell>
+                    <MUITableCell className="font-medium text-xl!" align="center">الطبيب</MUITableCell>
+                    <MUITableCell className="font-medium text-xl!" align="center"> مبلغ </MUITableCell>
+                    <MUITableCell className="font-medium text-xl!" align="center"> المدفوع </MUITableCell>
+                    <MUITableCell className="font-medium text-xl!" align="center">الخصم</MUITableCell>
+                    <MUITableCell className="font-medium text-xl!" align="center">  البنك</MUITableCell>
+                    <MUITableCell className="font-medium text-xl!" align="center">اسم الشركة</MUITableCell>
+                    <MUITableCell className="font-medium text-xl!" align="center"> التحاليل </MUITableCell>
+                    <MUITableCell className="font-medium text-xl!" align="center">الحالة</MUITableCell>
+                    <MUITableCell className="font-medium text-xl!" align="center">التفاصيل</MUITableCell>
                   </MUITableRow>
                 </MUITableHead>
                 <MUITableBody>
@@ -572,23 +599,23 @@ const LabGeneralReportPage: React.FC = () => {
                           backgroundColor: hasDiscount ? '#fff3cd' : 'inherit', // Light yellow for discount rows
                         }}
                       >
-                        <MUITableCell align="center" className="font-medium">{patient.doctorvisit_id}</MUITableCell>
-                        <MUITableCell align="center">{patient.name}</MUITableCell>
-                        <MUITableCell align="center">{patient.doctor_name}</MUITableCell>
-                        <MUITableCell align="center">{formatNumber(totalLabAmount)}</MUITableCell>
-                        <MUITableCell align="center">{formatNumber(totalPaid)}</MUITableCell>
-                        <MUITableCell align="center">{formatNumber(discount)}</MUITableCell>
-                        <MUITableCell align="center" sx={{ color: bankAmount > 0 ? 'red' : 'inherit' }}>
+                        <MUITableCell className="font -medium text-xl!" align="center">{patient.doctorvisit_id}</MUITableCell>
+                        <MUITableCell className="font-medium text-xl!" align="center">{patient.name}</MUITableCell>
+                        <MUITableCell className="font-medium text-xl!" align="center">{patient.doctor_name}</MUITableCell>
+                        <MUITableCell className="font-medium text-xl!" align="center">{formatNumber(totalLabAmount)}</MUITableCell>
+                        <MUITableCell className="font-medium text-xl!" align="center">{formatNumber(totalPaid)}</MUITableCell>
+                        <MUITableCell className="font-medium text-xl!" align="center">{formatNumber(discount)}</MUITableCell>
+                        <MUITableCell className="font-medium text-xl!" align="center" sx={{ color: bankAmount > 0 ? 'red' : 'inherit' }}>
                           {formatNumber(bankAmount)}
                         </MUITableCell>
-                        <MUITableCell align="center">{patient.company_name || '-'}</MUITableCell>
-                        <MUITableCell align="center" className="max-w-xs truncate" title={patient.main_tests_names}>
+                        <MUITableCell className="font-medium text-xl!" align="center">{patient.company_name || '-'}</MUITableCell>
+                          <MUITableCell className="font-medium text-xl!" align="center"  title={patient.main_tests_names}>
                           {patient.main_tests_names}
                         </MUITableCell>
-                        <MUITableCell align="center">
+                        <MUITableCell className="font-medium text-xl!"  align="center">
                           {isFullyPaid && <CheckCircle className="h-5 w-5 text-green-500" />}
                         </MUITableCell>
-                        <MUITableCell align="center">
+                        <MUITableCell className="font-medium text-xl!" align="center">
                           <Button
                             size="small"
                             variant="outlined"
@@ -607,16 +634,7 @@ const LabGeneralReportPage: React.FC = () => {
                   })}
                 </MUITableBody>
               </MUITable>
-              {meta && (patients.length > 0) && (
-                <Box sx={{ borderTop: 1, borderColor: 'divider', pt: 2, mt: 2 }}>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    <div className="font-semibold">إجمالي المرضى: <span className="font-normal">{meta.total}</span></div>
-                    <div className="font-semibold">إجمالي مبلغ المختبر: <span className="font-normal">{formatNumber(patients.reduce((sum: number, p: LabGeneralReportItem) => sum + Number(p.total_lab_amount || 0), 0))}</span></div>
-                    <div className="font-semibold">إجمالي المدفوع: <span className="font-normal">{formatNumber(patients.reduce((sum: number, p: LabGeneralReportItem) => sum + Number(p.total_paid_for_lab || 0), 0))}</span></div>
-                    <div className="font-semibold">إجمالي الخصم: <span className="font-normal">{formatNumber(patients.reduce((sum: number, p: LabGeneralReportItem) => sum + Number(p.discount || 0), 0))}</span></div>
-                  </div>
-                </Box>
-              )}
+           
             </Box>
           ) : (
             <Box sx={{ textAlign: 'center', py: 4 }}>

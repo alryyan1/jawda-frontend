@@ -10,6 +10,7 @@ import type { Shift } from '@/types/shifts';
 import type { PatientLabQueueItem, LabQueueFilters } from '@/types/labWorkflow';
 import { getNewlyRegisteredLabPendingQueue } from '@/services/labWorkflowService';
 import type { LabAppearanceSettings } from '@/lib/appearance-settings-store';
+import showJsonDialog from '@/lib/showJsonDialog';
 
 interface LabPatientQueueProps {
   currentShift: Shift | null;
@@ -60,6 +61,7 @@ const LabPatientQueue = React.forwardRef<LabPatientQueueRef, LabPatientQueueProp
       }
       
       const paginatedQueue = await getNewlyRegisteredLabPendingQueue(requestFilters);
+      // showJsonDialog(paginatedQueue);
       setQueueItems(paginatedQueue.data);
       setMeta(paginatedQueue.meta);
     } catch (err) {
@@ -122,7 +124,7 @@ const LabPatientQueue = React.forwardRef<LabPatientQueueRef, LabPatientQueueProp
     <div className="h-full flex flex-col">
       <QueueHeader
         currentShift={currentShift}
-        patientCount={meta?.total || 0}
+        patientCount={queueItems.length}
         onShiftChange={onShiftChange}
         onRefreshQueue={handleRefresh}
         isLoading={isFetching || isLoading}

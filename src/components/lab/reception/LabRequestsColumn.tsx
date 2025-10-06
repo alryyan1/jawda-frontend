@@ -617,8 +617,9 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                             </DropdownMenuItem>
                             {/* Bankak Toggle */}
                             <DropdownMenuItem
+                             
                               onClick={() => handleToggleBankak(request.id, !request.is_bankak)}
-                              disabled={toggleBankakMutation.isPending}
+                              disabled={toggleBankakMutation.isPending || !request.is_paid}
                             >
                               <Checkbox
                                 checked={request.is_bankak}

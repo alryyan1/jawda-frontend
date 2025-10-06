@@ -1,5 +1,4 @@
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
 import {
   Dialog,
   DialogTitle,
@@ -14,11 +13,9 @@ import {
   Alert,
   Divider,
 } from '@mui/material';
-import { Loader2, AlertTriangle, DollarSign, Landmark, Coins } from 'lucide-react';
-import type { LabUserShiftIncomeSummary } from '@/types/attendance';
-import { fetchCurrentUserLabIncomeSummary } from '@/services/userService';
+import { AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { formatNumber } from '@/lib/utils';
+import LabUserShiftSummary from './LabUserShiftSummary';
 
 // Reusable Detail Row sub-component for consistent styling
 interface DetailRowProps {
@@ -79,20 +76,6 @@ interface LabUserShiftSummaryDialogProps {
 const LabUserShiftSummaryDialog: React.FC<LabUserShiftSummaryDialogProps> = ({ isOpen, onOpenChange, currentClinicShiftId }) => {
   const { user } = useAuth();
 
-  const queryKey = ['labUserShiftIncomeSummary', user?.id, currentClinicShiftId] as const;
-
-  const { data: summary, isLoading, error, isFetching } = useQuery<LabUserShiftIncomeSummary, Error>({
-    queryKey: queryKey,
-    queryFn: () => {
-      if (!currentClinicShiftId) {
-        // This should not happen if the dialog is opened correctly, but it's a good safeguard
-        throw new Error("Active shift ID is required to fetch summary.");
-      }
-      return fetchCurrentUserLabIncomeSummary(currentClinicShiftId);
-    },
-    enabled: isOpen && !!user && !!currentClinicShiftId, // Fetch only when dialog is open and all IDs are available
-  });
-
   return (
     <Dialog 
       open={isOpen} 
@@ -107,74 +90,8 @@ const LabUserShiftSummaryDialog: React.FC<LabUserShiftSummaryDialogProps> = ({ i
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           رقم الوردية: {currentClinicShiftId || 'غير محدد'}
         </Typography>
-
-        <Box sx={{ py: 2 }}>
-          {(isLoading || (isFetching && !summary)) && (
-            <Box sx={{ 
-              display: 'flex', 
-              flexDirection: 'column',
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              py: 5,
-              gap: 2
-            }}>
-              <CircularProgress size={32} />
-              <Typography variant="body2" color="text.secondary">
-                جاري التحميل...
-              </Typography>
-            </Box>
-          )}
-          
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                <AlertTriangle size={20} />
-                <Typography variant="subtitle2">
-                  فشل في جلب البيانات
-                </Typography>
-              </Box>
-              <Typography variant="caption">
-                {error.message}
-              </Typography>
-            </Alert>
-          )}
-          
-          {summary && !isLoading && (
-            <Card variant="outlined">
-              <CardContent sx={{ pt: 3 }}>
-                <Typography variant="h6" sx={{ textAlign: 'center', mb: 3, fontWeight: 'bold' }}>
-                  إجمالي دخل المختبر
-                </Typography>
-                <DetailRow
-                  label="إجمالي النقد"
-                  value={formatNumber(summary.total_cash)}
-                  icon={Coins}
-                  unit="د.ك"
-                  valueClass="text-blue-600 dark:text-blue-400"
-                />
-                <DetailRow
-                  label="إجمالي البنك"
-                  value={formatNumber(summary.total_bank)}
-                  icon={Landmark}
-                  unit="د.ك"
-                  valueClass="text-purple-600 dark:text-purple-400"
-                />
-                <DetailRow
-                  label="إجمالي الدخل"
-                  value={formatNumber(summary.total_lab_income)}
-                  icon={DollarSign}
-                  unit="د.ك"
-                  valueClass="text-xl text-green-600 dark:text-green-500"
-                />
-              </CardContent>
-            </Card>
-          )}
-          
-          {!summary && !isLoading && !isFetching && !error && (
-            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-              لا توجد بيانات متاحة
-            </Typography>
-          )}
+        <Box sx={{ py: 1 }}>
+          <LabUserShiftSummary />
         </Box>
       </DialogContent>
       

@@ -7,10 +7,11 @@ import {
     UserPlus, 
     LayoutGrid, 
     Eye,
-    ListChecks,
     Printer,
     Globe,
     Loader2,
+    TrendingUp,
+    ListChecks,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -20,6 +21,7 @@ import apiClient from '@/services/api';
 // Import the dialogs that will be opened by the new buttons
 import LabUserShiftSummaryDialog from './LabUserShiftSummaryDialog';
 import OnlineLabPatientsDialog from './OnlineLabPatientsDialog';
+import { Calculate } from '@mui/icons-material';
 
 interface LabReceptionActionPageProps {
   isFormVisible: boolean;
@@ -128,6 +130,28 @@ const LabReceptionActionPage: React.FC<LabReceptionActionPageProps> = ({
 
         <Separator className="my-1" />
 
+        {/* Button: Open Lab User Income Summary Dialog */}
+        {currentClinicShift && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="w-11 h-11"
+                onClick={() => setIsIncomeDialogOpen(true)}
+                aria-label="ملخص دخل المستخدم"
+              >
+                <Calculate className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">
+              <p>ملخص دخل المستخدم</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
+
+        <Separator className="my-1" />
+
         {/* Button: Print Invoice (visible only when a patient is selected and has lab requests) */}
         {activeVisitId && hasLabRequests && (
           <Tooltip>
@@ -157,27 +181,9 @@ const LabReceptionActionPage: React.FC<LabReceptionActionPageProps> = ({
               className="w-11 h-11"
               disabled={populateCbcMutation.isPending}
               onClick={() => {
-                if (!activeVisitId) {
-                  toast.error('يرجى اختيار زيارة أولاً');
-                  return;
-                }
-                
-                if (!activeLabRequestId) {
-                  toast.error('يرجى اختيار طلب مختبر أولاً');
-                  return;
-                }
-                
-                if (!activeMainTestId) {
-                  toast.error('يرجى اختيار فحص CBC أولاً');
-                  return;
-                }
-                
-                // Call the CBC populate API
-                populateCbcMutation.mutate({
-                  labRequestId: activeLabRequestId,
-                  doctorVisitId: activeVisitId,
-                  mainTestId: activeMainTestId
-                });
+         
+                onOpenPriceList();
+             
               }}
               aria-label="CBC Populate"
             >

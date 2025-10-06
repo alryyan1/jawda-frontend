@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Users, RotateCcw, CalendarDays, Loader2 } from 'lucide-react'; // Keep CalendarDays for shift date display
 import type { Shift } from '@/types/shifts';
 import dayjs from 'dayjs';
+import showJsonDialog from '@/lib/showJsonDialog';
 // Remove DatePickerWithRange and DateRange imports
 
 interface QueueHeaderProps {
@@ -22,9 +23,12 @@ const QueueHeader: React.FC<QueueHeaderProps> = ({
     if (!currentShift) {
       return 'لا توجد وردية فعّالة';
     }
-    const shiftLabel = currentShift.name || `الوردية #${currentShift.id}`;
+    // showJsonDialog(currentShift);
+    let shiftAmOrPm = currentShift.created_at ? dayjs(currentShift.created_at).format('A') : 'تاريخ غير معروف';
+    // alert(shiftAmOrPm);
+    // const shiftLabel = currentShift.name || `الوردية #${currentShift.id}`;
 
-    return `${shiftLabel} `;
+    return `${shiftAmOrPm === 'AM' ? 'الورديه الصباحيه' : 'الورديه المسائيه'} `;
   };
 
   // Arabic UI is RTL: previous → right, next → left

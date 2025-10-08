@@ -376,7 +376,7 @@ const WhatsAppWorkAreaDialog: React.FC<WhatsAppWorkAreaDialogProps> = ({
                 type="button"
                 variant="default"
                 onClick={form.handleSubmit(handleSendDocument)}
-                disabled={isLoading || !isConfigured || !phoneNumber || !effectivePatientData?.result_url}
+                disabled={isLoading || !isConfigured  || !effectivePatientData?.result_url}
                 className="flex-1"
                 title={!effectivePatientData?.result_url ? "لا يوجد رابط للتقرير. يرجى رفع التقرير إلى التخزين السحابي أولاً." : ""}
               >

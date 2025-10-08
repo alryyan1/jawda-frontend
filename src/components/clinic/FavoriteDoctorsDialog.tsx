@@ -143,7 +143,7 @@ const FavoriteDoctorsDialog: React.FC<FavoriteDoctorsDialogProps> = ({
         <DialogTitle>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <FontAwesomeIcon icon={faHeart} color="#e91e63" />
-            <Typography variant="h6">إدارة الأطباء المفضلين</Typography>
+            <Typography variant="h6">أطبائي</Typography>
           </Box>
         </DialogTitle>
         <DialogContent>

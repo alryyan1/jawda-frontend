@@ -171,7 +171,7 @@ const ManageDoctorShiftsDialog: React.FC<ManageDoctorShiftsDialogProps> = ({ tri
         maxWidth="lg"
         fullWidth
       >
-        <DialogTitle>ورديات الأطباء المفضلين</DialogTitle>
+        <DialogTitle>أطبائي</DialogTitle>
         <DialogContent>
           <Box sx={{ mb: 2 }}>
             <TextField

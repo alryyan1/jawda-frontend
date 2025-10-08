@@ -1,6 +1,6 @@
 // src/components/clinic/PatientInfoDialog.tsx
 import React, { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { arSA, enUS } from "date-fns/locale";
 
@@ -26,6 +26,8 @@ import {
   Chip,
   Avatar,
   Stack,
+  Autocomplete,
+  TextField,
 } from "@mui/material";
 import {
   Person as UserCircle,
@@ -45,6 +47,11 @@ import type { Patient } from "@/types/patients";
 import { getPatientById } from "@/services/patientService";
 import EditPatientInfoDialog from "./EditPatientInfoDialog";
 import type { DoctorVisit } from "@/types/visits";
+import type { DoctorShift } from "@/types/doctors";
+import { getActiveDoctorShifts } from "@/services/clinicService";
+import { createCopiedVisitForNewShift } from "@/services/patientService";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 interface PatientInfoDialogProps {
   isOpen: boolean;
@@ -158,6 +165,7 @@ const PatientInfoDialog: React.FC<PatientInfoDialogProps> = ({
   const queryClient = useQueryClient();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const { currentClinicShift } = useAuth();
 
   // State for Edit Dialog
   const [isEditPatientDialogOpen, setIsEditPatientDialogOpen] = useState(false);
@@ -174,6 +182,31 @@ const PatientInfoDialog: React.FC<PatientInfoDialogProps> = ({
       return getPatientById(visit?.patient.id);
     },
     enabled: !!visit?.patient.id && isOpen, // Only fetch when main dialog is open and patientId exists
+  });
+
+  // Load active doctor shifts for Autocomplete (for copying patient to another shift)
+  const { data: activeDoctorShifts = [], isLoading: isLoadingShifts } = useQuery<DoctorShift[], Error>({
+    queryKey: ["activeDoctorShiftsForCopyFromInfo", currentClinicShift?.id],
+    queryFn: () => getActiveDoctorShifts(currentClinicShift?.id),
+    enabled: isOpen && !!currentClinicShift?.id,
+  });
+
+  // Mutation: copy current patient to selected doctor shift (create new visit)
+  const copyToShiftMutation = useMutation({
+    mutationFn: (targetDoctorShiftId: number) => {
+      if (!patient?.id) throw new Error("Patient ID missing");
+      return createCopiedVisitForNewShift(patient.id, { target_doctor_shift_id: targetDoctorShiftId });
+    },
+    onSuccess: () => {
+      toast.success('تم نسخ المريض إلى الورديه بنجاح');
+      // Refresh relevant data
+      queryClient.invalidateQueries({ queryKey: ["activePatients"] });
+      queryClient.invalidateQueries({ queryKey: ["patientVisitsSummary"] });
+    },
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'فشل نسخ المريض إلى الورديه';
+      toast.error(message);
+    }
   });
 
   const getAgeString = (p?: Patient | null): string => {
@@ -298,6 +331,37 @@ const PatientInfoDialog: React.FC<PatientInfoDialogProps> = ({
                   تعديل
                 </Button>
               )}
+                
+                      <Autocomplete
+                        loading={isLoadingShifts}
+                        options={activeDoctorShifts}
+                        getOptionLabel={(opt) => `${opt.doctor_name || ''} - وردية #${opt.id}`}
+                        noOptionsText={currentClinicShift ? 'لا توجد ورديات أطباء مفتوحة' : 'لم يتم فتح وردية للعيادة'}
+                        onChange={(_e, value) => {
+                          if (value?.id) {
+                            copyToShiftMutation.mutate(value.id);
+                          }
+                        }}
+                        renderInput={(params) => (
+                          <TextField
+                          sx={{width:'400px'}}
+                            {...params}
+                            label=" نسخ المريض "
+                            placeholder="ابحث واختر وردية الطبيب المفتوحة"
+                            InputProps={{
+                              ...params.InputProps,
+                              endAdornment: (
+                                <>
+                                  {copyToShiftMutation.isPending && <CircularProgress color="inherit" size={18} />}
+                                  {params.InputProps.endAdornment}
+                                </>
+                              ),
+                            }}
+                          />
+                        )}
+                        disabled={!currentClinicShift?.id || copyToShiftMutation.isPending}
+                      />
+                   
               <IconButton
                 onClick={() => handleMainDialogOpenChange(false)}
                 sx={{
@@ -560,6 +624,8 @@ const PatientInfoDialog: React.FC<PatientInfoDialogProps> = ({
                       </CardContent>
                     </Card>
                   )}
+
+                
                 </Box>
               </Box>
             </Fade>

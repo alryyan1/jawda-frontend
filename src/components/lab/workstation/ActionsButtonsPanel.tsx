@@ -119,11 +119,11 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
               variant="contained"
               className="w-full justify-start text-xs bg-green-600 hover:bg-green-700"
               onClick={handleAuthenticateResults}
-              disabled={!patient?.id || resultsLocked || patientLabQueueItem?.all_requests_paid === false}
+              disabled={!patient?.id || resultsLocked || patientLabQueueItem?.all_requests_paid === false || isAuthenticating}
               title={resultsLocked ? "النتائج مقفلة" : "اعتماد النتائج"}
             >
-              <ShieldCheck className="ltr:mr-2 rtl:ml-2 h-3.5 w-3.5" />
-              اعتماد النتائج
+              <ShieldCheck className={`ltr:mr-2 rtl:ml-2 h-3.5 w-3.5 ${isAuthenticating ? 'animate-spin' : ''}`} />
+              {isAuthenticating ? 'جاري الاعتماد...' : 'اعتماد النتائج'}
             </MuiButton>
           )}
 

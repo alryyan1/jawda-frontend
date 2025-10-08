@@ -212,7 +212,7 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
   };
 
   const handleUploadToFirebase = async () => {
-    if (!currentPatientData?.id || !selectedVisitId) {
+    if (!currentPatientData?.patient_id || !selectedVisitId) {
       toast.error('يرجى اختيار مريض أولاً');
       return;
     }
@@ -220,71 +220,58 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
     setIsUploadingToFirebase(true);
     try {
       // Call the backend endpoint to upload to Firebase
-      const response = await apiClient.post(`/patients/${currentPatientData.id}/upload-to-firebase`);
+      const response = await apiClient.post(`/patients/${currentPatientData.patient_id}/upload-to-firebase`);
       
       if (response.data.success) {
         const { result_url, was_updated, lab_to_lab_object_id } = response.data;
         console.log(currentPatientData,'currentPatientData.lab_to_lab_object_id')
         
-        // Now update the Firestore document via backend using the response data
-        if (lab_to_lab_object_id && result_url) {
-          const firestoreUpdateResult = await updateFirestoreDocumentViaBackend(
-            lab_to_lab_object_id,
-            result_url,
-            currentPatientData.id
-          );
-          
-          if (firestoreUpdateResult.success) {
-            if (was_updated) {
+     
+           
+              if (was_updated) {
               toast.success("تم استبدال تقرير المختبر في التخزين السحابي بنجاح");
             } else {
               toast.success("تم رفع تقرير المختبر إلى التخزين السحابي بنجاح");
             }
-          } else {
-            toast.error("تم رفع الملف بنجاح ولكن فشل تحديث قاعدة البيانات السحابية", {
-              description: firestoreUpdateResult.error
-            });
-          }
-        } else {
-          toast.error("فشل الحصول على البيانات المطلوبة لتحديث قاعدة البيانات السحابية");
-        }
+        
+          
         
         // Update the query cache with the new result_url
-        queryClient.setQueryData(['patientDetailsForActionPane', currentPatientData.id], (old: Patient | undefined) => {
+        queryClient.setQueryData(['patientDetailsForActionPane', currentPatientData.patient_id], (old: Patient | undefined) => {
           if (old) {
             return {
               ...old,
-              result_url: result_url
+              result_url: response.data.result_url
             };
           }
           return old;
         });
         
         // Also update other patient detail caches
-        queryClient.setQueryData(['patientDetailsForInfoPanel', currentPatientData.id], (old: { data?: { result_url?: string } } | undefined) => {
+        queryClient.setQueryData(['patientDetailsForInfoPanel', currentPatientData.patient_id], (old: { data?: { result_url?: string } } | undefined) => {
           if (old?.data) {
             return {
               ...old,
               data: {
                 ...old.data,
-                result_url: result_url
+                result_url: response.data.result_url
               }
             };
           }
-          return { data: { ...old?.data, result_url } };
+          return { data: { ...old?.data, result_url: response.data.result_url } };
         });
 
-        queryClient.setQueryData(['patientDetailsForLabDisplay', currentPatientData.id], (old: { data?: { result_url?: string } } | undefined) => {
+        queryClient.setQueryData(['patientDetailsForLabDisplay', currentPatientData.patient_id], (old: { data?: { result_url?: string } } | undefined) => {
           if (old?.data) {
             return {
               ...old,
               data: {
                 ...old.data,
-                result_url: result_url
+                result_url: response.data.result_url
               }
             };
           }
-          return { data: { ...old?.data, result_url } };
+          return { data: { ...old?.data, result_url: response.data.result_url } };
         });
         
         // console.log('Patient result_url updated successfully:', result_url);
@@ -303,7 +290,7 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
       setIsUploadingToFirebase(false);
     }
   };
-
+console.log(currentPatientData,'currentPatientData')
  // console.log(currentLockStatus,'currentLockStatus')
   return (
     <TooltipProvider delayDuration={100}>
@@ -398,7 +385,7 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
                     size="icon" 
                     className="w-12 h-12" 
                     onClick={handleUploadToFirebase}
-                    disabled={isUploadingToFirebase || !currentPatientData?.id || !selectedVisitId}
+                    disabled={isUploadingToFirebase || !currentPatientData?.patient_id || !selectedVisitId}
                 >
                     {isUploadingToFirebase ? (
                         <Loader2 className="h-7! w-7! animate-spin" />

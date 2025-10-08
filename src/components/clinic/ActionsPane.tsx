@@ -100,13 +100,13 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
           </Tooltip>
         )}
             {canManageDoctorShifts && (
-          <Tooltip title="إدارة نوبات الأطباء" placement="left">
+          <Tooltip title="  أطبائي" placement="left">
             <ManageDoctorShiftsDialog
               currentClinicShiftId={currentClinicShift?.id ?? null}
               currentUserId={1} // TODO: Get from auth context when available
               onDoctorShiftClosed={onDoctorShiftClosed}
               triggerButton={
-                <IconButton sx={{ width: 44, height: 44 }}>
+                <IconButton title="أطبائي" sx={{ width: 44, height: 44 }}>
                   <FontAwesomeIcon icon={faUserDoctor} />
                 </IconButton>
               }

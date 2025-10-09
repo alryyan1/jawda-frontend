@@ -56,6 +56,9 @@ type SettingsFormData = {
   disable_doctor_service_check?: boolean;
   barcode?: boolean;
   show_water_mark?: boolean;
+  // NEW flags
+  send_sms_after_auth?: boolean;
+  send_whatsapp_after_auth?: boolean;
   
   // Notification Settings
   inventory_notification_number?: string;
@@ -79,6 +82,8 @@ type SettingsFormData = {
   // Report assets (paths in storage)
   header_base64?: string;
   footer_base64?: string;
+  // NEW watermark asset
+  watermark_image?: string;
 };
 
 const SettingsPage: React.FC = () => {
@@ -121,6 +126,9 @@ const SettingsPage: React.FC = () => {
       disable_doctor_service_check: undefined,
       barcode: undefined,
       show_water_mark: undefined,
+      // NEW flags
+      send_sms_after_auth: undefined,
+      send_whatsapp_after_auth: undefined,
       
       // Notification Settings
       inventory_notification_number: undefined,
@@ -143,12 +151,15 @@ const SettingsPage: React.FC = () => {
       default_lab_report_template: undefined,
       header_base64: undefined,
       footer_base64: undefined,
+      // NEW watermark asset
+      watermark_image: undefined,
     },
   });
   const { control, handleSubmit, reset, watch } = form;
   const { setValue } = form;
   const [headerPreview, setHeaderPreview] = useState<string | null>(null);
   const [footerPreview, setFooterPreview] = useState<string | null>(null);
+  const [watermarkPreview, setWatermarkPreview] = useState<string | null>(null);
 
   // Watch form values for immediate updates
   const watchedValues = watch();
@@ -181,6 +192,9 @@ const SettingsPage: React.FC = () => {
         disable_doctor_service_check: settings.disable_doctor_service_check || undefined,
         barcode: settings.barcode || undefined,
         show_water_mark: settings.show_water_mark || undefined,
+        // NEW flags
+        send_sms_after_auth: (settings as any).send_sms_after_auth ?? undefined,
+        send_whatsapp_after_auth: (settings as any).send_whatsapp_after_auth ?? undefined,
         
         // Notification Settings
         inventory_notification_number: settings.inventory_notification_number || undefined,
@@ -203,6 +217,8 @@ const SettingsPage: React.FC = () => {
         default_lab_report_template: settings.default_lab_report_template || undefined,
         header_base64: (settings as Setting & { header_base64?: string }).header_base64 || undefined,
         footer_base64: (settings as Setting & { footer_base64?: string }).footer_base64 || undefined,
+        // NEW watermark asset
+        watermark_image: (settings as any).watermark_image || undefined,
       });
     }
   }, [settings, reset]);
@@ -226,12 +242,13 @@ const SettingsPage: React.FC = () => {
     mutation.mutate(data);
   };
 
-  // Upload helper for report header/footer assets
-  const uploadSettingAsset = async (field: 'header_base64' | 'footer_base64', file: File) => {
+  // Upload helper for report header/footer/watermark assets
+  const uploadSettingAsset = async (field: 'header_base64' | 'footer_base64' | 'watermark_image', file: File) => {
     // Show preview immediately
     const localUrl = URL.createObjectURL(file);
     if (field === 'header_base64') setHeaderPreview(localUrl);
     if (field === 'footer_base64') setFooterPreview(localUrl);
+    if (field === 'watermark_image') setWatermarkPreview(localUrl);
     
     const formData = new FormData();
     formData.append('file', file);
@@ -243,9 +260,11 @@ const SettingsPage: React.FC = () => {
       const data = res.data;
       const path: string = data?.path || data?.url || '';
       if (!path) throw new Error('Invalid upload response');
-      setValue(field, path);
+      setValue(field as any, path);
       await mutation.mutateAsync({ [field]: path } as unknown as SettingsFormData);
-      toast.success(field === 'header_base64' ? 'تم رفع ترويسة التقرير' : 'تم رفع تذييل التقرير');
+      toast.success(
+        field === 'header_base64' ? 'تم رفع ترويسة التقرير' : field === 'footer_base64' ? 'تم رفع تذييل التقرير' : 'تم رفع علامة مائية'
+      );
     } catch (e: unknown) {
       const error = e as { response?: { data?: { message?: string } }; message?: string };
       const msg = error?.response?.data?.message || error?.message || 'فشل رفع الملف';
@@ -253,6 +272,7 @@ const SettingsPage: React.FC = () => {
       // Clear preview on error
       if (field === 'header_base64') setHeaderPreview(null);
       if (field === 'footer_base64') setFooterPreview(null);
+      if (field === 'watermark_image') setWatermarkPreview(null);
     }
   };
 
@@ -282,15 +302,7 @@ const SettingsPage: React.FC = () => {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Box mb={4}>
-        <Typography variant="h3" component="h1" gutterBottom>
-          الإعدادات العامة
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          إدارة جميع إعدادات النظام والمختبر
-        </Typography>
-      </Box>
-
+   
       <Box component="form" onSubmit={handleSubmit(onSubmit)}>
         <Paper elevation={1} sx={{ mb: 3 }}>
           <Tabs 
@@ -323,6 +335,14 @@ const SettingsPage: React.FC = () => {
                 <Stack direction="row" spacing={1} alignItems="center">
                   <Settings size={16} />
                   <span>سير العمل</span>
+                </Stack>
+              } 
+            />
+            <Tab 
+              value="lab_canceled_report" 
+              label={
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <span>تقرير ملغات المختبر</span>
                 </Stack>
               } 
             />
@@ -409,126 +429,199 @@ const SettingsPage: React.FC = () => {
                 </Stack>
               </Stack>
             </Paper>
-            <Paper elevation={2} sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                ملفات تقرير المختبر
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                رفع صور الترويسة والتذييل لاستخدامها في تقارير النتائج
-              </Typography>
-              
-              <Stack spacing={3}>
-                {/* Header Image Upload */}
-                <Box>
-                  <Typography variant="subtitle1" gutterBottom>
-                    صورة  (Header)
-                  </Typography>
-                  <Stack direction="row" spacing={2} alignItems="center">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      id="header-upload"
-                      style={{ display: 'none' }}
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) uploadSettingAsset('header_base64', file);
-                      }}
-                    />
-                    <label htmlFor="header-upload">
-                      <IconButton
-                        color="primary"
-                        component="span"
-                        sx={{ 
-                          border: '2px dashed',
-                          borderColor: 'primary.main',
-                          borderRadius: 2,
-                          p: 2
-                        }}
-                      >
-                        <CloudUpload sx={{ fontSize: 32 }} />
-                      </IconButton>
-                    </label>
-                    {(headerPreview || watchedValues.header_base64) && (
-                      <Stack direction="row" spacing={2} alignItems="center">
-                        <Avatar
-                          src={headerPreview || `${webUrl}${watchedValues.header_base64}`}
-                          variant="rounded"
-                          sx={{ width: 80, height: 60 }}
-                        />
-                        <Box>
-                          <Chip 
-                            label="تم الرفع" 
-                            color="success" 
-                            size="small" 
-                            sx={{ mb: 1 }}
-                          />
-                          <Typography variant="caption" display="block" color="text.secondary">
-                            {watchedValues.header_base64}
-                          </Typography>
-                        </Box>
-                      </Stack>
-                    )}
-                  </Stack>
-                </Box>
-
-                {/* Footer Image Upload */}
-                <Box>
-                  <Typography variant="subtitle1" gutterBottom>
-                    صورة الفوتر (Footer)
-                  </Typography>
-                  <Stack direction="row" spacing={2} alignItems="center">
-                              <input
-                      type="file"
-                      accept="image/*"
-                      id="footer-upload"
-                      style={{ display: 'none' }}
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) uploadSettingAsset('footer_base64', file);
-                      }}
-                    />
-                    <label htmlFor="footer-upload">
-                      <IconButton
-                        color="primary"
-                        component="span"
-                        sx={{ 
-                          border: '2px dashed',
-                          borderColor: 'primary.main',
-                          borderRadius: 2,
-                          p: 2
-                        }}
-                      >
-                        <CloudUpload sx={{ fontSize: 32 }} />
-                      </IconButton>
-                    </label>
-                    {(footerPreview || watchedValues.footer_base64) && (
-                      <Stack direction="row" spacing={2} alignItems="center">
-                        <Avatar
-                          src={footerPreview || watchedValues.footer_base64!}
-                          variant="rounded"
-                          sx={{ width: 80, height: 60 }}
-                        />
-                        <Box>
-                          <Chip 
-                            label="تم الرفع" 
-                            color="success" 
-                            size="small" 
-                            sx={{ mb: 1 }}
-                          />
-                          <Typography variant="caption" display="block" color="text.secondary">
-                            {watchedValues.footer_base64}
-                          </Typography>
-                        </Box>
-                      </Stack>
-                    )}
-                  </Stack>
-                </Box>
-              </Stack>
-            </Paper>
           </Stack>
         )}
 
-            {/* WhatsApp Settings Tab */}
+        {/* Lab Canceled Report Tab */}
+        {activeTab === "lab_canceled_report" && (
+          <Paper elevation={2} sx={{ p: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              ملفات تقرير المختبر
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              رفع صور الترويسة والتذييل وعلامة مائية لاستخدامها في تقارير النتائج
+            </Typography>
+            
+            <Stack spacing={3}>
+              {/* Header Image Upload */}
+              <Box>
+                <Typography variant="subtitle1" gutterBottom>
+                  صورة  (Header)
+                </Typography>
+                <Stack direction="row" spacing={2} alignItems="center">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    id="header-upload"
+                    style={{ display: 'none' }}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) uploadSettingAsset('header_base64', file);
+                    }}
+                  />
+                  <label htmlFor="header-upload">
+                    <IconButton
+                      color="primary"
+                      component="span"
+                      sx={{ 
+                        border: '2px dashed',
+                        borderColor: 'primary.main',
+                        borderRadius: 2,
+                        p: 2
+                      }}
+                    >
+                      <CloudUpload sx={{ fontSize: 32 }} />
+                    </IconButton>
+                  </label>
+                  {(headerPreview || watchedValues.header_base64) && (
+                    <Stack direction="row" spacing={2} alignItems="center">
+                      <Avatar
+                        src={headerPreview || `${webUrl}${watchedValues.header_base64}`}
+                        variant="rounded"
+                        sx={{ width: 80, height: 60 }}
+                      />
+                      <Box>
+                        <Chip 
+                          label="تم الرفع" 
+                          color="success" 
+                          size="small" 
+                          sx={{ mb: 1 }}
+                        />
+                        <Typography variant="caption" display="block" color="text.secondary">
+                          {watchedValues.header_base64}
+                        </Typography>
+                      </Box>
+                    </Stack>
+                  )}
+                </Stack>
+              </Box>
+
+              {/* Footer Image Upload */}
+              <Box>
+                <Typography variant="subtitle1" gutterBottom>
+                  صورة الفوتر (Footer)
+                </Typography>
+                <Stack direction="row" spacing={2} alignItems="center">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    id="footer-upload"
+                    style={{ display: 'none' }}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) uploadSettingAsset('footer_base64', file);
+                    }}
+                  />
+                  <label htmlFor="footer-upload">
+                    <IconButton
+                      color="primary"
+                      component="span"
+                      sx={{ 
+                        border: '2px dashed',
+                        borderColor: 'primary.main',
+                        borderRadius: 2,
+                        p: 2
+                      }}
+                    >
+                      <CloudUpload sx={{ fontSize: 32 }} />
+                    </IconButton>
+                  </label>
+                  {(footerPreview || watchedValues.footer_base64) && (
+                    <Stack direction="row" spacing={2} alignItems="center">
+                      <Avatar
+                        src={footerPreview || `${webUrl}${watchedValues.footer_base64!}`}
+                        variant="rounded"
+                        sx={{ width: 80, height: 60 }}
+                      />
+                      <Box>
+                        <Chip 
+                          label="تم الرفع" 
+                          color="success" 
+                          size="small" 
+                          sx={{ mb: 1 }}
+                        />
+                        <Typography variant="caption" display="block" color="text.secondary">
+                          {watchedValues.footer_base64}
+                        </Typography>
+                      </Box>
+                    </Stack>
+                  )}
+                </Stack>
+              </Box>
+
+              {/* Watermark Image Upload */}
+              <Box>
+                <Typography variant="subtitle1" gutterBottom>
+                  صورة العلامة المائية (Watermark)
+                </Typography>
+                <Stack direction="row" spacing={2} alignItems="center">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    id="watermark-upload"
+                    style={{ display: 'none' }}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) uploadSettingAsset('watermark_image', file);
+                    }}
+                  />
+                  <label htmlFor="watermark-upload">
+                    <IconButton
+                      color="primary"
+                      component="span"
+                      sx={{ 
+                        border: '2px dashed',
+                        borderColor: 'primary.main',
+                        borderRadius: 2,
+                        p: 2
+                      }}
+                    >
+                      <CloudUpload sx={{ fontSize: 32 }} />
+                    </IconButton>
+                  </label>
+                  {(watermarkPreview || watchedValues.watermark_image) && (
+                    <Stack direction="row" spacing={2} alignItems="center">
+                      <Avatar
+                        src={watermarkPreview || `${webUrl}${watchedValues.watermark_image}`}
+                        variant="rounded"
+                        sx={{ width: 80, height: 60 }}
+                      />
+                      <Box>
+                        <Chip 
+                          label="تم الرفع" 
+                          color="success" 
+                          size="small" 
+                          sx={{ mb: 1 }}
+                        />
+                        <Typography variant="caption" display="block" color="text.secondary">
+                          {watchedValues.watermark_image}
+                        </Typography>
+                      </Box>
+                    </Stack>
+                  )}
+                </Stack>
+              </Box>
+
+              {/* Toggle: Show Logo in Report */}
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    {...control.register("is_logo")}
+                    checked={!!watchedValues.is_logo}
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography variant="body1">إظهار الشعار   كلوقو </Typography>
+                    
+                  </Box>
+                }
+              />
+            </Stack>
+          </Paper>
+        )}
+
+        {/* WhatsApp Settings Tab */}
         {activeTab === "whatsapp" && (
           <Paper elevation={2} sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
@@ -600,21 +693,46 @@ const SettingsPage: React.FC = () => {
                       إرسال رسالة ترحيبية تلقائياً
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                                عند تفعيل هذا الخيار سيتم إرسال رسالة ترحيبية عند تسجيل زيارة جديدة
+                      عند تفعيل هذا الخيار سيتم إرسال رسالة ترحيبية عند تسجيل زيارة جديدة
                     </Typography>
                   </Box>
                 }
               />
-              
-              <TextField
-                {...control.register("welcome_message")}
-                label="نص الرسالة الترحيبية"
-                            placeholder="مرحباً {name}، نرحب بكم في مستشفى {hospital}. تم تسجيل زيارتكم بنجاح."
-                multiline
-                rows={8}
-                fullWidth
-                variant="outlined"
-                helperText="يمكنك استخدام المتغيرات: {name} ، {hospital}"
+
+              {/* NEW: Send SMS after auth */}
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    {...control.register("send_sms_after_auth")}
+                    checked={!!watchedValues.send_sms_after_auth}
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography variant="body1">إرسال رسالة SMS بعد الإعتماد</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      عند الاعتماد يتم إرسال رسالة نصية تحتوي على إشعار وجزء من التفاصيل
+                    </Typography>
+                  </Box>
+                }
+              />
+
+              {/* NEW: Send WhatsApp after auth */}
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    {...control.register("send_whatsapp_after_auth")}
+                    checked={!!watchedValues.send_whatsapp_after_auth}
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography variant="body1">إرسال رسالة واتساب بعد الإعتماد</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      سيتم إرسال رسالة واتساب للمريض بعد اعتماد النتائج
+                    </Typography>
+                  </Box>
+                }
               />
             </Stack>
           </Paper>
@@ -628,8 +746,8 @@ const SettingsPage: React.FC = () => {
             disabled={mutation.isPending}
             startIcon={mutation.isPending ? <CircularProgress size={20} /> : null}
           >
-              حفظ الإعدادات
-            </Button>
+            حفظ الإعدادات
+          </Button>
         </Box>
       </Box>
     </Container>

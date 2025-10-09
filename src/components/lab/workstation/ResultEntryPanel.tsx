@@ -3,17 +3,15 @@ import React, { useEffect, useCallback, useState, useRef } from "react";
 import {
   useForm,
   Controller,
-  useWatch,
   type Path,
 } from "react-hook-form";
-import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { debounce } from "lodash";
 
 // MUI Imports
 import Box from "@mui/material/Box";
 import Tabs from "@mui/material/Tabs";
-import { styled } from "@mui/material/styles";
 import Tab from "@mui/material/Tab";
 import Typography from "@mui/material/Typography";
 import Table from "@mui/material/Table";
@@ -45,23 +43,12 @@ import type {
 } from "@/types/labWorkflow";
 import {
   getLabRequestForEntry,
-  saveSingleChildTestResult,
-  saveLabResults,
   updateNormalRange,
   updateLabRequestComment,
-  getSinglePatientLabQueueItem,
-  type SingleResultSavePayload,
 } from "@/services/labWorkflowService";
 
 import ChildTestAutocompleteInput from "./ChildTestAutocompleteInput";
-import MainCommentEditor from "./MainCommentEditor";
-import { type FieldSaveStatus } from "./FieldStatusIndicator";
 
-const StyledTab = styled(Tab)(({ theme }) => ({
-  minHeight: "40px",
-  padding: theme.spacing(0.5, 1.5),
-  fontSize: theme.typography.pxToRem(13),
-}));
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -102,11 +89,8 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
   onItemUpdated,
 }) => {
   // استخدام نص عربي مباشر بدلاً من i18n
-  const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState(0);
-  const [fieldSaveStatus, setFieldSaveStatus] = useState<
-    Record<string, FieldSaveStatus>
-  >({});
+  const [activeTab] = useState(0);
+  const [activeGroupTab, setActiveGroupTab] = useState(0); // For special test group tabs
   const [selectedChildTestIndex, setSelectedChildTestIndex] = useState<number | null>(null);
   const [normalRangeInput, setNormalRangeInput] = useState<string>("");
   const [isSavingNormalRange, setIsSavingNormalRange] = useState(false);
@@ -136,83 +120,75 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
     getValues,
   } = form;
 
-  // --- Individual Result Save Mutation ---
-  const saveSingleResultMutation = useMutation({
-    mutationFn: (params: {
-      labRequestId: number;
-      childTestId: number;
-      payload: SingleResultSavePayload;
-      fieldNameKey: string;
-    }) =>
-      saveSingleChildTestResult(
-        params.childTestId,
-        params.payload.result_value || ""
-      ),
-    onSuccess: async (updatedResultData, variables) => {
-      if (!updatedResultData) return;
-      setFieldSaveStatus((prev) => ({
-        ...prev,
-        [variables.fieldNameKey]: "success",
-      }));
-      // toast.success("تم حفظ الحقل بنجاح");
-
-      // Fetch the updated single item to update progress bars
-      if (visitId && onItemUpdated) {
-        try {
-          const updatedItem = await getSinglePatientLabQueueItem(visitId);
-          onItemUpdated(updatedItem);
-        } catch (error) {
-          console.error('Failed to fetch updated item:', error);
+  // Get unique child groups for special tests
+  const childGroups = React.useMemo(() => {
+    if (!testDataForEntry?.is_special_test || !testDataForEntry?.child_tests_with_results) {
+      return [];
+    }
+    // console.log(testDataForEntry.child_tests_with_results,'testDataForEntry.child_tests_with_results');
+    const groups = testDataForEntry.child_tests_with_results
+      .filter(ct => ct.child_group_name) // Only include tests with group names
+      .reduce((acc, ct) => {
+        const groupName = ct.child_group_name!;
+        if (!acc.find(g => g.name === groupName)) {
+          acc.push({
+            name: groupName,
+            id: ct.child_group_id || 0,
+          });
         }
-      }
+        return acc;
+      }, [] as Array<{ name: string; id: number }>);
+    
+    // Sort groups by the order they appear in the child tests
+    return groups.sort((a, b) => {
+      const aIndex = testDataForEntry.child_tests_with_results.findIndex(ct => ct.child_group_name === a.name);
+      const bIndex = testDataForEntry.child_tests_with_results.findIndex(ct => ct.child_group_name === b.name);
+      return aIndex - bIndex;
+    });
+  }, [testDataForEntry]);
 
-      // Don't invalidate queries immediately - the data is already updated
-      // Just call the callback to notify parent components
-      onResultsSaved(initialLabRequest);
-
-      setTimeout(
-        () =>
-          setFieldSaveStatus((prev) => ({
-            ...prev,
-            [variables.fieldNameKey]: "idle",
-          })),
-        2000
+  // Filter child tests by active group tab for special tests
+  const { filteredChildTests, filteredToOriginalIndexMap } = React.useMemo(() => {
+    if (!testDataForEntry?.is_special_test || childGroups.length === 0) {
+      const allTests = testDataForEntry?.child_tests_with_results || [];
+      const indexMap = allTests.reduce((map, _, index) => {
+        map[index] = index;
+        return map;
+      }, {} as Record<number, number>);
+      return { filteredChildTests: allTests, filteredToOriginalIndexMap: indexMap };
+    }
+    
+    const activeGroup = childGroups[activeGroupTab];
+    if (!activeGroup) {
+      const allTests = testDataForEntry.child_tests_with_results;
+      const indexMap = allTests.reduce((map, _, index) => {
+        map[index] = index;
+        return map;
+      }, {} as Record<number, number>);
+      return { filteredChildTests: allTests, filteredToOriginalIndexMap: indexMap };
+    }
+    
+    const filtered = testDataForEntry.child_tests_with_results.filter(
+      ct => ct.child_group_name === activeGroup.name
+    );
+    
+    // Create mapping from filtered index to original index
+    const indexMap = filtered.reduce((map, filteredTest, filteredIndex) => {
+      const originalIndex = testDataForEntry.child_tests_with_results.findIndex(
+        originalTest => originalTest.id === filteredTest.id
       );
-    },
-    onError: (error: Error, variables) => {
-      setFieldSaveStatus((prev) => ({
-        ...prev,
-        [variables.fieldNameKey]: "error",
-      }));
+      map[filteredIndex] = originalIndex;
+      return map;
+    }, {} as Record<number, number>);
+    
+    return { filteredChildTests: filtered, filteredToOriginalIndexMap: indexMap };
+  }, [testDataForEntry, childGroups, activeGroupTab]);
   
-      setTimeout(
-        () =>
-          setFieldSaveStatus((prev) => ({
-            ...prev,
-            [variables.fieldNameKey]: "idle",
-          })),
-        3000
-      );
-    },
-  });
+  console.log('Filtered child tests:', filteredChildTests);
+  console.log('Index mapping:', filteredToOriginalIndexMap);
+  console.log('Active group tab:', activeGroupTab);
 
-  const immediateSaveField = useCallback(
-    (
-      labRequestId: number,
-      childTestId: number,
-      fieldNameKey: string,
-      payload: SingleResultSavePayload
-    ) => {
-      setFieldSaveStatus((prev) => ({ ...prev, [fieldNameKey]: "saving" }));
-      saveSingleResultMutation.mutate({
-        labRequestId,
-        childTestId,
-        payload,
-        fieldNameKey,
-      });
-    },
-    [saveSingleResultMutation]
-  );
+
 
   // --- Main Comment Autosave ---
   // const debouncedSaveMainComment = useCallback(
@@ -384,10 +360,27 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
   useEffect(() => {
     setSelectedChildTestIndex(null);
     setNormalRangeInput("");
+    // Reset group tab to first tab for special tests
+    setActiveGroupTab(0);
   }, [testDataForEntry]);
 
-  const handleTabChange = (_: React.SyntheticEvent, newValue: number) =>
-    setActiveTab(newValue);
+  // Force form re-render when switching tabs to ensure proper synchronization
+  useEffect(() => {
+    if (testDataForEntry && testDataForEntry.is_special_test) {
+      // Trigger a form re-render by updating a dummy field
+      // This ensures all form fields are properly synchronized
+      const currentFormData = getValues();
+      reset(currentFormData);
+    }
+  }, [activeGroupTab, testDataForEntry, reset, getValues]);
+
+
+  const handleGroupTabChange = (_: React.SyntheticEvent, newValue: number) => {
+    setActiveGroupTab(newValue);
+    // Clear selected child test when switching groups
+    setSelectedChildTestIndex(null);
+    setNormalRangeInput("");
+  };
 
   // Custom handler for child test focus that sets the selected index
   const handleChildTestFocus = useCallback((childTest: ChildTestWithResult | null, index: number) => {
@@ -410,30 +403,33 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
   }, [onChildTestFocus]);
 
   // Debounced save function for normal range updates
-  const debouncedSaveNormalRange = useCallback(
-    debounce(async (newNormalRange: string) => {
-      if (!initialLabRequest.id || selectedChildTestIndex === null || !testDataForEntry?.child_tests_with_results[selectedChildTestIndex]) return;
-      
-      const childTest = testDataForEntry.child_tests_with_results[selectedChildTestIndex];
-      if (!childTest.id) return;
-      
-      setIsSavingNormalRange(true);
-      try {
-        await updateNormalRange(initialLabRequest.id, childTest.id, newNormalRange);
-        toast.success("تم حفظ النطاق الطبيعي بنجاح");
-        // Update the local state to reflect the saved value
-        childTest.normal_range = newNormalRange;
-      } catch (error: unknown) {
-        console.error('Failed to save normal range:', error);
-        const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Unknown error';
-        toast.error("فشل حفظ النطاق الطبيعي", {
-          description: errorMessage,
-        });
-      } finally {
-        setIsSavingNormalRange(false);
-      }
-    }, 1000),
-    [initialLabRequest.id, selectedChildTestIndex, testDataForEntry]
+  const saveNormalRange = useCallback(async (newNormalRange: string) => {
+    if (!initialLabRequest.id || selectedChildTestIndex === null) return;
+    
+    // Find the child test in the filtered array
+    const filteredTest = filteredChildTests[selectedChildTestIndex];
+    if (!filteredTest?.id) return;
+    
+    setIsSavingNormalRange(true);
+    try {
+      await updateNormalRange(initialLabRequest.id, filteredTest.id, newNormalRange);
+      toast.success("تم حفظ النطاق الطبيعي بنجاح");
+      // Update the local state to reflect the saved value
+      filteredTest.normal_range = newNormalRange;
+    } catch (error: unknown) {
+      console.error('Failed to save normal range:', error);
+      const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Unknown error';
+      toast.error("فشل حفظ النطاق الطبيعي", {
+        description: errorMessage,
+      });
+    } finally {
+      setIsSavingNormalRange(false);
+    }
+  }, [initialLabRequest.id, selectedChildTestIndex, filteredChildTests]);
+
+  const debouncedSaveNormalRange = React.useMemo(
+    () => debounce(saveNormalRange, 1000),
+    [saveNormalRange]
   );
 
   // Handle normal range input change
@@ -472,10 +468,13 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
 
 
   // Generate field names for consistent access
-  const getFieldNames = (index: number) => ({
-    resultValueField: `results.${index}.result_value` as Path<ResultEntryFormValues>,
-    normalRangeTextField: `results.${index}.normal_range_text` as Path<ResultEntryFormValues>,
-  });
+  const getFieldNames = (filteredIndex: number) => {
+    const originalIndex = filteredToOriginalIndexMap[filteredIndex];
+    return {
+      resultValueField: `results.${originalIndex}.result_value` as Path<ResultEntryFormValues>,
+      normalRangeTextField: `results.${originalIndex}.normal_range_text` as Path<ResultEntryFormValues>,
+    };
+  };
 
 
 
@@ -560,9 +559,44 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
             
             <CustomTabPanel value={activeTab} index={0}>
               <ScrollArea className="h-[calc(100vh-200px)] pr-1">
-                {testDataForEntry.child_tests_with_results.length === 0 ? (
+                {/* Group Tabs for Special Tests */}
+                {testDataForEntry.is_special_test && childGroups.length > 0 && (
+                  <div className="mb-4">
+                    <Tabs
+                      value={activeGroupTab}
+                      onChange={handleGroupTabChange}
+                      variant="scrollable"
+                      scrollButtons="auto"
+                      sx={{
+                        borderBottom: 1,
+                        borderColor: 'divider',
+                        '& .MuiTab-root': {
+                          minHeight: '36px',
+                          fontSize: '0.8rem',
+                          padding: '6px 12px',
+                          textTransform: 'none',
+                          fontWeight: 500,
+                        },
+                      }}
+                    >
+                      {childGroups.map((group, index) => (
+                        <Tab
+                          key={group.id}
+                          label={group.name}
+                          id={`group-tab-${index}`}
+                          aria-controls={`group-tabpanel-${index}`}
+                        />
+                      ))}
+                    </Tabs>
+                  </div>
+                )}
+
+                {filteredChildTests.length === 0 ? (
                   <div className="text-center text-muted-foreground py-10">
-                    لا توجد فحوصات فرعية لإدخال النتائج
+                    {testDataForEntry.is_special_test && childGroups.length > 0
+                      ? `لا توجد فحوصات في المجموعة "${childGroups[activeGroupTab]?.name || ''}"`
+                      : "لا توجد فحوصات فرعية لإدخال النتائج"
+                    }
                   </div>
                 ) : (
                   <TableContainer
@@ -630,7 +664,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                       </TableHead>
                       <TableBody>
                         {/* {console.log(testDataForEntry,'testDataForEntry')} */}
-                        {testDataForEntry.child_tests_with_results
+                        {filteredChildTests
                           .sort((a, b) => {
                             // First sort by test_order
                             const orderA = Number(a.test_order) || 0;
@@ -643,9 +677,16 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                           })
                           .map(
                           (ctResult, index) => {
-                            const { resultValueField, normalRangeTextField } = getFieldNames(index);
+                            const { resultValueField } = getFieldNames(index);
                             const isFirstInput = index === 0;
-                              // console.log(ctResult, 'ctResult.result_id')
+                            const fieldValue = getValues(resultValueField);
+                            console.log('Rendering child test:', { 
+                              childTestId: ctResult.id, 
+                              childTestName: ctResult.child_test_name,
+                              fieldValue,
+                              resultValueField,
+                              originalIndex: filteredToOriginalIndexMap[index]
+                            });
                             return (
                               <TableRow
                                 key={ctResult.id || `new-${index}`}
@@ -725,7 +766,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                                           onClick={(e) => e.stopPropagation()}
                                         >
                                           <ChildTestAutocompleteInput
-                                            key={`${ctResult.id}-${ctResult.result_id}`}
+                                            key={`${ctResult.id}-${ctResult.result_id}-${activeGroupTab}`}
                                             value={field.value as string | ChildTestOption | null}
                                             onChange={field.onChange}
                                             onBlur={field.onBlur}
@@ -759,8 +800,8 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                   </TableContainer>
                 )}
 
-{selectedChildTestIndex !== null && testDataForEntry?.child_tests_with_results[selectedChildTestIndex] && (
-                <div className="mt-4 p-3 bg-muted/50 rounded-lg border mt-2">
+{selectedChildTestIndex !== null && filteredChildTests[selectedChildTestIndex] && (
+                <div className="mt-4 p-3 bg-muted/50 rounded-lg border">
                   <div className="flex items-center gap-2 mb-2">
                     <Typography
                       variant="subtitle2"
@@ -770,7 +811,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                         color: "var(--foreground)",
                       }}
                     >
-                      Normal Range for {testDataForEntry.child_tests_with_results[selectedChildTestIndex].child_test_name}
+                      Normal Range for {filteredChildTests[selectedChildTestIndex].child_test_name}
                     </Typography>
                   </div>
                   <div className="relative">
@@ -791,9 +832,9 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                       </div>
                     )}
                   </div>
-                  {testDataForEntry.child_tests_with_results[selectedChildTestIndex].unit_name && (
+                  {filteredChildTests[selectedChildTestIndex].unit_name && (
                     <div className="mt-2 text-xs text-muted-foreground">
-                      Unit: {testDataForEntry.child_tests_with_results[selectedChildTestIndex].unit_name}
+                      Unit: {filteredChildTests[selectedChildTestIndex].unit_name}
                     </div>
                   )}
                 </div>

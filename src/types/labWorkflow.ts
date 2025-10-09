@@ -103,6 +103,7 @@ export interface MainTestWithChildrenResults { // Data for the ResultEntryPanel
   lab_request_id: number; // The specific LabRequest ID we are entering results for
   main_test_id: number;
   main_test_name: string;
+  is_special_test?: boolean; // Whether this is a special test that should show tabs
   is_trailer_hidden?: boolean; // from LabRequest.hidden
   // Add other MainTest details if needed for display (e.g., default container)
   child_tests_with_results: ChildTestWithResult[];

@@ -1,7 +1,7 @@
 // src/components/lab/workstation/ChildTestAutocompleteInput.tsx
 import React, { useState, useEffect, useCallback } from "react";
 // استخدام نص عربي مباشر بدلاً من i18n
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import Autocomplete, {
   createFilterOptions,
 } from "@mui/material/Autocomplete";
@@ -156,6 +156,14 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
     }
   }, [childTestId]);
 
+  // Reset autocomplete state when childTestId changes (e.g., when switching tabs)
+  useEffect(() => {
+    setIsAutocompleteOpen(false);
+    setCurrentInputValue("");
+    setIsSaving(false);
+    setShowSuccess(false);
+  }, [childTestId]);
+
   // Initialize currentInputValue from RHF value and update when value changes
   useEffect(() => {
     const newValue = typeof value === "object" && value !== null 
@@ -164,12 +172,21 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
         ? value 
         : "";
     
-    // Always update the display value when the prop value changes
-    // This ensures saved values are properly displayed
-    setCurrentInputValue(newValue);
-  }, [value]); // Watch for value changes from parent
-
-  // No cleanup needed for immediate function
+    // Use a small timeout to ensure this runs after the reset effect
+    const timeoutId = setTimeout(() => {
+      // Always update the display value when the prop value changes
+      // This ensures saved values are properly displayed and resets when switching tabs
+      setCurrentInputValue(newValue);
+      
+      // Reset saving states when value changes (e.g., when switching tabs)
+      setIsSaving(false);
+      setShowSuccess(false);
+      
+      console.log('ChildTestAutocompleteInput value updated:', { childTestId, newValue, value });
+    }, 0);
+    
+    return () => clearTimeout(timeoutId);
+  }, [value, childTestId]); // Watch for value changes from parent and childTestId
 
   const handleDialogClose = () => {
     setDialogValue("");
@@ -297,6 +314,14 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
             setShowSuccess(false);
             setIsSaving(false);
             onChange(null); // Immediately clear the value
+          } else if (reason === "blur") {
+            // Ensure input value matches the actual value on blur
+            const actualValue = typeof value === "object" && value !== null 
+              ? value.name 
+              : typeof value === "string" 
+                ? value 
+                : "";
+            setCurrentInputValue(actualValue);
           }
         }}
         onFocus={() => onFocusChange(parentChildTestModel)}
@@ -349,7 +374,8 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
             error={error}
             helperText={helperText}
             onKeyDown={(event) => {
-              console.log(event.target.value, 'event.target.value')
+              const target = event.target as HTMLInputElement;
+              console.log(target.value, 'event.target.value')
               // Prevent form submission when Enter is pressed
               if (event.key === 'Enter') {
                 event.preventDefault();
@@ -358,7 +384,8 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
             }}
           onChange={(event) => {
             console.log(resultId, 'resultId')
-            saveSingleChildTestResult(resultId, (event.target as HTMLInputElement).value)
+            const target = event.target as HTMLInputElement;
+            saveSingleChildTestResult(resultId, target.value)
           }}
             InputProps={{
               ...params.InputProps,

@@ -29,6 +29,7 @@ import {
 } from "@/services/ultramsgService";
 import { getPatientById } from "@/services/patientService";
 import type { AxiosError } from "axios";
+import apiClient from "@/services/api";
 
 interface WhatsAppWorkAreaDialogProps {
   isOpen: boolean;
@@ -53,6 +54,7 @@ const WhatsAppWorkAreaDialog: React.FC<WhatsAppWorkAreaDialogProps> = ({
 }) => {
   const [instanceStatus, setInstanceStatus] = useState<UltramsgInstanceStatus | null>(null);
   const [isCheckingStatus, setIsCheckingStatus] = useState(false);
+  const [isSendingDoc, setIsSendingDoc] = useState(false);
   const queryClient = useQueryClient();
 
   const form = useForm<WhatsAppFormValues>({
@@ -176,6 +178,7 @@ const WhatsAppWorkAreaDialog: React.FC<WhatsAppWorkAreaDialogProps> = ({
   const sendDocumentMutation = useMutation({
     mutationFn: async (data: WhatsAppFormValues) => {
       // Check if patient has result_url from Firebase
+      // alert()
       if (!effectivePatientData?.result_url) {
         throw new Error("لا يوجد رابط للتقرير. يرجى التأكد من رفع التقرير إلى التخزين السحابي أولاً.");
       }
@@ -234,8 +237,60 @@ const WhatsAppWorkAreaDialog: React.FC<WhatsAppWorkAreaDialogProps> = ({
   };
 
   const handleSendDocument = (data: WhatsAppFormValues) => {
- 
-    sendDocumentMutation.mutate(data);
+    // Pre-checks instead of disabling the button
+    if (!isConfigured) {
+      toast.error("خدمة واتساب غير مُعدة. يرجى ضبط الإعدادات أولاً.");
+      return;
+    }
+    if (isLoading) {
+      toast.info("جاري تنفيذ عملية أخرى، يرجى الإنتظار...");
+      return;
+    }
+    const ensureUploadedAndSend = async () => {
+      // alert('sss')
+      console.log(effectivePatientData,'effectivePatientData');
+
+      try {
+        setIsSendingDoc(true);
+        let resultUrl = effectivePatientData?.result_url;
+        console.log(resultUrl,'resultUrl');
+        // Always upload latest PDF to ensure newest version is sent
+        if (effectivePatientData?.patient_id) {
+          toast.info("جاري رفع أحدث نسخة من التقرير إلى التخزين السحابي...");
+          const uploadRes = await apiClient.post(`/patients/${effectivePatientData.patient_id}/upload-to-firebase`);
+          resultUrl = (uploadRes?.data as { result_url?: string })?.result_url || resultUrl;
+          if (!resultUrl) {
+            // Fallback to fetch patient if API didn't return URL for any reason
+            const fresh = await getPatientById(effectivePatientData.patient_id);
+            resultUrl = fresh?.result_url;
+          }
+        }
+        if (!resultUrl) {
+          throw new Error("لا يوجد رابط للتقرير بعد الرفع. يرجى المحاولة مرة أخرى.");
+        }
+        // Send using the (newest) URL
+        toast.info("جاري إرسال التقرير عبر واتساب...");
+        const resp = await sendUltramsgDocumentFromUrl({
+          to: data.phoneNumber,
+          document_url: resultUrl,
+          filename: 'result.pdf',
+          caption: data.message,
+        });
+        if (resp.success) {
+          toast.success("تم إرسال التقرير بنجاح");
+          if (onMessageSent) onMessageSent();
+          onOpenChange(false);
+        } else {
+          throw new Error(resp.error || "فشل إرسال التقرير");
+        }
+      } catch (e: unknown) {
+        const err = e as { message?: string };
+        toast.error(err?.message || "فشل في رفع التقرير أو إرساله.");
+      } finally {
+        setIsSendingDoc(false);
+      }
+    };
+    ensureUploadedAndSend();
   };
 
   const isConfigured = configStatus?.configured ?? false;
@@ -376,16 +431,15 @@ const WhatsAppWorkAreaDialog: React.FC<WhatsAppWorkAreaDialogProps> = ({
                 type="button"
                 variant="default"
                 onClick={form.handleSubmit(handleSendDocument)}
-                disabled={isLoading || !isConfigured  || !effectivePatientData?.result_url}
                 className="flex-1"
-                title={!effectivePatientData?.result_url ? "لا يوجد رابط للتقرير. يرجى رفع التقرير إلى التخزين السحابي أولاً." : ""}
+                disabled={isSendingDoc}
               >
-                {sendDocumentMutation.isPending ? (
+                {isSendingDoc || sendDocumentMutation.isPending ? (
                   <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />
                 ) : (
                   <FileText className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
                 )}
-                {sendDocumentMutation.isPending ? "جاري الإرسال..." : "إرسال تقرير"}
+                {isSendingDoc || sendDocumentMutation.isPending ? "جاري الإرسال..." : "إرسال تقرير"}
               </Button>
             </div>
 

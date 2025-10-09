@@ -36,6 +36,7 @@ import { Button } from '@/components/ui/button';
 import apiClient from '@/services/api';
 import { updateFirestoreDocumentViaBackend } from '@/services/firestorePatientService';
 import type { PatientLabQueueItem } from '@/types/labWorkflow';
+import showJsonDialog from '@/lib/showJsonDialog';
 // import { useAuthorization } from '@/hooks/useAuthorization';
 
 interface LabActionsPaneProps {
@@ -61,8 +62,9 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
   // const { can } = useAuthorization();
   const queryClient = useQueryClient();
  // console.log(currentPatientData,'currentPatientData')
-  const patientIdForLock =  currentPatientData?.id;
-  const currentLockStatus = currentPatientData?.result_is_locked || false;
+//  showJsonDialog(currentPatientData)
+  const patientIdForLock =  currentPatientData?.patient_id;
+  const currentLockStatus = currentPatientData?.is_result_locked || false;
   const [isAppearanceDialogOpen, setIsAppearanceDialogOpen] = useState(false);
   const [isWhatsAppDialogOpen, setIsWhatsAppDialogOpen] = useState(false);
   const [isUploadingToFirebase, setIsUploadingToFirebase] = useState(false);

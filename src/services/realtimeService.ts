@@ -13,16 +13,26 @@ class RealtimeService {
   private reconnectDelay = 1000; // 1 second
 
   constructor() {
-    this.connect();
+    // Only connect if not already connected
+    if (!this.socket || !this.socket.connected) {
+      this.connect();
+    }
   }
 
   private connect(): void {
-      const realtimeUrl = import.meta.env.VITE_REALTIME_URL || realtimeUrlFromConstants;
+    // Don't create a new connection if one already exists and is connected
+    if (this.socket && this.socket.connected) {
+      console.log('Socket already connected, skipping new connection');
+      return;
+    }
+
+    const realtimeUrl = import.meta.env.VITE_REALTIME_URL || realtimeUrlFromConstants;
     
     this.socket = io(realtimeUrl, {
       transports: ['websocket', 'polling'],
       timeout: 20000,
-      forceNew: true,
+      forceNew: false, // Don't force new connections
+      autoConnect: true,
     });
 
     this.socket.on('connect', () => {
@@ -106,7 +116,7 @@ class RealtimeService {
   // Subscribe to general shift open event
   public onOpenGeneralShift(callback: (data: { user_id?: number; user_name?: string; opened_at?: string }) => void): void {
     if (this.socket) {
-      this.socket.on('open-general-shift', (data: any) => {
+      this.socket.on('open-general-shift', (data: { user_id?: number; user_name?: string; opened_at?: string }) => {
         console.log('Received open-general-shift event:', data);
         callback(data || {});
       });
@@ -117,7 +127,7 @@ class RealtimeService {
   public offOpenGeneralShift(callback?: (data: { user_id?: number; user_name?: string; opened_at?: string }) => void): void {
     if (this.socket) {
       if (callback) {
-        this.socket.off('open-general-shift', callback as any);
+        this.socket.off('open-general-shift', callback);
       } else {
         this.socket.off('open-general-shift');
       }
@@ -127,7 +137,7 @@ class RealtimeService {
   // Subscribe to general shift close event
   public onCloseGeneralShift(callback: (data: { user_id?: number; user_name?: string; shift_id?: number; closed_at?: string }) => void): void {
     if (this.socket) {
-      this.socket.on('close-general-shift', (data: any) => {
+      this.socket.on('close-general-shift', (data: { user_id?: number; user_name?: string; shift_id?: number; closed_at?: string }) => {
         console.log('Received close-general-shift event:', data);
         callback(data || {});
       });
@@ -138,7 +148,7 @@ class RealtimeService {
   public offCloseGeneralShift(callback?: (data: { user_id?: number; user_name?: string; shift_id?: number; closed_at?: string }) => void): void {
     if (this.socket) {
       if (callback) {
-        this.socket.off('close-general-shift', callback as any);
+        this.socket.off('close-general-shift', callback);
       } else {
         this.socket.off('close-general-shift');
       }
@@ -166,15 +176,50 @@ class RealtimeService {
     }
   }
 
+  // Print services receipt
+  public async printServicesReceipt(visitId: number, patientId?: number): Promise<{ success: boolean; message?: string; error?: string }> {
+    try {
+      const realtimeUrl = import.meta.env.VITE_REALTIME_URL || realtimeUrlFromConstants;
+      const response = await fetch(`${realtimeUrl}/emit/print-services-receipt`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-internal-token': import.meta.env.VITE_SERVER_AUTH_TOKEN || 'changeme',
+        },
+        body: JSON.stringify({
+          visit_id: visitId,
+          patient_id: patientId,
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        return { success: true, message: result.message };
+      } else {
+        return { success: false, error: result.error || 'Failed to print services receipt' };
+      }
+    } catch (error) {
+      console.error('Error printing services receipt:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error occurred' };
+    }
+  }
+
   // Check if connected
   public getConnectionStatus(): boolean {
-    return this.isConnected;
+    return this.isConnected && this.socket?.connected === true;
+  }
+
+  // Get socket instance safely
+  public getSocket(): Socket | null {
+    return this.socket;
   }
 
   // Disconnect
   public disconnect(): void {
     if (this.socket) {
       this.socket.disconnect();
+      this.socket.removeAllListeners(); // Clean up all event listeners
       this.socket = null;
       this.isConnected = false;
     }

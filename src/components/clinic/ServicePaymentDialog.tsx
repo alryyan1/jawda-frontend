@@ -25,6 +25,7 @@ import { recordServicePayment } from '@/services/visitService';
 import { formatNumber } from '@/lib/utils'; // Assuming you have this
 import type { DoctorVisit } from '@/types/visits';
 import { useAuth } from '@/contexts/AuthContext';
+import realtimeService from '@/services/realtimeService';
 
 interface ServicePaymentDialogProps {
   visit?: DoctorVisit;
@@ -124,8 +125,25 @@ const ServicePaymentDialog: React.FC<ServicePaymentDialogProps> = ({
             is_bank: data.is_bank === "1",
             shift_id: currentClinicShiftId
         }),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("تم الدفع بنجاح");
+      
+      // Print services receipt after successful payment
+      if (visitId && visit?.patient_id) {
+        try {
+          const result = await realtimeService.printServicesReceipt(visitId, visit.patient_id);
+          if (result.success) {
+            toast.success('تم طباعة إيصال الخدمات بنجاح');
+          } else {
+            toast.error(result.error || 'فشل في طباعة إيصال الخدمات');
+          }
+        } catch (error) {
+          console.error('Error printing services receipt:', error);
+          toast.error('حدث خطأ أثناء طباعة إيصال الخدمات');
+        }
+      }
+      
+      // Also call the original print receipt function for PDF preview
       handlePrintReceipt();
       onPaymentSuccess();
       const key = ["userShiftIncomeSummary", user?.id, currentClinicShiftId] as const;

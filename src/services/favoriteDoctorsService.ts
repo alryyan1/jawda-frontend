@@ -118,7 +118,7 @@ export const getServices = async (search: string = ''): Promise<Service[]> => {
     const response = await apiClient.get('/services', {
       params: { 
         search,
-        per_page: 50 // Limit results for autocomplete
+        per_page: 1000 // Limit results for autocomplete
       }
     });
     return response.data.data || response.data;

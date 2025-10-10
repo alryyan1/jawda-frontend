@@ -7,22 +7,14 @@ import type { RequestedService } from "@/types/services";
 import PatientCompanyDetails from "../lab/reception/PatientCompanyDetails";
 import PdfPreviewDialog from "../common/PdfPreviewDialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, DollarSign, FileText, Coins, Landmark, TrendingUp } from "lucide-react";
+import { Loader2, DollarSign, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import { fetchCurrentUserShiftIncomeSummary } from "@/services/userService";
-import { formatNumber } from "@/lib/utils";
 import { ItemRow } from "../lab/workstation/PatientDetailsLabEntry";
+import realtimeService from "@/services/realtimeService";
 import { 
-  CheckCircle2, 
   Phone, 
   CalendarDays, 
-  User, 
-  UserCircle2, 
-  Clock,
-  Shield,
-  Printer,
-  CreditCard,
   Copy
 } from "lucide-react";
 export interface PatientDetailsColumnClinicProps {
@@ -63,20 +55,13 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
   });
 
   // Fetch lab requests for lab totals when needed
-  const { data: labRequests = [], isLoading: isLoadingLab } = useQuery({
+  const { isLoading: isLoadingLab } = useQuery({
     queryKey: ["labRequestsForVisit", visitId],
     queryFn: async () => {
       const { getLabRequestsForVisit } = await import("@/services/labRequestService");
       return getLabRequestsForVisit(visitId!);
     },
     enabled: !!visitId,
-  });
-
-  // Services income summary for current user/shift (cash/bank/total)
-  const { data: servicesShiftSummary, isLoading: isLoadingServicesSummary } = useQuery({
-    queryKey: ["userShiftIncomeSummary", user?.id, currentClinicShift?.id],
-    queryFn: () => fetchCurrentUserShiftIncomeSummary(currentClinicShift!.id),
-    enabled: !!currentClinicShift && !!user && activeTab === 'services',
   });
 
   // Pay all unpaid services/lab requests mutation
@@ -118,9 +103,26 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
         return unpaidServices;
       }
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("تم معالجة جميع المدفوعات بنجاح");
-      if (onPrintReceipt) {
+      
+      // Print services receipt after successful payment
+      if (activeTab === 'services' && visitId) {
+        try {
+          const result = await realtimeService.printServicesReceipt(visitId, visit?.patient_id);
+          if (result.success) {
+            toast.success('تم طباعة إيصال الخدمات بنجاح');
+          } else {
+            toast.error(result.error || 'فشل في طباعة إيصال الخدمات');
+          }
+        } catch (error) {
+          console.error('Error printing services receipt:', error);
+          toast.error('حدث خطأ أثناء طباعة إيصال الخدمات');
+        }
+      }
+      
+      // Call the original print receipt function for lab payments
+      if (activeTab === 'lab' && onPrintReceipt) {
         onPrintReceipt();
       }
       
@@ -285,7 +287,7 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
       try {
         await navigator.clipboard.writeText(serial);
         toast.success("تم نسخ المتسلسل");
-      } catch (error) {
+      } catch {
         // Fallback for older browsers
         const textArea = document.createElement('textarea');
         textArea.value = serial;

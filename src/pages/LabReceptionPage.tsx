@@ -92,7 +92,7 @@ const LabReceptionPage: React.FC = () => {
     return {
       visit_id: visit.id,
       patient_id: visit.patient_id,
-      lab_number: visit.patient?.visit_number?.toString() || visit.id.toString(), // Using visit ID as lab number
+      lab_number: visit.id.toString(), // Using visit ID as lab number
       patient_name: visit.patient?.name || '',
       phone: visit.patient?.phone || '',
       sample_id: oldestRequest?.id?.toString() || visit.id.toString(),
@@ -104,6 +104,8 @@ const LabReceptionPage: React.FC = () => {
       is_result_locked: visit.patient?.result_is_locked || false,
       is_printed: false, // This would need to be determined from lab results
       company: visit.patient?.company,
+      total_result_count: 0, // Add missing property
+      pending_result_count: 0, // Add missing property
     };
   };
 
@@ -177,34 +179,6 @@ const LabReceptionPage: React.FC = () => {
     setShowPatientHistory(combinedSearchResults.length > 0);
   }, [combinedSearchResults.length]);
 
-  // Keyboard event listener for Enter key to trigger payment
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      // Only trigger if Enter is pressed and a patient is selected
-      if (event.key === 'Enter' && activeVisitId && !event.ctrlKey && !event.altKey && !event.shiftKey) {
-        // Check if we're not in an input field or textarea
-        const target = event.target as HTMLElement;
-        const isInputField = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true';
-        
-        if (!isInputField) {
-          event.preventDefault();
-          // Trigger payment if patient details ref is available
-          if (patientDetailsRef.current) {
-            patientDetailsRef.current.triggerPayment();
-          }
-        }
-      }
-    };
-
-    // Add event listener
-    document.addEventListener('keydown', handleKeyDown);
-
-    // Cleanup
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [activeVisitId]);
-
   // Click outside handler for patient history - DISABLED to prevent closing on click away
   // useEffect(() => {
   //   const handleClickOutside = (event: MouseEvent) => {
@@ -266,6 +240,7 @@ const LabReceptionPage: React.FC = () => {
     staleTime: 30 * 1000, // Cache for 30 seconds
   });
   const [selectedTests, setSelectedTests] = useState<MainTestStripped[]>([]);
+
 
   // --- Event Handlers ---
   const handlePatientActivated = useCallback(

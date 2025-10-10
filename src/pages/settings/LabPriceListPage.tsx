@@ -24,7 +24,11 @@ import {
   Container,
   InputAdornment,
   Pagination,
-  Button
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
 import {
   Edit,
@@ -32,7 +36,8 @@ import {
   Science,
   CheckCircle,
   Cancel,
-  Search
+  Search,
+  TrendingDown
 } from '@mui/icons-material';
 
 // Removed local DB fetching; Firestore only
@@ -67,6 +72,9 @@ const LabPriceListPage = () => {
   const [error, setError] = useState<Error | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [reloadTs, setReloadTs] = useState(0);
+  const [bulkAdjustmentDialog, setBulkAdjustmentDialog] = useState(false);
+  const [adjustmentPercentage, setAdjustmentPercentage] = useState('');
+  const [isAdjusting, setIsAdjusting] = useState(false);
 
   useEffect(() => {
     const handler = setTimeout(() => setDebouncedSearchTerm(searchTerm), 500);
@@ -230,6 +238,63 @@ const LabPriceListPage = () => {
     }
   };
 
+  const handleBulkPriceAdjustment = async () => {
+    if (!labId) {
+      toast.error('لا يمكن التعديل بدون labId');
+      return;
+    }
+
+    const percentage = parseFloat(adjustmentPercentage);
+    if (isNaN(percentage) || percentage <= 0 || percentage > 100) {
+      toast.error('يرجى إدخال نسبة صحيحة بين 1 و 100');
+      return;
+    }
+
+    try {
+      setIsAdjusting(true);
+      const colRef = collection(db, 'labToLap', String(labId), 'pricelist');
+      const BATCH_LIMIT = 450;
+      
+      // Get all current tests
+      const currentTests = testsAll.filter(test => test.price && parseFloat(String(test.price)) > 0);
+      
+      if (currentTests.length === 0) {
+        toast.error('لا توجد أسعار للتعديل');
+        return;
+      }
+
+      // Calculate new prices with decrease
+      const decreaseFactor = 1 - (percentage / 100); // Convert percentage to factor
+      
+      for (let i = 0; i < currentTests.length; i += BATCH_LIMIT) {
+        const slice = currentTests.slice(i, i + BATCH_LIMIT);
+        const batch = writeBatch(db);
+        
+        slice.forEach(test => {
+          const currentPrice = parseFloat(String(test.price)) || 0;
+          const newPrice = Math.max(0, currentPrice * decreaseFactor); // Ensure price doesn't go below 0
+          
+          const docRef = doc(colRef, String(test.id));
+          batch.update(docRef, {
+            price: Math.round(newPrice * 100) / 100, // Round to 2 decimal places
+          });
+        });
+        
+        await batch.commit();
+      }
+      
+      toast.success(`تم تطبيق خصم ${percentage}% على جميع الأسعار بنجاح`);
+      setBulkAdjustmentDialog(false);
+      setAdjustmentPercentage('');
+      setReloadTs(Date.now());
+    } catch (error: unknown) {
+      const message = error && typeof error === 'object' && 'message' in error ? String((error as { message?: unknown }).message) : 'حدث خطأ أثناء التعديل';
+      toast.error('فشل تعديل الأسعار', { description: message });
+    } finally {
+      setIsAdjusting(false);
+    }
+  };
+
   if (error) {
     return (
       <Typography color="error" sx={{ p: 2 }}>
@@ -291,6 +356,17 @@ const LabPriceListPage = () => {
                 ),
               }}
             />
+            
+            <Button
+              variant="outlined"
+              startIcon={<TrendingDown />}
+              onClick={() => setBulkAdjustmentDialog(true)}
+              disabled={testsAll.length === 0}
+              size="small"
+              sx={{ minWidth: { xs: '100%', sm: 'auto' } }}
+            >
+              خصم على الأسعار
+            </Button>
             
           </Stack>
         </Stack>
@@ -445,6 +521,71 @@ const LabPriceListPage = () => {
             <ListItemText>تعديل</ListItemText>
           </MenuItem>
         </Menu>
+
+        {/* Bulk Price Adjustment Dialog */}
+        <Dialog 
+          open={bulkAdjustmentDialog} 
+          onClose={() => setBulkAdjustmentDialog(false)}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle>
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <TrendingDown color="primary" />
+              <Typography variant="h6" fontWeight="bold">
+                تطبيق خصم على جميع الأسعار
+              </Typography>
+            </Stack>
+          </DialogTitle>
+          <DialogContent>
+            <Stack spacing={3} sx={{ mt: 1 }}>
+              <Typography variant="body2" color="text.secondary">
+                سيتم تطبيق نسبة الخصم على جميع الأسعار الموجودة في قائمة الأسعار
+              </Typography>
+              
+              <TextField
+                label="نسبة الخصم (%)"
+                type="number"
+                value={adjustmentPercentage}
+                onChange={(e) => setAdjustmentPercentage(e.target.value)}
+                placeholder="مثال: 5"
+                fullWidth
+                inputProps={{ 
+                  min: 1, 
+                  max: 100,
+                  step: 0.1
+                }}
+                helperText="أدخل النسبة من 1 إلى 100 (مثال: 5 يعني خصم 5%)"
+              />
+              
+              {adjustmentPercentage && !isNaN(parseFloat(adjustmentPercentage)) && (
+                <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    <strong>مثال:</strong> إذا كان السعر الحالي 100 جنيه ونسبة الخصم {adjustmentPercentage}%
+                    <br />
+                    <strong>السعر الجديد:</strong> {Math.round((100 * (1 - parseFloat(adjustmentPercentage) / 100)) * 100) / 100} جنيه
+                  </Typography>
+                </Box>
+              )}
+            </Stack>
+          </DialogContent>
+          <DialogActions sx={{ p: 2 }}>
+            <Button 
+              onClick={() => setBulkAdjustmentDialog(false)}
+              disabled={isAdjusting}
+            >
+              إلغاء
+            </Button>
+            <Button 
+              onClick={handleBulkPriceAdjustment}
+              variant="contained"
+              disabled={isAdjusting || !adjustmentPercentage || isNaN(parseFloat(adjustmentPercentage))}
+              startIcon={isAdjusting ? <CircularProgress size={16} /> : <TrendingDown />}
+            >
+              {isAdjusting ? 'جاري التطبيق...' : 'تطبيق الخصم'}
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Stack>
     </Container>
   );

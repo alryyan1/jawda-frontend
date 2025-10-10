@@ -71,37 +71,95 @@ export interface NavItem {
   to: string;
   label: string; // Direct Arabic text
   icon: React.ElementType;
-  permission?: string; // Optional: permission string from your PermissionName type
   children?: NavItem[]; 
 }
 
-// Main Navigation Items
-const mainNavItems: NavItem[] = [
-  { to: '/dashboard', label: 'لوحة التحكم', icon: Home, permission: 'view dashboard' },
-  { to: '/clinic', label: 'العيادة', icon: BriefcaseMedical, permission: 'access clinic_workspace' },
-  { to: '/lab-reception', label: 'استقبال المختبر', icon: Microscope, permission: 'access lab_reception' },
-  { to: '/lab-sample-collection', label: 'جمع العينات', icon: Syringe, permission: 'access lab_sample_collection' },
-  { to: '/lab-workstation', label: 'نتائج المختبر', icon: FlaskConical, permission: 'access lab_workstation' },
-  // { to: '/attendance/sheet', label: 'سجل الحضور', icon: ClipboardEditIcon, permission: 'record_attendance' },
-  { to: '/patients', label: 'المرضى', icon: Users, permission: 'list patients' },
-  { to: '/doctors', label: 'الأطباء', icon: Stethoscope, permission: 'list doctors' },
-  // { to: '/analysis', label: 'التحليل', icon: FileBarChart2, permission: 'view analysis' },
-  // { to: '/schedules-appointments', label: 'المواعيد والجداول', icon: CalendarClock, permission: 'view doctor_schedules' },
-  { to: '/cash-reconciliation', label: 'الفئات', icon: Banknote, permission: 'access cash_reconciliation' },
-  { to: '/hl7-parser', label: 'محلل HL7', icon: FileText, permission: 'access hl7_parser' },
+// Main Navigation Items - All available items
+const allMainNavItems: NavItem[] = [
+  { to: '/dashboard', label: 'لوحة التحكم', icon: Home },
+  { to: '/clinic', label: 'العيادة', icon: BriefcaseMedical },
+  { to: '/lab-reception', label: 'استقبال المختبر', icon: Microscope },
+  { to: '/lab-sample-collection', label: 'جمع العينات', icon: Syringe },
+  { to: '/lab-workstation', label: 'نتائج المختبر', icon: FlaskConical },
+  // { to: '/attendance/sheet', label: 'سجل الحضور', icon: ClipboardEditIcon },
+  { to: '/patients', label: 'المرضى', icon: Users },
+  { to: '/doctors', label: 'الأطباء', icon: Stethoscope },
+  // { to: '/analysis', label: 'التحليل', icon: FileBarChart2 },
+  // { to: '/schedules-appointments', label: 'المواعيد والجداول', icon: CalendarClock },
+  { to: '/cash-reconciliation', label: 'الفئات', icon: Banknote },
+  { to: '/hl7-parser', label: 'محلل HL7', icon: FileText },
 
-  // { to: '/bulk-whatsapp', label: 'الواتساب الجماعي', icon: MessageCircle, permission: 'send bulk whatsapp' },
+  // { to: '/bulk-whatsapp', label: 'الواتساب الجماعي', icon: MessageCircle },
 ];
+// 'استقبال معمل','ادخال نتائج','استقبال عياده','خزنه موحده','تامين'
+const UserType = {
+  lab_reception: 'استقبال معمل',
+  lab_results: 'ادخال نتائج',
+  clinic_reception: 'استقبال عياده',
+  cash_reconciliation: 'خزنه موحده',
+  insurance: 'تامين',
+} as const;
+
+type UserType = typeof UserType[keyof typeof UserType];
+// Function to get navigation items based on user type
+const getMainNavItems = (userType?: UserType): NavItem[] => {
+  // If user type is 'استقبال معمل', show only specific items
+  if (userType === UserType.lab_reception) {
+    return allMainNavItems.filter(item => 
+      item.to === '/dashboard' || 
+      item.to === '/lab-reception' || 
+      item.to === '/lab-sample-collection'
+    );
+  }
+  if (userType === UserType.lab_results) {
+    return allMainNavItems.filter(item => 
+      item.to === '/dashboard' || 
+      item.to === '/lab-workstation' || 
+      item.to === '/lab-sample-collection'
+    );
+  }
+  if (userType === UserType.clinic_reception) {
+    return allMainNavItems.filter(item => 
+      item.to === '/dashboard' || 
+      item.to === '/clinic'
+    );
+  }
+  if (userType === UserType.cash_reconciliation) {
+    return allMainNavItems.filter(item => 
+      item.to === '/dashboard' || 
+      item.to === '/clinic'
+    );
+  }
+  if (userType === UserType.insurance) {
+    return allMainNavItems.filter(item => 
+      item.to === '/dashboard' || 
+      item.to === '/clinic'
+    );
+  }
+  
+  // For all other user types, show all items
+  return allMainNavItems;
+};
+
+// Function to get utility navigation items based on user type
+const getUtilityNavItems = (userType?: UserType): NavItem[] => {
+  // If user has a specific type (not admin), hide all utility items
+  if (userType && Object.values(UserType).includes(userType)) {
+    return [];
+  }
+  
+  // For admin users (no specific type or other types), show all utility items
+  return utilityNavItems;
+};
 
 // Utility/Admin Navigation Items (typically at the bottom or in a separate group)
 const utilityNavItems: NavItem[] = [
-  { to: '/reports/doctor-shifts', label: 'التقارير', icon: FileBarChart2, permission: 'view reports_section' },
-  { to: '/users', label: 'المستخدمون', icon: Users, permission: 'list users' },
-  { to: '/roles', label: 'الأدوار', icon: ShieldCheck, permission: 'list roles' },
-  { to: '/settings/general', label: 'الإعدادات', icon: Settings, permission: 'view settings' },
-  { to: '/specialists', label: 'التخصصات الطبيه', icon: Users, permission: 'list specialists' },
+  { to: '/reports/doctor-shifts', label: 'التقارير', icon: FileBarChart2 },
+  { to: '/users', label: 'المستخدمون', icon: Users },
+  { to: '/roles', label: 'الأدوار', icon: ShieldCheck },
+  { to: '/settings/general', label: 'الإعدادات', icon: Settings },
+  { to: '/specialists', label: 'التخصصات الطبيه', icon: Users },
 ];
-
 
 // Theme Toggle Hook (ensure this is defined, possibly in a separate utils/hooks file)
 const useTheme = () => {
@@ -311,14 +369,6 @@ const AppLayout: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Placeholder for actual permission checking from useAuthorization hook
-  const can = (permission?: string): boolean => {
-    if (!permission) return true; // If no specific permission is required, item is visible
-    // const { can: checkPermission } = useAuthorization(); // This would be the actual hook
-    // return checkPermission(permission as PermissionName);
-    // For now, for layout purposes, we'll assume all are visible
-    return true; 
-  };
 
   const toggleDesktopSidebar = () => {
     setIsDesktopSidebarCollapsed((prev: boolean) => {
@@ -343,8 +393,6 @@ const AppLayout: React.FC = () => {
   }
 
   const NavLinkItem: React.FC<NavLinkItemProps> = ({ item, isCollapsed, onClick }) => {
-    if (!can(item.permission)) return null;
-
     const linkContent = (
       <>
         <item.icon className={cn("h-5 w-5 flex-shrink-0 ", !isCollapsed && "ml-3")} />
@@ -385,22 +433,30 @@ const AppLayout: React.FC = () => {
     );
   };
 
-  const SidebarContent: React.FC<{isMobile?: boolean}> = ({ isMobile = false }) => (
-    <div className="flex flex-col h-full">
-      <ScrollArea className="flex-1 min-h-0"> {/* Changed from flex-grow to flex-1 min-h-0 for proper flex behavior */}
-        <nav style={{direction: 'rtl'}} className="space-y-1 p-2">
-          {mainNavItems.map((item) => (
-            <NavLinkItem key={item.to} item={item} isCollapsed={!isMobile && isDesktopSidebarCollapsed} onClick={() => isMobile && setMobileNavOpen(false)} />
-          ))}
-        </nav>
-      </ScrollArea>
-      <div className="flex-shrink-0 p-2 space-y-1 border-t border-border">
-        {utilityNavItems.map((item) => (
-           <NavLinkItem key={item.to} item={item} isCollapsed={!isMobile && isDesktopSidebarCollapsed} onClick={() => isMobile && setMobileNavOpen(false)} />
-        ))}
+  const SidebarContent: React.FC<{isMobile?: boolean}> = ({ isMobile = false }) => {
+    // Get filtered navigation items based on user type
+    const filteredMainNavItems = getMainNavItems(user?.user_type as UserType);
+    const filteredUtilityNavItems = getUtilityNavItems(user?.user_type as UserType);
+    
+    return (
+      <div className="flex flex-col h-full">
+        <ScrollArea className="flex-1 min-h-0"> {/* Changed from flex-grow to flex-1 min-h-0 for proper flex behavior */}
+          <nav style={{direction: 'rtl'}} className="space-y-1 p-2">
+            {filteredMainNavItems.map((item) => (
+              <NavLinkItem key={item.to} item={item} isCollapsed={!isMobile && isDesktopSidebarCollapsed} onClick={() => isMobile && setMobileNavOpen(false)} />
+            ))}
+          </nav>
+        </ScrollArea>
+        {filteredUtilityNavItems.length > 0 && (
+          <div className="flex-shrink-0 p-2 space-y-1 border-t border-border">
+            {filteredUtilityNavItems.map((item) => (
+               <NavLinkItem key={item.to} item={item} isCollapsed={!isMobile && isDesktopSidebarCollapsed} onClick={() => isMobile && setMobileNavOpen(false)} />
+            ))}
+          </div>
+        )}
       </div>
-    </div>
-  );
+    );
+  };
   
   const CollapseIcon = ChevronsRight;
   const ExpandIcon = ChevronsLeft;
@@ -544,7 +600,7 @@ const AppLayout: React.FC = () => {
               
                
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild disabled={!can('view profile')}>
+                      <DropdownMenuItem asChild>
                         <Link to="/profile" className="w-full flex items-center"><Users className="mr-2 h-4 w-4" /> الملف الشخصي</Link>
                       </DropdownMenuItem>
                

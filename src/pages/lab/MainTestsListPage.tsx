@@ -1,7 +1,7 @@
 // src/pages/lab/MainTestsListPage.tsx
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, keepPreviousData } from '@tanstack/react-query';
+import { useQuery, useMutation, keepPreviousData, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 import {
@@ -40,6 +40,7 @@ import {
 } from '@mui/icons-material';
 
 import { getMainTests, updateMainTest } from '@/services/mainTestService';
+import { updateTestAvailabilityAcrossAllLabs } from '@/services/firestoreTestService';
 import apiClient from '@/services/api';
 // import { useAuthorization } from '@/hooks/useAuthorization';
 import { db } from '@/lib/firebase';
@@ -58,6 +59,7 @@ interface MainTestWithContainer {
 
 export default function MainTestsListPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   // const { can } = useAuthorization();
   const canCreateTests = true; // Placeholder: can('create lab_tests');
 
@@ -68,6 +70,7 @@ export default function MainTestsListPage() {
   const [selectedTestId, setSelectedTestId] = useState<number | null>(null);
   const [priceInputs, setPriceInputs] = useState<Record<number, string>>({});
   const [isUploadingPriceList, setIsUploadingPriceList] = useState(false);
+  const [updatingAvailable, setUpdatingAvailable] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
     const handler = setTimeout(() => setDebouncedSearchTerm(searchTerm), 500);
@@ -97,10 +100,21 @@ export default function MainTestsListPage() {
     mutationFn: ({ id, price }: { id: number; price: string }) => updateMainTest(id, { price }),
     onSuccess: () => {
       toast.success('تم تحديث السعر بنجاح');
-      // queryClient.invalidateQueries({ queryKey: ['mainTests'] });
+      queryClient.invalidateQueries({ queryKey: ['mainTests'] });
     },
     onError: (err: { response?: { data?: { message?: string } }; message?: string }) => {
       toast.error('خطأ في تحديث السعر', { description: err.response?.data?.message || err.message });
+    },
+  });
+
+  const updateAvailableMutation = useMutation({
+    mutationFn: ({ id, available }: { id: number; available: boolean }) => updateMainTest(id, { available }),
+    onSuccess: () => {
+      toast.success('تم تحديث حالة التوفر بنجاح');
+      queryClient.invalidateQueries({ queryKey: ['mainTests'] });
+    },
+    onError: (err: { response?: { data?: { message?: string } }; message?: string }) => {
+      toast.error('خطأ في تحديث حالة التوفر', { description: err.response?.data?.message || err.message });
     },
   });
 
@@ -134,6 +148,38 @@ export default function MainTestsListPage() {
 
   const handlePriceFocus = (e: React.FocusEvent<HTMLInputElement>) => {
     e.target.select();
+  };
+
+  const handleToggleAvailable = async (testId: number, currentAvailable: boolean) => {
+    setUpdatingAvailable(prev => ({ ...prev, [testId]: true }));
+    try {
+      // First update the main database
+      await updateAvailableMutation.mutateAsync({ 
+        id: testId, 
+        available: !currentAvailable 
+      });
+
+      // Then update Firestore across all labs
+      const test = tests.find(t => t.id === testId);
+      if (test) {
+        const firestoreResult = await updateTestAvailabilityAcrossAllLabs(
+          testId,
+          !currentAvailable,
+          test.main_test_name
+        );
+
+        if (firestoreResult.success) {
+          toast.success(`تم تحديث التوفر في ${firestoreResult.updatedLabs} مختبر`);
+        } else {
+          toast.warning(`تم تحديث قاعدة البيانات الرئيسية، لكن حدث خطأ في Firestore: ${firestoreResult.error}`);
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling test availability:', error);
+      toast.error('خطأ في تحديث حالة التوفر');
+    } finally {
+      setUpdatingAvailable(prev => ({ ...prev, [testId]: false }));
+    }
   };
 
   const handleGeneratePDF = async () => {
@@ -383,8 +429,21 @@ export default function MainTestsListPage() {
                         }}
                       />
                     </TableCell>
-                    <TableCell className="text-2xl!" align="center">
-                      {test.available ? (
+                    <TableCell 
+                      className="text-2xl!" 
+                      align="center"
+                      onClick={(e) => { e.stopPropagation(); handleToggleAvailable(test.id, test.available); }}
+                      sx={{ 
+                        cursor: 'pointer',
+                        '&:hover': {
+                          backgroundColor: 'action.hover',
+                        },
+                        position: 'relative'
+                      }}
+                    >
+                      {updatingAvailable[test.id] ? (
+                        <CircularProgress size={20} />
+                      ) : test.available ? (
                         <CheckCircle color="success" />
                       ) : (
                         <Cancel color="error" />

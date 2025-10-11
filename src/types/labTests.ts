@@ -18,6 +18,8 @@ export interface Container {
     available: boolean;
     is_special_test?: boolean;
     child_tests?: ChildTest[];
+    conditions?: string;
+    timer?: number;
 
     // created_at?: string; // If timestamps are enabled
     // updated_at?: string;
@@ -36,6 +38,8 @@ export interface MainTestPriceListItem extends Pick<MainTest, 'id' | 'main_test_
     price?: string; // Input as string
     divided: boolean;
     available: boolean;
+    conditions?: string;
+    timer?: number;
   }
   
   export interface Unit {
@@ -97,6 +101,8 @@ export interface MainTestStripped {
   id: number;
   main_test_name: string;
   price: number;
+  conditions?: string;
+  timer?: number;
 }
 
 export interface Package {

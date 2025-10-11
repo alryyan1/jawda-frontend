@@ -1,6 +1,6 @@
 // src/pages/settings/LabPriceListPage.tsx
 import { useState, useEffect } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import {
@@ -13,11 +13,6 @@ import {
   TableCell,
   TableHead,
   TableRow,
-  IconButton,
-  Menu,
-  MenuItem,
-  ListItemIcon,
-  ListItemText,
   Typography,
   CircularProgress,
   Stack,
@@ -31,13 +26,10 @@ import {
   DialogActions
 } from '@mui/material';
 import {
-  Edit,
-  MoreVert,
   Science,
-  CheckCircle,
-  Cancel,
   Search,
-  TrendingDown
+  TrendingDown,
+  Update
 } from '@mui/icons-material';
 
 // Removed local DB fetching; Firestore only
@@ -57,15 +49,12 @@ interface MainTestWithContainer {
 }
 
 const LabPriceListPage = () => {
-  const navigate = useNavigate();
   const { labId } = useParams();
   const [labName, setLabName] = useState<string>('');
 
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [selectedTestId, setSelectedTestId] = useState<number | null>(null);
   const [priceInputs, setPriceInputs] = useState<Record<number, string>>({});
   const [testsAll, setTestsAll] = useState<MainTestWithContainer[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -75,6 +64,7 @@ const LabPriceListPage = () => {
   const [bulkAdjustmentDialog, setBulkAdjustmentDialog] = useState(false);
   const [adjustmentPercentage, setAdjustmentPercentage] = useState('');
   const [isAdjusting, setIsAdjusting] = useState(false);
+  const [isUpdatingCashPrices, setIsUpdatingCashPrices] = useState(false);
 
   useEffect(() => {
     const handler = setTimeout(() => setDebouncedSearchTerm(searchTerm), 500);
@@ -147,15 +137,6 @@ const LabPriceListPage = () => {
     load();
   }, [labId, debouncedSearchTerm, reloadTs]);
 
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, testId: number) => {
-    setAnchorEl(event.currentTarget);
-    setSelectedTestId(testId);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-    setSelectedTestId(null);
-  };
 
   const handlePriceKeyDown = async (e: React.KeyboardEvent, testId: number, currentIndex: number) => {
     if (e.key === 'Enter') {
@@ -276,7 +257,7 @@ const LabPriceListPage = () => {
           
           const docRef = doc(colRef, String(test.id));
           batch.update(docRef, {
-            price: Math.round(newPrice * 100) / 100, // Round to 2 decimal places
+            price: Math.round(newPrice)  // Round to 2 decimal places
           });
         });
         
@@ -292,6 +273,75 @@ const LabPriceListPage = () => {
       toast.error('فشل تعديل الأسعار', { description: message });
     } finally {
       setIsAdjusting(false);
+    }
+  };
+
+  const handleUpdateWithCashPrices = async () => {
+    if (!labId) {
+      toast.error('لا يمكن التحديث بدون labId');
+      return;
+    }
+
+    try {
+      setIsUpdatingCashPrices(true);
+      toast.info('جاري جلب الأسعار النقدية من قاعدة البيانات...');
+
+      // Fetch all active main tests with their cash prices from local DB
+      const freshTests = await getAllActiveMainTestsForPriceList('');
+      
+      if (!Array.isArray(freshTests) || freshTests.length === 0) {
+        toast.error('لا توجد تحاليل في قاعدة البيانات');
+        return;
+      }
+
+      // Create a map of test ID to cash price for quick lookup
+      const cashPriceMap = new Map<number, number>();
+      freshTests.forEach(test => {
+        if (test.price !== null && test.price !== undefined) {
+          cashPriceMap.set(test.id, Number(test.price));
+        }
+      });
+
+      if (cashPriceMap.size === 0) {
+        toast.error('لا توجد أسعار نقدية في قاعدة البيانات');
+        return;
+      }
+
+      toast.info(`جاري تحديث ${cashPriceMap.size} سعر نقدي...`);
+
+      const colRef = collection(db, 'labToLap', String(labId), 'pricelist');
+      const BATCH_LIMIT = 450;
+      let updatedCount = 0;
+
+      // Process in batches
+      const testIds = Array.from(cashPriceMap.keys());
+      for (let i = 0; i < testIds.length; i += BATCH_LIMIT) {
+        const slice = testIds.slice(i, i + BATCH_LIMIT);
+        const batch = writeBatch(db);
+        
+        slice.forEach(testId => {
+          const cashPrice = cashPriceMap.get(testId);
+          if (cashPrice !== undefined) {
+            const docRef = doc(colRef, String(testId));
+            batch.set(docRef, {
+              id: testId,
+              name: freshTests.find(t => t.id === testId)?.main_test_name || `Test ${testId}`,
+              price: cashPrice,
+            }, { merge: true });
+            updatedCount++;
+          }
+        });
+        
+        await batch.commit();
+      }
+      
+      toast.success(`تم تحديث ${updatedCount} سعر نقدي بنجاح`);
+      setReloadTs(Date.now());
+    } catch (error: unknown) {
+      const message = error && typeof error === 'object' && 'message' in error ? String((error as { message?: unknown }).message) : 'حدث خطأ أثناء التحديث';
+      toast.error('فشل تحديث الأسعار النقدية', { description: message });
+    } finally {
+      setIsUpdatingCashPrices(false);
     }
   };
 
@@ -368,6 +418,17 @@ const LabPriceListPage = () => {
               خصم على الأسعار
             </Button>
             
+            <Button
+              variant="contained"
+              startIcon={isUpdatingCashPrices ? <CircularProgress size={16} /> : <Update />}
+              onClick={handleUpdateWithCashPrices}
+              disabled={isUpdatingCashPrices}
+              size="small"
+              sx={{ minWidth: { xs: '100%', sm: 'auto' } }}
+            >
+              {isUpdatingCashPrices ? 'جاري التحديث...' : 'تحديث بالأسعار النقدية'}
+            </Button>
+            
           </Stack>
         </Stack>
         
@@ -404,15 +465,8 @@ const LabPriceListPage = () => {
                 <TableHead>
                   <TableRow>
                     <TableCell className="text-2xl!" align="center">الكود</TableCell>
-                    <TableCell className="text-2xl!" align="center">اسم </TableCell>
-                    <TableCell className="text-2xl!" align="center" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
-                      الوعاء
-                    </TableCell>
-                    <TableCell className="text-2xl!" align="center" sx={{ display: { xs: 'none', md: 'table-cell' } }}>
-                      السعر
-                    </TableCell>
-                    <TableCell className="text-2xl!" align="center">متاح</TableCell>
-                    <TableCell className="text-2xl!" align="right">الإجراءات</TableCell>
+                    <TableCell className="text-2xl!" align="center">اسم التحليل</TableCell>
+                    <TableCell className="text-2xl!" align="center">السعر</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -420,8 +474,6 @@ const LabPriceListPage = () => {
                     <TableRow 
                       key={test.id}
                       hover
-                      onClick={() => navigate(`/settings/laboratory/${test.id}/edit`)}
-                      sx={{ cursor: 'pointer' }}
                     >
                       <TableCell className="text-2xl!" align="center" sx={{ fontWeight: 'medium' }}>
                         {test.id}
@@ -429,15 +481,7 @@ const LabPriceListPage = () => {
                       <TableCell className="text-2xl!" align="center" sx={{ fontWeight: 'medium' }}>
                         {test.main_test_name}
                       </TableCell>
-                      <TableCell className="text-2xl!" align="center" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
-                        {test.container?.container_name || test.container_name || '-'}
-                      </TableCell>
-                      <TableCell 
-                        className="text-2xl!" 
-                        align="center" 
-                        sx={{ display: { xs: 'none', md: 'table-cell' } }}
-                        onClick={(e) => e.stopPropagation()}
-                      >
+                      <TableCell className="text-2xl!" align="center">
                         <TextField
                           value={priceInputs[test.id] ?? ''}
                           onChange={(e) => setPriceInputs(prev => ({ ...prev, [test.id]: e.target.value }))}
@@ -460,21 +504,6 @@ const LabPriceListPage = () => {
                           }}
                         />
                       </TableCell>
-                      <TableCell className="text-2xl!" align="center">
-                        {test.available ? (
-                          <CheckCircle color="success" />
-                        ) : (
-                          <Cancel color="error" />
-                        )}
-                      </TableCell>
-                      <TableCell className="text-2xl!" align="right">
-                        <IconButton
-                          onClick={(e) => { e.stopPropagation(); handleMenuOpen(e, test.id); }}
-                          size="small"
-                        >
-                          <MoreVert />
-                        </IconButton>
-                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -496,31 +525,6 @@ const LabPriceListPage = () => {
           </Box>
         )}
 
-        {/* Dropdown Menu */}
-        <Menu
-          anchorEl={anchorEl}
-          open={Boolean(anchorEl)}
-          onClose={handleMenuClose}
-          anchorOrigin={{
-            vertical: 'bottom',
-            horizontal: 'right',
-          }}
-          transformOrigin={{
-            vertical: 'top',
-            horizontal: 'right',
-          }}
-        >
-          <MenuItem 
-            component={Link} 
-            to={`/settings/laboratory/${selectedTestId}/edit`}
-            onClick={handleMenuClose}
-          >
-            <ListItemIcon>
-              <Edit fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>تعديل</ListItemText>
-          </MenuItem>
-        </Menu>
 
         {/* Bulk Price Adjustment Dialog */}
         <Dialog 

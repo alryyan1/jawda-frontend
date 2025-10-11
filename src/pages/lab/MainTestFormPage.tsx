@@ -22,6 +22,7 @@ import { FormProvider } from 'react-hook-form';
 
 import type { Container, Package } from '@/types/labTests';
 import { createMainTest, updateMainTest, getMainTestById } from '@/services/mainTestService';
+import { updateTestConditionsAndTimerAcrossAllLabs } from '@/services/firestoreTestService';
 import { getContainers } from '@/services/containerService';
 
 import MainTestFormFields from '@/components/lab/MainTestFormFields';
@@ -46,7 +47,9 @@ const mainTestFormSchema = z.object({
   price: z.string().optional(),
   divided: z.boolean(),
   available: z.boolean(),
-  is_special_test: z.boolean()
+  is_special_test: z.boolean(),
+  conditions: z.string().optional(),
+  timer: z.string().optional()
 });
 
 type MainTestFormValues = z.infer<typeof mainTestFormSchema>;
@@ -60,6 +63,8 @@ interface MainTestSubmissionData {
   divided: boolean;
   available: boolean;
   is_special_test?: boolean;
+  conditions?: string;
+  timer?: number;
 }
 
 const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
@@ -96,7 +101,9 @@ const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
       price: '',
       divided: false,
       available: true,
-      is_special_test: false
+      is_special_test: false,
+      conditions: '',
+      timer: ''
     }
   });
   
@@ -122,7 +129,9 @@ const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
         price: '',
         divided: false,
         available: true,
-        is_special_test: false
+        is_special_test: false,
+        conditions: '',
+        timer: ''
       });
       setCurrentMainTestId(null);
     }
@@ -138,7 +147,9 @@ const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
         price: mainTestData.price ? String(mainTestData.price) : '',
         divided: mainTestData.divided,
         available: mainTestData.available,
-        is_special_test: Boolean((mainTestData as unknown as { is_special_test?: boolean }).is_special_test)
+        is_special_test: Boolean((mainTestData as unknown as { is_special_test?: boolean }).is_special_test),
+        conditions: (mainTestData as unknown as { conditions?: string }).conditions || '',
+        timer: (mainTestData as unknown as { timer?: number }).timer ? String((mainTestData as unknown as { timer?: number }).timer) : ''
       });
     }
   }, [mainTestData, currentMainTestId, reset]);
@@ -154,15 +165,44 @@ const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
         divided: data.divided,
         available: data.available,
         is_special_test: data.is_special_test,
+        conditions: data.conditions?.trim() || undefined,
+        timer: data.timer?.trim() ? Number(data.timer) : undefined,
       };
       return isEditMode && currentMainTestId 
         ? updateMainTest(currentMainTestId, submissionData) 
         : createMainTest(submissionData);
     },
-    onSuccess: (response) => {
+    onSuccess: async (response, variables) => {
       const savedMainTest = response.data;
       toast.success('تم حفظ الاختبار بنجاح');
       queryClient.invalidateQueries({ queryKey: ['mainTests'] });
+      
+      // Check if we need to update Firestore with conditions or timer
+      const hasConditions = variables.conditions && variables.conditions.trim() !== '';
+      const hasTimer = variables.timer && variables.timer.trim() !== '' && Number(variables.timer) > 0;
+      
+      if (hasConditions || hasTimer) {
+        try {
+          const firestoreResult = await updateTestConditionsAndTimerAcrossAllLabs(
+            savedMainTest.id,
+            hasConditions ? variables.conditions : undefined,
+            hasTimer ? Number(variables.timer) : undefined,
+            savedMainTest.main_test_name
+          );
+
+          if (firestoreResult.success && firestoreResult.updatedLabs > 0) {
+            toast.success(`تم تحديث الشروط والوقت في ${firestoreResult.updatedLabs} مختبر`);
+          } else if (firestoreResult.success) {
+            // No labs updated, but no error either
+            console.log('No labs found to update with conditions/timer');
+          } else {
+            toast.warning(`تم حفظ الاختبار، لكن حدث خطأ في تحديث Firestore: ${firestoreResult.error}`);
+          }
+        } catch (error) {
+          console.error('Error updating Firestore with conditions/timer:', error);
+          toast.warning('تم حفظ الاختبار، لكن حدث خطأ في تحديث Firestore');
+        }
+      }
       
       if (!isEditMode && savedMainTest.id) {
         setCurrentMainTestId(savedMainTest.id);

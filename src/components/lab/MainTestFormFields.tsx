@@ -28,6 +28,8 @@ interface MainTestFormValues {
   divided: boolean;
   available: boolean;
   is_special_test: boolean;
+  conditions?: string;
+  timer?: string;
 }
 
 interface MainTestFormFieldsProps {
@@ -157,6 +159,48 @@ const MainTestFormFields: React.FC<MainTestFormFieldsProps> = ({
         )}
       />
 
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+        <Controller
+          control={control}
+          name="conditions"
+          render={({ field, fieldState: { error } }) => (
+            <TextField
+              {...field}
+              label="الشروط"
+              placeholder="أدخل شروط الاختبار"
+              disabled={disabled}
+              error={!!error}
+              helperText={error?.message}
+              multiline
+              rows={2}
+              fullWidth
+            />
+          )}
+        />
+        
+        <Controller
+          control={control}
+          name="timer"
+          render={({ field, fieldState: { error } }) => (
+            <TextField
+              {...field}
+              label="المؤقت (بالساعات)"
+              type="number"
+              inputProps={{ 
+                min: 0,
+                step: 1
+              }}
+              placeholder="أدخل الوقت بالساعات"
+              value={field.value || ''}
+              disabled={disabled}
+              error={!!error}
+              helperText={error?.message || "أدخل الوقت بالساعات (أرقام فقط)"}
+              fullWidth
+            />
+          )}
+        />
+      </Stack>
+
       <Paper elevation={1} sx={{ p: 2, mt: 2 }}>
         <Stack direction="row" spacing={4} justifyContent="space-around" alignItems="center">
           {/* <Controller
@@ -210,7 +254,7 @@ const MainTestFormFields: React.FC<MainTestFormFieldsProps> = ({
             )}
           />
 
-          {/* <Controller
+          <Controller
             control={control}
             name="is_special_test"
             render={({ field }) => (
@@ -225,7 +269,7 @@ const MainTestFormFields: React.FC<MainTestFormFieldsProps> = ({
                 label="اختبار خاص"
               />
             )}
-          /> */}
+          />
         </Stack>
       </Paper>
     </Stack>

@@ -5,6 +5,7 @@ import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Loader2, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { smsService } from '@/services/smsService';
 
 interface LabDocument {
 	id: string;
@@ -40,6 +41,7 @@ const LabtoLabDashBoard: React.FC = () => {
 	const [labData, setLabData] = useState<LabDocument | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [updating, setUpdating] = useState(false);
+	const [sendingSms, setSendingSms] = useState(false);
 
 	// Fetch lab data from Firestore
 	useEffect(() => {
@@ -83,6 +85,22 @@ const LabtoLabDashBoard: React.FC = () => {
 
 			setLabData(prev => prev ? { ...prev, isApproved: newApprovalStatus } : null);
 			
+			// Send SMS notification if lab is being approved
+			if (newApprovalStatus && labData.phone) {
+				setSendingSms(true);
+				toast.info('جاري إرسال رسالة نصية للمعمل...');
+				
+				try {
+					await smsService.sendLabApprovalSms(labData.phone);
+					toast.success('تم إرسال رسالة النصية بنجاح');
+				} catch (smsError) {
+					console.error('SMS sending failed:', smsError);
+					toast.error('فشل في إرسال الرسالة النصية');
+				} finally {
+					setSendingSms(false);
+				}
+			}
+			
 			toast.success(
 				newApprovalStatus 
 					? 'تم تفعيل المعمل بنجاح' 
@@ -116,33 +134,33 @@ const LabtoLabDashBoard: React.FC = () => {
 					
 					{/* Big Approval Toggle Button */}
 					<div className="flex justify-center">
-						<Button
-							onClick={toggleApproval}
-							disabled={updating}
-							size="lg"
-							className={`h-20 px-12 text-lg font-bold transition-all duration-300 ${
-								labData.isApproved
-									? 'bg-green-600 hover:bg-green-700 text-white'
-									: 'bg-red-600 hover:bg-red-700 text-white'
-							}`}
-						>
-							{updating ? (
-								<>
-									<Loader2 className="h-6 w-6 animate-spin ml-2" />
-									جاري التحديث...
-								</>
-							) : labData.isApproved ? (
-								<>
-									<CheckCircle className="h-6 w-6 ml-2" />
-									المعمل مفعل
-								</>
-							) : (
-								<>
-									<XCircle className="h-6 w-6 ml-2" />
-									المعمل غير مفعل
-								</>
-							)}
-						</Button>
+					<Button
+						onClick={toggleApproval}
+						disabled={updating || sendingSms}
+						size="lg"
+						className={`h-20 px-12 text-lg font-bold transition-all duration-300 ${
+							labData.isApproved
+								? 'bg-green-600 hover:bg-green-700 text-white'
+								: 'bg-red-600 hover:bg-red-700 text-white'
+						}`}
+					>
+						{updating || sendingSms ? (
+							<>
+								<Loader2 className="h-6 w-6 animate-spin ml-2" />
+								{sendingSms ? 'جاري إرسال الرسالة...' : 'جاري التحديث...'}
+							</>
+						) : labData.isApproved ? (
+							<>
+								<CheckCircle className="h-6 w-6 ml-2" />
+								المعمل مفعل
+							</>
+						) : (
+							<>
+								<XCircle className="h-6 w-6 ml-2" />
+								المعمل غير مفعل
+							</>
+						)}
+					</Button>
 					</div>
 					
 					{/* Lab Status Info */}

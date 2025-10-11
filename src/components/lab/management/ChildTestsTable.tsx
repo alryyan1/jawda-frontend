@@ -279,7 +279,7 @@ const ChildTestsTable: React.FC<ChildTestsTableProps> = ({
   }
 
   return (
-    <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
+    <Box sx={{ maxWidth: 1500, mx: 'auto' }}>
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 2, mb: 3 }}>
         {orderHasChanged && canReorder && (
           <Button
@@ -332,22 +332,22 @@ const ChildTestsTable: React.FC<ChildTestsTableProps> = ({
               strategy={verticalListSortingStrategy}
             >
               <TableContainer>
-                <Table className="text-2xl!">
+                <Table className="text-xl!">
                   <TableHead>
                     <TableRow>
-                      <TableCell sx={{ width: 40, display: { xs: 'none', print: 'none' } }}></TableCell>
-                      <TableCell className="text-2xl!" align="center">الاسم</TableCell>
-                      <TableCell className="text-2xl!" align="center" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
-                        الوحدة
+                      <TableCell >*</TableCell>
+                      <TableCell className="text-xl!" align="center">Name</TableCell>
+                      <TableCell className="text-xl!" align="center" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
+                        Unit
                       </TableCell>
-                      <TableCell className="text-2xl!" align="center" sx={{ display: { xs: 'none', md: 'table-cell' } }}>
-                        المجموعة
+                      <TableCell className="text-xl!" align="center" sx={{ display: { xs: 'none', md: 'table-cell' } }}>
+                        Group
                       </TableCell>
-                      <TableCell className="text-2xl!" align="center" sx={{ display: { xs: 'none', lg: 'table-cell' } }}>
-                        النطاق الطبيعي
+                      <TableCell className="text-xl!" align="center" sx={{ display: { xs: 'none', lg: 'table-cell' } }}>
+                          N.R
                       </TableCell>
-                      <TableCell className="text-2xl!" align="center">ترتيب العرض</TableCell>
-                      <TableCell className="text-2xl!" align="center">الإجراءات</TableCell>
+                      <TableCell className="text-xl!" align="center"> Order</TableCell>
+                      <TableCell className="text-xl!" align="center">Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>

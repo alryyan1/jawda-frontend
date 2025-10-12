@@ -20,7 +20,6 @@ import CollectedSamples from "@/components/lab/sample_collection/CollectedSample
 import NotCollectedSamples from "@/components/lab/sample_collection/NotCollectedSamples";
 import VisitSampleContainers from "@/components/lab/sample_collection/VisitSampleContainers";
 import RequestedTests from "../../components/lab/sample_collection/RequestedTests";
-import PdfPreviewDialog from "@/components/common/PdfPreviewDialog";
 
 import type { PatientLabQueueItem } from "@/types/labWorkflow";
 import type { Shift } from "@/types/shifts";
@@ -36,7 +35,6 @@ import type { Patient } from "@/types/patients";
 
 import SendWhatsAppTextDialogSC from "@/components/lab/sample_collection/SendWhatsAppTextDialogSC";
 import SendPdfToCustomNumberDialogSC from "@/components/lab/sample_collection/SendPdfToCustomNumberDialogSC";
-import { getDoctorVisitById } from "@/services/visitService";
 
 // Global event handler manager to prevent multiple handlers
 class GlobalEventManager {
@@ -340,13 +338,6 @@ const SampleCollectionPage: React.FC = () => {
     isOpen: boolean;
     queueItem: PatientLabQueueItem | null;
   }>({ isOpen: false, queueItem: null });
-  const [pdfPreviewData, setPdfPreviewData] = useState<{
-    isOpen: boolean;
-    url: string | null;
-    title: string;
-    fileName: string;
-    isLoading: boolean;
-  }>({ isOpen: false, url: null, title: "", fileName: "", isLoading: false });
 
   useEffect(() => {
     if (
@@ -488,61 +479,119 @@ const SampleCollectionPage: React.FC = () => {
       toast.error(errorMessage);
     }
   };
- const pirntToZebra = (activePatient: DoctorVisit)=>{
-  fetch("http://127.0.0.1:5000/", {
-    method: "POST",
-    headers: {
-      "Content-Type": "APPLICATION/JSON",
-    },
-
-    body: JSON.stringify(activePatient),
-  }).then(() => {});
-
- }
-  const generateAndShowPdfForActionPane = async (
-    titleKey: string,
-    fileNamePrefix: string,
-    endpointTemplate: string
-  ) => {
+  const printToZebra = async (visitId: number) => {
+    try {
+      const response = await apiClient.post(`/visits/${visitId}/print-barcode`);
+      
+      if (response.data.status) {
+        toast.success("تم طباعة الباركود بنجاح");
+      } else {
+        toast.error(response.data.message || "فشل في طباعة الباركود");
+      }
+    } catch (error: unknown) {
+      console.error('Error printing barcode:', error);
+      const errorMessage = error instanceof Error ? error.message : "فشل في طباعة الباركود";
+      toast.error(errorMessage);
+    }
+  };
+  const printBarcodeLabels = async () => {
     const visitIdToUse = selectedQueueItem?.visit_id;
     if (!visitIdToUse) {
       toast.error("يرجى اختيار زيارة أولاً");
       return;
     }
 
-    setPdfPreviewData((prev) => ({
-      ...prev,
-      isLoading: true,
-      title: titleKey,
-      isOpen: true,
-      url: null,
-    }));
+    // Debug: Check authentication status
+    const authToken = localStorage.getItem('authToken');
+    console.log('Auth token exists:', !!authToken);
+    console.log('Making request to:', `/visits/${visitIdToUse}/lab-barcode/pdf`);
+
     try {
-      const endpoint = endpointTemplate.replace(
-        "{visitId}",
-        String(visitIdToUse)
-      );
-        const doctorVisit = await getDoctorVisitById(visitIdToUse);
-        console.log(doctorVisit,"doctorVisit",visitIdToUse,'visitIdToUse');
-        pirntToZebra(doctorVisit);
-      const response = await apiClient.get(endpoint, { responseType: "blob" });
-      const blob = new Blob([response.data], { type: "application/pdf" });
-      const objectUrl = URL.createObjectURL(blob);
-      setPdfPreviewData((prev) => ({
-        ...prev,
-        url: objectUrl,
-        isLoading: false,
-        fileName: `${fileNamePrefix}_Visit${visitIdToUse}_${
-          selectedQueueItem?.patient_name.replace(/\s+/g, "_") || "Patient"
-        }.pdf`,
-      }));
-    } catch {
-      toast.error("فشل في إنشاء ملف PDF");
-      setPdfPreviewData((prev) => ({
-        ...prev,
-        isLoading: false,
-        isOpen: false,
-      }));
+      // Make both requests in parallel
+      const [zebraResult, pdfResult] = await Promise.allSettled([
+        // Print barcode to Zebra printer
+        printToZebra(visitIdToUse),
+        // Generate PDF with viewer
+        apiClient.get(`/visits/${visitIdToUse}/lab-barcode/pdf`, { responseType: "blob" })
+      ]);
+
+      // Handle Zebra printer result
+      if (zebraResult.status === 'fulfilled') {
+        console.log('Zebra printer request completed successfully');
+      } else {
+        console.error('Zebra printer request failed:', zebraResult.reason);
+        toast.error("فشل في طباعة الباركود على الطابعة");
+      }
+
+      // Handle PDF generation result
+      if (pdfResult.status === 'fulfilled') {
+        const response = pdfResult.value;
+        const blob = new Blob([response.data], { type: "application/pdf" });
+        
+        // Method 1: Try to open in new tab with blob URL
+        try {
+          const objectUrl = URL.createObjectURL(blob);
+          const newWindow = window.open(objectUrl, '_blank', 'noopener,noreferrer');
+          
+          if (newWindow) {
+            // Clean up the object URL after a delay
+            setTimeout(() => {
+              URL.revokeObjectURL(objectUrl);
+            }, 5000);
+            console.log('PDF opened in new tab successfully');
+          } else {
+            // Fallback: Download the PDF
+            const link = document.createElement('a');
+            link.href = objectUrl;
+            link.download = `barcode_labels_visit_${visitIdToUse}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            setTimeout(() => {
+              URL.revokeObjectURL(objectUrl);
+            }, 1000);
+            console.log('PDF downloaded as fallback');
+          }
+        } catch (error) {
+          // Fallback: Direct download
+          const objectUrl = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = objectUrl;
+          link.download = `barcode_labels_visit_${visitIdToUse}.pdf`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+          setTimeout(() => {
+            URL.revokeObjectURL(objectUrl);
+          }, 1000);
+          console.log('PDF downloaded due to error:', error);
+        }
+        
+        console.log('PDF generation completed successfully');
+      } else {
+        console.error('PDF generation failed:', pdfResult.reason);
+        
+        // Check if it's an authentication error
+        if (pdfResult.reason?.response?.status === 401) {
+          toast.error("انتهت صلاحية الجلسة - يرجى تسجيل الدخول مرة أخرى");
+        } else if (pdfResult.reason?.response?.status === 500) {
+          toast.error("خطأ في الخادم - تحقق من صحة البيانات");
+        } else {
+          toast.error("فشل في إنشاء ملف PDF");
+        }
+      }
+
+      // Show overall success message if at least one request succeeded
+      if (zebraResult.status === 'fulfilled' || pdfResult.status === 'fulfilled') {
+        toast.success("تم تنفيذ طلب الطباعة");
+      }
+
+    } catch (error: unknown) {
+      console.error('Error in printBarcodeLabels:', error);
+      const errorMessage = error instanceof Error ? error.message : "فشل في تنفيذ طلب الطباعة";
+      toast.error(errorMessage);
     }
   };
 
@@ -777,13 +826,7 @@ const SampleCollectionPage: React.FC = () => {
             <RequestedTests
               selectedVisitId={selectedQueueItem?.visit_id || null}
               labRequests={labRequestsForSelectedVisit}
-              onPrintAllLabels={() =>
-                generateAndShowPdfForActionPane(
-                  "طباعة جميع ملصقات العينات",
-                  "AllSampleLabels",
-                  `/visits/{visitId}/lab-sample-labels/pdf`
-                )
-              }
+              onPrintAllLabels={printBarcodeLabels}
               onAfterPrint={() => {
                 fetchQueueData();
                 refetchLabRequestsForVisit();
@@ -814,20 +857,6 @@ const SampleCollectionPage: React.FC = () => {
         }
         queueItem={sendPdfCustomData.queueItem}
         pdfType="sample_collection_slip" // Or dynamically determine what PDF to send
-      />
-      <PdfPreviewDialog
-        isOpen={pdfPreviewData.isOpen}
-        onOpenChange={(open) => {
-          setPdfPreviewData((prev) => ({ ...prev, isOpen: open }));
-          if (!open && pdfPreviewData.url) {
-            URL.revokeObjectURL(pdfPreviewData.url);
-            setPdfPreviewData((prev) => ({ ...prev, url: null }));
-          }
-        }}
-        pdfUrl={pdfPreviewData.url}
-        isLoading={pdfPreviewData.isLoading}
-        title={pdfPreviewData.title}
-        fileName={pdfPreviewData.fileName}
       />
     </>
   );

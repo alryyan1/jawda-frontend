@@ -163,16 +163,16 @@ const VisitSampleContainers: React.FC<VisitSampleContainersProps> = ({
       </div>
       
       <CardContent className="flex-grow p-4">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xl mb-3">
-          <div>
+        <div className="">
+          {/* <div>
             <span className="font-medium">الهاتف:</span> <span>{patientPhone ?? '-'}</span>
           </div>
           <div>
             <span className="font-medium">العمر:</span> <span>{patientAge ?? '-'}</span>
-          </div>
-          <div>
+          </div> */}
+          {/* <div>
             <span className="font-medium">الطبيب:</span> <span>{doctorName ?? '-'}</span>
-          </div>
+          </div> */}
           <div>
             <span className="font-medium">التاريخ:</span> <span>{formatDate(visitDateTime)} · {formatTime(visitDateTime)}</span>
           </div>

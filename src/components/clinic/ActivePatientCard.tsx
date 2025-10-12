@@ -257,7 +257,7 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
                 "flex-shrink-0 w-8 h-8 flex items-center justify-center rounded text-white text-sm font-bold shadow ltr:mr-3 rtl:ml-3",
                 getStatusColor(visit.status)
               )}
-              title={`رقم الطابور: ${queueNumberOrVisitId}`}
+              title={`رقم : ${queueNumberOrVisitId}`}
             >
               {queueNumberOrVisitId}
             </div>

@@ -9,8 +9,6 @@ import { Button } from "@/components/ui/button";
 import { User, Loader2, Mail } from "lucide-react";
 import { getLabRequestsForVisit } from "@/services/labRequestService";
 import { realtimeUrlFromConstants } from "@/pages/constants";
-import { useAuth } from "@/contexts/AuthContext";
-import LabUserShiftSummary from "./LabUserShiftSummary";
 // import { showJsonDialog } from "@/lib/showJsonDialog";
 
 interface PatientDetailsColumnV1Props {
@@ -36,7 +34,6 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
   onPrintReceipt,
 }, ref) => {
   const queryClient = useQueryClient();
-  const { currentClinicShift } = useAuth();
   const [isPatientInfoDialogOpen, setIsPatientInfoDialogOpen] = useState(false);
   const [isSmsDialogOpen, setIsSmsDialogOpen] = useState(false);
   const [smsMessage, setSmsMessage] = useState("");
@@ -52,6 +49,21 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
     onSuccess: async () => {
       // toast.success("تمت معالجة جميع المدفوعات بنجاح");
       onPrintReceipt();
+      
+      // Send print order to Zebra printer
+      try {
+        if (activeVisitId) {
+          const printResponse = await apiClient.post(`/visits/${activeVisitId}/print-barcode`);
+          if (printResponse.data.status) {
+            console.log('Zebra print order sent successfully');
+          } else {
+            console.error('Zebra print order failed:', printResponse.data.message);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to send print order to Zebra:', error);
+        // Don't show error to user as payment was successful
+      }
       
       // Emit lab-payment event
       try {

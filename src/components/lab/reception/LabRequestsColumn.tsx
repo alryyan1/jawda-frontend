@@ -375,7 +375,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
               {"اختر مريضاً"}
             </p>
             <p className="text-sm max-w-xs mx-auto leading-relaxed">
-              {"اختر مريضاً من الطابور لعرض طلباته"}
+              {"اختر مريضاً من  لعرض طلباته"}
             </p>
           </div>
         </div>

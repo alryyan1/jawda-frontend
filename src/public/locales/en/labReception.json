@@ -3,5 +3,7 @@
     "payableAmount": "Payable Amount",
     "needApprove": "Need Approve",
     "approved": "Approved",
-    "pendingApproval": "Pending Approval"
+    "pendingApproval": "Pending Approval",
+    "printOrderSuccess": "Print order sent to Zebra successfully",
+    "printOrderFailed": "Failed to send print order to Zebra"
 } 

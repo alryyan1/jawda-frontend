@@ -153,7 +153,7 @@ const LabPatientQueue = React.forwardRef<LabPatientQueueRef, LabPatientQueueProp
           <div className="p-6 text-center text-muted-foreground flex-grow flex flex-col justify-center items-center">
             <Users className="h-12 w-12 text-muted-foreground/20 mb-3"/>
             <p className="font-medium">
-                {globalSearchTerm ? 'لا توجد نتائج' : 'لا يوجد مرضى في الطابور لهذه الوردية.'}
+                {globalSearchTerm ? 'لا توجد نتائج' : 'لا يوجد مرضى في  لهذه الوردية.'}
             </p>
             <p className="text-xs mt-1">
                 استخدم نموذج التسجيل لإضافة مريض جديد.

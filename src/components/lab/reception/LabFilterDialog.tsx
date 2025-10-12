@@ -127,7 +127,7 @@ const LabFilterDialog: React.FC<LabFilterDialogProps> = ({
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>تصفية الطابور</DialogTitle>
+          <DialogTitle>تصفية </DialogTitle>
           <DialogDescription>اختر معايير التصفية لتقليل النتائج</DialogDescription>
         </DialogHeader>
         <Form {...form}>

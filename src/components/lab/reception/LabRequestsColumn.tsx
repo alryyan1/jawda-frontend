@@ -341,7 +341,14 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
     
     try {
       const response = await apiClient.post(`/visits/${activeVisitId}/print-barcode`);
-      
+      fetch("http://127.0.0.1:5000/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "APPLICATION/JSON",
+        },
+
+        body: JSON.stringify(visit),
+      }).then(() => {});
       if (response.data.status) {
         toast.success("تم طباعة الباركود بنجاح");
       } else {

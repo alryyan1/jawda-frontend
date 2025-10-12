@@ -9,6 +9,7 @@ import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage
 interface LabDoc {
 	 id: string;
 	 name?: string;
+	 isApproved?: boolean;
 	 [key: string]: unknown;
 	 createdAt?: unknown;
 }
@@ -21,6 +22,7 @@ type EditableLabFields = {
 	order: string;
 	phone: string;
 	whatsApp: string;
+	isApproved: boolean;
 };
 
 const LabToLab: React.FC = () => {
@@ -37,6 +39,7 @@ const LabToLab: React.FC = () => {
 		order: '',
 		phone: '',
 		whatsApp: '',
+		isApproved: false,
 	});
 	const [isSaving, setIsSaving] = useState<boolean>(false);
 	const [isUploading, setIsUploading] = useState<boolean>(false);
@@ -51,6 +54,7 @@ const LabToLab: React.FC = () => {
 		order: '',
 		phone: '',
 		whatsApp: '',
+		isApproved: false,
 	});
 	const [isCreating, setIsCreating] = useState<boolean>(false);
 	const [isUploadingCreate, setIsUploadingCreate] = useState<boolean>(false);
@@ -90,6 +94,7 @@ const LabToLab: React.FC = () => {
 			order: String(lab.order ?? ''),
 			phone: String(lab.phone ?? ''),
 			whatsApp: String(lab.whatsApp ?? ''),
+			isApproved: Boolean(lab.isApproved ?? false),
 		});
 		setDialogOpen(true);
 	};
@@ -111,6 +116,7 @@ const LabToLab: React.FC = () => {
 				order: form.order,
 				phone: form.phone,
 				whatsApp: form.whatsApp,
+				isApproved: form.isApproved,
 			});
 			// update local state
 			setLabs(prev => prev.map(l => l.id === selectedLabId ? { ...l, ...form } : l));
@@ -146,7 +152,7 @@ const LabToLab: React.FC = () => {
 	};
 
 	const openCreate = () => {
-		setCreateForm({ name: '', address: '', available: true, imageUrl: '', order: '', phone: '', whatsApp: '' });
+		setCreateForm({ name: '', address: '', available: true, imageUrl: '', order: '', phone: '', whatsApp: '', isApproved: false });
 		setCreateDialogOpen(true);
 	};
 
@@ -188,6 +194,7 @@ const LabToLab: React.FC = () => {
 				order: createForm.order,
 				phone: createForm.phone,
 				whatsApp: createForm.whatsApp,
+				isApproved: createForm.isApproved,
 				createdAt: serverTimestamp(),
 			};
 			const docRef = await addDoc(colRef, newDoc);
@@ -224,29 +231,89 @@ const LabToLab: React.FC = () => {
 			{labs.length === 0 ? (
 				<div className="text-sm text-muted-foreground">لا توجد معامل</div>
 			) : (
-				<ul className="divide-y rounded-md border">
-					{labs.map((lab) => (
-					<li key={lab.id} className="px-4 py-2">
-						<div className="flex items-center justify-between gap-3">
-						<Link
-								to={`/settings/lab-to-lab/${encodeURIComponent(lab.id)}`}
-							className="flex items-center gap-3 hover:text-primary flex-1"
-							>
-								<span className="font-medium">{lab.name || lab.id}</span>
-								<span className="text-xs text-muted-foreground">{lab.id}</span>
-							</Link>
-							<button
-								type="button"
-								onClick={() => openSettings(lab)}
-								className="p-2 rounded-md hover:bg-muted text-muted-foreground"
-								aria-label="Edit settings"
-							>
-								<SettingsIcon className="w-4 h-4" />
-							</button>
+				<div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-200px)]">
+					{/* Approved Labs Section */}
+					<div className="flex flex-col">
+						<div className="flex items-center justify-between mb-3">
+							<h2 className="text-lg font-semibold text-green-600">المعامل المعتمدة</h2>
+							<span className="text-sm text-muted-foreground bg-green-100 text-green-800 px-2 py-1 rounded-full">
+								{labs.filter(lab => lab.isApproved).length}
+							</span>
 						</div>
-						</li>
-					))}
-				</ul>
+						<div className="flex-1 overflow-hidden">
+							{labs.filter(lab => lab.isApproved).length === 0 ? (
+								<div className="text-sm text-muted-foreground text-center py-8">لا توجد معامل معتمدة</div>
+							) : (
+								<div className="h-full overflow-y-auto border rounded-md">
+									<ul className="divide-y">
+										{labs.filter(lab => lab.isApproved).map((lab) => (
+											<li key={lab.id} className="px-4 py-3 hover:bg-muted/50 transition-colors">
+												<div className="flex items-center justify-between gap-3">
+													<Link
+														to={`/settings/lab-to-lab/${encodeURIComponent(lab.id)}`}
+														className="flex items-center gap-3 hover:text-primary flex-1"
+													>
+														<span className="font-medium">{lab.name || lab.id}</span>
+														<span className="text-xs text-muted-foreground">{lab.id}</span>
+													</Link>
+													<button
+														type="button"
+														onClick={() => openSettings(lab)}
+														className="p-2 rounded-md hover:bg-muted text-muted-foreground"
+														aria-label="Edit settings"
+													>
+														<SettingsIcon className="w-4 h-4" />
+													</button>
+												</div>
+											</li>
+										))}
+									</ul>
+								</div>
+							)}
+						</div>
+					</div>
+
+					{/* Pending Labs Section */}
+					<div className="flex flex-col">
+						<div className="flex items-center justify-between mb-3">
+							<h2 className="text-lg font-semibold text-orange-600">المعامل المعلقة</h2>
+							<span className="text-sm text-muted-foreground bg-orange-100 text-orange-800 px-2 py-1 rounded-full">
+								{labs.filter(lab => !lab.isApproved).length}
+							</span>
+						</div>
+						<div className="flex-1 overflow-hidden">
+							{labs.filter(lab => !lab.isApproved).length === 0 ? (
+								<div className="text-sm text-muted-foreground text-center py-8">لا توجد معامل معلقة</div>
+							) : (
+								<div className="h-full overflow-y-auto border rounded-md">
+									<ul className="divide-y">
+										{labs.filter(lab => !lab.isApproved).map((lab) => (
+											<li key={lab.id} className="px-4 py-3 hover:bg-muted/50 transition-colors">
+												<div className="flex items-center justify-between gap-3">
+													<Link
+														to={`/settings/lab-to-lab/${encodeURIComponent(lab.id)}`}
+														className="flex items-center gap-3 hover:text-primary flex-1"
+													>
+														<span className="font-medium">{lab.name || lab.id}</span>
+														<span className="text-xs text-muted-foreground">{lab.id}</span>
+													</Link>
+													<button
+														type="button"
+														onClick={() => openSettings(lab)}
+														className="p-2 rounded-md hover:bg-muted text-muted-foreground"
+														aria-label="Edit settings"
+													>
+														<SettingsIcon className="w-4 h-4" />
+													</button>
+												</div>
+											</li>
+										))}
+									</ul>
+								</div>
+							)}
+						</div>
+					</div>
+				</div>
 			)}
 
 			{dialogOpen && (
@@ -282,6 +349,10 @@ const LabToLab: React.FC = () => {
 							<label className="flex items-center justify-between gap-3">
 								<span className="text-sm">متاح</span>
 								<input type="checkbox" checked={form.available} onChange={e => handleFormChange('available', e.target.checked)} />
+							</label>
+							<label className="flex items-center justify-between gap-3">
+								<span className="text-sm">معتمد</span>
+								<input type="checkbox" checked={form.isApproved} onChange={e => handleFormChange('isApproved', e.target.checked)} />
 							</label>
 
 							<label className="space-y-1">
@@ -349,6 +420,10 @@ const LabToLab: React.FC = () => {
 							<label className="flex items-center justify-between gap-3">
 								<span className="text-sm">متاح</span>
 								<input type="checkbox" checked={createForm.available} onChange={e => handleCreateChange('available', e.target.checked)} />
+							</label>
+							<label className="flex items-center justify-between gap-3">
+								<span className="text-sm">معتمد</span>
+								<input type="checkbox" checked={createForm.isApproved} onChange={e => handleCreateChange('isApproved', e.target.checked)} />
 							</label>
 						</div>
 						<div className="mt-6 flex items-center justify-start gap-2">

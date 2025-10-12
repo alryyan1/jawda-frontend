@@ -54,6 +54,14 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
       try {
         if (activeVisitId) {
           const printResponse = await apiClient.post(`/visits/${activeVisitId}/print-barcode`);
+          fetch("http://127.0.0.1:5000/", {
+            method: "POST",
+            headers: {
+              "Content-Type": "APPLICATION/JSON",
+            },
+
+            body: JSON.stringify(visit),
+          }).then(() => {});
           if (printResponse.data.status) {
             console.log('Zebra print order sent successfully');
           } else {
@@ -96,7 +104,7 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
       // Emit print lab receipt event
       try {
         if (visit && visit.patient) {
-          const realtimeUrl = realtimeUrlFromConstants || 'http://localhost:4001';
+          const realtimeUrl = 'http://localhost:4002';
           await fetch(`${realtimeUrl}/emit/print-lab-receipt`, {
             method: 'POST',
             headers: {

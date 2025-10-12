@@ -41,6 +41,7 @@ import {
   Banknote,
   PrinterIcon,
   MessageSquare,
+  Barcode,
 } from "lucide-react";
 
 // Services & Types
@@ -331,6 +332,28 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
     }
   };
 
+  // Print barcode to Zebra printer
+  const printToZebra = async () => {
+    if (!activeVisitId) {
+      toast.error("يرجى اختيار زيارة أولاً");
+      return;
+    }
+    
+    try {
+      const response = await apiClient.post(`/visits/${activeVisitId}/print-barcode`);
+      
+      if (response.data.status) {
+        toast.success("تم طباعة الباركود بنجاح");
+      } else {
+        toast.error(response.data.message || "فشل في طباعة الباركود");
+      }
+    } catch (error: unknown) {
+      console.error('Error printing barcode:', error);
+      const errorMessage = error instanceof Error ? error.message : "فشل في طباعة الباركود";
+      toast.error(errorMessage);
+    }
+  };
+
   const calculateDiscountedAmount = (price: number, discountPer: number) => {
     return price - (price * discountPer / 100);
   };
@@ -397,6 +420,16 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
           >
             <PrinterIcon className="h-4 w-4 mr-2" />
             <span className="hidden sm:inline">طباعة الإيصال</span>
+          </Button>
+          <Button
+            onClick={printToZebra}
+            variant="outline"
+            size="sm"
+            disabled={visit?.lab_requests?.length === 0}
+            title="طباعة الباركود على طابعة Zebra"
+          >
+            {/* <Barcode className="h-4 w-4 mr-2" /> */}
+            <span className="hidden sm:inline">طباعة الباركود</span>
           </Button>
         </div>
         

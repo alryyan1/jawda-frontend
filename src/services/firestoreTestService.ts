@@ -53,7 +53,7 @@ export const updateTestAvailabilityAcrossAllLabs = async (
           if (testData.id === testId) {
             const testRef = doc(db, 'labToLap', labId, 'pricelist', testDoc.id);
             batch.update(testRef, {
-              is_available: isAvailable,
+              available: isAvailable,
               updated_at: new Date().toISOString()
             });
             updatedLabs++;

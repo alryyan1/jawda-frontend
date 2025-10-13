@@ -84,6 +84,9 @@ type SettingsFormData = {
   footer_base64?: string;
   // NEW watermark asset
   watermark_image?: string;
+  // Logo display controls
+  show_logo?: boolean;
+  show_logo_only_whatsapp?: boolean;
 };
 
 const SettingsPage: React.FC = () => {
@@ -153,6 +156,9 @@ const SettingsPage: React.FC = () => {
       footer_base64: undefined,
       // NEW watermark asset
       watermark_image: undefined,
+      // Logo display controls
+      show_logo: undefined,
+      show_logo_only_whatsapp: undefined,
     },
   });
   const { control, handleSubmit, reset, watch } = form;
@@ -219,6 +225,9 @@ const SettingsPage: React.FC = () => {
         footer_base64: (settings as Setting & { footer_base64?: string }).footer_base64 || undefined,
         // NEW watermark asset
         watermark_image: (settings as any).watermark_image || undefined,
+        // Logo display controls
+        show_logo: (settings as any).show_logo ?? undefined,
+        show_logo_only_whatsapp: (settings as any).show_logo_only_whatsapp ?? undefined,
       });
     }
   }, [settings, reset]);
@@ -432,7 +441,7 @@ const SettingsPage: React.FC = () => {
           </Stack>
         )}
 
-        {/* Lab Canceled Report Tab */}
+        {/* Lab Report Tab */}
         {activeTab === "lab_canceled_report" && (
           <Paper elevation={2} sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
@@ -443,6 +452,39 @@ const SettingsPage: React.FC = () => {
             </Typography>
             
             <Stack spacing={3}>
+              {/* Logo Display Controls */}
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    {...control.register("show_logo")}
+                    checked={!!watchedValues.show_logo}
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography variant="body1">إظهار الشعار في التقارير</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      تفعيل أو تعطيل إظهار الشعار لجميع التقارير
+                    </Typography>
+                  </Box>
+                }
+              />
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    {...control.register("show_logo_only_whatsapp")}
+                    checked={!!watchedValues.show_logo_only_whatsapp}
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography variant="body1">إظهار الشعار عند الإرسال عبر واتساب فقط</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      عند التفعيل سيظهر الشعار فقط عند إرسال التقرير على واتساب
+                    </Typography>
+                  </Box>
+                }
+              />
               {/* Header Image Upload */}
               <Box>
                 <Typography variant="subtitle1" gutterBottom>

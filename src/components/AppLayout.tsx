@@ -121,19 +121,23 @@ const getMainNavItems = (userType?: UserType): NavItem[] => {
   if (userType === UserType.clinic_reception) {
     return allMainNavItems.filter(item => 
       item.to === '/dashboard' || 
-      item.to === '/clinic'
+      item.to === '/clinic' ||
+      item.to === '/cash-reconciliation'
+
     );
   }
   if (userType === UserType.cash_reconciliation) {
     return allMainNavItems.filter(item => 
       item.to === '/dashboard' || 
-      item.to === '/clinic'
+      item.to === '/clinic' ||
+      item.to === '/cash-reconciliation'
     );
   }
   if (userType === UserType.insurance) {
     return allMainNavItems.filter(item => 
       item.to === '/dashboard' || 
-      item.to === '/clinic'
+      item.to === '/clinic' ||
+      item.to === '/cash-reconciliation'
     );
   }
   

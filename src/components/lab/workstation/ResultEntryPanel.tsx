@@ -184,9 +184,9 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
     return { filteredChildTests: filtered, filteredToOriginalIndexMap: indexMap };
   }, [testDataForEntry, childGroups, activeGroupTab]);
   
-  console.log('Filtered child tests:', filteredChildTests);
-  console.log('Index mapping:', filteredToOriginalIndexMap);
-  console.log('Active group tab:', activeGroupTab);
+  // console.log('Filtered child tests:', filteredChildTests);
+  // console.log('Index mapping:', filteredToOriginalIndexMap);
+  // console.log('Active group tab:', activeGroupTab);
 
 
 
@@ -296,14 +296,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
               ? ct.result_value
               : ct.defval || null;
 
-          if (isBooleanResult && typeof initialResultValue === "string") {
-            const positiveOption = ct.options
-              ?.find((o) => o.name.match(/positive|present|yes|true/i))
-              ?.name.toLowerCase();
-            initialResultValue =
-              initialResultValue.toLowerCase() === "true" ||
-              initialResultValue.toLowerCase() === positiveOption;
-          } else if (
+          if (
             hasOptions &&
             typeof initialResultValue === "string" &&
             initialResultValue.trim() !== ""
@@ -381,6 +374,47 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
     setSelectedChildTestIndex(null);
     setNormalRangeInput("");
   };
+
+  // Determine if a given result is abnormal
+  const isResultAbnormal = useCallback((ct: ChildTestWithResult, value: unknown): boolean => {
+    if (value === undefined || value === null) return false;
+    // Numeric range check
+    const hasNumericBounds = (ct.low !== null && ct.low !== undefined) || (ct.upper !== null && ct.upper !== undefined);
+    if (hasNumericBounds) {
+      const parsed = typeof value === "string" ? parseFloat(value) : typeof value === "number" ? value : NaN;
+      if (!Number.isFinite(parsed)) return false;
+      const low = typeof ct.low === "number" ? ct.low : undefined;
+      const upper = typeof ct.upper === "number" ? ct.upper : undefined;
+      if (low !== undefined && upper !== undefined) return parsed < low || parsed > upper;
+      if (low !== undefined) return parsed < low;
+      if (upper !== undefined) return parsed > upper;
+      return false;
+    }
+    // Qualitative options check
+    const options = ct.options || [];
+    const toName = (v: unknown): string => {
+      if (typeof v === "string") return v;
+      if (typeof v === "boolean") return v ? "Positive" : "Negative";
+      if (typeof v === "object" && v !== null && "name" in (v as Record<string, unknown>)) {
+        return String((v as { name?: string }).name || "");
+      }
+      return String(v ?? "");
+    };
+    const vName = toName(value);
+    if (options.length > 0) {
+      const positiveLike = /positive|reactive|detected|present|yes|true/i;
+      const negativeLike = /negative|non\s*reactive|not\s*detected|absent|no|false/i;
+      // If matches positive-like => mark abnormal, if matches negative-like => normal
+      if (positiveLike.test(vName)) return true;
+      if (negativeLike.test(vName)) return false;
+      // Fallback: if there is a default value, mark abnormal when differs
+      if (ct.defval && typeof ct.defval === "string") {
+        return vName.trim().toLowerCase() !== ct.defval.trim().toLowerCase();
+      }
+      return false;
+    }
+    return false;
+  }, []);
 
   // Custom handler for child test focus that sets the selected index
   const handleChildTestFocus = useCallback((childTest: ChildTestWithResult | null, index: number) => {
@@ -687,6 +721,8 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                               resultValueField,
                               originalIndex: filteredToOriginalIndexMap[index]
                             });
+                            console.log(ctResult,'ctResult');
+                            const abnormal = isResultAbnormal(ctResult, fieldValue);
                             return (
                               <TableRow
                                 key={ctResult.id || `new-${index}`}
@@ -702,6 +738,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                                   backgroundColor: "var(--background)",
                                   cursor: "pointer",
                                   borderLeft: selectedChildTestIndex === index ? "4px solid #3b82f6" : "4px solid transparent",
+                                  borderRight: abnormal ? "4px solid #ef4444" : "4px solid transparent",
                                   transition: "all 0.2s ease-in-out",
                                 }}
                               >

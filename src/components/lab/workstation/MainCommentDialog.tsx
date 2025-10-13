@@ -1,16 +1,16 @@
 // src/components/lab/workstation/MainCommentDialog.tsx
-import React, { useEffect } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import React, { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
 import {
   Dialog,
   DialogContent,
   DialogTitle,
   DialogActions,
   Button,
-  TextField,
   Box,
   CircularProgress
 } from '@mui/material';
+import CodeEditor from './CodeEditor';
 
 interface MainCommentDialogProps {
   isOpen: boolean;
@@ -18,6 +18,9 @@ interface MainCommentDialogProps {
   currentComment: string | null | undefined;
   onSave: (comment: string) => void;
   isSaving?: boolean;
+  patient?: Record<string, unknown>; // Add patient prop for CodeEditor
+  setActivePatient?: (patient: Record<string, unknown>) => void; // Add setActivePatient prop
+  labRequestId?: number; // Add labRequestId for saving comments
 }
 
 const MainCommentDialog: React.FC<MainCommentDialogProps> = ({
@@ -25,29 +28,34 @@ const MainCommentDialog: React.FC<MainCommentDialogProps> = ({
   onOpenChange,
   currentComment,
   onSave,
-  isSaving
+  isSaving,
+  patient,
+  setActivePatient,
+  labRequestId
 }) => {
-  const { control, setValue, watch } = useForm<{ comment: string }>({
+  const { setValue } = useForm<{ comment: string }>({
     defaultValues: { comment: currentComment || '' },
   });
 
-  const commentText = watch('comment');
+  const [codeOptions, setCodeOptions] = useState<string[]>([]);
+  const [currentValue, setCurrentValue] = useState(currentComment || '');
 
   useEffect(() => {
     if (isOpen) {
       setValue('comment', currentComment || '');
+      setCurrentValue(currentComment || '');
     }
   }, [isOpen, currentComment, setValue]);
 
   const handleSave = () => {
-    if (currentComment !== commentText) {
-        onSave(commentText);
+    if (currentComment !== currentValue) {
+        onSave(currentValue);
     }
     onOpenChange(false);
   };
   
   const handleDialogClose = () => {
-    if (currentComment !== commentText) {
+    if (currentComment !== currentValue) {
         if(window.confirm('هل تريد تجاهل التغييرات؟')) {
              onOpenChange(false);
         }
@@ -69,25 +77,19 @@ const MainCommentDialog: React.FC<MainCommentDialogProps> = ({
       </DialogTitle>
       <DialogContent>
         <Box sx={{ py: 2 }}>
-          <Controller
-            name="comment"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                multiline
-                rows={8}
-                fullWidth
-                placeholder="أدخل ملاحظة للتحليل الرئيسي..."
-                variant="outlined"
-                sx={{
-                  '& .MuiInputBase-input': {
-                    textAlign: 'right',
-                    direction: 'rtl'
-                  }
-                }}
-              />
-            )}
+          <CodeEditor
+            options={codeOptions}
+            setOptions={setCodeOptions}
+            init={currentValue}
+            colName="comment"
+            patient={patient || {}}
+            setActivePatient={setActivePatient || (() => {})}
+            width="100%"
+            labRequestId={labRequestId}
+            onSave={(value) => {
+              setCurrentValue(value);
+              setValue('comment', value);
+            }}
           />
         </Box>
       </DialogContent>
@@ -102,7 +104,7 @@ const MainCommentDialog: React.FC<MainCommentDialogProps> = ({
         <Button 
           variant="contained" 
           onClick={handleSave} 
-          disabled={isSaving || commentText === currentComment}
+          disabled={isSaving || currentValue === currentComment}
           startIcon={isSaving ? <CircularProgress size={16} /> : null}
         >
           حفظ

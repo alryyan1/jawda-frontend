@@ -84,7 +84,7 @@ const PatientQueuePanel: React.FC<PatientQueuePanelProps> = ({
   // Initialize queueItems when paginatedQueue data changes
   React.useEffect(() => {
     if (paginatedQueue?.data) {
-      console.log('Initializing queue items:', paginatedQueue.data.length, 'items');
+      // console.log('Initializing queue items:', paginatedQueue.data.length, 'items');
       setQueueItems(paginatedQueue.data);
     }
   }, [paginatedQueue?.data]);
@@ -92,7 +92,7 @@ const PatientQueuePanel: React.FC<PatientQueuePanelProps> = ({
   // Update the specific item in the queue when updatedItem is provided
   React.useEffect(() => {
     if (updatedItem) {
-      console.log('Updating queue item for visit_id:', updatedItem.visit_id, 'with progress:', updatedItem.total_result_count, '/', updatedItem.pending_result_count);
+      // console.log('Updating queue item for visit_id:', updatedItem.visit_id, 'with progress:', updatedItem.total_result_count, '/', updatedItem.pending_result_count);
       setQueueItems(prevItems => 
         prevItems.map(item => 
           item.visit_id === updatedItem.visit_id ? updatedItem : item
@@ -110,9 +110,9 @@ const PatientQueuePanel: React.FC<PatientQueuePanelProps> = ({
   };
   
   // Debug: Log current queue items
-  console.log('Current queueItems:', queueItems.length, 'items');
+  //  console.log('Current queueItems:', queueItems.length, 'items');
   if (queueItems.length > 0) {
-    console.log('First item progress:', queueItems[0].visit_id, 'has', queueItems[0].total_result_count, 'total,', queueItems[0].pending_result_count, 'pending');
+    // console.log('First item progress:', queueItems[0].visit_id, 'has', queueItems[0].total_result_count, 'total,', queueItems[0].pending_result_count, 'pending');
   }
   return (
     <div className="h-[calc(100vh-150px)] flex flex-col">

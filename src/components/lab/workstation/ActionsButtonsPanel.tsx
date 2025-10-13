@@ -1,13 +1,14 @@
 // src/components/lab/workstation/ActionsButtonsPanel.tsx
 import React, { useState, useCallback } from "react";
-import { Card as MuiCard, CardContent as MuiCardContent, Button as MuiButton } from "@mui/material";
+import { Button as MuiButton } from "@mui/material";
 import { FileText, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import type { Patient } from "@/types/patients";
-import type { PatientLabQueueItem } from "@/types/labWorkflow";
+import type { PatientLabQueueItem, MainTestWithChildrenResults, ChildTestWithResult } from "@/types/labWorkflow";
+import { getLabRequestForEntry } from "@/services/labWorkflowService";
 import LabReportPdfPreviewDialog from "@/components/common/LabReportPdfPreviewDialog";
 import apiClient from "@/services/api";
-import { uploadLabResultFromApi, hasPatientResultUrl } from "@/services/firebaseStorageService";
+import { hasPatientResultUrl } from "@/services/firebaseStorageService";
 
 interface ActionsButtonsPanelProps {
   visitId: number | null;
@@ -15,7 +16,6 @@ interface ActionsButtonsPanelProps {
   patientLabQueueItem: PatientLabQueueItem | null;
   resultsLocked: boolean;
   onPatientUpdate?: (updatedPatient: Patient) => void;
-  onUploadStatusChange?: (isUploading: boolean) => void;
 }
 
 const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
@@ -24,7 +24,6 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
   patientLabQueueItem,
   resultsLocked,
   onPatientUpdate,
-  onUploadStatusChange,
 }) => {
   // State for PDF Preview
   const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false);
@@ -34,11 +33,107 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
   const [pdfFileName, setPdfFileName] = useState('document.pdf');
   const [isAuthenticating, setIsAuthenticating] = useState(false);
 
+  // Helpers to evaluate results
+  const isValueEmpty = useCallback((value: unknown): boolean => {
+    if (value === null || value === undefined) return true;
+    if (typeof value === 'string') return value.trim() === '';
+    // For option object with { name }
+    if (typeof value === 'object' && 'name' in (value as Record<string, unknown>)) {
+      const name = (value as { name?: string }).name || '';
+      return String(name).trim() === '';
+    }
+    return false;
+  }, []);
+
+  const toComparableName = useCallback((value: unknown): string => {
+    if (typeof value === 'string') return value;
+    if (typeof value === 'boolean') return value ? 'Positive' : 'Negative';
+    if (typeof value === 'object' && value !== null && 'name' in (value as Record<string, unknown>)) {
+      return String((value as { name?: string }).name || '');
+    }
+    return String(value ?? '');
+  }, []);
+
+  const isQualitativeAbnormal = useCallback((ct: ChildTestWithResult, value: unknown): boolean => {
+    const vName = toComparableName(value);
+    const positiveLike = /positive|reactive|detected|present|yes|true/i;
+    const negativeLike = /negative|non\s*reactive|not\s*detected|absent|no|false/i;
+    if (positiveLike.test(vName)) return true;
+    if (negativeLike.test(vName)) return false;
+    if (ct.defval && typeof ct.defval === 'string') {
+      return vName.trim().toLowerCase() !== ct.defval.trim().toLowerCase();
+    }
+    return false;
+  }, [toComparableName]);
+
+  const isNumericAbnormal = useCallback((ct: ChildTestWithResult, value: unknown): boolean => {
+    const hasBounds = (ct.low !== null && ct.low !== undefined) || (ct.upper !== null && ct.upper !== undefined);
+    if (!hasBounds) return false;
+    const parsed = typeof value === 'string' ? parseFloat(value) : typeof value === 'number' ? value : NaN;
+    if (!Number.isFinite(parsed)) return false;
+    const low = typeof ct.low === 'number' ? ct.low : (ct.low != null ? Number(ct.low) : undefined);
+    const upper = typeof ct.upper === 'number' ? ct.upper : (ct.upper != null ? Number(ct.upper) : undefined);
+    if (low !== undefined && upper !== undefined) return parsed < low || parsed > upper;
+    if (low !== undefined) return parsed < low;
+    if (upper !== undefined) return parsed > upper;
+    return false;
+  }, []);
+
+  const validateAllLabRequests = useCallback(async (labRequestIds: number[]): Promise<{ abnormal: string[]; empty: string[] }> => {
+    const abnormal: string[] = [];
+    const empty: string[] = [];
+    const requests = await Promise.all(labRequestIds.map((id) => getLabRequestForEntry(id)));
+    requests.forEach((req: MainTestWithChildrenResults) => {
+      (req.child_tests_with_results || []).forEach((ct) => {
+        const value = ct.result_value ?? '';
+        if (isValueEmpty(value)) {
+          empty.push(`${req.main_test_name}: ${ct.child_test_name}`);
+          return;
+        }
+        const abnormalNumeric = isNumericAbnormal(ct, value);
+        const abnormalQual = isQualitativeAbnormal(ct, value);
+        if (abnormalNumeric || abnormalQual) {
+          abnormal.push(`${req.main_test_name}: ${ct.child_test_name} (${toComparableName(value)})`);
+        }
+      });
+    });
+    return { abnormal, empty };
+  }, [isValueEmpty, isNumericAbnormal, isQualitativeAbnormal, toComparableName]);
+
   const handleAuthenticateResults = useCallback(async () => {
     if (!patient?.id || !visitId) return;
     
     setIsAuthenticating(true);
     try {
+      // Validate results before authenticating
+      const labRequestIds = patientLabQueueItem?.lab_request_ids || [];
+      if (labRequestIds.length > 0) {
+        const { abnormal, empty } = await validateAllLabRequests(labRequestIds);
+        
+        // Block authentication only if there are empty fields
+        if (empty.length > 0) {
+          toast.error("لا يمكن اعتماد النتائج لوجود حقول فارغة", {
+            description: [
+              `حقول فارغة: ${empty.length}`,
+              ...(empty.slice(0, 5).map((t) => `• ${t}`)),
+              empty.length > 5 ? `وغيرها ${empty.length - 5}...` : ''
+            ].filter(Boolean).join('\n')
+          });
+          return; // Block authenticate
+        }
+        
+        // Show warning for abnormal results but don't block
+        if (abnormal.length > 0) {
+          toast.warning("تحذير: توجد نتائج غير طبيعية", {
+            description: [
+              `نتائج غير طبيعية: ${abnormal.length}`,
+              ...(abnormal.slice(0, 5).map((t) => `• ${t}`)),
+              abnormal.length > 5 ? `وغيرها ${abnormal.length - 5}...` : ''
+            ].filter(Boolean).join('\n')
+          });
+        }
+      }
+
       const response = await apiClient.patch(`/patients/${patient.id}/authenticate-results`);
       const updatedPatient = response.data.data;
       
@@ -57,7 +152,7 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
     } finally {
       setIsAuthenticating(false);
     }
-  }, [patient?.id, patient?.name, visitId, onPatientUpdate, onUploadStatusChange]);
+  }, [patient, visitId, onPatientUpdate, patientLabQueueItem?.lab_request_ids, validateAllLabRequests]);
 
   const generateAndShowPdf = useCallback(async (
     title: string,
@@ -86,7 +181,7 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
     } finally {
       setIsGeneratingPdf(false);
     }
-  }, [patient?.name, visitId]);
+  }, [patient, visitId]);
 
  
 

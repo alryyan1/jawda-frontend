@@ -60,6 +60,17 @@ function isNumeric(str: unknown): boolean {
   return !isNaN(str as unknown as number) && !isNaN(parseFloat(str));
 }
 
+// Map boolean values to human labels, trying to use existing option names if available
+function booleanToLabel(isTrue: boolean, options?: Array<{ name: string }>): string {
+  if (options && options.length > 0) {
+    const positive = options.find((o) => /positive|present|yes|true/i.test(o.name))?.name;
+    const negative = options.find((o) => /negative|absent|no|false/i.test(o.name))?.name;
+    if (isTrue && positive) return positive;
+    if (!isTrue && negative) return negative;
+  }
+  return isTrue ? "Positive" : "Negative";
+}
+
 const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
   value,
   resultId,
@@ -116,8 +127,8 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
         try {
           const updatedItem = await getSinglePatientLabQueueItem(visitId);
           onItemUpdated(updatedItem);
-        } catch (error) {
-          console.error('Failed to fetch updated item:', error);
+        } catch {
+          // console.error('Failed to fetch updated item:', error);
         }
       }
       
@@ -138,9 +149,9 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
     if (cachedOptions) {
       try {
         setOptions(JSON.parse(cachedOptions));
-      } catch (e) {
+      } catch {
         localStorage.removeItem(localStorageKey); // Clear invalid cache
-        console.error("Failed to parse cached options", e);
+        // console.error("Failed to parse cached options", e);
       }
       setIsLoadingOptions(false);
     } else {
@@ -170,7 +181,9 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
       ? value.name 
       : typeof value === "string" 
         ? value 
-        : "";
+        : typeof value === "boolean"
+          ? booleanToLabel(value, options)
+          : "";
     
     // Use a small timeout to ensure this runs after the reset effect
     const timeoutId = setTimeout(() => {
@@ -182,11 +195,11 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
       setIsSaving(false);
       setShowSuccess(false);
       
-      console.log('ChildTestAutocompleteInput value updated:', { childTestId, newValue, value });
+      // console.log('ChildTestAutocompleteInput value updated:', { childTestId, newValue, value });
     }, 0);
     
     return () => clearTimeout(timeoutId);
-  }, [value, childTestId]); // Watch for value changes from parent and childTestId
+  }, [value, childTestId, options]); // Watch for value changes from parent and childTestId
 
   const handleDialogClose = () => {
     setDialogValue("");
@@ -265,9 +278,11 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
             },
           },
         }}
-        getOptionLabel={(option) =>
-          typeof option === "string" ? option : option.name
-        }
+        getOptionLabel={(option) => {
+          if (typeof option === "string") return option;
+          if (typeof option === "boolean") return booleanToLabel(option, options);
+          return option?.name ?? "";
+        }}
         value={value || null}
         onChange={(_, newValue) => {
           if (typeof newValue === "string") {
@@ -330,9 +345,19 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
           // Don't call onFocusChange(null) to keep the normal range persistent
         }}
         isOptionEqualToValue={(option, val) => {
-          // Handles both string and object values
-          const optionName = typeof option === "string" ? option : option?.name;
-          const valueName = typeof val === "string" ? val : val?.name;
+          // Handles string, boolean, and object values safely
+          const optionName =
+            typeof option === "string"
+              ? option
+              : typeof option === "boolean"
+                ? booleanToLabel(option, options)
+                : option?.name;
+          const valueName =
+            typeof val === "string"
+              ? val
+              : typeof val === "boolean"
+                ? booleanToLabel(val, options)
+                : val?.name;
           return optionName === valueName;
         }}
         freeSolo // Allows typing values not in the list
@@ -374,8 +399,8 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
             error={error}
             helperText={helperText}
             onKeyDown={(event) => {
-              const target = event.target as HTMLInputElement;
-              console.log(target.value, 'event.target.value')
+              // const target = event.target as HTMLInputElement;
+              // console.log(target.value, 'event.target.value')
               // Prevent form submission when Enter is pressed
               if (event.key === 'Enter') {
                 event.preventDefault();
@@ -383,7 +408,7 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
               }
             }}
           onChange={(event) => {
-            console.log(resultId, 'resultId')
+            // console.log(resultId, 'resultId')
             const target = event.target as HTMLInputElement;
             saveSingleChildTestResult(resultId, target.value)
           }}

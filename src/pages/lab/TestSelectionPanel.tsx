@@ -83,7 +83,7 @@ const TestSelectionPanel: React.FC<TestSelectionPanelProps> = ({
                 >
                     <Box className="flex items-center justify-between gap-2">
                         <Box className="flex-grow min-w-0  font-bold">
-                            <Typography sx={{fontWeight: 'bold',color: 'black'}}  className={cn("  truncate", lr.hidden ===  false && "line-through")} title={lr.main_test?.main_test_name}>
+                            <Typography sx={{fontWeight: 'bold',color: 'black'}}  className={cn("  truncate", lr.hidden ===  true && "line-through")} title={lr.main_test?.main_test_name}>
                                 {lr.main_test?.main_test_name }
                             </Typography>
                            

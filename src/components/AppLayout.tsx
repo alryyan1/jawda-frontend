@@ -108,7 +108,8 @@ const getMainNavItems = (userType?: UserType): NavItem[] => {
     return allMainNavItems.filter(item => 
       item.to === '/dashboard' || 
       item.to === '/lab-reception' || 
-      item.to === '/lab-sample-collection'
+      item.to === '/lab-sample-collection' ||
+      item.to === '/cash-reconciliation'
     );
   }
   if (userType === UserType.lab_results) {

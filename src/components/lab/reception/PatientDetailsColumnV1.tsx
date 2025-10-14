@@ -1,4 +1,4 @@
-import { forwardRef, useImperativeHandle, useState } from "react";
+import { forwardRef, useImperativeHandle, useState, useCallback } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import apiClient from "@/services/api";
@@ -6,10 +6,12 @@ import type { DoctorVisit } from "@/types/visits";
 import PatientCompanyDetails from "./PatientCompanyDetails";
 import PatientInfoDialog from "@/components/clinic/PatientInfoDialog";
 import { Button } from "@/components/ui/button";
-import { User, Loader2, Mail } from "lucide-react";
+import { User, Loader2, Mail, FileText } from "lucide-react";
 import { getLabRequestsForVisit } from "@/services/labRequestService";
 import { realtimeUrlFromConstants } from "@/pages/constants";
 // import { showJsonDialog } from "@/lib/showJsonDialog";
+import LabReportPdfPreviewDialog from "@/components/common/LabReportPdfPreviewDialog";
+import { hasPatientResultUrl } from "@/services/firebaseStorageService";
 
 interface PatientDetailsColumnV1Props {
   activeVisitId: number | null;
@@ -38,6 +40,13 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
   const [isSmsDialogOpen, setIsSmsDialogOpen] = useState(false);
   const [smsMessage, setSmsMessage] = useState("");
   const [isSendingSms, setIsSendingSms] = useState(false);
+
+  // PDF Preview state
+  const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [pdfPreviewTitle, setPdfPreviewTitle] = useState("");
+  const [pdfFileName, setPdfFileName] = useState("document.pdf");
 
   // Lab shift summary moved to LabUserShiftSummary component
 
@@ -147,6 +156,51 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
       }
     },
   }));
+
+  // PDF helpers
+  const generateAndShowPdf = useCallback(async (
+    title: string,
+    fileNamePrefix: string,
+    fetchFunction: () => Promise<Blob>
+  ) => {
+    setIsGeneratingPdf(true);
+    setPdfUrl(null);
+    setPdfPreviewTitle(title);
+    setIsPdfPreviewOpen(true);
+
+    try {
+      const blob = await fetchFunction();
+      const objectUrl = URL.createObjectURL(blob);
+      setPdfUrl(objectUrl);
+      const patientNameSanitized = visit?.patient?.name?.replace(/[^A-Za-z0-9-_]/g, "_") || "patient";
+      setPdfFileName(`${fileNamePrefix}_${activeVisitId}_${patientNameSanitized}_${new Date().toISOString().slice(0,10)}.pdf`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      toast.error("حدث خطأ أثناء إنشاء ملف PDF", {
+        description: errorMessage,
+      });
+      setIsPdfPreviewOpen(false);
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  }, [visit?.patient?.name, activeVisitId]);
+
+  const handleViewReportPreview = useCallback(() => {
+    if (!activeVisitId) return;
+    generateAndShowPdf(
+      "معاينة تقرير المختبر",
+      "LabReport",
+      () => apiClient.get(`/visits/${activeVisitId}/lab-report/pdf`, { responseType: "blob" }).then(res => res.data)
+    );
+  }, [activeVisitId, generateAndShowPdf]);
+
+  const handlePdfDialogOpenChange = useCallback((open: boolean) => {
+    setIsPdfPreviewOpen(open);
+    if (!open && pdfUrl) {
+      URL.revokeObjectURL(pdfUrl);
+      setPdfUrl(null);
+    }
+  }, [pdfUrl]);
 
   // Placeholder data for demonstration
   const patientName = visit?.patient?.name 
@@ -293,6 +347,23 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
           {"دفع الكل"}
         </button>
       )}
+      {/* Preview Lab Report Button (visible only if results are authenticated) */}
+      {visit?.patient && visit.patient.result_auth && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full mt-2 flex items-center justify-center gap-2"
+          onClick={handleViewReportPreview}
+          disabled={!activeVisitId || isGeneratingPdf}
+          title={"معاينة التقرير"}
+        >
+          <FileText className="h-4 w-4" />
+          معاينة التقرير
+          {hasPatientResultUrl(visit.patient) && (
+            <span className="ml-1 text-green-500 text-xs">☁️</span>
+          )}
+        </Button>
+      )}
         {/* Lab Shift Summary */}
     
       {/* Patient Info Dialog */}
@@ -377,6 +448,15 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
           </div>
         </div>
       )}
+      {/* Lab Report PDF Preview Dialog */}
+      <LabReportPdfPreviewDialog
+        isOpen={isPdfPreviewOpen}
+        onOpenChange={handlePdfDialogOpenChange}
+        pdfUrl={pdfUrl}
+        isLoading={isGeneratingPdf && !pdfUrl}
+        title={pdfPreviewTitle}
+        fileName={pdfFileName}
+      />
     </div>
       </div>
       

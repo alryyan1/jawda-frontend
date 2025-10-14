@@ -139,7 +139,7 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
     }, 500);
   }, [onChange, visitId, onItemUpdated]);
 
-  // Fetch and cache options using localStorage (from your original component)
+  // Fetch and cache options using localStorage (cache options only, not result values)
   useEffect(() => {
     if (!childTestId) return;
     setIsLoadingOptions(true);
@@ -149,11 +149,20 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
     if (cachedOptions) {
       try {
         setOptions(JSON.parse(cachedOptions));
+        setIsLoadingOptions(false);
       } catch {
         localStorage.removeItem(localStorageKey); // Clear invalid cache
-        // console.error("Failed to parse cached options", e);
+        // Fallback to API call if cache is corrupted
+        getChildTestOptionsList(childTestId)
+          .then((data: ChildTestOption[]) => {
+            setOptions(data);
+            localStorage.setItem(localStorageKey, JSON.stringify(data));
+          })
+          .catch((err: unknown) =>
+            console.error("Failed to fetch child test options:", err)
+          )
+          .finally(() => setIsLoadingOptions(false));
       }
-      setIsLoadingOptions(false);
     } else {
       getChildTestOptionsList(childTestId)
         .then((data: ChildTestOption[]) => {
@@ -183,7 +192,7 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
         ? value 
         : typeof value === "boolean"
           ? booleanToLabel(value, options)
-          : "";
+          : ""; // Always use empty string for null/undefined values
     
     // Use a small timeout to ensure this runs after the reset effect
     const timeoutId = setTimeout(() => {
@@ -213,6 +222,7 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
       toast.success("تم إضافة الخيار بنجاح");
       const newOptionsList = [...options, newOption];
       setOptions(newOptionsList);
+      // Update localStorage cache with the new option
       localStorage.setItem(
         `childTestOptions_${childTestId}`,
         JSON.stringify(newOptionsList)

@@ -109,6 +109,8 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
     queryKey: ["labRequestForEntry", initialLabRequest.id],
     queryFn: () => getLabRequestForEntry(initialLabRequest.id),
     enabled: !!initialLabRequest.id,
+    staleTime: 0, // Always consider data stale to ensure fresh fetch
+    cacheTime: 0, // Don't cache the data
   });
 
   const form = useForm<ResultEntryFormValues>({
@@ -291,10 +293,11 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
               )
             );
 
+          // Always use the actual result_value from the database, don't fall back to defval
           let initialResultValue: string | ChildTestOption | null | boolean =
             ct.result_value !== undefined && ct.result_value !== null
               ? ct.result_value
-              : ct.defval || null;
+              : null; // Use null instead of defval to avoid showing stale values
 
           if (
             hasOptions &&
@@ -355,7 +358,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
     setNormalRangeInput("");
     // Reset group tab to first tab for special tests
     setActiveGroupTab(0);
-  }, [testDataForEntry]);
+  }, [testDataForEntry, initialLabRequest.id]);
 
   // Force form re-render when switching tabs to ensure proper synchronization
   useEffect(() => {
@@ -803,7 +806,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                                           onClick={(e) => e.stopPropagation()}
                                         >
                                           <ChildTestAutocompleteInput
-                                            key={`${ctResult.id}-${ctResult.result_id}-${activeGroupTab}`}
+                                            key={`${initialLabRequest.id}-${ctResult.id}-${ctResult.result_id}-${activeGroupTab}`}
                                             value={field.value as string | ChildTestOption | null}
                                             onChange={field.onChange}
                                             onBlur={field.onBlur}

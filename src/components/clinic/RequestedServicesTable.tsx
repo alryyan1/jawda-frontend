@@ -237,13 +237,13 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                 <Table size="small">
                   <TableHead>
                     <TableRow>
-                      <TableCell align="center">اسم الخدمة</TableCell>
-                      <TableCell align="center" sx={{ width: 90 }}>السعر</TableCell>
+                      <TableCell className="text-xl!" align="center">اسم الخدمة</TableCell>
+                      <TableCell className="text-xl!    " align="center" sx={{ width: 90 }}>السعر</TableCell>
                       {isCompanyPatient && (
-                        <TableCell align="center" sx={{ width: 110 }}>التحمل</TableCell>
+                        <TableCell className="text-xl!" align="center" sx={{ width: 110 }}>التحمل</TableCell>
                       )}
-                      <TableCell align="center" sx={{ width: 120 }}>المبلغ المدفوع</TableCell>
-                      <TableCell align="center" sx={{ width: 80 }}>دفع</TableCell>
+                      <TableCell className="text-xl!" align="center" sx={{ width: 120 }}> المدفوع</TableCell>
+                      <TableCell className="text-xl!"  align="center" sx={{ width: 80 }}>دفع</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -252,29 +252,29 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                   return (
                     <React.Fragment key={rs.id}>
                       <TableRow hover onClick={() => handleOpenRowOptions(rs)} sx={{ cursor: 'pointer' }}>
-                        <TableCell align="center" sx={{ py: 1.25, fontWeight: 500 }}>
+                        <TableCell className="text-xl!" align="center" >
                           {rs.service?.name || "خدمة غير معروفة"}
                      
                         </TableCell>
-                        <TableCell align="center" sx={{ py: 1.25 }}>
-                          <Box display="flex" flexDirection="column" alignItems="center" lineHeight={1}>
+                        <TableCell className="text-xl!" align="center" >
+                          <Box display="flex" flexDirection="column" alignItems="center" >
                             <span>{formatNumber(price)}</span>
                             {Number(rs.count) > 1 && (
-                              <Typography component="span" variant="caption" color="error" sx={{ mt: 0.25 }}>
+                              <Typography component="span" variant="caption" color="error" >
                                 x {Number(rs.count)}
                               </Typography>
                             )}
                           </Box>
                         </TableCell>
                         {isCompanyPatient && (
-                          <TableCell align="center" sx={{ py: 1.25, color: 'warning.main' }}>
+                          <TableCell className="text-xl!" align="center" >
                             {formatNumber(Number(rs.endurance) || 0)}
                           </TableCell>
                         )}
-                        <TableCell align="center" sx={{ py: 1.25, color: 'success.main' }}>
+                      <TableCell className="text-xl!" align="center" >
                           {formatNumber(rs.amount_paid)}
                         </TableCell>
-                        <TableCell align="center" sx={{ py: 1.25 }}>
+                        <TableCell className="text-xl!" align="center" >
                           {calculateItemBalance(rs) <= 0.01 ? (
                             <CheckCircle className="h-5 w-5 text-green-600" aria-label="مدفوع بالكامل" />
                           ) : (

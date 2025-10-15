@@ -26,12 +26,14 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { FileText } from 'lucide-react';
 
 const ClinicPage: React.FC = () => {
   const { requestSelection } = useClinicSelection();
   // Removed React Query client; using local refresh key instead
   const [activePatientsRefreshKey, setActivePatientsRefreshKey] = useState(0);
-   
+
   const { currentClinicShift, user } = useAuth();
   const isUnifiedCashier = (user?.user_type || '').trim() === 'خزنه موحده';
   const DETAILS_COLLAPSE_KEY = 'clinic_patient_details_collapsed';
@@ -53,28 +55,31 @@ const ClinicPage: React.FC = () => {
   const [selectedPatientVisit, setSelectedPatientVisit] = useState<{ patient: Patient; visitId: number } | null>(null);
   const [activeDoctorShift, setActiveDoctorShift] = useState<DoctorShift | null>(null); // For DoctorsTabs interaction
   // const [globalSearchTerm, setGlobalSearchTerm] = useState(''); // For patient search - not used yet
- // NEW CALLBACK for DoctorFinderDialog
-// NEW: State for DoctorFinderDialog visibility, now controlled by F9 too
-const [isDoctorFinderDialogOpen, setIsDoctorFinderDialogOpen] = useState(false);
-// NEW: State for UserShiftIncomeDialog visibility, controlled by F8
-const [isIncomeDialogOpen, setIsIncomeDialogOpen] = useState(false);
-// NEW: State for ClinicFinancialSummary dialog visibility
-const [isFinancialSummaryDialogOpen, setIsFinancialSummaryDialogOpen] = useState(false);
+  // NEW CALLBACK for DoctorFinderDialog
+  // NEW: State for DoctorFinderDialog visibility, now controlled by F9 too
+  const [isDoctorFinderDialogOpen, setIsDoctorFinderDialogOpen] = useState(false);
+  // NEW: State for UserShiftIncomeDialog visibility, controlled by F8
+  const [isIncomeDialogOpen, setIsIncomeDialogOpen] = useState(false);
+  // NEW: State for ClinicFinancialSummary dialog visibility
+  const [isFinancialSummaryDialogOpen, setIsFinancialSummaryDialogOpen] = useState(false);
+  // NEW: State for responsive behavior
+  const [isScreenSmall, setIsScreenSmall] = useState(false);
+  const [isPatientDetailsDialogOpen, setIsPatientDetailsDialogOpen] = useState(false);
   const patientDetailsRef = React.useRef<PatientDetailsColumnClinicRef>(null);
 
-const handleDoctorShiftSelectedFromFinder = useCallback((shift: DoctorShift) => {
-  setActiveDoctorShift(shift);
-  setIsDoctorFinderDialogOpen(false); // Close dialog after selection
-  // If registration form is not the primary focus after finder, you might show it:
-  // if (!showRegistrationForm) {
-  //   setShowRegistrationForm(true);
-  //   setSelectedPatientVisit(null);
-  // }
-  // Or focus on patient registration name input if form is already visible
-  // This depends on desired UX flow after selecting a doctor via F9
-}, [/* showRegistrationForm, setShowRegistrationForm, setSelectedPatientVisit */]);
+  const handleDoctorShiftSelectedFromFinder = useCallback((shift: DoctorShift) => {
+    setActiveDoctorShift(shift);
+    setIsDoctorFinderDialogOpen(false); // Close dialog after selection
+    // If registration form is not the primary focus after finder, you might show it:
+    // if (!showRegistrationForm) {
+    //   setShowRegistrationForm(true);
+    //   setSelectedPatientVisit(null);
+    // }
+    // Or focus on patient registration name input if form is already visible
+    // This depends on desired UX flow after selecting a doctor via F9
+  }, [/* showRegistrationForm, setShowRegistrationForm, setSelectedPatientVisit */]);
 
-// Empty dependency array means this effect runs once on mount and cleans up on unmount
+  // Empty dependency array means this effect runs once on mount and cleans up on unmount
   const handlePatientRegistered = useCallback((patient: Patient) => {
     // Refresh active patients list
     setActivePatientsRefreshKey(prev => prev + 1);
@@ -102,7 +107,7 @@ const handleDoctorShiftSelectedFromFinder = useCallback((shift: DoctorShift) => 
       setSelectedPatientVisit(null); // Clear selected patient
     }
   };
-  
+
   const onShiftSelect = (shift: DoctorShift | null) => {
     setActiveDoctorShift(shift);
     setShowRegistrationForm(isUnifiedCashier ? false : true);
@@ -110,8 +115,8 @@ const handleDoctorShiftSelectedFromFinder = useCallback((shift: DoctorShift) => 
   }
 
   const handleDoctorShiftClosed = (doctorShiftId: number) => {
-console.log('doctor shift closed', doctorShiftId);
-console.log('active doctor shift', activeDoctorShift);
+    console.log('doctor shift closed', doctorShiftId);
+    console.log('active doctor shift', activeDoctorShift);
     // If the closed shift is the currently active one, deselect it
     if (activeDoctorShift?.id === doctorShiftId) {
       // alert('doctor shift closed');
@@ -128,21 +133,38 @@ console.log('active doctor shift', activeDoctorShift);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isUnifiedCashier]);
-  const [showPatientHistory, setShowPatientHistory] = useState(false);
+
+  // Responsive behavior for screen size
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsScreenSmall(window.innerWidth < 1400);
+    };
+
+    // Check initial size
+    checkScreenSize();
+
+    // Add event listener
+    window.addEventListener('resize', checkScreenSize);
+
+    // Cleanup
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
   // F8 and F10 keyboard listeners
   // F8: Open income dialog, F10: Open doctor finder dialog
   useEffect(() => {
     // Expose selection handler to the header search when clinic page is active
-    requestSelection({ onSelect: (patient, visitId, doctorShift) => {
-      setSelectedPatientVisit({ patient, visitId });
-      setShowRegistrationForm(false);
-      
-      // If the patient is from the current shift and the doctor shift is currently open,
-      // set that doctor shift as active
-      if (doctorShift) {
-        setActiveDoctorShift(doctorShift);
+    requestSelection({
+      onSelect: (patient, visitId, doctorShift) => {
+        setSelectedPatientVisit({ patient, visitId });
+        setShowRegistrationForm(false);
+
+        // If the patient is from the current shift and the doctor shift is currently open,
+        // set that doctor shift as active
+        if (doctorShift) {
+          setActiveDoctorShift(doctorShift);
+        }
       }
-    }});
+    });
     return () => requestSelection(null);
   }, [requestSelection]);
 
@@ -178,12 +200,12 @@ console.log('active doctor shift', activeDoctorShift);
   useEffect(() => {
     const handleRealtimePatientRegistered = (patient: Patient) => {
       console.log('Realtime patient registered:', patient);
-      
+
       // Check if the patient belongs to the current doctor shift
       if (activeDoctorShift && patient.doctor_visit?.doctor_shift_id === activeDoctorShift.id) {
         // Refresh the active patients list
         setActivePatientsRefreshKey(prev => prev + 1);
-        
+
         // Optionally auto-select the new patient
         const visitId = patient.doctor_visit?.id;
         if (visitId) {
@@ -251,14 +273,14 @@ console.log('active doctor shift', activeDoctorShift);
   }, [isShiftStatusDialogOpen]);
 
   return (
-    <div className="clinic-page-container" dir="rtl">
+    <div className='flex justify-between'>  <div className="clinic-page-container" dir="rtl">
       {/* Top Section: Doctors Tabs Only */}
       <header className="clinic-header">
         <div className="clinic-header-content">
-          <DoctorsTabs 
+          <DoctorsTabs
             setSelectedPatientVisit={setSelectedPatientVisit}
-            onShiftSelect={onShiftSelect} 
-            activeShiftId={activeDoctorShift?.id || null} 
+            onShiftSelect={onShiftSelect}
+            activeShiftId={activeDoctorShift?.id || null}
           />
         </div>
       </header>
@@ -266,16 +288,16 @@ console.log('active doctor shift', activeDoctorShift);
       {/* Main Content Area */}
       <div className={`clinic-main-content ${showRegistrationForm ? 'with-registration' : 'without-registration'} ${selectedPatientVisit ? '' : ' without-patient-selected'}`}>
         {/* Section 1: Actions Pane (Fixed width, always visible) */}
-      
+
 
         {/* Section 2: Patient Registration Form Panel (Conditional Visibility) */}
         {showRegistrationForm && !isUnifiedCashier && (
-          
-            <PatientRegistrationForm 
-              isVisible={showRegistrationForm} 
-              activeDoctorShift={activeDoctorShift} 
-              onPatientRegistered={handlePatientRegistered} 
-            />
+
+          <PatientRegistrationForm
+            isVisible={showRegistrationForm}
+            activeDoctorShift={activeDoctorShift}
+            onPatientRegistered={handlePatientRegistered}
+          />
         )}
 
         {/* Section 3: Active Patients List Panel */}
@@ -318,18 +340,20 @@ console.log('active doctor shift', activeDoctorShift);
           </section>
         )}
 
-        {/* Section 5: Patient Details Column (Collapsible for unified cashier) */}
-       { <section className={`clinic-panel details ${isUnifiedCashier && isDetailsCollapsed ? 'collapsed' : ''}`}>
-         <PatientDetailsColumnClinic
-            ref={patientDetailsRef}
-            visitId={selectedPatientVisit?.visitId || null}
-            currentClinicShiftId={activeDoctorShift?.id || null}
-            activeTab={activeWorkspaceTab}
-            onPrintReceipt={() => {
-              // Print receipt functionality
-            }}
-          />
-        </section>}
+        {/* Section 5: Patient Details Column (Collapsible for unified cashier) - Only show on large screens */}
+        {!isScreenSmall && (
+          <section className={`clinic-panel details ${isUnifiedCashier && isDetailsCollapsed ? 'collapsed' : ''}`}>
+            <PatientDetailsColumnClinic
+              ref={patientDetailsRef}
+              visitId={selectedPatientVisit?.visitId || null}
+              currentClinicShiftId={activeDoctorShift?.id || null}
+              activeTab={activeWorkspaceTab}
+              onPrintReceipt={() => {
+                // Print receipt functionality
+              }}
+            />
+          </section>
+        )}
 
         {isUnifiedCashier && (
           <button
@@ -355,14 +379,7 @@ console.log('active doctor shift', activeDoctorShift);
           </button>
         )}
 
-        <ActionsPane
-          activeDoctorShift={activeDoctorShift}
-          showRegistrationForm={showRegistrationForm}
-          onToggleRegistrationForm={toggleRegistrationForm}
-          onDoctorShiftSelectedFromFinder={handleDoctorShiftSelectedFromFinder}
-          onDoctorShiftClosed={handleDoctorShiftClosed}
-          onOpenFinancialSummary={() => setIsFinancialSummaryDialogOpen(true)}
-        />
+   
       </div>
 
       <DoctorFinderDialog
@@ -383,7 +400,7 @@ console.log('active doctor shift', activeDoctorShift);
       <Dialog open={isFinancialSummaryDialogOpen} onOpenChange={setIsFinancialSummaryDialogOpen}>
         <DialogContent className="!max-w-3xl max-h-[90vh] overflow-y-auto w-[95vw] ">
           <DialogHeader>
-       
+
           </DialogHeader>
           <ClinicFinancialSummary currentClinicShiftId={currentClinicShift?.id ?? null} />
         </DialogContent>
@@ -403,7 +420,47 @@ console.log('active doctor shift', activeDoctorShift);
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Patient Details Dialog for small screens */}
+      <Dialog open={isPatientDetailsDialogOpen} onOpenChange={setIsPatientDetailsDialogOpen}>
+        <DialogContent className="!max-w-md max-h-[90vh] overflow-y-auto w-[95vw]">
+          <DialogHeader>
+            <DialogTitle>تفاصيل المريض</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[70vh] overflow-y-auto">
+            <PatientDetailsColumnClinic
+              ref={patientDetailsRef}
+              visitId={selectedPatientVisit?.visitId || null}
+              currentClinicShiftId={activeDoctorShift?.id || null}
+              activeTab={activeWorkspaceTab}
+              onPrintReceipt={() => {
+                // Print receipt functionality
+              }}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Floating Button for Patient Details (only on small screens) */}
+      {isScreenSmall && selectedPatientVisit && (
+        <Button
+          onClick={() => setIsPatientDetailsDialogOpen(true)}
+          className="fixed bottom-4 left-4 z-50 rounded-full w-12 h-12 shadow-lg"
+          size="icon"
+        >
+          <FileText className="h-5 w-5" />
+        </Button>
+      )}
     </div>
+    <ActionsPane
+          activeDoctorShift={activeDoctorShift}
+          showRegistrationForm={showRegistrationForm}
+          onToggleRegistrationForm={toggleRegistrationForm}
+          onDoctorShiftSelectedFromFinder={handleDoctorShiftSelectedFromFinder}
+          onDoctorShiftClosed={handleDoctorShiftClosed}
+          onOpenFinancialSummary={() => setIsFinancialSummaryDialogOpen(true)}
+        /></div>
+
   );
 };
 

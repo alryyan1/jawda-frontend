@@ -106,19 +106,20 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
     onSuccess: async () => {
       toast.success("تم معالجة جميع المدفوعات بنجاح");
       
-      // Print services receipt after successful payment
+      // Print services receipt after successful payment (non-blocking)
       if (activeTab === 'services' && visitId) {
-        try {
-          const result = await realtimeService.printServicesReceipt(visitId, visit?.patient_id);
-          if (result.success) {
-            toast.success('تم طباعة إيصال الخدمات بنجاح');
-          } else {
-            toast.error(result.error || 'فشل في طباعة إيصال الخدمات');
-          }
-        } catch (error) {
-          console.error('Error printing services receipt:', error);
-          toast.error('حدث خطأ أثناء طباعة إيصال الخدمات');
-        }
+        realtimeService.printServicesReceipt(visitId, visit?.patient_id)
+          .then(result => {
+            if (result.success) {
+              toast.success('تم طباعة إيصال الخدمات بنجاح');
+            } else {
+              toast.error(result.error || 'فشل في طباعة إيصال الخدمات');
+            }
+          })
+          .catch(error => {
+            console.error('Error printing services receipt:', error);
+            toast.error('حدث خطأ أثناء طباعة إيصال الخدمات');
+          });
       }
       
       // Call the original print receipt function for lab payments

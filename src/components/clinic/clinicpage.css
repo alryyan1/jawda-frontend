@@ -103,15 +103,15 @@
 
 /* RTL Support */
 .clinic-page-container[dir="rtl"] .clinic-main-content.with-registration {
-  grid-template-columns:  390px 395px minmax(320px, 1fr) 60px ;
+  grid-template-columns:  390px 395px minmax(320px, 1fr) ;
 }
 
 .clinic-page-container[dir="rtl"] .clinic-main-content.without-registration {
-  grid-template-columns: 362px  minmax(700px, 1fr) 320px 60px;
+  grid-template-columns: 362px  1fr 320px ;
 }
 
 .clinic-page-container[dir="rtl"] .clinic-main-content.without-registration.without-patient-selected {
-  grid-template-columns: 362px  minmax(700px, 1fr) 0px 60px;
+  grid-template-columns: 362px  1fr 0px ;
 }
 .clinic-page-container[dir="rtl"] .clinic-panel.registration {
   border-left: 1px solid #e0e0e0;
@@ -130,6 +130,16 @@
 
 
 /* Responsive Design */
+@media (max-width: 1399px) {
+  .clinic-page-container[dir="rtl"] .clinic-main-content.without-registration {
+    grid-template-columns: 362px 1fr 0px 60px;
+  }
+  
+  .clinic-page-container[dir="rtl"] .clinic-main-content.with-registration {
+    grid-template-columns: 390px 395px minmax(320px, 1fr) 0px;
+  }
+}
+
 @media (max-width: 1200px) {
   .clinic-main-content.with-registration {
     grid-template-columns: 60px 350px minmax(300px, 1fr) minmax(0, 1fr) 280px;

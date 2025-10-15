@@ -348,7 +348,7 @@ const AppLayout: React.FC = () => {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
 
-  const [isDesktopSidebarCollapsed, setIsDesktopSidebarCollapsed] = useState<boolean>(true);
+  const [isDesktopSidebarCollapsed, setIsDesktopSidebarCollapsed] = useState<boolean>(getSidebarCollapsedState());
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
 
@@ -483,25 +483,25 @@ const AppLayout: React.FC = () => {
               isDesktopSidebarCollapsed && "justify-center px-2"
             )}
           >
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button 
-                  onClick={toggleDesktopSidebar}
-                  className={cn(
-                    "flex items-center gap-2 font-bold text-primary truncate hover:opacity-80 transition-opacity",
-                    isDesktopSidebarCollapsed ? "text-xl" : "text-lg"
-                  )}
-                >
-                  <img src="/logo.png" alt="شعار النظام" className={cn("rounded-md", isDesktopSidebarCollapsed ? "h-8 w-8" : "h-7 w-7")} />
-                  {!isDesktopSidebarCollapsed && <span>نظام جودة الطبي</span>}
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="left" sideOffset={5}>
-                <p>{isDesktopSidebarCollapsed ? 'توسيع الشريط الجانبي' : 'طي الشريط الجانبي'}</p>
-              </TooltipContent>
-            </Tooltip>
+            <Link to="/dashboard" className={cn("flex items-center gap-2 font-bold text-primary truncate", isDesktopSidebarCollapsed ? "text-xl" : "text-lg")}>
+              <img src="/logo.png" alt="شعار النظام" className={cn("rounded-md", isDesktopSidebarCollapsed ? "h-8 w-8" : "h-7 w-7")} />
+              {!isDesktopSidebarCollapsed && <span>نظام جودة الطبي</span>}
+            </Link>
           </div>
           <SidebarContent />
+          <div className="p-2 border-t border-border mt-auto">
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" onClick={toggleDesktopSidebar} className="w-full h-10">
+                    {isDesktopSidebarCollapsed ? <ExpandIcon className="h-5 w-5" /> : <CollapseIcon className="h-5 w-5" />}
+                    <span className="sr-only">{isDesktopSidebarCollapsed ? 'توسيع الشريط الجانبي' : 'طي الشريط الجانبي'}</span>
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent side="left" sideOffset={5}>
+                    <p>{isDesktopSidebarCollapsed ? 'توسيع الشريط الجانبي' : 'طي الشريط الجانبي'}</p>
+                </TooltipContent>
+            </Tooltip>
+          </div>
         </aside>
 
         {/* Mobile Sidebar (Sheet) */}

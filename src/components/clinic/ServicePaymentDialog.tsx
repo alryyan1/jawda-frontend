@@ -128,19 +128,20 @@ const ServicePaymentDialog: React.FC<ServicePaymentDialogProps> = ({
     onSuccess: async () => {
       toast.success("تم الدفع بنجاح");
       
-      // Print services receipt after successful payment
+      // Print services receipt after successful payment (non-blocking)
       if (visitId && visit?.patient_id) {
-        try {
-          const result = await realtimeService.printServicesReceipt(visitId, visit.patient_id);
-          if (result.success) {
-            toast.success('تم طباعة إيصال الخدمات بنجاح');
-          } else {
-            toast.error(result.error || 'فشل في طباعة إيصال الخدمات');
-          }
-        } catch (error) {
-          console.error('Error printing services receipt:', error);
-          toast.error('حدث خطأ أثناء طباعة إيصال الخدمات');
-        }
+        realtimeService.printServicesReceipt(visitId, visit.patient_id)
+          .then(result => {
+            if (result.success) {
+              toast.success('تم طباعة إيصال الخدمات بنجاح');
+            } else {
+              toast.error(result.error || 'فشل في طباعة إيصال الخدمات');
+            }
+          })
+          .catch(error => {
+            console.error('Error printing services receipt:', error);
+            toast.error('حدث خطأ أثناء طباعة إيصال الخدمات');
+          });
       }
       
       // Also call the original print receipt function for PDF preview

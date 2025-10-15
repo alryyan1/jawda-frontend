@@ -133,7 +133,7 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
         is_supervisor: !!userData.is_supervisor,
         is_active:
           userData.is_active === undefined ? true : !!userData.is_active,
-        user_type: (userData as unknown as { user_type?: string })?.user_type || "",
+        user_type: (userData as unknown as { user_type?: string | null })?.user_type ?? "",
         roles: userData.roles?.map((role) => role.name) || [],
       });
     } else if (!isEditMode) {
@@ -200,7 +200,7 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
       is_nurse: false,
       is_supervisor: formData.is_supervisor,
       is_active: formData.is_active,
-      user_type: formData.user_type || undefined,
+      user_type: formData.user_type ? formData.user_type : null,
       roles: formData.roles || [],
       user_money_collector_type: 'all',
     };

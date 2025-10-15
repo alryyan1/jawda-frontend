@@ -10,6 +10,7 @@ import type { PaginatedResponse } from "@/types/common";
 import ActivePatientCard from "./ActivePatientCard";
 import PatientInfoDialog from "./PatientInfoDialog";
 import type { DoctorVisit } from "@/types/visits";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ActivePatientsListProps {
   onPatientSelect: (patient: Patient, visitId: number) => void;
@@ -24,6 +25,8 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
   selectedPatientVisitId,
   doctorShiftId,
 }) => {
+
+  const { user } = useAuth();
 
   const {
     data: visits,
@@ -95,7 +98,12 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
         <div className="flex-grow relative">
           <div className="absolute inset-0 overflow-y-auto scrollbar-thin scrollbar-thumb-muted-foreground/20 hover:scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent">
             <div style={{direction:'rtl'}} className="grid grid-cols-[repeat(auto-fit,300px)] gap-3 p-3 justify-start">
-              {visitsList.map((visit: ActivePatientVisit) => (
+              {visitsList.filter(visit =>  {
+                if(visit.patient.company_id == null && user?.user_type == 'تامين'){
+                  return false;
+                }
+                return true;
+              }).map((visit: ActivePatientVisit) => (
                 <ActivePatientCard
                   key={visit.id}
                   visit={visit}

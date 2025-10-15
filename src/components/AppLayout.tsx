@@ -45,6 +45,7 @@ import {
   Wifi,
   WifiOff,
   FileText,
+  Pencil,
 } from "lucide-react";
 import { Toaster } from "sonner";
 import { useQuery } from "@tanstack/react-query";
@@ -77,7 +78,7 @@ export interface NavItem {
 // Main Navigation Items - All available items
 const allMainNavItems: NavItem[] = [
   { to: '/dashboard', label: 'لوحة التحكم', icon: Home },
-  { to: '/clinic', label: 'العيادة', icon: BriefcaseMedical },
+  { to: '/clinic', label: 'العيادة', icon: Pencil },
   { to: '/lab-reception', label: 'استقبال المختبر', icon: Microscope },
   { to: '/lab-sample-collection', label: 'جمع العينات', icon: Syringe },
   { to: '/lab-workstation', label: 'نتائج المختبر', icon: FlaskConical },
@@ -101,6 +102,34 @@ const UserType = {
 } as const;
 
 type UserType = typeof UserType[keyof typeof UserType];
+// Visual style mapping for each user type (border/text/background colors)
+const userTypeStyles: Record<UserType, { border: string; text: string; bg: string }> = {
+  [UserType.lab_reception]: {
+    border: 'border-blue-500',
+    text: 'text-blue-700',
+    bg: 'bg-blue-50',
+  },
+  [UserType.lab_results]: {
+    border: 'border-emerald-500',
+    text: 'text-emerald-700',
+    bg: 'bg-emerald-50',
+  },
+  [UserType.clinic_reception]: {
+    border: 'border-amber-500',
+    text: 'text-amber-800',
+    bg: 'bg-amber-50',
+  },
+  [UserType.cash_reconciliation]: {
+    border: 'border-purple-500',
+    text: 'text-purple-700',
+    bg: 'bg-purple-50',
+  },
+  [UserType.insurance]: {
+    border: 'border-rose-500',
+    text: 'text-rose-700',
+    bg: 'bg-rose-50',
+  },
+};
 // Function to get navigation items based on user type
 const getMainNavItems = (userType?: UserType): NavItem[] => {
   // If user type is 'استقبال معمل', show only specific items
@@ -544,6 +573,27 @@ const AppLayout: React.FC = () => {
                         </SheetTrigger>
                     </Sheet>
                     <div className="flex-1 text-lg font-semibold hidden md:block truncate px-4" />
+                    {/* Desktop sidebar toggle button in navbar */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={toggleDesktopSidebar}
+                          className="hidden md:inline-flex mr-2"
+                          aria-label={isDesktopSidebarCollapsed ? 'توسيع الشريط الجانبي' : 'طي الشريط الجانبي'}
+                        >
+                          {isDesktopSidebarCollapsed ? (
+                            <ExpandIcon className="h-5 w-5" />
+                          ) : (
+                            <CollapseIcon className="h-5 w-5" />
+                          )}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" sideOffset={6}>
+                        <p>{isDesktopSidebarCollapsed ? 'توسيع الشريط الجانبي' : 'طي الشريط الجانبي'}</p>
+                      </TooltipContent>
+                    </Tooltip>
                     <AppHeaderSearch />
                 </div>
                 
@@ -593,14 +643,44 @@ const AppLayout: React.FC = () => {
                   {/* User Menu */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-9 px-3 rounded-md max-w-[220px] truncate">
-                        {user?.username || user?.name || "User"}
-                      </Button>
+                      {(() => {
+                        const type = (user?.user_type as UserType | undefined);
+                        const style = type ? userTypeStyles[type] : undefined;
+                        return (
+                          <Button
+                            variant="ghost"
+                            className={cn(
+                              "h-9 px-3 rounded-md max-w-[220px] truncate border",
+                              style?.border ?? "border-border",
+                              style?.text ?? "text-foreground"
+                            )}
+                          >
+                            {user?.username || user?.name || "User"}
+                          </Button>
+                        );
+                      })()}
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-56">
-                      <DropdownMenuLabel className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">{user?.name}</p>
-                        <p className="text-xs leading-none text-muted-foreground">{user?.username}</p>
+                      <DropdownMenuLabel className="p-0">
+                        {(() => {
+                          const type = (user?.user_type as UserType | undefined);
+                          const style = type ? userTypeStyles[type] : undefined;
+                          return (
+                            <div
+                              className={cn(
+                                'flex flex-col space-y-1 p-2 rounded-md border',
+                                style?.border ?? 'border-gray-300',
+                                style?.bg ?? 'bg-accent/30'
+                              )}
+                            >
+                              <p className="text-sm font-medium leading-none">{user?.name}</p>
+                              <p className="text-xs leading-none text-muted-foreground">{user?.username}</p>
+                              {('user_type' in (user || {})) && (
+                                <p className={cn('text-xs leading-none', style?.text ?? 'text-foreground')}>نوع المستخدم: {user?.user_type ?? 'بدون'}</p>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </DropdownMenuLabel>
               
                

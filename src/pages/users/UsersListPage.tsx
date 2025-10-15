@@ -33,7 +33,11 @@ import {
   Typography,
   Divider,
   CircularProgress,
+  FormControl,
+  InputLabel,
+  Select,
 } from "@mui/material";
+import type { SelectChangeEvent } from "@mui/material";
 import {
   MoreHorizontal,
   Trash2,
@@ -57,9 +61,17 @@ export default function UsersListPage() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedUserType, setSelectedUserType] = useState<string>("");
+  const [selectedActive, setSelectedActive] = useState<string>(""); // "" = all, "1" active, "0" inactive
+  const [perPage, setPerPage] = useState<number>(20);
   const debouncedSearch = useDebounce(searchTerm, 400);
 
-  const filters = useMemo(() => ({ search: debouncedSearch }), [debouncedSearch]);
+  const filters = useMemo(() => ({
+    search: debouncedSearch,
+    user_type: selectedUserType || undefined,
+    is_active: selectedActive === "" ? undefined : Number(selectedActive),
+    per_page: perPage,
+  }), [debouncedSearch, selectedUserType, selectedActive, perPage]);
 
   const {
     data: paginatedData,
@@ -161,6 +173,49 @@ export default function UsersListPage() {
               fullWidth
               sx={{ minWidth: { sm: 280 }, flex: { xs: 1, sm: 'initial' } }}
             />
+            <FormControl size="small" sx={{ minWidth: 160 }}>
+              <InputLabel id="filter-user-type-label">نوع المستخدم</InputLabel>
+              <Select
+                labelId="filter-user-type-label"
+                label="نوع المستخدم"
+                value={selectedUserType}
+                onChange={(e: SelectChangeEvent<string>) => { setCurrentPage(1); setSelectedUserType(e.target.value as string); }}
+              >
+                <MenuItem value="">الكل</MenuItem>
+                <MenuItem value="استقبال معمل">استقبال معمل</MenuItem>
+                <MenuItem value="ادخال نتائج">ادخال نتائج</MenuItem>
+                <MenuItem value="استقبال عياده">استقبال عياده</MenuItem>
+                <MenuItem value="خزنه موحده">خزنه موحده</MenuItem>
+                <MenuItem value="تامين">تامين</MenuItem>
+              </Select>
+            </FormControl>
+            <FormControl size="small" sx={{ minWidth: 140 }}>
+              <InputLabel id="filter-active-label">الحالة</InputLabel>
+              <Select
+                labelId="filter-active-label"
+                label="الحالة"
+                value={selectedActive}
+                onChange={(e: SelectChangeEvent<string>) => { setCurrentPage(1); setSelectedActive(e.target.value as string); }}
+              >
+                <MenuItem value="">الكل</MenuItem>
+                <MenuItem value="1">نشط</MenuItem>
+                <MenuItem value="0">غير نشط</MenuItem>
+              </Select>
+            </FormControl>
+            <FormControl size="small" sx={{ minWidth: 120 }}>
+              <InputLabel id="rows-per-page-label">الصفوف</InputLabel>
+              <Select
+                labelId="rows-per-page-label"
+                label="الصفوف"
+                value={String(perPage)}
+                onChange={(e: SelectChangeEvent<string>) => { setCurrentPage(1); setPerPage(Number(e.target.value)); }}
+              >
+                <MenuItem value="10">10</MenuItem>
+                <MenuItem value="20">20</MenuItem>
+                <MenuItem value="50">50</MenuItem>
+                <MenuItem value="100">100</MenuItem>
+              </Select>
+            </FormControl>
             {canCreateUsers && (
               <Link to="/users/new">
                 <Button variant="contained" size="small" sx={{ height: 36, display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -200,15 +255,16 @@ export default function UsersListPage() {
         <Card>
           <CardContent sx={{ p: 0 }}>
             <TableContainer>
-              <Table>
+              <Table className="text-2xl!">
                 <TableHead>
                   <TableRow>
-                    <TableCell align="center" sx={{ display: { xs: 'none', sm: 'table-cell' }, width: 50 }}>م</TableCell>
-                    <TableCell>الاسم</TableCell>
-                    <TableCell align="center" sx={{ display: { xs: 'none', md: 'table-cell' } }}>اسم المستخدم</TableCell>
-                    <TableCell align="center">الأدوار</TableCell>
-                    <TableCell align="center" sx={{ width: 120 }}>الحالة</TableCell>
-                    <TableCell align="right" sx={{ width: 80 }}>إجراءات</TableCell>
+                    <TableCell className="text-xl!"  align="center" sx={{ display: { xs: 'none', sm: 'table-cell' }, width: 50 }}>م</TableCell>
+                    <TableCell className="text-xl!">الاسم</TableCell>
+                    <TableCell className="text-xl!">اسم المستخدم</TableCell> 
+                    <TableCell className="text-xl!" align="center" sx={{ display: { xs: 'none', md: 'table-cell' } }}>النوع</TableCell>
+                    <TableCell className="text-xl!" align="center">الأدوار</TableCell>
+                    <TableCell className="text-xl!" align="center" sx={{ width: 120 }}>الحالة</TableCell>
+                    <TableCell className="text-xl!" align="right" sx={{ width: 80 }}>إجراءات</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -219,10 +275,10 @@ export default function UsersListPage() {
                       onClick={() => navigate(`/users/${u.id}/edit`)}
                       sx={{ cursor: 'pointer' }}
                     >
-                      <TableCell align="center" sx={{ display: { xs: 'none', sm: 'table-cell' }, py: 1.25 }}>{u.id}</TableCell>
-                      <TableCell sx={{ py: 1.25 }}>
+                      <TableCell className="text-xl!" align="center" sx={{ display: { xs: 'none', sm: 'table-cell' }, py: 1.25 }}>{u.id}</TableCell>
+                      <TableCell className="text-xl!" sx={{ py: 1.25 }}>
                         <Box display="flex" alignItems="center" gap={1}>
-                          <Typography variant="body2">{u.name}</Typography>
+                          <Typography className="text-xl!" variant="body2">{u.name}</Typography>
                           {u.is_supervisor && (
                             <Tooltip title="مشرف">
                               <span>
@@ -231,37 +287,40 @@ export default function UsersListPage() {
                             </Tooltip>
                           )}
                           {currentUser?.id === u.id && (
-                            <Chip label="أنت" size="small" variant="outlined" sx={{ fontSize: 10, height: 18 }} />
+                            <Chip className="text-xl!" label="أنت" size="small" variant="outlined" sx={{ fontSize: 10, height: 18 }} />
                           )}
                         </Box>
                       </TableCell>
-                      <TableCell align="center" sx={{ display: { xs: 'none', md: 'table-cell' }, py: 1.25 }}>
+                      <TableCell className="text-xl!" align="center" sx={{ display: { xs: 'none', md: 'table-cell' }, py: 1.25 }}>
                         {u.username}
                       </TableCell>
-                      <TableCell align="center" sx={{ py: 1.25 }}>
+                      <TableCell className="text-xl!" align="center" sx={{ py: 1.25 }}>
+                        {u.user_type}
+                      </TableCell>
+                      <TableCell className="text-xl!" align="center" sx={{ py: 1.25 }}>
                         <Box display="flex" flexWrap="wrap" gap={0.5} justifyContent="center">
                           {u.roles?.slice(0, 2).map((role) => (
-                            <Chip key={role.id} label={role.name} size="small" variant="outlined" sx={{ fontSize: 12 }} />
+                            <Chip className="text-xl!" key={role.id} label={role.name} size="small" variant="outlined" sx={{ fontSize: 12 }} />
                           ))}
                           {u.roles && u.roles.length > 2 && (
                             <Tooltip title={u.roles.slice(2).map((r) => r.name).join(", ")}> 
-                              <Chip label={`+${u.roles.length - 2}`} size="small" variant="outlined" sx={{ fontSize: 12 }} />
+                              <Chip className="text-xl!" label={`+${u.roles.length - 2}`} size="small" variant="outlined" sx={{ fontSize: 12 }} />
                             </Tooltip>
                           )}
                         </Box>
                       </TableCell>
-                      <TableCell align="center" sx={{ py: 1.25 }}>
+                      <TableCell className="text-xl!" align="center" sx={{ py: 1.25 }}>
                         {u.is_active ? (
-                          <Chip color="success" label={
+                          <Chip className="text-xl!" color="success" label={
                             <Box display="flex" alignItems="center" gap={0.5}><CheckCircle2 className="h-3 w-3"/> نشط</Box>
                           } size="small" sx={{ fontSize: 12 }} />
                         ) : (
-                          <Chip color="error" label={
+                          <Chip className="text-xl!" color="error" label={
                             <Box display="flex" alignItems="center" gap={0.5}><XCircle className="h-3 w-3"/> غير نشط</Box>
                           } size="small" sx={{ fontSize: 12 }} />
                         )}
                       </TableCell>
-                      <TableCell align="right" sx={{ py: 1.25 }}>
+                      <TableCell className="text-xl!"     align="right" sx={{ py: 1.25 }}>
                         <IconButton
                           size="small"
                           onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); openMenuFor(e, u.id); }}

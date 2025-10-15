@@ -14,13 +14,13 @@ const PatientCompanyDetails: React.FC<PatientCompanyDetailsProps> = ({ patient }
   return (
     <div className="w-full bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700 p-3 mb-2">
       <div className="text-center font-semibold text-blue-800 dark:text-blue-200 text-sm mb-2">
-        معلومات شركة المريض
+        بيانات التامين  
       </div>
       <table className="w-full text-xs">
         <tbody>
           <tr>
             <td className="text-right text-gray-700 pr-2">اسم الشركة</td>
-            <td className="text-left font-medium">{patient.company.name}</td>
+            <td className="text-left font-medium text-lg text-blue-800 dark:text-blue-200">{patient.company.name}</td>
           </tr>
     
           {patient.subcompany && patient.subcompany.name && (

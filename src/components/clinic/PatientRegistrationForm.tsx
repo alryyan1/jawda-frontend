@@ -4,6 +4,7 @@ import {
   Box,
   TextField,
   Button,
+  Autocomplete,
   Select,
   MenuItem,
   FormControl,
@@ -153,7 +154,7 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
   const loadCompanies = async () => {
     try {
       setIsLoadingCompanies(true);
-      const response = await apiClient.get('/companies');
+      const response = await apiClient.get('/companies', { params: { per_page: 10000 } });
       setCompanies(response.data.data || []);
     } catch (error) {
       console.error('Error loading companies:', error);
@@ -487,25 +488,36 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
 
               {/* Company Field */}
               <FormControl fullWidth error={!!errors.company_id}>
-                <InputLabel>الشركة</InputLabel>
-                <Select
-                  value={formData.company_id}
-                  onChange={handleSelectChange('company_id')}
-                  label="الشركة"
+                <Autocomplete
+                  options={companies}
+                  value={companies.find(c => String(c.id) === formData.company_id) || null}
+                  onChange={(_e, newValue) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      company_id: newValue ? String(newValue.id) : '',
+                      subcompany_id: '',
+                      company_relation_id: ''
+                    }));
+                    if (errors.company_id) {
+                      setErrors(prev => ({ ...prev, company_id: undefined }));
+                    }
+                  }}
+                  getOptionLabel={(option) => option.name}
+                  isOptionEqualToValue={(option, value) => option.id === value.id}
+                  loading={isLoadingCompanies}
                   disabled={isLoadingCompanies || isSubmitting}
-                >
-                  <MenuItem value="">لا يوجد</MenuItem>
-                  {isLoadingCompanies ? (
-                    <MenuItem disabled>جاري التحميل...</MenuItem>
-                  ) : (
-                    companies.map(comp => (
-                      <MenuItem key={comp.id} value={String(comp.id)}>
-                        {comp.name}
-                      </MenuItem>
-                    ))
+                  clearOnEscape
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="الشركة"
+                      error={!!errors.company_id}
+                      helperText={errors.company_id}
+                    />
                   )}
-                </Select>
-                {errors.company_id && <FormHelperText>{errors.company_id}</FormHelperText>}
+                  noOptionsText="لا توجد نتائج"
+                  loadingText="جاري التحميل..."
+                />
               </FormControl>
 
               {/* Insurance Details Section */}

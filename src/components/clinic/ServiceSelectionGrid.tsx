@@ -195,7 +195,7 @@ const ServiceSelectionGrid: React.FC<ServiceSelectionGridProps> = ({
         className={`transition-colors cursor-pointer ${isSelected ? 'ring-2 ring-primary' : 'hover:ring-1 hover:ring-slate-300'} `}
         sx={{ height: '100%', ...(isSelected ? { backgroundColor: 'action.selected' } : {}) }}
       >
-        <CardContent sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', height: '64px' }}>
+        <CardContent sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', height: '40px' }}>
           <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap title={service.name}>
             {service.name}
           </Typography>
@@ -282,7 +282,7 @@ const ServiceSelectionGrid: React.FC<ServiceSelectionGridProps> = ({
               value={activeTab ?? filteredCatalog[0]?.id.toString()}
               onChange={(_e, val) => setActiveTab(String(val))}
               variant="scrollable"
-              allowScrollButtonsMobile
+              // allowScrollButtonsMobile
             >
               {filteredCatalog.map((group) => (
                 <Tab key={group.id} value={group.id.toString()} label={`${group.name} (${group.services.length})`} />

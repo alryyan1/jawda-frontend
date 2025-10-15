@@ -20,7 +20,8 @@ import {
   faClockRotateLeft,
   faGlobe,
   faUserDoctor,
-  faCalculator
+  faCalculator,
+  faBook
 } from "@fortawesome/free-solid-svg-icons";
 import ManageDoctorShiftsDialog from "./ManageDoctorShiftsDialog";
 import DoctorCredits from "./DoctorCredits";
@@ -30,7 +31,7 @@ import ShiftSummaryDialog from "./ShiftSummaryDialog";
 import OnlineAppointmentsDialog from "./OnlineAppointmentsDialog";
 import type { DoctorShift } from "@/types/doctors";
 import { webUrl } from "@/pages/constants";
- 
+
 interface ActionsPaneProps {
   showRegistrationForm: boolean;
   onToggleRegistrationForm: () => void;
@@ -48,34 +49,37 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
   onOpenFinancialSummary,
 }) => {
   const { currentClinicShift, user: authUser } = useAuth();
-    // Placeholder permissions
+  // Placeholder permissions
   const canRegisterPatient = true;
-  const canManageDoctorShifts = true;
+  const canManageDoctorShifts = authUser?.user_type !== 'تامين';
+  const canManageDcotorCredits = authUser?.user_type !== 'تامين';
+  const canViewInsuranceReport = authUser?.user_type === 'تامين';
+  const canViewGeneralReport = authUser?.user_type !== 'تامين';
   const [showShiftSummaryDialog, setShowShiftSummaryDialog] = useState(false);
   const [isDoctorCreditsOpen, setIsDoctorCreditsOpen] = useState(false);
   const [isOnlineAppointmentsOpen, setIsOnlineAppointmentsOpen] = useState(false);
- console.log(activeDoctorShift,'activeDoctorShift')
+  console.log(activeDoctorShift, 'activeDoctorShift')
 
   return (
     <>
-    <Box
-      sx={{
-        width: "60px",
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 1,
-        padding: 1,
-        backgroundColor: "background.paper",
-        borderRight: 1,
-        borderColor: "divider",
-        overflowY: "auto",
-        boxShadow: 1,
-        direction: "rtl", // Arabic RTL direction
-      }}
-    >
-       <Tooltip title="التقرير العام" placement="left">
+      <Box
+        sx={{
+          width: "60px",
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 1,
+          padding: 1,
+          backgroundColor: "background.paper",
+          borderRight: 1,
+          borderColor: "divider",
+          overflowY: "auto",
+          boxShadow: 1,
+          direction: "rtl", // Arabic RTL direction
+        }}
+      >
+        {canViewGeneralReport && <Tooltip title="التقرير العام" placement="left">
           <IconButton
             onClick={() => {
               const url = `${webUrl}reports/doctor-shifts/pdf?shift_id=${currentClinicShift?.id}&user_opened=${authUser?.id}`;
@@ -86,9 +90,9 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
           >
             <FontAwesomeIcon icon={faSitemap} />
           </IconButton>
-        </Tooltip>
-        
-        {canRegisterPatient && (
+        </Tooltip>}
+
+        {/* {canRegisterPatient && (
           <Tooltip title={showRegistrationForm ? "عرض مساحة العمل للمرضى" : "تسجيل مريض جديد"} placement="left">
             <IconButton
               color={showRegistrationForm ? "primary" : "default"}
@@ -98,8 +102,8 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
               {showRegistrationForm ? <LayoutGrid /> : <FontAwesomeIcon icon={faUserPlus} />}
             </IconButton>
           </Tooltip>
-        )}
-            {canManageDoctorShifts && (
+        )} */}
+        {canManageDoctorShifts && (
           <Tooltip title="  أطبائي" placement="left">
             <ManageDoctorShiftsDialog
               currentClinicShiftId={currentClinicShift?.id ?? null}
@@ -114,15 +118,17 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
           </Tooltip>
         )}
         {/* Doctor Credits Button */}
-        <Tooltip title="استحقاقات الأطباء" placement="left">
-          <IconButton
-            onClick={() => setIsDoctorCreditsOpen(true)}
-            sx={{ width: 44, height: 44, color: "info.main" }}
-            aria-label="استحقاقات الأطباء"
-          >
-            <BriefcaseMedical />
-          </IconButton>
-        </Tooltip>
+        {canManageDcotorCredits && (
+          <Tooltip title="استحقاقات الأطباء" placement="left">
+            <IconButton
+              onClick={() => setIsDoctorCreditsOpen(true)}
+              sx={{ width: 44, height: 44, color: "info.main" }}
+              aria-label="استحقاقات الأطباء"
+            >
+              <BriefcaseMedical />
+            </IconButton>
+          </Tooltip>
+        )}
 
         {/* Financial Summary Button */}
         <Tooltip title="الملخص المالي" placement="left">
@@ -134,24 +140,30 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
             <FontAwesomeIcon icon={faCalculator} />
           </IconButton>
         </Tooltip>
-        
-        
-    
-        <Tooltip title="تحديث" placement="left">
-          <IconButton
-            onClick={() => {/* TODO: Add refresh functionality */}}
-            sx={{ width: 44, height: 44, color: "success.main" }}
-          >
-            <FontAwesomeIcon icon={faClockRotateLeft} />
-          </IconButton>
-        </Tooltip>
-        
-      
-        
-   
-     
-        <Divider sx={{ width: "100%", my: 1 }} />
-          <Tooltip title="الحجوزات الإلكترونية" placement="left">
+
+        {/* Insurance Report Button (visible for insurance users) */}
+        {canViewInsuranceReport && (
+          <Tooltip title="تقرير التأمين" placement="left">
+            <IconButton
+              onClick={() => {
+                const url = `${webUrl}reports/insurance/pdf`;
+                window.open(url, '_blank', 'noopener,noreferrer');
+              }}
+              sx={{ width: 44, height: 44, color: "primary.main" }}
+              aria-label="تقرير التأمين"
+            >
+              <FontAwesomeIcon icon={faBook} />
+            </IconButton>
+          </Tooltip>
+        )}
+
+
+
+
+
+
+
+        <Tooltip title="الحجوزات الإلكترونية" placement="left">
           <IconButton
             onClick={() => setIsOnlineAppointmentsOpen(true)}
             disabled={!activeDoctorShift}
@@ -160,9 +172,9 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
             <FontAwesomeIcon icon={faGlobe} />
           </IconButton>
         </Tooltip>
-     
+
       </Box>
-      
+
 
       {currentClinicShift && (
         <ShiftSummaryDialog
@@ -177,7 +189,7 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
         <DialogTitle>استحقاقات الأطباء</DialogTitle>
         <DialogContent dividers>
           <DoctorCredits
-            setAllMoneyUpdatedLab={() => {}}
+            setAllMoneyUpdatedLab={() => { }}
             user={{ id: authUser?.id ?? 0, isAdmin: !!authUser?.roles?.some(r => r.name === 'admin') }}
           />
         </DialogContent>
@@ -189,7 +201,7 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
         onClose={() => setIsOnlineAppointmentsOpen(false)}
         activeDoctorShift={activeDoctorShift}
       />
-      
+
     </>
   );
 };

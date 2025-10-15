@@ -119,7 +119,7 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId 
               const getTabClassName = () => {
                 if (isActive) {
                   return isExamining 
-                    ? 'doctor-tab doctor-tab--active-examining'
+                    ? 'doctor-tab doctor-tab--active-examining '
                     : 'doctor-tab doctor-tab--active-not-examining';
                 } else {
                   return isExamining
@@ -140,7 +140,7 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId 
                   {/* Doctor Name */}
                   <Typography
                   style={{fontWeight:'bold'}}
-                    className={`text-black! doctor-name ${isActive ? 'doctor-name--active text-2xl font-bold' : ''}`}
+                    className={`text-black! doctor-name ${isActive ? 'doctor-name--active text-2xl font-bold text-white! ' : ''}`}
                     title={shift.doctor_name}
                   >
                     {shift.doctor_name}

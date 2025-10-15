@@ -197,7 +197,7 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
       </div>
     );
   }
-
+  const canAddService = visit.user_id === user?.id;
   return (
     <div className="flex flex-col h-full bg-background shadow-xl">
       <Tabs
@@ -226,7 +226,7 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
               {isGeneratingPdf ? <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2"/> : <PrinterIcon className="h-4 w-4 ltr:mr-2 rtl:ml-2"/>}
               طباعة الإيصال
             </Button>
-            {!isUnifiedCashier && (
+            {!isUnifiedCashier && canAddService && (
               <Button onClick={() => setOpenSelectionGridCommand(c => c + 1)} variant="default" size="sm">
                 <PlusCircle className="h-4 w-4 ltr:mr-2 rtl:ml-2"/>
                 إضافة خدمات

@@ -153,13 +153,12 @@ const ManageDoctorShiftsDialog: React.FC<ManageDoctorShiftsDialogProps> = ({ tri
   const handleCloseShift = (doctorShiftId: number) => {
     closeShiftMutation.mutate(doctorShiftId);
   };
-
   const handleViewReport = (doctorShiftId: number) => {
     // Open doctor's clinic report in a new tab
     const reportUrl = `${webUrl}reports/clinic-report-old/pdf?doctor_shift_id=${doctorShiftId}`;
     window.open(reportUrl, '_blank');
   };
-
+console.log(doctorsList,'doctorsList');
   return (
     <>
       <Box onClick={() => setIsOpen(true)}>
@@ -171,7 +170,7 @@ const ManageDoctorShiftsDialog: React.FC<ManageDoctorShiftsDialogProps> = ({ tri
         maxWidth="lg"
         fullWidth
       >
-        <DialogTitle>أطبائي</DialogTitle>
+        <DialogTitle sx={{ fontSize: '1.5rem', fontWeight: 'bold' }}>أطبائي</DialogTitle>
         <DialogContent>
           <Box sx={{ mb: 2 }}>
             <TextField
@@ -179,10 +178,14 @@ const ManageDoctorShiftsDialog: React.FC<ManageDoctorShiftsDialogProps> = ({ tri
               placeholder="البحث عن الأطباء المفضلين..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              sx={{ 
+                '& .MuiInputBase-input': { fontSize: '1.1rem' },
+                '& .MuiInputBase-input::placeholder': { fontSize: '1.1rem' }
+              }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <SearchIcon />
+                    <SearchIcon sx={{ fontSize: '1.2rem' }} />
                   </InputAdornment>
                 ),
               }}
@@ -200,30 +203,33 @@ const ManageDoctorShiftsDialog: React.FC<ManageDoctorShiftsDialogProps> = ({ tri
                 <Table>
                   <TableHead>
                     <TableRow>
-                      <TableCell align="center">الاسم</TableCell>
-                      <TableCell align="center">التخصص</TableCell>
-                      <TableCell align="center">الإجراءات</TableCell>
-                      <TableCell align="center">التقرير</TableCell>
+                      <TableCell className='text-2xl' align="center" sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>الاسم</TableCell>
+                      <TableCell className='text-2xl' align="center" sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>التخصص</TableCell>
+                      <TableCell className='text-2xl' align="center" sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>الإجراءات</TableCell>
+                      <TableCell className='text-2xl' align="center" sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>التقرير</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {doctorsList?.map((doc) => (
+  // {console.log(doc)}
                       <TableRow key={doc.id}>
-                        <TableCell align="center" sx={{ fontWeight: 'medium' }}>
+                        <TableCell className='text-2xl' align="center" sx={{ fontWeight: 'medium', fontSize: '1.1rem' }}>
                           {doc.name}
                         </TableCell>
-                        <TableCell align="center">
+                        <TableCell className='text-2xl' align="center" sx={{ fontSize: '1.1rem' }}>
                           {doc.specialist_name || '-'}
                         </TableCell>
                  
-                        <TableCell align="center">
+                        <TableCell className='text-2xl' align="center">
                           {doc.is_on_shift && doc.current_doctor_shift_id ? (
                             <Button
-                              size="small"
+                              size="medium"
                               color="error"
                               variant="contained"
                               onClick={() => handleCloseShift(doc.current_doctor_shift_id!)}
                               disabled={closeShiftMutation.isPending && closeShiftMutation.variables === doc.current_doctor_shift_id}
+                              className='text-2xl'
+                              sx={{ fontSize: '1rem' }}
                               startIcon={
                                 closeShiftMutation.isPending && closeShiftMutation.variables === doc.current_doctor_shift_id 
                                   ? <CircularProgress size={16} />
@@ -234,10 +240,12 @@ const ManageDoctorShiftsDialog: React.FC<ManageDoctorShiftsDialogProps> = ({ tri
                             </Button>
                           ) : (
                             <Button
-                              size="small"
+                              size="medium"
                               variant="contained"
                               onClick={() => handleOpenShift(doc.id)}
                               disabled={openShiftMutation.isPending && openShiftMutation.variables === doc.id}
+                              className='text-2xl'
+                              sx={{ fontSize: '1rem' }}
                               startIcon={
                                 openShiftMutation.isPending && openShiftMutation.variables === doc.id 
                                   ? <CircularProgress size={16} />
@@ -251,11 +259,13 @@ const ManageDoctorShiftsDialog: React.FC<ManageDoctorShiftsDialogProps> = ({ tri
                         <TableCell align="center">
                           <Tooltip title="عرض تقرير الطبيب في تبويب جديد">
                             <Button
-                              size="small"
+                              size="medium"
                               variant="outlined"
                               color="primary"
                               disabled={doc.current_doctor_shift_id == null}
                               onClick={() => handleViewReport(doc.current_doctor_shift_id!)}
+                              className='text-2xl'
+                              sx={{ fontSize: '1rem' }}
                               startIcon={<PdfIcon />}
                             >
                               عرض التقرير
@@ -269,11 +279,11 @@ const ManageDoctorShiftsDialog: React.FC<ManageDoctorShiftsDialogProps> = ({ tri
               ) : (
                 <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
                   {searchTerm ? (
-                    'لا توجد نتائج'
+                    <Box sx={{ fontSize: '1.2rem' }}>لا توجد نتائج</Box>
                   ) : (
                     <Box>
-                      <Box sx={{ mb: 2 }}>لا يوجد أطباء مفضلين</Box>
-                      <Box sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>
+                      <Box sx={{ mb: 2, fontSize: '1.2rem' }}>لا يوجد أطباء مفضلين</Box>
+                      <Box sx={{ fontSize: '1rem', color: 'text.secondary' }}>
                         استخدم زر "الأطباء المفضلين" لإضافة أطباء إلى قائمة المفضلة
                       </Box>
                     </Box>
@@ -295,13 +305,13 @@ const ManageDoctorShiftsDialog: React.FC<ManageDoctorShiftsDialogProps> = ({ tri
                 variant="outlined"
                 color="error"
                 startIcon={<FontAwesomeIcon icon={faHeart} />}
-                sx={{ mr: 1 }}
+                sx={{ mr: 1, fontSize: '1rem' }}
               >
                 الأطباء المفضلين
               </Button>
             }
           />
-          <Button onClick={() => setIsOpen(false)} variant="outlined">
+          <Button onClick={() => setIsOpen(false)} variant="outlined" sx={{ fontSize: '1rem' }}>
             إغلاق
           </Button>
         </DialogActions>

@@ -291,6 +291,7 @@ export interface LabGeneralReportItem {
   id: number; // Patient ID
   name: string; // Patient name
   doctor_name: string; // Doctor name
+  user_name?: string; // User name who processed the lab
   total_lab_amount: number | string; // Total lab amount (can be string from DB)
   total_paid_for_lab: number | string; // Total paid for lab (can be string from DB)
   discount: number | string; // Total discount (can be string from DB)
@@ -298,12 +299,15 @@ export interface LabGeneralReportItem {
   company_name?: string; // Company name if exists
   doctorvisit_id: number; // Doctor visit ID
   main_tests_names: string; // Main tests names (comma-separated)
+  created_at: string; // Patient creation date and time
 }
 
 export interface LabGeneralReportFilters {
   shift_id?: number;
   date_from?: string;
   date_to?: string;
+  start_time?: string;
+  end_time?: string;
   patient_name?: string;
   user_id?: number;
   page?: number;

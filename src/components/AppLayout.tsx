@@ -46,6 +46,7 @@ import {
   WifiOff,
   FileText,
   Pencil,
+  Image,
 } from "lucide-react";
 import { Toaster } from "sonner";
 import { useQuery } from "@tanstack/react-query";
@@ -89,6 +90,7 @@ const allMainNavItems: NavItem[] = [
   // { to: '/schedules-appointments', label: 'المواعيد والجداول', icon: CalendarClock },
   { to: '/cash-reconciliation', label: 'الفئات', icon: Banknote },
   { to: '/hl7-parser', label: 'محلل HL7', icon: FileText },
+  // { to: '/bankak-gallery', label: 'بنك الصور', icon: Image },
 
   // { to: '/bulk-whatsapp', label: 'الواتساب الجماعي', icon: MessageCircle },
 ];

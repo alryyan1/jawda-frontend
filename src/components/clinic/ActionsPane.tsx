@@ -21,7 +21,8 @@ import {
   faGlobe,
   faUserDoctor,
   faCalculator,
-  faBook
+  faBook,
+  faImages
 } from "@fortawesome/free-solid-svg-icons";
 import ManageDoctorShiftsDialog from "./ManageDoctorShiftsDialog";
 import DoctorCredits from "./DoctorCredits";
@@ -29,6 +30,7 @@ import DoctorCredits from "./DoctorCredits";
 import { useAuth } from "@/contexts/AuthContext";
 import ShiftSummaryDialog from "./ShiftSummaryDialog";
 import OnlineAppointmentsDialog from "./OnlineAppointmentsDialog";
+import BankakGallery from "../gallery/BankakGallery";
 import type { DoctorShift } from "@/types/doctors";
 import { webUrl } from "@/pages/constants";
 
@@ -58,6 +60,7 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
   const [showShiftSummaryDialog, setShowShiftSummaryDialog] = useState(false);
   const [isDoctorCreditsOpen, setIsDoctorCreditsOpen] = useState(false);
   const [isOnlineAppointmentsOpen, setIsOnlineAppointmentsOpen] = useState(false);
+  const [isBankakGalleryOpen, setIsBankakGalleryOpen] = useState(false);
   console.log(activeDoctorShift, 'activeDoctorShift')
 
   return (
@@ -173,6 +176,17 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
           </IconButton>
         </Tooltip>
 
+        {/* Bankak Gallery Button */}
+        <Tooltip title="بنك الصور" placement="left">
+          <IconButton
+            onClick={() => setIsBankakGalleryOpen(true)}
+            sx={{ width: 44, height: 44, color: "info.main" }}
+            aria-label="بنك الصور"
+          >
+            <FontAwesomeIcon icon={faImages} />
+          </IconButton>
+        </Tooltip>
+
       </Box>
 
 
@@ -201,6 +215,25 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
         onClose={() => setIsOnlineAppointmentsOpen(false)}
         activeDoctorShift={activeDoctorShift}
       />
+
+      {/* Bankak Gallery Dialog */}
+      <Dialog 
+        open={isBankakGalleryOpen} 
+        onClose={() => setIsBankakGalleryOpen(false)} 
+        fullWidth 
+        maxWidth="xl"
+        sx={{
+          '& .MuiDialog-paper': {
+            height: '90vh',
+            maxHeight: '90vh'
+          }
+        }}
+      >
+        <DialogTitle>بنك الصور</DialogTitle>
+        <DialogContent dividers sx={{ padding: 0, height: '100%' }}>
+          <BankakGallery />
+        </DialogContent>
+      </Dialog>
 
     </>
   );

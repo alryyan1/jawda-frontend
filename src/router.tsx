@@ -74,6 +74,7 @@ import SampleCollectionPage from "./pages/lab/SampleCollectionPage";
 import MonthlyAttendanceSummaryPage from "./pages/attendance/MonthlyAttendanceSummaryPage";
 import LabTestStatisticsReportPage from "./pages/reports/LabTestStatisticsReportPage";
 import LabGeneralReportPage from "./pages/reports/LabGeneralReportPage";
+import LabGeneralReportDetailsPage from "./pages/reports/LabGeneralReportDetailsPage";
 import LabReceptionPage from "./pages/LabReceptionPage";
 import SpecialistsPage from "./pages/specialists/SpecialistsPage";
 import CashReconciliationPage from "./pages/CashReconciliationPage";
@@ -143,6 +144,7 @@ const router = createBrowserRouter([
             path: "hl7-parser",
             element: <HL7ParserPage />,
           },
+        
           {
             path: "dashboard", // Explicit dashboard route if needed, often same as index
             element: <HomePage />,
@@ -261,6 +263,10 @@ const router = createBrowserRouter([
               {
                 path: 'lab-general',
                 element: <LabGeneralReportPage />,
+              },
+              {
+                path: 'lab-general/details',
+                element: <LabGeneralReportDetailsPage />,
               },
               {
                 path: 'monthly-service-income',

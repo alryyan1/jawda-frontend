@@ -144,7 +144,7 @@ const LabPatientQueue = React.forwardRef<LabPatientQueueRef, LabPatientQueueProp
         {error && (
           <div className="p-4 text-center text-destructive">
             <AlertTriangle className="mx-auto h-8 w-8 mb-2"/>
-            <p className="font-semibold">فشل في جلب بيانات طابور المرضى</p>
+            <p className="font-semibold">فشل في جلب بيانات  المرضى</p>
             <p className="text-xs mt-1">{error.message}</p>
           </div>
         )}

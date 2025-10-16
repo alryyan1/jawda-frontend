@@ -76,6 +76,7 @@ import LabTestStatisticsReportPage from "./pages/reports/LabTestStatisticsReport
 import LabGeneralReportPage from "./pages/reports/LabGeneralReportPage";
 import LabGeneralReportDetailsPage from "./pages/reports/LabGeneralReportDetailsPage";
 import LabReceptionPage from "./pages/LabReceptionPage";
+import TestOffersPage from "./pages/TestOffersPage";
 import SpecialistsPage from "./pages/specialists/SpecialistsPage";
 import CashReconciliationPage from "./pages/CashReconciliationPage";
 // import NotFoundPage from './pages/NotFoundPage'; // Optional: For 404 handling
@@ -339,6 +340,7 @@ const router = createBrowserRouter([
               { index: true, element: <Navigate to="general" replace /> },
               { path: "general", element: <GeneralSettingsPage /> }, // Your main settings form
               { path: "doctors", element: <DoctorsListPage /> },
+              { path: "offers", element: <TestOffersPage /> },
               // { path: "patients", element: <TodaysPatientsPage /> },
               { path: "users", element: <UsersListPage /> },
               { path: "roles", element: <RolesListPage /> },
@@ -427,6 +429,7 @@ const router = createBrowserRouter([
                       />
                     ),
                   },
+                 
                   {
                     path: ":mainTestId/parameters",
                     element: <ChildTestsManagementPage />,

@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Filter, Download, Eye, User, Phone, Clock } from 'lucide-react';
+import { Filter, Download, Eye, User, Phone, Clock, Brain } from 'lucide-react';
 import { format } from 'date-fns';
 import apiClient from '@/services/api';
 import realtimeService from '@/services/realtimeService';
+import geminiService from '@/services/geminiService';
 import { webUrl } from '@/pages/constants';
 
 interface BankakImage {
@@ -45,6 +46,12 @@ const BankakGallery: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<BankakImage | null>(null);
   const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
   const isListeningRef = useRef(false);
+  
+  // Analysis State
+  const [analyzingImageId, setAnalyzingImageId] = useState<number | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<string | null>(null);
+  const [showAnalysisDialog, setShowAnalysisDialog] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
   
   // Refs to track current values for real-time handler
   const currentPageRef = useRef(currentPage);
@@ -186,6 +193,27 @@ const BankakGallery: React.FC = () => {
     link.click();
     document.body.removeChild(link);
   };
+
+  const analyzeImage = async (image: BankakImage) => {
+    try {
+      setAnalyzingImageId(image.id);
+      setAnalysisError(null);
+      
+      const result = await geminiService.analyzeImage(image.full_image_url, 'قم بتحليل الصوره');
+      
+      if (result.success && result.data) {
+        setAnalysisResult(result.data.analysis);
+        setShowAnalysisDialog(true);
+      } else {
+        setAnalysisError(result.error || 'فشل في تحليل الصورة');
+      }
+    } catch (error) {
+      setAnalysisError('حدث خطأ في تحليل الصورة');
+      console.error('Error analyzing image:', error);
+    } finally {
+      setAnalyzingImageId(null);
+    }
+  };
   return (
     <div className="container mx-auto p-6 space-y-6">
      
@@ -310,9 +338,21 @@ const BankakGallery: React.FC = () => {
                       >
                         <Download className="h-4 w-4" />
                       </Button>
-                    </div>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => analyzeImage(image)}
+                        disabled={analyzingImageId === image.id}
+                      >
+                        {analyzingImageId === image.id ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        ) : (
+                          <Brain className="h-4 w-4" />
+                        )}
+                      </Button>
+                    {/* </div> */}
                   </div>
-                {/* </div> */}
+                </div>
                 <CardContent className="p-4">
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
@@ -378,7 +418,51 @@ const BankakGallery: React.FC = () => {
                   <Download className="h-4 w-4 mr-2" />
                   تحميل الصورة
                 </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => analyzeImage(selectedImage)}
+                  disabled={analyzingImageId === selectedImage.id}
+                >
+                  {analyzingImageId === selectedImage.id ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
+                  ) : (
+                    <Brain className="h-4 w-4 mr-2" />
+                  )}
+                  تحليل الصورة
+                </Button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Analysis Result Dialog */}
+      {showAnalysisDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-2xl max-h-full overflow-auto">
+            <div className="p-4 border-b flex items-center justify-between">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Brain className="h-5 w-5" />
+                تحليل الصورة
+              </h3>
+              <Button variant="ghost" onClick={() => setShowAnalysisDialog(false)}>
+                ✕
+              </Button>
+            </div>
+            <div className="p-4">
+              {analysisResult ? (
+                <div className="space-y-4">
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">
+                      {analysisResult}
+                    </p>
+                  </div>
+                </div>
+              ) : analysisError ? (
+                <div className="bg-red-50 p-4 rounded-lg">
+                  <p className="text-red-600">{analysisError}</p>
+                </div>
+              ) : null}
             </div>
           </div>
         </div>

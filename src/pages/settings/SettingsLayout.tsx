@@ -9,7 +9,8 @@ import {
     // Users,
     User,
     ShieldCheck,
-    Users
+    Users,
+    Tag
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 // Removed i18n usage
@@ -29,6 +30,7 @@ const settingsNavItems: SettingsNavItem[] = [
   { to: 'laboratory', labelKey: 'laboratory', icon: FlaskConical, permission: 'manage laboratory_settings' },
   { to: 'service-groups', labelKey: 'tabs.serviceGroups', icon: Layers, permission: 'manage service_groups' }, // NEW
   { to: 'services', labelKey: 'tabs.servicesConfig', icon: ListOrdered, permission: 'manage service_settings' },
+  { to: 'offers', labelKey: 'العروض', icon: Tag, permission: 'manage offers' },
   //doctors
   { to: 'doctors', labelKey: 'الاطباء', icon: Stethoscope, permission: 'manage doctors' },
   { to: 'specialists', labelKey: 'التخصصات الطبيه', icon: Users, permission: 'manage specialists' },

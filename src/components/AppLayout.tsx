@@ -47,6 +47,7 @@ import {
   FileText,
   Pencil,
   Image,
+  Package,
 } from "lucide-react";
 import { Toaster } from "sonner";
 import { useQuery } from "@tanstack/react-query";
@@ -83,6 +84,7 @@ const allMainNavItems: NavItem[] = [
   { to: '/lab-reception', label: 'استقبال المختبر', icon: Microscope },
   { to: '/lab-sample-collection', label: 'جمع العينات', icon: Syringe },
   { to: '/lab-workstation', label: 'نتائج المختبر', icon: FlaskConical },
+  // { to: '/laboratory/offers', label: 'عروض التحاليل', icon: Package },
   // { to: '/attendance/sheet', label: 'سجل الحضور', icon: ClipboardEditIcon },
   { to: '/patients', label: 'المرضى', icon: Users },
   // { to: '/doctors', label: 'الأطباء', icon: Stethoscope },

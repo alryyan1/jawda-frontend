@@ -8,11 +8,15 @@ import {
     LayoutGrid, 
     Eye,
     Printer,
+    FileText,
     Globe,
     Loader2,
     TrendingUp,
     ListChecks,
+    Calculator,
+    Banknote,
 } from 'lucide-react';
+import { webUrl } from '@/pages/constants';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -108,7 +112,7 @@ const LabReceptionActionPage: React.FC<LabReceptionActionPageProps> = ({
               onClick={onToggleView}
               aria-label={
                 isFormVisible
-                  ? 'عرض طابور المرضى'
+                  ? 'عرض  المرضى'
                   : 'تسجيل مريض جديد'
               }
             >
@@ -122,7 +126,7 @@ const LabReceptionActionPage: React.FC<LabReceptionActionPageProps> = ({
           <TooltipContent side="left">
             <p>
               {isFormVisible
-                ? 'عرض طابور المرضى'
+                ? 'عرض  المرضى'
                 : 'تسجيل مريض جديد'}
             </p>
           </TooltipContent>
@@ -168,6 +172,31 @@ const LabReceptionActionPage: React.FC<LabReceptionActionPageProps> = ({
             </TooltipTrigger>
             <TooltipContent side="left">
               <p>طباعة فاتورة المختبر</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
+
+        {/* Button: Open Lab Shift Report PDF in new tab */}
+        {currentClinicShift && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="w-11 h-11"
+                onClick={() => {
+                  const params = new URLSearchParams();
+                  if (currentClinicShift?.id) params.append('shift', String(currentClinicShift.id));
+                  const url = `${webUrl}reports/lab-shift/pdf?${params.toString()}`;
+                  window.open(url, '_blank', 'noopener,noreferrer');
+                }}
+                aria-label="تقرير وردية المختبر"
+              >
+                <FileText className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">
+              <p>تقرير وردية المختبر</p>
             </TooltipContent>
           </Tooltip>
         )}
@@ -221,7 +250,25 @@ const LabReceptionActionPage: React.FC<LabReceptionActionPageProps> = ({
                 <p>فلترة حسب الطبيب</p>
             </TooltipContent>
         </Tooltip>
-
+        {/* //cash reconciliation */}
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <Button 
+                onClick={() => {
+                    console.log('Calculator button clicked');
+                   window.open(`./cash-reconciliation`, '_blank', 'noopener,noreferrer');
+                }}
+                    variant="ghost" 
+                    size="icon" 
+                    className="w-11 h-11" 
+                >
+                    <Banknote className="h-5 w-5" />
+                </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">
+                <p>الفئات  </p>
+            </TooltipContent>
+        </Tooltip>
         <Separator className="my-1" />
 
         {/* Button 4 (Globe): Open Online Lab Patients Dialog */}
@@ -246,6 +293,8 @@ const LabReceptionActionPage: React.FC<LabReceptionActionPageProps> = ({
         </Tooltip>
 
       </aside>
+      {/* //cash reconciliation */}
+
 
       {/* Render the dialogs that this pane can open */}
       {currentClinicShift && (

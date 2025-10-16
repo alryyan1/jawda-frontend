@@ -4,7 +4,12 @@ import { Outlet, NavLink, /* useLocation */ } from 'react-router-dom';
 import { 
     Settings, Building, FlaskConical, ListOrdered, CreditCard,
     Layers,
-    Link2
+    Link2,
+    Stethoscope,
+    // Users,
+    User,
+    ShieldCheck,
+    Users
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 // Removed i18n usage
@@ -24,6 +29,16 @@ const settingsNavItems: SettingsNavItem[] = [
   { to: 'laboratory', labelKey: 'laboratory', icon: FlaskConical, permission: 'manage laboratory_settings' },
   { to: 'service-groups', labelKey: 'tabs.serviceGroups', icon: Layers, permission: 'manage service_groups' }, // NEW
   { to: 'services', labelKey: 'tabs.servicesConfig', icon: ListOrdered, permission: 'manage service_settings' },
+  //doctors
+  { to: 'doctors', labelKey: 'الاطباء', icon: Stethoscope, permission: 'manage doctors' },
+  { to: 'specialists', labelKey: 'التخصصات الطبيه', icon: Users, permission: 'manage specialists' },
+  //users
+  { to: 'users', labelKey: 'المستخدمون', icon: User, permission: 'manage users' },
+  //roles
+  { to: 'roles', labelKey: 'الأدوار', icon: ShieldCheck, permission: 'manage roles' },
+  //specialists
+  //patients
+  // { to: 'patients', labelKey: 'patients', icon: User, permission: 'manage patients' },
   // { to: '/settings/laboratory/price-list', labelKey: 'laboratoryTestsPriceList', icon: CreditCard, permission: 'manage price_list' },
   // { to: 'insurance-audit', labelKey: 'insuranceAudit', icon: CreditCard, permission: 'manage insurance_audit' },
   { to: 'lab-to-lab', labelKey: 'labToLab', icon: Link2, permission: 'manage laboratory_settings' },

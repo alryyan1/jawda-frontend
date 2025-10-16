@@ -338,6 +338,11 @@ const router = createBrowserRouter([
             children: [
               { index: true, element: <Navigate to="general" replace /> },
               { path: "general", element: <GeneralSettingsPage /> }, // Your main settings form
+              { path: "doctors", element: <DoctorsListPage /> },
+              // { path: "patients", element: <TodaysPatientsPage /> },
+              { path: "users", element: <UsersListPage /> },
+              { path: "roles", element: <RolesListPage /> },
+              { path: "specialists", element: <SpecialistsPage /> },
               {
                 path: "insurance-audit",
                 element: <InsuranceAuditPage />,

@@ -85,11 +85,11 @@ const allMainNavItems: NavItem[] = [
   { to: '/lab-workstation', label: 'نتائج المختبر', icon: FlaskConical },
   // { to: '/attendance/sheet', label: 'سجل الحضور', icon: ClipboardEditIcon },
   { to: '/patients', label: 'المرضى', icon: Users },
-  { to: '/doctors', label: 'الأطباء', icon: Stethoscope },
+  // { to: '/doctors', label: 'الأطباء', icon: Stethoscope },
   // { to: '/analysis', label: 'التحليل', icon: FileBarChart2 },
   // { to: '/schedules-appointments', label: 'المواعيد والجداول', icon: CalendarClock },
-  { to: '/cash-reconciliation', label: 'الفئات', icon: Banknote },
-  { to: '/hl7-parser', label: 'محلل HL7', icon: FileText },
+  // { to: '/cash-reconciliation', label: 'الفئات', icon: Banknote },
+  // { to: '/hl7-parser', label: 'محلل HL7', icon: FileText },
   // { to: '/bankak-gallery', label: 'بنك الصور', icon: Image },
 
   // { to: '/bulk-whatsapp', label: 'الواتساب الجماعي', icon: MessageCircle },
@@ -191,10 +191,10 @@ const getUtilityNavItems = (userType?: UserType): NavItem[] => {
 // Utility/Admin Navigation Items (typically at the bottom or in a separate group)
 const utilityNavItems: NavItem[] = [
   { to: '/reports/doctor-shifts', label: 'التقارير', icon: FileBarChart2 },
-  { to: '/users', label: 'المستخدمون', icon: Users },
-  { to: '/roles', label: 'الأدوار', icon: ShieldCheck },
+  // { to: '/users', label: 'المستخدمون', icon: Users },
+  // { to: '/roles', label: 'الأدوار', icon: ShieldCheck },
   { to: '/settings/general', label: 'الإعدادات', icon: Settings },
-  { to: '/specialists', label: 'التخصصات الطبيه', icon: Users },
+  // { to: '/specialists', label: 'التخصصات الطبيه', icon: Users },
 ];
 
 // Theme Toggle Hook (ensure this is defined, possibly in a separate utils/hooks file)

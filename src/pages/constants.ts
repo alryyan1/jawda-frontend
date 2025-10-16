@@ -1,7 +1,7 @@
 export const schema = "http";
-export const host = "server2";
+export const host = "server1";
 export const realtimePort = 4001;
-export const realtimeHost = "server2";
+export const realtimeHost = "server1";
 export const projectFolder = "jawda-medical";
 export const webUrl = `${schema}://${host}/${projectFolder}/public/`;
 export const realtimeUrlFromConstants = `${schema}://${realtimeHost}:${realtimePort}`;

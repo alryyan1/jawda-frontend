@@ -383,47 +383,47 @@ const OnlineLabPatientsDialog: React.FC<OnlineLabPatientsDialogProps> = ({
               <Table stickyHeader>
                 <TableHead>
                   <TableRow>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>الكود</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>الاسم</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>الهاتف</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>المعمل</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>المبلغ </TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>الوقت</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>التاريخ</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}> التحليل</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>الحالة</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>الإجراءات</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold', py: 0.5, px: 1 }}>الكود</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold', py: 0.5, px: 1 }}>الاسم</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold', py: 0.5, px: 1 }}>الهاتف</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold', py: 0.5, px: 1 }}>المعمل</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold', py: 0.5, px: 1 }}>المبلغ</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold', py: 0.5, px: 1 }}>الوقت</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold', py: 0.5, px: 1 }}>التاريخ</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold', py: 0.5, px: 1 }}>التحليل</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold', py: 0.5, px: 1 }}>الحالة</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold', py: 0.5, px: 1 }}>الإجراءات</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {patients.map((patient) => (
                     <TableRow key={patient.id} hover>
-                      <TableCell sx={{ fontWeight: 'bold' }}>
+                      <TableCell align="center" sx={{ fontWeight: 'bold', py: 0.5, px: 1 }}>
                         {patient.id}
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 'bold' }}>
+                      <TableCell align="center" sx={{ fontWeight: 'bold', py: 0.5, px: 1 }}>
                         {patient.name}
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 'bold' }}>
+                      <TableCell align="center" sx={{ fontWeight: 'bold', py: 0.5, px: 1 }}>
                         {patient.phone}
                       </TableCell>
-                      <TableCell>
+                      <TableCell align="center" sx={{ py: 0.5, px: 1 }}>
                         {labToLap.find(lab => lab.id === patient.labId)?.name || 'غير محدد'}
                       </TableCell>
-                      <TableCell>
+                      <TableCell align="center" sx={{ py: 0.5, px: 1 }}>
                         <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'success.main' }}>
                           {formatNumber(calculateTotalPrice(patient.lab_request))}
                         </Typography>
                       </TableCell>
-                      <TableCell>
+                      <TableCell align="center" sx={{ py: 0.5, px: 1 }}>
                         {formatTime(patient.createdAt)}
                       </TableCell>
-                      <TableCell>
+                      <TableCell align="center" sx={{ py: 0.5, px: 1 }}>
                         {formatDate(patient.createdAt)}
                       </TableCell>
-                      <TableCell>
+                      <TableCell align="center" sx={{ py: 0.5, px: 1 }}>
                         {patient.lab_request && patient.lab_request.length > 0 ? (
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
                             <TestTube size={16} color="#666" />
                             <Typography variant="body2">
                               {patient.lab_request.map(request => request.name).join('، ')}
@@ -435,14 +435,14 @@ const OnlineLabPatientsDialog: React.FC<OnlineLabPatientsDialogProps> = ({
                           </Typography>
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell align="center" sx={{ py: 0.5, px: 1 }}>
                         <Chip 
                           label={getStatusText(patient.status)}
                           color={getStatusChipColor(patient.status) as 'warning' | 'success' | 'info' | 'default'}
                           size="small"
                         />
                       </TableCell>
-                      <TableCell>
+                      <TableCell align="center" sx={{ py: 0.5, px: 1 }}>
                         <Tooltip title="حفظ المريض في النظام">
                           <IconButton
                             onClick={() => handleSavePatient(patient)}

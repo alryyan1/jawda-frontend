@@ -199,7 +199,7 @@ const BankakGallery: React.FC = () => {
       setAnalyzingImageId(image.id);
       setAnalysisError(null);
       
-      const result = await geminiService.analyzeImage(image.full_image_url, 'قم بتحليل الصوره');
+      const result = await geminiService.analyzeImage(image.full_image_url, 'استخرج من الصوره التعليق و المبلغ فقط');
       
       if (result.success && result.data) {
         setAnalysisResult(result.data.analysis);
@@ -350,6 +350,7 @@ const BankakGallery: React.FC = () => {
                           <Brain className="h-4 w-4" />
                         )}
                       </Button>
+      
                     {/* </div> */}
                   </div>
                 </div>

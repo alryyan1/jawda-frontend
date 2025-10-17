@@ -54,6 +54,7 @@ interface LabReceptionHeaderProps {
   onResetView: () => void;
   onAddTests: () => void;
   onSearchByVisitIdEnter: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  onOpenOffers: () => void;
 }
 
 const LabReceptionHeader: React.FC<LabReceptionHeaderProps> = ({
@@ -81,6 +82,7 @@ const LabReceptionHeader: React.FC<LabReceptionHeaderProps> = ({
   onResetView,
   onAddTests,
   onSearchByVisitIdEnter,
+  onOpenOffers,
 }) => {
   // Translations removed; using direct Arabic strings
 
@@ -209,6 +211,23 @@ const LabReceptionHeader: React.FC<LabReceptionHeaderProps> = ({
 
         {/* Test Selection Autocomplete - moved to the right */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexShrink: 0 }}>
+          {Boolean(activeVisitId) && (
+            <Button
+              variant="contained"
+              color="secondary"
+              onClick={onOpenOffers}
+              sx={{
+                px: 2,
+                py: 1,
+                borderRadius: 1,
+                boxShadow: 2,
+                transition: 'all 0.2s ease-in-out',
+                '&:hover': { boxShadow: 4, transform: 'scale(1.05)' },
+              }}
+            >
+              العروض
+            </Button>
+          )}
           <Autocomplete
             ref={testSelectionAutocompleteRef}
             multiple

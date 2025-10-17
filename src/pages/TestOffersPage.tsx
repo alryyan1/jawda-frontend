@@ -33,14 +33,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import apiClient from '@/services/api';
 
@@ -74,6 +66,7 @@ const TestOffersPage: React.FC = () => {
     price: '',
     main_test_ids: [],
   });
+  const [testSearchTerm, setTestSearchTerm] = useState('');
 
   const queryClient = useQueryClient();
 
@@ -160,6 +153,7 @@ const TestOffersPage: React.FC = () => {
       price: '',
       main_test_ids: [],
     });
+    setTestSearchTerm('');
   };
 
   const handleEdit = (offer: Offer) => {
@@ -187,30 +181,98 @@ const TestOffersPage: React.FC = () => {
   };
 
   const handleTestToggle = (testId: number) => {
-    setFormData(prev => ({
-      ...prev,
-      main_test_ids: prev.main_test_ids.includes(testId)
+    setFormData(prev => {
+      const isCurrentlySelected = prev.main_test_ids.includes(testId);
+      const newMainTestIds = isCurrentlySelected
         ? prev.main_test_ids.filter(id => id !== testId)
-        : [...prev.main_test_ids, testId],
-      offered_tests: (prev.offered_tests || [])
-        .filter(t => t.main_test_id !== testId)
-    }));
+        : [...prev.main_test_ids, testId];
+      
+      // Calculate new offered tests
+      let newOfferedTests = (prev.offered_tests || [])
+        .filter(t => t.main_test_id !== testId);
+      
+      // If adding a test, calculate its price based on offer price divided by number of tests
+      if (!isCurrentlySelected && prev.price) {
+        const offerPrice = parseInt(prev.price) || 0;
+        const numberOfTests = newMainTestIds.length;
+        const testPrice = numberOfTests > 0 ? Math.floor(offerPrice / numberOfTests) : 0;
+        
+        newOfferedTests = [...newOfferedTests, {
+          main_test_id: testId,
+          price: testPrice
+        }];
+        
+        // Recalculate all existing test prices to maintain equal distribution
+        newOfferedTests = newOfferedTests.map(test => ({
+          ...test,
+          price: numberOfTests > 0 ? Math.floor(offerPrice / numberOfTests) : 0
+        }));
+      }
+      
+      return {
+        ...prev,
+        main_test_ids: newMainTestIds,
+        offered_tests: newOfferedTests
+      };
+    });
   };
 
   const updateOfferedTestPrice = (main_test_id: number, value: string) => {
-    const price = parseInt(value || '0', 10) || 0;
+    // Ensure only integers are accepted
+    const price = Math.floor(parseInt(value || '0', 10)) || 0;
     setFormData(prev => {
+      const offerPrice = parseInt(prev.price) || 0;
+      
+      // Prevent individual test price from exceeding offer price
+      const maxAllowedPrice = offerPrice;
+      const finalPrice = Math.min(price, maxAllowedPrice);
+      
       const current = prev.offered_tests || [];
       const exists = current.find(t => t.main_test_id === main_test_id);
       let next: { main_test_id: number; price: number }[];
       if (exists) {
-        next = current.map(t => t.main_test_id === main_test_id ? { ...t, price } : t);
+        next = current.map(t => t.main_test_id === main_test_id ? { ...t, price: finalPrice } : t);
       } else {
-        next = [...current, { main_test_id, price }];
+        next = [...current, { main_test_id, price: finalPrice }];
       }
       return { ...prev, offered_tests: next };
     });
   };
+
+  const handleOfferPriceChange = (value: string) => {
+    setFormData(prev => {
+      // Ensure only integers are accepted
+      const integerValue = Math.floor(parseFloat(value) || 0).toString();
+      const offerPrice = parseInt(integerValue) || 0;
+      const numberOfTests = prev.main_test_ids.length;
+      
+      // Recalculate all test prices when offer price changes
+      let newOfferedTests = prev.offered_tests || [];
+      if (numberOfTests > 0 && offerPrice > 0) {
+        const testPrice = Math.floor(offerPrice / numberOfTests);
+        newOfferedTests = newOfferedTests.map(test => ({
+          ...test,
+          price: testPrice
+        }));
+      }
+      
+      return {
+        ...prev,
+        price: integerValue,
+        offered_tests: newOfferedTests
+      };
+    });
+  };
+
+  // Helper function to format numbers with thousands separator (integers only)
+  const formatNumber = (num: number): string => {
+    return Math.floor(num).toLocaleString('en-US');
+  };
+
+  // Filter tests based on search term
+  const filteredTests = mainTests?.filter(test =>
+    test.main_test_name.toLowerCase().includes(testSearchTerm.toLowerCase())
+  ) || [];
 
   if (isLoadingOffers) {
     return (
@@ -261,10 +323,10 @@ const TestOffersPage: React.FC = () => {
                 <Input
                   id="price"
                   type="number"
-                  step="0.01"
+                  step="1"
                   min="0"
                   value={formData.price}
-                  onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
+                  onChange={(e) => handleOfferPriceChange(e.target.value)}
                   placeholder="أدخل السعر"
                   required
                 />
@@ -272,19 +334,33 @@ const TestOffersPage: React.FC = () => {
 
               <div>
                 <Label>التحاليل المدرجة في العرض</Label>
+                <div className="mb-3">
+                  <Input
+                    placeholder="البحث في التحاليل..."
+                    value={testSearchTerm}
+                    onChange={(e) => setTestSearchTerm(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
                 <div className="max-h-60 overflow-y-auto border rounded-md p-4 space-y-2">
-                  {mainTests?.map((test) => (
-                    <div key={test.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`test-${test.id}`}
-                        checked={formData.main_test_ids.includes(test.id)}
-                        onCheckedChange={() => handleTestToggle(test.id)}
-                      />
-                      <Label htmlFor={`test-${test.id}`} className="text-sm">
-                        {test.main_test_name}
-                      </Label>
+                  {filteredTests.length > 0 ? (
+                    filteredTests.map((test) => (
+                      <div key={test.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`test-${test.id}`}
+                          checked={formData.main_test_ids.includes(test.id)}
+                          onCheckedChange={() => handleTestToggle(test.id)}
+                        />
+                        <Label htmlFor={`test-${test.id}`} className="text-sm">
+                          {test.main_test_name}
+                        </Label>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-4 text-muted-foreground">
+                      {testSearchTerm ? 'لا توجد تحاليل تطابق البحث' : 'لا توجد تحاليل متاحة'}
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
 
@@ -356,7 +432,7 @@ const TestOffersPage: React.FC = () => {
               <div className="flex items-center space-x-2">
                 <DollarSign className="h-4 w-4 text-green-600" />
                 <span className="font-semibold text-lg">
-                  {offer.price.toLocaleString()} ريال
+                  {formatNumber(offer.price)}
                 </span>
               </div>
               
@@ -422,10 +498,10 @@ const TestOffersPage: React.FC = () => {
               <Input
                 id="edit-price"
                 type="number"
-                step="0.01"
+                step="1"
                 min="0"
                 value={formData.price}
-                onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
+                onChange={(e) => handleOfferPriceChange(e.target.value)}
                 placeholder="أدخل السعر"
                 required
               />
@@ -433,36 +509,74 @@ const TestOffersPage: React.FC = () => {
 
             <div>
               <Label>التحاليل وأسعارها داخل العرض</Label>
+              <div className="mb-3">
+                <Input
+                  placeholder="البحث في التحاليل..."
+                  value={testSearchTerm}
+                  onChange={(e) => setTestSearchTerm(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+              {formData.main_test_ids.length > 0 && (
+                <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                  <div className="text-sm text-blue-800">
+                    <div>سعر العرض: {formatNumber(parseInt(formData.price || '0'))}</div>
+                    <div>عدد التحاليل: {formData.main_test_ids.length}</div>
+                    <div>متوسط السعر لكل تحليل: {formData.main_test_ids.length > 0 ? formatNumber(Math.floor(parseInt(formData.price || '0') / formData.main_test_ids.length)) : 0}</div>
+                    <div>إجمالي أسعار التحاليل: {formatNumber((formData.offered_tests || []).reduce((sum, test) => sum + test.price, 0))}</div>
+                  </div>
+                </div>
+              )}
               <div className="max-h-72 overflow-y-auto border rounded-md p-4 space-y-3">
-                {mainTests?.map((test) => {
-                  const selected = formData.main_test_ids.includes(test.id);
-                  const pivotPrice = (formData.offered_tests || []).find(t => t.main_test_id === test.id)?.price ?? 0;
-                  return (
-                    <div key={test.id} className="flex items-center gap-3">
-                      <Checkbox
-                        id={`edit-test-${test.id}`}
-                        checked={selected}
-                        onCheckedChange={() => handleTestToggle(test.id)}
-                      />
-                      <Label htmlFor={`edit-test-${test.id}`} className="text-sm flex-1">
-                        {test.main_test_name}
-                      </Label>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">السعر</span>
-                        <Input
-                          type="number"
-                          inputMode="numeric"
-                          min={0}
-                          step={1}
-                          className="w-28 h-8"
-                          value={pivotPrice}
-                          onChange={(e) => updateOfferedTestPrice(test.id, e.target.value)}
-                          disabled={!selected}
+                {filteredTests.length > 0 ? (
+                  filteredTests.map((test) => {
+                    const selected = formData.main_test_ids.includes(test.id);
+                    const pivotPrice = (formData.offered_tests || []).find(t => t.main_test_id === test.id)?.price ?? 0;
+                    return (
+                      <div key={test.id} className="flex items-center gap-3">
+                        <Checkbox
+                          id={`edit-test-${test.id}`}
+                          checked={selected}
+                          onCheckedChange={() => handleTestToggle(test.id)}
                         />
+                        <Label htmlFor={`edit-test-${test.id}`} className="text-sm flex-1">
+                          {test.main_test_name}
+                        </Label>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">السعر</span>
+                          <div className="flex flex-col">
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number"
+                                inputMode="numeric"
+                                min={0}
+                                step={1}
+                                className={`w-28 h-8 ${pivotPrice > (parseInt(formData.price) || 0) ? 'border-red-500' : ''}`}
+                                value={pivotPrice}
+                                onChange={(e) => updateOfferedTestPrice(test.id, e.target.value)}
+                                disabled={!selected}
+                              />
+                              {pivotPrice > 0 && (
+                                <span className="text-xs text-muted-foreground">
+                                  {formatNumber(pivotPrice)}
+                                </span>
+                              )}
+                            </div>
+                            {pivotPrice > (parseInt(formData.price) || 0) && (
+                              <span className="text-xs text-red-500 mt-1">
+                                يتجاوز سعر العرض
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                ) : (
+                  <div className="text-center py-4 text-muted-foreground">
+                    {testSearchTerm ? 'لا توجد تحاليل تطابق البحث' : 'لا توجد تحاليل متاحة'}
+                  </div>
+                )}
               </div>
             </div>
 

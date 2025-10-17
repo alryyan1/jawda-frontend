@@ -138,7 +138,7 @@ const StatusIcon: React.FC<{
   const isCompleted = status?.done;
   //  console.log(label,'label',status)
   return (
-    <Tooltip title={isClickable ? (isCompleted ? "انقر لإلغاء المصادقة (مدير)" : "انقر للمصادقة (مدير)") : label}>
+    <Tooltip title={isClickable ? (isCompleted ? "انقر لإلغاء التحقيق (مدير)" : "انقر التحقيق (مدير)") : label}>
       <Box 
         sx={{ 
           display: 'flex', 
@@ -345,7 +345,7 @@ const PatientDetailsLabEntry: React.FC<PatientDetailsLabEntryProps> = ({
               icon={Printer}
             />
             <StatusIcon 
-              label="المصادقة" 
+              label="التحقيق" 
               status={statuses?.authentication} 
               icon={Shield}
               onClick={onAuthenticationToggle}

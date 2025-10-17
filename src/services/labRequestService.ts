@@ -20,6 +20,7 @@ export const addLabTestsToVisit = async (params: {
   visitId: number;
   main_test_ids: number[];
   comment?: string;
+  override_prices?: Record<number, number>; // key: main_test_id, value: price to use
 }): Promise<LabRequest[]> => {
   // Backend LabRequestController@storeBatchForVisit returns LabRequestResource::collection
   const response = await apiClient.post<{ data: LabRequest[] }>(
@@ -27,6 +28,7 @@ export const addLabTestsToVisit = async (params: {
     {
       main_test_ids: params.main_test_ids,
       comment: params.comment,
+      override_prices: params.override_prices,
     }
   );
   return response.data.data;

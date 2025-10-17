@@ -25,7 +25,12 @@ import {
   Stack,
   Container,
   InputAdornment,
-  Pagination
+  Pagination,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions
 } from '@mui/material';
 import {
   Edit,
@@ -36,10 +41,11 @@ import {
   Search,
   Add,
   PictureAsPdf,
-  CloudUpload
+  CloudUpload,
+  Delete
 } from '@mui/icons-material';
 
-import { getMainTests, updateMainTest } from '@/services/mainTestService';
+import { getMainTests, updateMainTest, deleteMainTest } from '@/services/mainTestService';
 import { updateTestAvailabilityAcrossAllLabs } from '@/services/firestoreTestService';
 import apiClient from '@/services/api';
 // import { useAuthorization } from '@/hooks/useAuthorization';
@@ -71,6 +77,8 @@ export default function MainTestsListPage() {
   const [priceInputs, setPriceInputs] = useState<Record<number, string>>({});
   const [isUploadingPriceList, setIsUploadingPriceList] = useState(false);
   const [updatingAvailable, setUpdatingAvailable] = useState<Record<number, boolean>>({});
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [testToDelete, setTestToDelete] = useState<MainTestWithContainer | null>(null);
 
   useEffect(() => {
     const handler = setTimeout(() => setDebouncedSearchTerm(searchTerm), 500);
@@ -118,6 +126,19 @@ export default function MainTestsListPage() {
     },
   });
 
+  const deleteTestMutation = useMutation({
+    mutationFn: (id: number) => deleteMainTest(id),
+    onSuccess: () => {
+      toast.success('تم حذف الاختبار بنجاح');
+      queryClient.invalidateQueries({ queryKey: ['mainTests'] });
+      setDeleteDialogOpen(false);
+      setTestToDelete(null);
+    },
+    onError: (err: { response?: { data?: { message?: string } }; message?: string }) => {
+      toast.error('خطأ في حذف الاختبار', { description: err.response?.data?.message || err.message });
+    },
+  });
+
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, testId: number) => {
     setAnchorEl(event.currentTarget);
     setSelectedTestId(testId);
@@ -126,6 +147,23 @@ export default function MainTestsListPage() {
   const handleMenuClose = () => {
     setAnchorEl(null);
     setSelectedTestId(null);
+  };
+
+  const handleDeleteClick = (test: MainTestWithContainer) => {
+    setTestToDelete(test);
+    setDeleteDialogOpen(true);
+    handleMenuClose();
+  };
+
+  const handleDeleteConfirm = () => {
+    if (testToDelete) {
+      deleteTestMutation.mutate(testToDelete.id);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteDialogOpen(false);
+    setTestToDelete(null);
   };
 
   const handlePriceKeyDown = (e: React.KeyboardEvent, testId: number, currentIndex: number) => {
@@ -502,9 +540,52 @@ export default function MainTestsListPage() {
               </ListItemIcon>
               <ListItemText>تعديل</ListItemText>
             </MenuItem>
+            <MenuItem 
+              onClick={() => {
+                const test = tests.find(t => t.id === selectedTestId);
+                if (test) handleDeleteClick(test);
+              }}
+            >
+              <ListItemIcon>
+                <Delete fontSize="small" color="error" />
+              </ListItemIcon>
+              <ListItemText sx={{ color: 'error.main' }}>حذف</ListItemText>
+            </MenuItem>
        
          
         </Menu>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog
+          open={deleteDialogOpen}
+          onClose={handleDeleteCancel}
+          aria-labelledby="delete-dialog-title"
+          aria-describedby="delete-dialog-description"
+        >
+          <DialogTitle id="delete-dialog-title">
+            تأكيد الحذف
+          </DialogTitle>
+          <DialogContent>
+            <DialogContentText id="delete-dialog-description">
+              هل أنت متأكد من حذف الاختبار "{testToDelete?.main_test_name}"؟
+              <br />
+              <strong>تحذير:</strong> لا يمكن التراجع عن هذا الإجراء.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleDeleteCancel} color="primary">
+              إلغاء
+            </Button>
+            <Button 
+              onClick={handleDeleteConfirm} 
+              color="error" 
+              variant="contained"
+              disabled={deleteTestMutation.isPending}
+            >
+              {deleteTestMutation.isPending ? 'جاري الحذف...' : 'حذف'}
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Stack>
     </Container>
   );

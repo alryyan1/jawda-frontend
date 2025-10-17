@@ -334,9 +334,9 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
       {/* Pay Button */}
       {activeVisitId && (
         <button
-          className={`w-full bg-blue-600 text-white py-2 rounded-lg font-bold mt-2 hover:bg-blue-700 transition flex items-center justify-center ${balance === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
+          className={`w-full bg-blue-600 text-white py-2 rounded-lg font-bold mt-2 hover:bg-blue-700 transition flex items-center justify-center ${balance === 0 && visit?.company ? " cursor-not-allowed" : ""}`}
           onClick={() => payAllMutation.mutate()}
-          disabled={payAllMutation.isPending || balance === 0}
+          // disabled={payAllMutation.isPending || balance === 0}
         >
           {payAllMutation.isPending ? (
             <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
@@ -420,15 +420,25 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
                   }
                   try {
                     setIsSendingSms(true);
-                    await apiClient.post('/sms/send', {
+                    const response = await apiClient.post('/sms/send', {
                       messages: [
                         { to: phone.startsWith('249') ? phone : `249${phone.replace(/^0/, '')}`, message: smsMessage }
                       ]
                     });
-                    toast.success("تم إرسال الرسالة بنجاح");
-                    setIsSmsDialogOpen(false);
-                  } catch {
-                    toast.error("فشل إرسال الرسالة");
+                    
+                    // Check if the response indicates success
+                    if (response.data && response.data.success) {
+                      toast.success("تم إرسال الرسالة بنجاح");
+                      setIsSmsDialogOpen(false);
+                    } else {
+                      // Extract error message from response
+                      const errorMessage = response.data?.error || response.data?.message || "فشل إرسال الرسالة";
+                      toast.error(`فشل إرسال الرسالة: ${errorMessage}`);
+                    }
+                  } catch (error: any) {
+                    // Handle network errors or other exceptions
+                    const errorMessage = error.response?.data?.error || error.response?.data?.message || error.message || "فشل إرسال الرسالة";
+                    toast.error(`فشل إرسال الرسالة: ${errorMessage}`);
                   } finally {
                     setIsSendingSms(false);
                   }

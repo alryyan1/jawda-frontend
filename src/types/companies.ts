@@ -15,6 +15,7 @@ export interface Company {
   
   finance_account_id?: number | null;
   finance_account?: FinanceAccount; // Optional: loaded FinanceAccount object
+  lab2lab_firestore_id?: string | null;
 
   created_at: string; // DateTime string (ISO 8601)
   updated_at: string; // DateTime string

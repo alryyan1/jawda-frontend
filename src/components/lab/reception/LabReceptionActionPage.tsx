@@ -11,10 +11,9 @@ import {
     FileText,
     Globe,
     Loader2,
-    TrendingUp,
     ListChecks,
-    Calculator,
     Banknote,
+    Images,
 } from 'lucide-react';
 import { webUrl } from '@/pages/constants';
 import { useAuth } from '@/contexts/AuthContext';
@@ -25,6 +24,7 @@ import apiClient from '@/services/api';
 // Import the dialogs that will be opened by the new buttons
 import LabUserShiftSummaryDialog from './LabUserShiftSummaryDialog';
 import OnlineLabPatientsDialog from './OnlineLabPatientsDialog';
+import BankakGallery from '../../gallery/BankakGallery';
 import { Calculate } from '@mui/icons-material';
 
 interface LabReceptionActionPageProps {
@@ -58,6 +58,9 @@ const LabReceptionActionPage: React.FC<LabReceptionActionPageProps> = ({
   
   // State to control the visibility of the online lab patients dialog
   const [isOnlineLabPatientsDialogOpen, setIsOnlineLabPatientsDialogOpen] = useState(false);
+  
+  // State to control the visibility of the bankak gallery dialog
+  const [isBankakGalleryOpen, setIsBankakGalleryOpen] = useState(false);
 
   // CBC Populate mutation
   const populateCbcMutation = useMutation({
@@ -292,6 +295,29 @@ const LabReceptionActionPage: React.FC<LabReceptionActionPageProps> = ({
             </TooltipContent>
         </Tooltip>
 
+        <Separator className="my-1" />
+
+        {/* Button: Bankak Gallery */}
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="w-11 h-11" 
+                    onClick={() => {
+                        console.log('Bankak Gallery button clicked');
+                        setIsBankakGalleryOpen(true);
+                    }} 
+                    aria-label="بنك الصور"
+                >
+                    <Images className="h-5 w-5" />
+                </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">
+                <p>بنك الصور</p>
+            </TooltipContent>
+        </Tooltip>
+
       </aside>
       {/* //cash reconciliation */}
 
@@ -309,6 +335,27 @@ const LabReceptionActionPage: React.FC<LabReceptionActionPageProps> = ({
           isOpen={isOnlineLabPatientsDialogOpen}
           onOpenChange={setIsOnlineLabPatientsDialogOpen}
       />
+      
+      {/* Bankak Gallery Dialog */}
+      {isBankakGalleryOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
+          <div className="bg-white rounded-lg w-[90vw] h-[90vh] overflow-hidden">
+            <div className="flex justify-between items-center p-4 border-b">
+              <h2 className="text-lg font-semibold">بنك الصور</h2>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setIsBankakGalleryOpen(false)}
+              >
+                ✕
+              </Button>
+            </div>
+            <div className="h-full overflow-auto">
+              <BankakGallery />
+            </div>
+          </div>
+        </div>
+      )}
     </TooltipProvider>
   );
 };

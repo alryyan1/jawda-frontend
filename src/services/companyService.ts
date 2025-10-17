@@ -85,6 +85,11 @@ export const deleteCompany = async (id: number): Promise<void> => {
   await apiClient.delete(`${API_URL}/${id}`);
 };
 
+export const updateCompanyFirestoreId = async (id: number, firestoreId: string): Promise<{ data: Company }> => {
+  const response = await apiClient.put<{ data: Company }>(`${API_URL}/${id}/firestore-id`, { lab2lab_firestore_id: firestoreId });
+  return response.data;
+};
+
 // --- NEW FUNCTION: getCompaniesList ---
 /**
  * Fetches a simple list of companies, typically for dropdowns.

@@ -41,6 +41,7 @@ import { addLabTestsToVisit } from "@/services/labRequestService";
 // Removed getSinglePatientQueueItem import - using getDoctorVisitById instead
 import PdfPreviewDialog from "@/components/common/PdfPreviewDialog";
 import MainTestsPriceListDialog from "@/components/lab/reception/MainTestsPriceListDialog";
+import OffersDialog from "@/components/lab/reception/OffersDialog";
 
 // Material Theme
 const materialTheme = createTheme({
@@ -127,6 +128,7 @@ const LabReceptionPage: React.FC = () => {
 
   const [isDoctorFinderOpen, setIsDoctorFinderOpen] = useState(false);
   const [isPriceListOpen, setIsPriceListOpen] = useState(false);
+  const [isOffersOpen, setIsOffersOpen] = useState(false);
 
   // State lifted from LabRegistrationForm
   const [searchQuery, setSearchQuery] = useState('');
@@ -451,6 +453,26 @@ const LabReceptionPage: React.FC = () => {
     );
   };
 
+  // Apply selected offers -> add their tests using offer prices as override
+  const handleApplyOffers = useCallback(async (payload: { mainTestIds: number[]; overridePrices: Record<number, number> }) => {
+    if (!activeVisitId) return;
+    if (payload.mainTestIds.length === 0) return;
+    try {
+      await addLabTestsToVisit({
+        visitId: activeVisitId,
+        main_test_ids: payload.mainTestIds,
+        override_prices: payload.overridePrices,
+      });
+      toast.success('تمت إضافة عروض الفحوصات');
+      queryClient.invalidateQueries({ queryKey: ["activeVisitForLabRequests", activeVisitId] });
+      queryClient.invalidateQueries({ queryKey: ["doctorVisit", activeVisitId] });
+      setIsOffersOpen(false);
+    } catch (e) {
+      const err = e as { response?: { data?: { message?: string } } };
+      toast.error(err.response?.data?.message || 'فشل إضافة العروض');
+    }
+  }, [activeVisitId, queryClient]);
+
   // Debug logging
   useEffect(() => {
     console.log('Available tests:', availableTests);
@@ -542,6 +564,7 @@ interface AutocompleteVisitOption {
           onResetView={handleResetView}
           onAddTests={handleAddTests}
           onSearchByVisitIdEnter={handleSearchByVisitIdEnter}
+          onOpenOffers={() => setIsOffersOpen(true)}
         />
 
         {/* Dynamic Layout */}
@@ -679,6 +702,11 @@ interface AutocompleteVisitOption {
         isOpen={isPriceListOpen}
         onOpenChange={setIsPriceListOpen}
         tests={availableTests}
+      />
+      <OffersDialog
+        isOpen={isOffersOpen && Boolean(activeVisitId)}
+        onOpenChange={setIsOffersOpen}
+        onApply={handleApplyOffers}
       />
       {/* === RENDER THE DIALOG HERE === */}
       {/* It's controlled by the state within this page component */}

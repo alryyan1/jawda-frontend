@@ -10,7 +10,10 @@ import {
   Box,
   CircularProgress
 } from '@mui/material';
+import { Brain } from 'lucide-react';
+import { toast } from 'sonner';
 import CodeEditor from './CodeEditor';
+import geminiService from '@/services/geminiService';
 
 interface MainCommentDialogProps {
   isOpen: boolean;
@@ -21,6 +24,7 @@ interface MainCommentDialogProps {
   patient?: Record<string, unknown>; // Add patient prop for CodeEditor
   setActivePatient?: (patient: Record<string, unknown>) => void; // Add setActivePatient prop
   labRequestId?: number; // Add labRequestId for saving comments
+  testResults?: any; // Add test results for AI analysis
 }
 
 const MainCommentDialog: React.FC<MainCommentDialogProps> = ({
@@ -31,7 +35,8 @@ const MainCommentDialog: React.FC<MainCommentDialogProps> = ({
   isSaving,
   patient,
   setActivePatient,
-  labRequestId
+  labRequestId,
+  testResults
 }) => {
   const { setValue } = useForm<{ comment: string }>({
     defaultValues: { comment: currentComment || '' },
@@ -39,13 +44,15 @@ const MainCommentDialog: React.FC<MainCommentDialogProps> = ({
 
   const [codeOptions, setCodeOptions] = useState<string[]>([]);
   const [currentValue, setCurrentValue] = useState(currentComment || '');
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [aiApplied, setAiApplied] = useState(false);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !aiApplied) {
       setValue('comment', currentComment || '');
       setCurrentValue(currentComment || '');
     }
-  }, [isOpen, currentComment, setValue]);
+  }, [isOpen, currentComment, setValue, aiApplied]);
 
   const handleSave = () => {
     if (currentComment !== currentValue) {
@@ -62,8 +69,49 @@ const MainCommentDialog: React.FC<MainCommentDialogProps> = ({
     } else {
         onOpenChange(false);
     }
+    // Reset AI state when dialog closes
+    setAiApplied(false);
   }
 
+  const handleGenerateAIInterpretation = async () => {
+    if (!testResults) {
+      toast.error('لا توجد نتائج تحاليل للتحليل');
+      return;
+    }
+
+    setIsGeneratingAI(true);
+    try {
+      // Test connection first
+      console.log('Testing Gemini API connection...');
+      const connectionOk = await geminiService.testConnection();
+      if (!connectionOk) {
+        toast.error('فشل في الاتصال بخدمة Gemini. يرجى التحقق من إعدادات API');
+        return;
+      }
+      
+      console.log('Connection test passed, proceeding with analysis...');
+      const response = await geminiService.analyzeLabResults(testResults);
+      
+      if (response.success && response.data) {
+        // Automatically update the CodeEditor with the AI interpretation
+        setCurrentValue(response.data.analysis);
+        setValue('comment', response.data.analysis);
+        setAiApplied(true); // Mark that AI interpretation has been applied
+        
+        toast.success('تم إنشاء التفسير بنجاح وتم تحديث الحقل تلقائياً');
+      } else {
+        toast.error(response.error || 'فشل في إنشاء التفسير');
+      }
+    } catch (error) {
+      console.error('Error generating AI interpretation:', error);
+      toast.error('حدث خطأ في إنشاء التفسير');
+    } finally {
+      setIsGeneratingAI(false);
+    }
+  };
+
+  console.log(currentValue,'currentValue');
+// alert(currentValue);
   return (
     <Dialog 
       open={isOpen} 
@@ -77,6 +125,32 @@ const MainCommentDialog: React.FC<MainCommentDialogProps> = ({
       </DialogTitle>
       <DialogContent>
         <Box sx={{ py: 2 }}>
+          {/* AI Interpretation Section */}
+          {testResults && (
+            <Box sx={{ mb: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                <Button
+                  variant="outlined"
+                  startIcon={isGeneratingAI ? <CircularProgress size={16} /> : <Brain size={16} />}
+                  onClick={handleGenerateAIInterpretation}
+                  disabled={isGeneratingAI}
+                  sx={{ 
+                    borderColor: '#3b82f6',
+                    color: '#3b82f6',
+                    '&:hover': {
+                      borderColor: '#2563eb',
+                      backgroundColor: '#eff6ff'
+                    }
+                  }}
+                >
+                  {isGeneratingAI ? 'جاري التحليل...' : 'تفسير ذكي للنتائج'}
+                </Button>
+              </Box>
+
+            </Box>
+          )}
+
+{/* alert(currentValue); */}
           <CodeEditor
             options={codeOptions}
             setOptions={setCodeOptions}

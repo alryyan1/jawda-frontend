@@ -78,6 +78,7 @@ interface ResultEntryPanelProps {
   patientAuthDate?: boolean | null;
   visitId?: number; // Visit ID for queue invalidation
   onItemUpdated?: (updatedItem: PatientLabQueueItem) => void; // Callback to update the item in parent
+  onTestResultsChange?: (testResults: any) => void; // Callback to expose current test results for AI analysis
   }
 
 const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
@@ -87,6 +88,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
   patientAuthDate,
   visitId,
   onItemUpdated,
+  onTestResultsChange,
 }) => {
   // استخدام نص عربي مباشر بدلاً من i18n
   const [activeTab] = useState(0);
@@ -371,6 +373,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
   }, [activeGroupTab, testDataForEntry, reset, getValues]);
 
 
+
   const handleGroupTabChange = (_: React.SyntheticEvent, newValue: number) => {
     setActiveGroupTab(newValue);
     // Clear selected child test when switching groups
@@ -418,6 +421,27 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
     }
     return false;
   }, []);
+
+  // Expose current test results for AI analysis
+  useEffect(() => {
+    if (testDataForEntry && onTestResultsChange) {
+      const currentFormData = getValues();
+      const testResults = {
+        testName: testDataForEntry.main_test_name || testDataForEntry.name,
+        results: testDataForEntry.child_tests_with_results?.map((ct, index) => ({
+          testName: ct.child_test_name,
+          value: currentFormData.results?.[index]?.result_value || ct.result_value,
+          unit: ct.unit_name || ct.unit?.name,
+          normalRange: ct.normal_range || ct.normalRange,
+          isAbnormal: ct.result_value ? isResultAbnormal(ct, currentFormData.results?.[index]?.result_value || ct.result_value) : false
+        })) || [],
+        comment: currentFormData.main_test_comment || initialLabRequest.comment,
+        patientName: testDataForEntry.patient_name,
+        testDate: new Date().toISOString()
+      };
+      onTestResultsChange(testResults);
+    }
+  }, [testDataForEntry, getValues, onTestResultsChange, initialLabRequest.comment, isResultAbnormal]);
 
   // Custom handler for child test focus that sets the selected index
   const handleChildTestFocus = useCallback((childTest: ChildTestWithResult | null, index: number) => {

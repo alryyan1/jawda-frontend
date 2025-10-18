@@ -50,6 +50,11 @@ function CodeEditor({
     loadSuggestions();
   }, [setOptions]);
 
+  // Update internal value when init prop changes
+  useEffect(() => {
+    setValue(init);
+  }, [init]);
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function myCompletions(context: any) {
     const word = context.matchBefore(/\w*/);

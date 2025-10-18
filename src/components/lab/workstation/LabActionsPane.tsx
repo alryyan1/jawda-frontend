@@ -440,7 +440,7 @@ console.log(currentPatientData,'currentPatientData')
         <Separator className="my-2" />
 
           {/* New Appearance Settings Button */}
-          <Tooltip>
+          {/* <Tooltip>
               <TooltipTrigger asChild>
                   <Button variant="ghost" size="icon" className="w-12 h-12" onClick={() => setIsAppearanceDialogOpen(true)}>
                       <FontAwesomeIcon icon={faBolt} className="h-7! w-7!" />
@@ -449,8 +449,8 @@ console.log(currentPatientData,'currentPatientData')
               <TooltipContent side="right" sideOffset={5}>
                   <p>إعدادات المظهر</p>
               </TooltipContent>
-          </Tooltip>
-        <Tooltip>
+          </Tooltip> */}
+        {/* <Tooltip>
                 <TooltipTrigger asChild>
                 <Button
                     variant="ghost"
@@ -471,13 +471,13 @@ console.log(currentPatientData,'currentPatientData')
                 <TooltipContent side="right" sideOffset={5}>
                 <p>{currentLockStatus === false ? 'إلغاء قفل النتائج' : 'قفل النتائج'}</p>
                 </TooltipContent>
-            </Tooltip>
+            </Tooltip> */}
         {/* Spacer to push settings to bottom, or use flex-grow on a container above */}
         <div className="flex-grow"></div> 
 
-        <Tooltip>
+        {/* <Tooltip>
             <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="w-12 h-12" onClick={() => toast.info("Navigate to Lab Settings")}> {/* TODO: Navigate */}
+                <Button variant="ghost" size="icon" className="w-12 h-12" onClick={() => toast.info("Navigate to Lab Settings")}> 
                     <FontAwesomeIcon icon={faDove} className="h-7! w-7!" />
                 </Button>
             </TooltipTrigger>
@@ -485,6 +485,7 @@ console.log(currentPatientData,'currentPatientData')
                 <p>إعدادات المختبر</p>
             </TooltipContent>
         </Tooltip>
+         */}
 
       {/* Render the dialogs */}
       <LabAppearanceSettingsDialog

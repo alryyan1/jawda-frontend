@@ -1,6 +1,6 @@
 // src/components/lab/workstation/QueueHeader.tsx
 import React from 'react';
-import { Button } from '@/components/ui/button';
+import { IconButton } from '@mui/material';
 import { ChevronLeft, ChevronRight, Users, RotateCcw, CalendarDays, Loader2 } from 'lucide-react'; // Keep CalendarDays for shift date display
 import type { Shift } from '@/types/shifts';
 import dayjs from 'dayjs';
@@ -21,7 +21,7 @@ const QueueHeader: React.FC<QueueHeaderProps> = ({
 
   const displayShiftInfo = () => {
     if (!currentShift) {
-      return 'لا توجد وردية فعّالة';
+      return 'لا توجد وردية نشطه';
     }
     // showJsonDialog(currentShift);
     let shiftAmOrPm = currentShift.created_at ? dayjs(currentShift.created_at).format('A') : 'تاريخ غير معروف';
@@ -30,11 +30,12 @@ const QueueHeader: React.FC<QueueHeaderProps> = ({
 
     return `${shiftAmOrPm === 'AM' ? 'الورديه الصباحيه' : 'الورديه المسائيه'} `;
   };
-
+// showJsonDialog
+  // const RefreshIcon = RotateCcw;
   // Arabic UI is RTL: previous → right, next → left
   const PrevIcon = ChevronRight;
   const NextIcon = ChevronLeft;
-
+ console.log(currentShift,'currentShift');
   return (
     <div className="p-2 sm:p-3 border-b bg-card sticky top-0 z-10">
       <div className="flex justify-between items-center mb-1.5">
@@ -49,15 +50,66 @@ const QueueHeader: React.FC<QueueHeaderProps> = ({
           )}
         </div>
         <div className="flex items-center gap-0.5 sm:gap-1">
-          <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" onClick={() => onShiftChange('prev')} title={'الوردية السابقة'} disabled={isLoading /* Add logic to disable if no prev shift */}>
+          <IconButton 
+            size="small" 
+            className="h-7 w-7 sm:h-8 sm:w-8" 
+            onClick={() => onShiftChange('prev')} 
+            // title={'الوردية '} 
+            disabled={isLoading || currentShift?.is_last_shift}
+            sx={{ 
+              backgroundColor: 'primary.main',
+              color: 'primary.contrastText',
+              '&:hover': {
+                backgroundColor: 'primary.dark',
+              },
+              '&.Mui-disabled': {
+                backgroundColor: 'action.disabledBackground',
+                color: 'action.disabled',
+              }
+            }}
+          >
             {isLoading ? <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" /> : <PrevIcon className="h-4 w-4 sm:h-5 sm:w-5" />}
-          </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" onClick={() => onShiftChange('next')} title={'الوردية التالية'} disabled={isLoading /* Add logic to disable if no next shift */}>
+          </IconButton>
+          <IconButton 
+            size="small" 
+            className="h-7 w-7 sm:h-8 sm:w-8" 
+            onClick={() => onShiftChange('next')} 
+            // title={'الوردية التالية'} 
+            disabled={isLoading }
+            sx={{ 
+              backgroundColor: 'primary.main',
+              color: 'primary.contrastText',
+              '&:hover': {
+                backgroundColor: 'primary.dark',
+              },
+              '&.Mui-disabled': {
+                backgroundColor: 'action.disabledBackground',
+                color: 'action.disabled',
+              }
+            }}
+          >
             {isLoading ? <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" /> : <NextIcon className="h-4 w-4 sm:h-5 sm:w-5" />}
-          </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" onClick={onRefreshQueue} title={'تحديث القائمة'} disabled={isLoading}>
+          </IconButton>
+          <IconButton 
+            size="small" 
+            className="h-7 w-7 sm:h-8 sm:w-8" 
+            onClick={onRefreshQueue} 
+            title={'تحديث القائمة'} 
+            disabled={isLoading}
+            sx={{ 
+              backgroundColor: 'primary.main',
+              color: 'primary.contrastText',
+              '&:hover': {
+                backgroundColor: 'primary.dark',
+              },
+              '&.Mui-disabled': {
+                backgroundColor: 'action.disabledBackground',
+                color: 'action.disabled',
+              }
+            }}
+          >
             <RotateCcw className={`h-4 w-4 sm:h-4 sm:w-4 ${isLoading ? 'animate-spin' : ''}`} />
-          </Button>
+          </IconButton>
         </div>
       </div>
       <div className="flex justify-between items-center text-[10px] sm:text-xs text-muted-foreground">

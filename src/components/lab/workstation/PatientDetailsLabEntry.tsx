@@ -299,7 +299,7 @@ const PatientDetailsLabEntry: React.FC<PatientDetailsLabEntryProps> = ({
 
           <Box>
             <ItemRow label="الطبيب" value={doctorName || "-"} icon={User} />
-            <ItemRow label="التاريخ" value={dayjs(date).format('DD/MM/YYYY') || "-"} icon={CalendarDays} />
+            <ItemRow label="التاريخ" value={`${dayjs(date).format('DD/MM/YYYY')} ${dayjs(date).format('hh:mm A')}` || "-"} icon={CalendarDays} />
             <ItemRow label="الهاتف" value={phone || "-"} icon={Phone} />
             <ItemRow label="سُجل بواسطة" value={registeredBy || "-"} icon={UserCircle2} />
             <ItemRow label="العمر" value={age ?? "-"} icon={Clock} isLast={true} />

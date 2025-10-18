@@ -99,9 +99,9 @@ if(item.visit_id === 34218){
         '--text-color': currentStyle.textColor,
       } as React.CSSProperties}
       className={cn(
-        "w-[54px] h-[54px]  duration-2500! flex-shrink-0 rounded-lg cursor-pointer transition-all duration-200 ease-out",
+        "w-[50px] h-[45px] border-1 border-black font-bold duration-2500! flex-shrink-0 rounded-md cursor-pointer transition-all duration-200 ease-out",
         "flex flex-col items-center justify-center relative group border",
-        "hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-[#f0f5f7]",
+        // "hover:scale-105 f focus:ring-2 focus:ring-offset-2 bg-[#f0f5f7]",
         item.is_printed && "bg-[#01b9ff] text-black! font-bold",
         isSelected && "bg-[#fee685]",
         "active:scale-95 transform-gpu",
@@ -111,9 +111,8 @@ if(item.visit_id === 34218){
         isClicking && "opacity-50 cursor-not-allowed", // Visual feedback when clicking
 
         // Use CSS variables for dynamic styling
-        "border-[var(--border-color)] text-[var(--text-color)]",
-        currentStyle.isBold ? 'font-semibold' : 'font-normal',
-        isSelected && 'ring-2 ring-[var(--border-color)] shadow-lg'
+        " text-[var(--text-color)]",
+        // isSelected && 'ring-1 ring-[var(--border-color)] shadow-lg'
       )}
       title={`${item.patient_name}\nID: ${item.patient_id}`}
     >
@@ -159,7 +158,7 @@ if(item.visit_id === 34218){
 
       {/* Progress Bar */}
       {item.total_result_count > 0 && (
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-200 rounded-b-lg overflow-hidden">
+        <div className="absolute bottom-[-5px] left-0 right-0 h-1 bg-gray-200 rounded-b-lg overflow-hidden">
           <div 
             className="h-full bg-gradient-to-r from-blue-500 to-blue-500 transition-all duration-300 ease-out"
             style={{ width: `${progressPercentage}%` }}

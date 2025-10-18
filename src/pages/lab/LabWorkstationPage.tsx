@@ -159,6 +159,7 @@ const LabWorkstationPage: React.FC = () => {
   // Comment Dialog State
   const [isCommentDialogOpen, setIsCommentDialogOpen] = useState(false);
   const [selectedLabRequestForComment, setSelectedLabRequestForComment] = useState<number | null>(null);
+  const [currentTestResults, setCurrentTestResults] = useState<any>(null);
 
   // Get lab requests for comment dialog
   const { data: labRequestsForComment } = useQuery<LabRequest[], Error>({
@@ -682,6 +683,29 @@ const LabWorkstationPage: React.FC = () => {
     },
     [selectedLabRequestForComment, selectedQueueItem?.visit_id, queryClient]
   );
+
+  const handleTestResultsChange = useCallback((testResults: any) => {
+    setCurrentTestResults(testResults);
+  }, []);
+
+  const handleSaveAIInterpretation = useCallback(async (interpretation: string) => {
+    if (!selectedLabRequestForComment) return;
+    
+    try {
+      await updateLabRequestDetails(selectedLabRequestForComment, { comment: interpretation });
+      toast.success('تم حفظ التفسير الذكي بنجاح');
+      
+      // Invalidate the lab requests query to refresh the data
+      queryClient.invalidateQueries({
+        queryKey: ['labRequestsForVisit', selectedQueueItem?.visit_id]
+      });
+      
+      setIsCommentDialogOpen(false);
+    } catch (error) {
+      const errorMessage = (error as { response?: { data?: { message?: string } } }).response?.data?.message || 'فشل حفظ التفسير الذكي';
+      toast.error(errorMessage);
+    }
+  }, [selectedLabRequestForComment, selectedQueueItem?.visit_id, queryClient]);
 
   const handleLabHistoryItemSelect = useCallback(
     (historyItem: LabHistoryItem | null) => {
@@ -1260,6 +1284,7 @@ const LabWorkstationPage: React.FC = () => {
               onChildTestFocus={() => {}} // Empty function since we're handling focus internally
               visitId={selectedQueueItem?.visit_id}
               onItemUpdated={handleItemUpdated}
+              onTestResultsChange={handleTestResultsChange}
             />
           ) : (
             <div className="flex-grow flex items-center justify-center p-10 text-center">
@@ -1360,6 +1385,8 @@ const LabWorkstationPage: React.FC = () => {
           null
         }
         onSave={handleSaveComment}
+        testResults={currentTestResults}
+        onSaveAIInterpretation={handleSaveAIInterpretation}
       />
     </div>
   );

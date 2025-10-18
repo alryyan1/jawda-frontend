@@ -85,7 +85,7 @@ const LabWorkstationPage: React.FC = () => {
     noResultsFound: "لا توجد نتائج",
     loading: "جاري التحميل",
     searchByVisitIdPlaceholderShort: "بحث بالكود",
-    filters_openFilterDialog: "فتح خيارات التصفية",
+    filters_openFilterDialog: "الفلتره  ",
     shifts_openDialogTooltip: "فتح نافذة اختيار الوردية",
     resetViewTooltip: "إعادة تعيين العرض",
     loadingShiftInfo: "جاري تحميل معلومات الوردية",
@@ -1030,7 +1030,7 @@ const LabWorkstationPage: React.FC = () => {
                 <div className="w-[250px] md:w-[300px]">
                   <Skeleton className="h-10 w-full rounded-md" />
                 </div>
-              ) : labHistoryData.length > 0 ? (
+              ) : labHistoryData.length > 1 ? (
                 <Autocomplete
                   id="lab-history-dropdown"
                   options={labHistoryData}
@@ -1045,51 +1045,7 @@ const LabWorkstationPage: React.FC = () => {
                   loading={isLoadingLabHistory}
                   size="small"
                   sx={{
-                    width: { xs: "100%", sm: 250, md: 300 },
-                    "& .MuiInputLabel-root": {
-                      fontSize: "0.8rem",
-                      color: "var(--muted-foreground)",
-                      "&.Mui-focused": {
-                        color: "var(--ring)",
-                      },
-                    },
-                    "& .MuiOutlinedInput-root": {
-                      fontSize: "0.8rem",
-                      backgroundColor: "var(--background)",
-                      color: "var(--foreground)",
-                      "& fieldset": {
-                        borderColor: "var(--border)",
-                      },
-                      "&:hover fieldset": {
-                        borderColor: "var(--ring)",
-                      },
-                      "&.Mui-focused fieldset": {
-                        borderColor: "var(--ring)",
-                      },
-                    },
-                    "& .MuiAutocomplete-inputRoot": {
-                      paddingTop: "2px",
-                      paddingBottom: "2px",
-                    },
-                    "& .MuiAutocomplete-listbox": {
-                      backgroundColor: "var(--background)",
-                      color: "var(--foreground)",
-                    },
-                    "& .MuiAutocomplete-option": {
-                      color: "var(--foreground)",
-                      "&:hover": {
-                        backgroundColor: "var(--accent)",
-                      },
-                      "&.Mui-focused": {
-                        backgroundColor: "var(--accent)",
-                      },
-                    },
-                    "& .MuiAutocomplete-noOptions": {
-                      color: "var(--muted-foreground)",
-                    },
-                    "& .MuiAutocomplete-loading": {
-                      color: "var(--muted-foreground)",
-                    },
+                    minWidth: 250,
                   }}
                   renderInput={(params) => (
                     <TextField
@@ -1129,7 +1085,7 @@ const LabWorkstationPage: React.FC = () => {
               ) : null}
             </>
           )}
-          <Tooltip title={appliedQueueFilters.ready_for_print_only ? "إخفاء جاهز للطباعة" : "عرض جاهز للطباعة فقط"}>
+          {/* <Tooltip title={appliedQueueFilters.ready_for_print_only ? "إخفاء جاهز للطباعة" : "عرض جاهز للطباعة فقط"}>
             <IconButton
               onClick={() => {
                 const newFilters = {
@@ -1152,7 +1108,7 @@ const LabWorkstationPage: React.FC = () => {
             >
               <Printer className="h-5 w-5" />
             </IconButton>
-          </Tooltip>
+          </Tooltip> */}
           
           <Tooltip title={appliedQueueFilters.show_unfinished_only ? "إخفاء النتائج غير المكتملة" : "عرض النتائج غير المكتملة فقط"}>
             <IconButton
@@ -1194,11 +1150,11 @@ const LabWorkstationPage: React.FC = () => {
               <CalendarSearch className="h-5 w-5" />
             </IconButton>
           </Tooltip>
-          <Tooltip title={AR.resetViewTooltip}>
+          {/* <Tooltip title={AR.resetViewTooltip}>
             <IconButton onClick={handleResetView} size="small">
               <ListRestart className="h-5 w-5" />
             </IconButton>
-          </Tooltip>
+          </Tooltip> */}
           <Tooltip title={soundEnabled ? "إيقاف الصوت" : "تشغيل الصوت"}>
             <IconButton 
               onClick={() => {

@@ -28,29 +28,24 @@ import {
   Menu,
   Home,
   Users,
-  Stethoscope,
   Settings,
   LogOut,
   Sun,
   Moon,
   FileBarChart2,
-  ShieldCheck,
-  BriefcaseMedical,
   ChevronsLeft,
   ChevronsRight,
   FlaskConical,
   Syringe,
   Microscope,
-  Banknote,
   Wifi,
   WifiOff,
-  FileText,
   Pencil,
-  Image,
-  Package,
+  Bell,
+  BellOff,
 } from "lucide-react";
 import { Toaster } from "sonner";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   Tooltip,
   TooltipContent,
@@ -68,6 +63,9 @@ import CircularProgress from "@mui/material/CircularProgress";
 import { searchRecentDoctorVisits, getPatientById } from "@/services/patientService";
 import { getActiveDoctorShifts } from "@/services/clinicService";
 import type { DoctorShift } from "@/types/doctors";
+import queueWorkerService from "@/services/queueWorkerService";
+import type { QueueWorkerStatus } from "@/services/queueWorkerService";
+import { toast } from "sonner";
 
 // Define navigation items structure
 export interface NavItem {
@@ -384,6 +382,11 @@ const AppLayout: React.FC = () => {
   const [isDesktopSidebarCollapsed, setIsDesktopSidebarCollapsed] = useState<boolean>(getSidebarCollapsedState());
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
+  const [queueWorkerStatus, setQueueWorkerStatus] = useState<QueueWorkerStatus>({
+    is_running: false,
+    status: 'stopped'
+  });
+  const [isQueueWorkerLoading, setIsQueueWorkerLoading] = useState(false);
 
   // Current general shift status for app-wide indicator
   const { data: currentOpenShift } = useQuery({
@@ -392,6 +395,48 @@ const AppLayout: React.FC = () => {
     // Removed refetchInterval - fetch only once
   });
  console.log(currentOpenShift,'currentOpenShift')
+
+  // Queue worker status query with polling
+  const { data: queueWorkerData, refetch: refetchQueueWorkerStatus } = useQuery({
+    queryKey: ['queueWorkerStatus'],
+    queryFn: () => queueWorkerService.getStatus(),
+    refetchInterval: 5000, // Poll every 5 seconds
+  });
+
+  // Update queue worker status when data changes
+  useEffect(() => {
+    if (queueWorkerData?.success) {
+      setQueueWorkerStatus(queueWorkerData.data);
+    }
+  }, [queueWorkerData]);
+
+  // Queue worker toggle mutation
+  const queueWorkerToggleMutation = useMutation({
+    mutationFn: () => queueWorkerService.toggle(),
+    onMutate: () => {
+      setIsQueueWorkerLoading(true);
+    },
+    onSuccess: (response) => {
+      if (response.success) {
+        setQueueWorkerStatus(response.data);
+        toast.success(response.data.is_running ? 'تم تشغيل معالج الإشعارات بنجاح' : 'تم إيقاف معالج الإشعارات بنجاح');
+      } else {
+        toast.error(response.message || 'فشل في تشغيل/إيقاف معالج الإشعارات');
+      }
+    },
+    onError: (error: Error) => {
+      toast.error('حدث خطأ أثناء تشغيل/إيقاف معالج الإشعارات');
+      console.error('Queue Worker error:', error);
+    },
+    onSettled: () => {
+      setIsQueueWorkerLoading(false);
+      refetchQueueWorkerStatus(); // Refresh status after toggle
+    }
+  });
+
+  const handleQueueWorkerToggle = () => {
+    queueWorkerToggleMutation.mutate();
+  };
   // Monitor realtime connection status
   useEffect(() => {
     const checkConnection = () => {
@@ -629,7 +674,37 @@ const AppLayout: React.FC = () => {
                       </div>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>{isRealtimeConnected ? 'متصل بالخادم المباشر' : 'غير متصل بالخادم المباشر'}</p>
+                      <p>{isRealtimeConnected ? 'التزامن مفعل' : 'التزامن معطل'}</p>
+                    </TooltipContent>
+                  </Tooltip>
+
+                  {/* Queue Worker Status */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleQueueWorkerToggle}
+                        disabled={isQueueWorkerLoading}
+                        className="h-8 w-8"
+                        aria-label="queue-worker-status"
+                      >
+                        {isQueueWorkerLoading ? (
+                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+                        ) : queueWorkerStatus.is_running ? (
+                          <Bell className={cn("h-4 w-4", "text-green-500")} />
+                        ) : (
+                          <BellOff className={cn("h-4 w-4", "text-gray-500")} />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>
+                        {queueWorkerStatus.is_running 
+                          ? `معالج الإشعارات يعمل (PID: ${queueWorkerStatus.pid})` 
+                          : 'معالج الإشعارات متوقف'
+                        }
+                      </p>
                     </TooltipContent>
                   </Tooltip>
 

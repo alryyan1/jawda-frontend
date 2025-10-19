@@ -5,16 +5,17 @@ import { toast } from 'sonner';
 
 // MUI
 import { Box, Card, CardContent, CardHeader, Typography, FormControl, InputLabel, Select, MenuItem, TextField, CircularProgress, Button, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip } from '@mui/material';
-import { PictureAsPdf as PdfIcon } from '@mui/icons-material';
+import { PictureAsPdf as PdfIcon, Delete as DeleteIcon } from '@mui/icons-material';
 
 import { formatNumber } from '@/lib/utils';
 import { getDenominationsForShift, saveDenominationCounts } from '@/services/cashReconciliationService';
+import { deleteCost } from '@/services/costService';
 import type { Denomination } from '@/types/cash';
 import { getShiftsList } from '@/services/shiftService';
 import type { Shift } from '@/types/shifts';
 import UserMoneySummary from '@/components/UserMoneySummary';
 import apiClient from '@/services/api';
-import { projectFolder, webUrl } from '@/pages/constants';
+import { webUrl } from '@/pages/constants';
 
 // Cost interface
 interface Cost {
@@ -73,6 +74,11 @@ const CashReconciliationPage: React.FC = () => {
 
   const costs = costsData?.data || [];
 
+  // Calculate total costs
+  const totalCosts = useMemo(() => {
+    return costs.reduce((total, cost) => total + cost.amount + cost.amount_bankak, 0);
+  }, [costs]);
+
   const saveMutation = useMutation({
     mutationFn: (data: { shiftId: number; counts: Denomination[] }) =>
       saveDenominationCounts(data.shiftId, data.counts),
@@ -97,6 +103,20 @@ const CashReconciliationPage: React.FC = () => {
     },
     onError: (error: any) => {
       const errorMessage = error?.response?.data?.message || 'فشل في إضافة المصروف';
+      toast.error(errorMessage);
+    }
+  });
+
+  // Cost deletion mutation
+  const deleteCostMutation = useMutation({
+    mutationFn: (costId: number) => deleteCost(costId),
+    onSuccess: () => {
+      toast.success('تم حذف المصروف بنجاح');
+      // Invalidate costs to refresh the data
+      queryClient.invalidateQueries({ queryKey: ['shiftCosts', selectedShiftId] });
+    },
+    onError: (error: any) => {
+      const errorMessage = error?.response?.data?.message || 'فشل في حذف المصروف';
       toast.error(errorMessage);
     }
   });
@@ -162,7 +182,6 @@ const CashReconciliationPage: React.FC = () => {
       const shiftName = currentShift?.name || `وردية #${selectedShiftId}`;
 
       // Create URL for web route that opens PDF in new tab
-      const baseUrl = `${window.location.protocol}//${window.location.host}`;
       const pdfUrl = `${webUrl}reports/cash-reconciliation/pdf?shift_id=${selectedShiftId}&title=${encodeURIComponent(`تقرير تسوية النقدية - ${shiftName}`)}&date=${encodeURIComponent(new Date().toLocaleDateString('ar-SA'))}`;
 
       // Open PDF in new tab
@@ -400,68 +419,90 @@ const CashReconciliationPage: React.FC = () => {
                     لا توجد مصروفات مسجلة لهذه الوردية
                   </Typography>
                 ) : (
-                  <TableContainer component={Paper} variant="outlined">
-                    <Table size="small">
-                      <TableHead>
-                        <TableRow>
-                          <TableCell>الوصف</TableCell>
-                          <TableCell align="center">النقدي</TableCell>
-                          <TableCell align="center">البنكي</TableCell>
-                          <TableCell align="center">المجموع</TableCell>
-                          <TableCell align="center">التاريخ</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {costs.map((cost) => (
-                          <TableRow key={cost.id}>
-                            <TableCell>
-                              <Typography variant="body2">
-                                {cost.description}
-                              </Typography>
-                            </TableCell>
-                            <TableCell align="center">
-                              {cost.amount > 0 ? (
-                                <Chip 
-                                  label={formatNumber(cost.amount)} 
-                                  color="success" 
-                                  size="small" 
-                                  variant="outlined"
-                                />
-                              ) : (
-                                <Typography variant="body2" color="text.secondary">
-                                  -
-                                </Typography>
-                              )}
-                            </TableCell>
-                            <TableCell align="center">
-                              {cost.amount_bankak > 0 ? (
-                                <Chip 
-                                  label={formatNumber(cost.amount_bankak)} 
-                                  color="info" 
-                                  size="small" 
-                                  variant="outlined"
-                                />
-                              ) : (
-                                <Typography variant="body2" color="text.secondary">
-                                  -
-                                </Typography>
-                              )}
-                            </TableCell>
-                            <TableCell align="center">
-                              <Typography variant="body2" fontWeight="bold">
-                                {formatNumber(cost.amount + cost.amount_bankak)}
-                              </Typography>
-                            </TableCell>
-                            <TableCell align="center">
-                              <Typography variant="caption" color="text.secondary">
-                                {new Date(cost.created_at).toLocaleDateString('ar-SA')}
-                              </Typography>
-                            </TableCell>
+                  <>
+                    <TableContainer component={Paper} variant="outlined">
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell>الوصف</TableCell>
+                            <TableCell align="center">النقدي</TableCell>
+                            <TableCell align="center">البنكي</TableCell>
+                            <TableCell align="center">المجموع</TableCell>
+                            <TableCell align="center">التاريخ</TableCell>
+                            <TableCell align="center">الإجراءات</TableCell>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
+                        </TableHead>
+                        <TableBody>
+                          {costs.map((cost) => (
+                            <TableRow key={cost.id}>
+                              <TableCell>
+                                <Typography variant="body2">
+                                  {cost.description}
+                                </Typography>
+                              </TableCell>
+                              <TableCell align="center">
+                                {cost.amount > 0 ? (
+                                  <Chip 
+                                    label={formatNumber(cost.amount)} 
+                                    color="success" 
+                                    size="small" 
+                                    variant="outlined"
+                                  />
+                                ) : (
+                                  <Typography variant="body2" color="text.secondary">
+                                    -
+                                  </Typography>
+                                )}
+                              </TableCell>
+                              <TableCell align="center">
+                                {cost.amount_bankak > 0 ? (
+                                  <Chip 
+                                    label={formatNumber(cost.amount_bankak)} 
+                                    color="info" 
+                                    size="small" 
+                                    variant="outlined"
+                                  />
+                                ) : (
+                                  <Typography variant="body2" color="text.secondary">
+                                    -
+                                  </Typography>
+                                )}
+                              </TableCell>
+                              <TableCell align="center">
+                                <Typography variant="body2" fontWeight="bold">
+                                  {formatNumber(cost.amount + cost.amount_bankak)}
+                                </Typography>
+                              </TableCell>
+                              <TableCell align="center">
+                                <Typography variant="caption" color="text.secondary">
+                                  {new Date(cost.created_at).toLocaleDateString('ar-SA')}
+                                </Typography>
+                              </TableCell>
+                              <TableCell align="center">
+                                <Button
+                                  variant="outlined"
+                                  color="error"
+                                  size="small"
+                                  startIcon={<DeleteIcon />}
+                                  onClick={() => deleteCostMutation.mutate(cost.id)}
+                                  disabled={deleteCostMutation.isPending}
+                                >
+                                  حذف
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                    
+                    {/* Total Cost Display */}
+                    <Box sx={{ mt: 2, p: 2, bgcolor: 'primary.light', borderRadius: 1 }}>
+                      <Typography variant="h6" textAlign="center" color="primary.contrastText" fontWeight="bold">
+                        إجمالي المصروفات: {formatNumber(totalCosts)}
+                      </Typography>
+                    </Box>
+                  </>
                 )}
               </CardContent>
             </Card>

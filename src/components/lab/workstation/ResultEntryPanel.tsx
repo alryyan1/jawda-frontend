@@ -741,14 +741,14 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                             const { resultValueField } = getFieldNames(index);
                             const isFirstInput = index === 0;
                             const fieldValue = getValues(resultValueField);
-                            console.log('Rendering child test:', { 
-                              childTestId: ctResult.id, 
-                              childTestName: ctResult.child_test_name,
-                              fieldValue,
-                              resultValueField,
-                              originalIndex: filteredToOriginalIndexMap[index]
-                            });
-                            console.log(ctResult,'ctResult');
+                            // console.log('Rendering child test:', { 
+                            //   childTestId: ctResult.id, 
+                            //   childTestName: ctResult.child_test_name,
+                            //   fieldValue,
+                            //   resultValueField,
+                            //   originalIndex: filteredToOriginalIndexMap[index]
+                            // });
+                            // console.log(ctResult,'ctResult');
                             const abnormal = isResultAbnormal(ctResult, fieldValue);
                             return (
                               <TableRow

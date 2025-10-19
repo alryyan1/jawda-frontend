@@ -1,42 +1,40 @@
 
 // src/components/lab/workstation/LabActionsPane.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 // استخدام نص عربي مباشر بدلاً من i18n
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
 import { Loader2 } from 'lucide-react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBluetoothB } from '@fortawesome/free-brands-svg-icons';
 import { 
   faWifi, 
   faLockOpen, 
   faCog, 
   faDownload, 
   faBars, 
-  faBolt, 
-  faThumbsUp, 
-  faDove,
   faLock,
-  faCloudUploadAlt
+  faCloudUploadAlt,
+  faPlug,
+  faUnlink
 } from '@fortawesome/free-solid-svg-icons';
 import { cn } from '@/lib/utils';
 
 import type { LabRequest } from '@/types/visits'; // Or types/visits
 import { toast } from 'sonner';
 import { setLabRequestResultsToDefault } from '@/services/labWorkflowService';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { populateCbcResults } from '@/services/labRequestService';
 import { togglePatientResultLock } from '@/services/patientService';
 import type { Patient } from '@/types/patients';
 import LabAppearanceSettingsDialog from './LabAppearanceSettingsDialog';
 import WhatsAppWorkAreaDialog from './dialog/WhatsAppWorkAreaDialog';
-import { LisClientUrl, LisServerUrl } from '@/pages/constants';
+import { LisServerUrl } from '@/pages/constants';
 import { Button } from '@/components/ui/button';
 import apiClient from '@/services/api';
-import { updateFirestoreDocumentViaBackend } from '@/services/firestorePatientService';
 import type { PatientLabQueueItem } from '@/types/labWorkflow';
-import showJsonDialog from '@/lib/showJsonDialog';
+import hl7ClientService from '@/services/hl7ClientService';
+import type { HL7ClientStatus } from '@/services/hl7ClientService';
 // import { useAuthorization } from '@/hooks/useAuthorization';
 
 interface LabActionsPaneProps {
@@ -68,6 +66,53 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
   const [isAppearanceDialogOpen, setIsAppearanceDialogOpen] = useState(false);
   const [isWhatsAppDialogOpen, setIsWhatsAppDialogOpen] = useState(false);
   const [isUploadingToFirebase, setIsUploadingToFirebase] = useState(false);
+  const [hl7ClientStatus, setHl7ClientStatus] = useState<HL7ClientStatus>({
+    is_running: false,
+    status: 'disconnected'
+  });
+  const [isHl7ClientLoading, setIsHl7ClientLoading] = useState(false);
+
+  // HL7 Client status query with polling
+  const { data: hl7StatusData, refetch: refetchHl7Status } = useQuery({
+    queryKey: ['hl7ClientStatus'],
+    queryFn: () => hl7ClientService.getStatus(),
+    refetchInterval: 5000, // Poll every 5 seconds
+  });
+
+  // Update HL7 client status when data changes
+  useEffect(() => {
+    if (hl7StatusData?.success) {
+      setHl7ClientStatus(hl7StatusData.data);
+    }
+  }, [hl7StatusData]);
+
+  // HL7 Client toggle mutation
+  const hl7ClientToggleMutation = useMutation({
+    mutationFn: () => hl7ClientService.toggle(),
+    onMutate: () => {
+      setIsHl7ClientLoading(true);
+    },
+    onSuccess: (response) => {
+      if (response.success) {
+        setHl7ClientStatus(response.data);
+        toast.success(response.data.is_running ? 'تم تشغيل HL7 Client بنجاح' : 'تم إيقاف HL7 Client بنجاح');
+      } else {
+        toast.error(response.message || 'فشل في تشغيل/إيقاف HL7 Client');
+      }
+    },
+    onError: (error: Error) => {
+      toast.error('حدث خطأ أثناء تشغيل/إيقاف HL7 Client');
+      console.error('HL7 Client error:', error);
+    },
+    onSettled: () => {
+      setIsHl7ClientLoading(false);
+      refetchHl7Status(); // Refresh status after toggle
+    }
+  });
+
+  const handleHl7ClientToggle = () => {
+    hl7ClientToggleMutation.mutate();
+  };
 
   const toggleLockMutation = useMutation({
     mutationFn: (params: { patientId: number; lock: boolean }) =>
@@ -145,7 +190,6 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
 
   // Placeholder permissions
   const canBatchAuthorize = true; // can('batch_authorize lab_results')
-  const canSyncLIS = false; // Example: can('sync_lis') - disabled for now
   const canManageQC = true; // can('manage quality_control')
   const setDefaultMutation = useMutation({
     mutationFn: (labRequestId: number) => setLabRequestResultsToDefault(labRequestId),
@@ -225,7 +269,7 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
       const response = await apiClient.post(`/patients/${currentPatientData.patient_id}/upload-to-firebase`);
       
       if (response.data.success) {
-        const { result_url, was_updated, lab_to_lab_object_id } = response.data;
+        const { was_updated } = response.data;
         console.log(currentPatientData,'currentPatientData.lab_to_lab_object_id')
         
      
@@ -332,16 +376,33 @@ console.log(currentPatientData,'currentPatientData')
                     <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="w-12 h-12"
-                        onClick={
-                          ()=>{window.open(LisClientUrl, '_blank')}
-                        }
+                        className={cn(
+                          "w-12 h-12",
+                          hl7ClientStatus.is_running ? "text-green-500" : "text-gray-500"
+                        )}
+                        onClick={handleHl7ClientToggle}
+                        disabled={isHl7ClientLoading}
                     >
-                        {setDefaultMutation.isPending ? <Loader2 className="h-7! w-7! animate-spin"/> : <FontAwesomeIcon icon={faBluetoothB} className="h-7! w-7!" />}
+                        {isHl7ClientLoading ? (
+                          <Loader2 className="h-7! w-7! animate-spin" />
+                        ) : (
+                          <FontAwesomeIcon 
+                            icon={hl7ClientStatus.is_running ? faPlug : faUnlink} 
+                            className={cn(
+                              "h-7! w-7!",
+                              hl7ClientStatus.is_running ? "text-green-500" : "text-gray-500"
+                            )} 
+                          />
+                        )}
                     </Button>
                 </TooltipTrigger>
                 <TooltipContent side="right" sideOffset={5}>
-                    <p>Client Lis </p>
+                    <p>
+                      {hl7ClientStatus.is_running 
+                        ? `HL7 Client متصل - كابل متصل (PID: ${hl7ClientStatus.pid})` 
+                        : 'HL7 Client غير متصل - كابل غير متصل'
+                      }
+                    </p>
                 </TooltipContent>
             </Tooltip>
            { selectedVisitId && <Tooltip>
@@ -416,13 +477,12 @@ console.log(currentPatientData,'currentPatientData')
         )}
         
         <Separator className="my-2" />
- {console.log(currentPatientData,'currentPatientData')}
         <Tooltip>
             <TooltipTrigger asChild>
                 <Button 
                     variant="ghost" 
                     size="icon" 
-                    className={cn("w-12 h-12", currentPatientData?.has_cbc ? "text-red-500" : "")} 
+                    className="w-12 h-12"
                     onClick={handlePopulateCbc}
                     disabled={populateCbcMutation.isPending}
                 >
@@ -497,7 +557,7 @@ console.log(currentPatientData,'currentPatientData')
       <WhatsAppWorkAreaDialog
         isOpen={isWhatsAppDialogOpen}
         onOpenChange={setIsWhatsAppDialogOpen}
-        currentPatient={currentPatientData}
+        currentPatient={currentPatientData as any}
         selectedLabRequest={selectedLabRequest}
         onMessageSent={() => {
           // Optional: Add any callback logic when message is sent

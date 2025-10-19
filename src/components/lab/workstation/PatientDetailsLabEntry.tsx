@@ -27,6 +27,8 @@ import {
 import dayjs from "dayjs";
 import { useAuth } from "@/contexts/AuthContext";
 import { AttachMoney } from "@mui/icons-material";
+import PatientCompanyDetails from "../reception/PatientCompanyDetails";
+import type { Patient } from "@/types/patients";
 
 interface StatusItem {
   done?: boolean;
@@ -36,6 +38,7 @@ interface StatusItem {
 
 export interface PatientDetailsLabEntryProps {
   visitId: number | null;
+  patient?: Patient | null;
   patientName?: string | null;
   doctorName?: string | null;
   date?: string | null;
@@ -200,6 +203,7 @@ const PatientDetailsLabEntry: React.FC<PatientDetailsLabEntryProps> = ({
   doctorName,
   date,
   phone,
+  patient,
   registeredBy,
   age,
   statuses,
@@ -208,9 +212,7 @@ const PatientDetailsLabEntry: React.FC<PatientDetailsLabEntryProps> = ({
 }) => {
   const { user } = useAuth();
   const isAdmin = user?.roles?.some(role => role.name === 'admin') || false;
-  const completedSteps = Object.values(statuses || {}).filter(status => status?.done).length;
-  const totalSteps = Object.keys(statuses || {}).length;
-
+ console.log(patient,'patient');
   // Function to copy visit ID to clipboard
   const handleCopyVisitId = async () => {
     if (visitId) {
@@ -230,6 +232,7 @@ const PatientDetailsLabEntry: React.FC<PatientDetailsLabEntryProps> = ({
     }
   };
 
+  console.log(patient,'patient');
   return (
     <MuiCard 
       dir="rtl" 
@@ -304,6 +307,11 @@ const PatientDetailsLabEntry: React.FC<PatientDetailsLabEntryProps> = ({
             <ItemRow label="سُجل بواسطة" value={registeredBy || "-"} icon={UserCircle2} />
             <ItemRow label="العمر" value={age ?? "-"} icon={Clock} isLast={true} />
           </Box>
+          
+      {/* Patient Company Details */}
+      {patient && (
+        <PatientCompanyDetails patient={patient} />
+      )}
         </Paper>
 
         {/* Status Section */}

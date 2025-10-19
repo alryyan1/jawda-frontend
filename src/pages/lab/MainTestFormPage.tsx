@@ -49,7 +49,8 @@ const mainTestFormSchema = z.object({
   available: z.boolean(),
   is_special_test: z.boolean(),
   conditions: z.string().optional(),
-  timer: z.string().optional()
+  timer: z.string().optional(),
+  hide_unit: z.boolean()
 });
 
 type MainTestFormValues = z.infer<typeof mainTestFormSchema>;
@@ -65,6 +66,7 @@ interface MainTestSubmissionData {
   is_special_test?: boolean;
   conditions?: string;
   timer?: number;
+  hide_unit: boolean;
 }
 
 const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
@@ -103,7 +105,8 @@ const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
       available: true,
       is_special_test: false,
       conditions: '',
-      timer: ''
+      timer: '',
+      hide_unit: false
     }
   });
   
@@ -131,7 +134,8 @@ const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
         available: true,
         is_special_test: false,
         conditions: '',
-        timer: ''
+        timer: '',
+        hide_unit: false
       });
       setCurrentMainTestId(null);
     }
@@ -149,7 +153,8 @@ const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
         available: mainTestData.available,
         is_special_test: Boolean((mainTestData as unknown as { is_special_test?: boolean }).is_special_test),
         conditions: (mainTestData as unknown as { conditions?: string }).conditions || '',
-        timer: (mainTestData as unknown as { timer?: number }).timer ? String((mainTestData as unknown as { timer?: number }).timer) : ''
+        timer: (mainTestData as unknown as { timer?: number }).timer ? String((mainTestData as unknown as { timer?: number }).timer) : '',
+        hide_unit: Boolean((mainTestData as unknown as { hide_unit?: boolean }).hide_unit)
       });
     }
   }, [mainTestData, currentMainTestId, reset]);
@@ -167,6 +172,7 @@ const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
         is_special_test: data.is_special_test,
         conditions: data.conditions?.trim() || undefined,
         timer: data.timer?.trim() ? Number(data.timer) : undefined,
+        hide_unit: data.hide_unit,
       };
       return isEditMode && currentMainTestId 
         ? updateMainTest(currentMainTestId, submissionData) 
@@ -263,6 +269,7 @@ const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
                   packages={packages}
                   isLoadingPackages={isLoadingPackages}
                   onPackageAdded={handlePackageAdded}
+                  setValue={setMainValue}
                 />
                 <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ pt: 2 }}>
                   {currentMainTestId && (

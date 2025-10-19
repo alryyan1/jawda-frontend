@@ -120,7 +120,7 @@ if(item.visit_id === 34218){
         {labIdentifier.length > 6 ? labIdentifier.substring(0, 5) + "…" : labIdentifier}
       </span>
       
-      {item.test_count > 0 && (
+      {/* {item.test_count > 0 && (
         <div
           style={{
             backgroundColor: allRequestsPaid ? '#10B981' : 'red',
@@ -130,7 +130,7 @@ if(item.visit_id === 34218){
         >
           {item.test_count}
         </div>
-      )}
+      )} */}
 
       {item.is_result_locked && (
         <div className="absolute -bottom-1 -left-1 p-0.5 bg-[var(--bg-color)] rounded-full shadow-sm border border-[var(--border-color)]">
@@ -158,7 +158,7 @@ if(item.visit_id === 34218){
 
       {/* Progress Bar */}
       {item.total_result_count > 0 && (
-        <div className="absolute bottom-[-5px] left-0 right-0 h-1 bg-gray-200 rounded-b-lg overflow-hidden">
+        <div className="absolute bottom-[-5px] left-0 right-0 h-1 bg-gray-200 overflow-hidden">
           <div 
             className="h-full bg-gradient-to-r from-blue-500 to-blue-500 transition-all duration-300 ease-out"
             style={{ width: `${progressPercentage}%` }}

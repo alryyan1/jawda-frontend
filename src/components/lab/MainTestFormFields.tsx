@@ -1,6 +1,7 @@
 // src/components/lab/MainTestFormFields.tsx
 import type { Control } from 'react-hook-form';
 import { Controller } from 'react-hook-form';
+import { useState } from 'react';
 import {
   TextField,
   FormControl,
@@ -12,12 +13,17 @@ import {
   FormControlLabel,
   Box,
   Stack,
-  Typography,
-  Paper
+  Paper,
+  CircularProgress,
+  IconButton,
+  Tooltip
 } from '@mui/material';
+import { Sparkles } from 'lucide-react';
+import { toast } from 'sonner';
 import AddContainerDialog from './AddContainerDialog';
 import type { Container, Package } from '@/types/labTests';
 import AddPackageDialog from './AddPackageDialog';
+import geminiService from '@/services/geminiService';
 
 interface MainTestFormValues {
   main_test_name: string;
@@ -30,6 +36,7 @@ interface MainTestFormValues {
   is_special_test: boolean;
   conditions?: string;
   timer?: string;
+  hide_unit: boolean;
 }
 
 interface MainTestFormFieldsProps {
@@ -42,6 +49,7 @@ interface MainTestFormFieldsProps {
   packages: Package[] | undefined; // NEW PROP
   isLoadingPackages: boolean; // NEW PROP
   onPackageAdded: (newPackage: Package) => void; // NEW PROP
+  setValue: (name: keyof MainTestFormValues, value: any) => void; // For updating form values
 }
 
 const MainTestFormFields: React.FC<MainTestFormFieldsProps> = ({
@@ -54,8 +62,47 @@ const MainTestFormFields: React.FC<MainTestFormFieldsProps> = ({
   packages,
   isLoadingPackages,
   onPackageAdded,
+  setValue,
 }) => {
   const disabled = isLoadingData || isSubmitting;
+  const [isGeneratingConditions, setIsGeneratingConditions] = useState(false);
+
+  const handleGenerateConditions = async () => {
+    setIsGeneratingConditions(true);
+    try {
+      // Get the current test name from the form
+      const testName = control._formValues?.main_test_name || '';
+      
+      if (!testName.trim()) {
+        toast.error('يرجى إدخال اسم الاختبار أولاً');
+        return;
+      }
+
+      const prompt = `أعطني تعليمات التحضير للاختبار الطبي التالي باللغة العربية: ${testName}. 
+      يجب أن تتضمن التعليمات:
+      1. التحضيرات المطلوبة قبل الاختبار
+      2. المدة الزمنية للصيام أو التحضير
+      3. أي قيود على الطعام أو الشراب
+      // 4. الأدوية التي يجب تجنبها
+      4. أي تعليمات خاصة أخرى
+      
+        اكتب الإجابة باللغة العربية وبشكل  مختصر في 3 اسطر.`;
+
+      const response = await geminiService.analyzeLabResults({ results: [] }, prompt);
+      
+      if (response.success && response.data?.analysis) {
+        setValue('conditions', response.data.analysis);
+        toast.success('تم إنشاء تعليمات التحضير بنجاح');
+      } else {
+        toast.error(response.error || 'فشل في إنشاء تعليمات التحضير');
+      }
+    } catch (error) {
+      console.error('Error generating conditions:', error);
+      toast.error('حدث خطأ في إنشاء تعليمات التحضير');
+    } finally {
+      setIsGeneratingConditions(false);
+    }
+  };
 
   return (
     <Stack spacing={3}>
@@ -159,22 +206,46 @@ const MainTestFormFields: React.FC<MainTestFormFieldsProps> = ({
         )}
       />
 
-      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+      <Stack direction={{ xs: 'column', md: 'column' }} spacing={2}>
         <Controller
           control={control}
           name="conditions"
           render={({ field, fieldState: { error } }) => (
-            <TextField
-              {...field}
-              label="الشروط"
-              placeholder="أدخل شروط الاختبار"
-              disabled={disabled}
-              error={!!error}
-              helperText={error?.message}
-              multiline
-              rows={2}
-              fullWidth
-            />
+            <Box sx={{ position: 'relative', width: '100%' }}>
+              <TextField
+                {...field}
+                label="الشروط"
+                placeholder="أدخل شروط الاختبار"
+                disabled={disabled}
+                error={!!error}
+                helperText={error?.message}
+                multiline
+                rows={6}
+                fullWidth
+              />
+              <Tooltip title="إنشاء تعليمات التحضير باستخدام الذكاء الاصطناعي">
+                <IconButton
+                  onClick={handleGenerateConditions}
+                  disabled={disabled || isGeneratingConditions}
+                  sx={{
+                    position: 'absolute',
+                    top: 8,
+                    left: 8,
+                    zIndex: 1,
+                    backgroundColor: 'background.paper',
+                    '&:hover': {
+                      backgroundColor: 'action.hover',
+                    }
+                  }}
+                >
+                  {isGeneratingConditions ? (
+                    <CircularProgress size={20} />
+                  ) : (
+                    <Sparkles size={20} />
+                  )}
+                </IconButton>
+              </Tooltip>
+            </Box>
           )}
         />
         
@@ -267,6 +338,23 @@ const MainTestFormFields: React.FC<MainTestFormFieldsProps> = ({
                   />
                 }
                 label="اختبار خاص"
+              />
+            )}
+          />
+
+          <Controller
+            control={control}
+            name="hide_unit"
+            render={({ field }) => (
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={field.value}
+                    onChange={field.onChange}
+                    disabled={disabled}
+                  />
+                }
+                label="إخفاء الوحدة"
               />
             )}
           />

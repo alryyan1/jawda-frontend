@@ -41,4 +41,6 @@ export const downloadCostsReportPdf = async (filters: Omit<CostFilters, 'page' |
   });
   return response.data;
 };
-// Add getCosts, updateCost, deleteCost later for a full cost management page
+export const deleteCost = async (costId: number): Promise<void> => {
+  await apiClient.delete(`${API_URL}/${costId}`);
+};

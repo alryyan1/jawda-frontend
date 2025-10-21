@@ -1,6 +1,6 @@
 
 // src/components/lab/workstation/LabActionsPane.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 // استخدام نص عربي مباشر بدلاً من i18n
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -16,15 +16,15 @@ import {
   faLock,
   faCloudUploadAlt,
   faPlug,
-  faUnlink
+  faMicroscope
 } from '@fortawesome/free-solid-svg-icons';
 import { cn } from '@/lib/utils';
 
 import type { LabRequest } from '@/types/visits'; // Or types/visits
 import { toast } from 'sonner';
 import { setLabRequestResultsToDefault } from '@/services/labWorkflowService';
-import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import { populateCbcResults } from '@/services/labRequestService';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { populateCbcResults, addOrganism } from '@/services/labRequestService';
 import { togglePatientResultLock } from '@/services/patientService';
 import type { Patient } from '@/types/patients';
 import LabAppearanceSettingsDialog from './LabAppearanceSettingsDialog';
@@ -33,8 +33,6 @@ import { LisServerUrl } from '@/pages/constants';
 import { Button } from '@/components/ui/button';
 import apiClient from '@/services/api';
 import type { PatientLabQueueItem } from '@/types/labWorkflow';
-import hl7ClientService from '@/services/hl7ClientService';
-import type { HL7ClientStatus } from '@/services/hl7ClientService';
 // import { useAuthorization } from '@/hooks/useAuthorization';
 
 interface LabActionsPaneProps {
@@ -66,52 +64,9 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
   const [isAppearanceDialogOpen, setIsAppearanceDialogOpen] = useState(false);
   const [isWhatsAppDialogOpen, setIsWhatsAppDialogOpen] = useState(false);
   const [isUploadingToFirebase, setIsUploadingToFirebase] = useState(false);
-  const [hl7ClientStatus, setHl7ClientStatus] = useState<HL7ClientStatus>({
-    is_running: false,
-    status: 'disconnected'
-  });
-  const [isHl7ClientLoading, setIsHl7ClientLoading] = useState(false);
-
-  // HL7 Client status query with polling
-  const { data: hl7StatusData, refetch: refetchHl7Status } = useQuery({
-    queryKey: ['hl7ClientStatus'],
-    queryFn: () => hl7ClientService.getStatus(),
-    refetchInterval: 5000, // Poll every 5 seconds
-  });
-
-  // Update HL7 client status when data changes
-  useEffect(() => {
-    if (hl7StatusData?.success) {
-      setHl7ClientStatus(hl7StatusData.data);
-    }
-  }, [hl7StatusData]);
-
-  // HL7 Client toggle mutation
-  const hl7ClientToggleMutation = useMutation({
-    mutationFn: () => hl7ClientService.toggle(),
-    onMutate: () => {
-      setIsHl7ClientLoading(true);
-    },
-    onSuccess: (response) => {
-      if (response.success) {
-        setHl7ClientStatus(response.data);
-        toast.success(response.data.is_running ? 'تم تشغيل HL7 Client بنجاح' : 'تم إيقاف HL7 Client بنجاح');
-      } else {
-        toast.error(response.message || 'فشل في تشغيل/إيقاف HL7 Client');
-      }
-    },
-    onError: (error: Error) => {
-      toast.error('حدث خطأ أثناء تشغيل/إيقاف HL7 Client');
-      console.error('HL7 Client error:', error);
-    },
-    onSettled: () => {
-      setIsHl7ClientLoading(false);
-      refetchHl7Status(); // Refresh status after toggle
-    }
-  });
-
-  const handleHl7ClientToggle = () => {
-    hl7ClientToggleMutation.mutate();
+  console.log('currentpatientdata',currentPatientData)
+  const handleHl7ClientOpen = () => {
+    window.open('http://127.0.0.1/jawda-medical/hl7-client.php', '_blank');
   };
 
   const toggleLockMutation = useMutation({
@@ -250,6 +205,48 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
       
     }
   };
+
+  // Add Organism mutation
+  const addOrganismMutation = useMutation({
+    mutationFn: (payload: { labRequestId: number; organism: string; sensitive?: string; resistant?: string }) =>
+      addOrganism(payload.labRequestId, { 
+        organism: payload.organism, 
+        sensitive: payload.sensitive, 
+        resistant: payload.resistant 
+      }),
+    onSuccess: (response) => {
+      toast.success('تم إضافة الكائن الحي بنجاح');
+      queryClient.invalidateQueries({ queryKey: ['labRequestForEntry', selectedLabRequest?.id] });
+      queryClient.invalidateQueries({ queryKey: ['labRequestsForVisit', selectedVisitId] });
+      if (onResultsModified && response.lab_request) {
+        onResultsModified(response.lab_request);
+      }
+    },
+    onError: (error: Error) => {
+      toast.error('فشل في إضافة الكائن الحي');
+      console.error('Add organism error:', error);
+    }
+  });
+
+  const handleAddOrganism = () => {
+    if (!selectedLabRequest) {
+      toast.error('يرجى اختيار طلب فحص أولاً');
+      return;
+    }
+
+    const organismName = prompt('أدخل اسم الكائن الحي:');
+    if (!organismName) return;
+
+    const sensitive = prompt('أدخل المضادات الحساسة (اختياري):') || '';
+    const resistant = prompt('أدخل المضادات المقاومة (اختياري):') || '';
+
+    addOrganismMutation.mutate({
+      labRequestId: selectedLabRequest.id,
+      organism: organismName,
+      sensitive: sensitive || undefined,
+      resistant: resistant || undefined
+    });
+  };
   
 
 
@@ -376,33 +373,17 @@ console.log(currentPatientData,'currentPatientData')
                     <Button 
                         variant="ghost" 
                         size="icon" 
-                        className={cn(
-                          "w-12 h-12",
-                          hl7ClientStatus.is_running ? "text-green-500" : "text-gray-500"
-                        )}
-                        onClick={handleHl7ClientToggle}
-                        disabled={isHl7ClientLoading}
+                        className="w-12 h-12 text-blue-500"
+                        onClick={handleHl7ClientOpen}
                     >
-                        {isHl7ClientLoading ? (
-                          <Loader2 className="h-7! w-7! animate-spin" />
-                        ) : (
-                          <FontAwesomeIcon 
-                            icon={hl7ClientStatus.is_running ? faPlug : faUnlink} 
-                            className={cn(
-                              "h-7! w-7!",
-                              hl7ClientStatus.is_running ? "text-green-500" : "text-gray-500"
-                            )} 
-                          />
-                        )}
+                        <FontAwesomeIcon 
+                            icon={faPlug} 
+                            className="h-7! w-7! text-blue-500"
+                        />
                     </Button>
                 </TooltipTrigger>
                 <TooltipContent side="right" sideOffset={5}>
-                    <p>
-                      {hl7ClientStatus.is_running 
-                        ? `HL7 Client متصل - كابل متصل (PID: ${hl7ClientStatus.pid})` 
-                        : 'HL7 Client غير متصل - كابل غير متصل'
-                      }
-                    </p>
+                    <p>فتح HL7 Client</p>
                 </TooltipContent>
             </Tooltip>
            { selectedVisitId && <Tooltip>
@@ -416,7 +397,7 @@ console.log(currentPatientData,'currentPatientData')
                     >
                       {toggleLockMutation.isPending ? (
                         <Loader2 className="h-7! w-7! animate-spin" />
-                    ) : currentLockStatus === false ? (
+                    ) : currentPatientData?.result_is_locked === false ? (
                         <FontAwesomeIcon icon={faLockOpen} className="h-7! w-7! text-green-500" />
                     ) : (
                         <FontAwesomeIcon icon={faLock} className="h-7! w-7! text-red-500" />
@@ -489,12 +470,34 @@ console.log(currentPatientData,'currentPatientData')
                     {populateCbcMutation.isPending ? (
                         <Loader2 className="h-7! w-7! animate-spin" />
                     ) : (
-                        <FontAwesomeIcon icon={faBars} className="h-7! w-7!" />
+                        <FontAwesomeIcon icon={faBars} style={{color: currentPatientData?.has_cbc ? 'red' : 'green'}} className="h-7! w-7" />
                     )}
                 </Button>
             </TooltipTrigger>
             <TooltipContent side="right" sideOffset={5}>
                 <p> ملء نتائج CBC من Sysmex</p>
+            </TooltipContent>
+        </Tooltip>
+        
+        {/* Add Organism Button */}
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="w-12 h-12"
+                    onClick={handleAddOrganism}
+                    disabled={addOrganismMutation.isPending}
+                >
+                    {addOrganismMutation.isPending ? (
+                        <Loader2 className="h-7! w-7! animate-spin" />
+                    ) : (
+                        <FontAwesomeIcon icon={faMicroscope} className="h-7! w-7! text-purple-500" />
+                    )}
+                </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={5}>
+                <p>إضافة كائن حي</p>
             </TooltipContent>
         </Tooltip>
         <Separator className="my-2" />

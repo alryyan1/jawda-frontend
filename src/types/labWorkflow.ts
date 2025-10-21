@@ -1,4 +1,5 @@
 import type { ChildGroup, ChildTestOption, Unit } from "./labTests";
+import type { RequestedOrganism } from "./visits";
 
 export interface PatientLabQueueItem { // For the leftmost list
   visit_id: number; // DoctorVisit ID
@@ -15,6 +16,7 @@ export interface PatientLabQueueItem { // For the leftmost list
   all_requests_paid: boolean;
   is_result_locked: boolean;
   is_last_result_pending?: boolean; 
+  has_cbc?: boolean;
   is_ready_for_print?: boolean;
   company?: unknown; // Company information from backend
   auth_date?: string | null;
@@ -107,6 +109,7 @@ export interface MainTestWithChildrenResults { // Data for the ResultEntryPanel
   is_trailer_hidden?: boolean; // from LabRequest.hidden
   // Add other MainTest details if needed for display (e.g., default container)
   child_tests_with_results: ChildTestWithResult[];
+  requested_organisms?: RequestedOrganism[]; // For culture tests
 }
 
 // For the form submitting results for one MainTest (LabRequest)

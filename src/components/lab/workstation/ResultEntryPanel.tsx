@@ -27,13 +27,14 @@ import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import Button from "@mui/material/Button";
+import BugReportIcon from "@mui/icons-material/BugReport";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Form } from "@/components/ui/form";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 
-import type { LabRequest } from "@/types/visits";
+import type { LabRequest, RequestedOrganism } from "@/types/visits";
 import type { ChildTestOption } from "@/types/labTests";
 import type {
   MainTestWithChildrenResults,
@@ -48,6 +49,7 @@ import {
 } from "@/services/labWorkflowService";
 
 import ChildTestAutocompleteInput from "./ChildTestAutocompleteInput";
+import OrganismTable from "./OrganismTable";
 
 
 interface TabPanelProps {
@@ -99,6 +101,8 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
   const [commentDialogOpen, setCommentDialogOpen] = useState(false);
   const [commentInput, setCommentInput] = useState<string>("");
   const [isSavingComment, setIsSavingComment] = useState(false);
+  const [organisms, setOrganisms] = useState<RequestedOrganism[]>([]);
+  const [organismDialogOpen, setOrganismDialogOpen] = useState(false);
   
   // Ref to track the first input field for auto-focus
   const firstInputRef = useRef<HTMLInputElement | null>(null);
@@ -112,7 +116,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
     queryFn: () => getLabRequestForEntry(initialLabRequest.id),
     enabled: !!initialLabRequest.id,
     staleTime: 0, // Always consider data stale to ensure fresh fetch
-    cacheTime: 0, // Don't cache the data
+    gcTime: 0, // Don't cache the data (replaces cacheTime)
   });
 
   const form = useForm<ResultEntryFormValues>({
@@ -335,8 +339,22 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
         results: formattedResults,
         main_test_comment: initialLabRequest.comment || "",
       });
+      
+      // Initialize organisms from testDataForEntry
+      const organismsData = testDataForEntry.requested_organisms || [];
+      console.log('Organisms data from backend:', organismsData);
+      // Ensure all organism fields are strings
+      const formattedOrganisms = organismsData.map(org => ({
+        ...org,
+        organism: org.organism || '',
+        sensitive: org.sensitive || '',
+        resistant: org.resistant || ''
+      }));
+      console.log('Formatted organisms:', formattedOrganisms);
+      setOrganisms(formattedOrganisms);
     } else {
       reset({ results: [], main_test_comment: "" });
+      setOrganisms([]);
     }
   }, [testDataForEntry, reset, initialLabRequest.comment]);
 
@@ -427,7 +445,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
     if (testDataForEntry && onTestResultsChange) {
       const currentFormData = getValues();
       const testResults = {
-        testName: testDataForEntry.main_test_name || testDataForEntry.name,
+        testName: testDataForEntry.main_test_name,
         results: testDataForEntry.child_tests_with_results?.map((ct, index) => ({
           testName: ct.child_test_name,
           value: currentFormData.results?.[index]?.result_value || ct.result_value,
@@ -436,7 +454,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
           isAbnormal: ct.result_value ? isResultAbnormal(ct, currentFormData.results?.[index]?.result_value || ct.result_value) : false
         })) || [],
         comment: currentFormData.main_test_comment || initialLabRequest.comment,
-        patientName: testDataForEntry.patient_name,
+        patientName: initialLabRequest.patient_name || 'Unknown Patient',
         testDate: new Date().toISOString()
       };
       onTestResultsChange(testResults);
@@ -526,6 +544,14 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
       setIsSavingComment(false);
     }
   }, [initialLabRequest, commentInput, onResultsSaved]);
+
+  const handleOpenOrganismDialog = useCallback(() => {
+    setOrganismDialogOpen(true);
+  }, []);
+
+  const handleCloseOrganismDialog = useCallback(() => {
+    setOrganismDialogOpen(false);
+  }, []);
 
 
   // Generate field names for consistent access
@@ -674,12 +700,12 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                       aria-label="child test results table"
                       sx={{ 
                         "& .MuiTableCell-root": { 
-                          padding: "2px 4px",
+                          padding: "1px 2px",
                           backgroundColor: "var(--background)",
                           color: "var(--foreground)",
                           borderBottomColor: "var(--border)",
-                          // fontSize: "0.75rem",
-                          lineHeight: 1.2,
+                          fontSize: "0.7rem",
+                          lineHeight: 1.1,
                         }
                       }}
                     >
@@ -688,8 +714,8 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                         "& .MuiTableCell-root": {
                           backgroundColor: "var(--muted)",
                           color: "var(--foreground)",
-                          padding: "2px 4px",
-                          // fontSize: "0.7rem",
+                          padding: "1px 2px",
+                          fontSize: "0.65rem",
                           fontWeight: "medium",
                         }
                       }}>
@@ -701,8 +727,8 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                               borderBottomColor: "var(--border)",
                               backgroundColor: "var(--muted)",
                               color: "var(--foreground)",
-                              padding: "10حء",
-                              // fontSize: "0.7rem",
+                              padding: "1px 2px",
+                              fontSize: "0.65rem",
                             }}
                           >
                              Test 
@@ -715,8 +741,8 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                               backgroundColor: "var(--muted)",
                               color: "var(--foreground)",
                               textAlign: "center",
-                              padding: "2px 4px",
-                              // fontSize: "0.7rem",
+                              padding: "1px 2px",
+                              fontSize: "0.65rem",
                             }}
                           >
                             Result 
@@ -776,8 +802,8 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                                     borderBottomColor: "var(--border)",
                                     backgroundColor: "var(--background)",
                                     color: "var(--foreground)",
-                                    padding: "2px 4px",
-                                    // fontSize: "0.75rem",
+                                    padding: "1px 2px",
+                                    fontSize: "0.7rem",
                                   }}
                                 >
                                   <Typography
@@ -787,6 +813,10 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                                       fontWeight: 900,
                                       textAlign: "center",
                                       color: "var(--foreground)",
+                                      fontSize: "0.7rem",
+                                      lineHeight: 1.1,
+                                      margin: 0,
+                                      padding: 0,
                                     }}
                                   >
                                     {ctResult.child_test_name
@@ -799,10 +829,12 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                                     sx={{
                                       display: "flex",
                                       alignItems: "center",
-                                      mt: 0.1,
+                                      mt: 0,
                                       color: "var(--muted-foreground)",
-                                      // fontSize: "0.65rem",
-                                      lineHeight: 1.1,
+                                      fontSize: "0.6rem",
+                                      lineHeight: 1,
+                                      margin: 0,
+                                      padding: 0,
                                     }}
                                   >
                                   
@@ -813,8 +845,8 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                                     borderBottomColor: "var(--border)",
                                     backgroundColor: "var(--background)",
                                     color: "var(--foreground)",
-                                    padding: "2px 4px",
-                                    // fontSize: "0.75rem",
+                                    padding: "1px 2px",
+                                    fontSize: "0.7rem",
                                   }}
                                 >
                                   <Controller
@@ -826,7 +858,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                                     }) =>
                                       
                                         <div 
-                                          style={{ fontSize: "0.75rem" }}
+                                          style={{ fontSize: "0.7rem" }}
                                           onClick={(e) => e.stopPropagation()}
                                         >
                                           <ChildTestAutocompleteInput
@@ -863,6 +895,26 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
              
                   </TableContainer>
                 )}
+
+                {/* Organism Button */}
+                <div className="mt-4 flex justify-end">
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<BugReportIcon />}
+                    onClick={handleOpenOrganismDialog}
+                    sx={{
+                      fontSize: "0.75rem",
+                      padding: "4px 12px",
+                      minWidth: "auto",
+                    }}
+                  >
+                    {organisms.length > 0 
+                      ? `إدارة الكائنات الحية (${organisms.length})` 
+                      : "إضافة كائنات حية"
+                    }
+                  </Button>
+                </div>
 
 {selectedChildTestIndex !== null && filteredChildTests[selectedChildTestIndex] && (
                 <div className="mt-4 p-3 bg-muted/50 rounded-lg border">
@@ -917,6 +969,44 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
         </Form>
       </div>
 
+      {/* Organism Dialog */}
+      <Dialog
+        open={organismDialogOpen}
+        onClose={handleCloseOrganismDialog}
+        maxWidth="xl"
+        fullWidth
+        PaperProps={{
+          sx: {
+            backgroundColor: "var(--background)",
+            border: "1px solid var(--border)",
+            maxHeight: "90vh",
+            width: "95vw",
+            maxWidth: "1400px",
+          },
+        }}
+      >
+        <DialogTitle sx={{ fontSize: "1rem", fontWeight: 600, display: "flex", alignItems: "center", gap: 1 }}>
+          <BugReportIcon fontSize="small" />
+          إدارة الكائنات الحية
+        </DialogTitle>
+        <DialogContent sx={{ padding: 0 }} dir="ltr">
+          <OrganismTable
+            organisms={organisms}
+            labRequestId={initialLabRequest.id}
+            onOrganismsChange={setOrganisms}
+          />
+        </DialogContent>
+        <DialogActions sx={{ padding: "16px 24px" }}>
+          <Button
+            onClick={handleCloseOrganismDialog}
+            variant="outlined"
+            size="small"
+          >
+            إغلاق
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Comment Dialog */}
       <Dialog
         open={commentDialogOpen}
@@ -927,13 +1017,14 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
           sx: {
             backgroundColor: "var(--background)",
             border: "1px solid var(--border)",
+            direction:'ltr',
           },
         }}
       >
         <DialogTitle sx={{ fontSize: "1rem", fontWeight: 600 }}>
           {initialLabRequest.comment ? "Edit Lab Request Comment" : "Add Lab Request Comment"}
         </DialogTitle>
-        <DialogContent>
+        <DialogContent dir="ltr">
           <Textarea
             value={commentInput}
             onChange={(e) => setCommentInput(e.target.value)}

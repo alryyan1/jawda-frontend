@@ -259,27 +259,28 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
         readOnly={isDisabled}
         sx={{
           '& .MuiAutocomplete-root': {
-            // fontSize: '0.75rem',
+            fontSize: '0.7rem',
           },
           '& .MuiInputBase-root': {
-            minHeight: '28px',
-            // fontSize: '0.75rem',
-            padding: '2px 8px',
+            minHeight: '20px',
+            fontSize: '0.7rem',
+            padding: '1px 4px',
           },
           '& .MuiInputBase-input': {
-            padding: '2px 4px',
-            // fontSize: '0.75rem',
+            padding: '1px 2px',
+            fontSize: '0.7rem',
           },
           '& .MuiAutocomplete-listbox': {
             backgroundColor: 'var(--background)',
             color: 'var(--foreground)',
-            // fontSize: '0.75rem',
+            fontSize: '0.7rem',
           },
           '& .MuiAutocomplete-option': {
             color: 'var(--foreground)',
-            // fontSize: '0.75rem',
-            padding: '4px 8px',
+            fontSize: '0.7rem',
+            padding: '2px 4px',
             minHeight: 'auto',
+            lineHeight: 1.1,
             '&:hover': {
               backgroundColor: 'var(--accent)',
             },
@@ -429,19 +430,19 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
                   {isLoadingOptions ? (
                     <CircularProgress
                       color="inherit"
-                      size={16}
-                      sx={{ mr: 1 }}
+                      size={12}
+                      sx={{ mr: 0.5 }}
                     />
                   ) : isSaving ? (
                     <CircularProgress
                       color="primary"
-                      size={16}
-                      sx={{ mr: 1 }}
+                      size={12}
+                      sx={{ mr: 0.5 }}
                     />
                   ) : showSuccess ? (
                     <CheckCircleIcon
                       color="success"
-                      sx={{ fontSize: 16, mr: 1 }}
+                      sx={{ fontSize: 12, mr: 0.5 }}
                     />
                   ) : null}
                   {params.InputProps.endAdornment}
@@ -506,13 +507,14 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
             />
           </DialogContent>
           <DialogActions>
-            <Button onClick={handleDialogClose} color="inherit" size="small">
+            <Button onClick={handleDialogClose} color="inherit" size="small" sx={{ fontSize: '0.75rem', padding: '2px 8px' }}>
               إلغاء
             </Button>
             <Button
               type="submit"
               size="small"
               disabled={isSavingNewOption}
+              sx={{ fontSize: '0.75rem', padding: '2px 8px' }}
             >
               إضافة
             </Button>

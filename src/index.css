@@ -169,4 +169,20 @@
   }
 }
 
+/* Force LTR for organism editors */
+.organism-editor-ltr .cm-editor,
+.organism-editor-ltr .cm-content,
+.organism-editor-ltr .cm-focused,
+.organism-editor-ltr .cm-line {
+  direction: ltr !important;
+  text-align: left !important;
+}
 
+/* Force LTR for organism table cells */
+.organism-table-cell .cm-editor,
+.organism-table-cell .cm-content,
+.organism-table-cell .cm-focused,
+.organism-table-cell .cm-line {
+  direction: ltr !important;
+  text-align: left !important;
+}

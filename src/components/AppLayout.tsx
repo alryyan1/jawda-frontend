@@ -400,7 +400,7 @@ const AppLayout: React.FC = () => {
   const { data: queueWorkerData, refetch: refetchQueueWorkerStatus } = useQuery({
     queryKey: ['queueWorkerStatus'],
     queryFn: () => queueWorkerService.getStatus(),
-    refetchInterval: 5000, // Poll every 5 seconds
+    refetchInterval: 500000, // Poll every 5 seconds
   });
 
   // Update queue worker status when data changes

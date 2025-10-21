@@ -1,7 +1,7 @@
 // src/services/labRequestService.ts
 import apiClient from "./api";
 import { MainTestStripped } from "../types/labTests"; // For available tests
-import { LabRequest, type DoctorVisit } from "../types/visits"; // Or where LabRequest type is defined
+import { LabRequest, type DoctorVisit, RequestedOrganism } from "../types/visits"; // Or where LabRequest type is defined
 
 const VISIT_BASE_URL = "/visits"; // Assuming lab requests are nested under visits
 const LABREQUEST_BASE_URL = "/labrequests"; // For direct operations on lab requests
@@ -165,4 +165,57 @@ export const populateCbcResults = async (
     payload
   );
   return response.data;
+};
+
+interface AddOrganismPayload {
+  organism: string;
+  sensitive?: string;
+  resistant?: string;
+}
+
+interface AddOrganismResponse {
+  success: boolean;
+  message: string;
+  data: {
+    organism: any;
+    lab_request: LabRequest;
+  };
+}
+
+export const addOrganism = async (
+  labRequestId: number,
+  payload: AddOrganismPayload
+): Promise<AddOrganismResponse['data']> => {
+  const response = await apiClient.post<AddOrganismResponse>(
+    `/labrequests/${labRequestId}/add-organism`,
+    payload
+  );
+  return response.data.data;
+};
+
+// Get organisms for a lab request
+export const getOrganismsForLabRequest = async (
+  labRequestId: number
+): Promise<RequestedOrganism[]> => {
+  const response = await apiClient.get<{ data: RequestedOrganism[] }>(
+    `/labrequests/${labRequestId}/organisms`
+  );
+  return response.data.data;
+};
+
+// Update organism
+export const updateOrganism = async (
+  organismId: number,
+  payload: Partial<AddOrganismPayload>
+): Promise<RequestedOrganism> => {
+  const response = await apiClient.patch<{ data: RequestedOrganism }>(
+    `/requested-organisms/${organismId}`,
+    payload
+  );
+  return response.data.data;
+};
+
+// Delete organism
+export const deleteOrganism = async (organismId: number): Promise<void> => {
+  await apiClient.delete(`/requested-organisms/${organismId}`);
 };

@@ -18,7 +18,7 @@ import {
 
 const reportNavItems = [
   { to: '/reports/lab-general', label: 'تقرير المختبر العام', icon: BarChartBig },
-  { to: '/reports/doctor-shifts', label: 'مناوبات الأطباء', icon: FileBarChart2 },
+  { to: '/reports/doctor-shifts', label: 'عيادات اليوم', icon: FileBarChart2 },
   { to: '/reports/service-statistics', label: 'إحصائيات الخدمات', icon: FileBarChart2 },
   { to: '/reports/clinic-shift-summary', label: 'التقرير العام للعيادات', icon: FileSpreadsheet },
   { to: '/reports/costs', label: 'تقرير التكاليف', icon: FileSpreadsheet },

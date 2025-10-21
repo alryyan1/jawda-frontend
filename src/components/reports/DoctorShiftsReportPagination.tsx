@@ -1,5 +1,4 @@
 import React from "react";
-import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 
 interface PaginationMeta {
@@ -22,7 +21,6 @@ const DoctorShiftsReportPagination: React.FC<DoctorShiftsReportPaginationProps> 
   isFetching,
   onPageChange,
 }) => {
-  const { t } = useTranslation(["common"]);
 
   if (!meta || meta.last_page <= 1) {
     return null;
@@ -36,13 +34,10 @@ const DoctorShiftsReportPagination: React.FC<DoctorShiftsReportPaginationProps> 
         onClick={() => onPageChange(Math.max(1, currentPage - 1))}
         disabled={currentPage === 1 || isFetching}
       >
-        {t("common:previous")}
+        السابق
       </Button>
       <span className="text-sm text-muted-foreground">
-        {t("common:pageXOfY", {
-          current: meta.current_page,
-          total: meta.last_page,
-        })}
+        صفحة {meta.current_page} من {meta.last_page}
       </span>
       <Button
         variant="outline"
@@ -50,7 +45,7 @@ const DoctorShiftsReportPagination: React.FC<DoctorShiftsReportPaginationProps> 
         onClick={() => onPageChange(Math.min(meta.last_page, currentPage + 1))}
         disabled={currentPage === meta.last_page || isFetching}
       >
-        {t("common:next")}
+        التالي
       </Button>
     </div>
   );

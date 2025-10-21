@@ -21,6 +21,14 @@ export const downloadDoctorShiftsReportPdf = async (filters: Omit<DoctorShiftRep
   });
   return response.data;
 };
+
+export const downloadDoctorShiftsReportExcel = async (filters: Omit<DoctorShiftReportFilters, 'page' | 'per_page'>): Promise<Blob> => {
+  const response = await apiClient.get<Blob>('/reports/doctor-shifts/excel', {
+    params: filters,
+    responseType: 'blob', // Important: tell Axios to expect a binary response
+  });
+  return response.data;
+};
 export const downloadDoctorShiftFinancialSummaryPdf = async (doctorShiftId: number): Promise<Blob> => {
   const response = await apiClient.get(`/reports/doctor-shifts/${doctorShiftId}/financial-summary/pdf`, {
     responseType: 'blob',

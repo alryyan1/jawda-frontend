@@ -272,8 +272,11 @@ export interface DoctorShiftReportItem {
   status_text: string; // "Open", "Closed"
   user_id_opened?: number; // NEW: User who opened the DoctorShift
   user_name_opened?: string; // NEW: Name of the user who opened
+  created_at?: string; // NEW: Creation date of the doctor shift
 
   // Financials (ideally from backend, or fetched on demand)
+  total_income?: number; // Total income from services
+  clinic_enurance?: number; // Clinic endurance amount
   total_doctor_entitlement?: number;
   cash_entitlement?: number;
   insurance_entitlement?: number;

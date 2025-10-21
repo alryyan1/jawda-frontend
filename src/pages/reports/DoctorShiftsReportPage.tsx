@@ -2,8 +2,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import {
   useQuery,
-  useMutation,
-  useQueryClient,
   keepPreviousData,
 } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -13,10 +11,9 @@ import { toast } from "sonner";
 import { createTheme, ThemeProvider } from "@mui/material";
 import { useTheme } from "next-themes";
 
-import { Loader2 } from "lucide-react";
+import { Loader2, Download, FileSpreadsheet } from "lucide-react";
 
 // Import the new components
-import DoctorShiftsReportHeader from "@/components/reports/DoctorShiftsReportHeader";
 import DoctorShiftsReportFilters from "@/components/reports/DoctorShiftsReportFilters";
 import DoctorShiftsReportTable from "@/components/reports/DoctorShiftsReportTable";
 import DoctorShiftsReportPagination from "@/components/reports/DoctorShiftsReportPagination";
@@ -25,18 +22,13 @@ import type {
   DoctorShiftReportItem,
 } from "@/types/reports";
 import type { Doctor } from "@/types/doctors";
-import type { User } from "@/types/auth";
 import type { Shift as GeneralShiftType } from "@/types/shifts";
 import type { PaginatedResponse } from "@/types/common";
 import {
   getDoctorShiftsReport,
   downloadDoctorShiftsReportPdf,
-  downloadDoctorShiftFinancialSummaryPdf,
+  downloadDoctorShiftsReportExcel,
 } from "@/services/reportService";
-import {
-  endDoctorShift,
-  updateDoctorShiftProofingFlags,
-} from "@/services/doctorShiftService";
 import { getDoctorsList } from "@/services/doctorService";
 import { getUsers } from "@/services/userService";
 import { getShiftsList } from "@/services/shiftService";
@@ -53,8 +45,8 @@ import {
   DialogContent,
   DialogActions,
   Button,
-  IconButton,
 } from "@mui/material";
+import { Button as UIButton } from "@/components/ui/button";
 
 interface Filters {
   userIdOpened: string;
@@ -66,17 +58,9 @@ interface Filters {
   status: "all" | "open" | "closed";
 }
 
-type ProofingFlagKey = keyof Pick<
-  DoctorShiftReportItem,
-  | "is_cash_revenue_prooved"
-  | "is_cash_reclaim_prooved"
-  | "is_company_revenue_prooved"
-  | "is_company_reclaim_prooved"
->;
 
 const DoctorShiftsReportPage: React.FC = () => {
   // translations removed; using direct Arabic strings
-  const queryClient = useQueryClient();
   const { user: currentUser } = useAuth();
   const { can } = useAuthorization();
   const { theme } = useTheme();
@@ -118,14 +102,12 @@ const DoctorShiftsReportPage: React.FC = () => {
   }), [theme]);
 
   const canViewAllUsersShifts = can("list all_doctor_shifts");
-  const canCloseShifts = can("end doctor_shifts");
-  const canRecordEntitlementCost = can("record clinic_costs");
-  const canUpdateProofing = can("view doctor_shift_financial_summary");
 
   const defaultDateFrom = format(new Date(), "yyyy-MM-dd");
   const defaultDateTo = format(new Date(), "yyyy-MM-dd");
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(50);
   const [filters, setFilters] = useState<Filters>({
     userIdOpened: canViewAllUsersShifts
       ? "all"
@@ -140,19 +122,9 @@ const DoctorShiftsReportPage: React.FC = () => {
   const [debouncedSearchDoctorName, setDebouncedSearchDoctorName] =
     useState("");
 
-  const [isFinancialSummaryDialogOpen, setIsFinancialSummaryDialogOpen] =
-    useState(false);
-  const [selectedShiftForSummaryDialog, setSelectedShiftForSummaryDialog] =
-    useState<DoctorShiftReportItem | null>(null);
-
-  const [isAddCostDialogOpen, setIsAddCostDialogOpen] = useState(false);
-  const [selectedShiftForCostAction, setSelectedShiftForCostAction] =
-    useState<DoctorShiftReportItem | null>(null);
 
   const [isGeneratingListPdf, setIsGeneratingListPdf] = useState(false);
-  const [isGeneratingSummaryPdfId, setIsGeneratingSummaryPdfId] = useState<
-    number | null
-  >(null);
+  const [isGeneratingExcel, setIsGeneratingExcel] = useState(false);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false);
   const [pdfPreviewFilename, setPdfPreviewFilename] = useState("report.pdf");
@@ -168,7 +140,7 @@ const DoctorShiftsReportPage: React.FC = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [filters, debouncedSearchDoctorName]);
+  }, [filters, debouncedSearchDoctorName, rowsPerPage]);
 
   useEffect(() => {
     if (
@@ -206,6 +178,7 @@ const DoctorShiftsReportPage: React.FC = () => {
   const reportQueryKey = [
     "doctorShiftsReport",
     currentPage,
+    rowsPerPage,
     filters,
     debouncedSearchDoctorName,
   ] as const;
@@ -220,7 +193,7 @@ const DoctorShiftsReportPage: React.FC = () => {
     queryFn: () =>
       getDoctorShiftsReport({
         page: currentPage,
-        per_page: 15,
+        per_page: rowsPerPage,
         date_from: filters.dateFrom,
         date_to: filters.dateTo,
         doctor_id: filters.doctorId === "all" ? undefined : parseInt(filters.doctorId),
@@ -241,69 +214,11 @@ const DoctorShiftsReportPage: React.FC = () => {
     placeholderData: keepPreviousData,
   });
 
-  const closeShiftMutation = useMutation({
-    mutationFn: (doctorShiftId: number) => endDoctorShift({ doctor_shift_id: doctorShiftId }),
-    onSuccess: () => {
-      toast.success('تم إغلاق المناوبة بنجاح');
-      queryClient.invalidateQueries({ queryKey: ["doctorShiftsReport"] });
-    },
-    onError: (error: unknown) => {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      toast.error('فشل إغلاق المناوبة', { description: errorMessage });
-    },
-  });
-
-  const proofingFlagsMutation = useMutation({
-    mutationFn: (params: { shiftId: number; flags: Partial<Pick<DoctorShiftReportItem, ProofingFlagKey>> }) =>
-      updateDoctorShiftProofingFlags(params.shiftId, params.flags),
-    onSuccess: (updatedDoctorShift, variables) => {
-      toast.success('تم تحديث حالة التدقيق');
-      queryClient.setQueryData(reportQueryKey, (oldData: PaginatedResponse<DoctorShiftReportItem> | undefined) => {
-        if (!oldData) return oldData;
-        return {
-          ...oldData,
-          data: oldData.data.map(ds => 
-            ds.id === variables.shiftId 
-            ? { ...ds, ...variables.flags }
-            : ds
-          ),
-        };
-      });
-    },
-    onError: (error: unknown) => {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        toast.error('فشل تحديث حالة التدقيق', { description: errorMessage });
-    },
-  });
-
-  const handleProofingAction = (shiftId: number, flagField: ProofingFlagKey, currentValue?: boolean) => {
-    if (!canUpdateProofing) {
-        toast.error('هذا الإجراء غير مصرح به');
-        return;
-    }
-    if (proofingFlagsMutation.isPending) return;
-
-    const flagsToUpdate: Partial<Pick<DoctorShiftReportItem, ProofingFlagKey>> = { [flagField]: !currentValue };
-    proofingFlagsMutation.mutate({ shiftId, flags: flagsToUpdate });
-  };
 
   const handleFilterChange = (filterName: keyof Filters, value: string) => {
     setFilters((prev) => ({ ...prev, [filterName]: value }));
   };
 
-  const handleOpenAddCostDialog = (shift: DoctorShiftReportItem) => {
-    if (!canRecordEntitlementCost) {
-      toast.error('هذا الإجراء غير مصرح به');
-      return;
-    }
-    setSelectedShiftForCostAction(shift);
-    setIsAddCostDialogOpen(true);
-  };
-
-  const handleCostAddedAndProved = () => {
-    setIsAddCostDialogOpen(false);
-    setSelectedShiftForCostAction(null);
-  };
 
   const generatePdf = async (
     fetchFn: () => Promise<Blob>,
@@ -344,14 +259,29 @@ const DoctorShiftsReportPage: React.FC = () => {
     ).finally(() => setIsGeneratingListPdf(false));
   };
 
-  const handleDownloadSummaryPdf = async (shift: DoctorShiftReportItem) => {
-    setIsGeneratingSummaryPdfId(shift.id);
+  const handleDownloadExcel = () => {
+    if (!paginatedData?.data.length) {
+      toast.info('لا توجد بيانات للتصدير');
+      return;
+    }
+    
+    setIsGeneratingExcel(true);
+    
     generatePdf(
-      () => downloadDoctorShiftFinancialSummaryPdf(shift.id),
-      'طباعة الملخص المالي',
-      `Doctor_Shift_Summary_${shift.id}.pdf`
-    ).finally(() => setIsGeneratingSummaryPdfId(null));
+      () => downloadDoctorShiftsReportExcel({
+        date_from: filters.dateFrom,
+        date_to: filters.dateTo,
+        doctor_id: filters.doctorId === "all" ? undefined : parseInt(filters.doctorId),
+        status: filters.status === "all" ? undefined : filters.status === "open" ? "1" : "0",
+        shift_id: filters.generalShiftId === "all" ? undefined : parseInt(filters.generalShiftId),
+        user_id_opened: filters.userIdOpened === "all" ? undefined : parseInt(filters.userIdOpened),
+        doctor_name_search: debouncedSearchDoctorName || undefined,
+      }),
+      'تقرير مناوبات الأطباء Excel',
+      `Doctor_Shifts_Report_${filters.dateFrom}_to_${filters.dateTo}.xlsx`
+    ).finally(() => setIsGeneratingExcel(false));
   };
+
 
   const shifts = paginatedData?.data || [];
   const meta = paginatedData?.meta;
@@ -386,12 +316,36 @@ const DoctorShiftsReportPage: React.FC = () => {
   return (
     <ThemeProvider theme={muiTheme}>
       <Box className="container mx-auto py-4 sm:py-6 lg:py-8 space-y-6 text-base">
-        <DoctorShiftsReportHeader
-          isGeneratingListPdf={isGeneratingListPdf}
-          isLoading={isLoading}
-          hasData={shifts.length > 0}
-          onDownloadListPdf={handleDownloadListPdf}
-        />
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex gap-2">
+            <UIButton
+              onClick={handleDownloadListPdf}
+              variant="outline"
+              size="sm"
+              disabled={isGeneratingListPdf || isLoading || !shifts.length}
+            >
+              {isGeneratingListPdf ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              <span className="ltr:ml-2 rtl:mr-2">{"تصدير PDF"}</span>
+            </UIButton>
+            <UIButton
+              onClick={handleDownloadExcel}
+              variant="outline"
+              size="sm"
+              disabled={isGeneratingExcel || isLoading || !shifts.length}
+            >
+              {isGeneratingExcel ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <FileSpreadsheet className="h-4 w-4" />
+              )}
+              <span className="ltr:ml-2 rtl:mr-2">{"تصدير Excel"}</span>
+            </UIButton>
+          </div>
+        </div>
 
         <DoctorShiftsReportFilters
           filters={filters}
@@ -414,16 +368,8 @@ const DoctorShiftsReportPage: React.FC = () => {
         <DoctorShiftsReportTable
           shifts={shifts}
           isLoading={isLoading}
-          isFetching={isFetching}
-          isGeneratingSummaryPdfId={isGeneratingSummaryPdfId}
-          closeShiftMutation={closeShiftMutation}
-          proofingFlagsMutation={proofingFlagsMutation}
-          canCloseShifts={canCloseShifts}
-          canRecordEntitlementCost={canRecordEntitlementCost}
-          canUpdateProofing={canUpdateProofing}
-          onDownloadSummaryPdf={handleDownloadSummaryPdf}
-          onOpenAddCostDialog={handleOpenAddCostDialog}
-          onProofingAction={handleProofingAction}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={setRowsPerPage}
         />
 
         <DoctorShiftsReportPagination
@@ -443,7 +389,7 @@ const DoctorShiftsReportPage: React.FC = () => {
       >
         <DialogTitle>{pdfPreviewTitle || 'معاينة الملف'}</DialogTitle>
         <DialogContent dividers>
-          {(!pdfPreviewUrl || isGeneratingListPdf || (!!isGeneratingSummaryPdfId && !pdfPreviewUrl)) ? (
+          {(!pdfPreviewUrl || isGeneratingListPdf) ? (
             <Box className="flex items-center justify-center py-10">
               <Loader2 className="h-8 w-8 animate-spin" />
             </Box>
@@ -463,13 +409,6 @@ const DoctorShiftsReportPage: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {selectedShiftForSummaryDialog && (
-        <></>
-      )}
-
-      {selectedShiftForCostAction && (
-        <></>
-      )}
     </ThemeProvider>
   );
 };

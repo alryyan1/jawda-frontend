@@ -105,7 +105,7 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId 
   // showJsonDialog(user,'user')
   return (
       <Box sx={{
-        width:`${window.innerWidth - 300}px`,
+        // width:`${window.innerWidth - 300}px`,
         overflowX:'auto'
       }} className="doctors-tabs-flex-wrapper">
     

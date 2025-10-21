@@ -31,10 +31,10 @@
   height: calc(100vh - 100px);
   min-height: 0;
   display: grid;
-  gap: 16px;
+  gap: 5px;
   overflow: hidden;
   width: 100%;
-  padding: 16px;
+  padding: 5px;
 }
 
 .clinic-main-content.with-registration {
@@ -170,8 +170,8 @@
 
 @media (max-width: 768px) {
   .clinic-header {
-    height: 80px;
-    padding: 16px;
+    /* height: 80px; */
+    padding: 5px;
   }
   
   .clinic-main-content {
@@ -181,14 +181,14 @@
   }
   
   .clinic-panel {
-    padding: 16px;
+    padding: 5px;
   }
   
   .clinic-panel-header {
-    margin-left: -16px;
-    margin-right: -16px;
-    padding-left: 16px;
-    padding-right: 16px;
+    margin-left: -5px;
+    margin-right: -5px;
+    padding-left: 5px;
+    padding-right: 5px;
   }
   
 }

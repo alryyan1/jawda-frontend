@@ -121,7 +121,7 @@ export interface Patient {
   result_print_date?: string | null;
   auth_date?: string | null;
   doctor_visit?: DoctorVisit;
-
+  has_cbc: boolean; 
   subcompany_id?: number | null;
   subcompany?: Subcompany;
   user:UserStripped;

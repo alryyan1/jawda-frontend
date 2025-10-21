@@ -259,25 +259,25 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
         readOnly={isDisabled}
         sx={{
           '& .MuiAutocomplete-root': {
-            fontSize: '0.7rem',
+            // fontSize: '0.7rem',
           },
           '& .MuiInputBase-root': {
             minHeight: '20px',
-            fontSize: '0.7rem',
+            // fontSize: '0.7rem',
             padding: '1px 4px',
           },
           '& .MuiInputBase-input': {
             padding: '1px 2px',
-            fontSize: '0.7rem',
+            // fontSize: '0.7rem',
           },
           '& .MuiAutocomplete-listbox': {
             backgroundColor: 'var(--background)',
             color: 'var(--foreground)',
-            fontSize: '0.7rem',
+            // fontSize: '0.7rem',
           },
           '& .MuiAutocomplete-option': {
             color: 'var(--foreground)',
-            fontSize: '0.7rem',
+            // fontSize: '0.7rem',
             padding: '2px 4px',
             minHeight: 'auto',
             lineHeight: 1.1,

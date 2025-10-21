@@ -75,6 +75,7 @@ import {
 import realtimeService from "@/services/realtimeService";
 import type { LabRequest } from "@/types/visits";
 import type { SysmexResultEventData } from "@/types/sysmex";
+import showJsonDialog from "@/lib/showJsonDialog";
 
 const LabWorkstationPage: React.FC = () => {
   // Direct Arabic labels for this page
@@ -110,6 +111,7 @@ const LabWorkstationPage: React.FC = () => {
   const [activeQueueFilters, setActiveQueueFilters] = useState<LabQueueFilters>(
     {}
   );
+
   const [appearanceSettings, setAppearanceSettings] =
     useState<LabAppearanceSettings>(getAppearanceSettings);
 
@@ -470,6 +472,7 @@ const LabWorkstationPage: React.FC = () => {
     mutationFn: async (targetVisitId: number) =>
       getDoctorVisitById(targetVisitId),
     onSuccess: (data: DoctorVisit) => {
+      // showJsonDialog(data)
       // console.log(data, "data");
       if (data && data.patient && data.lab_requests) {
         // alert("data")
@@ -499,6 +502,7 @@ const LabWorkstationPage: React.FC = () => {
           is_result_locked: data.patient.result_is_locked || false,
           total_result_count: 0, // Will be updated by backend
           pending_result_count: 0, // Will be updated by backend
+          has_cbc: data.patient.has_cbc || false,
         };
 
         setSelectedQueueItem(queueItemLike); // This makes it appear "selected" in the context

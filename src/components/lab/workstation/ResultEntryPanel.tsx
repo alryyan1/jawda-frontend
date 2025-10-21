@@ -813,7 +813,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                                       fontWeight: 900,
                                       textAlign: "center",
                                       color: "var(--foreground)",
-                                      fontSize: "0.7rem",
+                                      // fontSize: "0.7rem",
                                       lineHeight: 1.1,
                                       margin: 0,
                                       padding: 0,
@@ -831,7 +831,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                                       alignItems: "center",
                                       mt: 0,
                                       color: "var(--muted-foreground)",
-                                      fontSize: "0.6rem",
+                                      // fontSize: "0.6rem",
                                       lineHeight: 1,
                                       margin: 0,
                                       padding: 0,
@@ -846,7 +846,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                                     backgroundColor: "var(--background)",
                                     color: "var(--foreground)",
                                     padding: "1px 2px",
-                                    fontSize: "0.7rem",
+                                    // fontSize: "0.7rem",
                                   }}
                                 >
                                   <Controller
@@ -858,7 +858,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                                     }) =>
                                       
                                         <div 
-                                          style={{ fontSize: "0.7rem" }}
+                                          // style={{ fontSize: "0.7rem" }}
                                           onClick={(e) => e.stopPropagation()}
                                         >
                                           <ChildTestAutocompleteInput

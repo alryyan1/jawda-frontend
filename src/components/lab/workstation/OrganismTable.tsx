@@ -143,6 +143,7 @@ const OrganismTable: React.FC<OrganismTableProps> = ({
             onChange={setNewOrganismName}
             placeholder="Enter organism name..."
             height="60px"
+            type="organism"
           />
           <Button
             variant="contained"
@@ -222,14 +223,17 @@ const OrganismTable: React.FC<OrganismTableProps> = ({
                         onChange={(value) => handleFieldChange(organism.id, 'organism', value)}
                         height="80px"
                         placeholder="Enter organism name..."
+                        table="organism"
                       />
                     </TableCell>
                     <TableCell className="organism-table-cell" sx={{ direction: 'ltr', textAlign: 'left' }}>
                       <OrganismCodeEditor
+                      
                         value={editingOrganism.sensitive || ''}
                         onChange={(value) => handleFieldChange(organism.id, 'sensitive', value)}
                         height="80px"
                         placeholder="Enter sensitive antibiotics..."
+                        table="drugs"
                       />
                     </TableCell>
                     <TableCell className="organism-table-cell" sx={{ direction: 'ltr', textAlign: 'left' }}>
@@ -238,6 +242,7 @@ const OrganismTable: React.FC<OrganismTableProps> = ({
                         onChange={(value) => handleFieldChange(organism.id, 'resistant', value)}
                         height="80px"
                         placeholder="Enter resistant antibiotics..."
+                        table="drugs"
                       />
                     </TableCell>
                     <TableCell>

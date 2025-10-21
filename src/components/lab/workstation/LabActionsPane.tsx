@@ -397,7 +397,7 @@ console.log(currentPatientData,'currentPatientData')
                     >
                       {toggleLockMutation.isPending ? (
                         <Loader2 className="h-7! w-7! animate-spin" />
-                    ) : currentPatientData?.result_is_locked === false ? (
+                    ) : currentPatientData?.is_result_locked === false ? (
                         <FontAwesomeIcon icon={faLockOpen} className="h-7! w-7! text-green-500" />
                     ) : (
                         <FontAwesomeIcon icon={faLock} className="h-7! w-7! text-red-500" />
@@ -470,7 +470,7 @@ console.log(currentPatientData,'currentPatientData')
                     {populateCbcMutation.isPending ? (
                         <Loader2 className="h-7! w-7! animate-spin" />
                     ) : (
-                        <FontAwesomeIcon icon={faBars} style={{color: currentPatientData?.has_cbc ? 'red' : 'green'}} className="h-7! w-7" />
+                        <FontAwesomeIcon icon={faBars} style={{color: currentPatientData?.has_cbc ? 'red' : ''}} className="h-7! w-7" />
                     )}
                 </Button>
             </TooltipTrigger>
@@ -480,7 +480,7 @@ console.log(currentPatientData,'currentPatientData')
         </Tooltip>
         
         {/* Add Organism Button */}
-        <Tooltip>
+        {/* <Tooltip>
             <TooltipTrigger asChild>
                 <Button 
                     variant="ghost" 
@@ -498,8 +498,8 @@ console.log(currentPatientData,'currentPatientData')
             </TooltipTrigger>
             <TooltipContent side="right" sideOffset={5}>
                 <p>إضافة كائن حي</p>
-            </TooltipContent>
-        </Tooltip>
+            </TooltipContent> */}
+        {/* </Tooltip> */}
         <Separator className="my-2" />
 
           {/* New Appearance Settings Button */}

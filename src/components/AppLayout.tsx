@@ -22,6 +22,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -43,6 +46,22 @@ import {
   Pencil,
   Bell,
   BellOff,
+  Building,
+  ListOrdered,
+  CreditCard,
+  Layers,
+  Link2,
+  Stethoscope,
+  User,
+  ShieldCheck,
+  Tag,
+  BarChartBig,
+  FileSpreadsheet,
+  HandCoins,
+  LineChart,
+  UsersRound,
+  CalendarCheck2,
+  FileText,
 } from "lucide-react";
 import { Toaster } from "sonner";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -190,11 +209,7 @@ const getUtilityNavItems = (userType?: UserType): NavItem[] => {
 
 // Utility/Admin Navigation Items (typically at the bottom or in a separate group)
 const utilityNavItems: NavItem[] = [
-  { to: '/reports/doctor-shifts', label: 'التقارير', icon: FileBarChart2 },
-  // { to: '/users', label: 'المستخدمون', icon: Users },
-  // { to: '/roles', label: 'الأدوار', icon: ShieldCheck },
-  { to: '/settings/general', label: 'الإعدادات', icon: Settings },
-  // { to: '/specialists', label: 'التخصصات الطبيه', icon: Users },
+  // Moved to dropdown menu in app bar
 ];
 
 // Theme Toggle Hook (ensure this is defined, possibly in a separate utils/hooks file)
@@ -530,13 +545,6 @@ const AppLayout: React.FC = () => {
             ))}
           </nav>
         </ScrollArea>
-        {filteredUtilityNavItems.length > 0 && (
-          <div className="flex-shrink-0 p-2 space-y-1 border-t border-border">
-            {filteredUtilityNavItems.map((item) => (
-               <NavLinkItem key={item.to} item={item} isCollapsed={!isMobile && isDesktopSidebarCollapsed} onClick={() => isMobile && setMobileNavOpen(false)} />
-            ))}
-          </div>
-        )}
       </div>
     );
   };
@@ -767,6 +775,183 @@ const AppLayout: React.FC = () => {
                       <DropdownMenuItem asChild>
                         <Link to="/profile" className="w-full flex items-center"><Users className="mr-2 h-4 w-4" /> الملف الشخصي</Link>
                       </DropdownMenuItem>
+                      
+                      {/* Reports and Settings for admin users */}
+                      {(!user?.user_type || !Object.values(UserType).includes(user.user_type as UserType)) && (
+                        <>
+                          <DropdownMenuSeparator />
+                          
+                          {/* Reports Submenu */}
+                          <DropdownMenuSub>
+                            <DropdownMenuSubTrigger className="flex items-center">
+                              <FileBarChart2 className="mr-2 h-4 w-4" />
+                              التقارير
+                            </DropdownMenuSubTrigger>
+                            <DropdownMenuSubContent>
+                              <DropdownMenuItem asChild>
+                                <Link to="/reports/lab-general" className="w-full flex items-center">
+                                  <BarChartBig className="mr-2 h-4 w-4" />
+                                  المختبر
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link to="/reports/doctor-shifts" className="w-full flex items-center">
+                                  <FileBarChart2 className="mr-2 h-4 w-4" />
+                                  عيادات اليوم
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link to="/reports/service-statistics" className="w-full flex items-center">
+                                  <FileBarChart2 className="mr-2 h-4 w-4" />
+                                  إحصائيات الخدمات
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link to="/reports/clinic-shift-summary" className="w-full flex items-center">
+                                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                                  التقرير العام
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link to="/reports/costs" className="w-full flex items-center">
+                                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                                  التكاليف
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link to="/reports/monthly-service-income" className="w-full flex items-center">
+                                  <BarChartBig className="mr-2 h-4 w-4" />
+                                  دخل الخدمات الشهري
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link to="/reports/service-cost-breakdown" className="w-full flex items-center">
+                                  <BarChartBig className="mr-2 h-4 w-4" />
+                                  تفصيل تكلفة الخدمات
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link to="/reports/doctor-statistics" className="w-full flex items-center">
+                                  <BarChartBig className="mr-2 h-4 w-4" />
+                                  إحصائيات الأطباء
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link to="/reports/company-performance" className="w-full flex items-center">
+                                  <BarChartBig className="mr-2 h-4 w-4" />
+                                  أداء الشركات
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link to="/reports/doctor-company-entitlement" className="w-full flex items-center">
+                                  <HandCoins className="mr-2 h-4 w-4" />
+                                  استحقاقات الأطباء للشركات
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link to="/reports/yearly-income-comparison" className="w-full flex items-center">
+                                  <LineChart className="mr-2 h-4 w-4" />
+                                  مقارنة الدخل السنوية
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link to="/reports/yearly-patient-frequency" className="w-full flex items-center">
+                                  <UsersRound className="mr-2 h-4 w-4" />
+                                  تردد المرضى
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link to="/reports/monthly-lab-income" className="w-full flex items-center">
+                                  <BarChartBig className="mr-2 h-4 w-4" />
+                                  دخل المختبر الشهري
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link to="/reports/lab-test-statistics" className="w-full flex items-center">
+                                  <BarChartBig className="mr-2 h-4 w-4" />
+                                  إحصائيات تحاليل المختبر
+                                </Link>
+                              </DropdownMenuItem>
+                            </DropdownMenuSubContent>
+                          </DropdownMenuSub>
+                          
+                          {/* Settings Submenu */}
+                          <DropdownMenuSub>
+                            <DropdownMenuSubTrigger className="flex items-center">
+                              <Settings className="mr-2 h-4 w-4" />
+                              الإعدادات
+                            </DropdownMenuSubTrigger>
+                            <DropdownMenuSubContent>
+                              <DropdownMenuItem asChild>
+                                <Link to="/settings/general" className="w-full flex items-center">
+                                  <Settings className="mr-2 h-4 w-4" />
+                                  عام
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link to="/settings/companies" className="w-full flex items-center">
+                                  <Building className="mr-2 h-4 w-4" />
+                                  الشركات
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link to="/settings/laboratory" className="w-full flex items-center">
+                                  <FlaskConical className="mr-2 h-4 w-4" />
+                                  المختبر
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link to="/settings/service-groups" className="w-full flex items-center">
+                                  <Layers className="mr-2 h-4 w-4" />
+                                  مجموعات الخدمات
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link to="/settings/services" className="w-full flex items-center">
+                                  <ListOrdered className="mr-2 h-4 w-4" />
+                                  إعدادات الخدمات
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link to="/settings/offers" className="w-full flex items-center">
+                                  <Tag className="mr-2 h-4 w-4" />
+                                  العروض
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link to="/settings/doctors" className="w-full flex items-center">
+                                  <Stethoscope className="mr-2 h-4 w-4" />
+                                  الأطباء
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link to="/settings/specialists" className="w-full flex items-center">
+                                  <Users className="mr-2 h-4 w-4" />
+                                  التخصصات الطبية
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link to="/settings/users" className="w-full flex items-center">
+                                  <User className="mr-2 h-4 w-4" />
+                                  المستخدمون
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link to="/settings/roles" className="w-full flex items-center">
+                                  <ShieldCheck className="mr-2 h-4 w-4" />
+                                  الأدوار
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link to="/settings/lab-to-lab" className="w-full flex items-center">
+                                  <Link2 className="mr-2 h-4 w-4" />
+                                  المعامل المتعاقدة
+                                </Link>
+                              </DropdownMenuItem>
+                            </DropdownMenuSubContent>
+                          </DropdownMenuSub>
+                        </>
+                      )}
                
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive focus:bg-destructive/10">

@@ -126,12 +126,7 @@ const ClinicShiftSummaryReportPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2">
-        <FileSpreadsheet className="h-7 w-7 text-primary" />
-        <h1 className="text-2xl sm:text-3xl font-bold">
-          ملخص مناوبة العيادة
-        </h1>
-      </div>
+  
       <Card>
         <CardHeader>
           <Typography variant="h6">مرشحات التقرير</Typography>

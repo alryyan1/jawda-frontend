@@ -93,16 +93,16 @@ function DoctorShiftsReportTable({
       <TableContainer dir="ltr  " component={Paper} elevation={2}>
         <Table size="small" sx={{ direction: 'ltr' }}>
         <TableHead>
-          <TableRow sx={{ backgroundColor: 'primary.main', '& .MuiTableCell-head': { color: 'white' } }}>
-            <TableCell align="center">تاريخ الإنشاء</TableCell>
+          <TableRow>
+            <TableCell align="center">تاريخ </TableCell>
             <TableCell align="center">التخصص</TableCell>
             <TableCell align="center">الطبيب</TableCell>
-            <TableCell align="center">إجمالي الإيراد</TableCell>
+            <TableCell align="center">إجمالي المدفوع</TableCell>
             <TableCell align="center">التحمل</TableCell>
             <TableCell align="center">استحقاق (كاش)</TableCell>
             <TableCell align="center">استحقاق (تأمين)</TableCell>
-            <TableCell align="center">إجمالي المستحق</TableCell>
-            <TableCell align="center">الموظف</TableCell>
+            <TableCell align="center">إجمالي الاستحقاق</TableCell>
+            <TableCell align="center">المستخدم</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>

@@ -17,11 +17,11 @@ import {
 } from '@mui/material';
 
 const reportNavItems = [
-  { to: '/reports/lab-general', label: 'تقرير المختبر العام', icon: BarChartBig },
+  { to: '/reports/lab-general', label: ' المختبر ', icon: BarChartBig },
   { to: '/reports/doctor-shifts', label: 'عيادات اليوم', icon: FileBarChart2 },
   { to: '/reports/service-statistics', label: 'إحصائيات الخدمات', icon: FileBarChart2 },
-  { to: '/reports/clinic-shift-summary', label: 'التقرير العام للعيادات', icon: FileSpreadsheet },
-  { to: '/reports/costs', label: 'تقرير التكاليف', icon: FileSpreadsheet },
+  { to: '/reports/clinic-shift-summary', label: 'التقرير العام ', icon: FileSpreadsheet },
+  { to: '/reports/costs', label: ' التكاليف', icon: FileSpreadsheet },
   { to: '/reports/monthly-service-income', label: 'دخل الخدمات الشهري', icon: BarChartBig },
   { to: '/reports/service-cost-breakdown', label: 'تفصيل تكلفة الخدمات', icon: BarChartBig },
   { to: '/reports/doctor-statistics', label: 'إحصائيات الأطباء', icon: BarChartBig },

@@ -345,6 +345,26 @@ const DoctorShiftsReportPage: React.FC = () => {
               <span className="ltr:ml-2 rtl:mr-2">{"تصدير Excel"}</span>
             </UIButton>
           </div>
+          
+          {/* Count Display */}
+          {!isLoading && shifts.length > 0 && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg px-4 py-2">
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                <span className="text-blue-700 dark:text-blue-300 font-medium text-sm">
+                  عدد مناوبات الأطباء المعروضة: {shifts.length}
+                </span>
+                {meta && (
+                  <span className="text-xs text-blue-600 dark:text-blue-400">
+                    من {((currentPage - 1) * rowsPerPage) + 1} إلى {Math.min(currentPage * rowsPerPage, meta.total)}
+                    {meta.total > 0 && (
+                      <span className="mr-1">من أصل {meta.total}</span>
+                    )}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         <DoctorShiftsReportFilters

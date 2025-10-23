@@ -90,15 +90,13 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId 
 
   if (doctorShifts.length === 0 && !isLoading) {
     return (
-      <Paper className="empty-container">
-        <Box className="empty-content">
-          <Typography className="empty-title">
-            لا توجد نوبات نشطة
+      <Paper className="">
+        {/* <Box className="empty-content"> */}
+          <Typography className="">
+            لا توجد ورديات اطباء نشطة
           </Typography>
-          <Typography className="empty-description">
-            لا يوجد أطباء في النوبة حالياً
-          </Typography>
-        </Box>
+        
+        {/* </Box> */}
       </Paper>
     );
   }
@@ -109,7 +107,7 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId 
         overflowX:'auto'
       }} className="doctors-tabs-flex-wrapper">
     
-          <Box className="doctors-tabs-flex-container">
+          <Box  className="doctors-tabs-flex-container overflow-y-hidden">
             {doctorShifts.filter(shift =>shift.user_id_opened == user?.id || hasRole('admin') || user?.user_type == 'خزنه موحده' || user?.user_type == 'تامين').map((shift) => {
               const isActive = activeShiftId === shift.id;
               const isExamining = shift.is_examining;
@@ -136,7 +134,40 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId 
                   }}
                   onClick={() => onShiftSelect(shift)}
                   className={getTabClassName()}
+                  sx={{ position: 'relative' }}
                 >
+                  {/* Patient Count Badge - Top Left Corner */}
+                  {shift.patients_count > 0 && (
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        top: -8,
+                        left: -8,
+                        backgroundColor: '#ef4444', // red-500
+                        color: 'white',
+                        borderRadius: '50%',
+                        minWidth: '24px',
+                        height: '24px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        zIndex: 10,
+                        border: '2px solid white',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                        animation: shift.patients_count > 0 ? 'pulse 2s infinite' : 'none',
+                        '@keyframes pulse': {
+                          '0%': { transform: 'scale(1)' },
+                          '50%': { transform: 'scale(1.1)' },
+                          '100%': { transform: 'scale(1)' }
+                        }
+                      }}
+                    >
+                      {shift.patients_count > 99 ? '99+' : shift.patients_count}
+                    </Box>
+                  )}
+
                   {/* Doctor Name */}
                   <Typography
                   style={{fontWeight:'bold'}}
@@ -145,24 +176,6 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId 
                   >
                     {shift.doctor_name}
                   </Typography>
-
-                  {/* Status Indicators */}
-                  <Box className="status-indicators">
-                    {/* Patient Count Badge */}
-                    {shift.patients_count > 0 && (
-                      <span
-                        className={`patient-count-badge ${
-                          isActive 
-                            ? 'patient-count-badge--active'
-                            : isExamining
-                              ? 'patient-count-badge--inactive-examining'
-                              : 'patient-count-badge--inactive-not-examining'
-                        }`}
-                      >
-                        {shift.patients_count}
-                      </span>
-                    )}
-                  </Box>
 
                   {/* Active Tab Indicator */}
                   {isActive && (

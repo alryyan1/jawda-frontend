@@ -114,16 +114,9 @@ const LabReceptionHeader: React.FC<LabReceptionHeaderProps> = ({
               borderRadius: 1,
             }}
           >
-            <Microscope size={28} color="#1976d2" />
+            {/* <Microscope size={28} color="#1976d2" /> */}
           </Box>
-          <Box>
-            <Typography variant="h5" component="h1" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-              استقبال المختبر
-            </Typography>
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              نظام إدارة المختبرات الاحترافي
-            </Typography>
-          </Box>
+       
           {/* Sockets removed: no connection status */}
         </Box>
         {/* Search Controls - centered */}

@@ -620,8 +620,8 @@ const AppLayout: React.FC = () => {
         >
             {/* Header */}
             <header className={cn(
-                "sticky top-0 z-30 flex h-16 flex-shrink-0 items-center justify-between border-b border-border bg-card",
-                "px-4 sm:px-6 lg:px-8"
+                "sticky top-0 z-30 flex h-11 flex-shrink-0 items-center justify-between border-b border-border bg-card",
+                "px-1 sm:px-6 lg:px-2"
             )}>
                 <div className="flex items-center">
                     <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
@@ -963,7 +963,7 @@ const AppLayout: React.FC = () => {
                 </div>
             </header>
 
-            <main style={{userSelect: 'none'}} className="flex-1 p-1 ">
+            <main style={{userSelect: 'none',overflow:'hidden'}} className="flex-1 p-1 ">
                 <Outlet />
             </main>
         </div>

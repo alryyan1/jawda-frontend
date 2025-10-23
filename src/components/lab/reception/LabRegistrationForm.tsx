@@ -259,7 +259,7 @@ const LabRegistrationForm: React.FC<LabRegistrationFormProps> = React.memo(({
     <Box sx={{ width: '100%', maxWidth: 380, mx: 'auto' }}>
       <Card>
         <CardContent>
-          <Typography variant="h6">تسجيل مريض جديد</Typography>
+          {/* <Typography variant="h6">تسجيل مريض جديد</Typography> */}
           <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ mt: 2 }}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <Controller name="phone" control={control} render={({ field }) => (
@@ -374,18 +374,19 @@ const LabRegistrationForm: React.FC<LabRegistrationFormProps> = React.memo(({
         </CardContent>
       </Card>
  
-      <AddSubcompanyDialog
+     {showSubcompanyDialog && <AddSubcompanyDialog
         companyId={companyId ? Number(companyId) : null}
         open={showSubcompanyDialog}
         onOpenChange={setShowSubcompanyDialog}
         onSubcompanyAdded={handleSubcompanyAdded}
-      />
-      <AddCompanyRelationDialog
+      /> }
+     { showRelationDialog && <AddCompanyRelationDialog
         companyId={companyId ? Number(companyId) : null}
         open={showRelationDialog}
-        onOpenChange={setShowRelationDialog}
-        onCompanyRelationAdded={handleRelationAdded}
-      />
+          onOpenChange={setShowRelationDialog}
+          onCompanyRelationAdded={handleRelationAdded}
+        />
+      }
     </Box>
   );
 });

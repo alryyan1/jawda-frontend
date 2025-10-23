@@ -208,9 +208,16 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
           : Number(rs.endurance) || 0;
     }
 
+    console.log(subTotal,'subTotal', totalItemDiscount,'totalItemDiscount', itemEndurance,'itemEndurance',rs.endurance,'rs.endurance');
     const netPrice = subTotal - totalItemDiscount - itemEndurance;
     const amountPaid = Number(rs.amount_paid) || 0;
-    return netPrice - amountPaid;
+    console.log(netPrice,'netPrice', amountPaid,'amountPaid');
+    if(visit?.company){
+return rs.endurance - rs.amount_paid;
+    }else{
+
+      return netPrice - amountPaid;
+    }
   };
 
   if (isLoading) {

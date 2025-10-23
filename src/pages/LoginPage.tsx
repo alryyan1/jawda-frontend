@@ -95,7 +95,7 @@ const LoginPage: React.FC = () => {
           {/* Header */}
           <div className="text-center mb-8">
             {/* System Logo */}
-            <div className="mx-auto w-60 h-60 mb-6 transform hover:scale-105 transition-transform duration-300">
+            <div className="mx-auto w-30 h-30 mb-1 transform hover:scale-105 transition-transform duration-300">
               <img 
               
                 src="/logo.png" 

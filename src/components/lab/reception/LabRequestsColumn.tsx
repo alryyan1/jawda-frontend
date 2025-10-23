@@ -2,6 +2,14 @@ import React, { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+// Utility function to format currency with thousands separator
+const formatCurrency = (amount: number): string => {
+  return amount.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+};
+
 // Shadcn UI Components
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,12 +30,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 // Icons
 import {
@@ -36,12 +38,10 @@ import {
   Loader2,
   Trash2,
   AlertCircle,
-  MoreVertical,
   CheckCircle2,
   Banknote,
   PrinterIcon,
   MessageSquare,
-  Barcode,
 } from "lucide-react";
 
 // Services & Types
@@ -278,9 +278,9 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
   };
 
   const handleDeleteRequest = (requestId: number) => {
-    if (window.confirm("هل أنت متأكد من حذف طلب المختبر؟")) {
+    // if (window.confirm("هل أنت متأكد من حذف طلب المختبر؟")) {
       deleteRequestMutation.mutate(requestId);
-    }
+    
   };
 
   const handleRemoveAllPending = () => {
@@ -513,7 +513,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                   return (
                     <TableRow
                       key={request.id}
-                      className="xl:cursor-default cursor-pointer"
+                      className={`xl:cursor-default cursor-pointer ${request.is_bankak ? 'bg-green-50 dark:bg-green-900/20' : ''}`}
                       onClick={() => {
                         // Open dialog only on small screens (< 1280px)
                         if (window.innerWidth < 1280) {
@@ -528,14 +528,10 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                             <span className="text-sm font-semibold">
                               {request.main_test?.main_test_name || "Unknown Test"}
                             </span>
-                            {/* Green checkmark if fully paid */}
-                            {request.is_paid && (
-                              <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
-                            )}
                             {/* Approval status inline badge for company patients */}
                             {visit?.patient?.company && (
-                              <Badge variant={request.approve == 0? "success" : "destructive"} className="ml-1">
-                                {request.approve == 0 ? " " : "يحتاج موافقة"}
+                              <Badge variant={request.approve ? "success" : "destructive"} className="ml-1">
+                                {request.approve ? " " : "يحتاج موافقة"}
                               </Badge>
                             )}
                             {/* Comment icon if comment exists */}
@@ -553,35 +549,30 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                           </div>
                           <span className="text-xs text-slate-500">
                             ID: {request.id}
+                            {request.is_bankak && (
+                              <span className="ml-2 text-xs text-gray-500">bankak</span>
+                            )}
                           </span>
-                          {/* Bank badge if is_bankak */}
-                          {request.is_bankak && (
-                            <Badge
-                              className={`mt-1 w-fit ${request.is_paid ? "bg-green-600 text-white" : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"}`}
-                            >
-                              {"بنكك"}
-                            </Badge>
-                          )}
                           {/* Mobile-only info */}
                           <div className="sm:hidden space-y-1 mt-2">
                             <div className="flex justify-between text-xs">
                               <span className="text-slate-500">السعر:</span>
-                              <span className="font-medium">${request.price.toFixed(2)}</span>
+                              <span className="font-medium">${formatCurrency(request.price)}</span>
                             </div>
                             <div className="flex justify-between text-xs">
                               <span className="text-slate-500">المبلغ:</span>
-                              <span className="font-medium">${discountedAmount.toFixed(2)}</span>
+                              <span className="font-medium">${formatCurrency(discountedAmount)}</span>
                             </div>
                             <div className="flex justify-between text-xs">
                               <span className="text-slate-500">المدفوع:</span>
                               <span className={`font-medium ${request.is_paid ? 'text-green-600' : 'text-red-600'}`}>
-                                ${request.amount_paid.toFixed(2)}
+                                ${formatCurrency(request.amount_paid)}
                               </span>
                             </div>
                             {!request.is_paid && (
                               <div className="flex justify-between text-xs">
                                 <span className="text-slate-500">المتبقي:</span>
-                                <span className="font-medium text-red-600">${remainingAmount.toFixed(2)}</span>
+                                <span className="font-medium text-red-600">${formatCurrency(remainingAmount)}</span>
                               </div>
                             )}
                           </div>
@@ -589,7 +580,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                       </TableCell>
                       
                       <TableCell className="hidden sm:table-cell">
-                        <span className="font-medium">${request.price.toFixed(2)}</span>
+                        <span className="font-medium">${formatCurrency(request.price)}</span>
                       </TableCell>
                       
                       {!visit?.patient?.company && (
@@ -612,7 +603,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                       {!visit?.patient?.company && (
                         <TableCell>
                           <div className="flex flex-col">
-                            <span className="font-medium">${discountedAmount.toFixed(2)}</span>
+                            <span className="font-medium">${formatCurrency(discountedAmount)}</span>
                             {request.discount_per > 0 && (
                               <span className="text-xs text-green-600">
                                 -{request.discount_per}%
@@ -625,85 +616,90 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                       {visit?.patient?.company && (
                         <TableCell>
                           <span className="font-medium text-red-600">
-                            ${request.endurance || 0}
+                            ${formatCurrency(request.endurance || 0)}
                           </span>
                         </TableCell>
                       )}
                       
                       {/* Removed separate approval cell; handled near test name */}
                       
-                      {/* Combined Actions Dropdown - hidden on < 1280px */}
+                      {/* Action Buttons - hidden on < 1280px */}
                       <TableCell className="hidden xl:table-cell">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {/* Paid Status */}
-                            <DropdownMenuItem disabled>
-                              {request.is_paid ? (
-                                <Badge variant="default" className="text-xs w-fit mr-2">
-                                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                                  {"مدفوع"}
-                                </Badge>
+                        <div className="flex items-center gap-1">
+                          {/* Green checkmark if fully paid */}
+                          {request.is_paid && (
+                            <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0" />
+                          )}
+                          
+                          {/* Payment/Unpay Button */}
+                          {!request.is_paid ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 border-2 border-green-200 p-0 text-green-600 hover:text-green-800 hover:bg-green-50"
+                              onClick={() => handleDirectPayItem(request.id, false)}
+                              disabled={directPayItemMutation.isPending}
+                              title="دفع نقدي"
+                            >
+                              {directPayItemMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
                               ) : (
-                                <Badge variant="destructive" className="text-xs w-fit mr-2">
-                                  ${remainingAmount.toFixed(2)} {"مستحق"}
-                                </Badge>
+                                'دفع'
                               )}
-                              <span>${request.amount_paid.toFixed(2)}</span>
-                            </DropdownMenuItem>
-                            {/* Bankak Toggle */}
-                            <DropdownMenuItem
-                             
-                              onClick={() => handleToggleBankak(request.id, !request.is_bankak)}
-                              disabled={toggleBankakMutation.isPending || !request.is_paid}
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50"
+                              onClick={() => handleUnpayLabRequest(request.id)}
+                              disabled={unpayLabRequestMutation.isPending || visit?.patient?.result_print_date != null}
+                              title="إلغاء الدفع"
                             >
-                              <Checkbox
-                                checked={request.is_bankak}
-                                disabled={toggleBankakMutation.isPending}
-                                className="mr-2"
-                              />
-                              {request.is_bankak ? "إلغاء بنكك" : "تعيين بنكك"}
-                            </DropdownMenuItem>
-                            {/* Payment Button */}
-                            {!request.is_paid && (
-                              <DropdownMenuItem
-                                onClick={() => handleDirectPayItem(request.id, false)}
-                                disabled={directPayItemMutation.isPending}
-                              >
-                                {directPayItemMutation.isPending ? (
-                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                ) : (
-                                  <Banknote className="h-4 w-4 mr-2" />
-                                )}
-                                {"دفع نقدي"}
-                              </DropdownMenuItem>
+                              {unpayLabRequestMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <AlertCircle className="h-4 w-4" />
+                              )}
+                            </Button>
+                          )}
+                          
+                          {/* Bankak Toggle Button */}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={`h-8 w-12 p-0 border-2 border-blue-200 ${
+                              request.is_bankak 
+                                ? "text-blue-600 hover:text-blue-800 hover:bg-blue-50" 
+                                : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+                            }`}
+                            onClick={() => handleToggleBankak(request.id, !request.is_bankak)}
+                            disabled={toggleBankakMutation.isPending || !request.is_paid}
+                            title={request.is_bankak ? "إلغاء بنكك" : "تعيين بنكك"}
+                          >
+                            {toggleBankakMutation.isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              'Bankak'
                             )}
-                            {/* Unpay Option */}
-                            {request.is_paid && (
-                              <DropdownMenuItem
-                                onClick={() => handleUnpayLabRequest(request.id)}
-                                className="text-yellow-600"
-                                disabled={unpayLabRequestMutation.isPending || visit?.patient?.result_print_date != null}
-                              >
-                                <AlertCircle className="h-4 w-4 mr-2" />
-                                {"إلغاء الدفع"}
-                              </DropdownMenuItem>
+                          </Button>
+                          
+                          {/* Delete Button */}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 text-red-600 hover:text-red-800 hover:bg-red-50"
+                            onClick={() => handleDeleteRequest(request.id)}
+                            disabled={deleteRequestMutation.isPending || visit?.patient?.result_print_date != null}
+                            title="حذف"
+                          >
+                            {deleteRequestMutation.isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
                             )}
-                            {/* Delete Option */}
-                            <DropdownMenuItem
-                              onClick={() => handleDeleteRequest(request.id)}
-                              className="text-red-600"
-                              disabled={deleteRequestMutation.isPending || visit?.patient?.result_print_date != null}
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              {"حذف"}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -779,7 +775,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                   </Badge>
                 ) : (
                   <Badge variant="destructive" className="text-xs w-fit">
-                    { (calculateDiscountedAmount(selectedRequestForRowDialog.price, selectedRequestForRowDialog.discount_per) - selectedRequestForRowDialog.amount_paid).toFixed(2) } مستحق
+                    { formatCurrency(calculateDiscountedAmount(selectedRequestForRowDialog.price, selectedRequestForRowDialog.discount_per) - selectedRequestForRowDialog.amount_paid) } مستحق
                   </Badge>
                 )}
               </div>

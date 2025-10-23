@@ -199,7 +199,7 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
   }
   const canAddService = visit.user_id === user?.id;
   return (
-    <div className="flex flex-col h-full bg-background shadow-xl">
+    <div className="flex flex-col h-full bg-background">
       <Tabs
         value={activeTab}
         onValueChange={(val) => {

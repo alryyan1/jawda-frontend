@@ -568,7 +568,7 @@ interface AutocompleteVisitOption {
         />
 
         {/* Dynamic Layout */}
-        <div className="flex-1 min-h-0 flex gap-4 p-4 overflow-hidden relative">
+        <div className="flex-1 min-h-0 flex gap-4 p-1 overflow-hidden relative">
           {/* Action Column */}
           <div className="flex-shrink-0">
             <LabReceptionActionPage
@@ -588,8 +588,8 @@ interface AutocompleteVisitOption {
               isFormVisible ? 'w-1/4' : 'w-0 opacity-0'
             } overflow-hidden`}
           >
-            <Card className="bg-white dark:bg-slate-800 shadow-lg border-0 rounded-xl overflow-hidden h-full">
-              <CardContent className="p-4 h-full overflow-y-auto">
+            {/* <Card className="bg-white dark:bg-slate-800 shadow-lg border-0 rounded-xl overflow-hidden h-full"> */}
+              {/* <CardContent className="p-1 h-full overflow-y-auto"> */}
                 <LabRegistrationForm
                   setActiveVisitId={setActiveVisitId}
                   setFormVisible={setIsFormVisible}
@@ -601,15 +601,15 @@ interface AutocompleteVisitOption {
                   referringDoctor={selectedDoctorForNewVisit}
                   onPatientSaved={handlePatientSaved}
                 />
-              </CardContent>
-            </Card>
+              {/* </CardContent> */}
+            {/* </Card> */}
           </div>
 
           {/* Patient History Dialog - Absolute positioned overlay */}
           {showPatientHistory && (
             <div className="absolute top-4 left-4 z-50 w-1/2 max-h-[600px]" ref={patientHistoryRef}>
-              <Card className="bg-white dark:bg-slate-800 shadow-2xl border-0 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
-                <CardContent className="p-1 h-full overflow-hidden">
+              {/* <Card className="bg-white dark:bg-slate-800 shadow-2xl border-0 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-2xl"> */}
+                {/* <CardContent className="p-1 h-full overflow-hidden"> */}
                   <div className="flex justify-between items-start mb-1">
                     <Button
                       variant="ghost"
@@ -626,17 +626,17 @@ interface AutocompleteVisitOption {
                     onSelectPatient={handlePatientSelectedFromHistory}
                     referringDoctor={selectedDoctorForNewVisit}
                   />
-                </CardContent>
-              </Card>
+                {/* </CardContent> */}
+              {/* </Card> */}
             </div>
           )}
 
           {/* Grid Layout Container */}
-          <div className="flex-1 grid grid-cols-4 gap-4 h-full">
+          <div className="flex-1 grid grid-cols-4 gap-4 ">
             {/* Patient Queue Column - 1fr when patient selected, 2fr when no patient */}
             <div className={activeVisitId ? "col-span-1" : "col-span-2"}>
               <Card className="bg-white dark:bg-slate-800 shadow-lg border-0 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-xl h-full">
-                <CardContent className="p-0 h-full overflow-hidden">
+                {/* <CardContent className="p-0 h-full overflow-hidden"> */}
                   <LabPatientQueue
                     ref={labPatientQueueRef}
                     appearanceSettings={getAppearanceSettings()}
@@ -647,7 +647,7 @@ interface AutocompleteVisitOption {
                     selectedVisitId={activeVisitId}
                     globalSearchTerm=""
                   />
-                </CardContent>
+                {/* </CardContent> */}
               </Card>
             </div>
 

@@ -251,9 +251,9 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
   let totalBalance = 0;
 
   if (activeTab === 'lab') {
-    total = visit.total_amount!;
-    totalPaid = visit.total_paid!;
-    totalBalance = visit.balance_due!;
+    total = visit.total_lab_amount!;
+    totalPaid = visit.total_lab_paid!;
+    totalBalance = visit.total_lab_balance!;
   } else {
     total = requestedServices.reduce((sum, service) => {
       const price = Number(service.price) || 0;
@@ -378,15 +378,15 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
         <div className="w-full bg-muted/30 rounded-lg border border-border flex flex-col items-center mb-4">
           <div className="flex w-full">
             <div className="flex-1 text-center p-3 border-r border-border">
-              <div className="text-xs text-muted-foreground">{activeTab === 'lab' ? 'إجمالي المختبر' : 'المجموع'}</div>
+              <div className="text-xs text-muted-foreground">{activeTab === 'lab' ? 'إجمالي ' : 'المجموع'}</div>
               <div className="text-lg font-bold text-foreground">{total.toLocaleString()}</div>
             </div>
             <div className="flex-1 text-center p-3 border-r border-border">
-              <div className="text-xs text-muted-foreground">{activeTab === 'lab' ? 'المدفوع للمختبر' : 'المدفوع'}</div>
+              <div className="text-xs text-muted-foreground">{activeTab === 'lab' ? 'المدفوع ' : 'المدفوع'}</div>
               <div className="text-lg text-green-600 font-bold">{totalPaid.toLocaleString()}</div>
             </div>
             <div className="flex-1 text-center p-3">
-              <div className="text-xs text-muted-foreground">{activeTab === 'lab' ? 'المتبقي للمختبر' : 'المتبقي'}</div>
+              <div className="text-xs text-muted-foreground">{activeTab === 'lab' ? 'المتبقي ' : 'المتبقي'}</div>
               <div className={cn(
                 "text-lg font-bold",
                 totalBalance > 0.009 ? "text-red-600" : "text-green-600"

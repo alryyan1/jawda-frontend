@@ -43,7 +43,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             </AuthProvider>
           </ThemeProvider>
         </CacheProvider>
-        <ReactQueryDevtools initialIsOpen={false} /> 
+        {/* <ReactQueryDevtools initialIsOpen={false} />  */}
       </QueryClientProvider>
     </Suspense>
   // </React.StrictMode>

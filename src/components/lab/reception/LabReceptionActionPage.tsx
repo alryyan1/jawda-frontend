@@ -135,7 +135,7 @@ const LabReceptionActionPage: React.FC<LabReceptionActionPageProps> = ({
           </TooltipContent>
         </Tooltip>
 
-        <Separator className="my-1" />
+        {/* <Separator className="my-1" /> */}
 
         {/* Button: Open Lab User Income Summary Dialog */}
         {currentClinicShift && (
@@ -157,7 +157,7 @@ const LabReceptionActionPage: React.FC<LabReceptionActionPageProps> = ({
           </Tooltip>
         )}
 
-        <Separator className="my-1" />
+        {/* <Separator className="my-1" /> */}
 
         {/* Button: Print Invoice (visible only when a patient is selected and has lab requests) */}
         {activeVisitId && hasLabRequests && (
@@ -227,11 +227,11 @@ const LabReceptionActionPage: React.FC<LabReceptionActionPageProps> = ({
             </Button>
           </TooltipTrigger>
           <TooltipContent side="left">
-            <p>ملء نتائج CBC من Sysmex</p>
+            <p>قائمة الاسعار</p>
           </TooltipContent>
         </Tooltip>
 
-        <Separator className="my-1" />
+        {/* <Separator className="my-1" /> */}
 
         {/* Button 3 (Eye): Open Doctor Finder to filter the queue */}
         <Tooltip>

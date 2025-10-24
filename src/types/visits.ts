@@ -140,6 +140,7 @@ export interface DoctorVisit {
   doctor_id: number;
   doctor?: DoctorStripped; // Or full Doctor object
 
+
   user_id: number; // User who created the visit entry (e.g., receptionist)
   created_by_user?: UserStripped;
 
@@ -158,6 +159,7 @@ export interface DoctorVisit {
   queue_number?: number | null;
   number: number; // The sequential number of this visit for the patient, or within the shift
   
+
   reason_for_visit?: string | null;
   visit_notes?: string | null; // General notes for the visit by doctor/reception
 
@@ -180,6 +182,9 @@ export interface DoctorVisit {
   total_paid?: number;
   balance_due?: number;
   total_discount?:number;
+  total_lab_amount?: number;
+  total_lab_paid?: number;
+  total_lab_balance?: number;
   requested_services_count?: number; // Count of services for this visit
 }
 

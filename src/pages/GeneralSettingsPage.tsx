@@ -87,6 +87,7 @@ type SettingsFormData = {
   // Logo display controls
   show_logo?: boolean;
   show_logo_only_whatsapp?: boolean;
+  show_title_in_lab_result?: boolean;
 };
 
 const SettingsPage: React.FC = () => {
@@ -159,6 +160,7 @@ const SettingsPage: React.FC = () => {
       // Logo display controls
       show_logo: undefined,
       show_logo_only_whatsapp: undefined,
+      show_title_in_lab_result: undefined,
     },
   });
   const { control, handleSubmit, reset, watch } = form;
@@ -228,6 +230,7 @@ const SettingsPage: React.FC = () => {
         // Logo display controls
         show_logo: (settings as any).show_logo ?? undefined,
         show_logo_only_whatsapp: (settings as any).show_logo_only_whatsapp ?? undefined,
+        show_title_in_lab_result: (settings as any).show_title_in_lab_result ?? undefined,
       });
     }
   }, [settings, reset]);
@@ -656,6 +659,24 @@ const SettingsPage: React.FC = () => {
                   <Box>
                     <Typography variant="body1">إظهار الشعار   كلوقو </Typography>
                     
+                  </Box>
+                }
+              />
+
+              {/* Toggle: Show Title in Lab Result */}
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    {...control.register("show_title_in_lab_result")}
+                    checked={!!watchedValues.show_title_in_lab_result}
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography variant="body1">إظهار العنوان في نتائج المختبر</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      عند التفعيل سيظهر عنوان التقرير في نتائج المختبر
+                    </Typography>
                   </Box>
                 }
               />

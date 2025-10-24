@@ -65,6 +65,7 @@ const LabPriceListPage = () => {
   const [adjustmentPercentage, setAdjustmentPercentage] = useState('');
   const [isAdjusting, setIsAdjusting] = useState(false);
   const [isUpdatingCashPrices, setIsUpdatingCashPrices] = useState(false);
+  const [isAddingMissing, setIsAddingMissing] = useState(false);
 
   useEffect(() => {
     const handler = setTimeout(() => setDebouncedSearchTerm(searchTerm), 500);
@@ -345,6 +346,78 @@ const LabPriceListPage = () => {
     }
   };
 
+  const handleAddMissingTests = async () => {
+    if (!labId) {
+      toast.error('لا يمكن إضافة الاختبارات المفقودة بدون labId');
+      return;
+    }
+
+    try {
+      setIsAddingMissing(true);
+      
+      // Fetch all active main tests from local database
+      const freshTests = await getAllActiveMainTestsForPriceList('');
+      if (!Array.isArray(freshTests) || freshTests.length === 0) {
+        toast.error('لا توجد تحاليل في قاعدة البيانات المحلية');
+        return;
+      }
+
+      // Get existing tests from Firestore
+      const colRef = collection(db, 'labToLap', String(labId), 'pricelist');
+      const snapshot = await getDocs(colRef);
+      const existingTestIds = new Set<string>();
+      
+      snapshot.forEach(doc => {
+        existingTestIds.add(doc.id);
+      });
+
+      // Find missing tests
+      const missingTests = freshTests.filter(test => !existingTestIds.has(String(test.id)));
+      
+      if (missingTests.length === 0) {
+        toast.info('لا توجد اختبارات مفقودة');
+        return;
+      }
+
+      // Add missing tests to Firestore
+      const BATCH_LIMIT = 450;
+      let addedCount = 0;
+      
+      for (let i = 0; i < missingTests.length; i += BATCH_LIMIT) {
+        const slice = missingTests.slice(i, i + BATCH_LIMIT);
+        const batch = writeBatch(db);
+        
+        slice.forEach(test => {
+          const docRef = doc(colRef, String(test.id));
+          batch.set(docRef, {
+            id: test.id,
+            name: test.main_test_name,
+            price: test.price || 0,
+            pack_id: test.pack_id || null,
+            container_id: test.container_id || null,
+            available: true,
+            condition: test.conditions || '',
+            hidden: true,
+            order: 1,
+            timer: test.timer || 0,
+            updated_at: new Date().toISOString()
+          }, { merge: true });
+          addedCount++;
+        });
+        
+        await batch.commit();
+      }
+      
+      toast.success(`تم إضافة ${addedCount} اختبار مفقود بنجاح`);
+      setReloadTs(Date.now());
+    } catch (error: unknown) {
+      const message = error && typeof error === 'object' && 'message' in error ? String((error as { message?: unknown }).message) : 'حدث خطأ أثناء إضافة الاختبارات المفقودة';
+      toast.error('فشل إضافة الاختبارات المفقودة', { description: message });
+    } finally {
+      setIsAddingMissing(false);
+    }
+  };
+
   if (error) {
     return (
       <Typography color="error" sx={{ p: 2 }}>
@@ -427,6 +500,17 @@ const LabPriceListPage = () => {
               sx={{ minWidth: { xs: '100%', sm: 'auto' } }}
             >
               {isUpdatingCashPrices ? 'جاري التحديث...' : 'تحديث بالأسعار النقدية'}
+            </Button>
+            
+            <Button
+              variant="outlined"
+              startIcon={isAddingMissing ? <CircularProgress size={16} /> : <Science />}
+              onClick={handleAddMissingTests}
+              disabled={isAddingMissing}
+              size="small"
+              sx={{ minWidth: { xs: '100%', sm: 'auto' } }}
+            >
+              {isAddingMissing ? 'جاري الإضافة...' : 'اضافه المفقود'}
             </Button>
             
           </Stack>

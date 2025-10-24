@@ -210,9 +210,9 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
   const serial = visit?.id?.toString() 
   const registeredBy = visit?.patient?.user?.username
   const paymentMethod = "cash"
-  const total = visit?.total_amount
-  const received = visit?.total_paid
-  const balance = visit?.balance_due
+  const total = visit?.total_lab_amount
+  const received = visit?.total_lab_paid
+  const balance = visit?.total_lab_balance
   const age = getAge(visit!)
 
   // alert(JSON.stringify(visit,null,2))

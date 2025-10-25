@@ -98,6 +98,23 @@ const ServiceSelectionGrid: React.FC<ServiceSelectionGridProps> = ({
     }
   }, [checkScrollState]);
 
+  // Memoized calculation for the filtered catalog
+  const filteredCatalog = useMemo(() => {
+    if (!serviceCatalog) return [];
+    const lowerSearchTerm = searchTerm.toLowerCase().trim(); // Trim search term
+
+    if (!lowerSearchTerm) return serviceCatalog; // Return original if search is empty
+
+    return serviceCatalog
+      .map(group => ({
+        ...group,
+        services: group.services.filter(service =>
+          service.name.toLowerCase().includes(lowerSearchTerm)
+        ),
+      }))
+      .filter(group => group.services.length > 0);
+  }, [serviceCatalog, searchTerm]);
+
   // Check scroll state when filteredCatalog changes
   useEffect(() => {
     checkScrollState();
@@ -127,23 +144,6 @@ const ServiceSelectionGrid: React.FC<ServiceSelectionGridProps> = ({
       setIsFindingServiceById(false);
     }
   };
-  
-  // Memoized calculation for the filtered catalog
-  const filteredCatalog = useMemo(() => {
-    if (!serviceCatalog) return [];
-    const lowerSearchTerm = searchTerm.toLowerCase().trim(); // Trim search term
-
-    if (!lowerSearchTerm) return serviceCatalog; // Return original if search is empty
-
-    return serviceCatalog
-      .map(group => ({
-        ...group,
-        services: group.services.filter(service =>
-          service.name.toLowerCase().includes(lowerSearchTerm)
-        ),
-      }))
-      .filter(group => group.services.length > 0);
-  }, [serviceCatalog, searchTerm]);
 
   // Effect to update activeTab if it becomes invalid after filtering
   useEffect(() => {

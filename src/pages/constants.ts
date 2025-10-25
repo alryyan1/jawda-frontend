@@ -1,0 +1,9 @@
+export const schema = "http";
+export const host = "127.0.0.1";
+export const realtimePort = 4001;
+export const realtimeHost = "127.0.0.1";
+export const projectFolder = "jawda-medical";
+export const webUrl = `${schema}://${host}/${projectFolder}/public/`;
+export const realtimeUrlFromConstants = `${schema}://${realtimeHost}:${realtimePort}`;
+export const LisServerUrl = `http://${host}/server/classes/server.php`;
+export const LisClientUrl = `http://${host}/server/classes/client.php`;

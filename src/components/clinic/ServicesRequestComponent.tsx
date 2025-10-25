@@ -131,7 +131,7 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ vis
     },
     onError: (error: unknown) => {
       const apiError = error as { response?: { data?: { message?: string } } };
-      toast.error(apiError.response?.data?.message || 'فشل في تنفيذ الطلب');
+      // toast.error(apiError.response?.data?.message || 'فشل في تنفيذ الطلب');
     }
   });
 

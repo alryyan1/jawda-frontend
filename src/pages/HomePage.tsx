@@ -29,6 +29,8 @@ import {
   Info,
   ShieldCheck,
   ServerCrash,
+  Sun,
+  Moon,
 } from "lucide-react";
 import type { Shift } from "@/types/shifts";
 import type { DashboardSummary } from "@/types/dashboard";
@@ -293,8 +295,29 @@ const ShiftManagementCard: React.FC<ShiftManagementCardProps> = ({
                     : "text-green-700 dark:text-green-300"
                 }`}>
                   <ShieldCheck className="h-4 w-4" />
-                  <span className="font-semibold text-sm">{currentShift.is_closed ? 'الوردية مغلقة' : 'الوردية فعالة'} (ID: {currentShift.id})</span>
+                  <span className="font-semibold text-sm">{currentShift.is_closed ? 'الوردية مغلقة' : 'الوردية مفتوحه'} (ID: {currentShift.id})</span>
                 </div>
+                {/* Shift Type Display */}
+                {currentShift.created_at && (
+                  <div className="flex items-center gap-2 justify-center sm:justify-start mt-2">
+                    {(() => {
+                      const shiftHour = new Date(currentShift.created_at).getHours();
+                      const isMorning = shiftHour >= 6 && shiftHour < 18;
+                      return (
+                        <>
+                          {isMorning ? (
+                            <Sun className="h-6 w-6 text-amber-500" />
+                          ) : (
+                            <Moon className="h-6 w-6 text-blue-500" />
+                          )}
+                          <span className="font-bold text-lg">
+                            {isMorning ? 'الورديه الصباحيه' : 'الورديه المسائيه'}
+                          </span>
+                        </>
+                      );
+                    })()}
+                  </div>
+                )}
               </div>
               {currentShift.is_closed ? (
                 <Button

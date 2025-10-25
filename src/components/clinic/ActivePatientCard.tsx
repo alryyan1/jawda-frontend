@@ -258,10 +258,9 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
               >
                 {/* Custom heart shape with solid background */}
                 <div 
-                  className="relative w-8 h-8 flex items-center justify-center"
+                  className="relative w-8 h-8 flex items-center justify-center border-2 border-pink-400 rounded"
                   style={{
                     background: 'linear-gradient(45deg, #ec4899, #f472b6)',
-                    clipPath: 'polygon(50% 85%, 15% 50%, 15% 25%, 50% 15%, 85% 25%, 85% 50%)',
                     boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                   }}
                 >

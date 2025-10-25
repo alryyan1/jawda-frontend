@@ -351,13 +351,43 @@ return rs.endurance - rs.amount_paid;
 
         {rowOptionsService && (
           <Dialog open={isRowOptionsDialogOpen} onClose={() => setIsRowOptionsDialogOpen(false)} fullWidth maxWidth="xs">
-            <DialogTitle>إجراءات الخدمة</DialogTitle>
+            <DialogTitle className="text-center">{rowOptionsService.service?.name || "خدمة غير معروفة"}</DialogTitle>
             <DialogContent>
               <Box display="grid" gridTemplateColumns={{ xs: '1fr' }} gap={2} mt={1}>
                 <Box>
                   <Typography variant="caption" fontWeight={600}>العدد</Typography>
-                  <TextField type="number" size="small" inputProps={{ min: 1 }} value={rowOptionsData.count}
-                    onChange={(e) => setRowOptionsData({ ...rowOptionsData, count: parseInt(e.target.value || '1') || 1 })} />
+                  <Box display="flex" gap={1} mt={1} justifyContent="center">
+                    {[1, 2, 3, 4, 5].map((number) => (
+                      <Box
+                        key={number}
+                        onClick={() => setRowOptionsData({ ...rowOptionsData, count: number })}
+                        sx={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          border: '2px solid',
+                          borderColor: rowOptionsData.count === number ? 'primary.main' : 'grey.300',
+                          backgroundColor: rowOptionsData.count === number ? 'primary.main' : 'transparent',
+                          color: rowOptionsData.count === number ? 'white' : 'text.primary',
+                          fontWeight: 600,
+                          fontSize: '16px',
+                          transition: 'all 0.2s ease-in-out',
+                          '&:hover': {
+                            borderColor: 'primary.main',
+                            backgroundColor: rowOptionsData.count === number ? 'primary.main' : 'primary.light',
+                            color: 'white',
+                            transform: 'scale(1.1)',
+                          },
+                        }}
+                      >
+                        {number}
+                      </Box>
+                    ))}
+                  </Box>
                 </Box>
                 {isCompanyPatient && (
                   <Box>
@@ -368,8 +398,8 @@ return rs.endurance - rs.amount_paid;
                 )}
                 {!isCompanyPatient && (
                   <Box>
-                    <Typography variant="caption" fontWeight={600}>نسبة الخصم</Typography>
-                    <Select size="small" value={rowOptionsData.discount_per} onChange={(e) => setRowOptionsData({ ...rowOptionsData, discount_per: Number(e.target.value) })}>
+                    التخفيض
+                    <Select label="نسبة الخصم" size="small" value={rowOptionsData.discount_per} onChange={(e) => setRowOptionsData({ ...rowOptionsData, discount_per: Number(e.target.value) })}>
                       {Array.from({ length: 11 }).map((_, i) => {
                         const value = i * 10;
                         return (
@@ -380,9 +410,9 @@ return rs.endurance - rs.amount_paid;
                   </Box>
                 )}
               </Box>
-              <Box display="flex" flexDirection="column" gap={1.25} mt={2}>
-                <Button variant="outlined" onClick={() => { setIsRowOptionsDialogOpen(false); handleManageServiceCosts(rowOptionsService); }} startIcon={<Settings2 className="h-4 w-4" />}>إدارة التكاليف</Button>
-                <Button variant="outlined" onClick={() => { setIsRowOptionsDialogOpen(false); handleManageDeposits(rowOptionsService); }} startIcon={<PackageOpen className="h-4 w-4" />}>إدارة المدفوعات</Button>
+              <Box display="flex" flexDirection="row" justifyContent="space-between"  gap={1.25} mt={2}>
+                <Button variant="outlined" onClick={() => { setIsRowOptionsDialogOpen(false); handleManageServiceCosts(rowOptionsService); }} startIcon={<Settings2 className="h-4 w-4" />}> التكاليف</Button>
+                <Button variant="outlined" onClick={() => { setIsRowOptionsDialogOpen(false); handleManageDeposits(rowOptionsService); }} startIcon={<PackageOpen className="h-4 w-4" />}> المدفوعات</Button>
                 <Button color="error" variant="outlined" onClick={() => { setIsRowOptionsDialogOpen(false); setServiceToDelete(rowOptionsService.id); }} startIcon={<Trash2 className="h-4 w-4" />}>حذف</Button>
               </Box>
             </DialogContent>

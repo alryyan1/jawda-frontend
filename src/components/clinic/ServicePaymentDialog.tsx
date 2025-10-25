@@ -135,12 +135,12 @@ const ServicePaymentDialog: React.FC<ServicePaymentDialogProps> = ({
             if (result.success) {
               toast.success('تم طباعة إيصال الخدمات بنجاح');
             } else {
-              toast.error(result.error || 'فشل في طباعة إيصال الخدمات');
+              // toast.error(result.error || 'فشل في طباعة إيصال الخدمات');
             }
           })
           .catch(error => {
             console.error('Error printing services receipt:', error);
-            toast.error('حدث خطأ أثناء طباعة إيصال الخدمات');
+            // toast.error('حدث خطأ أثناء طباعة إيصال الخدمات');
           });
       }
       
@@ -151,7 +151,7 @@ const ServicePaymentDialog: React.FC<ServicePaymentDialogProps> = ({
       queryClient.invalidateQueries({ queryKey: key });
     },
     onError: (error: Error & { response?: { data?: { message?: string } } }) => {
-      toast.error(error.response?.data?.message || "حدث خطأ في الدفع");
+      // toast.error(error.response?.data?.message || "حدث خطأ في الدفع");
     },
   });
 

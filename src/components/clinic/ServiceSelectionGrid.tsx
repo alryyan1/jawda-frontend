@@ -1,7 +1,7 @@
 // src/components/clinic/ServiceSelectionGrid.tsx
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import type { ServiceGroupWithServices, Service } from '@/types/services';
-import { Search, List, AlertCircle, Loader2, PlusCircle } from 'lucide-react';
+import { Search, List, AlertCircle, Loader2, PlusCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 // import { formatNumber } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
@@ -11,8 +11,6 @@ import {
   CardContent,
   // Chip,
   InputAdornment,
-  Tab,
-  Tabs,
   TextField,
   Typography,
 } from '@mui/material';
@@ -57,12 +55,54 @@ const ServiceSelectionGrid: React.FC<ServiceSelectionGridProps> = ({
   const initialActiveTab = useMemo(() => findInitialActiveTab(serviceCatalog || []), [serviceCatalog]);
   const [activeTab, setActiveTab] = useState<string | undefined>(initialActiveTab);
   const [serviceIdInput, setServiceIdInput] = useState(''); // 
+  const tabsContainerRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  
   // Effect to set initial active tab when catalog loads or changes
   useEffect(() => {
     if (serviceCatalog && serviceCatalog.length > 0 && !activeTab) {
       setActiveTab(findInitialActiveTab(serviceCatalog));
     }
   }, [serviceCatalog, activeTab]);
+
+  // Check scroll state
+  const checkScrollState = useCallback(() => {
+    if (tabsContainerRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = tabsContainerRef.current;
+      setCanScrollLeft(scrollLeft > 0);
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth);
+    }
+  }, []);
+
+  // Scroll functions
+  const scrollLeft = useCallback(() => {
+    if (tabsContainerRef.current) {
+      tabsContainerRef.current.scrollBy({ left: -200, behavior: 'smooth' });
+    }
+  }, []);
+
+  const scrollRight = useCallback(() => {
+    if (tabsContainerRef.current) {
+      tabsContainerRef.current.scrollBy({ left: 200, behavior: 'smooth' });
+    }
+  }, []);
+
+  // Check scroll state on mount and when tabs change
+  useEffect(() => {
+    checkScrollState();
+    const container = tabsContainerRef.current;
+    if (container) {
+      container.addEventListener('scroll', checkScrollState);
+      return () => container.removeEventListener('scroll', checkScrollState);
+    }
+  }, [checkScrollState]);
+
+  // Check scroll state when filteredCatalog changes
+  useEffect(() => {
+    checkScrollState();
+  }, [checkScrollState, filteredCatalog]);
+
   const [isFindingServiceById, setIsFindingServiceById] = useState(false); // NEW: 
   // NEW: Handler for adding service by ID input
   const handleAddServiceByIdInput = async () => {
@@ -143,7 +183,6 @@ const ServiceSelectionGrid: React.FC<ServiceSelectionGridProps> = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key !== '+' && e.key !== '=') return; // Support both + and = keys (same key on most keyboards)
       const target = e.target as HTMLElement | null;
-      const isTextInput = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.getAttribute('contenteditable') === 'true');
       const isServiceIdInput = target instanceof HTMLInputElement && target.type === 'number' && target.placeholder?.includes('رقم الخدمة');
       if (isServiceIdInput) return; // allow the ID input's own Enter handler
       if (selectedServiceIds.size > 0) {
@@ -276,18 +315,110 @@ const ServiceSelectionGrid: React.FC<ServiceSelectionGridProps> = ({
         </Box>
       ) : (
         <Box display="flex" flexDirection="column" flex={1} minHeight={0}>
-          {/* Tabs header */}
-          <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-            <Tabs
-              value={activeTab ?? filteredCatalog[0]?.id.toString()}
-              onChange={(_e, val) => setActiveTab(String(val))}
-              variant="scrollable"
-              // allowScrollButtonsMobile
+          {/* Custom Scrollable Tabs */}
+          <Box sx={{ borderBottom: 1, borderColor: 'divider', position: 'relative' }}>
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                position: 'relative',
+                overflow: 'hidden',
+              }}
             >
-              {filteredCatalog.map((group) => (
-                <Tab key={group.id} value={group.id.toString()} label={`${group.name} (${group.services.length})`} />
-              ))}
-            </Tabs>
+              {/* Left scroll button */}
+              {canScrollLeft && (
+                <Button
+                  onClick={scrollLeft}
+                  size="small"
+                  sx={{
+                    position: 'absolute',
+                    left: 0,
+                    zIndex: 1,
+                    minWidth: 'auto',
+                    width: 40,
+                    height: 40,
+                    borderRadius: '50%',
+                    backgroundColor: 'background.paper',
+                    boxShadow: 2,
+                    '&:hover': {
+                      backgroundColor: 'action.hover',
+                    },
+                  }}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              )}
+              
+              {/* Right scroll button */}
+              {canScrollRight && (
+                <Button
+                  onClick={scrollRight}
+                  size="small"
+                  sx={{
+                    position: 'absolute',
+                    right: 0,
+                    zIndex: 1,
+                    minWidth: 'auto',
+                    width: 40,
+                    height: 40,
+                    borderRadius: '50%',
+                    backgroundColor: 'background.paper',
+                    boxShadow: 2,
+                    '&:hover': {
+                      backgroundColor: 'action.hover',
+                    },
+                  }}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              )}
+
+              {/* Tabs container */}
+              <Box
+                ref={tabsContainerRef}
+                sx={{
+                  display: 'flex',
+                  overflowX: 'auto',
+                  scrollbarWidth: 'none',
+                  msOverflowStyle: 'none',
+                  '&::-webkit-scrollbar': {
+                    display: 'none',
+                  },
+                  paddingLeft: canScrollLeft ? '50px' : 0,
+                  paddingRight: canScrollRight ? '50px' : 0,
+                }}
+              >
+                {filteredCatalog.map((group) => {
+                  const isActive = activeTab === group.id.toString();
+                  return (
+                    <Button
+                      key={group.id}
+                      onClick={() => setActiveTab(group.id.toString())}
+                      variant={isActive ? 'contained' : 'text'}
+                      sx={{
+                        minWidth: 'auto',
+                        whiteSpace: 'nowrap',
+                        px: 2,
+                        py: 1,
+                        mx: 0.5,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontWeight: isActive ? 600 : 400,
+                        backgroundColor: isActive ? 'primary.main' : 'transparent',
+                        color: isActive ? 'primary.contrastText' : 'text.primary',
+                        '&:hover': {
+                          backgroundColor: isActive ? 'primary.dark' : 'action.hover',
+                        },
+                        borderBottom: isActive ? '2px solid' : '2px solid transparent',
+                        borderBottomColor: isActive ? 'primary.main' : 'transparent',
+                      }}
+                    >
+                      {`${group.name} (${group.services.length})`}
+                    </Button>
+                  );
+                })}
+              </Box>
+            </Box>
           </Box>
           {/* Tabs content */}
           <Box flex={1} minHeight={0} position="relative" pt={1}>

@@ -178,8 +178,7 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
     onSuccess: () => {
       toast.success("تم تحديث الدفعة بنجاح");
       handleQueryInvalidation();
-    },
-    onError: (err) => toast.error(err.response?.data?.message || "فشل تحديث الدفعة"),
+    }
   });
 
   const deleteMutation = useMutation<void, ApiError, number>({

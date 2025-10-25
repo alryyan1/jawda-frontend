@@ -89,7 +89,7 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId 
 
   if (doctorShifts.length === 0 && !isLoading) {
     return (
-      <Paper className="">
+      <Paper className="flex justify-center items-center h-full">
         {/* <Box className="empty-content"> */}
           <Typography className="">
             لا توجد ورديات اطباء نشطة

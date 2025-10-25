@@ -67,17 +67,14 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
     <>
       <Box
         sx={{
-          width: "60px",
           height: "100%",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           gap: 1,
           padding: 1,
-          backgroundColor: "background.paper",
           borderRight: 1,
-          borderColor: "divider",
-          overflowY: "auto",
+          overflow: "hidden",
           boxShadow: 1,
           direction: "rtl", // Arabic RTL direction
         }}
@@ -159,6 +156,7 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
             </IconButton>
           </Tooltip>
         )}
+        
 
 
 

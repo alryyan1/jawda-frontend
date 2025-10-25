@@ -306,7 +306,7 @@ export default function ServicesListPage() {
     <>
       {/* Row actions menu component using MUI */}
       
-      <div style={{ direction: 'rtl' }} className="container mx-auto py-4 sm:py-6 lg:py-8">
+      <div style={{ direction: 'rtl' }} className="container mx-auto py-1 sm:py-1 lg:py-1">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl sm:text-3xl font-bold">
             الخدمات

@@ -12,7 +12,6 @@ import type { DoctorShift } from '@/types/doctors';
 import type { Patient } from '@/types/patients';
 import { getActiveDoctorShifts } from '@/services/clinicService';
 import './DoctorsTabs.css';
-import showJsonDialog from '@/lib/showJsonDialog';
 import { useAuthorization } from '@/hooks/useAuthorization';
 
 interface DoctorsTabsProps {
@@ -105,9 +104,9 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId 
       <Box sx={{
         // width:`${window.innerWidth - 300}px`,
         overflowX:'auto'
-      }} className="doctors-tabs-flex-wrapper">
+      }} className="doctors-tabs-flex-wrapper p-1">
     
-          <Box  className="doctors-tabs-flex-container overflow-y-hidden">
+          <Box  className="doctors-tabs-flex-container" sx={{ overflowY: 'visible' }}>
             {doctorShifts.filter(shift =>shift.user_id_opened == user?.id || hasRole('admin') || user?.user_type == 'خزنه موحده' || user?.user_type == 'تامين').map((shift) => {
               const isActive = activeShiftId === shift.id;
               const isExamining = shift.is_examining;
@@ -130,7 +129,7 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId 
                 <Box
                   key={shift.id}
                   ref={(el) => {
-                    tabRefs.current[shift.id] = el;
+                    tabRefs.current[shift.id] = el as HTMLDivElement | null;
                   }}
                   onClick={() => onShiftSelect(shift)}
                   className={getTabClassName()}

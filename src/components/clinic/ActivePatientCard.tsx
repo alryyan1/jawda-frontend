@@ -9,7 +9,6 @@ import { Card } from "@/components/ui/card";
 import {
   UserCircle,
   Loader2,
-  Heart,
   Copy,
   MessageSquare,
   History,
@@ -251,16 +250,37 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
             aria-selected={isSelected}
             aria-label={`اختيار ${visit.patient.name}, رقم ${queueNumberOrVisitId}`}
           >
-            {/* Queue number */}
-            <div
-              className={cn(
-                "flex-shrink-0 w-8 h-8 flex items-center justify-center rounded text-white text-sm font-bold shadow ltr:mr-3 rtl:ml-3",
-                getStatusColor(visit.status)
-              )}
-              title={`رقم : ${queueNumberOrVisitId}`}
-            >
-              {queueNumberOrVisitId}
-            </div>
+            {/* Queue number or Heart for company patients */}
+            {visit.company ? (
+              <div
+                className="flex-shrink-0 w-8 h-8 flex items-center justify-center ltr:mr-3 rtl:ml-3"
+                title={`رقم : ${queueNumberOrVisitId}`}
+              >
+                {/* Custom heart shape with solid background */}
+                <div 
+                  className="relative w-8 h-8 flex items-center justify-center"
+                  style={{
+                    background: 'linear-gradient(45deg, #ec4899, #f472b6)',
+                    clipPath: 'polygon(50% 85%, 15% 50%, 15% 25%, 50% 15%, 85% 25%, 85% 50%)',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                  }}
+                >
+                  <span className="text-white text-xs font-bold z-10">
+                    {queueNumberOrVisitId}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div
+                className={cn(
+                  "flex-shrink-0 w-8 h-8 flex items-center justify-center rounded text-white text-sm font-bold shadow ltr:mr-3 rtl:ml-3",
+                  getStatusColor(visit.status)
+                )}
+                title={`رقم : ${queueNumberOrVisitId}`}
+              >
+                {queueNumberOrVisitId}
+              </div>
+            )}
 
             {/* Patient info and status */}
             <div className="flex-grow min-w-0 ltr:mr-2 rtl:ml-2">
@@ -271,13 +291,7 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
                 {visit.patient.name}
               </p>
               <div className="flex items-center justify-between mt-1">
-            
-                
-                {visit.company != null && (
-                  <div className="flex-shrink-0 ltr:ml-1 rtl:mr-1">
-                    <Heart className="h-6 w-6 text-pink-500" />
-                  </div>
-                )}
+                {/* Company indicator removed since it's now shown as the main badge */}
               </div>
             </div>
 

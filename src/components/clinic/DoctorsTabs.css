@@ -14,12 +14,108 @@
 .doctors-tabs-flex-container {
   display: flex;
   gap: 4px;
-   height: 64px;
-  /* padding-bottom: 28px; */
-  min-width: max-content;
-  justify-content: center !important;
+  height: 64px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0; /* Allow flex item to shrink below its content size */
+  flex-shrink: 0; /* Prevent container from shrinking */
+  justify-content: flex-start !important; /* Start from left instead of center */
   align-items: center !important;
-  overflow: visible; /* Allow badge to be visible */
+  overflow-x: auto; /* Enable horizontal scrolling */
+  overflow-y: visible; /* Allow badge to be visible */
+  
+  /* Professional scrollbar styling */
+  scrollbar-width: thin;
+  scrollbar-color: #3b82f6 rgba(0, 0, 0, 0.05);
+}
+
+/* Webkit scrollbar styling for professional look */
+.doctors-tabs-flex-container::-webkit-scrollbar {
+  height: 10px;
+}
+
+.doctors-tabs-flex-container::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 5px;
+  margin: 0 8px;
+}
+
+.doctors-tabs-flex-container::-webkit-scrollbar-thumb {
+  background: linear-gradient(45deg, #3b82f6, #1d4ed8);
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+  transition: all 0.3s ease;
+}
+
+.doctors-tabs-flex-container::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(45deg, #2563eb, #1e40af);
+  transform: scaleY(1.1);
+}
+
+.doctors-tabs-flex-container::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Smooth scrolling behavior */
+.doctors-tabs-flex-container {
+  scroll-behavior: smooth;
+}
+
+/* Professional scroll enhancements */
+.doctors-tabs-flex-container {
+  /* Add subtle gradient fade at edges to indicate scrollable content */
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 20px,
+    black calc(100% - 20px),
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 20px,
+    black calc(100% - 20px),
+    transparent 100%
+  );
+}
+
+/* Scroll shadow effects for better UX */
+.doctors-tabs-flex-container::before,
+.doctors-tabs-flex-container::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 20px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.doctors-tabs-flex-container::before {
+  left: 0;
+  background: linear-gradient(to right, rgba(255, 255, 255, 0.8), transparent);
+}
+
+.doctors-tabs-flex-container::after {
+  right: 0;
+  background: linear-gradient(to left, rgba(255, 255, 255, 0.8), transparent);
+}
+
+/* Enhanced scrollbar for dark mode support */
+@media (prefers-color-scheme: dark) {
+  .doctors-tabs-flex-container::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+  }
+  
+  .doctors-tabs-flex-container::-webkit-scrollbar-thumb {
+    background: linear-gradient(45deg, #60a5fa, #3b82f6);
+  }
+  
+  .doctors-tabs-flex-container::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(45deg, #3b82f6, #2563eb);
+  }
 }
 
 .doctors-tabs-flex-wrapper {
@@ -37,6 +133,7 @@
   justify-content: center;
   min-width: 200px;
   max-width: 200px;
+  width: 200px; /* Fixed width */
   height: 40px;
   padding: 4px 8px;
   margin-right: 5px;
@@ -44,6 +141,7 @@
   border: 2px solid;
   cursor: pointer;
   transition: all 0.2s ease;
+  flex-shrink: 0; /* Prevent tabs from shrinking */
 }
 
 .doctor-tab:hover {

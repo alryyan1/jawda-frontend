@@ -78,22 +78,138 @@ export interface PaginatedPatientsResponse {
 }
 export interface ActivePatientVisit {
   id: number;
-  patient: Patient;
-  doctor?: {
+  created_at: string;
+  visit_time: string | null;
+  visit_time_formatted: string | null;
+  status: "waiting" | "with_doctor" | "lab_pending" | "imaging_pending" | "payment_pending" | "completed" | "cancelled" | "no_show";
+  visit_type: string | null;
+  company: any | null;
+  queue_number: number | null;
+  number: number;
+  reason_for_visit: string | null;
+  visit_notes: string | null;
+  is_new: boolean;
+  only_lab: boolean;
+  requested_services_count: number;
+  patient_id: number;
+  patient: {
     id: number;
     name: string;
+    phone: string | null;
+    gender: "male" | "female" | "other";
+    age_year: number | null;
+    age_month: number | null;
+    age_day: number | null;
+    full_age: string;
+    doctor: {
+      id: number;
+      name: string;
+      specialist_name: string | null;
+    };
+    result_is_locked: boolean;
+    address: string | null;
+    gov_id: string | null;
+    company_id: number | null;
+    company: any | null;
+    subcompany_id: number | null;
+    subcompany: any | null;
+    company_relation_id: number | null;
+    insurance_no: string | null;
+    expire_date: string | null;
+    guarantor: string | null;
+    paper_fees: number;
+    is_lab_paid: boolean;
+    lab_paid: number;
+    sample_collected: boolean;
+    sample_collect_time: string | null;
+    result_print_date: string | null;
+    sample_print_date: string | null;
+    visit_number: number;
+    result_auth: boolean;
+    auth_date: string | null;
+    discount: number;
+    discount_comment: string;
+    doctor_finish: boolean;
+    doctor_lab_request_confirm: boolean;
+    doctor_lab_urgent_confirm: boolean;
+    created_at: string;
+    updated_at: string;
+    user: {
+      id: number;
+      name: string;
+      username: string;
+    };
+    has_cbc: boolean;
+    result_url: string | null;
   };
-  status:
-    | "waiting"
-    | "with_doctor"
-    | "lab_pending"
-    | "imaging_pending"
-    | "payment_pending"
-    | "completed"
-    | "cancelled"
-    | "no_show";
-  requested_services_count: number;
-  created_at: string;
+  patient_subcompany: any | null;
+  doctor_id: number;
+  doctor: {
+    id: number;
+    name: string;
+    specialist_name: string | null;
+  };
+  doctor_name: string;
+  user_id: number;
+  shift_id: number;
+  doctor_shift_id: number;
+  total_lab_amount: number;
+  total_paid: number;
+  total_discount: number;
+  balance_due: number;
+  total_lab_paid: number;
+  total_lab_discount: number;
+  total_lab_endurance: number;
+  total_lab_balance: number;
+  requested_services: Array<{
+    id: number;
+    doctorvisits_id: number;
+    service_id: number;
+    service: {
+      id: number;
+      name: string;
+      service_group_id: number;
+      service_group_name: string;
+      service_group: {
+        id: number;
+        name: string;
+      };
+      price: number;
+      activate: boolean;
+      variable: boolean;
+      created_at: string;
+      updated_at: string;
+    };
+    user_id: number;
+    user_deposited: number;
+    doctor_id: number;
+    price: number;
+    amount_paid: number;
+    endurance: number;
+    is_paid: boolean;
+    discount: number;
+    discount_per: number;
+    bank: boolean;
+    count: number;
+    doctor_note: string;
+    nurse_note: string;
+    done: boolean;
+    approval: boolean;
+    created_at: string;
+    sub_total: number;
+    net_payable: number | null;
+    balance_due: number;
+  }>;
+  lab_requests: any[];
+  requested_services_summary: Array<{
+    id: number;
+    service_name: string;
+    price: number;
+    count: number;
+    amount_paid: number;
+    is_paid: boolean;
+    done: boolean;
+  }>;
   updated_at: string;
 }
 // src/types/patients.ts

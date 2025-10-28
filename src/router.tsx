@@ -35,6 +35,7 @@ import CompanyServiceContractsPage from "./pages/companies/CompanyServiceContrac
 import TodaysPatientsPage from "./pages/patients/TodaysPatientsPage";
 import DoctorSchedulesPage from "./components/schedules/DoctorSchedulesPage";
 import DoctorShiftsReportPage from "./pages/reports/DoctorShiftsReportPage";
+import DoctorShiftDetailsPage from "./pages/reports/DoctorShiftDetailsPage";
 import ReportsLayout from "./pages/reports/ReportsLayout";
 import ServiceStatisticsReportPage from "./pages/reports/ServiceStatisticsReportPage";
 import MainTestFormPage from "./pages/lab/MainTestFormPage";
@@ -253,6 +254,7 @@ const router = createBrowserRouter([
             children: [
               { index: true, element: <Navigate to="doctor-shifts" replace /> }, // Default report
               { path: "doctor-shifts", element: <DoctorShiftsReportPage /> },
+              { path: "doctor-shifts/:doctorShiftId", element: <DoctorShiftDetailsPage /> },
               {
                 path: "service-statistics",
                 element: <ServiceStatisticsReportPage />,

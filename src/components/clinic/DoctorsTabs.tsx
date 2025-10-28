@@ -101,12 +101,52 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId 
   }
   // showJsonDialog(user,'user')
   return (
-      <Box sx={{
-        // width:`${window.innerWidth - 300}px`,
-        overflowX:'auto'
-      }} className="doctors-tabs-flex-wrapper p-1">
-    
-          <Box  className="doctors-tabs-flex-container" sx={{ overflowY: 'visible' }}>
+    <Box 
+    sx={{ overflowY: 'visible',overflowX:'auto',width:`${window.innerWidth - 350}px` }}
+    >
+      <Box   
+        className="doctors-tabs-flex-container" 
+        sx={{ 
+          overflowY: 'visible',
+          overflowX: 'auto',
+          width: '100%',
+          maxWidth: '100%',
+          minWidth: 0, // Allow flex item to shrink below its content size
+          scrollBehavior: 'smooth',
+          // Webkit scrollbar styling
+          '&::-webkit-scrollbar': {
+            height: '10px',
+          },
+          '&::-webkit-scrollbar-track': {
+            background: 'rgba(0, 0, 0, 0.05)',
+            borderRadius: '5px',
+            margin: '0 8px',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: 'linear-gradient(45deg, #3b82f6, #1d4ed8)',
+            borderRadius: '5px',
+            border: '2px solid transparent',
+            backgroundClip: 'content-box',
+            transition: 'all 0.3s ease',
+            '&:hover': {
+              background: 'linear-gradient(45deg, #2563eb, #1e40af)',
+              transform: 'scaleY(1.1)',
+            },
+          },
+          '&::-webkit-scrollbar-thumb:hover': {
+            background: 'linear-gradient(45deg, #2563eb, #1e40af)',
+            transform: 'scaleY(1.1)',
+          },
+          '&::-webkit-scrollbar-corner': {
+            background: 'transparent',
+          },
+          // Firefox scrollbar styling
+          scrollbarWidth: 'thin',
+          scrollbarColor: '#3b82f6 rgba(0, 0, 0, 0.05)',
+          // Add subtle shadow for depth
+          boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.1)',
+        }}
+      >
             {doctorShifts.filter(shift =>shift.user_id_opened == user?.id || hasRole('admin') || user?.user_type == 'خزنه موحده' || user?.user_type == 'تامين').map((shift) => {
               const isActive = activeShiftId === shift.id;
               const isExamining = shift.is_examining;
@@ -189,8 +229,8 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId 
                 </Box>
               );
             })}
-          </Box>
       </Box>
+    </Box>
   );
 };
 

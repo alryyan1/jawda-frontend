@@ -19,6 +19,6 @@ interface ActivePatientFilters {
 }
 
 export const getActiveClinicPatients = async (filters: ActivePatientFilters): Promise<ActivePatientVisit[]> => {
-  const response = await apiClient.get<ActivePatientVisit[]>('/clinic-active-patients', { params: filters });
-  return response.data; // Return the array directly since no pagination
+  const response = await apiClient.get<{ data: ActivePatientVisit[] }>('/clinic-active-patients', { params: filters });
+  return response.data.data; // Return the array from the data property
 };

@@ -13,9 +13,12 @@ import {
   Select,
   MenuItem,
   Typography,
+  Link,
 } from "@mui/material";
 import { formatNumber } from "@/lib/utils";
 import type { DoctorShiftReportItem } from "@/types/reports";
+import { useNavigate } from "react-router-dom";
+import dayjs from "dayjs";
 
 interface DoctorShiftsReportTableProps {
   shifts: DoctorShiftReportItem[];
@@ -30,9 +33,26 @@ function DoctorShiftsReportTable({
   rowsPerPage = 50,
   onRowsPerPageChange,
 }: DoctorShiftsReportTableProps) {
-  const handleRowClick = (shiftId: number) => {
-    const reportUrl = `http://server1/jawda-medical/public/reports/clinic-report-old/pdf?doctor_shift_id=${shiftId}`;
-    window.open(reportUrl, '_blank');
+  const navigate = useNavigate();
+  
+  const handleRowClick = (shift: DoctorShiftReportItem) => {
+    // const reportUrl = `http://server1/jawda-medical/public/reports/clinic-report-old/pdf?doctor_shift_id=${shiftId}`;
+    sessionStorage.setItem('selectedShiftData', JSON.stringify(shift));
+    navigate(`/reports/doctor-shifts/${shift.id}`, {
+      state: { shiftData: shift }
+    });
+    // window.open(reportUrl, '_blank');
+  };
+
+  const handleDoctorNameClick = (shift: DoctorShiftReportItem, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent row click
+    
+    // Store the shift data in sessionStorage as a fallback
+    sessionStorage.setItem('selectedShiftData', JSON.stringify(shift));
+    
+    navigate(`/reports/doctor-shifts/${shift.id}`, {
+      state: { shiftData: shift }
+    });
   };
 
   // Calculate totals for all financial columns
@@ -94,6 +114,7 @@ function DoctorShiftsReportTable({
         <Table size="small" sx={{ direction: 'ltr' }}>
         <TableHead>
           <TableRow>
+            <TableCell align="center">الحالة</TableCell>
             <TableCell align="center">تاريخ </TableCell>
             <TableCell align="center">التخصص</TableCell>
             <TableCell align="center">الطبيب</TableCell>
@@ -109,34 +130,50 @@ function DoctorShiftsReportTable({
           {shifts.map((shift, index) => (
             <TableRow 
               key={shift.id} 
-              onClick={() => handleRowClick(shift.id)}
-              className={shift.status ? 'bg-blue-500' : undefined}
+              onClick={() => handleRowClick(shift)}
               sx={{ 
-                backgroundColor: shift.status 
-                  ? '#C8E6C9' // Material light green 100
-                  : (index % 2 === 0 ? 'background.paper' : 'grey.50'),
+                backgroundColor: index % 2 === 0 ? 'background.paper' : 'grey.50',
                 cursor: 'pointer',
-                '&:hover': { 
-                  backgroundColor: shift.status ? undefined : 'action.hover',
-                  transform: 'scale(1.01)',
-                  transition: 'all 0.2s ease-in-out'
-                }
+               
               }}
             >
               <TableCell align="center">
-                {shift.created_at ? new Date(shift.created_at).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: '2-digit',
-                  day: '2-digit',
-                  hour: '2-digit',
-                  minute: '2-digit'
-                }) : '-'}
+                <Box
+                  sx={{
+                    width: 12,
+                    height: 12,
+                    borderRadius: '50%',
+                    backgroundColor: shift.status ? '#4CAF50' : '#F44336', // Green for open, red for closed
+                    margin: '0 auto',
+                    border: '2px solid',
+                    borderColor: shift.status ? '#2E7D32' : '#C62828', // Darker border
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                  }}
+                  title={shift.status ? 'مفتوح' : 'مغلق'}
+                />
+              </TableCell>
+              <TableCell align="center">
+                {shift.created_at ? dayjs(shift.created_at).format('DD/MM/YYYY HH:mm A') : '-'}
               </TableCell>
               <TableCell align="center">
                 {shift.doctor_specialist_name || '-'}
               </TableCell>
               <TableCell align="center">
-                {shift.doctor_name || 'N/A'}
+                <Link
+                  component="button"
+                  onClick={(e) => handleDoctorNameClick(shift, e)}
+                  sx={{
+                    color: 'primary.main',
+                    textDecoration: 'none',
+                    cursor: 'pointer',
+                    '&:hover': {
+                      textDecoration: 'underline',
+                    },
+                    fontWeight: 'medium',
+                  }}
+                >
+                  {shift.doctor_name || 'N/A'}
+                </Link>
               </TableCell>
               <TableCell align="center" sx={{ fontWeight: 'bold', color: 'success.main' }}>
                 {formatNumber(shift.total_income || 0)}
@@ -161,7 +198,7 @@ function DoctorShiftsReportTable({
           {/* Summary Row */}
           <TableRow 
             sx={{ 
-              backgroundColor: 'primary.light',
+              backgroundColor: 'primary.warning',
               '& .MuiTableCell-root': { 
                 fontWeight: 'bold',
                 borderTop: '2px solid',
@@ -169,6 +206,9 @@ function DoctorShiftsReportTable({
               }
             }}
           >
+            <TableCell align="center" sx={{ fontWeight: 'bold', fontSize: '1rem' }}>
+              -
+            </TableCell>
             <TableCell align="center" sx={{ fontWeight: 'bold', fontSize: '1rem' }}>
               المجموع
             </TableCell>

@@ -1,38 +1,34 @@
 // src/components/clinic/ManageServiceDepositsDialog.tsx
-import React, { useEffect, useCallback, useMemo } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import React, { useEffect, useCallback, useMemo, useState } from "react";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { arSA, enUS } from "date-fns/locale";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
+  Button,
   Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
   DialogTitle,
-  DialogClose,
-} from "@/components/ui/dialog";
-import {
-  Form,
-  FormField,
-} from "@/components/ui/form";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import {
+  DialogContent,
+  DialogActions,
+  TextField,
+  Checkbox,
+  FormControlLabel,
   Table,
   TableBody,
   TableCell,
+  TableContainer,
   TableHead,
-  TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Loader2, PlusCircle, Trash2, Save, Info } from "lucide-react";
+  Paper,
+  Box,
+  Typography,
+  CircularProgress,
+  IconButton,
+  Tooltip,
+} from "@mui/material";
+import { PlusCircle, Trash2, Save, Info } from "lucide-react";
 
 import type {
   RequestedService,
@@ -50,14 +46,11 @@ import {
 
 // Form interfaces
 interface DepositItemFormValues {
+  id?: number;
   amount: string;
   is_bank: boolean;
   user_name?: string;
   created_at_formatted?: string;
-}
-
-interface ManageDepositsFormValues {
-  deposits: DepositItemFormValues[];
 }
 
 interface ManageServiceDepositsDialogProps {
@@ -82,7 +75,7 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
   
   const dateLocale = useMemo(() => 
     "ar".startsWith("ar") ? arSA : enUS,
-    ["ar"]
+    []
   );
 
   const depositsQueryKey = useMemo(() => 
@@ -95,19 +88,8 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
     [requestedService.doctorvisits_id]
   );
 
-  // Initialize form with empty deposits
-  const defaultValues = useMemo(() => ({ deposits: [] }), []);
-  
-  const form = useForm<ManageDepositsFormValues>({
-    defaultValues: { deposits: [] },
-  });
-
-  const { control, reset, getValues } = form;
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: "deposits",
-    keyName: "fieldId",
-  });
+  // State for managing deposits
+  const [deposits, setDeposits] = useState<DepositItemFormValues[]>([]);
 
   // Query for deposits
   const { data: existingDeposits = [], isLoading: isLoadingDeposits } = useQuery<RequestedServiceDeposit[], Error>({
@@ -137,19 +119,17 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
     }));
   }, [existingDeposits, dateLocale]);
 
-  // Handle form reset when dialog opens/closes or deposits change
+  // Handle deposits state when dialog opens/closes or deposits change
   useEffect(() => {
     if (!isOpen) {
-      reset();
+      setDeposits([]);
       return;
     }
 
     if (formattedDeposits.length > 0) {
-      reset({
-        deposits: formattedDeposits
-      });
+      setDeposits(formattedDeposits);
     }
-  }, [isOpen, formattedDeposits, reset, defaultValues]);
+  }, [isOpen, formattedDeposits]);
 
   // Memoize the query invalidation function
   const handleQueryInvalidation = useCallback(() => {
@@ -193,161 +173,158 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
   const handleSaveRow = useCallback((index: number) => {
     if (!isOpen) return;
 
-    form.trigger(`deposits.${index}`).then((isValid) => {
-      if (!isValid) {
-        toast.error("تحقق من وجود أخطاء في الصف");
-        return;
-      }
+    const rowData = deposits[index];
+    if (!rowData) return;
 
-      const rowData = getValues(`deposits.${index}`);
-      
-      if (!currentClinicShift?.id && !rowData.id) {
-        toast.error("لا توجد وردية نشطة للدفع");
-        return;
-      }
+    // Basic validation
+    if (!rowData.amount || parseFloat(rowData.amount) <= 0) {
+      toast.error("يرجى إدخال مبلغ صحيح");
+      return;
+    }
+    
+    if (!currentClinicShift?.id && !rowData.id) {
+      toast.error("لا توجد وردية نشطة للدفع");
+      return;
+    }
 
-      const payload: RequestedServiceDepositFormData = {
-        id: rowData.id || undefined,
-        amount: rowData.amount,
-        is_bank: rowData.is_bank,
-      };
+    const payload: RequestedServiceDepositFormData = {
+      id: rowData.id || undefined,
+      amount: rowData.amount,
+      is_bank: rowData.is_bank,
+    };
 
-      if (rowData.id) {
-        updateMutation.mutate(payload);
-      } else {
-        createMutation.mutate(payload as Omit<RequestedServiceDepositFormData, "id">);
-      }
-    });
-  }, [getValues, currentClinicShift?.id, updateMutation, createMutation, form, isOpen]);
+    if (rowData.id) {
+      updateMutation.mutate(payload);
+    } else {
+      createMutation.mutate(payload as Omit<RequestedServiceDepositFormData, "id">);
+    }
+  }, [deposits, currentClinicShift?.id, updateMutation, createMutation, isOpen]);
 
   const addNewDepositField = useCallback(() => {
     if (!isOpen) return;
 
-    append({
+    const newDeposit: DepositItemFormValues = {
       amount: "0.00",
       is_bank: false,
       user_name: "إدخال جديد",
       created_at_formatted: format(new Date(), "Pp", { locale: dateLocale }),
-    });
-  }, [append, dateLocale, isOpen]);
+    };
 
-  const handleDelete = useCallback((fieldItem: { id?: number | null }, index: number) => {
+    setDeposits(prev => [...prev, newDeposit]);
+  }, [dateLocale, isOpen]);
+
+  const handleDelete = useCallback((deposit: DepositItemFormValues, index: number) => {
     if (!isOpen) return;
 
-    if (fieldItem.id) {
-      deleteMutation.mutate(Number(fieldItem.id));
+    if (deposit.id) {
+      deleteMutation.mutate(Number(deposit.id));
     } else {
-      remove(index);
+      setDeposits(prev => prev.filter((_, i) => i !== index));
     }
-  }, [deleteMutation, remove, isOpen]);
+  }, [deleteMutation, isOpen]);
+
+  const updateDeposit = useCallback((index: number, field: keyof DepositItemFormValues, value: string | boolean) => {
+    setDeposits(prev => prev.map((deposit, i) => 
+      i === index ? { ...deposit, [field]: value } : deposit
+    ));
+  }, []);
 
   if (!isOpen) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle>
-            {"إدارة دفعات الخدمة"}
-          </DialogTitle>
-          <DialogDescription>
-            {"أضف وعدّل واحذف دفعات الخدمة"}
-          </DialogDescription>
-        </DialogHeader>
-
+    <Dialog 
+      open={isOpen} 
+      onClose={() => onOpenChange(false)}
+      maxWidth="md"
+      fullWidth
+    >
+      <DialogTitle>
+        إدارة دفعات الخدمة
+      </DialogTitle>
+      <DialogContent>
         {isLoadingDeposits ? (
-          <div className="flex justify-center items-center py-10">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
+          <Box display="flex" justifyContent="center" alignItems="center" py={4}>
+            <CircularProgress />
+          </Box>
         ) : (
-          <Form {...form}>
-            <form
-              onSubmit={(e) => e.preventDefault()}
-              className="flex-grow flex flex-col overflow-hidden"
-            >
-              <ScrollArea
-                style={{ direction: true }}
-                className="flex-grow pr-1 -mr-2"
-              >
-                {fields.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Info size={24} className="mx-auto mb-2" />
-                    {"لا توجد دفعات"}
-                  </div>
-                )}
-                {fields.length > 0 && (
-                  <Table className="text-xs">
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[120px] text-center">
-                          {"المبلغ"}
-                        </TableHead>
-                        <TableHead className="w-[100px] text-center">
-                          {"طريقة الدفع"}
-                        </TableHead>
-                        <TableHead className="hidden sm:table-cell text-center">
-                          {"المستخدم"}
-                        </TableHead>
-                        <TableHead className="hidden sm:table-cell text-center">
-                          {"التاريخ والوقت"}
-                        </TableHead>
-                        <TableHead className="w-[80px] text-center">
-                          {"إجراءات"}
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {fields.map((fieldItem, index) => (
-                        <TableRow key={fieldItem.fieldId}>
-                          <TableCell className="py-1">
-                            <FormField
-                              control={control}
-                              name={`deposits.${index}.amount`}
-                              render={({ field: f }) => (
-                                <Input
-                                  type="number"
-                                  {...f}
-                                  step="0.01"
-                                  className="h-7 text-xs text-center"
-                                />
-                              )}
-                            />
-                          </TableCell>
-                          <TableCell className="py-1">
-                            <FormField
-                              control={control}
-                              name={`deposits.${index}.is_bank`}
-                              render={({ field: f }) => (
-                                <div className="flex justify-center">
-                                  <Checkbox
-                                    checked={f.value}
-                                    onCheckedChange={f.onChange}
-                                    id={`is_bank_${index}`}
-                                  />
-                                  <label
-                                    htmlFor={`is_bank_${index}`}
-                                    className="text-xs ltr:ml-2 rtl:mr-2"
-                                  >
-                                    {f.value
-                                      ? "تحويل بنكي"
-                                      : "نقدي"}
-                                  </label>
-                                </div>
-                              )}
-                            />
-                          </TableCell>
-                          <TableCell className="py-1 hidden sm:table-cell text-center">
-                            {fieldItem.user_name}
-                          </TableCell>
-                          <TableCell className="py-1 hidden sm:table-cell text-center">
-                            {fieldItem.created_at_formatted}
-                          </TableCell>
-                          <TableCell className="py-1 text-center">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
+          <Box>
+            {deposits.length === 0 && (
+              <Box textAlign="center" py={4}>
+                <Info size={24} className="mx-auto mb-2" />
+                <Typography variant="body2" color="text.secondary">
+                  لا توجد دفعات
+                </Typography>
+              </Box>
+            )}
+            {deposits.length > 0 && (
+              <TableContainer component={Paper} elevation={1}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell align="center" sx={{ width: 120 }}>
+                        المبلغ
+                      </TableCell>
+                      <TableCell align="center" sx={{ width: 100 }}>
+                        طريقة الدفع
+                      </TableCell>
+                      <TableCell align="center" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
+                        المستخدم
+                      </TableCell>
+                      <TableCell align="center" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
+                        التاريخ والوقت
+                      </TableCell>
+                      <TableCell align="center" sx={{ width: 80 }}>
+                        إجراءات
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {deposits.map((deposit, index) => (
+                      <TableRow key={index}>
+                        <TableCell>
+                          <TextField
+                            type="number"
+                            value={deposit.amount}
+                            onChange={(e) => updateDeposit(index, 'amount', e.target.value)}
+                            size="small"
+                            inputProps={{ 
+                              step: "0.01",
+                              style: { textAlign: 'center', fontSize: '0.75rem' }
+                            }}
+                            sx={{ '& .MuiInputBase-root': { height: 32 } }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <FormControlLabel
+                            control={
+                              <Checkbox
+                                checked={deposit.is_bank}
+                                onChange={(e) => updateDeposit(index, 'is_bank', e.target.checked)}
+                                size="small"
+                              />
+                            }
+                            label={
+                              <Typography variant="caption">
+                                {deposit.is_bank ? "تحويل بنكي" : "نقدي"}
+                              </Typography>
+                            }
+                            sx={{ margin: 0, justifyContent: 'center' }}
+                          />
+                        </TableCell>
+                        <TableCell align="center" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
+                          <Typography variant="caption">
+                            {deposit.user_name}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="center" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
+                          <Typography variant="caption">
+                            {deposit.created_at_formatted}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="center">
+                          <Tooltip title="حفظ">
+                            <IconButton
+                              size="small"
                               onClick={() => handleSaveRow(index)}
                               disabled={
                                 createMutation.isPending ||
@@ -356,61 +333,54 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
                             >
                               {createMutation.isPending ||
                               updateMutation.isPending ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <CircularProgress size={16} />
                               ) : (
-                                <Save className="h-4 w-4 text-green-600" />
+                                <Save size={16} color="green" />
                               )}
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-destructive"
-                              onClick={() => handleDelete(fieldItem, index)}
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="حذف">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleDelete(deposit, index)}
                               disabled={
                                 deleteMutation.isPending &&
-                                deleteMutation.variables ===
-                                  Number(fieldItem.id)
+                                deleteMutation.variables === Number(deposit.id)
                               }
                             >
                               {deleteMutation.isPending &&
-                              deleteMutation.variables ===
-                                Number(fieldItem.id) ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
+                              deleteMutation.variables === Number(deposit.id) ? (
+                                <CircularProgress size={16} />
                               ) : (
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 size={16} color="error" />
                               )}
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
-              </ScrollArea>
-              <div className="pt-2 flex justify-start">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={addNewDepositField}
-                  className="text-xs"
-                >
-                  <PlusCircle className="h-3.5 w-3.5 ltr:mr-1 rtl:ml-1" />{" "}
-                  {"إضافة دفعة"}
-                </Button>
-              </div>
-              <DialogFooter className="mt-auto pt-4">
-                <DialogClose asChild>
-                  <Button type="button" variant="outline">
-                    {"إغلاق"}
-                  </Button>
-                </DialogClose>
-              </DialogFooter>
-            </form>
-          </Form>
+                            </IconButton>
+                          </Tooltip>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+            <Box mt={2}>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={addNewDepositField}
+                startIcon={<PlusCircle size={16} />}
+              >
+                إضافة دفعة
+              </Button>
+            </Box>
+          </Box>
         )}
       </DialogContent>
+      <DialogActions>
+        <Button onClick={() => onOpenChange(false)} variant="outlined">
+          إغلاق
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 };

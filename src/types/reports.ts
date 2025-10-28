@@ -5,15 +5,35 @@
 
 export interface DoctorShiftReportItem {
   id: number;
+  doctor_id: number;
+  total_income: number;
+  clinic_enurance: number;
   doctor_name: string;
-  general_shift_name?: string;
+  doctor_specialist_name?: string;
+  user_id_opened: number;
+  user_name_opened?: string;
+  patients_count?: number | null;
   shift_id: number;
-  formatted_start_time: string;
-  formatted_end_time?: string;
-  duration?: string;
+  general_shift_name?: string;
+  firebase_id?: string | null;
+  specialist_firestore_id?: string | null;
   status: boolean;
   status_text: string;
-  user_name?: string;
+  start_time?: string | null;
+  end_time?: string | null;
+  formatted_start_time: string;
+  formatted_end_time?: string;
+  duration?: string | null;
+  total_doctor_entitlement: number;
+  cash_entitlement: number;
+  insurance_entitlement: number;
+  static_wage_applied: number;
+  is_cash_revenue_prooved: boolean;
+  is_cash_reclaim_prooved: boolean;
+  is_company_revenue_prooved: boolean;
+  is_company_reclaim_prooved: boolean;
+  created_at: string;
+  updated_at: string;
 }
 // src/types/reports.ts
 // ... existing types ...

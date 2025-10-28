@@ -276,7 +276,7 @@ const ClinicPage: React.FC = () => {
     <div className='flex justify-between'>  <div className="clinic-page-container" dir="rtl">
       {/* Top Section: Doctors Tabs Only */}
       <header  className="clinic-header">
-        <div className="clinic-header-content">
+        <div  className="clinic-header-content">
           <DoctorsTabs
             setSelectedPatientVisit={setSelectedPatientVisit}
             onShiftSelect={onShiftSelect}

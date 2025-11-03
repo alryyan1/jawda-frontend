@@ -1,11 +1,11 @@
 // src/types/visits.ts
 
 import type { Patient, PatientStripped } from "./patients";
-import type { Doctor, DoctorShift, DoctorStripped } from "./doctors";
-import type { User, UserStripped } from "./auth"; // Assuming UserStripped is here or in users.ts
+import type { DoctorShift, DoctorStripped } from "./doctors";
+import type { UserStripped } from "./auth"; // Assuming UserStripped is here or in users.ts
 import type { Shift } from "./shifts";
 import type { Service, RequestedServiceDeposit } from "./services"; // Assuming RequestedServiceDeposit is here
-import type { ChildTest, MainTest, Container } from "./labTests"; // MainTest now includes childTests
+import type { ChildTest, MainTest } from "./labTests"; // MainTest now includes childTests
 import type { Company } from "./companies";
 
 // --- RequestedResult based on your latest decision to include tracking fields ---
@@ -203,14 +203,50 @@ export interface PatientVisitSummary {
   id: number; // Visit ID
   visit_date: string;
   visit_time?: string | null;
+  visit_time_formatted?: string | null;
   status: string;
-  patient: PatientStripped;
-  doctor?: DoctorStripped;
+  visit_type?: string | null;
+
+  patient: Patient;
+  patient_id?: number;
+  total_services_amount: number;
+  total_services_paid: number;
+  lab_paid: number;
+  total_lab_value_will_pay: number;
+ 
+  doctor?: DoctorStripped | null;
+  doctor_id?: number | null;
+  doctor_name?: string | null;
+
+  shift_id?: number;
+  doctor_shift_id?: number | null;
+  doctor_shift_details?: Partial<DoctorShift> | null;
+
+  number: number;
+  queue_number?: number | null;
+  reason_for_visit?: string | null;
+  visit_notes?: string | null;
+
+  is_new: boolean;
+  only_lab: boolean;
+  company?: Company | null;
+
   total_amount: number;
   total_paid: number;
   total_discount: number;
   balance_due: number;
+  total_lab_amount?: number;
+  total_lab_paid?: number;
+  total_lab_discount?: number;
+  total_lab_balance?: number;
+  requested_services_count?: number | null;
+
+  requested_services?: RequestedService[];
+  lab_requests?: LabRequest[];
   requested_services_summary?: RequestedServiceSummary[];
+
+  created_at: string;
+  updated_at?: string;
   // You might add a summary for lab requests too if needed in the dialog
   // lab_requests_summary?: { test_name: string; price: number; is_paid: boolean }[];
 }

@@ -145,13 +145,15 @@ export const recordServicePayment = async (payload: CreateDepositPayload): Promi
 
 const DOCTOR_VISITS_API_URL = '/doctor-visits'; // Matches your apiResource route
 
-interface GetVisitsFilters {
+export interface GetVisitsFilters {
   page?: number;
   visit_date?: string; // YYYY-MM-DD
   doctor_id?: number | string | null;
   search?: string;
   status?: string | null; // e.g., 'all', 'waiting', 'completed'
   per_page?: number;
+  date_from?: string; // YYYY-MM-DD
+  date_to?: string; // YYYY-MM-DD
 }
 
 export const getPatientVisitsSummary = async (filters: GetVisitsFilters): Promise<PaginatedResponse<PatientVisitSummary>> => {

@@ -85,6 +85,7 @@ import type { DoctorShift } from "@/types/doctors";
 import queueWorkerService from "@/services/queueWorkerService";
 import type { QueueWorkerStatus } from "@/services/queueWorkerService";
 import { toast } from "sonner";
+import { useAuthorization } from "@/hooks/useAuthorization";
 
 // Define navigation items structure
 export interface NavItem {
@@ -535,7 +536,7 @@ const AppLayout: React.FC = () => {
     // Get filtered navigation items based on user type
     const filteredMainNavItems = getMainNavItems(user?.user_type as UserType);
     const filteredUtilityNavItems = getUtilityNavItems(user?.user_type as UserType);
-    
+    const { can } = useAuthorization();
     return (
       <div className="flex flex-col h-full">
         <ScrollArea className="flex-1 min-h-0"> {/* Changed from flex-grow to flex-1 min-h-0 for proper flex behavior */}
@@ -551,7 +552,7 @@ const AppLayout: React.FC = () => {
   
   const CollapseIcon = ChevronsRight;
   const ExpandIcon = ChevronsLeft;
-
+  const {can} = useAuthorization();
   return (
     <ClinicSelectionProvider>
     <TooltipProvider delayDuration={100}>
@@ -777,12 +778,12 @@ const AppLayout: React.FC = () => {
                       </DropdownMenuItem>
                       
                       {/* Reports and Settings for admin users */}
-                      {(!user?.user_type || !Object.values(UserType).includes(user.user_type as UserType)) && (
+                     
                         <>
                           <DropdownMenuSeparator />
                           
                           {/* Reports Submenu */}
-                          <DropdownMenuSub>
+                          {can('عرض التقارير') && <DropdownMenuSub>
                             <DropdownMenuSubTrigger className="flex items-center">
                               <FileBarChart2 className="mr-2 h-4 w-4" />
                               التقارير
@@ -873,10 +874,10 @@ const AppLayout: React.FC = () => {
                                 </Link>
                               </DropdownMenuItem>
                             </DropdownMenuSubContent>
-                          </DropdownMenuSub>
+                          </DropdownMenuSub>}
                           
                           {/* Settings Submenu */}
-                          <DropdownMenuSub>
+                          {can('عرض الاعدادات') && <DropdownMenuSub>
                             <DropdownMenuSubTrigger className="flex items-center">
                               <Settings className="mr-2 h-4 w-4" />
                               الإعدادات
@@ -949,9 +950,9 @@ const AppLayout: React.FC = () => {
                                 </Link>
                               </DropdownMenuItem>
                             </DropdownMenuSubContent>
-                          </DropdownMenuSub>
+                          </DropdownMenuSub>}
                         </>
-                      )}
+                    
                
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive focus:bg-destructive/10">

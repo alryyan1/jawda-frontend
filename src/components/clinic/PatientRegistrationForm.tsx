@@ -27,6 +27,7 @@ import apiClient from '@/services/api';
 import PatientistorytableClinc from '@/components/clinic/PatientistorytableClinc';
 import AddSubcompanyDialog from '@/components/companies/AddSubcompanyDialog';
 import AddCompanyRelationDialog from '@/components/companies/AddCompanyRelationDialog';
+import { useAuthorization } from '@/hooks/useAuthorization';
 
 interface PatientRegistrationFormProps {
   onPatientRegistered: (patient: Patient) => void;
@@ -109,7 +110,7 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
   // Dialog state
   const [showSubcompanyDialog, setShowSubcompanyDialog] = useState(false);
   const [showRelationDialog, setShowRelationDialog] = useState(false);
-
+  const { can } = useAuthorization();
   // Alert state
   const [alert, setAlert] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
 
@@ -505,7 +506,7 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
                   getOptionLabel={(option) => option.name}
                   isOptionEqualToValue={(option, value) => option.id === value.id}
                   loading={isLoadingCompanies}
-                  disabled={isLoadingCompanies || isSubmitting}
+                  disabled={isLoadingCompanies || isSubmitting || !can('تسجيل مريض تامين')}
                   clearOnEscape
                   renderInput={(params) => (
                     <TextField

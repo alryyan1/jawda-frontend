@@ -37,7 +37,7 @@ import {
   CheckCircle,
   CreditCard,
 } from "lucide-react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import ServicePaymentDialog from "./ServicePaymentDialog";
 import { formatNumber } from "@/lib/utils";
@@ -70,6 +70,57 @@ interface RowEditData {
   endurance?: number;
   visit?: DoctorVisit;
 }
+
+// Component to toggle deposits bank/cash state
+interface ToggleDepositsButtonProps {
+  requestedServiceId: number;
+  updatingServiceId: number | null;
+  onToggle: (serviceId: number) => void;
+}
+
+const ToggleDepositsButton: React.FC<ToggleDepositsButtonProps> = ({
+  requestedServiceId,
+  updatingServiceId,
+  onToggle,
+}) => {
+  const { data: deposits = [] } = useQuery({
+    queryKey: ["depositsForRequestedService", requestedServiceId],
+    queryFn: () => getDepositsForRequestedService(requestedServiceId),
+    enabled: !!requestedServiceId,
+  });
+
+  // Determine if all deposits are bank
+  const allAreBank = deposits.length > 0 && deposits.every((deposit) => deposit.is_bank === true);
+  const isUpdating = updatingServiceId === requestedServiceId;
+
+  const tooltipTitle = allAreBank 
+    ? "تغيير جميع الدفعات إلى كاش" 
+    : deposits.length > 0 
+    ? "تغيير جميع الدفعات إلى بنك"
+    : "لا توجد دفعات";
+
+  const buttonColor = allAreBank ? "primary" : "default";
+
+  return (
+    <Tooltip title={tooltipTitle}>
+      <IconButton
+        size="small"
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggle(requestedServiceId);
+        }}
+        disabled={isUpdating || !requestedServiceId || deposits.length === 0}
+        color={buttonColor as "primary" | "default"}
+      >
+        {isUpdating ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <CreditCard className="h-4 w-4" />
+        )}
+      </IconButton>
+    </Tooltip>
+  );
+};
 
 const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
   visit,
@@ -174,23 +225,45 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
     null
   );
 
-  // Mutation to set all deposits is_bank = 1
+  // Mutation to toggle all deposits is_bank
   const setAllDepositsBankMutation = useMutation({
     mutationFn: async (requestedServiceId: number) => {
       setUpdatingServiceId(requestedServiceId);
       // Get all deposits for the requested service
       const deposits = await getDepositsForRequestedService(requestedServiceId);
 
-      // Update each deposit to set is_bank = true (1)
+      if (deposits.length === 0) {
+        toast.warning("لا توجد دفعات للخدمة");
+        return { count: 0, serviceId: requestedServiceId, newState: false };
+      }
+
+      // Check if all deposits are bank (is_bank = true)
+      const allAreBank = deposits.every((deposit) => deposit.is_bank === true);
+      
+      // Toggle: if all are bank, set to cash (false), otherwise set to bank (true)
+      const newBankState = !allAreBank;
+
+      // Update each deposit
       const updatePromises = deposits.map((deposit) =>
-        updateRequestedServiceDeposit(deposit.id, { is_bank: true })
+        updateRequestedServiceDeposit(deposit.id, { 
+          amount: String(deposit.amount),
+          is_bank: newBankState 
+        })
       );
 
       await Promise.all(updatePromises);
-      return { count: deposits.length, serviceId: requestedServiceId };
+      return { 
+        count: deposits.length, 
+        serviceId: requestedServiceId, 
+        newState: newBankState 
+      };
     },
-    onSuccess: ({ count }) => {
-      toast.success(`تم تحديث ${count} دفعة كدفعة بنكية`);
+    onSuccess: ({ count, newState }) => {
+      if (count > 0) {
+        toast.success(
+          `تم تحديث ${count} دفعة إلى ${newState ? "بنك" : "كاش"}`
+        );
+      }
       queryClient.invalidateQueries({
         queryKey: ["requestedServicesForVisit", visitId],
       });
@@ -439,25 +512,13 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                                     دفع
                                   </Button>
                                 )}
-                                <Tooltip title="تعيين جميع الدفعات كدفعة بنكية">
-                                  <IconButton
-                                    size="small"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setAllDepositsBankMutation.mutate(rs.id);
-                                    }}
-                                    disabled={
-                                      updatingServiceId === rs.id || !rs.id
-                                    }
-                                    color="primary"
-                                  >
-                                    {updatingServiceId === rs.id ? (
-                                      <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                      'بنكك'
-                                    )}
-                                  </IconButton>
-                                </Tooltip>
+                                <ToggleDepositsButton 
+                                  requestedServiceId={rs.id}
+                                  updatingServiceId={updatingServiceId}
+                                  onToggle={(serviceId) => {
+                                    setAllDepositsBankMutation.mutate(serviceId);
+                                  }}
+                                />
                               </Box>
                             </TableCell>
                           </TableRow>

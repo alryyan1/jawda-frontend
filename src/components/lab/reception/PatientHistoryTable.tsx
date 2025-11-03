@@ -29,6 +29,7 @@ import type { Company } from "@/types/companies";
 
 // Services
 import { useCachedDoctorsList, useCachedCompaniesList } from "@/hooks/useCachedData";
+import { useAuthorization } from "@/hooks/useAuthorization";
 
 interface PatientHistoryTableProps {
   searchResults: PatientSearchResult[];
@@ -51,7 +52,7 @@ const PatientHistoryTable: React.FC<PatientHistoryTableProps> = ({
   // Queries for doctors and companies using cached data
   const { data: doctors, isLoading: doctorsLoading } = useCachedDoctorsList();
   const { data: companies, isLoading: companiesLoading } = useCachedCompaniesList();
-
+  const { can } = useAuthorization();
 
 
   const handleSelect = (patientId: number) => {
@@ -79,7 +80,7 @@ const PatientHistoryTable: React.FC<PatientHistoryTableProps> = ({
       [patientId]: { ...prev[patientId], doctor }
     }));
   };
-
+console.log(can('تسجيل مريض تامين'),'can');
   const handleCompanyChange = (patientId: number, company: Company | null) => {
     setPatientSelections(prev => ({
       ...prev,
@@ -218,6 +219,7 @@ const PatientHistoryTable: React.FC<PatientHistoryTableProps> = ({
                       value={patientSelections[patient.id]?.company || null}
                       onChange={(_, newValue) => handleCompanyChange(patient.id, newValue)}
                       loading={companiesLoading}
+                      disabled={companiesLoading || !can('تسجيل مريض تامين')}
                       renderInput={(params) => (
                         <TextField
                           {...params}

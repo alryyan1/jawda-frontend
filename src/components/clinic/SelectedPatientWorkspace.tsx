@@ -89,8 +89,6 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
       setSelectedTests([]);
     },
     onError: (error: Error) => {
-      const apiError = error as { response?: { data?: { message?: string } } };
-      toast.error(apiError.response?.data?.message || "فشل إضافة الفحوصات");
     },
   });
 

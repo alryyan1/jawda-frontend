@@ -30,6 +30,7 @@ import type { Company } from "@/types/companies";
 
 // Services
 import { useCachedDoctorsList, useCachedCompaniesList } from "@/hooks/useCachedData";
+import { useAuthorization } from "@/hooks/useAuthorization";
 
 interface PatientHistoryTableProps {
   searchResults: PatientSearchResult[];
@@ -52,7 +53,7 @@ const PatientistorytableClinc: React.FC<PatientHistoryTableProps> = ({
   // Queries for doctors and companies using cached data
   const { data: doctors, isLoading: doctorsLoading } = useCachedDoctorsList();
   const { data: companies, isLoading: companiesLoading } = useCachedCompaniesList();
-
+  const { can } = useAuthorization();
   const handleSelect = (patientId: number) => {
     // Get the selected doctor and company for this patient
     const patientSelection = patientSelections[patientId];
@@ -85,9 +86,8 @@ const PatientistorytableClinc: React.FC<PatientHistoryTableProps> = ({
       [patientId]: { ...prev[patientId], company }
     }));
   };
-
   return (
-    <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
+    <TableContainer component={Paper} sx={{ maxHeight: window.innerHeight - 200 }}>
       <Table stickyHeader>
         <TableHead>
           <TableRow>
@@ -100,6 +100,12 @@ const PatientistorytableClinc: React.FC<PatientHistoryTableProps> = ({
             <TableCell sx={{ width: 200, textAlign: 'center', fontWeight: 'bold' }}>
               الطبيب
             </TableCell>
+            {/* <TableCell sx={{ width: 200, textAlign: 'center', fontWeight: 'bold' }}>
+              الطبيب السابق
+            </TableCell> */}
+            {/* <TableCell sx={{ width: 200, textAlign: 'center', fontWeight: 'bold' }}>
+              الشركه السابقه
+            </TableCell> */}
             <TableCell sx={{ width: 200, textAlign: 'center', fontWeight: 'bold' }}>
               الشركة
             </TableCell>
@@ -134,7 +140,7 @@ const PatientistorytableClinc: React.FC<PatientHistoryTableProps> = ({
                   cursor: 'pointer',
                   '&:hover': { backgroundColor: 'action.hover' }
                 }}
-                onClick={() => handleSelect(patient.id)}
+                // onClick={() => handleSelect(patient.id)}
               >
                 <TableCell sx={{ fontWeight: 'medium' }}>
                   <Box sx={{ display: 'flex', flexDirection: 'column' }}>
@@ -158,7 +164,7 @@ const PatientistorytableClinc: React.FC<PatientHistoryTableProps> = ({
                     <Autocomplete
                       options={doctors || []}
                       getOptionLabel={(option) => option.name}
-                      value={patientSelections[patient.id]?.doctor || null}
+                      value={doctors?.find((doctor) => doctor.id === patient.last_visit_doctor_id) || null}
                       onChange={(_, newValue) => handleDoctorChange(patient.id, newValue)}
                       loading={doctorsLoading}
                       renderInput={(params) => (
@@ -204,14 +210,21 @@ const PatientistorytableClinc: React.FC<PatientHistoryTableProps> = ({
                     />
                   </Box>
                 </TableCell>
+                {/* <TableCell>
+                  {patient.last_visit_doctor_name}
+                </TableCell> */}
+                {/* <TableCell>
+                  {patient.last_visit_company_name}
+                </TableCell> */}
                 <TableCell sx={{ textAlign: 'center' }}>
                   <Box onClick={(e) => e.stopPropagation()}>
                     <Autocomplete
                       options={companies || []}
                       getOptionLabel={(option) => option.name}
-                      value={patientSelections[patient.id]?.company || null}
+                      value={companies?.find((company) => company.id === patient.last_visit_company_id) || null}
                       onChange={(_, newValue) => handleCompanyChange(patient.id, newValue)}
                       loading={companiesLoading}
+                      disabled={companiesLoading || !can('تسجيل مريض تامين')}
                       renderInput={(params) => (
                         <TextField
                           {...params}
@@ -259,6 +272,7 @@ const PatientistorytableClinc: React.FC<PatientHistoryTableProps> = ({
                   <Button
                     size="small"
                     variant="text"
+                    onClick={() => handleSelect(patient.id)}
                     disabled={!referringDoctor}
                     title={
                       !referringDoctor

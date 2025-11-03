@@ -52,6 +52,7 @@ import { getActiveDoctorShifts } from "@/services/clinicService";
 import { createCopiedVisitForNewShift } from "@/services/patientService";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { useAuthorization } from "@/hooks/useAuthorization";
 
 interface PatientInfoDialogProps {
   isOpen: boolean;
@@ -166,7 +167,7 @@ const PatientInfoDialog: React.FC<PatientInfoDialogProps> = ({
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { currentClinicShift } = useAuth();
-
+  const { can } = useAuthorization();
   // State for Edit Dialog
   const [isEditPatientDialogOpen, setIsEditPatientDialogOpen] = useState(false);
 
@@ -314,6 +315,7 @@ const PatientInfoDialog: React.FC<PatientInfoDialogProps> = ({
                   size="medium" 
                   onClick={openEditDialog}
                   startIcon={<EditIcon />}
+                  disabled={!can('تعديل بيانات')}
                   sx={{
                     bgcolor: 'rgba(255,255,255,0.2)',
                     backdropFilter: 'blur(10px)',

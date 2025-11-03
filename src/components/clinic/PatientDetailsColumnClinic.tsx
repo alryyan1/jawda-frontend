@@ -17,6 +17,7 @@ import {
   CalendarDays, 
   Copy
 } from "lucide-react";
+import { useAuthorization } from "@/hooks/useAuthorization";
 export interface PatientDetailsColumnClinicProps {
   visitId: number | null;
   onPrintReceipt?: () => void;
@@ -39,7 +40,7 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isPdfDialogOpen, setIsPdfDialogOpen] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-
+  const { can } = useAuthorization();
   // Fetch visit data
   const { data: visit, isLoading: isLoadingVisit } = useQuery({
     queryKey: ["doctorVisit", visitId],
@@ -419,10 +420,10 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
 
           {/* Lab Payment Button - Lab Tab */}
           {activeTab === 'lab' && totalBalance > 0.009 && currentClinicShiftId && (
-            <button
+            <Button
               className={`w-full bg-blue-600 text-white py-2 rounded-lg font-bold hover:bg-blue-700 transition flex items-center justify-center ${totalBalance === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
               onClick={() => payAllMutation.mutate()}
-              disabled={payAllMutation.isPending || totalBalance === 0}
+              disabled={payAllMutation.isPending || totalBalance === 0 || !can('سداد فحص')}
             >
               {payAllMutation.isPending ? (
                 <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
@@ -431,7 +432,7 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
                 </svg>
               ) : null}
               {"دفع الكل"}
-            </button>
+            </Button>
           )}
 
         </div>

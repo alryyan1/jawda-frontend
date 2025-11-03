@@ -9,7 +9,7 @@ import { getLabRequestForEntry } from "@/services/labWorkflowService";
 import LabReportPdfPreviewDialog from "@/components/common/LabReportPdfPreviewDialog";
 import apiClient from "@/services/api";
 import { hasPatientResultUrl } from "@/services/firebaseStorageService";
-
+import { useAuthorization } from "@/hooks/useAuthorization";
 interface ActionsButtonsPanelProps {
   visitId: number | null;
   patient: Patient | null;
@@ -32,7 +32,7 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
   const [pdfPreviewTitle, setPdfPreviewTitle] = useState('');
   const [pdfFileName, setPdfFileName] = useState('document.pdf');
   const [isAuthenticating, setIsAuthenticating] = useState(false);
-
+  const { can } = useAuthorization();
   // Helpers to evaluate results
   const isValueEmpty = useCallback((value: unknown): boolean => {
     if (value === null || value === undefined) return true;
@@ -214,7 +214,7 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
               variant="contained"
               className="w-full justify-start text-xs bg-green-600 hover:bg-green-700"
               onClick={handleAuthenticateResults}
-              disabled={!patient?.id || resultsLocked || patientLabQueueItem?.all_requests_paid === false || isAuthenticating}
+              disabled={!patient?.id || resultsLocked || patientLabQueueItem?.all_requests_paid === false || isAuthenticating || !can('تحقيق نتيجه')}
               title={resultsLocked ? "النتائج مقفلة" : "اعتماد النتائج"}
             >
               <ShieldCheck className={`ltr:mr-2 rtl:ml-2 h-3.5 w-3.5 ${isAuthenticating ? 'animate-spin' : ''}`} />

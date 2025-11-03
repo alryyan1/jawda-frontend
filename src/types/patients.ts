@@ -43,7 +43,10 @@ export interface PatientSearchResult {
   last_visit_id?: number | null;
   last_visit_date?: string | null;
   last_visit_doctor_name?: string | null;
+  last_visit_doctor_id?: number | null;
   last_visit_file_id?: number | null;
+  last_visit_company_name?: string | null;
+  last_visit_company_id?: number | null;
 }
 // --- NEW/VERIFY: PatientStripped Interface ---
 export interface PatientStripped {

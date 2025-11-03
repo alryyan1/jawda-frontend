@@ -164,14 +164,14 @@ const OnlineLabPatientsDialog: React.FC<OnlineLabPatientsDialogProps> = ({
      const labToLap: any[] = []
      querySnapshot.forEach(async (doc) => {
       const data = doc.data()
-      console.log(data, 'data',doc.id,'doc')
+      // console.log(data, 'data',doc.id,'doc')
       labToLap.push({...data, id: doc.id})
      })
      setLabToLap(labToLap)
     }
     fetchLabToLap()
   }, [isOpen]);
- console.log(labToLap, 'labToLap')
+ // console.log(labToLap, 'labToLap')
   useEffect(() => {
     if (isOpen) {
       fetchOnlineLabPatients(searchName, searchDate);

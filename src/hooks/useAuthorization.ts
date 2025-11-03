@@ -12,206 +12,34 @@ interface UserWithAllPermissions extends AuthUserType {
     all_permissions?: Permission[];
 }
 export type PermissionName =
-  // Dashboard & General
-  | 'view dashboard'
-  | 'view dashboard_summary'
-  //open financials shift
-  | 'open financials_shift'
-  //close financials shift
-  | 'close financials_shift'
+  // Test/Lab Permissions
+  | 'سداد فحص'                    // Pay for test
+  | 'الغاء سداد فحص'              // Cancel test payment
+  | 'تخفيض فحص'                   // Reduce test
+  | 'حذف فحص مضاف'                // Delete added test
+  | 'تحقيق نتيجه'                 // Achieve result
+  | 'طباعه نتيجه'                 // Print result
 
-  // User Management
-  | 'list users'
-  | 'view users'
-  | 'create users'
-  | 'edit users'
-  | 'delete users'
-  | 'assign roles'
-  | 'update user_passwords'
-  | 'view user_shift_income'
-
-  // Role & Permission Management
-  | 'list roles'
-  | 'view roles'
-  | 'create roles'
-  | 'edit roles'
-  | 'delete roles'
-  | 'assign permissions_to_role'
-  | 'list permissions'
-
-  // Doctor & Specialist Management
-  | 'list doctors'
-  | 'create doctors'
-  | 'edit doctors'
-  | 'delete doctors'
-  | 'list specialists'
-  | 'create specialists'
-  | 'edit specialists' // Added
-  | 'delete specialists' // Added
+  // Service Permissions
+  | 'سداد خدمه'                   // Pay for service
+  | 'الغاء سداد خدمه'             // Cancel service payment
+  | 'حذف خدمه مضافه'             // Delete added service
+  | 'تخفيض خدمه'                  // Reduce service
 
   // Patient Management
-  | 'list patients'
-  | 'view patients'
-  | 'register cash_patient'    // NEW
-  | 'register insurance_patient' // NEW
-  | 'edit patients'
-  | 'delete patients'
-  | 'search existing_patients'
-  | 'create_visit_from_patient_history'
-  | 'copy_patient_to_new_visit'
+  | 'تسجيل مريض كاش'              // Register cash patient
+  | 'تسجيل مريض تامين'            // Register insurance patient
 
-  // Clinic Workspace & Visit Management
-  | 'access clinic_workspace'
-  | 'view active_clinic_patients'
-  | 'create doctor_visits' // This is effectively covered by patient registration permissions
-  | 'reassign doctor_visits_to_shift'
-  | 'view doctor_visits'
-  | 'edit doctor_visits' // For notes, clinical data within a visit
-  | 'update doctor_visit_status'
-  | 'cancel doctor_visits' // Instead of hard delete
+  // General Data Management
+  | 'تعديل بيانات'                 // Edit data
 
-  // Services within a Visit
-  | 'request visit_services'
-  | 'edit visit_requested_service_details'
-  | 'remove visit_services'
-  | 'record visit_service_payment'
-  | 'manage requested_service_costs' // For cost breakdown dialog
-  | 'manage service_payments_deposits' // For managing multiple deposits for a service
+  // Financial Shift Management
+  | 'فتح ورديه ماليه'              // Open financial shift
+  | 'اغلاق ورديه ماليه'            // Close financial shift
 
-  // Lab Requests within a Visit (Clinic side)
-  | 'request lab_tests_for_visit'
-  | 'edit lab_request_details_clinic'
-  | 'cancel lab_requests_clinic'
-  | 'clear_pending_lab_requests_for_visit'
-  | 'record lab_request_payment_clinic'
-  | 'record_batch lab_payment'
-
-  // Shift Management
-  | 'view current_open_clinic_shift'
-  | 'open clinic_shifts'
-  | 'close clinic_shifts'
-  | 'manage clinic_shift_financials'
-  | 'list clinic_shifts'
-  | 'view clinic_shifts'
-  | 'view clinic_shift_summary'
-
-  | 'view active_doctor_shifts'
-  | 'manage doctor_shifts'
-  | 'start doctor_shifts'
-  | 'end doctor_shifts'
-  | 'list all_doctor_shifts'
-  // | 'edit doctor_shift_details' // If fields on DoctorShift itself are editable post-creation
-  | 'view doctor_shift_financial_summary'
-
-  // Doctor Schedule & Appointments
-  | 'view doctor_schedules'
-  | 'manage own_doctor_schedule'
-  | 'manage all_doctor_schedules'
-  | 'list appointments'
-  | 'create appointments'
-  | 'view appointment_details'
-  | 'cancel appointments'
-  | 'update appointment_status'
-
-  // Service & Service Group Definitions
-  | 'list services'
-  | 'create services'
-  | 'edit services'
-  | 'delete services'
-  | 'list service_groups'
-  | 'create service_groups'
-  // | 'edit service_groups' // Add if groups are editable
-  // | 'delete service_groups' // Add if groups are deletable
-  | 'manage service_costs_definitions'
-  | 'manage sub_service_cost_types' // CRUD for SubServiceCost
-
-  // Company & Contract Management
-  | 'list companies'
-  | 'create companies'
-  | 'edit companies'
-  | 'delete companies'
-  | 'view companies'
-  | 'view company_contracts'
-  | 'manage company_service_contracts' // Implies CUD for service contracts
-  | 'import_all_services_to_company_contract'
-  | 'copy_company_service_contracts'
-  | 'manage company_main_test_contracts' // Implies CUD for test contracts
-  | 'import_all_main_tests_to_company_contract'
-  // | 'manage subcompanies' // If dedicated UI beyond quick-add
-  // | 'manage company_relations' // If dedicated UI beyond quick-add
-
-  // Lab Test Definitions (Settings Area)
-  | 'list lab_tests'
-  | 'create lab_tests'
-  | 'edit lab_tests'
-  | 'delete lab_tests'
-  | 'batch_update lab_test_prices'
-  | 'batch_delete lab_tests'
-  | 'manage lab_test_parameters' // Child tests CUD
-  | 'reorder lab_test_parameters' // For DND
-  | 'manage lab_test_containers'
-  | 'manage lab_test_units'
-  | 'manage lab_test_child_groups'
-  | 'manage lab_test_child_options'
-  | 'list lab_test_packages'
-  | 'create lab_test_packages'
-  | 'edit lab_test_packages'
-  | 'delete lab_test_packages'
-  | 'view lab_price_list'
-  | 'print lab_price_list'
-
-  // Lab Workstation & Results
-  | 'access lab_workstation'
-  | 'view lab_pending_queue'
-  | 'edit lab_request_flags_lab' // sample ID, valid, hidden etc. by lab
-  | 'enter lab_results'
-  | 'edit_own_lab_results'
-  | 'edit_any_lab_results'
-  | 'authorize lab_results'
-  | 'print lab_sample_labels'
-  | 'print lab_worklist'
-  | 'print lab_patient_report'
-  // | 'manage lab_quality_control'
-  // | 'sync_with_lis'
-
-  // Financials & Costs
-  | 'list finance_accounts'
-  | 'record clinic_costs'
-  | 'list clinic_costs'
-  | 'print cost_report'
-
-  // Reports
-  | 'view reports_section'
-  | 'view doctor_shift_reports'
-  | 'print doctor_shift_reports'
-  | 'view service_statistics_report'
-  | 'print service_statistics_report' // if PDF added for this
-  | 'view monthly_lab_income_report'
-  // | 'print monthly_lab_income_report' // if PDF added
-  | 'view monthly_service_income_report'
-  | 'export monthly_service_income_pdf'
-  | 'export monthly_service_income_excel'
-  | 'print company_service_contract_report'
-  | 'print company_main_test_contract_report'
-  | 'print thermal_receipt'
-
-  // Settings
-  | 'view settings'
-  | 'update settings'
-
-  // Insurance Auditing
-  | 'list auditable_visits'
-  | 'view audit_record'
-  | 'create_or_update audit_record_patient_info'
-  | 'manage_audited_services' // CUD for audited service lines
-  | 'copy_original_services_to_audit'
-  | 'finalize_audit_record' // verify, needs_correction, reject
-  | 'export_audit_claims_pdf'
-  | 'export_audit_claims_excel'
-  
-  // Communication
-  | 'send whatsapp_messages'
-  // | 'manage whatsapp_templates' // If becomes a feature
+  // Reports & Settings
+  | 'عرض التقارير'                 // View reports
+  | 'عرض الاعدادات'                // View settings
   ;
 /**
  * Custom hook providing utility functions for checking user roles and permissions.
@@ -253,7 +81,7 @@ export const useAuthorization = () => {
         if (userRoles.includes('Super Admin')) {
             return true;
         }
-        
+        console.log(userAllPermissions,'userAllPermissions')
         return userAllPermissions.includes(permissionName);
     };
 

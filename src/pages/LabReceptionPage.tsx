@@ -475,7 +475,7 @@ const LabReceptionPage: React.FC = () => {
 
   // Debug logging
   useEffect(() => {
-    console.log('Available tests:', availableTests);
+    // console.log('Available tests:', availableTests);
     // console.log('Selected tests:', selectedTests);
   }, [availableTests, selectedTests]);
   // Type for the Autocomplete's options

@@ -7,7 +7,7 @@ const ProtectedRoute: React.FC = () => {
   const { isAuthenticated, isLoading, user, token } = useAuth();
   const location = useLocation(); // Gets the current URL location object
 
-  console.log("ProtectedRoute state:", { isAuthenticated, isLoading, user, token });
+  // console.log("ProtectedRoute state:", { isAuthenticated, isLoading, user, token });
 
   if (isLoading) {
     // While the authentication status is being determined, show a loading state.

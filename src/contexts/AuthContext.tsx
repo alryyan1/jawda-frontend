@@ -76,7 +76,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     console.log("Shift fetch error:", shiftError);
   }
   const currentClinicShift = currentClinicShiftData ?? null; // Ensure null if undefined
-  console.log('currentClinicShift', currentClinicShift ,'in auth context');
+  // console.log('currentClinicShift', currentClinicShift ,'in auth context');
   const fetchUser = useCallback(async () => {
     if (!token) {
       setUser(null);

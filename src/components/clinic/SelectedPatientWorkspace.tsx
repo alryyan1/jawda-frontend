@@ -249,7 +249,7 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
 
         <TabsContent
           value="services"
-          className="flex-grow overflow-y-auto p-3 sm:p-4 focus-visible:ring-0 focus-visible:ring-offset-0"
+          className="flex-grow overflow-y-auto p-1 sm:p-1 focus-visible:ring-0 focus-visible:ring-offset-0"
         >
           <ServicesRequestComponent 
             addSelectedCommand={addSelectedCommand} 

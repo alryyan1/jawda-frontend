@@ -65,6 +65,7 @@ import {
   DialogTitle as ActionsDialogTitle,
   DialogFooter as ActionsDialogFooter,
 } from "@/components/ui/dialog";
+import { useAuthorization } from "@/hooks/useAuthorization";
 
 interface LabRequestsColumnProps {
   activeVisitId: number | null;
@@ -80,7 +81,8 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
   onPrintReceipt,
 }) => {
   const queryClient = useQueryClient();
-  const { currentClinicShift } = useAuth();
+  const { currentClinicShift , user  } = useAuth();
+  const { can } = useAuthorization();
 
   // State for dialogs
   const [showBatchPaymentDialog, setShowBatchPaymentDialog] = useState(false);
@@ -413,7 +415,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
     );
   }
 
-  console.log(visit?.patient,'visit?.patient?.result_print_date')
+  console.log(can('تخفيض فحص'),'can')
   return (
     <div className="h-full flex flex-col">
       {/* Header with Print Receipt and Remove All Pending buttons */}
@@ -441,7 +443,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
         </div>
         
         <div className="flex items-center gap-2">
-          <Button
+          {/* <Button
             onClick={handleRemoveAllPending}
 
             //add red border
@@ -455,9 +457,9 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
               <Trash2 className="h-4 w-4 mr-2" />
             )}
             <span className="hidden sm:inline">حذف  التحاليل </span>
-          </Button>
+          </Button> */}
           
-          <Button
+          {/* <Button
             onClick={handleUpdateAllBankak}
             variant="outline"
             size="sm"
@@ -469,7 +471,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
               <Banknote className="h-4 w-4 mr-2" />
             )}
             <span className="hidden sm:inline">تعيين الكل بنكك</span>
-          </Button>
+          </Button> */}
         </div>
       </div>
 
@@ -588,7 +590,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                           <Select
                             value={request.discount_per.toString()}
                             onValueChange={(value) => handleDiscountChange(request.id, value)}
-                            disabled={updateDiscountMutation.isPending || request.is_paid}
+                            disabled={updateDiscountMutation.isPending || request.is_paid  || !can('تخفيض فحص')}
                           >
                             <SelectTrigger className="w-full">
                               <SelectValue />
@@ -638,7 +640,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                               size="sm"
                               className="h-8 w-8 border-2 border-green-200 p-0 text-green-600 hover:text-green-800 hover:bg-green-50"
                               onClick={() => handleDirectPayItem(request.id, false)}
-                              disabled={directPayItemMutation.isPending}
+                              disabled={directPayItemMutation.isPending || !can('سداد فحص')}
                               title="دفع نقدي"
                             >
                               {directPayItemMutation.isPending ? (
@@ -653,7 +655,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                               size="sm"
                               className="h-8 w-8 p-0 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50"
                               onClick={() => handleUnpayLabRequest(request.id)}
-                              disabled={unpayLabRequestMutation.isPending || visit?.patient?.result_print_date != null}
+                              disabled={unpayLabRequestMutation.isPending || visit?.patient?.result_print_date != null || !can('الغاء سداد فحص')}
                               title="إلغاء الدفع"
                             >
                               {unpayLabRequestMutation.isPending ? (
@@ -680,7 +682,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                             {toggleBankakMutation.isPending ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (
-                              'Bankak'
+                              'بنكك'
                             )}
                           </Button>
                           
@@ -690,7 +692,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                             size="sm"
                             className="h-8 w-8 p-0 text-red-600 hover:text-red-800 hover:bg-red-50"
                             onClick={() => handleDeleteRequest(request.id)}
-                            disabled={deleteRequestMutation.isPending || visit?.patient?.result_print_date != null}
+                            disabled={deleteRequestMutation.isPending || visit?.patient?.result_print_date != null || !can('حذف فحص مضاف')}
                             title="حذف"
                           >
                             {deleteRequestMutation.isPending ? (
@@ -833,7 +835,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                   handleDeleteRequest(selectedRequestForRowDialog.id);
                   setRowActionsDialogOpen(false);
                 }}
-                disabled={deleteRequestMutation.isPending || visit?.patient?.result_print_date != null}
+                disabled={deleteRequestMutation.isPending || visit?.patient?.result_print_date != null || !can('حذف فحص مضاف')}
                 className="w-full"
               >
                 <Trash2 className="h-4 w-4 mr-2" /> حذف

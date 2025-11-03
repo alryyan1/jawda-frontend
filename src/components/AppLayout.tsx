@@ -409,7 +409,7 @@ const AppLayout: React.FC = () => {
     queryFn: getCurrentOpenShift,
     // Removed refetchInterval - fetch only once
   });
- console.log(currentOpenShift,'currentOpenShift')
+ // console.log(currentOpenShift,'currentOpenShift')
 
   // Queue worker status query with polling
   const { data: queueWorkerData, refetch: refetchQueueWorkerStatus } = useQuery({

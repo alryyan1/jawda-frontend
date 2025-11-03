@@ -35,7 +35,7 @@ const QueueHeader: React.FC<QueueHeaderProps> = ({
   // Arabic UI is RTL: previous → right, next → left
   const PrevIcon = ChevronRight;
   const NextIcon = ChevronLeft;
- console.log(currentShift,'currentShift');
+ // console.log(currentShift,'currentShift');
   return (
     <div className="p-2 sm:p-3 border-b bg-card sticky top-0 z-10">
       <div className="flex justify-between items-center mb-1.5">

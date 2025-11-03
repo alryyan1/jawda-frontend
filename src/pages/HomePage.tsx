@@ -50,6 +50,7 @@ import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 // import { AxiosError } from "axios";
 import { realtimeUrlFromConstants } from "@/pages/constants";
+import { useAuthorization } from "@/hooks/useAuthorization";
 
 // --- Reusable Stat Card Component ---
 interface StatCardProps {
@@ -248,7 +249,7 @@ const ShiftManagementCard: React.FC<ShiftManagementCardProps> = ({
     }
     setIsCloseShiftConfirmOpen(false);
   }, [currentOpenShift, onConfirmCloseShift]);
-
+  const { can } = useAuthorization();
   const getUserName = (user?: UserStripped | null) => user?.name || 'مستخدم';
 
   return (
@@ -322,7 +323,7 @@ const ShiftManagementCard: React.FC<ShiftManagementCardProps> = ({
               {currentShift.is_closed ? (
                 <Button
                   onClick={onOpenShift}
-                  disabled={isOpeningShift}
+                  disabled={isOpeningShift || !can('فتح ورديه ماليه')}
                   className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 text-white shadow-sm hover:shadow-md"
                 >
                   {isOpeningShift ? (
@@ -341,7 +342,7 @@ const ShiftManagementCard: React.FC<ShiftManagementCardProps> = ({
                     <Button
                       className="w-full sm:w-auto shadow-sm hover:shadow-md"
                       onClick={handleCloseShiftTrigger}
-                      disabled={isClosingShift}
+                      disabled={isClosingShift || !can('اغلاق ورديه ماليه')}
                     >
                       {isClosingShift ? (
                         <Loader2 className="ltr:mr-1.5 rtl:ml-1.5 h-4 w-4 animate-spin" />

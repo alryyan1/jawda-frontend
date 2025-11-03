@@ -6,12 +6,13 @@ import type { DoctorVisit } from "@/types/visits";
 import PatientCompanyDetails from "./PatientCompanyDetails";
 import PatientInfoDialog from "@/components/clinic/PatientInfoDialog";
 import { Button } from "@/components/ui/button";
-import { User, Loader2, Mail, FileText } from "lucide-react";
+import { Loader2, Mail, FileText, Edit } from "lucide-react";
 import { getLabRequestsForVisit } from "@/services/labRequestService";
 import { realtimeUrlFromConstants } from "@/pages/constants";
 // import { showJsonDialog } from "@/lib/showJsonDialog";
 import LabReportPdfPreviewDialog from "@/components/common/LabReportPdfPreviewDialog";
 import { hasPatientResultUrl } from "@/services/firebaseStorageService";
+import { useAuthorization } from "@/hooks/useAuthorization";
 
 interface PatientDetailsColumnV1Props {
   activeVisitId: number | null;
@@ -47,7 +48,7 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [pdfPreviewTitle, setPdfPreviewTitle] = useState("");
   const [pdfFileName, setPdfFileName] = useState("document.pdf");
-
+  const { can } = useAuthorization();
   // Lab shift summary moved to LabUserShiftSummary component
 
   const payAllMutation = useMutation({
@@ -228,15 +229,15 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
       
       {/* Patient Info + SMS Buttons */}
       <div className="w-full grid grid-cols-2 gap-2 mb-2">
-        {visit && (
+        {visit && can('تعديل بيانات') && (
           <Button
             variant="outline"
             size="sm"
             onClick={() => setIsPatientInfoDialogOpen(true)}
             className="w-full flex items-center justify-center gap-2"
           >
-            <User className="h-4 w-4" />
-            تفاصيل المريض
+            <Edit className="h-4 w-4" />
+            تعديل البيانات
           </Button>
         )}
         <Button
@@ -333,9 +334,10 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
     
       {/* Pay Button */}
       {activeVisitId && (
-        <button
-          className={`w-full bg-blue-600 text-white py-2 rounded-lg font-bold mt-2 hover:bg-blue-700 transition flex items-center justify-center ${balance === 0 && visit?.company ? " cursor-not-allowed" : ""}`}
+        <Button
+          className={`w-full bg-blue-600 text-white py-2 rounded-lg font-bold mt-2 hover:bg-blue-700 transition flex items-center justify-center ${balance === 0 && visit?.company ? "cursor-not-allowed" : !can('سداد فحص') ? "cursor-not-allowed" : ""}`}
           onClick={() => payAllMutation.mutate()}
+          disabled={!can('سداد فحص')}
           // disabled={payAllMutation.isPending || balance === 0}
         >
           {payAllMutation.isPending ? (
@@ -345,7 +347,7 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
             </svg>
           ) : null}
           {"دفع الكل"}
-        </button>
+        </Button>
       )}
       {/* Preview Lab Report Button (visible only if results are authenticated) */}
       {visit?.patient && visit.patient.result_auth && (

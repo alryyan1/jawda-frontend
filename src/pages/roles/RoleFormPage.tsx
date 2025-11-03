@@ -11,7 +11,9 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { CloudCog, Loader2, Search } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, Search, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -33,6 +35,7 @@ const RoleFormPage: React.FC<RoleFormPageProps> = ({ mode }) => {
   const queryClient = useQueryClient();
   const isEditMode = mode === RoleFormMode.EDIT;
   const [searchTerm, setSearchTerm] = useState('');
+  const [isPermissionsDialogOpen, setIsPermissionsDialogOpen] = useState(false);
 
   
 
@@ -54,7 +57,7 @@ const RoleFormPage: React.FC<RoleFormPageProps> = ({ mode }) => {
       permissions: [],
     },
   });
-  const { control, handleSubmit, reset, setValue, watch } = form;
+  const { control, handleSubmit, reset } = form;
 
   useEffect(() => {
     if (isEditMode && roleData) {
@@ -99,8 +102,6 @@ const RoleFormPage: React.FC<RoleFormPageProps> = ({ mode }) => {
   const dataIsLoading = isLoadingRole || isFetchingRole || isLoadingPermissions;
   // Group permissions by resource for better UI
   const groupedPermissions = allPermissions?.reduce((acc, permission) => {
-    const [resource] = permission.name.split(' '); // Simple split, assumes "action resource" or "resource action"
-    
     // A more robust grouping based on the first word after common verbs
     const commonVerbs = ['list', 'view', 'create', 'edit', 'delete', 'assign', 'manage'];
     let mainResource = permission.name;
@@ -164,13 +165,46 @@ const RoleFormPage: React.FC<RoleFormPageProps> = ({ mode }) => {
 
             <FormField
               control={control} name="permissions"
-              render={() => (
+              render={({ field }) => (
                 <FormItem>
                   <FormLabel>الصلاحيات</FormLabel>
                   <FormDescription>قم بتعيين الصلاحيات المناسبة لهذا الدور</FormDescription>
-                  {isLoadingPermissions ? <div className="py-4"><Loader2 className="animate-spin h-6 w-6" /></div> : 
-                   !groupedPermissions || Object.keys(groupedPermissions).length === 0 ? 
-                   <p className="text-sm text-muted-foreground py-4">لا توجد صلاحيات متاحة</p> : (
+                  <div className="flex items-center gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsPermissionsDialogOpen(true)}
+                      disabled={dataIsLoading || formIsSubmitting}
+                      className="flex items-center gap-2"
+                    >
+                      <Settings className="h-4 w-4" />
+                      إدارة الصلاحيات
+                    </Button>
+                    {field.value && field.value.length > 0 && (
+                      <Badge variant="secondary" className="text-sm">
+                        {field.value.length} صلاحية محددة
+                      </Badge>
+                    )}
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <Dialog open={isPermissionsDialogOpen} onOpenChange={setIsPermissionsDialogOpen}>
+              <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
+                <DialogHeader>
+                  <DialogTitle>إدارة الصلاحيات</DialogTitle>
+                  <DialogDescription>قم بتحديد الصلاحيات المناسبة لهذا الدور</DialogDescription>
+                </DialogHeader>
+                <div className="flex-1 overflow-hidden flex flex-col">
+                  {isLoadingPermissions ? (
+                    <div className="flex justify-center items-center py-8">
+                      <Loader2 className="animate-spin h-6 w-6" />
+                    </div>
+                  ) : !groupedPermissions || Object.keys(groupedPermissions).length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-4 text-center">لا توجد صلاحيات متاحة</p>
+                  ) : (
                     <>
                       <div className="relative mb-4">
                         <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -181,7 +215,7 @@ const RoleFormPage: React.FC<RoleFormPageProps> = ({ mode }) => {
                           className="pl-8"
                         />
                       </div>
-                      <ScrollArea className="h-auto max-h-[50vh] w-full rounded-md border p-4">
+                      <ScrollArea className="h-[calc(85vh-280px)] min-h-[300px] w-full rounded-md border p-4">
                         <div className="space-y-4">
                           {Object.entries(filteredGroupedPermissions || {}).sort(([groupA], [groupB]) => groupA.localeCompare(groupB)).map(([groupName, perms]) => (
                             <div key={groupName}>
@@ -206,7 +240,7 @@ const RoleFormPage: React.FC<RoleFormPageProps> = ({ mode }) => {
                                             }}
                                           />
                                         </FormControl>
-                                        <FormLabel title={permission.name} className="font-normal text-sm whitespace-nowrap">
+                                        <FormLabel title={permission.name} className="font-normal text-sm whitespace-nowrap cursor-pointer">
                                           {permission.name}
                                         </FormLabel>
                                       </FormItem>
@@ -220,10 +254,14 @@ const RoleFormPage: React.FC<RoleFormPageProps> = ({ mode }) => {
                       </ScrollArea>
                     </>
                   )}
-                  <FormMessage /> {/* For the permissions array itself (e.g., if 'min 1' was a rule) */}
-                </FormItem>
-              )}
-            />
+                </div>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setIsPermissionsDialogOpen(false)}>
+                    إغلاق
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
             
             <div className="flex justify-end gap-2 pt-4">
               <Button type="button" variant="outline" onClick={() => navigate('/roles')} disabled={formIsSubmitting}>إلغاء</Button>

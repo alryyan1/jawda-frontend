@@ -123,7 +123,7 @@ const LabRegistrationForm: React.FC<LabRegistrationFormProps> = React.memo(({
 
   const { data: doctorsList = [], isLoading: isLoadingDoctors } = useCachedDoctorsList();
   const { data: companies = [], isLoading: isLoadingCompanies } = useCachedCompaniesList();
-  console.log(companies, "companies");
+  // console.log(companies, "companies");
 
   // Auto-select default doctor if available and none selected yet
   const selectedDoctor = watch("doctor");
@@ -171,9 +171,9 @@ const LabRegistrationForm: React.FC<LabRegistrationFormProps> = React.memo(({
     },
     onSuccess: (newPatientWithVisit) => {
       toast.success('تم تسجيل المريض بنجاح');
-      console.log("API Response - newPatientWithVisit:", newPatientWithVisit);
-      console.log("API Response - doctor_visit:", newPatientWithVisit?.doctor_visit);
-      console.log("API Response - doctorVisit:", newPatientWithVisit?.doctorVisit);
+      // console.log("API Response - newPatientWithVisit:", newPatientWithVisit);
+      // console.log("API Response - doctor_visit:", newPatientWithVisit?.doctor_visit);
+      // console.log("API Response - doctorVisit:", newPatientWithVisit?.doctorVisit);
       onPatientActivated(newPatientWithVisit);
       reset(); // Reset form for next entry
       phoneInputRef.current?.focus();

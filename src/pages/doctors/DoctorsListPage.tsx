@@ -7,7 +7,7 @@ import type { Doctor } from '../../types/doctors';
 import { toast } from 'sonner';
 // MUI
 import { Box, Button, Card, CardContent, TextField, IconButton, CircularProgress, Avatar, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Menu, MenuItem, Divider, Typography } from '@mui/material';
-import { MoreHoriz as MoreHorizIcon, Delete as DeleteIcon, Edit as EditIcon, Search as SearchIcon, Checklist as ChecklistIcon, Person as PersonIcon, NavigateBefore, NavigateNext, Star as StarIcon } from '@mui/icons-material';
+import { MoreHoriz as MoreHorizIcon, Delete as DeleteIcon, Edit as EditIcon, Search as SearchIcon, Checklist as ChecklistIcon, Person as PersonIcon, NavigateBefore, NavigateNext, Star as StarIcon, PictureAsPdf as PictureAsPdfIcon } from '@mui/icons-material';
 import { useDebounce } from '@/hooks/useDebounce';
 import ManageDoctorServicesDialog from '@/components/doctors/ManageDoctorServicesDialog';
 
@@ -21,6 +21,7 @@ export default function DoctorsListPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 500);
+  const [isExporting, setIsExporting] = useState(false);
   const [dialogState, setDialogState] = useState<{
     isOpen: boolean;
     doctor: Doctor | null;
@@ -28,6 +29,10 @@ export default function DoctorsListPage() {
     isOpen: false,
     doctor: null
   });
+  // Menu state (must be declared before any early returns)
+  const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const [menuDoctor, setMenuDoctor] = useState<Doctor | null>(null);
+  const openMenu = Boolean(menuAnchorEl);
 
   const handleManageDoctorServices = (doctor: Doctor) => {
     setDialogState({
@@ -77,26 +82,29 @@ export default function DoctorsListPage() {
     }
   };
 
-  const getInitials = (name?: string | null) => { /* ... same getInitials function ... */
-    if (!name) return "DR";
-    const names = name.split(' ');
-    if (names.length > 1 && names[0] && names[names.length - 1]) {
-      return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
-    }
-    if (names[0] && names[0].length > 1) {
-      return names[0].substring(0, 2).toUpperCase();
-    }
-     if (names[0]) {
-        return names[0][0].toUpperCase();
-    }
-    return 'DR';
-  };
   
   const getImageUrl = (imagePath?: string | null) => {
     if (!imagePath) return undefined;
     if (imagePath.startsWith('http')) return imagePath;
     const baseUrl = import.meta.env.VITE_API_BASE_URL?.replace('/api', '/storage/') || '/storage/';
     return `${baseUrl}${imagePath}`;
+  };
+
+  const handleExportPdf = async () => {
+    try {
+      setIsExporting(true);
+      const apiBase = import.meta.env.VITE_API_BASE_URL || '';
+      const params = new URLSearchParams();
+      if (debouncedSearch) params.set('search', debouncedSearch);
+      const url = `${apiBase}/reports/doctors-list/pdf${params.toString() ? `?${params.toString()}` : ''}`;
+      window.open(url, '_blank');
+      toast.success('فتح ملف PDF في تبويب جديد');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'حدث خطأ غير متوقع.';
+      toast.error('فشل إنشاء ملف PDF', { description: message });
+    } finally {
+      setIsExporting(false);
+    }
   };
 
 
@@ -110,11 +118,6 @@ export default function DoctorsListPage() {
   const doctors = paginatedData?.data || [];
   const meta = paginatedData?.meta;
 
-  // Menu state
-  const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
-  const [menuDoctor, setMenuDoctor] = useState<Doctor | null>(null);
-  const openMenu = Boolean(menuAnchorEl);
-
   const handleMenuOpen = (event: React.MouseEvent<HTMLButtonElement>, doctor: Doctor) => {
     setMenuAnchorEl(event.currentTarget);
     setMenuDoctor(doctor);
@@ -127,7 +130,12 @@ export default function DoctorsListPage() {
     <Box sx={{ maxWidth: 1200, mx: 'auto', py: { xs: 2, sm: 3, lg: 4 } }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h5" fontWeight={700}>إدارة الأطباء</Typography>
-        <Button component={Link} to="/doctors/new" variant="contained" size="small">إضافة طبيب جديد</Button>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button onClick={handleExportPdf} variant="outlined" size="small" startIcon={isExporting ? <CircularProgress size={14} /> : <PictureAsPdfIcon fontSize="small" />} disabled={isExporting}>
+            تصدير PDF
+          </Button>
+          <Button component={Link} to="/doctors/new" variant="contained" size="small">إضافة طبيب جديد</Button>
+        </Box>
       </Box>
 
       <Card sx={{ mb: 2 }}>

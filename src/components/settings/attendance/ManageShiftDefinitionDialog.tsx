@@ -1,49 +1,32 @@
 import React, { useState, useEffect } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, type SubmitHandler, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch"; // For is_active
 import {
   Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
   DialogTitle,
-  DialogTrigger,
-  DialogClose,
-} from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import {
+  DialogContent,
+  DialogActions,
+  Button,
+  TextField,
+  Switch,
+  FormControlLabel,
+  Box,
   Table,
   TableBody,
   TableCell,
   TableHead,
-  TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import {
-  Loader2,
-  PlusCircle,
-  Edit,
-  Trash2,
-  Clock,
-  Settings,
-} from "lucide-react";
-import { TimePicker } from "@/components/ui/time-picker"; // Assuming you have or create a TimePicker component
+  Chip,
+  IconButton,
+  CircularProgress,
+  Typography,
+} from "@mui/material";
+import { PlusCircle, Edit, Trash2, Clock } from "lucide-react";
+// استخدام حقل وقت افتراضي من MUI عبر TextField type="time"
 
 import type { ShiftDefinition } from "@/types/attendance"; // You'll need to define this type
 import {
@@ -53,7 +36,6 @@ import {
   deleteShiftDefinition,
   type ShiftDefinitionFormData, // Define this for form/API payload
 } from "@/services/attendanceService"; // Create this service
-import { Badge } from "@/components/ui/badge";
 
 // Define ShiftDefinition type if not already done in types/attendance.ts
 // export interface ShiftDefinition {
@@ -74,9 +56,7 @@ import { Badge } from "@/components/ui/badge";
 //   is_active?: boolean;
 // }
 
-const getShiftDefinitionSchema = (
-  existingShiftDefinitionId?: number
-) =>
+const getShiftDefinitionSchema = () =>
   z
     .object({
       name: z
@@ -97,7 +77,7 @@ const getShiftDefinitionSchema = (
         .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, {
           message: "الوقت غير صالح (يجب أن يكون بالتنسيق HH:mm)",
         }),
-      is_active: z.boolean().default(true),
+      is_active: z.boolean(),
     })
     .refine(
       (data) => {
@@ -138,17 +118,16 @@ const ManageShiftDefinitionDialog: React.FC<
 
   const shiftDefinitionsQueryKey = ["shiftDefinitionsList"];
 
-  const {
-    data: shiftDefinitions = [],
-    isLoading,
-    refetch,
-  } = useQuery<ShiftDefinition[], Error>({
+  const { data: shiftDefinitions = [], isLoading } = useQuery<
+    ShiftDefinition[],
+    Error
+  >({
     queryKey: shiftDefinitionsQueryKey,
     queryFn: () => getShiftDefinitions({ active_only: false }), // Fetch all for management
     enabled: isOpen,
   });
 
-  const formSchema = getShiftDefinitionSchema(editingShift?.id);
+  const formSchema = getShiftDefinitionSchema();
   const form = useForm<ShiftDefinitionFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -188,10 +167,16 @@ const ManageShiftDefinitionDialog: React.FC<
       setEditingShift(null);
       form.reset();
     },
-    onError: (error: any) => {
-      toast.error(
-        error.response?.data?.message || "فشلت العملية، يرجى المحاولة لاحقًا"
-      );
+    onError: (error: unknown) => {
+      const maybeMessage =
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        typeof (error as { response?: { data?: { message?: unknown } } }).response?.data?.message ===
+          "string"
+          ? (error as { response?: { data?: { message?: unknown } } }).response!.data!.message
+          : null;
+      toast.error((maybeMessage as string | null) ?? "فشلت العملية، يرجى المحاولة لاحقًا");
     },
   };
 
@@ -223,7 +208,7 @@ const ManageShiftDefinitionDialog: React.FC<
     },
   });
 
-  const onSubmit = (data: ShiftDefinitionFormValues) => {
+  const onSubmit: SubmitHandler<ShiftDefinitionFormValues> = (data) => {
     const payload: ShiftDefinitionFormData = {
       ...data,
       start_time: data.start_time, // Already HH:mm
@@ -271,243 +256,181 @@ const ManageShiftDefinitionDialog: React.FC<
   return (
     <Dialog
       open={isOpen}
-      onOpenChange={(open) => {
-        if (!open) {
-          setShowForm(false);
-          setEditingShift(null);
-        }
-        onOpenChange(open);
+      onClose={() => {
+        setShowForm(false);
+        setEditingShift(null);
+        onOpenChange(false);
       }}
     >
       <DialogContent className="max-w-2xl lg:max-w-3xl max-h-[85vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Clock className="h-6 w-6 text-primary" />
-            إدارة تعريفات الورديات
-          </DialogTitle>
-          <DialogDescription>
+        <Box display="flex" flexDirection="column" gap={0.5} mb={1}>
+          <Box display="flex" alignItems="center" gap={1}>
+            <Clock className="h-6 w-6" />
+            <DialogTitle sx={{ p: 0 }}>إدارة تعريفات الورديات</DialogTitle>
+          </Box>
+          <Typography variant="body2" color="text.secondary">
             إضافة وتعديل وحذف تعريفات الورديات وساعات العمل.
-          </DialogDescription>
-        </DialogHeader>
+          </Typography>
+        </Box>
 
         {!showForm ? (
           <>
-            <div className="flex justify-end mb-2">
-              <Button size="sm" onClick={handleAddNew} disabled={isLoading}>
-                <PlusCircle className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+            <Box display="flex" justifyContent="end" mb={2}>
+              <Button size="small" variant="contained" onClick={handleAddNew} disabled={isLoading} startIcon={<PlusCircle className="h-4 w-4" />}>
                 إضافة تعريف جديد
               </Button>
-            </div>
-            <ScrollArea className="h-[400px] border rounded-md">
+            </Box>
+            <Box sx={{ maxHeight: 400, overflow: "auto", border: 1, borderColor: "divider", borderRadius: 1 }}>
               {isLoading ? (
-                <div className="flex justify-center items-center h-full">
-                  <Loader2 className="h-8 w-8 animate-spin" />
-                </div>
+                <Box display="flex" justifyContent="center" alignItems="center" height={300}>
+                  <CircularProgress size={28} />
+                </Box>
               ) : shiftDefinitions.length === 0 ? (
-                <p className="p-4 text-center text-muted-foreground">
-                  لا توجد تعريفات حالية.
-                </p>
+                <Box p={2} textAlign="center" color="text.secondary">لا توجد تعريفات حالية.</Box>
               ) : (
-                <Table size="sm">
-                  <TableHeader>
+                <Table size="small">
+                  <TableHead>
                     <TableRow>
-                      <TableHead className="text-center">
-                        الرمز
-                      </TableHead>
-                      <TableHead>
-                        الاسم
-                      </TableHead>
-                      <TableHead className="text-center">
-                        وقت البدء
-                      </TableHead>
-                      <TableHead className="text-center">
-                        وقت الانتهاء
-                      </TableHead>
-                      <TableHead className="text-center">
-                        الحالة
-                      </TableHead>
-                      <TableHead className="text-right">
-                        الإجراءات
-                      </TableHead>
+                      <TableCell align="center">الرمز</TableCell>
+                      <TableCell>الاسم</TableCell>
+                      <TableCell align="center">وقت البدء</TableCell>
+                      <TableCell align="center">وقت الانتهاء</TableCell>
+                      <TableCell align="center">الحالة</TableCell>
+                      <TableCell align="right">الإجراءات</TableCell>
                     </TableRow>
-                  </TableHeader>
+                  </TableHead>
                   <TableBody>
                     {shiftDefinitions.map((def) => (
                       <TableRow key={def.id}>
-                        <TableCell className="font-medium text-center">
-                          {def.shift_label}
-                        </TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 500 }}>{def.shift_label}</TableCell>
                         <TableCell>{def.name}</TableCell>
-                        <TableCell className="text-center">
-                          {def.start_time}
+                        <TableCell align="center">{def.start_time}</TableCell>
+                        <TableCell align="center">{def.end_time}</TableCell>
+                        <TableCell align="center">
+                          <Chip color={def.is_active ? "success" : "default"} variant={def.is_active ? "filled" : "outlined"} label={def.is_active ? "نشط" : "غير نشط"} size="small" />
                         </TableCell>
-                        <TableCell className="text-center">
-                          {def.end_time}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge
-                            variant={def.is_active ? "success" : "outline"}
-                          >
-                            {def.is_active ? "نشط" : "غير نشط"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon_xs"
-                            onClick={() => handleEdit(def)}
-                            className="h-7 w-7"
-                          >
+                        <TableCell align="right">
+                          <IconButton size="small" onClick={() => handleEdit(def)}>
                             <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon_xs"
+                          </IconButton>
+                          <IconButton
+                            size="small"
                             onClick={() => handleDelete(def.id)}
-                            className="h-7 w-7 text-destructive hover:text-destructive"
-                            disabled={
-                              deleteMutation.isPending &&
-                              deleteMutation.variables === def.id
-                            }
+                            disabled={deleteMutation.isPending && deleteMutation.variables === def.id}
+                            color="error"
                           >
-                            {deleteMutation.isPending &&
-                            deleteMutation.variables === def.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
+                            {deleteMutation.isPending && deleteMutation.variables === def.id ? (
+                              <CircularProgress size={16} />
                             ) : (
                               <Trash2 className="h-4 w-4" />
                             )}
-                          </Button>
+                          </IconButton>
                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               )}
-            </ScrollArea>
+            </Box>
           </>
         ) : (
-          <Form {...form}>
-            <form
-              onSubmit={form.handleSubmit(onSubmit)}
-              className="space-y-4 py-2"
-            >
-              <FormField
+          <form onSubmit={form.handleSubmit(onSubmit)} style={{ paddingTop: 8, paddingBottom: 8 }}>
+            <Box display="flex" flexDirection="column" gap={2}>
+              <Controller
                 control={form.control}
                 name="shift_label"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      الرمز
-                    </FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="مثال: وردية 1، صباحية" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+                render={({ field, fieldState }) => (
+                  <TextField
+                    {...field}
+                    label="الرمز"
+                    placeholder="مثال: وردية 1، صباحية"
+                    error={!!fieldState.error}
+                    helperText={fieldState.error?.message}
+                    fullWidth
+                  />
                 )}
               />
-              <FormField
+              <Controller
                 control={form.control}
                 name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      الاسم
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        placeholder="مثال: الدوام الصباحي، المسائية العامة"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+                render={({ field, fieldState }) => (
+                  <TextField
+                    {...field}
+                    label="الاسم"
+                    placeholder="مثال: الدوام الصباحي، المسائية العامة"
+                    error={!!fieldState.error}
+                    helperText={fieldState.error?.message}
+                    fullWidth
+                  />
                 )}
               />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormField
+              <Box display="grid" gridTemplateColumns={{ xs: "1fr", sm: "1fr 1fr" }} gap={2}>
+                <Controller
                   control={form.control}
                   name="start_time"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        وقت البدء
-                      </FormLabel>
-                      {/* Replace Input with your TimePicker */}
-                      <FormControl>
-                        <TimePicker
-                          value={field.value}
-                          onChange={field.onChange}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
+                  render={({ field, fieldState }) => (
+                    <TextField
+                      {...field}
+                      type="time"
+                      label="وقت البدء"
+                      InputLabelProps={{ shrink: true }}
+                      inputProps={{ step: 300 }}
+                      error={!!fieldState.error}
+                      helperText={fieldState.error?.message}
+                      fullWidth
+                    />
                   )}
                 />
-                <FormField
+                <Controller
                   control={form.control}
                   name="end_time"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        وقت الانتهاء
-                      </FormLabel>
-                      <FormControl>
-                        <TimePicker
-                          value={field.value}
-                          onChange={field.onChange}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
+                  render={({ field, fieldState }) => (
+                    <TextField
+                      {...field}
+                      type="time"
+                      label="وقت الانتهاء"
+                      InputLabelProps={{ shrink: true }}
+                      inputProps={{ step: 300 }}
+                      error={!!fieldState.error}
+                      helperText={fieldState.error?.message}
+                      fullWidth
+                    />
                   )}
                 />
-              </div>
-              <FormField
+              </Box>
+              <Controller
                 control={form.control}
                 name="is_active"
                 render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                    <FormLabel className="text-sm">
-                      نشط
-                    </FormLabel>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
+                  <FormControlLabel
+                    control={<Switch checked={field.value} onChange={(_, checked) => field.onChange(checked)} />}
+                    label="نشط"
+                  />
                 )}
               />
+            </Box>
 
-              <DialogFooter className="pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowForm(false)}
-                  disabled={isMutating}
-                >
-                  الرجوع للقائمة
-                </Button>
-                <Button type="submit" disabled={isMutating}>
-                  {isMutating && (
-                    <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />
-                  )}
-                  {editingShift ? "حفظ التغييرات" : "إنشاء"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
+            <DialogActions sx={{ pt: 2 }}>
+              <Button
+                type="button"
+                variant="outlined"
+                onClick={() => setShowForm(false)}
+                disabled={isMutating}
+              >
+                الرجوع للقائمة
+              </Button>
+              <Button type="submit" variant="contained" disabled={isMutating} startIcon={isMutating ? <CircularProgress size={16} /> : undefined}>
+                {editingShift ? "حفظ التغييرات" : "إنشاء"}
+              </Button>
+            </DialogActions>
+          </form>
         )}
         {!showForm && (
-          <DialogFooter className="mt-auto pt-4">
-            <DialogClose asChild>
-              <Button type="button" variant="outline">
-                إغلاق
-              </Button>
-            </DialogClose>
-          </DialogFooter>
+          <DialogActions sx={{ mt: "auto", pt: 2 }}>
+            <Button type="button" variant="outlined" onClick={() => onOpenChange(false)}>
+              إغلاق
+            </Button>
+          </DialogActions>
         )}
       </DialogContent>
     </Dialog>

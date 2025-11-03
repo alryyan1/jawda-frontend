@@ -1,39 +1,21 @@
 // src/pages/attendance/AttendanceSheetPage.tsx
-import React, {
-  useState,
-  useEffect,
-  useMemo,
-  useCallback,
-  useRef,
-} from "react";
-import { useTranslation } from "react-i18next";
+import React, { useState, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  format,
-  addMonths,
-  subMonths,
-  startOfMonth,
-  endOfMonth,
-  eachDayOfInterval,
-  isValid as isValidDate,
-} from "date-fns";
-import { arSA, enUS } from "date-fns/locale";
+import { format, addMonths, subMonths, startOfMonth } from "date-fns";
+import { arSA } from "date-fns/locale";
 import { toast } from "sonner";
 import _debounce from "lodash/debounce";
 
 // MUI Imports
-import Autocomplete, {
-  AutocompleteInputChangeReason,
-  createFilterOptions,
-} from "@mui/material/Autocomplete";
+import Autocomplete from "@mui/material/Autocomplete";
 import TextField from "@mui/material/TextField";
 import Box from "@mui/material/Box";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
 import CircularProgress from "@mui/material/CircularProgress";
 import Chip from "@mui/material/Chip";
-import Tooltip from "@mui/material/Tooltip";
-import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+// Removed unused MUI imports
 
 // Shadcn UI imports
 import { Button } from "@/components/ui/button";
@@ -52,15 +34,13 @@ import {
   ChevronLeft,
   ChevronRight,
   CalendarDays,
-  Users,
   UserCheck,
   UserX,
-  UserCog,
   RotateCcw,
   Filter as FilterIcon,
-  Save,
   Loader2,
   AlertTriangle,
+  FileText,
 } from "lucide-react";
 
 import apiClient from "@/services/api";
@@ -68,7 +48,6 @@ import type { UserStripped } from "@/types/auth";
 import type {
   MonthlySheetData,
   DailyAttendanceData,
-  DailyShiftAttendance,
   AttendanceRecord,
   AttendanceShiftDefinition,
 } from "@/types/attendance";
@@ -80,20 +59,18 @@ interface UserOptionType extends UserStripped {
 
 // Type for individual field save status
 export type FieldSaveStatus = "idle" | "saving" | "success" | "error";
-interface CellSaveStatus {
-  supervisor?: FieldSaveStatus;
-  employees?: Record<number, FieldSaveStatus>; // Keyed by employee user_id or a temp ID
-}
+type CellSaveStatus = Record<string, FieldSaveStatus>;
 
 const AttendanceSheetPage: React.FC = () => {
-  const { t, i18n } = useTranslation(["attendance", "common"]);
-  const dateLocale = i18n.language.startsWith("ar") ? arSA : enUS;
+  const navigate = useNavigate();
+  const dateLocale = arSA;
   const queryClient = useQueryClient();
 
   const [currentMonthDate, setCurrentMonthDate] = useState(() =>
     startOfMonth(new Date())
   );
   const [selectedShiftFilter, setSelectedShiftFilter] = useState<string>("all");
+  const [pdfLoading, setPdfLoading] = useState(false);
   const [cellSaveStatus, setCellSaveStatus] = useState<
     Record<string, Record<number, CellSaveStatus>>
   >({}); // { [date]: { [shiftDefId]: CellSaveStatus } }
@@ -105,6 +82,10 @@ const AttendanceSheetPage: React.FC = () => {
     }),
     [currentMonthDate]
   );
+
+  // Today references for preventing future attendance
+  const todayDateStr = useMemo(() => format(new Date(), "yyyy-MM-dd"), []);
+  const todayMonthStart = useMemo(() => startOfMonth(new Date()), []);
 
   const monthlySheetQueryKey = [
     "attendanceMonthlySheet",
@@ -139,7 +120,8 @@ const AttendanceSheetPage: React.FC = () => {
       supervisor_id?: number | null; // ID of the user in the supervisor slot for this shift-day
       is_shift_supervisor_entry?: boolean; // True if this is the supervisor slot itself
     }) => {
-      const { key, ...apiPayload } = payload; // Exclude key from API payload
+      const { key: _key, ...apiPayload } = payload; // Exclude key from API payload
+      void _key; // mark unused on purpose
       return apiClient.post("/attendances/record", apiPayload);
     },
     onMutate: (variables) => {
@@ -158,7 +140,7 @@ const AttendanceSheetPage: React.FC = () => {
       }));
     },
     onSuccess: (response, variables) => {
-      toast.success(t("attendance:record.saveSuccess"));
+      toast.success("تم الحفظ بنجاح");
       const [date, shiftIdStr, slotType, slotId] = variables.key.split("-");
       const shiftId = parseInt(shiftIdStr);
       setCellSaveStatus((prev) => ({
@@ -242,10 +224,19 @@ const AttendanceSheetPage: React.FC = () => {
         }));
       }, 2000);
     },
-    onError: (error: any, variables) => {
-      toast.error(
-        error.response?.data?.message || t("common:error.saveFailed")
-      );
+    onError: (error: unknown, variables) => {
+      let message = "فشل الحفظ";
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        (error as { response?: { data?: { message?: string } } }).response
+      ) {
+        const resp = (error as { response?: { data?: { message?: string } } })
+          .response;
+        message = resp?.data?.message ?? message;
+      }
+      toast.error(message);
       const [date, shiftIdStr, slotType, slotId] = variables.key.split("-");
       const shiftId = parseInt(shiftIdStr);
       setCellSaveStatus((prev) => ({
@@ -262,9 +253,9 @@ const AttendanceSheetPage: React.FC = () => {
     },
   });
 
-  const debouncedRecordAttendance = useCallback(
-    _debounce((payload) => recordAttendanceMutation.mutate(payload), 1000),
-    [recordAttendanceMutation] // Recreate if mutation instance changes (shouldn't often)
+  const debouncedRecordAttendance = useMemo(
+    () => _debounce((payload) => recordAttendanceMutation.mutate(payload), 1000),
+    [recordAttendanceMutation]
   );
 
   const handleUserSelection = (
@@ -275,6 +266,12 @@ const AttendanceSheetPage: React.FC = () => {
     slotIdentifier: string | number, // Could be 'supervisor' or employee index/tempId
     existingRecordUserId?: number // User ID of the record being replaced/removed
   ) => {
+    // Block future dates
+    const isFutureDay = new Date(`${dayDate}T00:00:00`) > new Date(`${todayDateStr}T00:00:00`);
+    if (isFutureDay) {
+      toast.error("لا يمكن تسجيل الحضور لتاريخ مستقبلي");
+      return;
+    }
     const keyBase = `${dayDate}-${shiftDefId}`;
     const slotKey = isSupervisorSlot
       ? "supervisor"
@@ -325,6 +322,31 @@ const AttendanceSheetPage: React.FC = () => {
     });
   };
 
+  const openMonthlyAttendancePdf = async () => {
+    try {
+      setPdfLoading(true);
+      const params: Record<string, string | number> = {
+        month: monthYearParams.month,
+        year: monthYearParams.year,
+      };
+      if (selectedShiftFilter && selectedShiftFilter !== "all") {
+        params.shift_definition_id = selectedShiftFilter;
+      }
+      const response = await apiClient.get(
+        "/attendance/reports/monthly-summary/pdf",
+        { params, responseType: "blob" }
+      );
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch {
+      toast.error("تعذر فتح تقرير الحضور الشهري");
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
   const activeShiftDefinitionsToDisplay = useMemo(() => {
     if (!sheetData?.meta.active_shift_definitions) return [];
     if (selectedShiftFilter === "all")
@@ -347,6 +369,16 @@ const AttendanceSheetPage: React.FC = () => {
     [sheetData?.selectable_supervisors]
   );
 
+  // Ensure a default selected shift (first option) when "all" is not present
+  useEffect(() => {
+    const defs = sheetData?.meta.active_shift_definitions || [];
+    if (!defs.length) return;
+    const validIds = defs.map((d) => String(d.id));
+    if (!validIds.includes(selectedShiftFilter)) {
+      setSelectedShiftFilter(String(defs[0].id));
+    }
+  }, [sheetData?.meta.active_shift_definitions, selectedShiftFilter]);
+
   if (isLoading && !sheetData)
     return (
       <div className="flex justify-center items-center h-screen">
@@ -357,15 +389,13 @@ const AttendanceSheetPage: React.FC = () => {
     return (
       <Alert variant="destructive" className="m-4">
         <AlertTriangle className="h-4 w-4" />
-        <AlertTitle>{t("common:error.anErrorOccurred")}</AlertTitle>
+        <AlertTitle>{"حدث خطأ ما"}</AlertTitle>
         <AlertDescription>{error.message}</AlertDescription>
       </Alert>
     );
   if (!sheetData)
     return (
-      <div className="p-8 text-center text-muted-foreground">
-        {t("common:noDataAvailable")}
-      </div>
+      <div className="p-8 text-center text-muted-foreground">{"لا توجد بيانات متاحة"}</div>
     );
 
   const renderDayCell = (
@@ -394,11 +424,15 @@ const AttendanceSheetPage: React.FC = () => {
       return allUserOptions.find((u) => u.id === userId) || null;
     };
 
-    const getCellStatus = (
-      slotType: "supervisor" | `employees.${string | number}`
-    ): FieldSaveStatus => {
-      return cellSaveStatus[day.date]?.[shiftDef.id]?.[slotType] || "idle";
+    const getCellStatus = (slotType: string): FieldSaveStatus => {
+      return (
+        (cellSaveStatus[day.date]?.[shiftDef.id] as Record<string, FieldSaveStatus> | undefined)?.[
+          slotType
+        ] || "idle"
+      );
     };
+
+    const isFutureDay = new Date(`${day.date}T00:00:00`) > new Date(`${todayDateStr}T00:00:00`);
 
     return (
       <Paper
@@ -428,19 +462,20 @@ const AttendanceSheetPage: React.FC = () => {
           </Typography>
           {day.is_holiday && (
             <Chip
-              label={t("attendance:sheet.holiday")}
+              label={"عطلة"}
               size="small"
               color="warning"
               sx={{ fontSize: "0.6rem", height: "16px", p: "0 4px" }}
             />
           )}
+          
         </Box>
         <Separator />
 
         <div className="flex-grow space-y-1.5 overflow-y-auto thin-scrollbar pr-1">
           {/* Supervisor Autocomplete */}
           <UserAutocomplete
-            label={t("attendance:sheet.shiftSupervisor")}
+            label={"مشرف الوردية"}
             options={supervisorOptions}
             value={getSelectedUserValue(shiftCellData?.supervisor_id)}
             onChange={(user) =>
@@ -453,7 +488,7 @@ const AttendanceSheetPage: React.FC = () => {
                 supervisorRecord?.user_id
               )
             }
-            disabled={recordAttendanceMutation.isPending || day.is_holiday}
+            disabled={recordAttendanceMutation.isPending || day.is_holiday || isFutureDay}
             saveStatus={getCellStatus("supervisor")}
             excludeUserIds={employeeRecords.map((e) => e.user_id)}
           />
@@ -464,7 +499,7 @@ const AttendanceSheetPage: React.FC = () => {
             return (
               <UserAutocomplete
                 key={existingEmpRecord?.id || `new-${idx}`}
-                label={`${t("attendance:sheet.employee")} ${idx + 1}`}
+                label={`الموظف ${idx + 1}`}
                 options={allUserOptions.filter(
                   (u) => u.id !== shiftCellData?.supervisor_id
                 )}
@@ -479,7 +514,7 @@ const AttendanceSheetPage: React.FC = () => {
                     existingEmpRecord?.user_id
                   )
                 }
-                disabled={recordAttendanceMutation.isPending || day.is_holiday}
+                disabled={recordAttendanceMutation.isPending || day.is_holiday || isFutureDay}
                 saveStatus={getCellStatus(
                   existingEmpRecord?.id
                     ? `employees.${existingEmpRecord.id}`
@@ -502,12 +537,12 @@ const AttendanceSheetPage: React.FC = () => {
   return (
     <div
       className="container mx-auto py-4 sm:py-6 lg:py-8 space-y-3 h-full flex flex-col"
-      style={{ direction: i18n.dir() }}
+      style={{ direction: "rtl" }}
     >
       <div className="flex flex-col sm:flex-row justify-between items-center gap-3 p-3 bg-card rounded-lg shadow flex-shrink-0">
         <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
           <CalendarDays className="h-6 w-6 text-primary" />
-          {t("attendance:sheet.pageTitle")}
+          {"كشف الحضور الشهري"}
         </h1>
         <div className="flex items-center gap-1 sm:gap-2">
           <Button
@@ -531,7 +566,7 @@ const AttendanceSheetPage: React.FC = () => {
             size="icon"
             className="h-8 w-8 sm:h-9 sm:w-9"
             onClick={() => changeMonth(1)}
-            disabled={isFetching}
+            disabled={isFetching || addMonths(currentMonthDate, 1) > todayMonthStart}
           >
             <ChevronRight className="h-4 sm:h-5 w-4 sm:w-5" />
           </Button>
@@ -541,7 +576,7 @@ const AttendanceSheetPage: React.FC = () => {
             className="h-8 w-8 sm:h-9 sm:w-9"
             onClick={() => refetch()}
             disabled={isFetching || isLoading}
-            title={t("common:refresh")}
+            title={"تحديث"}
           >
             <RotateCcw
               className={cn(
@@ -556,15 +591,13 @@ const AttendanceSheetPage: React.FC = () => {
           <Select
             value={selectedShiftFilter}
             onValueChange={setSelectedShiftFilter}
-            dir={i18n.dir()}
+            dir={"rtl"}
           >
             <SelectTrigger className="w-full sm:w-[180px] h-9 text-xs">
-              <SelectValue placeholder={t("attendance:sheet.filterByShift")} />
+              <SelectValue placeholder={"تصفية حسب الوردية"} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">
-                {t("attendance:sheet.allShifts")}
-              </SelectItem>
+              {/* <SelectItem value="all">{"كل الورديات"}</SelectItem> */}
               {sheetData.meta.active_shift_definitions.map((sd) => (
                 <SelectItem key={sd.id} value={String(sd.id)}>
                   {sd.shift_label} ({sd.name})
@@ -572,13 +605,35 @@ const AttendanceSheetPage: React.FC = () => {
               ))}
             </SelectContent>
           </Select>
+          <Button
+            variant="secondary"
+            className="h-9 text-xs flex items-center gap-1"
+            onClick={openMonthlyAttendancePdf}
+            disabled={pdfLoading || isLoading || isFetching}
+            title={"عرض تقرير الحضور الشهري (PDF)"}
+          >
+            {pdfLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <FileText className="h-4 w-4" />
+            )}
+            <span className="hidden sm:inline">ملف PDF</span>
+          </Button>
+          <Button
+            onClick={() => navigate("/settings/attendance-summary")}
+            variant="secondary"
+            className="h-9 text-xs flex items-center gap-1"
+          >
+            <FileText className="h-4 w-4" />
+            <span className="hidden sm:inline">ملخص الحضور والانصراف</span>
+          </Button>
         </div>
       </div>
 
       {isFetching && !isLoading && (
         <div className="text-center text-xs text-muted-foreground py-1">
           <Loader2 className="inline h-3 w-3 animate-spin" />{" "}
-          {t("common:loadingData")}
+          {"جاري تحميل البيانات..."}
         </div>
       )}
 
@@ -586,7 +641,9 @@ const AttendanceSheetPage: React.FC = () => {
         <div className="flex p-1 sm:p-1.5 min-w-max">
           {" "}
           {/* min-w-max for horizontal scroll content */}
-          {sheetData.days.map((day) => (
+          {sheetData.days
+            .filter((day) => day.date <= todayDateStr)
+            .map((day) => (
             <div
               key={day.date}
               className="flex flex-col border-r dark:border-slate-700 last:border-r-0 rtl:border-l rtl:last:border-l-0 rtl:first:border-r-0 flex-shrink-0"
@@ -616,7 +673,7 @@ const AttendanceSheetPage: React.FC = () => {
                 )}
               </div>
             </div>
-          ))}
+            ))}
         </div>
         <ScrollBar orientation="horizontal" />
       </ScrollArea>
@@ -632,9 +689,7 @@ interface UserAutocompleteProps {
   onChange: (user: UserOptionType | null) => void;
   disabled?: boolean;
   saveStatus: FieldSaveStatus;
-  allUsers: UserOptionType[]; // All users for filtering out already selected ones
-  currentShiftEmployeeIds?: number[]; // IDs of employees already assigned to other slots in this shift
-  currentSupervisorId?: number | null; // ID of the current supervisor for this shift
+  excludeUserIds?: (number | undefined | null)[];
 }
 const UserAutocomplete: React.FC<UserAutocompleteProps> = ({
   label,
@@ -643,20 +698,14 @@ const UserAutocomplete: React.FC<UserAutocompleteProps> = ({
   onChange,
   disabled,
   saveStatus,
-  allUsers,
-  currentShiftEmployeeIds = [],
-  currentSupervisorId,
+  excludeUserIds = [],
 }) => {
-  const filterOptions = createFilterOptions<UserOptionType>();
   const memoizedOptions = useMemo(() => {
-    // Filter out users already assigned in other slots of the same shift (excluding the current value if it's an update)
+    const exclude = new Set(excludeUserIds.filter(Boolean) as number[]);
     return options.filter(
-      (opt) =>
-        (value && opt.id === value.id) || // Always include the currently selected value for this slot
-        (!currentShiftEmployeeIds.includes(opt.id) &&
-          opt.id !== currentSupervisorId)
+      (opt) => (value && opt.id === value.id) || !exclude.has(opt.id)
     );
-  }, [options, value, currentShiftEmployeeIds, currentSupervisorId]);
+  }, [options, value, excludeUserIds]);
 
   return (
     <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
@@ -664,7 +713,7 @@ const UserAutocomplete: React.FC<UserAutocompleteProps> = ({
         options={memoizedOptions}
         getOptionLabel={(option) => option.label || ""}
         value={value}
-        onChange={(event, newValue) => onChange(newValue)}
+        onChange={(_event, newValue) => onChange(newValue)}
         isOptionEqualToValue={(option, val) => option.id === val?.id}
         size="small"
         fullWidth

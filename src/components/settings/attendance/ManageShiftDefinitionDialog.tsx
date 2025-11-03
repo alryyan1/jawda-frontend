@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useTranslation } from "react-i18next";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -76,32 +75,27 @@ import { Badge } from "@/components/ui/badge";
 // }
 
 const getShiftDefinitionSchema = (
-  t: Function,
   existingShiftDefinitionId?: number
 ) =>
   z
     .object({
       name: z
         .string()
-        .min(1, { message: t("common:validation.required") })
+        .min(1, { message: "هذا الحقل مطلوب" })
         .max(100),
       shift_label: z
         .string()
-        .min(1, { message: t("common:validation.required") })
+        .min(1, { message: "هذا الحقل مطلوب" })
         .max(50),
       start_time: z
         .string()
         .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, {
-          message: t(
-            "attendance:settings.shiftDefinitions.validation.invalidTime"
-          ),
+          message: "الوقت غير صالح (يجب أن يكون بالتنسيق HH:mm)",
         }),
       end_time: z
         .string()
         .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, {
-          message: t(
-            "attendance:settings.shiftDefinitions.validation.invalidTime"
-          ),
+          message: "الوقت غير صالح (يجب أن يكون بالتنسيق HH:mm)",
         }),
       is_active: z.boolean().default(true),
     })
@@ -118,9 +112,7 @@ const getShiftDefinitionSchema = (
         return true;
       },
       {
-        message: t(
-          "attendance:settings.shiftDefinitions.validation.endTimeAfterStart"
-        ),
+        message: "يجب أن يكون وقت الانتهاء بعد وقت البدء أو ضمن وردية ليلية",
         path: ["end_time"],
       }
     );
@@ -137,7 +129,6 @@ interface ManageShiftDefinitionDialogProps {
 const ManageShiftDefinitionDialog: React.FC<
   ManageShiftDefinitionDialogProps
 > = ({ isOpen, onOpenChange }) => {
-  const { t } = useTranslation(["attendance", "common"]);
   const queryClient = useQueryClient();
 
   const [editingShift, setEditingShift] = useState<ShiftDefinition | null>(
@@ -157,7 +148,7 @@ const ManageShiftDefinitionDialog: React.FC<
     enabled: isOpen,
   });
 
-  const formSchema = getShiftDefinitionSchema(t, editingShift?.id);
+  const formSchema = getShiftDefinitionSchema(editingShift?.id);
   const form = useForm<ShiftDefinitionFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -199,7 +190,7 @@ const ManageShiftDefinitionDialog: React.FC<
     },
     onError: (error: any) => {
       toast.error(
-        error.response?.data?.message || t("common:error.operationFailed")
+        error.response?.data?.message || "فشلت العملية، يرجى المحاولة لاحقًا"
       );
     },
   };
@@ -208,7 +199,7 @@ const ManageShiftDefinitionDialog: React.FC<
     mutationFn: (data: ShiftDefinitionFormData) => createShiftDefinition(data),
     ...mutationOptions,
     onSuccess: () => {
-      toast.success(t("attendance:settings.shiftDefinitions.createdSuccess"));
+      toast.success("تم إنشاء التعريف بنجاح");
       mutationOptions.onSuccess();
     },
   });
@@ -218,7 +209,7 @@ const ManageShiftDefinitionDialog: React.FC<
       updateShiftDefinition(data.id, data.payload),
     ...mutationOptions,
     onSuccess: () => {
-      toast.success(t("attendance:settings.shiftDefinitions.updatedSuccess"));
+      toast.success("تم تحديث التعريف بنجاح");
       mutationOptions.onSuccess();
     },
   });
@@ -227,7 +218,7 @@ const ManageShiftDefinitionDialog: React.FC<
     mutationFn: (id: number) => deleteShiftDefinition(id),
     ...mutationOptions,
     onSuccess: () => {
-      toast.success(t("attendance:settings.shiftDefinitions.deletedSuccess"));
+      toast.success("تم حذف التعريف بنجاح");
       mutationOptions.onSuccess(); // This will also refetch
     },
   });
@@ -253,9 +244,7 @@ const ManageShiftDefinitionDialog: React.FC<
   const handleDelete = (id: number) => {
     if (
       window.confirm(
-        t("common:confirmDeleteMessage", {
-          item: t("attendance:settings.shiftDefinitions.entityName"),
-        })
+        "هل أنت متأكد من حذف تعريف الوردية؟ لا يمكن التراجع عن هذا الإجراء."
       )
     ) {
       deleteMutation.mutate(id);
@@ -294,10 +283,10 @@ const ManageShiftDefinitionDialog: React.FC<
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Clock className="h-6 w-6 text-primary" />
-            {t("attendance:settings.shiftDefinitions.dialogTitle")}
+            إدارة تعريفات الورديات
           </DialogTitle>
           <DialogDescription>
-            {t("attendance:settings.shiftDefinitions.dialogDescription")}
+            إضافة وتعديل وحذف تعريفات الورديات وساعات العمل.
           </DialogDescription>
         </DialogHeader>
 
@@ -306,7 +295,7 @@ const ManageShiftDefinitionDialog: React.FC<
             <div className="flex justify-end mb-2">
               <Button size="sm" onClick={handleAddNew} disabled={isLoading}>
                 <PlusCircle className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
-                {t("attendance:settings.shiftDefinitions.addNewButton")}
+                إضافة تعريف جديد
               </Button>
             </div>
             <ScrollArea className="h-[400px] border rounded-md">
@@ -316,33 +305,29 @@ const ManageShiftDefinitionDialog: React.FC<
                 </div>
               ) : shiftDefinitions.length === 0 ? (
                 <p className="p-4 text-center text-muted-foreground">
-                  {t("attendance:settings.shiftDefinitions.noDefinitions")}
+                  لا توجد تعريفات حالية.
                 </p>
               ) : (
                 <Table size="sm">
                   <TableHeader>
                     <TableRow>
                       <TableHead className="text-center">
-                        {t("attendance:settings.shiftDefinitions.table.label")}
+                        الرمز
                       </TableHead>
                       <TableHead>
-                        {t("attendance:settings.shiftDefinitions.table.name")}
+                        الاسم
                       </TableHead>
                       <TableHead className="text-center">
-                        {t(
-                          "attendance:settings.shiftDefinitions.table.startTime"
-                        )}
+                        وقت البدء
                       </TableHead>
                       <TableHead className="text-center">
-                        {t(
-                          "attendance:settings.shiftDefinitions.table.endTime"
-                        )}
+                        وقت الانتهاء
                       </TableHead>
                       <TableHead className="text-center">
-                        {t("attendance:settings.shiftDefinitions.table.status")}
+                        الحالة
                       </TableHead>
                       <TableHead className="text-right">
-                        {t("common:actions.title")}
+                        الإجراءات
                       </TableHead>
                     </TableRow>
                   </TableHeader>
@@ -363,9 +348,7 @@ const ManageShiftDefinitionDialog: React.FC<
                           <Badge
                             variant={def.is_active ? "success" : "outline"}
                           >
-                            {def.is_active
-                              ? t("common:statusEnum.active")
-                              : t("common:statusEnum.inactive")}
+                            {def.is_active ? "نشط" : "غير نشط"}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
@@ -414,10 +397,10 @@ const ManageShiftDefinitionDialog: React.FC<
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      {t("attendance:settings.shiftDefinitions.form.label")}
+                      الرمز
                     </FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="e.g., Shift 1, Morning" />
+                      <Input {...field} placeholder="مثال: وردية 1، صباحية" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -429,12 +412,12 @@ const ManageShiftDefinitionDialog: React.FC<
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      {t("attendance:settings.shiftDefinitions.form.name")}
+                      الاسم
                     </FormLabel>
                     <FormControl>
                       <Input
                         {...field}
-                        placeholder="e.g., Morning Duty, General Evening"
+                        placeholder="مثال: الدوام الصباحي، المسائية العامة"
                       />
                     </FormControl>
                     <FormMessage />
@@ -448,9 +431,7 @@ const ManageShiftDefinitionDialog: React.FC<
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        {t(
-                          "attendance:settings.shiftDefinitions.form.startTime"
-                        )}
+                        وقت البدء
                       </FormLabel>
                       {/* Replace Input with your TimePicker */}
                       <FormControl>
@@ -469,7 +450,7 @@ const ManageShiftDefinitionDialog: React.FC<
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        {t("attendance:settings.shiftDefinitions.form.endTime")}
+                        وقت الانتهاء
                       </FormLabel>
                       <FormControl>
                         <TimePicker
@@ -488,7 +469,7 @@ const ManageShiftDefinitionDialog: React.FC<
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                     <FormLabel className="text-sm">
-                      {t("attendance:settings.shiftDefinitions.form.isActive")}
+                      نشط
                     </FormLabel>
                     <FormControl>
                       <Switch
@@ -507,13 +488,13 @@ const ManageShiftDefinitionDialog: React.FC<
                   onClick={() => setShowForm(false)}
                   disabled={isMutating}
                 >
-                  {t("common:backToList")}
+                  الرجوع للقائمة
                 </Button>
                 <Button type="submit" disabled={isMutating}>
                   {isMutating && (
                     <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />
                   )}
-                  {editingShift ? t("common:saveChanges") : t("common:create")}
+                  {editingShift ? "حفظ التغييرات" : "إنشاء"}
                 </Button>
               </DialogFooter>
             </form>
@@ -523,7 +504,7 @@ const ManageShiftDefinitionDialog: React.FC<
           <DialogFooter className="mt-auto pt-4">
             <DialogClose asChild>
               <Button type="button" variant="outline">
-                {t("common:close")}
+                إغلاق
               </Button>
             </DialogClose>
           </DialogFooter>

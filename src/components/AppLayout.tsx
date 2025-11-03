@@ -62,6 +62,7 @@ import {
   UsersRound,
   CalendarCheck2,
   FileText,
+  ClipboardEditIcon,
 } from "lucide-react";
 import { Toaster } from "sonner";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -103,7 +104,7 @@ const allMainNavItems: NavItem[] = [
   { to: '/lab-sample-collection', label: 'جمع العينات', icon: Syringe },
   { to: '/lab-workstation', label: 'نتائج المختبر', icon: FlaskConical },
   // { to: '/laboratory/offers', label: 'عروض التحاليل', icon: Package },
-  // { to: '/attendance/sheet', label: 'سجل الحضور', icon: ClipboardEditIcon },
+  { to: '/attendance/sheet', label: 'سجل الحضور', icon: ClipboardEditIcon },
   { to: '/patients', label: 'المرضى', icon: Users },
   // { to: '/doctors', label: 'الأطباء', icon: Stethoscope },
   // { to: '/analysis', label: 'التحليل', icon: FileBarChart2 },
@@ -801,12 +802,7 @@ const AppLayout: React.FC = () => {
                                   عيادات اليوم
                                 </Link>
                               </DropdownMenuItem>
-                              <DropdownMenuItem asChild>
-                                <Link to="/reports/service-statistics" className="w-full flex items-center">
-                                  <FileBarChart2 className="mr-2 h-4 w-4" />
-                                  إحصائيات الخدمات
-                                </Link>
-                              </DropdownMenuItem>
+                          
                               <DropdownMenuItem asChild>
                                 <Link to="/reports/clinic-shift-summary" className="w-full flex items-center">
                                   <FileSpreadsheet className="mr-2 h-4 w-4" />
@@ -816,7 +812,13 @@ const AppLayout: React.FC = () => {
                               <DropdownMenuItem asChild>
                                 <Link to="/reports/costs" className="w-full flex items-center">
                                   <FileSpreadsheet className="mr-2 h-4 w-4" />
-                                  التكاليف
+                                  المصروفات
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link to="/reports/monthly-lab-income" className="w-full flex items-center">
+                                  <BarChartBig className="mr-2 h-4 w-4" />
+                                  دخل المختبر الشهري
                                 </Link>
                               </DropdownMenuItem>
                               <DropdownMenuItem asChild>
@@ -832,9 +834,9 @@ const AppLayout: React.FC = () => {
                                 </Link>
                               </DropdownMenuItem>
                               <DropdownMenuItem asChild>
-                                <Link to="/reports/doctor-statistics" className="w-full flex items-center">
+                                <Link to="/settings/attendance-summary" className="w-full flex items-center">
                                   <BarChartBig className="mr-2 h-4 w-4" />
-                                  إحصائيات الأطباء
+                                  ملخص الحضور والانصراف
                                 </Link>
                               </DropdownMenuItem>
                               <DropdownMenuItem asChild>
@@ -862,9 +864,15 @@ const AppLayout: React.FC = () => {
                                 </Link>
                               </DropdownMenuItem>
                               <DropdownMenuItem asChild>
-                                <Link to="/reports/monthly-lab-income" className="w-full flex items-center">
+                                <Link to="/reports/doctor-statistics" className="w-full flex items-center">
                                   <BarChartBig className="mr-2 h-4 w-4" />
-                                  دخل المختبر الشهري
+                                  إحصائيات الأطباء
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link to="/reports/service-statistics" className="w-full flex items-center">
+                                  <FileBarChart2 className="mr-2 h-4 w-4" />
+                                  إحصائيات الخدمات
                                 </Link>
                               </DropdownMenuItem>
                               <DropdownMenuItem asChild>
@@ -874,6 +882,7 @@ const AppLayout: React.FC = () => {
                                 </Link>
                               </DropdownMenuItem>
                             </DropdownMenuSubContent>
+                         
                           </DropdownMenuSub>}
                           
                           {/* Settings Submenu */}
@@ -935,6 +944,12 @@ const AppLayout: React.FC = () => {
                                 <Link to="/settings/users" className="w-full flex items-center">
                                   <User className="mr-2 h-4 w-4" />
                                   المستخدمون
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link to="/settings/attendance/shift-definitions" className="w-full flex items-center">
+                                  <BarChartBig className="mr-2 h-4 w-4" />
+                                  الورديات
                                 </Link>
                               </DropdownMenuItem>
                               <DropdownMenuItem asChild>

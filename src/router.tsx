@@ -123,18 +123,18 @@ const router = createBrowserRouter([
             element: <SampleCollectionPage />,
           },
           {
-            path: 'lab-reception',
+            path: "lab-reception",
             element: <LabReceptionPage />,
           },
           {
-            path: 'cash-reconciliation',
+            path: "cash-reconciliation",
             element: <CashReconciliationPage />,
           },
           {
-            path: 'specialists',
+            path: "specialists",
             element: <SpecialistsPage />,
           },
-           {
+          {
             path: "analysis", // Or "/reports/analysis" if under reports
             element: <AnalysisPage />,
           },
@@ -146,13 +146,13 @@ const router = createBrowserRouter([
             path: "hl7-parser",
             element: <HL7ParserPage />,
           },
-        
+
           {
             path: "dashboard", // Explicit dashboard route if needed, often same as index
             element: <HomePage />,
           },
           {
-            path: '*',
+            path: "*",
             element: <NotFoundPage />,
           },
           {
@@ -201,22 +201,31 @@ const router = createBrowserRouter([
               },
             ],
           },
-       
+
           {
             path: "reports",
             element: <ReportsLayout />,
             children: [
               // ... your existing report routes ...
-              { path: "attendance-summary", element: <MonthlyAttendanceSummaryPage /> },
-              { path: "attendance-daily", element: <DailyAttendanceDetailPage /> },
-              { path: "attendance-payroll", element: <PayrollAttendanceReportPage /> },
+              {
+                path: "attendance-summary",
+                element: <MonthlyAttendanceSummaryPage />,
+              },
+              {
+                path: "attendance-daily",
+                element: <DailyAttendanceDetailPage />,
+              },
+              {
+                path: "attendance-payroll",
+                element: <PayrollAttendanceReportPage />,
+              },
             ],
           },
           {
             path: "clinic",
             element: <ClinicPage />,
           },
-      
+
           // Patients Module (Placeholder)
 
           // Appointments Module (Placeholder)
@@ -254,25 +263,28 @@ const router = createBrowserRouter([
             children: [
               { index: true, element: <Navigate to="doctor-shifts" replace /> }, // Default report
               { path: "doctor-shifts", element: <DoctorShiftsReportPage /> },
-              { path: "doctor-shifts/:doctorShiftId", element: <DoctorShiftDetailsPage /> },
+              {
+                path: "doctor-shifts/:doctorShiftId",
+                element: <DoctorShiftDetailsPage />,
+              },
               {
                 path: "service-statistics",
                 element: <ServiceStatisticsReportPage />,
               },
               {
-                path: 'lab-test-statistics',
+                path: "lab-test-statistics",
                 element: <LabTestStatisticsReportPage />,
               },
               {
-                path: 'lab-general',
+                path: "lab-general",
                 element: <LabGeneralReportPage />,
               },
               {
-                path: 'lab-general/details',
+                path: "lab-general/details",
                 element: <LabGeneralReportDetailsPage />,
               },
               {
-                path: 'monthly-service-income',
+                path: "monthly-service-income",
                 element: <MonthlyServiceIncomeReportPage />,
               },
               {
@@ -280,39 +292,38 @@ const router = createBrowserRouter([
                 element: <MonthlyLabIncomeReportPage />,
               },
               {
-                path: 'clinic-shift-summary', // Or whatever path you chose for the backend route / allclinicsReportNew
+                path: "clinic-shift-summary", // Or whatever path you chose for the backend route / allclinicsReportNew
                 element: <ClinicShiftSummaryReportPage />,
               },
               {
-                path: 'costs', // Or whatever path you chose for the backend route / allclinicsReportNew
+                path: "costs", // Or whatever path you chose for the backend route / allclinicsReportNew
                 element: <CostsReportPage />,
               },
               {
-                path: 'doctor-statistics',
+                path: "doctor-statistics",
                 element: <DoctorStatisticsReportPage />,
               },
               {
-                path: 'company-performance',
+                path: "company-performance",
                 element: <CompanyPerformanceReportPage />,
               },
               {
-                path:'doctor-company-entitlement',
-                element:<DoctorCompanyEntitlementReportPage/>
+                path: "doctor-company-entitlement",
+                element: <DoctorCompanyEntitlementReportPage />,
               },
               {
-                path: 'service-cost-breakdown',
+                path: "service-cost-breakdown",
                 element: <ServiceCostBreakdownReportPage />,
               },
               {
-                path:'yearly-income-comparison',
-                element:<YearlyIncomeComparisonReportPage/>
-              }
-              ,
+                path: "yearly-income-comparison",
+                element: <YearlyIncomeComparisonReportPage />,
+              },
               {
-                path:'yearly-patient-frequency',
-                element:<YearlyPatientFrequencyReportPage/>
-              }
-              
+                path: "yearly-patient-frequency",
+                element: <YearlyPatientFrequencyReportPage />,
+              },
+
               // Add other report routes here
               // { path: 'patient-visits', element: <PatientVisitsReportPage /> },
             ],
@@ -325,15 +336,15 @@ const router = createBrowserRouter([
             path: "/patients",
             element: <TodaysPatientsPage />,
           },
-  // === NEW: ATTENDANCE MODULE ROUTES ===
-  {
-    path: "attendance", // Base path for main attendance features
-    children: [
-      { index: true, element: <Navigate to="sheet" replace /> }, // Default to sheet
-      { path: "sheet", element: <AttendanceSheetPage /> },
-      // Add other main attendance related pages here if any
-    ],
-  },
+          // === NEW: ATTENDANCE MODULE ROUTES ===
+          {
+            path: "attendance", // Base path for main attendance features
+            children: [
+              { index: true, element: <Navigate to="sheet" replace /> }, // Default to sheet
+              { path: "sheet", element: <AttendanceSheetPage /> },
+              // Add other main attendance related pages here if any
+            ],
+          },
           // Settings & Profile (Placeholders)
           {
             path: "settings",
@@ -352,11 +363,11 @@ const router = createBrowserRouter([
                 element: <InsuranceAuditPage />,
               },
               // Inside your AppLayout children:
-{
-  path: "attendance-summary", // Or your preferred path
-  element: <MonthlyAttendanceSummaryPage />,
-  // Add permission check if needed for the route
-},
+              {
+                path: "attendance-summary", // Or your preferred path
+                element: <MonthlyAttendanceSummaryPage />,
+                // Add permission check if needed for the route
+              },
               {
                 path: "service-groups",
                 element: <ServiceGroupsPage />,
@@ -365,7 +376,10 @@ const router = createBrowserRouter([
                 path: "attendance",
                 element: <Outlet />,
                 children: [
-                  { path: "shift-definitions", element: <ShiftDefinitionsPage /> },
+                  {
+                    path: "shift-definitions",
+                    element: <ShiftDefinitionsPage />,
+                  },
                   { path: "holidays", element: <HolidaysPage /> },
                 ],
               },
@@ -416,22 +430,16 @@ const router = createBrowserRouter([
                   {
                     path: "new",
                     element: (
-                      <MainTestFormPage 
-                        mode="create"
-                        key="mainTestCreate"
-                      />
+                      <MainTestFormPage mode="create" key="mainTestCreate" />
                     ),
                   },
                   {
                     path: ":testId/edit",
                     element: (
-                      <MainTestFormPage
-                        mode="edit"
-                        key="mainTestEdit"
-                      />
+                      <MainTestFormPage mode="edit" key="mainTestEdit" />
                     ),
                   },
-                 
+
                   {
                     path: ":mainTestId/parameters",
                     element: <ChildTestsManagementPage />,
@@ -476,10 +484,8 @@ const router = createBrowserRouter([
                   },
                 ],
               },
-             
             ],
           },
-      
 
           // ... other protected top-level sections/modules
         ],

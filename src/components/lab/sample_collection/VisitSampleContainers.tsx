@@ -26,11 +26,8 @@ const VisitSampleContainers: React.FC<VisitSampleContainersProps> = ({
   patientName,
   labRequests,
   isLoading,
-  patientAge,
-  doctorName,
   visitDateTime,
-  patientPhone
- , onAfterPrint
+  onAfterPrint
 }) => {
   const formatDate = (value?: string | Date) => {
     const d = value ? new Date(value) : new Date();
@@ -67,24 +64,12 @@ const VisitSampleContainers: React.FC<VisitSampleContainersProps> = ({
   };
 
   const getContainerImageSrc = (containerId: number) => {
-    // Map container IDs to available images
-    const imageMap: Record<number, string> = {
-      1: '/src/assets/containers/1.png',
-      2: '/src/assets/containers/2.png',
-      3: '/src/assets/containers/3.png',
-      4: '/src/assets/containers/4.png',
-      5: '/src/assets/containers/5.png',
-      6: '/src/assets/containers/6.png',
-      7: '/src/assets/containers/7.png',
-      8: '/src/assets/containers/8.png',
-      9: '/src/assets/containers/9.png',
-      10: '/src/assets/containers/10.png',
-      11: '/src/assets/containers/11.png',
-      12: '/src/assets/containers/12.png',
-      13: '/src/assets/containers/13.png'
-    };
-    
-    return imageMap[containerId] || '/src/assets/containers/1.png'; // Default fallback
+    // Use Vite's URL resolution so images work after build
+    try {
+      return new URL(`../../../assets/containers/${containerId}.png`, import.meta.url).href;
+    } catch {
+      return new URL(`../../../assets/containers/1.png`, import.meta.url).href;
+    }
   };
 
   const getContainerWidth = (containerId: number) => {
@@ -208,7 +193,7 @@ const VisitSampleContainers: React.FC<VisitSampleContainersProps> = ({
                         className="object-contain transition-transform duration-200 group-hover:scale-105"
                         onError={(e) => {
                           // Fallback to default image if the specific one doesn't exist
-                          (e.target as HTMLImageElement).src = '/src/assets/containers/1.png';
+                          (e.target as HTMLImageElement).src = new URL(`../../../assets/containers/1.png`, import.meta.url).href;
                         }}
                       />
                       {container.count > 1 && (

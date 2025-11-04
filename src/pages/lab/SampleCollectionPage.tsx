@@ -512,7 +512,7 @@ const SampleCollectionPage: React.FC = () => {
         // Print barcode to Zebra printer
         printToZebra(visitIdToUse),
         // Generate PDF with viewer
-        apiClient.get(`/visits/${visitIdToUse}/lab-barcode/pdf`, { responseType: "blob" })
+        // apiClient.get(`/visits/${visitIdToUse}/lab-barcode/pdf`, { responseType: "blob" })
       ]);
 
       // Handle Zebra printer result
@@ -524,69 +524,69 @@ const SampleCollectionPage: React.FC = () => {
       }
 
       // Handle PDF generation result
-      if (pdfResult.status === 'fulfilled') {
-        const response = pdfResult.value;
-        const blob = new Blob([response.data], { type: "application/pdf" });
+      // if (pdfResult.status === 'fulfilled') {
+      //   const response = pdfResult.value;
+      //   const blob = new Blob([response.data], { type: "application/pdf" });
         
-        // Method 1: Try to open in new tab with blob URL
-        try {
-          const objectUrl = URL.createObjectURL(blob);
-          const newWindow = window.open(objectUrl, '_blank', 'noopener,noreferrer');
+      //   // Method 1: Try to open in new tab with blob URL
+      //   try {
+      //     const objectUrl = URL.createObjectURL(blob);
+      //     const newWindow = window.open(objectUrl, '_blank', 'noopener,noreferrer');
           
-          if (newWindow) {
-            // Clean up the object URL after a delay
-            setTimeout(() => {
-              URL.revokeObjectURL(objectUrl);
-            }, 5000);
-            console.log('PDF opened in new tab successfully');
-          } else {
-            // Fallback: Download the PDF
-            const link = document.createElement('a');
-            link.href = objectUrl;
-            link.download = `barcode_labels_visit_${visitIdToUse}.pdf`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+      //     if (newWindow) {
+      //       // Clean up the object URL after a delay
+      //       setTimeout(() => {
+      //         URL.revokeObjectURL(objectUrl);
+      //       }, 5000);
+      //       console.log('PDF opened in new tab successfully');
+      //     } else {
+      //       // Fallback: Download the PDF
+      //       const link = document.createElement('a');
+      //       link.href = objectUrl;
+      //       link.download = `barcode_labels_visit_${visitIdToUse}.pdf`;
+      //       document.body.appendChild(link);
+      //       link.click();
+      //       document.body.removeChild(link);
             
-            setTimeout(() => {
-              URL.revokeObjectURL(objectUrl);
-            }, 1000);
-            console.log('PDF downloaded as fallback');
-          }
-        } catch (error) {
-          // Fallback: Direct download
-          const objectUrl = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = objectUrl;
-          link.download = `barcode_labels_visit_${visitIdToUse}.pdf`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
+      //       setTimeout(() => {
+      //         URL.revokeObjectURL(objectUrl);
+      //       }, 1000);
+      //       console.log('PDF downloaded as fallback');
+      //     }
+      //   } catch (error) {
+      //     // Fallback: Direct download
+      //     const objectUrl = URL.createObjectURL(blob);
+      //     const link = document.createElement('a');
+      //     link.href = objectUrl;
+      //     link.download = `barcode_labels_visit_${visitIdToUse}.pdf`;
+      //     document.body.appendChild(link);
+      //     link.click();
+      //     document.body.removeChild(link);
           
-          setTimeout(() => {
-            URL.revokeObjectURL(objectUrl);
-          }, 1000);
-          console.log('PDF downloaded due to error:', error);
-        }
+      //     setTimeout(() => {
+      //       URL.revokeObjectURL(objectUrl);
+      //     }, 1000);
+      //     console.log('PDF downloaded due to error:', error);
+      //   }
         
-        console.log('PDF generation completed successfully');
-      } else {
-        console.error('PDF generation failed:', pdfResult.reason);
+      //   console.log('PDF generation completed successfully');
+      // } else {
+      //   console.error('PDF generation failed:', pdfResult.reason);
         
-        // Check if it's an authentication error
-        if (pdfResult.reason?.response?.status === 401) {
-          toast.error("انتهت صلاحية الجلسة - يرجى تسجيل الدخول مرة أخرى");
-        } else if (pdfResult.reason?.response?.status === 500) {
-          toast.error("خطأ في الخادم - تحقق من صحة البيانات");
-        } else {
-          toast.error("فشل في إنشاء ملف PDF");
-        }
-      }
+      //   // Check if it's an authentication error
+      //   if (pdfResult.reason?.response?.status === 401) {
+      //     toast.error("انتهت صلاحية الجلسة - يرجى تسجيل الدخول مرة أخرى");
+      //   } else if (pdfResult.reason?.response?.status === 500) {
+      //     toast.error("خطأ في الخادم - تحقق من صحة البيانات");
+      //   } else {
+      //     toast.error("فشل في إنشاء ملف PDF");
+      //   }
+      // }
 
       // Show overall success message if at least one request succeeded
-      if (zebraResult.status === 'fulfilled' || pdfResult.status === 'fulfilled') {
-        toast.success("تم تنفيذ طلب الطباعة");
-      }
+      // if (zebraResult.status === 'fulfilled' || pdfResult.status === 'fulfilled') {
+      //   toast.success("تم تنفيذ طلب الطباعة");
+      // }
 
     } catch (error: unknown) {
       console.error('Error in printBarcodeLabels:', error);

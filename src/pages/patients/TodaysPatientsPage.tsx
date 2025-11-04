@@ -19,8 +19,10 @@ import {
   TableRow,
   Paper,
   Chip,
-  CircularProgress
+  CircularProgress,
+  MenuItem
 } from "@mui/material";
+import Autocomplete from "@mui/material/Autocomplete";
 import { Search as SearchIcon, CalendarMonth as CalendarIcon } from "@mui/icons-material";
 
 import {
@@ -33,16 +35,25 @@ import { formatNumber } from "@/lib/utils";
 import ViewVisitServicesDialog from "@/components/clinic/patients/ViewVisitServicesDialog";
 import ServicesDialog from "@/components/clinic/patients/ServicesDialog";
 import LabRequestsDialog from "@/components/clinic/patients/LabRequestsDialog";
+import { getDoctorsList } from "@/services/doctorService";
+import type { DoctorStripped } from "@/types/doctors";
 
 const TodaysPatientsPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
 
+  // pagination size options
+  const perPageOptions = [10, 50, 100, 300, 500, 1000];
+  const [perPage, setPerPage] = useState<number>(15);
+
   // Simple date range with two inputs
   const todayIso = dayjs().format("YYYY-MM-DD");
   const [dateFrom, setDateFrom] = useState<string>(todayIso);
   const [dateTo, setDateTo] = useState<string>(todayIso);
+
+  // doctor filter
+  const [selectedDoctor, setSelectedDoctor] = useState<DoctorStripped | null>(null);
 
   const [selectedVisitForServices, setSelectedVisitForServices] =
     useState<PatientVisitSummary | null>(null);
@@ -70,6 +81,8 @@ const TodaysPatientsPage: React.FC = () => {
     debouncedSearchTerm,
     dateFrom || "all",
     dateTo || "all",
+    perPage,
+    selectedDoctor?.id || "all",
   ] as const;
 
   const {
@@ -82,14 +95,22 @@ const TodaysPatientsPage: React.FC = () => {
     queryFn: () => {
       const filters: GetVisitsFilters = {
         page: currentPage,
-        per_page: 15,
+        per_page: perPage,
         search: debouncedSearchTerm || undefined,
         date_from: dateFrom || undefined,
         date_to: dateTo || undefined,
+        doctor_id: selectedDoctor?.id ?? undefined,
       };
       return getPatientVisitsSummary(filters);
     },
     placeholderData: keepPreviousData,
+  });
+
+  // doctors list for autocomplete (active only if available)
+  const { data: doctorsList } = useQuery<DoctorStripped[]>({
+    queryKey: ["doctors-list", { active: true }],
+    queryFn: () => getDoctorsList({ active: true }),
+    staleTime: 5 * 60 * 1000,
   });
 
   const visits = paginatedVisits?.data || [];
@@ -112,6 +133,23 @@ const TodaysPatientsPage: React.FC = () => {
               InputProps={{ startAdornment: <SearchIcon fontSize="small" sx={{ mr: 1 }} /> }}
             />
           </Box>
+          {/* Doctor filter */}
+          <Box sx={{ minWidth: 220 }}>
+            <Autocomplete
+              size="small"
+              options={doctorsList || []}
+              getOptionLabel={(option) => option.name}
+              value={selectedDoctor}
+              onChange={(_, value) => {
+                setSelectedDoctor(value);
+                setCurrentPage(1);
+              }}
+              isOptionEqualToValue={(opt, val) => opt.id === val.id}
+              renderInput={(params) => (
+                <TextField {...params} label="الطبيب" placeholder="اختر الطبيب" />
+              )}
+            />
+          </Box>
           <TextField
             label="من"
             type="date"
@@ -128,6 +166,23 @@ const TodaysPatientsPage: React.FC = () => {
             onChange={(e) => setDateTo(e.target.value)}
             InputLabelProps={{ shrink: true }}
           />
+          {/* Rows per page selector */}
+          <TextField
+            select
+            size="small"
+            label="عدد الصفوف"
+            value={perPage}
+            onChange={(e) => {
+              const next = Number(e.target.value);
+              setPerPage(next);
+              setCurrentPage(1);
+            }}
+            sx={{ minWidth: 130 }}
+          >
+            {perPageOptions.map((opt) => (
+              <MenuItem key={opt} value={opt}>{opt}</MenuItem>
+            ))}
+          </TextField>
         </Box>
       </Box>
 

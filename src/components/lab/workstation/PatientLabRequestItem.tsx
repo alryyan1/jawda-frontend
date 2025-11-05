@@ -6,6 +6,7 @@ import {
   Lock,
   Heart,
   Globe,
+  Shield,
 } from "lucide-react";
 import type { PatientLabQueueItem } from "@/types/labWorkflow";
 
@@ -65,12 +66,7 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
  const currentStyle = appearanceSettings[currentState];
  const lockIconColor = appearanceSettings.isLocked.iconColor;
 
- const paymentStatusBadgeStyle = useMemo(() => {
-   if (allRequestsPaid === undefined) return { backgroundColor: appearanceSettings.default.badgeBackgroundColor, color: appearanceSettings.default.badgeTextColor };
-   return allRequestsPaid
-     ? { backgroundColor: '#10B981', color: '#FFFFFF' } // Hardcode Green for paid
-     : { backgroundColor: '#EF4444', color: '#FFFFFF' }; // Hardcode Red for unpaid
- }, [allRequestsPaid, appearanceSettings]);
+
 
   // console.log(item,'item')
 
@@ -81,12 +77,9 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
     return Math.round((completedCount / item.total_result_count) * 100);
   }, [item.total_result_count, item.pending_result_count]);
 
-  // showJsonDialog(item)
+  // console.log(item,'item');
 //  console.log(isLastResultPending,'isLastResultPending',isSelected,'isSelected',isReadyForPrint,'isReadyForPrint')
-if(item.visit_id === 34218){
-  console.log(item,'item')
-  console.log(progressPercentage,'progressPercentage')
-}
+
   return (
     <div
       onClick={handleClick}
@@ -131,7 +124,11 @@ if(item.visit_id === 34218){
           {item.test_count}
         </div>
       )} */}
-
+    {item.result_auth != false && (
+      <div className="absolute -bottom-1 -right-1 p-0.5 bg-[var(--bg-color)] rounded-full shadow-sm border border-[var(--border-color)]">
+        <Shield className="h-3 w-3" style={{ color: '#10B981' }} />
+      </div>
+    )}
       {item.is_result_locked && (
         <div className="absolute -bottom-1 -left-1 p-0.5 bg-[var(--bg-color)] rounded-full shadow-sm border border-[var(--border-color)]">
           <Lock className="h-3 w-3" style={{ color: lockIconColor }} />
@@ -158,7 +155,7 @@ if(item.visit_id === 34218){
 
       {/* Progress Bar */}
       {item.total_result_count > 0 && (
-        <div className="absolute bottom-[-5px] left-0 right-0 h-1 bg-gray-200 overflow-hidden">
+        <div className="absolute bottom-[-5px] left-0 right-0 h-0.5 bg-gray-200 overflow-hidden">
           <div 
             className="h-full bg-gradient-to-r from-blue-500 to-blue-500 transition-all duration-300 ease-out"
             style={{ width: `${progressPercentage}%` }}

@@ -37,7 +37,7 @@ const QueueHeader: React.FC<QueueHeaderProps> = ({
   const NextIcon = ChevronLeft;
  // console.log(currentShift,'currentShift');
   return (
-    <div className="p-2 sm:p-3 border-b bg-card sticky top-0 z-10">
+    <div className="p-1  border-b bg-card sticky top-0 z-10">
       <div className="flex justify-between items-center mb-1.5">
         <div className="min-w-0"> {/* For truncation */}
           <h3 className="text-xs sm:text-sm font-semibold leading-tight truncate" title={displayShiftInfo()}>

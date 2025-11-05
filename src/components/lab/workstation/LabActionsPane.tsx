@@ -16,7 +16,8 @@ import {
   faLock,
   faCloudUploadAlt,
   faPlug,
-  faMicroscope
+  faMicroscope,
+  faBolt
 } from '@fortawesome/free-solid-svg-icons';
 import { cn } from '@/lib/utils';
 
@@ -503,16 +504,16 @@ console.log(currentPatientData,'currentPatientData')
         <Separator className="my-2" />
 
           {/* New Appearance Settings Button */}
-          {/* <Tooltip>
+          <Tooltip>
               <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="w-12 h-12" onClick={() => setIsAppearanceDialogOpen(true)}>
+                  <Button variant="ghost" size="icon" className="w-12 h-12">
                       <FontAwesomeIcon icon={faBolt} className="h-7! w-7!" />
                   </Button>
               </TooltipTrigger>
               <TooltipContent side="right" sideOffset={5}>
-                  <p>إعدادات المظهر</p>
+                  <p> Chemistry</p>
               </TooltipContent>
-          </Tooltip> */}
+          </Tooltip>
         {/* <Tooltip>
                 <TooltipTrigger asChild>
                 <Button

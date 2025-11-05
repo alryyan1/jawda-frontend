@@ -1,5 +1,6 @@
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
+import type { PatientLabQueueItem } from '@/types/labWorkflow';
 
 export interface UploadResult {
   success: boolean;
@@ -81,6 +82,6 @@ export const getPatientResultUrl = (patient: { result_url?: string | null }): st
  * @param patient - Patient object with result_url field
  * @returns True if patient has a result URL, false otherwise
  */
-export const hasPatientResultUrl = (patient: { result_url?: string | null }): boolean => {
-  return Boolean(patient.result_url);
+export const hasPatientResultUrl = (patientLabQueueItem: PatientLabQueueItem): boolean => {
+  return Boolean(patientLabQueueItem?.result_url);
 };

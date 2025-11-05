@@ -24,10 +24,14 @@ interface PatientQueuePanelProps {
   appearanceSettings: LabAppearanceSettings;
   newPaymentBadges?: Set<number>; // Set of visit IDs that should show new payment badge
   updatedItem?: PatientLabQueueItem | null; // Updated item to replace in the list
+  queueItems: PatientLabQueueItem[];
+  setQueueItems: (items: PatientLabQueueItem[]) => void;
 }
 
 const PatientQueuePanel: React.FC<PatientQueuePanelProps> = ({
   appearanceSettings,
+  queueItems,
+  setQueueItems,
   currentShift, onShiftChange, onPatientSelect, selectedVisitId, globalSearchTerm, queueFilters = {}, newPaymentBadges = new Set(), updatedItem
 }) => {
   // const { t } = useTranslation(['labResults', 'common']);
@@ -79,8 +83,8 @@ const PatientQueuePanel: React.FC<PatientQueuePanelProps> = ({
     setCurrentPage(1);
   }, [currentShift?.id, globalSearchTerm, queueFilters]);
 
-  const [queueItems, setQueueItems] = useState<PatientLabQueueItem[]>([]);
   
+   console.log(paginatedQueue, "paginatedQueue",queueItems, "queueItems");
   // Initialize queueItems when paginatedQueue data changes
   React.useEffect(() => {
     if (paginatedQueue?.data) {
@@ -150,7 +154,7 @@ const PatientQueuePanel: React.FC<PatientQueuePanelProps> = ({
         {queueItems.length > 0 && (
           <ScrollArea className="h-full">
             {/* Flexbox layout for patient squares */}
-            <div className="p-1 flex flex-wrap gap-2 justify-start items-start content-start">
+            <div className="p-1 flex flex-wrap gap-2 justify-center items-center content-start">
               {queueItems.map((item) => (
                 <PatientLabRequestItem
                   isLastResultPending={item.is_last_result_pending}

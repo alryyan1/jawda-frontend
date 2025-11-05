@@ -420,7 +420,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
   return (
     <div className="h-full flex flex-col">
       {/* Header with Print Receipt and Remove All Pending buttons */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-1 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
         <div className="flex items-center gap-2">
           <Button
             onClick={onPrintReceipt}

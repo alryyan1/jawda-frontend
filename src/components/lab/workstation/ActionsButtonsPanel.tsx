@@ -15,7 +15,7 @@ interface ActionsButtonsPanelProps {
   patient: Patient | null;
   patientLabQueueItem: PatientLabQueueItem | null;
   resultsLocked: boolean;
-  onPatientUpdate?: (updatedPatient: Patient) => void;
+  onPatientUpdate?: (updatedPatient: PatientLabQueueItem) => void;
 }
 
 const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
@@ -25,6 +25,7 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
   resultsLocked,
   onPatientUpdate,
 }) => {
+  console.log(patientLabQueueItem, "patientLabQueueItem",patient, "patient",visitId, "visitId");
   // State for PDF Preview
   const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -83,7 +84,9 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
     const abnormal: string[] = [];
     const empty: string[] = [];
     const requests = await Promise.all(labRequestIds.map((id) => getLabRequestForEntry(id)));
-    requests.forEach((req: MainTestWithChildrenResults) => {
+    console.log(requests, "requests");
+    requests.filter((req)=>req.is_trailer_hidden === false).forEach((req: MainTestWithChildrenResults) => {
+      console.log(req, "req");
       (req.child_tests_with_results || []).forEach((ct) => {
         const value = ct.result_value ?? '';
         if (isValueEmpty(value)) {
@@ -136,6 +139,7 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
 
       const response = await apiClient.patch(`/patients/${patient.id}/authenticate-results`);
       const updatedPatient = response.data.data;
+      console.log(updatedPatient, "updatedPatient");
       
       // Update the patient data immediately after authentication
       if (onPatientUpdate) {
@@ -203,13 +207,13 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
       setPdfUrl(null);
     }
   }, [pdfUrl]);
-
+  console.log(patientLabQueueItem,'patientLabQueueItem in ActionsButtonsPanel');
   return (
     <>
        
         <div className="mt-2">
           {/* Show authenticate button if results are not authenticated */}
-          {patient && !patient.result_auth && (
+          {patientLabQueueItem && patientLabQueueItem.result_auth != true && (
             <MuiButton
               variant="contained"
               className="w-full justify-start text-xs bg-green-600 hover:bg-green-700"
@@ -223,7 +227,7 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
           )}
 
           {/* Show preview button only if results are authenticated */}
-          {patient && patient.result_auth && (
+          {patientLabQueueItem && patientLabQueueItem.result_auth == true && (
             <MuiButton
               variant="outlined"
               className="w-full justify-start text-xs"
@@ -233,7 +237,7 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
             >
               <FileText className="ltr:mr-2 rtl:ml-2 h-3.5 w-3.5" />
               معاينة التقرير
-              {hasPatientResultUrl(patient) && (
+              {hasPatientResultUrl(patientLabQueueItem) && (
                 <span className="ltr:ml-1 rtl:mr-1 text-green-500 text-xs">☁️</span>
               )}
             </MuiButton>

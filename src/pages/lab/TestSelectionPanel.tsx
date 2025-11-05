@@ -40,14 +40,14 @@ const TestSelectionPanel: React.FC<TestSelectionPanelProps> = ({
      mutationFn: (params: { labRequestId: number; hidden: boolean }) => 
          updateLabRequestFlags(params.labRequestId, { hidden: params.hidden }),
      onSuccess: (updatedLabRequest, variables) => {
-        toast.success('تم تحديث حالة الترحيل');
+        toast.success('تم التعديل بنجاح');
          // Optimistically update the cache or invalidate
          queryClient.setQueryData(labRequestsQueryKey, (oldData: LabRequest[] | undefined) => 
              oldData?.map(lr => lr.id === variables.labRequestId ? {...lr, ...updatedLabRequest} : lr) || []
          );
      },
      onError: (error: Error) => {
-        const errorMessage = (error as { response?: { data?: { message?: string } } }).response?.data?.message || 'فشل التحديث';
+        const errorMessage = (error as { response?: { data?: { message?: string } } }).response?.data?.message || 'فشل التعديل';
         toast.error(errorMessage);
      }
   });

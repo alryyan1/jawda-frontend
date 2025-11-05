@@ -47,6 +47,7 @@ interface ChildTestAutocompleteInputProps {
   onItemUpdated?: (updatedItem: PatientLabQueueItem) => void; // Callback to update the item in parent
   // For autosave trigger (optional, can be handled by parent watching RHF value)
   // onValueActuallyChanged: (newValue: string | ChildTestOption | null) => void;
+  patientLabQueueItem?: PatientLabQueueItem | null;
 }
 
 type OptionType = ChildTestOption | { inputValue: string; name: string };
@@ -87,6 +88,7 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
   patientAuthDate,
   visitId,
   onItemUpdated,
+  patientLabQueueItem
 }) => {
   // استخدام نص عربي مباشر بدلاً من i18n
 
@@ -258,6 +260,7 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
         loading={isLoadingOptions}
         readOnly={isDisabled}
         sx={{
+        
           '& .MuiAutocomplete-root': {
             // fontSize: '0.7rem',
           },
@@ -407,6 +410,8 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
             inputRef={inputRef}
             variant="outlined"
             placeholder="  "
+            style={{color:'red'}}
+            className={patientLabQueueItem?.result_auth != true ? 'cursor-not-allowed text-red-500' : ''}
             error={error}
             helperText={helperText}
             onKeyDown={(event) => {

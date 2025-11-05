@@ -111,7 +111,7 @@ const LabWorkstationPage: React.FC = () => {
   const [activeQueueFilters, setActiveQueueFilters] = useState<LabQueueFilters>(
     {}
   );
-
+  const [queueItems, setQueueItems] = useState<PatientLabQueueItem[]>([]);
   const [appearanceSettings, setAppearanceSettings] =
     useState<LabAppearanceSettings>(getAppearanceSettings);
 
@@ -761,7 +761,7 @@ const LabWorkstationPage: React.FC = () => {
         fetchVisitDetailsMutation.mutate(id);
         setVisitIdSearchTerm("");
       } else {
-        toast.error("رقم الزيارة غير صالح");
+        toast.error("الكود غير صالح");
       }
     }
   };
@@ -869,12 +869,10 @@ const LabWorkstationPage: React.FC = () => {
       className="flex flex-col  bg-slate-100 dark:bg-slate-900 text-sm overflow-hidden"
       onClick={initializeAudio} // Initialize audio on first click
     >
-      <header className="flex-shrink-0 h-auto p-3 border-b bg-card flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4 shadow-sm dark:border-slate-800">
+      <header className="flex-shrink-0 h-auto p-1 border-b bg-card flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4 shadow-sm dark:border-slate-800">
         <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
           <FlaskConical className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
-          <h1 className="text-lg sm:text-xl font-bold text-slate-800 dark:text-slate-100">
-            {AR.pageTitle}
-          </h1>
+         
           <Autocomplete
             id="recent-visits-by-patient-dropdown"
             options={recentVisitsData || []}
@@ -1217,6 +1215,8 @@ const LabWorkstationPage: React.FC = () => {
         >
           {selectedQueueItem ? (
             <StatusAndInfoPanel
+            handlePatientSelectFromQueue={handlePatientSelectFromQueue}
+            setQueueItems={setQueueItems}
               key={`info-panel-${selectedQueueItem.visit_id}-${
                 selectedQueueItem.patient_id
               }-${selectedLabRequestForEntry?.id || "none"}`}
@@ -1237,6 +1237,7 @@ const LabWorkstationPage: React.FC = () => {
         <main className="flex-grow bg-slate-100 dark:bg-slate-900/70 flex flex-col h-full overflow-hidden relative">
           {selectedLabRequestForEntry ? (
             <ResultEntryPanel
+              patientLabQueueItem={selectedQueueItem}
               key={`result-entry-${selectedLabRequestForEntry.id}`}
               initialLabRequest={selectedLabRequestForEntry}
               onResultsSaved={handleResultsSaved}
@@ -1265,7 +1266,7 @@ const LabWorkstationPage: React.FC = () => {
       
         <section
           className={cn(
-            "w-[240px] xl:w-[280px] flex-shrink-0 bg-slate-50 dark:bg-slate-800 border-border flex-col h-full overflow-hidden shadow-md",
+            "w-[230px]  flex-shrink-0 bg-slate-50 dark:bg-slate-800 border-border flex-col h-full overflow-hidden shadow-md",
             isRTL
               ? "border-l dark:border-slate-700"
               : "border-r dark:border-slate-700",
@@ -1292,7 +1293,7 @@ const LabWorkstationPage: React.FC = () => {
         </section>
         <aside
           className={cn(
-            "w-[322px] flex-shrink-0 bg-card dark:bg-slate-800/50 flex flex-col h-full overflow-hidden shadow-lg z-10",
+            "w-[300px] flex-shrink-0 bg-card dark:bg-slate-800/50 flex flex-col h-full overflow-hidden shadow-lg z-10",
             isRTL
               ? "border-l dark:border-slate-700"
               : "border-r dark:border-slate-700"
@@ -1308,6 +1309,8 @@ const LabWorkstationPage: React.FC = () => {
             queueFilters={appliedQueueFilters}
             newPaymentBadges={newPaymentBadges}
             updatedItem={updatedQueueItem}
+            queueItems={queueItems}
+            setQueueItems={setQueueItems}
           />
         </aside>
       </div>

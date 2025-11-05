@@ -18,6 +18,8 @@ interface StatusAndInfoPanelProps {
   patientLabQueueItem: PatientLabQueueItem | null;
   patientData?: Patient | null; // Pass patient data from parent to avoid duplicate API calls
   onUploadStatusChange?: (isUploading: boolean) => void;
+  setQueueItems: (items: PatientLabQueueItem[]) => void;
+  handlePatientSelectFromQueue: (item: PatientLabQueueItem) => void;
 }
 
 
@@ -29,11 +31,20 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
   patientLabQueueItem,
   patientData,
   onUploadStatusChange,
+  setQueueItems,
+  handlePatientSelectFromQueue,
 }) => {
-  const [updatedPatient, setUpdatedPatient] = useState<Patient | null>(null);
+  const [updatedPatient, setUpdatedPatient] = useState<PatientLabQueueItem | null>(null);
 
-  const handlePatientUpdate = useCallback((newPatient: Patient) => {
+  const handlePatientUpdate = useCallback((newPatient: PatientLabQueueItem) => {
     setUpdatedPatient(newPatient);
+    handlePatientSelectFromQueue(newPatient);
+    console.log(newPatient, "newPatient from handlePatientUpdate");
+    setQueueItems(prevItems => 
+      prevItems.map(item => 
+        item.visit_id === newPatient.id ? newPatient : item
+      )
+    );
   }, []);
 
   const queryClient = useQueryClient();
@@ -46,7 +57,9 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
     },
     onSuccess: (data) => {
       const updatedPatient = data.data;
+      console.log(updatedPatient, "updatedPatient from toggleAuthenticationMutation");
       setUpdatedPatient(updatedPatient);
+      
       toast.success(updatedPatient.result_auth ? "تم اعتماد النتائج" : "تم إلغاء اعتماد النتائج");
       
       // Invalidate the shared patient query
@@ -91,8 +104,8 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
     payment: { done: patientLabQueueItem?.all_requests_paid , by: patientLabQueueItem?.all_requests_paid },
     collected: { time: undefined, by: undefined },
     print: {  done: patientLabQueueItem?.is_printed, by: null },
-    authentication: { done: currentPatient?.result_auth },
-  }), [currentPatient?.result_auth, patientLabQueueItem?.is_printed]);
+    authentication: { done: patientLabQueueItem?.result_auth },
+  }), [patientLabQueueItem?.result_auth, patientLabQueueItem?.is_printed]);
 
   const getAgeString = useCallback(  
     (p?: Patient | null): string => {

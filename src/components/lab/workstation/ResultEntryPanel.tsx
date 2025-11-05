@@ -50,6 +50,8 @@ import {
 
 import ChildTestAutocompleteInput from "./ChildTestAutocompleteInput";
 import OrganismTable from "./OrganismTable";
+import { Shield } from "lucide-react";
+import { IconButton } from "@mui/material";
 
 
 interface TabPanelProps {
@@ -81,6 +83,7 @@ interface ResultEntryPanelProps {
   visitId?: number; // Visit ID for queue invalidation
   onItemUpdated?: (updatedItem: PatientLabQueueItem) => void; // Callback to update the item in parent
   onTestResultsChange?: (testResults: any) => void; // Callback to expose current test results for AI analysis
+  patientLabQueueItem?: PatientLabQueueItem | null;
   }
 
 const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
@@ -91,7 +94,9 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
   visitId,
   onItemUpdated,
   onTestResultsChange,
+  patientLabQueueItem
 }) => {
+  console.log(patientLabQueueItem,'patientLabQueueItem in ResultEntryPanel');
   // استخدام نص عربي مباشر بدلاً من i18n
   const [activeTab] = useState(0);
   const [activeGroupTab, setActiveGroupTab] = useState(0); // For special test group tabs
@@ -780,12 +785,14 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                               <TableRow
                                 key={ctResult.id || `new-${index}`}
                                 onClick={() => handleRowClick(ctResult, index)}
+                                // className={patientLabQueueItem?.result_auth == true ? "text-2xl" : ""}
                                 sx={{
                                   "&:last-child td, &:last-child th": {
                                     border: 0,
                                   },
                                   "&:hover": {
-                                    backgroundColor: "var(--muted)",
+                                    
+                                    color: patientLabQueueItem?.result_auth == true ? "red" : "red!important",
                                     cursor: "pointer",
                                   },
                                   backgroundColor: "var(--background)",
@@ -804,24 +811,28 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                                     color: "var(--foreground)",
                                     padding: "1px 2px",
                                     fontSize: "0.7rem",
+                                    
                                   }}
                                 >
                                   <Typography
                                     variant="body2"
                                     component="div"
+                                    className="flex items-center justify-center"
                                     sx={{
                                       fontWeight: 900,
                                       textAlign: "center",
-                                      color: "var(--foreground)",
+                                      // color: "var(--foreground)",
                                       // fontSize: "0.7rem",
                                       lineHeight: 1.1,
                                       margin: 0,
                                       padding: 0,
                                     }}
                                   >
-                                    {ctResult.child_test_name
-                                      ? ctResult.child_test_name.charAt(0).toUpperCase() + ctResult.child_test_name.slice(1)
-                                      : ""}
+                                  {patientLabQueueItem?.result_auth == true ? <IconButton> <Shield  className="w-3 h-3" /> </IconButton> : ""}
+                                  <div className="flex-grow">{ctResult.child_test_name
+                                      ? ctResult.child_test_name.charAt(0).toUpperCase() + ctResult.child_test_name.slice(1) 
+                                      : ""}</div>
+                                    
                                   </Typography>
                                   <Typography
                                     variant="caption"
@@ -879,6 +890,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                                             patientAuthDate={patientAuthDate}
                                             visitId={visitId}
                                             onItemUpdated={onItemUpdated}
+                                            patientLabQueueItem={patientLabQueueItem}
                                           />
                                         </div>
                                       

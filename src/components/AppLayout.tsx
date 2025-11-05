@@ -210,7 +210,9 @@ const getMainNavItems = (userType?: UserType): NavItem[] => {
     return allMainNavItems.filter(item => 
       item.to === '/dashboard' || 
       item.to === '/clinic' ||
-      item.to === '/cash-reconciliation'
+      item.to === '/cash-reconciliation'||
+      item.to === '/lab-reception' ||
+      item.to === '/lab-sample-collection'
     );
   }
   

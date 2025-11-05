@@ -29,6 +29,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AttachMoney } from "@mui/icons-material";
 import PatientCompanyDetails from "../reception/PatientCompanyDetails";
 import type { Patient } from "@/types/patients";
+import type { PatientLabQueueItem } from "@/types/labWorkflow";
 
 interface StatusItem {
   done?: boolean;
@@ -54,6 +55,7 @@ export interface PatientDetailsLabEntryProps {
   };
   className?: string;
   onAuthenticationToggle?: () => void;
+  patientLabQueueItem?: PatientLabQueueItem | null;
 }
 
  export const ItemRow: React.FC<{
@@ -208,11 +210,12 @@ const PatientDetailsLabEntry: React.FC<PatientDetailsLabEntryProps> = ({
   age,
   statuses,
   className,
-  onAuthenticationToggle
+  onAuthenticationToggle,
+  patientLabQueueItem
 }) => {
   const { user } = useAuth();
   const isAdmin = user?.roles?.some(role => role.name === 'admin') || false;
- console.log(patient,'patient');
+ console.log(patientLabQueueItem,'patientLabQueueItem in PatientDetailsLabEntry');
   // Function to copy visit ID to clipboard
   const handleCopyVisitId = async () => {
     if (visitId) {

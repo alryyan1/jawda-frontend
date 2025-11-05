@@ -42,6 +42,7 @@ import {
   Banknote,
   PrinterIcon,
   MessageSquare,
+  XCircle,
 } from "lucide-react";
 
 // Services & Types
@@ -292,9 +293,9 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
   };
 
   const handleUnpayLabRequest = (requestId: number) => {
-    if (window.confirm("هل أنت متأكد من إلغاء دفع هذا الطلب؟")) {
+    // if (window.confirm("هل أنت متأكد من إلغاء دفع هذا الطلب؟")) {
       unpayLabRequestMutation.mutate(requestId);
-    }
+    // }
   };
 
   const handleDirectPayItem = (requestId: number, isBankak: boolean) => {
@@ -310,9 +311,9 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
   };
 
   const handleUpdateAllBankak = () => {
-    if (window.confirm("هل تريد تعيين كل الطلبات بنكك")) {
+    // if (window.confirm("هل تريد تعيين كل الطلبات بنكك")) {
       updateAllBankakMutation.mutate(true);
-    }
+    // }
   };
 
   const handleOpenCommentDialog = (requestId: number) => {
@@ -459,7 +460,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
             <span className="hidden sm:inline">حذف  التحاليل </span>
           </Button> */}
           
-          {/* <Button
+          <Button
             onClick={handleUpdateAllBankak}
             variant="outline"
             size="sm"
@@ -468,10 +469,10 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
             {updateAllBankakMutation.isPending ? (
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
             ) : (
-              <Banknote className="h-4 w-4 mr-2" />
+              ''
             )}
-            <span className="hidden sm:inline">تعيين الكل بنكك</span>
-          </Button> */}
+            <span className="hidden sm:inline"> بنكك </span>
+          </Button>
         </div>
       </div>
 
@@ -482,8 +483,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
             <div className="text-center space-y-4">
               <FileText className="h-16 w-16 mx-auto text-slate-300 dark:text-slate-600" />
               <div className="space-y-2">
-                <p className="text-lg font-medium text-slate-600 dark:text-slate-400">لا توجد طلبات مختبر</p>
-                <p className="text-sm text-slate-500 dark:text-slate-500">أضف فحوصات للبدء</p>
+                <p className="text-lg font-medium text-slate-600 dark:text-slate-400">لا توجد  تحاليل مطلوبة</p>
               </div>
             </div>
           </div>
@@ -513,9 +513,9 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                   const remainingAmount = discountedAmount - request.amount_paid;
                   
                   return (
-                    <TableRow
+  <TableRow
                       key={request.id}
-                      className={`xl:cursor-default cursor-pointer ${request.is_bankak ? 'bg-green-50 dark:bg-green-900/20' : ''}`}
+                      className={`xl:cursor-default cursor-pointer ${request.is_bankak ? 'bg-green-50 dark:bg-green-900/20' : ''} ${request.amount_paid > 0 ? 'bg-emerald-50 dark:bg-emerald-900/20' : ''}`}
                       onClick={() => {
                         // Open dialog only on small screens (< 1280px)
                         if (window.innerWidth < 1280) {
@@ -656,18 +656,18 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                               className="h-8 w-8 p-0 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50"
                               onClick={() => handleUnpayLabRequest(request.id)}
                               disabled={unpayLabRequestMutation.isPending || visit?.patient?.result_print_date != null || !can('الغاء سداد فحص')}
-                              title="إلغاء الدفع"
+                              title="إلغاء السداد"
                             >
                               {unpayLabRequestMutation.isPending ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
                               ) : (
-                                <AlertCircle className="h-4 w-4" />
+                                <XCircle className="h-4 w-4" />
                               )}
                             </Button>
                           )}
                           
                           {/* Bankak Toggle Button */}
-                          <Button
+                        {request.amount_paid > 0 &&  <Button
                             variant="ghost"
                             size="sm"
                             className={`h-8 w-12 p-0 border-2 border-blue-200 ${
@@ -684,8 +684,8 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                             ) : (
                               'بنكك'
                             )}
-                          </Button>
-                          
+                          </Button> }
+
                           {/* Delete Button */}
                           <Button
                             variant="ghost"

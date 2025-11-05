@@ -405,8 +405,8 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
       <Card >
         <CardContent >
        
-          <Box component="form" onSubmit={handleSubmit}  sx={{ mt: 2 }}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Box  component="form" onSubmit={handleSubmit}  sx={{ mt: 2 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 ,}}>
               {/* Phone Number Field */}
               <TextField
                 fullWidth

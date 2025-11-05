@@ -6,7 +6,7 @@ import { Loader2 } from "lucide-react";
 import type { LabRequest } from "@/types/visits";
 import type { Shift } from "@/types/shifts";
 import type { Patient } from "@/types/patients";
-import RequestedLabTestsTable from "../RequestedLabTestsTable"; // Adjusted path
+// import RequestedLabTestsTable from "../RequestedLabTestsTable"; // Adjusted path
 import type { UseMutationResult } from "@tanstack/react-query";
 import { toast } from "sonner"; // For toasts if needed for local actions
 
@@ -129,21 +129,7 @@ const LabRequestDisplayArea: React.FC<LabRequestDisplayAreaProps> = ({
     <div className="h-full flex flex-col">
       {" "}
       {/* Ensure this can flex to fill height */}
-      <RequestedLabTestsTable
-        visitId={visitId}
-        patientId={0} // Not used in the component
-        currentPatient={currentPatient}
-        requestedTests={requestedTests}
-        isLoading={isLoadingRequestedTests}
-        isFetchingList={isFetchingRequestedTests}
-        currentClinicShift={currentClinicShift}
-        onAddMoreTests={() => {
-          /* This button is now in parent */
-        }}
-        onPayIndividual={handleDirectPayIndividualItem}
-        onCancelIndividual={handleCancelIndividualItem}
-        onUnpayIndividual={handleUnpayIndividualItem}
-      />
+   
       {/* Summary Card is removed and is now LabFinancialSummary in the parent component */}
     </div>
   );

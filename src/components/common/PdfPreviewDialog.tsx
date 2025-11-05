@@ -57,9 +57,7 @@ const PdfPreviewDialog: React.FC<PdfPreviewDialogProps> = ({
             : "w-[350px] max-w-[350px] h-[85vh] flex flex-col p-0 sm:p-0 overflow-hidden"
         }
       >
-        <DialogHeader className="p-3 sm:p-4 border-b flex-row justify-between items-center space-y-0">
-          <DialogTitle>{title || t('pdfPreview.title', "Document Preview")}</DialogTitle>
-        </DialogHeader>
+
         
         <div className="flex-grow overflow-hidden p-1 sm:p-2">
           {isLoading && (

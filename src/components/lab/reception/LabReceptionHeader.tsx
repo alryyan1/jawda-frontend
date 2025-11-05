@@ -89,18 +89,12 @@ const LabReceptionHeader: React.FC<LabReceptionHeaderProps> = ({
   return (
     <Box
       component="header"
-      sx={{
-        flexShrink: 0,
-        height: 'auto',
-        bgcolor: 'background.paper',
-        boxShadow: 2,
-        borderBottom: 1,
-        borderColor: 'divider',
-      }}
+
     >
       <Box
         sx={{
           display: 'flex',
+          paddingTop: '3px',
           flexWrap: 'wrap',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -122,6 +116,7 @@ const LabReceptionHeader: React.FC<LabReceptionHeaderProps> = ({
         {/* Search Controls - centered */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1, justifyContent: 'center' }}>
           <Autocomplete
+          
             options={recentVisitsData || []}
             value={selectedVisitFromAutocomplete}
             onChange={(_, newValue) => {
@@ -141,7 +136,7 @@ const LabReceptionHeader: React.FC<LabReceptionHeaderProps> = ({
             renderInput={(params) => (
               <TextField
                 {...params}
-                label={"ابحث عن المرضى"}
+                label={"بحث"}
                 variant="outlined"
                 InputProps={{
                   ...params.InputProps,
@@ -171,7 +166,7 @@ const LabReceptionHeader: React.FC<LabReceptionHeaderProps> = ({
           <Box sx={{ position: 'relative' }}>
             <TextField
               type="number"
-              placeholder="رقم الزيارة"
+              placeholder="الكود"
               value={visitIdSearchTerm}
               onChange={(e) => setVisitIdSearchTerm(e.target.value)}
               onKeyDown={onSearchByVisitIdEnter}
@@ -186,7 +181,7 @@ const LabReceptionHeader: React.FC<LabReceptionHeaderProps> = ({
             />
           </Box>
 
-          <IconButton
+          {/* <IconButton
             onClick={onResetView}
             title="إعادة التعيين"
             sx={{
@@ -199,24 +194,18 @@ const LabReceptionHeader: React.FC<LabReceptionHeaderProps> = ({
             }}
           >
             <ListRestart size={20} />
-          </IconButton>
+          </IconButton> */}
         </Box>
 
         {/* Test Selection Autocomplete - moved to the right */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexShrink: 0 }}>
           {Boolean(activeVisitId) && (
             <Button
+            size="small"
               variant="contained"
               color="secondary"
               onClick={onOpenOffers}
-              sx={{
-                px: 2,
-                py: 1,
-                borderRadius: 1,
-                boxShadow: 2,
-                transition: 'all 0.2s ease-in-out',
-                '&:hover': { boxShadow: 4, transform: 'scale(1.05)' },
-              }}
+          
             >
               العروض
             </Button>
@@ -277,19 +266,7 @@ const LabReceptionHeader: React.FC<LabReceptionHeaderProps> = ({
                 <Plus size={16} />
               )
             }
-            sx={{
-              bgcolor: 'primary.main',
-              px: 2,
-              py: 1,
-              borderRadius: 1,
-              boxShadow: 2,
-              transition: 'all 0.2s ease-in-out',
-              '&:hover': {
-                bgcolor: 'primary.dark',
-                boxShadow: 4,
-                transform: 'scale(1.05)',
-              },
-            }}
+            size="small"
           >
             إضافة فحص {selectedTests.length > 0 && `(${selectedTests.length})`}
           </Button>

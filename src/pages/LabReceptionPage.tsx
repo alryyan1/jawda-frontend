@@ -372,6 +372,9 @@ const LabReceptionPage: React.FC = () => {
 
   const handleToggleForm = () => {
     setIsFormVisible(!isFormVisible);
+    setActiveVisitId(null)
+    // handlePatientSelectedFromQueue(null);
+    
   };
 
   const handlePatientSelectedFromHistory = (patientId: number, doctorId: number, companyId?: number) => {
@@ -537,7 +540,7 @@ interface AutocompleteVisitOption {
     });
   return (
     <ThemeProvider theme={materialTheme}>
-      <div className="flex flex-col min-h-0 h-full bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-slate-900 dark:to-slate-800 overflow-hidden">
+      <div className="flex flex-col h-full">
         {/* Header */}
         <LabReceptionHeader
           // Test selection props
@@ -568,7 +571,7 @@ interface AutocompleteVisitOption {
         />
 
         {/* Dynamic Layout */}
-        <div className="flex-1 min-h-0 flex gap-4 p-1 overflow-hidden relative">
+        <div className="flex-1 min-h-0 flex gap-1 p-1 overflow-hidden relative">
           {/* Action Column */}
           <div className="flex-shrink-0">
             <LabReceptionActionPage
@@ -632,7 +635,7 @@ interface AutocompleteVisitOption {
           )}
 
           {/* Grid Layout Container */}
-          <div className="flex-1 grid grid-cols-4 gap-4 ">
+          <div className="flex-1 grid grid-cols-4 gap-1 ">
             {/* Patient Queue Column - 1fr when patient selected, 2fr when no patient */}
             <div className={activeVisitId ? "col-span-1" : "col-span-2"}>
               <Card className="bg-white dark:bg-slate-800 shadow-lg border-0 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-xl h-full">
@@ -654,22 +657,22 @@ interface AutocompleteVisitOption {
             {/* Lab Requests Column - 2fr when patient selected, 2fr when no patient */}
             <div className="col-span-2">
               <Card className="bg-white dark:bg-slate-800 shadow-lg border-0 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-xl h-full">
-                <CardContent className="p-0 h-full overflow-hidden">
+                {/* <CardContent className="p-0 h-full overflow-hidden"> */}
                   <LabRequestsColumn
                     activeVisitId={activeVisitId}
                     visit={activeVisit}
                     isLoading={isVisitLoading}
                     onPrintReceipt={handlePrintReceipt}
                   />
-                </CardContent>
+                {/* </CardContent> */}
               </Card>
             </div>
 
             {/* Patient Details Column - 1fr when patient selected, hidden when no patient */}
             {activeVisitId && (
               <div className="col-span-1">
-                <Card className="bg-white dark:bg-slate-800 shadow-lg border-0 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-xl h-full">
-                  <CardContent className="p-0 h-full overflow-hidden">
+                <Card className="p-0">
+                  <CardContent className="p-0 h-full overflow-auto max-h-[calc(100vh-100px)] ">
                     <PatientDetailsColumnV1
                       ref={patientDetailsRef}
                       activeVisitId={activeVisitId}

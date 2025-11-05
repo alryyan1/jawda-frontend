@@ -219,16 +219,16 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
   // alert(JSON.stringify(visit,null,2))
   // showJsonDialog(visit, { title: 'Visit JSON' });  
   return (
-    <div className="flex flex-col h-full w-full p-2 justify-between">
+    <div className="flex flex-col h-full w-full  justify-between p-2">
       <div>
- <div className="flex flex-col h-full w-full items-center justify-start p-2">
+ <div className="flex flex-col h-full w-full items-center justify-start ">
       {/* Patient Name */}
-      <div className="w-full text-center font-bold text-xl border-b border-gray-300 pb-1 mb-2">
+      <div className="w-full text-center font-bold text-xl border-b border-gray-300 pb-1 mb-1">
         {patientName}
       </div>
       
       {/* Patient Info + SMS Buttons */}
-      <div className="w-full grid grid-cols-2 gap-2 mb-2">
+      <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-2 ">
         {visit && can('تعديل بيانات') && (
           <Button
             variant="outline"
@@ -261,34 +261,34 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
         </Button>
       </div>
       {/* Details Table */}
-      <table className="w-full text-base mb-2">
+      <table className="w-full text-base mb-1 ">
         <tbody>
-          <tr>
+          <tr className="border-b border-gray-200">
             <td className="text-right text-gray-700">الطبيب</td>
             <td className="text-left font-medium">{doctorName}</td>
           </tr>
-          <tr>
+          <tr className="border-b border-gray-200">
             <td className="text-right text-gray-700">الهاتف</td>
             <td className="text-left font-medium">{phone}</td>
           </tr>
-          <tr>
+          <tr className="border-b border-gray-200">
             <td className="text-right text-gray-700">التاريخ</td>
             <td className="text-left font-medium">{date}</td>
           </tr>
-          <tr>
-            <td className="text-right text-gray-700">المسلسل</td>
+          <tr className="border-b border-gray-200">
+            <td className="text-right text-gray-700">الكود</td>
             <td className="text-left font-medium">{serial}</td>
           </tr>
-          <tr>
+          <tr className="border-b border-gray-200">
             <td className="text-right text-gray-700">سُجل بواسطة</td>
             <td className="text-left font-medium">{registeredBy}</td>
           </tr>
        
-          <tr>
+          <tr className="border-b border-gray-200">
             <td className="text-right text-gray-700">طريقة الدفع</td>
             <td className="text-left font-medium">{paymentMethod}</td>
           </tr>
-          <tr>
+          <tr className="border-b border-gray-200">
             <td className="text-right text-gray-700">العمر</td>
             <td className="text-left font-medium">{age}</td>
           </tr>
@@ -305,7 +305,7 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
 
       {/* Patient Discount Comment (if any) */}
       {visit?.patient?.discount_comment && (
-        <div className="w-full bg-yellow-50 rounded border border-yellow-200 p-2 mb-2 text-sm text-yellow-800">
+        <div className="w-full bg-yellow-50 rounded border border-yellow-200 p-2  text-sm text-yellow-800">
           <div className="font-semibold mb-1">تعليق الخصم</div>
           <div className="whitespace-pre-wrap">{visit.patient.discount_comment}</div>
         </div>

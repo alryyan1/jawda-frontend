@@ -404,7 +404,7 @@ const LabReceptionPage: React.FC = () => {
     },
     onError: (error: Error) => {
       const apiError = error as { response?: { data?: { message?: string } } };
-      toast.error(apiError.response?.data?.message || 'فشل الإضافة');
+      // toast.error(apiError.response?.data?.message || 'فشل الإضافة');
     },
   });
   const { data: availableTests = [], isLoading: isLoadingTests } = useCachedMainTestsList(activeVisitId);

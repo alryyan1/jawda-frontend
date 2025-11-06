@@ -150,7 +150,7 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
   const setDefaultMutation = useMutation({
     mutationFn: (labRequestId: number) => setLabRequestResultsToDefault(labRequestId),
     onSuccess: (updatedLabRequest) => {
-        toast.success('تم إعادة تعيين النتائج إلى القيم الافتراضية بنجاح');
+        // toast.success('تم إعادة تعيين النتائج إلى القيم الافتراضية بنجاح');
         queryClient.invalidateQueries({ queryKey: ['labRequestForEntry', updatedLabRequest.id] });
         queryClient.invalidateQueries({ queryKey: ['labRequestsForVisit', selectedVisitId] }); // If visitId is relevant
         queryClient.invalidateQueries({ queryKey: ['labPendingQueue'] }); // If status changes affect queue

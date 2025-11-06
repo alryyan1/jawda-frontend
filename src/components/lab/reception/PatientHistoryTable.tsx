@@ -90,15 +90,15 @@ console.log(can('تسجيل مريض تامين'),'can');
   // console.log(searchResults,'searchResults');
   // The component is now just the content, without its own Card or Header
   return (
-    <TableContainer component={Paper} sx={{ maxHeight: 400, padding: 0, margin: 0 }}>
-      <Table stickyHeader sx={{ '& .MuiTableCell-root': { padding: '4px 8px' } }}>
+    <TableContainer className="shadow-md" component={Paper} sx={{ maxHeight: 400, padding: 0, margin: 0 }}>
+      <Table className="shadow-md" stickyHeader sx={{ '& .MuiTableCell-root': { padding: '4px 8px' } }}>
         <TableHead>
           <TableRow>
             <TableCell sx={{ width: 190, fontWeight: 'bold', padding: '4px 8px' }}>
-              اسم المريض
+              اسم 
             </TableCell>
             <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' }, textAlign: 'center', fontWeight: 'bold', padding: '4px 8px' }}>
-              آخر زيارة
+           التاريخ
             </TableCell>
             <TableCell sx={{ width: 200, textAlign: 'center', fontWeight: 'bold', padding: '4px 8px' }}>
               الطبيب
@@ -161,7 +161,7 @@ console.log(can('تسجيل مريض تامين'),'can');
                     <Autocomplete
                       options={doctors || []}
                       getOptionLabel={(option) => option.name}
-                      value={patientSelections[patient.id]?.doctor || null}
+                      value={doctors?.find(doctor => doctor.id === patient.last_visit_doctor_id) || null}
                       onChange={(_, newValue) => handleDoctorChange(patient.id, newValue)}
                       loading={doctorsLoading}
                       renderInput={(params) => (
@@ -216,7 +216,7 @@ console.log(can('تسجيل مريض تامين'),'can');
                     <Autocomplete
                       options={companies || []}
                       getOptionLabel={(option) => option.name}
-                      value={patientSelections[patient.id]?.company || null}
+                      value={companies?.find(company => company.id === patient.last_visit_company_id) || null}
                       onChange={(_, newValue) => handleCompanyChange(patient.id, newValue)}
                       loading={companiesLoading}
                       disabled={companiesLoading || !can('تسجيل مريض تامين')}

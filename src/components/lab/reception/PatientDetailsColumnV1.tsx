@@ -115,7 +115,7 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
       try {
         if (visit && visit.patient) {
           const realtimeUrl = 'http://localhost:4002';
-          await fetch(`${realtimeUrl}/emit/print-lab-receipt`, {
+           fetch(`${realtimeUrl}/emit/print-lab-receipt`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -337,7 +337,7 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
         <Button
           className={`w-full bg-blue-600 text-white py-2 rounded-lg font-bold mt-2 hover:bg-blue-700 transition flex items-center justify-center ${balance === 0 && visit?.company ? "cursor-not-allowed" : !can('سداد فحص') ? "cursor-not-allowed" : ""}`}
           onClick={() => payAllMutation.mutate()}
-          disabled={!can('سداد فحص')}
+          disabled={!can('سداد فحص') || !visit?.patient.company &&  balance == 0}
           // disabled={payAllMutation.isPending || balance === 0}
         >
           {payAllMutation.isPending ? (

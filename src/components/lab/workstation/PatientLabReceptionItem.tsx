@@ -1,4 +1,4 @@
-// src/components/lab/workstation/PatientLabRequestItem.tsx
+// src/components/lab/workstation/PatientLabReceptionItem.tsx
 import React, { useMemo } from "react";
 // import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
@@ -12,7 +12,7 @@ import type { PatientLabQueueItem } from "@/types/labWorkflow";
 
 import type { ItemState, LabAppearanceSettings } from "@/lib/appearance-settings-store";
 
-interface PatientLabRequestItemProps {
+interface PatientLabReceptionItemProps {
   item: PatientLabQueueItem;
   isSelected: boolean;
   onSelect: () => void;
@@ -24,7 +24,7 @@ interface PatientLabRequestItemProps {
   showNewPaymentBadge?: boolean;
 }
 
-const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
+const PatientLabReceptionItem: React.FC<PatientLabReceptionItemProps> = ({
   appearanceSettings,
   item,
   isSelected,
@@ -79,7 +79,12 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
 
   console.log(item,'item');
 //  console.log(isLastResultPending,'isLastResultPending',isSelected,'isSelected',isReadyForPrint,'isReadyForPrint')
-
+const paymentStatusBadgeStyle = useMemo(() => {
+    if (allRequestsPaid === undefined) return { backgroundColor: appearanceSettings.default.badgeBackgroundColor, color: appearanceSettings.default.badgeTextColor };
+    return allRequestsPaid
+      ? { backgroundColor: '#10B981', color: '#FFFFFF' } // Hardcode Green for paid
+      : { backgroundColor: '#EF4444', color: '#FFFFFF' }; // Hardcode Red for unpaid
+  }, [allRequestsPaid, appearanceSettings]);
   return (
     <div
       onClick={handleClick}
@@ -113,7 +118,7 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
         {labIdentifier.length > 6 ? labIdentifier.substring(0, 5) + "…" : labIdentifier}
       </span>
       
-      {/* {item.test_count > 0 && (
+      {item.test_count > 0 && (
         <div
           style={{
             backgroundColor: allRequestsPaid ? '#10B981' : 'red',
@@ -123,7 +128,7 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
         >
           {item.test_count}
         </div>
-      )} */}
+      )}
     {item.result_auth != false && (
       <div className="absolute -bottom-1 -right-1 p-0.5 bg-[var(--bg-color)] rounded-full shadow-sm border border-[var(--border-color)]">
         <Shield className="h-3 w-3" style={{ color: '#10B981' }} />
@@ -167,4 +172,6 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
   );
 };
 
-export default PatientLabRequestItem;
+export default PatientLabReceptionItem;
+
+

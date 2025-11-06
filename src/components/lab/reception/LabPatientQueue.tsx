@@ -11,6 +11,7 @@ import type { PatientLabQueueItem, LabQueueFilters } from '@/types/labWorkflow';
 import { getNewlyRegisteredLabPendingQueue } from '@/services/labWorkflowService';
 import type { LabAppearanceSettings } from '@/lib/appearance-settings-store';
 import showJsonDialog from '@/lib/showJsonDialog';
+import PatientLabReceptionItem from '../workstation/PatientLabReceptionItem';
 
 interface LabPatientQueueProps {
   currentShift: Shift | null;
@@ -165,7 +166,7 @@ const LabPatientQueue = React.forwardRef<LabPatientQueueRef, LabPatientQueueProp
           <ScrollArea className="h-[calc(100vh-300px)] overflow-y-auto ">
             <div className="p-2 flex flex-wrap gap-2 justify-center items-start content-start">
               {queueItems.map((item) => (
-                <PatientLabRequestItem
+                <PatientLabReceptionItem
                   appearanceSettings={appearanceSettings}
                   key={`${currentShift?.id || 'no-shift'}-${item.visit_id}-${item.sample_id || item.lab_request_ids[0] || 'no-sample'}`}
                   item={item}

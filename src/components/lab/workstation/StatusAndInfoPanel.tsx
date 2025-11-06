@@ -1,5 +1,5 @@
 // src/components/lab/workstation/StatusAndInfoPanel.tsx
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -10,6 +10,7 @@ import type { PatientLabQueueItem } from "@/types/labWorkflow";
 import PatientDetailsLabEntry from "@/components/lab/workstation/PatientDetailsLabEntry";
 import ActionsButtonsPanel from "@/components/lab/workstation/ActionsButtonsPanel";
 import apiClient from "@/services/api";
+import { getSinglePatientLabQueueItem } from "@/services/labWorkflowService";
 
 
 interface StatusAndInfoPanelProps {
@@ -46,7 +47,15 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
       )
     );
   }, []);
-
+  useEffect(() => {
+      getSinglePatientLabQueueItem(visitId as number).then(data => {
+        console.log(data, "data from getSinglePatientLabQueueItem");
+        // handlePatientUpdate(data)
+        handlePatientSelectFromQueue(data)
+        // setQueueItems(data);
+        setQueueItems((prev)=>prev.map(item=>item.visit_id === visitId ? data : item))
+      });
+  }, [visitId]);
   const queryClient = useQueryClient();
 
   // Mutation to toggle authentication status

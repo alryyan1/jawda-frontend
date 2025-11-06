@@ -7,6 +7,7 @@ import apiClient from '@/services/api';
 interface UserMoneySummaryProps {
   shiftId: number;
   totalDenominations: number;
+  userId: number;
 }
 
 interface IncomeSummaryData {
@@ -39,13 +40,14 @@ interface IncomeSummaryData {
 
 const UserMoneySummary: React.FC<UserMoneySummaryProps> = ({
   shiftId,
-  totalDenominations
+  totalDenominations,
+  userId
 }) => {
   // Fetch income summary data from API
   const { data: responseData, isLoading, error } = useQuery<{ data: IncomeSummaryData }, Error>({
     queryKey: ['userIncomeSummary', shiftId],
     queryFn: async () => {
-      const response = await apiClient.get(`/user/current-shift-income-summary?shift_id=${shiftId}`);
+      const response = await apiClient.get(`/user/current-shift-income-summary?shift_id=${shiftId}&user_id=${userId}`);
       return response.data;
     },
     enabled: !!shiftId,
@@ -111,9 +113,7 @@ const UserMoneySummary: React.FC<UserMoneySummaryProps> = ({
 
   return (
     <Paper elevation={2} sx={{ p: 2 }}>
-      <Typography variant="h4" fontWeight={700} sx={{ mb: 2, textAlign: 'center' }}>
-        الملخص المالي
-      </Typography>
+    
       
       {/* Table Header */}
       <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 1, mb: 1 }}>

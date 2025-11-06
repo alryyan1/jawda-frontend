@@ -31,7 +31,7 @@ interface Cost {
 const CashReconciliationPage: React.FC = () => {
     const { currentClinicShift } = useAuth();
     const queryClient = useQueryClient();
-
+    const { user } = useAuth();
   const [selectedShiftId, setSelectedShiftId] = useState<string | null>(currentClinicShift?.id.toString() || null);
   const [denominations, setDenominations] = useState<Denomination[]>([]);
   
@@ -66,7 +66,7 @@ const CashReconciliationPage: React.FC = () => {
   const { data: costsData, isLoading: isLoadingCosts } = useQuery<{ data: Cost[] }, Error>({
     queryKey: ['shiftCosts', selectedShiftId],
     queryFn: async () => {
-      const response = await apiClient.get(`/costs-report-data?shift_id=${selectedShiftId}`);
+      const response = await apiClient.get(`/costs-report-data?shift_id=${selectedShiftId}&user_cost_id=${user?.id}`);
       return response.data;
     },
     enabled: !!selectedShiftId,
@@ -179,10 +179,10 @@ const CashReconciliationPage: React.FC = () => {
     try {
       // Get the current shift name
       const currentShift = shiftsList?.find(s => s.id.toString() === selectedShiftId);
-      const shiftName = currentShift?.name || `وردية #${selectedShiftId}`;
+     
 
       // Create URL for web route that opens PDF in new tab
-      const pdfUrl = `${webUrl}reports/cash-reconciliation/pdf?shift_id=${selectedShiftId}&title=${encodeURIComponent(`تقرير تسوية النقدية - ${shiftName}`)}&date=${encodeURIComponent(new Date().toLocaleDateString('ar-SA'))}`;
+      const pdfUrl = `${webUrl}reports/cash-reconciliation/pdf?shift_id=${selectedShiftId}&user_id=${user?.id}`;
 
       // Open PDF in new tab
       window.open(pdfUrl, '_blank');
@@ -238,8 +238,8 @@ const CashReconciliationPage: React.FC = () => {
   const isLoading = isLoadingShifts || (!!selectedShiftId && isLoadingDenominations);
 
   return (
-    <Box sx={{ maxWidth: 1200, mx: 'auto', py: 3 }}>
-      <Typography variant="h5" fontWeight={700} sx={{ mb: 2 }}>تسوية النقدية</Typography>
+    <Box sx={{ maxWidth: 1200, mx: 'auto', py: 1 }}>
+      <Typography variant="h5" fontWeight={700} sx={{ mb: 1 }}>الفئات </Typography>
       
       <Box sx={{ mb: 2, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
         <Box sx={{ maxWidth: 360, flex: 1, minWidth: 200 }}>
@@ -272,6 +272,15 @@ const CashReconciliationPage: React.FC = () => {
         >
           إنشاء تقرير PDF
         </Button>
+        <Button
+                    variant="outlined"
+                    color="warning"
+                    onClick={handleClearDenominations}
+                    size="small"
+                    sx={{ minWidth: 120 }}
+                  >
+                    مسح الكل
+                  </Button>
       </Box>
 
       {isLoading ? (
@@ -281,16 +290,15 @@ const CashReconciliationPage: React.FC = () => {
       ) : !selectedShiftId ? (
         <Card sx={{ p: 4, textAlign: 'center', color: 'text.secondary' }}>يرجى اختيار وردية</Card>
       ) : (
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 1 ,overflow:'auto' ,height:window.innerHeight - 200 }}>
           {/* Left Column: Calculator and Summary */}
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
             {/* Denomination Calculator */}
             <Card>
-              <CardHeader title="حاسبة الفئات" />
               <CardContent>
                 <Box sx={{ display: 'grid', gap: 1 }}>
                   {/* Headers */}
-                  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 2, px: 1, fontWeight: 600, fontSize: 14, color: 'text.secondary' }}>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 1, px: 1, fontWeight: 600, fontSize: 10, color: 'text.secondary' }}>
                     <Box textAlign="center">الفئة</Box>
                     <Box textAlign="center">الإضافة</Box>
                     <Box textAlign="center">الإجمالي الحالي</Box>
@@ -306,7 +314,7 @@ const CashReconciliationPage: React.FC = () => {
                         type="number"
                         defaultValue=""
                         onKeyPress={e => handleCountKeyPress(deno.id, (e.target as HTMLInputElement).value, e as React.KeyboardEvent<HTMLInputElement>)}
-                        placeholder="أدخل عدد للإضافة"
+                        placeholder="  "
                         size="small"
                         inputProps={{ min: 0 }}
                       />
@@ -329,22 +337,13 @@ const CashReconciliationPage: React.FC = () => {
                 </Box>
                 
                 {/* Clear Button */}
-                <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
-                  <Button
-                    variant="outlined"
-                    color="warning"
-                    onClick={handleClearDenominations}
-                    size="small"
-                    sx={{ minWidth: 120 }}
-                  >
-                    مسح الكل
-                  </Button>
-                </Box>
+            
               </CardContent>
             </Card>
             
             {/* Financial Summary - Below the calculator */}
             <UserMoneySummary
+              userId={user?.id}
               shiftId={Number(selectedShiftId)}
               totalDenominations={totalCalculated}
             />
@@ -353,7 +352,7 @@ const CashReconciliationPage: React.FC = () => {
           {/* Right Column: Quick Cost Creation */}
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <Card>
-              <CardHeader title="إضافة مصروف سريع" />
+              <CardHeader title="إضافة مصروف " />
               <CardContent>
                 <Stack spacing={2}>
                   <TextField
@@ -408,14 +407,14 @@ const CashReconciliationPage: React.FC = () => {
 
             {/* Costs Table */}
             <Card>
-              <CardHeader title="المصروفات المسجلة" />
+              {/* <CardHeader title="المصروفات المسجلة" /> */}
               <CardContent>
                 {isLoadingCosts ? (
-                  <Box display="flex" justifyContent="center" p={2}>
+                  <Box display="flex" justifyContent="center" p={1}>
                     <CircularProgress />
                   </Box>
                 ) : costs.length === 0 ? (
-                  <Typography variant="body2" color="text.secondary" textAlign="center" p={2}>
+                  <Typography variant="body2" color="text.secondary" textAlign="center" p={1}>
                     لا توجد مصروفات مسجلة لهذه الوردية
                   </Typography>
                 ) : (
@@ -428,7 +427,7 @@ const CashReconciliationPage: React.FC = () => {
                             <TableCell align="center">النقدي</TableCell>
                             <TableCell align="center">البنكي</TableCell>
                             <TableCell align="center">المجموع</TableCell>
-                            <TableCell align="center">التاريخ</TableCell>
+                            {/* <TableCell align="center">التاريخ</TableCell> */}
                             <TableCell align="center">الإجراءات</TableCell>
                           </TableRow>
                         </TableHead>
@@ -473,11 +472,7 @@ const CashReconciliationPage: React.FC = () => {
                                   {formatNumber(cost.amount + cost.amount_bankak)}
                                 </Typography>
                               </TableCell>
-                              <TableCell align="center">
-                                <Typography variant="caption" color="text.secondary">
-                                  {new Date(cost.created_at).toLocaleDateString('ar-SA')}
-                                </Typography>
-                              </TableCell>
+                          
                               <TableCell align="center">
                                 <Button
                                   variant="outlined"

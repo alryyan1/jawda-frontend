@@ -18,9 +18,10 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Chip,
   CircularProgress,
-  MenuItem
+  MenuItem,
+  FormControlLabel,
+  Switch
 } from "@mui/material";
 import Autocomplete from "@mui/material/Autocomplete";
 import { Search as SearchIcon, CalendarMonth as CalendarIcon } from "@mui/icons-material";
@@ -37,6 +38,8 @@ import ServicesDialog from "@/components/clinic/patients/ServicesDialog";
 import LabRequestsDialog from "@/components/clinic/patients/LabRequestsDialog";
 import { getDoctorsList } from "@/services/doctorService";
 import type { DoctorStripped } from "@/types/doctors";
+import { getCompaniesList } from "@/services/companyService";
+import type { Company } from "@/types/companies";
 
 const TodaysPatientsPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
@@ -54,6 +57,12 @@ const TodaysPatientsPage: React.FC = () => {
 
   // doctor filter
   const [selectedDoctor, setSelectedDoctor] = useState<DoctorStripped | null>(null);
+  
+  // company filter
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  
+  // filter by patients with company only
+  const [onlyWithCompany, setOnlyWithCompany] = useState<boolean>(false);
 
   const [selectedVisitForServices, setSelectedVisitForServices] =
     useState<PatientVisitSummary | null>(null);
@@ -73,7 +82,7 @@ const TodaysPatientsPage: React.FC = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [dateFrom, dateTo]);
+  }, [dateFrom, dateTo, selectedCompany, selectedDoctor, onlyWithCompany]);
 
   const visitsQueryKey = [
     "patientVisitsSummary",
@@ -83,6 +92,8 @@ const TodaysPatientsPage: React.FC = () => {
     dateTo || "all",
     perPage,
     selectedDoctor?.id || "all",
+    selectedCompany?.id || "all",
+    onlyWithCompany,
   ] as const;
 
   const {
@@ -100,6 +111,8 @@ const TodaysPatientsPage: React.FC = () => {
         date_from: dateFrom || undefined,
         date_to: dateTo || undefined,
         doctor_id: selectedDoctor?.id ?? undefined,
+        company_id: selectedCompany?.id ?? undefined,
+        has_company: onlyWithCompany ? true : false,
       };
       return getPatientVisitsSummary(filters);
     },
@@ -113,12 +126,19 @@ const TodaysPatientsPage: React.FC = () => {
     staleTime: 5 * 60 * 1000,
   });
 
+  // companies list for autocomplete
+  const { data: companiesList } = useQuery<Company[]>({
+    queryKey: ["companies-list", { status: true }],
+    queryFn: () => getCompaniesList({ status: true }),
+    staleTime: 5 * 60 * 1000,
+  });
+
   const visits = paginatedVisits?.data || [];
   const meta = paginatedVisits?.meta;
 
   return (
     <Box sx={{  py: 2 }}>
-      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2 }}>
+      <Box className="pb-1 mb-1" sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2 }}>
         <Typography variant="h5" fontWeight={700}>مرضى اليوم</Typography>
         {/* Filters */}
         <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 1, width: { xs: '100%', sm: 'auto' } }}>
@@ -148,6 +168,43 @@ const TodaysPatientsPage: React.FC = () => {
               renderInput={(params) => (
                 <TextField {...params} label="الطبيب" placeholder="اختر الطبيب" />
               )}
+            />
+          </Box>
+          {/* Company filter */}
+          <Box sx={{ minWidth: 220 }}>
+            <Autocomplete
+              size="small"
+              options={companiesList || []}
+              getOptionLabel={(option) => option.name}
+              value={selectedCompany}
+              onChange={(_, value) => {
+                setSelectedCompany(value);
+                setCurrentPage(1);
+              }}
+              isOptionEqualToValue={(opt, val) => opt.id === val.id}
+              renderInput={(params) => (
+                <TextField {...params} label="الشركة" placeholder="اختر الشركة" />
+              )}
+            />
+          </Box>
+          {/* Toggle: Only patients with company */}
+          <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 200 }}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={onlyWithCompany}
+                  onChange={(e) => {
+                    setOnlyWithCompany(e.target.checked);
+                    setCurrentPage(1);
+                  }}
+                  size="small"
+                />
+              }
+              label={
+                <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>
+                  فقط المرضى بالشركات
+                </Typography>
+              }
             />
           </Box>
           <TextField
@@ -201,7 +258,7 @@ const TodaysPatientsPage: React.FC = () => {
           فشل جلب المرضى: {error.message}
         </Typography>
       ) : visits.length === 0 ? (
-        <Card sx={{ textAlign: 'center' }}>
+        <Card sx={{ textAlign: 'center' }} className="pb-1 mb-1">
           <CardContent>
             <CalendarIcon sx={{ mx: 'auto', display: 'block', mb: 1, opacity: 0.3 }} />
             <Typography color="text.secondary">
@@ -217,8 +274,9 @@ const TodaysPatientsPage: React.FC = () => {
             <Table stickyHeader size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell align="center" sx={{ width: 80 }}>رقم الزيارة</TableCell>
+                  <TableCell align="center" sx={{ width: 80 }}>الكود </TableCell>
                   <TableCell align="center">اسم المريض</TableCell>
+                  <TableCell align="center">الشركه</TableCell>
                   <TableCell align="center">الطبيب</TableCell>
                   <TableCell align="center">التاريخ</TableCell>
                   <TableCell align="center">اجمالي الخدمات</TableCell>
@@ -234,12 +292,10 @@ const TodaysPatientsPage: React.FC = () => {
                     <TableCell align="center" sx={{ fontWeight: 500 }}>{visit.id}</TableCell>
                     <TableCell align="center">
                       {visit.patient.name}
-                      {visit.patient.company?.name && (
-                        <Chip label={visit.patient.company.name} size="small" variant="outlined" color="primary" sx={{ ml: 1 }} />
-                      )}
                     </TableCell>
-                    <TableCell align="center">{visit.doctor_shift_details?.doctor_name}</TableCell>
-                    <TableCell align="center">{dayjs(visit.created_at).format("DD/MM/YYYY HH:mm")}</TableCell>
+                    <TableCell align="center">{visit.patient.company?.name || '-'}</TableCell>
+                    <TableCell align="center">{visit.doctor_name || visit.doctor_shift_details?.doctor_name || '-'}</TableCell>
+                    <TableCell align="center">{dayjs(visit.created_at).format("YYYY/MM/DD hh:mm A")}</TableCell>
                     <TableCell 
                       align="center" 
                       onClick={(e) => {

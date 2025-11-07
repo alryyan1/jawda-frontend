@@ -63,6 +63,8 @@ import {
   CalendarCheck2,
   FileText,
   ClipboardEditIcon,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { Toaster } from "sonner";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -74,6 +76,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { getSidebarCollapsedState, setSidebarCollapsedState } from '../lib/sidebar-store';
+import { PdfPreviewVisibilityProvider, usePdfPreviewVisibility } from '../contexts/PdfPreviewVisibilityContext';
 import { getCurrentOpenShift } from "@/services/shiftService";
 import realtimeService from "@/services/realtimeService";
 import { ClinicSelectionProvider, useClinicSelection } from "@/contexts/ClinicSelectionContext";
@@ -500,6 +503,7 @@ const AppLayout: React.FC = () => {
     });
   };
 
+
   const handleLogout = async () => {
     await logout();
     navigate("/login");
@@ -576,9 +580,13 @@ const AppLayout: React.FC = () => {
   const CollapseIcon = ChevronsRight;
   const ExpandIcon = ChevronsLeft;
   const {can} = useAuthorization();
-  return (
-    <ClinicSelectionProvider>
-    <TooltipProvider delayDuration={100}>
+  
+  // Inner component that uses the PDF preview visibility hook
+  const AppLayoutContent: React.FC = () => {
+    const { isVisible: isPdfPreviewVisible, toggle: togglePdfPreviewVisibility } = usePdfPreviewVisibility();
+    
+    return (
+      <TooltipProvider delayDuration={100}>
       <div  style={{direction: 'rtl'}}  className="flex  h-screen bg-muted/30 dark:bg-background text-foreground">
         {/* Desktop Sidebar */}
         <aside  style={{direction: 'rtl'}}
@@ -740,6 +748,23 @@ const AppLayout: React.FC = () => {
                     </TooltipContent>
                   </Tooltip>
 
+                  {/* PDF Preview Visibility Toggle */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={togglePdfPreviewVisibility} 
+                        aria-label="تبديل عرض معاينة PDF"
+                      >
+                        {isPdfPreviewVisible ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{isPdfPreviewVisible ? 'إخفاء معاينة PDF' : 'إظهار معاينة PDF'}</p>
+                    </TooltipContent>
+                  </Tooltip>
+
                   {/* Theme Toggle */}
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -872,6 +897,14 @@ const AppLayout: React.FC = () => {
         <Toaster richColors position="top-right" />
       </div>
     </TooltipProvider>
+    );
+  };
+  
+  return (
+    <ClinicSelectionProvider>
+      <PdfPreviewVisibilityProvider>
+        <AppLayoutContent />
+      </PdfPreviewVisibilityProvider>
     </ClinicSelectionProvider>
   );
 };

@@ -21,6 +21,10 @@ export interface FirestoreLabToLab {
 
 // Test function to debug Firestore connection
 export const testFirestoreConnection = async (): Promise<void> => {
+  if (!db) {
+    console.warn('Firebase is disabled. Cannot test Firestore connection.');
+    return;
+  }
   try {
     console.log('Testing Firestore connection...');
     const labToLabRef = collection(db, 'labToLap');
@@ -40,6 +44,10 @@ export const testFirestoreConnection = async (): Promise<void> => {
 };
 
 export const fetchFirestoreLabToLab = async (): Promise<FirestoreLabToLab[]> => {
+  if (!db) {
+    console.warn('Firebase is disabled. Cannot fetch lab-to-lab companies.');
+    return [];
+  }
   try {
     // Reference to the labToLap collection
     const labToLabRef = collection(db, 'labToLap');

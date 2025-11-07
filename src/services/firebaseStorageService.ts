@@ -22,6 +22,13 @@ export const uploadLabResultToFirebase = async (
   doctorVisitId: number,
   fileName?: string
 ): Promise<UploadResult> => {
+  if (!storage) {
+    console.warn('Firebase is disabled. Cannot upload lab result.');
+    return {
+      success: false,
+      error: 'Firebase is disabled. Please enable it in settings.'
+    };
+  }
   try {
     // Create storage path: results/${hospitalname}/${doctorvisit.id}/
     const storagePath = `results/${hospitalName}/${doctorVisitId}/`;

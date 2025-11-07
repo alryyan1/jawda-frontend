@@ -67,6 +67,7 @@ import {
   DialogFooter as ActionsDialogFooter,
 } from "@/components/ui/dialog";
 import { useAuthorization } from "@/hooks/useAuthorization";
+import { usePdfPreviewVisibility } from "@/contexts/PdfPreviewVisibilityContext";
 
 interface LabRequestsColumnProps {
   activeVisitId: number | null;
@@ -84,6 +85,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
   const queryClient = useQueryClient();
   const { currentClinicShift , user  } = useAuth();
   const { can } = useAuthorization();
+  const { isVisible: isPdfPreviewVisible } = usePdfPreviewVisibility();
 
   // State for dialogs
   const [showBatchPaymentDialog, setShowBatchPaymentDialog] = useState(false);
@@ -732,21 +734,23 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
       )}
 
       {/* PDF Preview Dialog */}
-      <PdfPreviewDialog
-      widthClass="w-[300px]"
-        isOpen={isPdfPreviewOpen}
-        onOpenChange={(open) => {
-          setIsPdfPreviewOpen(open);
-          if (!open && pdfUrl) {
-            URL.revokeObjectURL(pdfUrl);
-            setPdfUrl(null);
-          }
-        }}
-        pdfUrl={pdfUrl}
-        isLoading={false}
-        title={""}
-        fileName={""}
-      />
+      {isPdfPreviewVisible && (
+        <PdfPreviewDialog
+          widthClass="w-[300px]"
+          isOpen={isPdfPreviewOpen}
+          onOpenChange={(open) => {
+            setIsPdfPreviewOpen(open);
+            if (!open && pdfUrl) {
+              URL.revokeObjectURL(pdfUrl);
+              setPdfUrl(null);
+            }
+          }}
+          pdfUrl={pdfUrl}
+          isLoading={false}
+          title={""}
+          fileName={""}
+        />
+      )}
 
       {/* Discount Comment Dialog */}
       {selectedLabRequestForComment && (

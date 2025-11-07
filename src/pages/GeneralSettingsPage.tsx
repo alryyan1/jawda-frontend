@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { Building2, MessageSquare, Settings } from "lucide-react";
+import { Building2, MessageSquare, Settings, Database } from "lucide-react";
 import { 
   Box, 
   Paper, 
@@ -29,6 +29,7 @@ import { api } from "@/lib/axios";
 import apiClient from "@/services/api";
 import showJsonDialog from "@/lib/showJsonDialog";
 import { webUrl } from "./constants";
+import { setFirebaseEnabled, checkFirebaseEnabled } from "@/lib/firebase";
 
 // Settings form data type
 type SettingsFormData = {
@@ -88,6 +89,7 @@ type SettingsFormData = {
   show_logo?: boolean;
   show_logo_only_whatsapp?: boolean;
   show_title_in_lab_result?: boolean;
+  firebase_enabled?: boolean;
 };
 
 const SettingsPage: React.FC = () => {
@@ -161,6 +163,7 @@ const SettingsPage: React.FC = () => {
       show_logo: undefined,
       show_logo_only_whatsapp: undefined,
       show_title_in_lab_result: undefined,
+      firebase_enabled: undefined,
     },
   });
   const { control, handleSubmit, reset, watch } = form;
@@ -168,6 +171,7 @@ const SettingsPage: React.FC = () => {
   const [headerPreview, setHeaderPreview] = useState<string | null>(null);
   const [footerPreview, setFooterPreview] = useState<string | null>(null);
   const [watermarkPreview, setWatermarkPreview] = useState<string | null>(null);
+  const [firebaseEnabled, setFirebaseEnabledState] = useState<boolean>(checkFirebaseEnabled());
 
   // Watch form values for immediate updates
   const watchedValues = watch();
@@ -231,7 +235,16 @@ const SettingsPage: React.FC = () => {
         show_logo: (settings as any).show_logo ?? undefined,
         show_logo_only_whatsapp: (settings as any).show_logo_only_whatsapp ?? undefined,
         show_title_in_lab_result: (settings as any).show_title_in_lab_result ?? undefined,
+        firebase_enabled: (settings as any).firebase_enabled !== undefined 
+          ? (settings as any).firebase_enabled 
+          : (localStorage.getItem('firebase_enabled') === 'true'),
       });
+      // Sync Firebase enabled state
+      const fbEnabled = (settings as any).firebase_enabled !== undefined 
+        ? (settings as any).firebase_enabled 
+        : checkFirebaseEnabled();
+      setFirebaseEnabledState(fbEnabled);
+      setFirebaseEnabled(fbEnabled);
     }
   }, [settings, reset]);
 
@@ -252,6 +265,17 @@ const SettingsPage: React.FC = () => {
   const onSubmit = (data: SettingsFormData) => {
     // All fields are now optional, so we can save without validation
     mutation.mutate(data);
+  };
+
+  // Handle Firebase toggle
+  const handleFirebaseToggle = async (enabled: boolean) => {
+    setFirebaseEnabledState(enabled);
+    setFirebaseEnabled(enabled);
+    setValue('firebase_enabled', enabled);
+    // Save to backend
+    await mutation.mutateAsync({ firebase_enabled: enabled } as unknown as SettingsFormData);
+    toast.success(enabled ? 'تم تفعيل Firebase' : 'تم تعطيل Firebase');
+    toast.info('يرجى إعادة تحميل الصفحة لتطبيق التغييرات');
   };
 
   // Upload helper for report header/footer/watermark assets
@@ -347,6 +371,15 @@ const SettingsPage: React.FC = () => {
                 <Stack direction="row" spacing={1} alignItems="center">
                   <Settings size={16} />
                   <span>سير العمل</span>
+                </Stack>
+              } 
+            />
+            <Tab 
+              value="firebase" 
+              label={
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Database size={16} />
+                  <span>Firebase</span>
                 </Stack>
               } 
             />
@@ -793,6 +826,44 @@ const SettingsPage: React.FC = () => {
                     <Typography variant="body1">إرسال رسالة واتساب بعد الإعتماد</Typography>
                     <Typography variant="body2" color="text.secondary">
                       سيتم إرسال رسالة واتساب للمريض بعد اعتماد النتائج
+                    </Typography>
+                  </Box>
+                }
+              />
+            </Stack>
+          </Paper>
+        )}
+
+        {/* Firebase Settings Tab */}
+        {activeTab === "firebase" && (
+          <Paper elevation={2} sx={{ p: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              إعدادات Firebase
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              تفعيل أو تعطيل خدمات Firebase (التخزين، قاعدة البيانات، والمصادقة)
+            </Typography>
+            
+            <Stack spacing={3}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={firebaseEnabled}
+                    onChange={(e) => handleFirebaseToggle(e.target.checked)}
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography variant="body1">
+                      تفعيل Firebase
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {firebaseEnabled 
+                        ? 'Firebase مفعل حالياً. سيتم تعطيل جميع خدمات Firebase عند إلغاء التفعيل.'
+                        : 'Firebase معطل حالياً. سيتم تفعيل جميع خدمات Firebase عند التفعيل.'}
+                    </Typography>
+                    <Typography variant="caption" color="warning.main" sx={{ mt: 1, display: 'block' }}>
+                      ملاحظة: يرجى إعادة تحميل الصفحة بعد تغيير هذا الإعداد لتطبيق التغييرات.
                     </Typography>
                   </Box>
                 }

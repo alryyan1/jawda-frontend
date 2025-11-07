@@ -91,7 +91,7 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
           
           // Emit the lab-payment event
           const realtimeUrl = realtimeUrlFromConstants || 'http://localhost:4001';
-          await fetch(`${realtimeUrl}/emit/lab-payment`, {
+           fetch(`${realtimeUrl}/emit/lab-payment`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

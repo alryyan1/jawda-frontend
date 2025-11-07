@@ -42,6 +42,8 @@ import { addLabTestsToVisit } from "@/services/labRequestService";
 import PdfPreviewDialog from "@/components/common/PdfPreviewDialog";
 import MainTestsPriceListDialog from "@/components/lab/reception/MainTestsPriceListDialog";
 import OffersDialog from "@/components/lab/reception/OffersDialog";
+import { usePdfPreviewVisibility } from "@/contexts/PdfPreviewVisibilityContext";
+import { realtimeUrlFromConstants } from "./constants";
 
 // Material Theme
 const materialTheme = createTheme({
@@ -84,6 +86,7 @@ const materialTheme = createTheme({
 const LabReceptionPage: React.FC = () => {
   const queryClient = useQueryClient();
   const { currentClinicShift } = useAuth();
+  const { isVisible: isPdfPreviewVisible } = usePdfPreviewVisibility();
 
   // Helper function to convert DoctorVisit to PatientLabQueueItem format
   const convertVisitToQueueItem = (visit: DoctorVisit): PatientLabQueueItem => {
@@ -445,6 +448,21 @@ const LabReceptionPage: React.FC = () => {
       'LabReceipt',
       () => apiClient.get(`/visits/${activeVisitId}/lab-thermal-receipt/pdf`, { responseType: 'blob' }).then(res => res.data)
     );
+       
+          // Emit the lab-payment event
+          const realtimeUrl = realtimeUrlFromConstants || 'http://localhost:4001';
+           fetch(`${realtimeUrl}/emit/lab-payment`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-internal-token': import.meta.env.VITE_SERVER_AUTH_TOKEN || 'changeme'
+            },
+            body: JSON.stringify({
+              visit: activeVisit,
+              patient: activeVisit?.patient,
+              labRequests: activeVisit?.lab_requests
+            })
+          });
   };
 
   const handlePrintInvoice = () => {
@@ -685,21 +703,23 @@ interface AutocompleteVisitOption {
             )}
           </div>
         </div>
-        <PdfPreviewDialog
-        widthClass="w-[350px]"
-        isOpen={isPdfPreviewOpen}
-        onOpenChange={(open) => {
-            setIsPdfPreviewOpen(open);
-            if (!open && pdfUrl) { // Clean up URL when dialog is manually closed
-                URL.revokeObjectURL(pdfUrl);
-                setPdfUrl(null);
-            }
-        }}
-        pdfUrl={pdfUrl}
-        isLoading={isGeneratingPdf && !pdfUrl}
-        title={pdfPreviewTitle}
-        fileName={pdfFileName}
-      />
+        {isPdfPreviewVisible && (
+          <PdfPreviewDialog
+            widthClass="w-[350px]"
+            isOpen={isPdfPreviewOpen}
+            onOpenChange={(open) => {
+                setIsPdfPreviewOpen(open);
+                if (!open && pdfUrl) { // Clean up URL when dialog is manually closed
+                    URL.revokeObjectURL(pdfUrl);
+                    setPdfUrl(null);
+                }
+            }}
+            pdfUrl={pdfUrl}
+            isLoading={isGeneratingPdf && !pdfUrl}
+            title={pdfPreviewTitle}
+            fileName={pdfFileName}
+          />
+        )}
       </div>
       <MainTestsPriceListDialog
         isOpen={isPriceListOpen}

@@ -70,6 +70,7 @@ export interface Setting {
   report_header_vatin?: string | null;
   report_header_cr?: string | null;
   default_lab_report_template?: string | null;
+  firebase_enabled?: boolean;
 
 }
 

@@ -149,6 +149,8 @@ export interface GetVisitsFilters {
   page?: number;
   visit_date?: string; // YYYY-MM-DD
   doctor_id?: number | string | null;
+  company_id?: number | string | null;
+  has_company?: boolean;
   search?: string;
   status?: string | null; // e.g., 'all', 'waiting', 'completed'
   per_page?: number;

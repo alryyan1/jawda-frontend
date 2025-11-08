@@ -235,6 +235,7 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
             )}
             {hasSelectedServices && (
               <Button
+              disabled={!can('اضافه خدمه')}
                 onClick={() => setAddSelectedCommand(c => c + 1)}
                 variant="secondary"
                 size="sm"

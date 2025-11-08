@@ -686,6 +686,7 @@ const LabWorkstationPage: React.FC = () => {
       // If a patient is selected, fetch their lab requests and auto-select the first one
       if (queueItem) {
         try {
+          console.log(queueItem, "queueItem in handlePatientSelectFromQueue");
           // Fetch lab requests for this visit
           const labRequests = await queryClient.fetchQuery({
             queryKey: ['labRequestsForVisit', queueItem.visit_id],

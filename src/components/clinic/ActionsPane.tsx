@@ -22,7 +22,8 @@ import {
   faUserDoctor,
   faCalculator,
   faBook,
-  faImages
+  faImages,
+  faMoneyBill
 } from "@fortawesome/free-solid-svg-icons";
 import ManageDoctorShiftsDialog from "./ManageDoctorShiftsDialog";
 import DoctorCredits from "./DoctorCredits";
@@ -138,6 +139,20 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
             aria-label="الملخص المالي"
           >
             <FontAwesomeIcon icon={faCalculator} />
+          </IconButton>
+        </Tooltip>
+
+        {/* Cash Reconciliation Button */}
+        <Tooltip title="الفئات" placement="left">
+          <IconButton
+            onClick={() => {
+              console.log('Cash reconciliation button clicked');
+              window.open(`./cash-reconciliation`, '_blank', 'noopener,noreferrer');
+            }}
+            sx={{ width: 44, height: 44, color: "success.main" }}
+            aria-label="الفئات"
+          >
+            <FontAwesomeIcon icon={faMoneyBill} />
           </IconButton>
         </Tooltip>
 

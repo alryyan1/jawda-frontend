@@ -69,6 +69,7 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
       console.log(updatedPatient, "updatedPatient from toggleAuthenticationMutation");
       setUpdatedPatient(updatedPatient);
       
+      
       toast.success(updatedPatient.result_auth ? "تم اعتماد النتائج" : "تم إلغاء اعتماد النتائج");
       
       // Invalidate the shared patient query
@@ -153,7 +154,7 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
       </div>
     );
   }
-  // console.log(patientLabQueueItem,'patientLabQueueItem')
+  // console.log(currentPatient,'currentPatient in StatusAndInfoPanel',patientLabQueueItem,'patientLabQueueItem in StatusAndInfoPanel')
 
   return (
     <div dir="rtl" className="h-full bg-slate-50 dark:bg-slate-800/30 overflow-y-auto">

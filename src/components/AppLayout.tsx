@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import {
   Outlet,
   Link,
@@ -268,6 +268,7 @@ const AppHeaderSearch: React.FC = () => {
   const location = useLocation();
   const isClinicRoute = useMemo(() => location.pathname.startsWith("/clinic"), [location.pathname]);
   const { currentRequest } = useClinicSelection();
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const [inputValue, setInputValue] = useState("");
   const [options, setOptions] = useState<Array<{ label: string; visit_id: number; patient_id: number; doctor_shift_id?: number | null }>>([]);
@@ -339,6 +340,8 @@ const AppHeaderSearch: React.FC = () => {
     currentRequest.onSelect(patient, value.visit_id, matchingDoctorShift || undefined);
     setInputValue("");
     setOptions([]);
+    // Blur the input field
+    inputRef.current?.blur();
   };
 
   const handleKeyDown = async (event: React.KeyboardEvent) => {
@@ -348,6 +351,11 @@ const AppHeaderSearch: React.FC = () => {
       // If there are options available, select the first one
       if (options.length > 0) {
         await handleSelect(null, options[0]);
+        // handleSelect already clears the input, but we ensure it's cleared here too
+        setInputValue("");
+        setOptions([]);
+        // Blur the input field
+        inputRef.current?.blur();
         return;
       }
       
@@ -368,13 +376,17 @@ const AppHeaderSearch: React.FC = () => {
               : null;
             
             currentRequest.onSelect(patient, result.visit_id, matchingDoctorShift || undefined);
-            setInputValue("");
-            setOptions([]);
           }
         } catch (error) {
           console.error('Error searching by ID:', error);
         }
       }
+      
+      // Always clear the input after pressing Enter
+      setInputValue("");
+      setOptions([]);
+      // Blur the input field
+      inputRef.current?.blur();
     }
   };
 
@@ -387,6 +399,9 @@ const AppHeaderSearch: React.FC = () => {
         onClose={() => setOpen(false)}
         options={options}
         loading={loading}
+        value={null}
+        inputValue={inputValue}
+        onInputChange={(_, newInputValue) => setInputValue(newInputValue)}
         onChange={handleSelect}
         filterOptions={(x) => x}
         getOptionLabel={(o) => o.label}
@@ -394,10 +409,9 @@ const AppHeaderSearch: React.FC = () => {
         renderInput={(params) => (
           <TextField
             {...params}
+            inputRef={inputRef}
             placeholder="بحث عن مريض بالاسم أو الكود "
             size="small"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
             InputProps={{
               ...params.InputProps,

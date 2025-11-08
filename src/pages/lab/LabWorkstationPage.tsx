@@ -473,39 +473,82 @@ const LabWorkstationPage: React.FC = () => {
       getDoctorVisitById(targetVisitId),
     onSuccess: (data: DoctorVisit) => {
       // showJsonDialog(data)
-      // console.log(data, "data");
+      console.log(data, "data");
       if (data && data.patient && data.lab_requests) {
         // alert("data")
+        // Calculate total and pending result counts from lab requests
+        const allResults = data.lab_requests.flatMap(lr => lr.results || []);
+        const totalResultCount = allResults.length;
+        const pendingResultCount = allResults.filter(r => !r.result || r.result === '').length;
+        
+        // Check if all requests are paid
+        const allRequestsPaid = data.lab_requests.length > 0 
+          ? data.lab_requests.every((lr: LabRequest) => (lr.amount_paid || 0) > 0)
+          : true;
+        
+        // Find oldest request time
+        const oldestRequestTime = data.lab_requests.length > 0
+          ? data.lab_requests.reduce(
+              (oldest, lr) =>
+                new Date(lr.created_at!) < new Date(oldest)
+                  ? lr.created_at!
+                  : oldest,
+              data.lab_requests[0].created_at!
+            )
+          : data.created_at || null;
+        
+        // Get sample_id from first lab request that has one
+        const sampleId = data.lab_requests?.find((lr) => lr.sample_id)?.sample_id?.toString() || null;
+        
+        // Check if last result is pending
+        const lastResult = allResults[allResults.length - 1];
+        const isLastResultPending = lastResult ? (!lastResult.result || lastResult.result === '') : false;
+        
+        // Check if ready for print (all results entered and lab request authorized)
+        // Check if all lab requests are authorized
+        const allLabRequestsAuthorized = data.lab_requests.every(lr => lr.authorized_at !== null);
+        const isReadyForPrint = totalResultCount > 0 && pendingResultCount === 0 && allLabRequestsAuthorized;
+        
+        // Get auth date from the most recent authorized lab request
+        const authDate = data.lab_requests
+          .filter(lr => lr.authorized_at)
+          .map(lr => lr.authorized_at!)
+          .sort()
+          .reverse()[0] || null;
+        
+        // Check if any lab request is authorized
+        const resultAuth = data.lab_requests.some(lr => lr.authorized_at !== null);
+        
         const queueItemLike: PatientLabQueueItem = {
           visit_id: data.id,
           patient_id: data.patient.id,
           patient_name: data.patient.name,
-          sample_id:
-            data.lab_requests?.find((lr) => lr.sample_id)?.sample_id ||
-            `V${data.id}`,
-          lab_number: `L${data.id}`,
+          sample_id: sampleId || `V${data.id}`,
+          lab_number: data.number?.toString() || `L${data.id}`,
           lab_request_ids: data.lab_requests.map((lr) => lr.id),
-          oldest_request_time:
-            data.lab_requests.length > 0
-              ? data.lab_requests.reduce(
-                  (oldest, lr) =>
-                    new Date(lr.created_at!) < new Date(oldest)
-                      ? lr.created_at!
-                      : oldest,
-                  data.lab_requests[0].created_at!
-                )
-              : data.created_at,
+          oldest_request_time: oldestRequestTime || data.created_at || '',
           test_count: data.lab_requests.length,
           phone: data.patient.phone || "",
           result_is_locked: data.patient.result_is_locked || false,
-          all_requests_paid: true, // Default to true for now
+          all_requests_paid: allRequestsPaid,
           is_result_locked: data.patient.result_is_locked || false,
-          total_result_count: 0, // Will be updated by backend
-          pending_result_count: 0, // Will be updated by backend
+          total_result_count: totalResultCount,
+          pending_result_count: pendingResultCount,
           has_cbc: data.patient.has_cbc || false,
+          is_printed: false, // Would need to be determined from lab results or visit status
+          company: data.patient?.company || data.company || null,
+          lab_to_lab_object_id: data.patient?.lab_to_lab_object_id || null,
+          is_last_result_pending: isLastResultPending,
+          is_ready_for_print: isReadyForPrint,
+          auth_date: authDate || null,
+          result_auth: resultAuth || false,
         };
-
-        setSelectedQueueItem(queueItemLike); // This makes it appear "selected" in the context
+        console.log(queueItemLike, "queueItemLike");
+        getSinglePatientLabQueueItem(data.id).then((queueItem) => {
+          console.log(queueItem, "queueItem in LabWorkstationPage after getSinglePatientLabQueueItem");
+          setSelectedQueueItem(queueItem);
+        });
+        // setSelectedQueueItem(queueItemLike); // This makes it appear "selected" in the context
         // console.log(queueItemLike, "queueItemLike");
         // Update currentShiftForQueue if the loaded visit is from a different shift
         if (

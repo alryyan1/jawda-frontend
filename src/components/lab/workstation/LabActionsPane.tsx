@@ -65,7 +65,7 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
   const [isAppearanceDialogOpen, setIsAppearanceDialogOpen] = useState(false);
   const [isWhatsAppDialogOpen, setIsWhatsAppDialogOpen] = useState(false);
   const [isUploadingToFirebase, setIsUploadingToFirebase] = useState(false);
-  console.log('currentpatientdata',currentPatientData)
+  // console.log('currentpatientdata',currentPatientData)
   const handleHl7ClientOpen = () => {
     window.open('http://127.0.0.1/jawda-medical/hl7-client.php', '_blank');
   };
@@ -207,6 +207,42 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
     }
   };
 
+  // Populate Chemistry mutation
+  const populateChemistryMutation = useMutation({
+    mutationFn: async (payload: { doctorVisitId: number; mainTestId: number }) => {
+      const response = await apiClient.post(`/populatePatientChemistryData/${payload.doctorVisitId}`, {
+        main_test_id: payload.mainTestId
+      });
+      return response.data;
+    },
+    onSuccess: (response) => {
+      if (response.status) {
+        toast.success('تم ملء نتائج الكيمياء بنجاح');
+        queryClient.invalidateQueries({ queryKey: ['labRequestForEntry', selectedLabRequest?.id] });
+        queryClient.invalidateQueries({ queryKey: ['labRequestsForVisit', selectedVisitId] });
+        queryClient.invalidateQueries({ queryKey: ['labPendingQueue'] });
+        // The queries are invalidated above, which will trigger a refetch
+        // If onResultsModified callback is needed, it can be called here with refetched data
+      } else {
+        toast.error(response.message || 'لا توجد بيانات لملء نتائج الكيمياء');
+      }
+    },
+    onError: (error: Error) => {
+      toast.error((error as { response?: { data?: { message?: string } } }).response?.data?.message || 'فشل ملء نتائج الكيمياء');
+    }
+  });
+
+  const handlePopulateChemistry = () => {
+    if (selectedLabRequest && selectedVisitId) {
+      populateChemistryMutation.mutate({
+        doctorVisitId: selectedVisitId,
+        mainTestId: selectedLabRequest.main_test_id
+      });
+    } else {
+      toast.error('يرجى اختيار طلب فحص أولاً');
+    }
+  };
+
   // Add Organism mutation
   const addOrganismMutation = useMutation({
     mutationFn: (payload: { labRequestId: number; organism: string; sensitive?: string; resistant?: string }) =>
@@ -268,7 +304,7 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
       
       if (response.data.success) {
         const { was_updated } = response.data;
-        console.log(currentPatientData,'currentPatientData.lab_to_lab_object_id')
+        // console.log(currentPatientData,'currentPatientData.lab_to_lab_object_id')
         
      
            
@@ -334,7 +370,7 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
       setIsUploadingToFirebase(false);
     }
   };
-console.log(currentPatientData,'currentPatientData')
+// console.log(currentPatientData,'currentPatientData')
  // console.log(currentLockStatus,'currentLockStatus')
   return (
     <TooltipProvider delayDuration={100}>
@@ -503,15 +539,25 @@ console.log(currentPatientData,'currentPatientData')
         {/* </Tooltip> */}
         <Separator className="my-2" />
 
-          {/* New Appearance Settings Button */}
+          {/* Chemistry Populate Button */}
           <Tooltip>
               <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="w-12 h-12">
-                      <FontAwesomeIcon icon={faBolt} className="h-7! w-7!" />
+                  <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="w-12 h-12"
+                      onClick={handlePopulateChemistry}
+                      disabled={populateChemistryMutation.isPending || !selectedLabRequest || !selectedVisitId}
+                  >
+                      {populateChemistryMutation.isPending ? (
+                          <Loader2 className="h-7! w-7! animate-spin" />
+                      ) : (
+                          <FontAwesomeIcon icon={faBolt} className="h-7! w-7!" />
+                      )}
                   </Button>
               </TooltipTrigger>
               <TooltipContent side="right" sideOffset={5}>
-                  <p> Chemistry</p>
+                  <p>ملء نتائج الكيمياء</p>
               </TooltipContent>
           </Tooltip>
         {/* <Tooltip>

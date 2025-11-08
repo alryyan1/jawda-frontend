@@ -96,7 +96,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
   onTestResultsChange,
   patientLabQueueItem
 }) => {
-  console.log(patientLabQueueItem,'patientLabQueueItem in ResultEntryPanel');
+  // console.log(patientLabQueueItem,'patientLabQueueItem in ResultEntryPanel');
   // استخدام نص عربي مباشر بدلاً من i18n
   const [activeTab] = useState(0);
   const [activeGroupTab, setActiveGroupTab] = useState(0); // For special test group tabs
@@ -347,7 +347,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
       
       // Initialize organisms from testDataForEntry
       const organismsData = testDataForEntry.requested_organisms || [];
-      console.log('Organisms data from backend:', organismsData);
+      // console.log('Organisms data from backend:', organismsData);
       // Ensure all organism fields are strings
       const formattedOrganisms = organismsData.map(org => ({
         ...org,
@@ -355,7 +355,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
         sensitive: org.sensitive || '',
         resistant: org.resistant || ''
       }));
-      console.log('Formatted organisms:', formattedOrganisms);
+      // console.log('Formatted organisms:', formattedOrganisms);
       setOrganisms(formattedOrganisms);
     } else {
       reset({ results: [], main_test_comment: "" });

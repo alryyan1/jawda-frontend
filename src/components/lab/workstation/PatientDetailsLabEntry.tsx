@@ -215,7 +215,7 @@ const PatientDetailsLabEntry: React.FC<PatientDetailsLabEntryProps> = ({
 }) => {
   const { user } = useAuth();
   const isAdmin = user?.roles?.some(role => role.name === 'admin') || false;
- console.log(patientLabQueueItem,'patientLabQueueItem in PatientDetailsLabEntry');
+ // console.log(patientLabQueueItem,'patientLabQueueItem in PatientDetailsLabEntry');
   // Function to copy visit ID to clipboard
   const handleCopyVisitId = async () => {
     if (visitId) {
@@ -235,7 +235,7 @@ const PatientDetailsLabEntry: React.FC<PatientDetailsLabEntryProps> = ({
     }
   };
 
-  console.log(patient,'patient');
+  // console.log(patient,'patient');
   return (
     <MuiCard 
       dir="rtl" 

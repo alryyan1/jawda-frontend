@@ -216,7 +216,6 @@ class RealtimeService {
   // Print services receipt
   public async printServicesReceipt(visitId: number, patientId?: number): Promise<{ success: boolean; message?: string; error?: string }> {
     try {
-      const realtimeUrl = import.meta.env.VITE_REALTIME_URL || realtimeUrlFromConstants;
       const response = await fetch(`http://localhost:4002/emit/print-services-receipt`, {
         method: 'POST',
         headers: {
@@ -238,6 +237,35 @@ class RealtimeService {
       }
     } catch (error) {
       console.error('Error printing services receipt:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error occurred' };
+    }
+  }
+
+  // Print single service receipt
+  public async printSingleServiceReceipt(visitId: number, requestedServiceId: number, patientId?: number): Promise<{ success: boolean; message?: string; error?: string }> {
+    try {
+      const response = await fetch(`http://localhost:4002/emit/print-single-service-receipt`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-internal-token': import.meta.env.VITE_SERVER_AUTH_TOKEN || 'changeme',
+        },
+        body: JSON.stringify({
+          visit_id: visitId,
+          requested_service_id: requestedServiceId,
+          patient_id: patientId,
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        return { success: true, message: result.message };
+      } else {
+        return { success: false, error: result.error || 'Failed to print single service receipt' };
+      }
+    } catch (error) {
+      console.error('Error printing single service receipt:', error);
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error occurred' };
     }
   }

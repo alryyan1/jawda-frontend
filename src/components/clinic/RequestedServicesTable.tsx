@@ -303,9 +303,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
       const blob = response.data;
       const objectUrl = URL.createObjectURL(blob);
       setPdfUrl(objectUrl);
-      const patientNameSanitized = visit?.patient?.name?.replace(/[^A-Za-z0-9\-_]/g, '_') || 'patient';
-      const serviceNameSanitized = requestedService.service?.name?.replace(/[^A-Za-z0-9\-_]/g, '_') || 'service';
-      setPdfFileName(`ServiceReceipt_Visit_${visitId}_${serviceNameSanitized}_${patientNameSanitized}_${new Date().toISOString().slice(0,10)}.pdf`);
+      setPdfFileName(`ServiceReceipt_Visit.pdf`);
     } catch (error: unknown) {
       console.error('Error generating service receipt PDF:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
@@ -585,12 +583,19 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                   <TableBody>
                     {requestedServices.map((rs) => {
                       const price = Number(rs.price) || 0;
+                      const hasPayment = Number(rs.amount_paid) > 0;
                       return (
                         <React.Fragment key={rs.id}>
                           <TableRow
                             hover
                             onClick={() => handleOpenRowOptions(rs)}
-                            sx={{ cursor: "pointer" }}
+                            sx={{ 
+                              cursor: "pointer",
+                              backgroundColor: hasPayment ? 'rgba(76, 175, 80, 0.1)' : 'transparent',
+                              '&:hover': {
+                                backgroundColor: hasPayment ? 'rgba(76, 175, 80, 0.15)' : undefined
+                              }
+                            }}
                           >
                             <TableCell className="text-xl!" align="center">
                               {rs.service?.name || "خدمة غير معروفة"}
@@ -674,11 +679,19 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                                 <Tooltip title="طباعة إيصال الخدمة">
                                   <IconButton
                                     size="small"
-                                    onClick={(e) => {
+                                    onClick={async (e) => {
                                       e.stopPropagation();
                                       handlePrintSingleServiceReceipt(rs);
-                                      realtimeService.printServicesReceipt(visitId, visit?.patient?.id);
-
+                                      try {
+                                        const result = await realtimeService.printSingleServiceReceipt(visitId, rs.id, visit?.patient?.id);
+                                        if (result.success) {
+                                          toast.success('تم إرسال أمر الطباعة بنجاح');
+                                        } else {
+                                          console.error('Failed to print single service receipt:', result.error);
+                                        }
+                                      } catch (error) {
+                                        console.error('Error printing single service receipt:', error);
+                                      }
                                     }}
                                     disabled={isGeneratingPdf}
                                   >
@@ -798,6 +811,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                   <TextField
                     type="number"
                     size="small"
+                    disabled={rowOptionsService.amount_paid > 0}
                     inputProps={{ min: 1 }}
                     value={rowOptionsData.count ?? 1}
                     onChange={(e) =>

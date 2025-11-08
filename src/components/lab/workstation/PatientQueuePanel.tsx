@@ -84,7 +84,7 @@ const PatientQueuePanel: React.FC<PatientQueuePanelProps> = ({
   }, [currentShift?.id, globalSearchTerm, queueFilters]);
 
   
-   console.log(paginatedQueue, "paginatedQueue",queueItems, "queueItems");
+   // console.log(paginatedQueue, "paginatedQueue",queueItems, "queueItems");
   // Initialize queueItems when paginatedQueue data changes
   React.useEffect(() => {
     if (paginatedQueue?.data) {

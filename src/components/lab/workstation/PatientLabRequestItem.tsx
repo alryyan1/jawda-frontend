@@ -105,7 +105,7 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
         "active:scale-95 transform-gpu",
         isLastResultPending &&   "animate-heartbeat",
         isLastResultPending  && "animate__animated animate__heartBeat animate__infinite animate__slow",
-        isReadyForPrint  && "animate__animated animate__bounce animate__infinite animate__slow",
+        isReadyForPrint && item.auth_date == null && "animate__animated animate__bounce animate__infinite animate__slow",
         isClicking && "opacity-50 cursor-not-allowed", // Visual feedback when clicking
 
         // Use CSS variables for dynamic styling

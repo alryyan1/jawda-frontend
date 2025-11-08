@@ -25,7 +25,7 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
   resultsLocked,
   onPatientUpdate,
 }) => {
-  console.log(patientLabQueueItem, "patientLabQueueItem",patient, "patient",visitId, "visitId");
+  // console.log(patientLabQueueItem, "patientLabQueueItem",patient, "patient",visitId, "visitId");
   // State for PDF Preview
   const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -207,7 +207,7 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
       setPdfUrl(null);
     }
   }, [pdfUrl]);
-  console.log(patientLabQueueItem,'patientLabQueueItem in ActionsButtonsPanel');
+  // console.log(patientLabQueueItem,'patientLabQueueItem in ActionsButtonsPanel');
   return (
     <>
        

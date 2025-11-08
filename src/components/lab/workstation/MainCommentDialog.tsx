@@ -110,7 +110,7 @@ const MainCommentDialog: React.FC<MainCommentDialogProps> = ({
     }
   };
 
-  console.log(currentValue,'currentValue');
+  // console.log(currentValue,'currentValue');
 // alert(currentValue);
   return (
     <Dialog 

@@ -1,6 +1,7 @@
 // src/pages/ClinicPage.tsx
 import React, { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 import './clinicpage.css';
 
 // Import Child Components (we will create/update these)
@@ -31,6 +32,7 @@ import { FileText } from 'lucide-react';
 
 const ClinicPage: React.FC = () => {
   const { requestSelection } = useClinicSelection();
+  const queryClient = useQueryClient();
   // Removed React Query client; using local refresh key instead
   const [activePatientsRefreshKey, setActivePatientsRefreshKey] = useState(0);
 
@@ -163,10 +165,19 @@ const ClinicPage: React.FC = () => {
         if (doctorShift) {
           setActiveDoctorShift(doctorShift);
         }
+
+        // Invalidate requested services query to refresh RequestedServicesTable
+        queryClient.invalidateQueries({
+          queryKey: ['requestedServicesForVisit', visitId],
+        });
+        // Also invalidate visit query to ensure visit data is up to date
+        queryClient.invalidateQueries({
+          queryKey: ['doctorVisit', visitId],
+        });
       }
     });
     return () => requestSelection(null);
-  }, [requestSelection]);
+  }, [requestSelection, queryClient]);
 
   // F8 and F10 keyboard listeners
   // F8: Open income dialog, F10: Open doctor finder dialog

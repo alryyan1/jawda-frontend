@@ -51,6 +51,7 @@ interface DepositItemFormValues {
   is_bank: boolean;
   user_name?: string;
   created_at?: string;
+  user_id: number;
 }
 
 interface ManageServiceDepositsDialogProps {
@@ -82,7 +83,7 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
     ["requestedServicesForVisit", requestedService.doctorvisits_id] as const,
     [requestedService.doctorvisits_id]
   );
-
+ const {user} = useAuth();
   // State for managing deposits
   const [deposits, setDeposits] = useState<DepositItemFormValues[]>([]);
   // State for add deposit dialog
@@ -334,13 +335,10 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
                                   </IconButton>
                                 </Tooltip>
                                   <IconButton
-                                   title={!can('الغاء سداد خدمه') ? 'ليس لديك صلاحية للغاء الدفع' : 'حذف'}
-                                    size="small"
                                     onClick={() => handleDelete(deposit)}
-                                    className={!can('الغاء سداد خدمه') ? 'cursor-not-allowed' : ''}
                                     disabled={
                                       deleteMutation.isPending &&
-                                      deleteMutation.variables === Number(deposit.id) || !can('الغاء سداد خدمه')
+                                      deleteMutation.variables === Number(deposit.id) || !can('الغاء سداد خدمه') || deposit.user_id !== user?.id
                                     }
                                   >
                                     {deleteMutation.isPending &&

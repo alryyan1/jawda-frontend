@@ -23,6 +23,7 @@ import {
   createChildTestOption,
 } from "@/services/childTestOptionService";
 import { saveSingleChildTestResult, getSinglePatientLabQueueItem } from "@/services/labWorkflowService";
+import { useAuthorization } from "@/hooks/useAuthorization";
 
 interface ChildTestAutocompleteInputProps {
   // RHF field props
@@ -91,7 +92,7 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
   patientLabQueueItem
 }) => {
   // استخدام نص عربي مباشر بدلاً من i18n
-
+  const { can } = useAuthorization();
   // Check if patient is authorized (auth_date is not null)
   const isPatientAuthorized = patientAuthDate == true;
   const isDisabled = disabled || isPatientAuthorized;
@@ -518,7 +519,7 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
             <Button
               type="submit"
               size="small"
-              disabled={isSavingNewOption}
+              disabled={isSavingNewOption || !can('تعديل نتائج المختبر')}
               sx={{ fontSize: '0.75rem', padding: '2px 8px' }}
             >
               إضافة

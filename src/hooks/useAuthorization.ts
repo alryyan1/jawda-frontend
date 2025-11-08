@@ -42,6 +42,7 @@ export type PermissionName =
   | 'عرض الاعدادات'                // View settings
   | 'اضافه خدمه'                  // Add service
   | 'اضافه فحص'                  // Add test
+  | 'تعديل نتائج المختبر'        // Edit lab results
   ;
 /**
  * Custom hook providing utility functions for checking user roles and permissions.

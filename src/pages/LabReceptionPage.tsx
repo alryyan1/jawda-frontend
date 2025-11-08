@@ -43,6 +43,7 @@ import PdfPreviewDialog from "@/components/common/PdfPreviewDialog";
 import MainTestsPriceListDialog from "@/components/lab/reception/MainTestsPriceListDialog";
 import OffersDialog from "@/components/lab/reception/OffersDialog";
 import { usePdfPreviewVisibility } from "@/contexts/PdfPreviewVisibilityContext";
+import { useAuthorization } from "@/hooks/useAuthorization";
 
 // Material Theme
 const materialTheme = createTheme({
@@ -91,7 +92,6 @@ const LabReceptionPage: React.FC = () => {
   const convertVisitToQueueItem = (visit: DoctorVisit): PatientLabQueueItem => {
     const labRequests = visit.lab_requests || [];
     const oldestRequest = labRequests.length > 0 ? labRequests[0] : null;
-    
     return {
       visit_id: visit.id,
       patient_id: visit.patient_id,
@@ -119,6 +119,7 @@ const LabReceptionPage: React.FC = () => {
   const [pdfFileName, setPdfFileName] = useState('document.pdf');
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false);
+  const { can } = useAuthorization();
 
   // State for the filters that the dialog will update
   const [filters, setFilters] = useState<LabQueueFilters>({
@@ -194,7 +195,9 @@ const LabReceptionPage: React.FC = () => {
           event.preventDefault();
           // Trigger payment if patient details ref is available
           if (patientDetailsRef.current) {
+            if(can('سداد فحص')){ 
             patientDetailsRef.current.triggerPayment();
+            }
           }
         }
       }

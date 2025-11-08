@@ -260,6 +260,7 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
         options={options as OptionType[]} // Use locally managed options (with localStorage caching)
         loading={isLoadingOptions}
         readOnly={isDisabled}
+        disabled={!can('تعديل نتائج المختبر')}
         sx={{
         
           '& .MuiAutocomplete-root': {
@@ -407,6 +408,7 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
         )}
         renderInput={(params) => (
           <TextField
+            // disabled={!can('تعديل نتائج المختبر')}
             {...params}
             inputRef={inputRef}
             variant="outlined"
@@ -519,7 +521,7 @@ const ChildTestAutocompleteInput: React.FC<ChildTestAutocompleteInputProps> = ({
             <Button
               type="submit"
               size="small"
-              disabled={isSavingNewOption || !can('تعديل نتائج المختبر')}
+              disabled={isSavingNewOption }
               sx={{ fontSize: '0.75rem', padding: '2px 8px' }}
             >
               إضافة

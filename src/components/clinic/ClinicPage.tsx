@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { FileText } from 'lucide-react';
+import { useAuthorization } from '@/hooks/useAuthorization';
 
 const ClinicPage: React.FC = () => {
   const { requestSelection } = useClinicSelection();
@@ -44,7 +45,7 @@ const ClinicPage: React.FC = () => {
     if (saved === 'true' || saved === 'false') return saved === 'true';
     return isUnifiedCashier ? true : false; // default collapsed for unified cashier, otherwise expanded
   });
-
+  const { can } = useAuthorization();
   useEffect(() => {
     localStorage.setItem(DETAILS_COLLAPSE_KEY, String(isDetailsCollapsed));
   }, [isDetailsCollapsed]);
@@ -195,7 +196,9 @@ const ClinicPage: React.FC = () => {
           const isTextInput = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.getAttribute('contenteditable') === 'true');
           if (!isTextInput) {
             event.preventDefault();
-            patientDetailsRef.current?.triggerPayAll();
+            if(can('سداد خدمه')){ 
+              patientDetailsRef.current?.triggerPayAll();
+            }
           }
         }
       }

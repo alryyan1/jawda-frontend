@@ -885,7 +885,7 @@ const AppLayout: React.FC = () => {
                               <SettingsMenuItem to="/settings/offers" icon={Tag} label="العروض" />
                               <SettingsMenuItem to="/settings/doctors" icon={Stethoscope} label="الأطباء" />
                               <SettingsMenuItem to="/settings/specialists" icon={Users} label="التخصصات الطبية" />
-                              <SettingsMenuItem to="/settings/users" icon={User} label="المستخدمون" />
+                              <SettingsMenuItem to="/settings/users" icon={User} label="المستخدمين" />
                               <SettingsMenuItem to="/settings/attendance/shift-definitions" icon={BarChartBig} label="الورديات" />
                               <SettingsMenuItem to="/settings/roles" icon={ShieldCheck} label="الأدوار" />
                               <SettingsMenuItem to="/settings/lab-to-lab" icon={Link2} label="المعامل المتعاقدة" />

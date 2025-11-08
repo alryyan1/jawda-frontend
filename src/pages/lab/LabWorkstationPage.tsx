@@ -425,6 +425,34 @@ const LabWorkstationPage: React.FC = () => {
     };
   }, []); // Empty dependency array - only run once on mount to prevent multiple subscriptions
 
+  // Real-time event subscription for lab queue item updates
+  useEffect(() => {
+    const handleLabQueueItemUpdated = (data: { queueItem: PatientLabQueueItem }) => {
+      console.log('Lab queue item updated event received:', data);
+      
+      const updatedItem = data.queueItem;
+      
+      // Update queueItems state
+      setQueueItems(prevItems => 
+        prevItems.map(item => 
+          item.visit_id === updatedItem.visit_id ? updatedItem : item
+        )
+      );
+      
+      // If this is the currently selected item, update it
+      if (selectedQueueItemRef.current?.visit_id === updatedItem.visit_id) {
+        setSelectedQueueItem(updatedItem);
+      }
+    };
+
+    realtimeService.onLabQueueItemUpdated(handleLabQueueItemUpdated);
+
+    // Cleanup subscription on component unmount
+    return () => {
+      realtimeService.offLabQueueItemUpdated(handleLabQueueItemUpdated);
+    };
+  }, []); // Empty dependency array - only run once on mount
+
   // Fetch global current open clinic shift
   const { data: currentClinicShiftGlobal, isLoading: isLoadingGlobalShift } =
     useQuery<Shift | null, Error>({

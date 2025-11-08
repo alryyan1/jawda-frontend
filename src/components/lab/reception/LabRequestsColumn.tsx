@@ -534,8 +534,8 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                             </span>
                             {/* Approval status inline badge for company patients */}
                             {visit?.patient?.company && (
-                              <Badge variant={request.approve ? "success" : "destructive"} className="ml-1">
-                                {request.approve ? " " : "يحتاج موافقة"}
+                              <Badge variant={!request.approve ? "success" : "destructive"} className="ml-1">
+                                {!request.approve  ? " " : "يحتاج موافقة"}
                               </Badge>
                             )}
                             {/* Comment icon if comment exists */}

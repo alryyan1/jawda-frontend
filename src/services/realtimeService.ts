@@ -3,6 +3,7 @@ import { io, Socket } from 'socket.io-client';
 import type { Patient } from '@/types/patients';
 import type { DoctorVisit, LabRequest } from '@/types/visits';
 import type { SysmexResultEventData } from '@/types/sysmex';
+import type { PatientLabQueueItem } from '@/types/labWorkflow';
 
 interface BankakImageEventData {
   id: number;
@@ -209,6 +210,27 @@ class RealtimeService {
         delete (callback as any).__eventHandler;
       } else {
         this.socket.off('bankak-image-inserted');
+      }
+    }
+  }
+
+  // Subscribe to lab-queue-item-updated events
+  public onLabQueueItemUpdated(callback: (data: { queueItem: PatientLabQueueItem }) => void): void {
+    if (this.socket) {
+      this.socket.on('lab-queue-item-updated', (data: { queueItem: PatientLabQueueItem }) => {
+        console.log('Received lab-queue-item-updated event:', data);
+        callback(data);
+      });
+    }
+  }
+
+  // Unsubscribe from lab-queue-item-updated events
+  public offLabQueueItemUpdated(callback?: (data: { queueItem: PatientLabQueueItem }) => void): void {
+    if (this.socket) {
+      if (callback) {
+        this.socket.off('lab-queue-item-updated', callback);
+      } else {
+        this.socket.off('lab-queue-item-updated');
       }
     }
   }

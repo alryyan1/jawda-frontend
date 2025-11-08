@@ -115,6 +115,7 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
         
         // Block authentication only if there are empty fields
         if (empty.length > 0) {
+          setIsAuthenticating(false);
           toast.error("لا يمكن اعتماد النتائج لوجود حقول فارغة", {
             description: [
               `حقول فارغة: ${empty.length}`,
@@ -138,12 +139,14 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
       }
 
       const response = await apiClient.patch(`/patients/${patient.id}/authenticate-results`);
-      const updatedPatient = response.data.data;
-      console.log(updatedPatient, "updatedPatient");
+      const updatedQueueItem = response.data.data as PatientLabQueueItem;
+      console.log(updatedQueueItem, "updatedQueueItem from authenticate-results");
       
-      // Update the patient data immediately after authentication
-      if (onPatientUpdate) {
-        onPatientUpdate(updatedPatient);
+      // Update the queue item immediately after authentication using the response directly
+      // No need to make additional requests - the backend returns PatientLabQueueItemResource
+      // and emits a realtime event for other clients
+      if (onPatientUpdate && updatedQueueItem) {
+        onPatientUpdate(updatedQueueItem);
       }
       
       toast.success("تم اعتماد النتائج بنجاح. تم إضافة رفع الملف إلى قائمة الانتظار.");

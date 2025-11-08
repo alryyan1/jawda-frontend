@@ -1,5 +1,5 @@
 // src/components/lab/workstation/StatusAndInfoPanel.tsx
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -10,7 +10,6 @@ import type { PatientLabQueueItem } from "@/types/labWorkflow";
 import PatientDetailsLabEntry from "@/components/lab/workstation/PatientDetailsLabEntry";
 import ActionsButtonsPanel from "@/components/lab/workstation/ActionsButtonsPanel";
 import apiClient from "@/services/api";
-import { getSinglePatientLabQueueItem } from "@/services/labWorkflowService";
 
 
 interface StatusAndInfoPanelProps {
@@ -19,7 +18,7 @@ interface StatusAndInfoPanelProps {
   patientLabQueueItem: PatientLabQueueItem | null;
   patientData?: Patient | null; // Pass patient data from parent to avoid duplicate API calls
   onUploadStatusChange?: (isUploading: boolean) => void;
-  setQueueItems: (items: PatientLabQueueItem[]) => void;
+  setQueueItems: React.Dispatch<React.SetStateAction<PatientLabQueueItem[]>>;
   handlePatientSelectFromQueue: (item: PatientLabQueueItem) => void;
 }
 
@@ -31,22 +30,21 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
   visitId,
   patientLabQueueItem,
   patientData,
-  onUploadStatusChange,
   setQueueItems,
   handlePatientSelectFromQueue,
 }) => {
-  const [updatedPatient, setUpdatedPatient] = useState<PatientLabQueueItem | null>(null);
+  const [updatedQueueItem, setUpdatedQueueItem] = useState<PatientLabQueueItem | null>(null);
 
-  const handlePatientUpdate = useCallback((newPatient: PatientLabQueueItem) => {
-    setUpdatedPatient(newPatient);
-    handlePatientSelectFromQueue(newPatient);
-    console.log(newPatient, "newPatient from handlePatientUpdate");
-    setQueueItems(prevItems => 
-      prevItems.map(item => 
-        item.visit_id === newPatient.id ? newPatient : item
+  const handlePatientUpdate = useCallback((newQueueItem: PatientLabQueueItem) => {
+    setUpdatedQueueItem(newQueueItem);
+    handlePatientSelectFromQueue(newQueueItem);
+    console.log(newQueueItem, "newQueueItem from handlePatientUpdate");
+    setQueueItems((prevItems: PatientLabQueueItem[]) => 
+      prevItems.map((item: PatientLabQueueItem) => 
+        item.visit_id === newQueueItem.visit_id ? newQueueItem : item
       )
     );
-  }, []);
+  }, [handlePatientSelectFromQueue, setQueueItems]);
   // useEffect(() => {
   //     getSinglePatientLabQueueItem(visitId as number).then(data => {
   //       console.log(data, "data from getSinglePatientLabQueueItem");
@@ -65,12 +63,11 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
       return response.data;
     },
     onSuccess: (data) => {
-      const updatedPatient = data.data;
-      console.log(updatedPatient, "updatedPatient from toggleAuthenticationMutation");
-      setUpdatedPatient(updatedPatient);
+      const updatedQueueItem = data.data as PatientLabQueueItem;
+      console.log(updatedQueueItem, "updatedQueueItem from toggleAuthenticationMutation");
+      handlePatientUpdate(updatedQueueItem);
       
-      
-      toast.success(updatedPatient.result_auth ? "تم اعتماد النتائج" : "تم إلغاء اعتماد النتائج");
+      toast.success(updatedQueueItem.result_auth ? "تم اعتماد النتائج" : "تم إلغاء اعتماد النتائج");
       
       // Invalidate the shared patient query
       queryClient.invalidateQueries({
@@ -107,15 +104,16 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
   const patient = patientData || fetchedPatient;
   const resultsLocked = patient?.result_is_locked || false;
 
-  // Use updated patient data if available, otherwise use the original patient
-  const currentPatient = updatedPatient || patient;
+  // Use updated queue item if available, otherwise use the original
+  const currentQueueItem = updatedQueueItem || patientLabQueueItem;
+  
   // console.log(patientLabQueueItem,'patientLabQueueItem')
   const patientStatuses = useMemo(() => ({
-    payment: { done: patientLabQueueItem?.all_requests_paid , by: patientLabQueueItem?.all_requests_paid },
+    payment: { done: currentQueueItem?.all_requests_paid, by: currentQueueItem?.all_requests_paid ? 'paid' : null },
     collected: { time: undefined, by: undefined },
-    print: {  done: patientLabQueueItem?.is_printed, by: null },
-    authentication: { done: patientLabQueueItem?.result_auth },
-  }), [patientLabQueueItem?.result_auth, patientLabQueueItem?.is_printed]);
+    print: { done: currentQueueItem?.is_printed, by: null },
+    authentication: { done: currentQueueItem?.result_auth ?? false },
+  }), [currentQueueItem?.result_auth, currentQueueItem?.is_printed, currentQueueItem?.all_requests_paid]);
 
   const getAgeString = useCallback(  
     (p?: Patient | null): string => {
@@ -159,17 +157,17 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
   return (
     <div dir="rtl" className="h-full bg-slate-50 dark:bg-slate-800/30 overflow-y-auto">
       <div className="p-2 sm:p-3 space-y-2 sm:space-y-3">
-        {currentPatient ? (
+        {patient ? (
           <PatientDetailsLabEntry
             visitId={visitId}
-            patient={currentPatient}
-            patientName={currentPatient.name}
-            doctorName={(patientLabQueueItem as any)?.doctor_name ?? null} // doctor_name is not available in the interface
-            date={currentPatient.created_at as unknown as string}
-            phone={currentPatient.phone ?? null}
+            patient={patient}
+            patientName={patient.name}
+            doctorName={(currentQueueItem as unknown as { doctor_name?: string })?.doctor_name ?? null}
+            date={patient.created_at as unknown as string}
+            phone={patient.phone ?? null}
             paymentMethod={null}
-            registeredBy={(patientLabQueueItem as unknown as { registered_by?: string }).registered_by ?? null}
-            age={getAgeString(currentPatient)}
+            registeredBy={(currentQueueItem as unknown as { registered_by?: string })?.registered_by ?? null}
+            age={getAgeString(patient)}
             statuses={patientStatuses}
             className="mb-2"
             onAuthenticationToggle={handleAuthenticationToggle}
@@ -220,11 +218,10 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
         
         <ActionsButtonsPanel
           visitId={visitId}
-          patient={currentPatient || null}
-          patientLabQueueItem={patientLabQueueItem}
+          patient={patient || null}
+          patientLabQueueItem={currentQueueItem}
           resultsLocked={resultsLocked}
           onPatientUpdate={handlePatientUpdate}
-          onUploadStatusChange={onUploadStatusChange}
         />
       </div>
     </div>

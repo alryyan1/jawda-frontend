@@ -394,7 +394,7 @@ const AppHeaderSearch: React.FC = () => {
         renderInput={(params) => (
           <TextField
             {...params}
-            placeholder="بحث عن مريض بالاسم أو رقم الزيارة"
+            placeholder="بحث عن مريض بالاسم أو الكود "
             size="small"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}

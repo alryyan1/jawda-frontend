@@ -24,6 +24,7 @@ const ClinicFinancialSummary: React.FC<ClinicFinancialSummaryProps> = ({
   currentClinicShiftId 
 }) => {
   const { user } = useAuth();
+  
 
   // Fetch services income summary
   const { 
@@ -31,7 +32,7 @@ const ClinicFinancialSummary: React.FC<ClinicFinancialSummaryProps> = ({
     isLoading: isLoadingServicesSummary 
   } = useQuery({
     queryKey: ['userShiftIncomeSummary', currentClinicShiftId, user?.id],
-    queryFn: () => fetchCurrentUserShiftIncomeSummary(currentClinicShiftId!, user?.id!),
+    queryFn: () => fetchCurrentUserShiftIncomeSummary(currentClinicShiftId!, user?.id! ),
     enabled: !!currentClinicShiftId && !!user?.id,
   });
 

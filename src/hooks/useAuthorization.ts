@@ -40,6 +40,8 @@ export type PermissionName =
   // Reports & Settings
   | 'عرض التقارير'                 // View reports
   | 'عرض الاعدادات'                // View settings
+  | 'اضافه خدمه'                  // Add service
+  | 'اضافه فحص'                  // Add test
   ;
 /**
  * Custom hook providing utility functions for checking user roles and permissions.

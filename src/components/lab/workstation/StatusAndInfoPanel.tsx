@@ -47,15 +47,15 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
       )
     );
   }, []);
-  useEffect(() => {
-      getSinglePatientLabQueueItem(visitId as number).then(data => {
-        console.log(data, "data from getSinglePatientLabQueueItem");
-        // handlePatientUpdate(data)
-        handlePatientSelectFromQueue(data)
-        // setQueueItems(data);
-        setQueueItems((prev)=>prev.map(item=>item.visit_id === visitId ? data : item))
-      });
-  }, [visitId]);
+  // useEffect(() => {
+  //     getSinglePatientLabQueueItem(visitId as number).then(data => {
+  //       console.log(data, "data from getSinglePatientLabQueueItem");
+  //       // handlePatientUpdate(data)
+  //       handlePatientSelectFromQueue(data)
+  //       // setQueueItems(data);
+  //       setQueueItems((prev)=>prev.map(item=>item.visit_id === visitId ? data : item))
+  //     });
+  // }, [visitId]);
   const queryClient = useQueryClient();
 
   // Mutation to toggle authentication status

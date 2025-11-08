@@ -64,19 +64,19 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
       try {
         if (activeVisitId) {
           const printResponse = await apiClient.post(`/visits/${activeVisitId}/print-barcode`);
-          fetch("http://127.0.0.1:5000/", {
-            method: "POST",
-            headers: {
-              "Content-Type": "APPLICATION/JSON",
-            },
+        //   fetch("http://127.0.0.1:5000/", {
+        //     method: "POST",
+        //     headers: {
+        //       "Content-Type": "APPLICATION/JSON",
+        //     },
 
-            body: JSON.stringify(visit),
-          }).then(() => {});
-          if (printResponse.data.status) {
-            console.log('Zebra print order sent successfully');
-          } else {
-            console.error('Zebra print order failed:', printResponse.data.message);
-          }
+        //     body: JSON.stringify(visit),
+        //   }).then(() => {});
+        //   if (printResponse.data.status) {
+        //     console.log('Zebra print order sent successfully');
+        //   } else {
+        //     console.error('Zebra print order failed:', printResponse.data.message);
+        //   }
         }
       } catch (error) {
         console.error('Failed to send print order to Zebra:', error);
@@ -91,18 +91,18 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
           
           // Emit the lab-payment event
           const realtimeUrl = realtimeUrlFromConstants || 'http://localhost:4001';
-           fetch(`${realtimeUrl}/emit/lab-payment`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-internal-token': import.meta.env.VITE_SERVER_AUTH_TOKEN || 'changeme'
-            },
-            body: JSON.stringify({
-              visit: visit,
-              patient: visit.patient,
-              labRequests: labRequests
-            })
-          });
+          //  fetch(`${realtimeUrl}/emit/lab-payment`, {
+          //   method: 'POST',
+          //   headers: {
+          //     'Content-Type': 'application/json',
+          //     'x-internal-token': import.meta.env.VITE_SERVER_AUTH_TOKEN || 'changeme'
+          //   },
+          //   body: JSON.stringify({
+          //     visit: visit,
+          //     patient: visit.patient,
+          //     labRequests: labRequests
+          //   })
+          // });
           
           console.log('Lab payment event emitted successfully');
         }
@@ -115,18 +115,18 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
       try {
         if (visit && visit.patient) {
           const realtimeUrl = 'http://localhost:4002';
-           fetch(`${realtimeUrl}/emit/print-lab-receipt`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-internal-token': import.meta.env.VITE_SERVER_AUTH_TOKEN || 'changeme'
-            },
-            body: JSON.stringify({
-              visit_id: visit.id,
-              patient_id: visit.patient.id,
-              lab_request_ids: visit.lab_requests?.map(req => req.id) || []
-            })
-          });
+          //  fetch(`${realtimeUrl}/emit/print-lab-receipt`, {
+          //   method: 'POST',
+          //   headers: {
+          //     'Content-Type': 'application/json',
+          //     'x-internal-token': import.meta.env.VITE_SERVER_AUTH_TOKEN || 'changeme'
+          //   },
+          //   body: JSON.stringify({
+          //     visit_id: visit.id,
+          //     patient_id: visit.patient.id,
+          //     lab_request_ids: visit.lab_requests?.map(req => req.id) || []
+          //   })
+          // });
           
           console.log('Print lab receipt event emitted successfully');
         }
@@ -337,7 +337,7 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
         <Button
           className={`w-full bg-blue-600 text-white py-2 rounded-lg font-bold mt-2 hover:bg-blue-700 transition flex items-center justify-center ${balance === 0 && visit?.company ? "cursor-not-allowed" : !can('سداد فحص') ? "cursor-not-allowed" : ""}`}
           onClick={() => payAllMutation.mutate()}
-          disabled={!can('سداد فحص') || !visit?.patient.company &&  balance == 0}
+          disabled={!can('سداد فحص') || !visit?.patient.company &&  balance == 0 && visit?.lab_requests?.every(req => req.is_paid )}
           // disabled={payAllMutation.isPending || balance === 0}
         >
           {payAllMutation.isPending ? (

@@ -32,6 +32,8 @@ import Box from "@mui/material/Box";
 import type { MainTestStripped } from "@/types/labTests";
 import { addLabTestsToVisit } from "@/services/labRequestService";
 import { useCachedMainTestsList } from "@/hooks/useCachedData";
+import realtimeService from "@/services/realtimeService";
+import { useAuthorization } from "@/hooks/useAuthorization";
 
 interface SelectedPatientWorkspaceProps {
   selectedPatientVisit: DoctorVisit;
@@ -73,7 +75,7 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
   const [selectedTests, setSelectedTests] = useState<MainTestStripped[]>([]);
   const testSelectionAutocompleteRef = useRef<HTMLDivElement | null>(null);
   const queryClient = useQueryClient();
-
+  const {can} = useAuthorization()
   // Fetch all available tests for Autocomplete (cached)
   const { data: availableTests = [], isLoading: isLoadingTests } = useCachedMainTestsList(visit?.id || 0);
 
@@ -124,6 +126,7 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
           headers: { Accept: 'application/pdf' },
         });
         receiptType = 'services';
+        realtimeService.printServicesReceipt(visit.id, visit.patient.id);
       }
       
       const blob = new Blob([response.data], { type: 'application/pdf' });
@@ -225,7 +228,7 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
               طباعة الإيصال
             </Button>
             {!isUnifiedCashier && canAddService && (
-              <Button onClick={() => setOpenSelectionGridCommand(c => c + 1)} variant="default" size="sm">
+              <Button disabled={!can('اضافه خدمه')} onClick={() => setOpenSelectionGridCommand(c => c + 1)} variant="default" size="sm">
                 <PlusCircle className="h-4 w-4 ltr:mr-2 rtl:ml-2"/>
                 إضافة خدمات
               </Button>

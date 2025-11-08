@@ -66,7 +66,12 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
  const currentStyle = appearanceSettings[currentState];
  const lockIconColor = appearanceSettings.isLocked.iconColor;
 
-
+ const paymentStatusBadgeStyle = useMemo(() => {
+  if (allRequestsPaid === undefined) return { backgroundColor: appearanceSettings.default.badgeBackgroundColor, color: appearanceSettings.default.badgeTextColor };
+  return allRequestsPaid
+    ? { backgroundColor: '#10B981', color: '#FFFFFF' } // Hardcode Green for paid
+    : { backgroundColor: '#EF4444', color: '#FFFFFF' }; // Hardcode Red for unpaid
+}, [allRequestsPaid, appearanceSettings]);
 
   // console.log(item,'item')
 
@@ -113,7 +118,7 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
         {labIdentifier.length > 6 ? labIdentifier.substring(0, 5) + "…" : labIdentifier}
       </span>
       
-      {/* {item.test_count > 0 && (
+      {item.test_count > 0 && (
         <div
           style={{
             backgroundColor: allRequestsPaid ? '#10B981' : 'red',
@@ -123,7 +128,7 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
         >
           {item.test_count}
         </div>
-      )} */}
+      )}
     {item.result_auth != false && (
       <div className="absolute -bottom-1 -right-1 p-0.5 bg-[var(--bg-color)] rounded-full shadow-sm border border-[var(--border-color)]">
         <Shield className="h-3 w-3" style={{ color: '#10B981' }} />

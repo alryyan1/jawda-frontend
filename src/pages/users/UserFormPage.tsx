@@ -287,7 +287,7 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
               </Button>
             )}
           </CardHeader>
-          <CardContent>
+          <CardContent className="h-[calc(100vh-200px)] overflow-y-auto">
             <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ '& > *': { mb: 3 } }}>
               <Grid container spacing={2}>
                 <Grid item xs={12} md={6}>

@@ -217,7 +217,7 @@ class RealtimeService {
   public async printServicesReceipt(visitId: number, patientId?: number): Promise<{ success: boolean; message?: string; error?: string }> {
     try {
       const realtimeUrl = import.meta.env.VITE_REALTIME_URL || realtimeUrlFromConstants;
-      const response = await fetch(`${realtimeUrl}/emit/print-services-receipt`, {
+      const response = await fetch(`http://localhost:4002/emit/print-services-receipt`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -72,6 +72,9 @@ const TodaysPatientsPage: React.FC = () => {
   const [labDialogOpen, setLabDialogOpen] = useState(false);
   const [selectedVisitId, setSelectedVisitId] = useState<number | null>(null);
 
+  // Window height state for table container
+  const [windowHeight, setWindowHeight] = useState<number>(window.innerHeight);
+
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
@@ -79,6 +82,15 @@ const TodaysPatientsPage: React.FC = () => {
     }, 500);
     return () => clearTimeout(handler);
   }, [searchTerm]);
+
+  // Track window height changes
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowHeight(window.innerHeight);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -135,6 +147,24 @@ const TodaysPatientsPage: React.FC = () => {
 
   const visits = paginatedVisits?.data || [];
   const meta = paginatedVisits?.meta;
+
+  // Calculate sums for the current page
+  const totals = visits.reduce(
+    (acc, visit) => ({
+      total_services_amount: acc.total_services_amount + (visit.total_services_amount || 0),
+      total_lab_value_will_pay: acc.total_lab_value_will_pay + (visit.total_lab_value_will_pay || 0),
+      total_services_paid: acc.total_services_paid + (visit.total_services_paid || 0),
+      lab_paid: acc.lab_paid + (visit.lab_paid || 0),
+      balance_due: acc.balance_due + (visit.balance_due || 0),
+    }),
+    {
+      total_services_amount: 0,
+      total_lab_value_will_pay: 0,
+      total_services_paid: 0,
+      lab_paid: 0,
+      balance_due: 0,
+    }
+  );
 
   return (
     <Box sx={{  py: 2 }}>
@@ -270,12 +300,13 @@ const TodaysPatientsPage: React.FC = () => {
         </Card>
       ) : (
         <Card>
-          <TableContainer component={Paper} sx={{ maxHeight: 'calc(100vh - 250px)' }}>
+          <TableContainer component={Paper} sx={{ maxHeight: `${windowHeight - 200}px` }}>
             <Table stickyHeader size="small">
               <TableHead>
                 <TableRow>
                   <TableCell align="center" sx={{ width: 80 }}>الكود </TableCell>
                   <TableCell align="center">اسم المريض</TableCell>
+                  <TableCell align="center">اسم المستخدم</TableCell>
                   <TableCell align="center">الشركه</TableCell>
                   <TableCell align="center">الطبيب</TableCell>
                   <TableCell align="center">التاريخ</TableCell>
@@ -293,6 +324,7 @@ const TodaysPatientsPage: React.FC = () => {
                     <TableCell align="center">
                       {visit.patient.name}
                     </TableCell>
+                    <TableCell align="center">{visit.patient.user?.username || visit.patient.user?.name || '-'}</TableCell>
                     <TableCell align="center">{visit.patient.company?.name || '-'}</TableCell>
                     <TableCell align="center">{visit.doctor_name || visit.doctor_shift_details?.doctor_name || '-'}</TableCell>
                     <TableCell align="center">{dayjs(visit.created_at).format("YYYY/MM/DD hh:mm A")}</TableCell>
@@ -331,10 +363,21 @@ const TodaysPatientsPage: React.FC = () => {
                     <TableCell align="center" sx={{ color: 'green' }}>{formatNumber(visit.total_services_paid)}</TableCell>
                     <TableCell align="center" sx={{ color: 'green' }}>{formatNumber(visit.lab_paid)}</TableCell>
                     <TableCell align="center" sx={{ fontWeight: 700, color: visit.balance_due > 0 ? 'error.main' : 'success.main' }}>{formatNumber(visit.balance_due)}</TableCell>
-                 
-                   
                   </TableRow>
                 ))}
+                {/* Sum Row */}
+                {visits.length > 0 && (
+                  <TableRow sx={{ backgroundColor: 'action.selected', '& td': { fontWeight: 700, borderTop: 2, borderColor: 'divider' } }}>
+                    <TableCell align="center" colSpan={6}>
+                      <Typography variant="body2" fontWeight={700}>المجموع</Typography>
+                    </TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700 }}>{formatNumber(totals.total_services_amount)}</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700 }}>{formatNumber(totals.total_lab_value_will_pay)}</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: 'green' }}>{formatNumber(totals.total_services_paid)}</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: 'green' }}>{formatNumber(totals.lab_paid)}</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: totals.balance_due > 0 ? 'error.main' : 'success.main' }}>{formatNumber(totals.balance_due)}</TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </TableContainer>

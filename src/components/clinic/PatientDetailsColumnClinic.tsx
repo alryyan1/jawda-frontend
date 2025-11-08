@@ -407,7 +407,7 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
             <Button
               className="w-full bg-green-600 hover:bg-green-700 text-white"
               onClick={() => payAllMutation.mutate()}
-              disabled={payAllMutation.isPending}
+              disabled={payAllMutation.isPending || !can('سداد خدمه')}
             >
               {payAllMutation.isPending ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />

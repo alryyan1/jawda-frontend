@@ -164,7 +164,8 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
   const generateAndShowPdf = useCallback(async (
     title: string,
     fileNamePrefix: string,
-    fetchFunction: () => Promise<Blob>
+    fetchFunction: () => Promise<Blob>,
+    shouldMarkPrinted: boolean = false
   ) => {
     setIsGeneratingPdf(true);
     setPdfUrl(null);
@@ -178,6 +179,25 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
       setPdfUrl(objectUrl);
       const patientNameSanitized = patient?.name.replace(/[^A-Za-z0-9-_]/g, '_') || 'patient';
       setPdfFileName(`${fileNamePrefix}_${visitId}_${patientNameSanitized}_${new Date().toISOString().slice(0,10)}.pdf`);
+      
+      // Mark report as printed if requested and update queue item via realtime
+      if (shouldMarkPrinted && visitId) {
+        try {
+          const response = await apiClient.post(`/visits/${visitId}/lab-report/mark-printed`);
+          const updatedQueueItem = response.data.data as PatientLabQueueItem;
+          console.log(updatedQueueItem, "updatedQueueItem from mark-printed");
+          
+          // Update the queue item immediately using the response directly
+          // No need to make additional requests - the backend returns PatientLabQueueItemResource
+          // and emits a realtime event for other clients
+          if (onPatientUpdate && updatedQueueItem) {
+            onPatientUpdate(updatedQueueItem);
+          }
+        } catch (markError) {
+          console.error('Error marking report as printed:', markError);
+          // Don't show error toast for this - it's not critical
+        }
+      }
     } catch (error: unknown) {
       console.error(`Error generating ${title}:`, error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
@@ -188,7 +208,7 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
     } finally {
       setIsGeneratingPdf(false);
     }
-  }, [patient, visitId]);
+  }, [patient, visitId, onPatientUpdate]);
 
  
 
@@ -198,7 +218,8 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
     generateAndShowPdf(
       "معاينة تقرير المختبر",
       'LabReport',
-      () => apiClient.get(`/visits/${visitId}/lab-report/pdf`, { responseType: 'blob' }).then(res => res.data)
+      () => apiClient.get(`/visits/${visitId}/lab-report/pdf`, { responseType: 'blob' }).then(res => res.data),
+      true // Mark as printed after viewing
     );
   }, [visitId, generateAndShowPdf]);
 

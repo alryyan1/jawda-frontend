@@ -22,6 +22,7 @@ import {
 
 // Types
 import type { MainTestStripped } from "@/types/labTests";
+import { useAuthorization } from "@/hooks/useAuthorization";
 
 interface AutocompleteVisitOption {
   visit_id: number;
@@ -85,7 +86,7 @@ const LabReceptionHeader: React.FC<LabReceptionHeaderProps> = ({
   onOpenOffers,
 }) => {
   // Translations removed; using direct Arabic strings
-
+  const { can } = useAuthorization();
   return (
     <Box
       component="header"
@@ -257,7 +258,7 @@ const LabReceptionHeader: React.FC<LabReceptionHeaderProps> = ({
           />
           <Button
             onClick={onAddTests}
-            disabled={selectedTests.length === 0 || !activeVisitId || addTestsMutation.isPending}
+            disabled={selectedTests.length === 0 || !activeVisitId || addTestsMutation.isPending || !can('اضافه فحص')}
             variant="contained"
             startIcon={
               addTestsMutation.isPending ? (

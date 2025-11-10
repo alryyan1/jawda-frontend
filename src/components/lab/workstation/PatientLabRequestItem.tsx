@@ -105,7 +105,7 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
         "active:scale-95 transform-gpu",
         isLastResultPending &&   "animate-heartbeat",
         isLastResultPending  && "animate__animated animate__heartBeat animate__infinite animate__slow",
-        isReadyForPrint  && "animate__animated animate__bounce animate__infinite animate__slow",
+        isReadyForPrint && item.result_auth == false && "animate__animated animate__bounce animate__infinite animate__slow",
         isClicking && "opacity-50 cursor-not-allowed", // Visual feedback when clicking
 
         // Use CSS variables for dynamic styling
@@ -131,7 +131,7 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
       )}
     {item.result_auth != false && (
       <div className="absolute -bottom-1 -right-1 p-0.5 bg-[var(--bg-color)] rounded-full shadow-sm border border-[var(--border-color)]">
-        <Shield className="h-3 w-3" style={{ color: '#10B981' }} />
+        <Shield className="h-3 w-3" style={{ color: 'black' }} />
       </div>
     )}
       {item.is_result_locked && (

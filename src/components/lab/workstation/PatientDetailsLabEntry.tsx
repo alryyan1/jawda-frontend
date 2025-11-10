@@ -38,6 +38,7 @@ interface StatusItem {
 }
 
 export interface PatientDetailsLabEntryProps {
+  selectedQueueItem: PatientLabQueueItem | null;
   visitId: number | null;
   patient?: Patient | null;
   patientName?: string | null;
@@ -63,14 +64,16 @@ export interface PatientDetailsLabEntryProps {
   value?: React.ReactNode;
   icon?: React.ElementType;
   isLast?: boolean;
-}> = ({ label, value, icon: Icon, isLast = false }) => (
+  dense?: boolean;
+}> = ({ label, value, icon: Icon, isLast = false, dense = false }) => (
   <>
     <Box 
       sx={{ 
         display: 'flex', 
         alignItems: 'center', 
-        py: 1, 
-        px: 0.5,
+        py: dense ? 0.25 : 1, 
+        m: dense ? 0 : 1,
+        px: dense ? 0 : 0.5,
         borderRadius: 1,
         '&:hover': {
           backgroundColor: 'action.hover',
@@ -80,16 +83,16 @@ export interface PatientDetailsLabEntryProps {
     >
       <Avatar 
         sx={{ 
-          width: 24, 
-          height: 24, 
-          bgcolor: 'primary.light', 
-          mr: 1.5,
+          width: dense ? 18 : 24, 
+          height: dense ? 18 : 24, 
+          // bgcolor: 'primary.light', 
+          mr: dense ? 0.75 : 1.5,
           '& .MuiAvatar-root': {
             fontSize: '0.75rem'
           }
         }}
       >
-        {Icon ? <Icon size={12} color="white" /> : null}
+        {Icon ? <Icon size={dense ? 10 : 12} color="white" /> : null}
       </Avatar>
       <Box sx={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Typography 
@@ -97,7 +100,8 @@ export interface PatientDetailsLabEntryProps {
           sx={{ 
             fontWeight: 900,
             flex: '0 0 auto',
-            mr: 2
+            mr: dense ? 0.5 : 1,
+            // fontSize: dense ? '0.75rem' : '0.875/rem'
           }}
         >
           {label}
@@ -105,14 +109,14 @@ export interface PatientDetailsLabEntryProps {
         <Typography 
           variant="body2" 
           sx={{ 
-            fontWeight: 600,
             color: 'text.primary',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
             flex: '0 0 auto',
             minWidth: 0,
-            maxWidth: '60%'
+            maxWidth: '60%',
+            // fontSize: dense ? '0.75rem' : '0.875rem'
           }}
           title={typeof value === 'string' ? value : undefined}
         >
@@ -125,7 +129,7 @@ export interface PatientDetailsLabEntryProps {
         sx={{ 
           height: '1px', 
           bgcolor: 'divider', 
-          mx: 2,
+          mx: dense ? 0.5 : 2,
           opacity: 0.5
         }} 
       />
@@ -200,6 +204,7 @@ const StatusIcon: React.FC<{
 };
 
 const PatientDetailsLabEntry: React.FC<PatientDetailsLabEntryProps> = ({
+  selectedQueueItem,
   visitId,
   patientName,
   doctorName,
@@ -235,13 +240,13 @@ const PatientDetailsLabEntry: React.FC<PatientDetailsLabEntryProps> = ({
     }
   };
 
-  // console.log(patient,'patient');
+  console.log(patientLabQueueItem,'patientLabQueueItem in PatientDetailsLabEntry');
   return (
     <MuiCard 
       dir="rtl" 
       className={cn("shadow-lg hover:shadow-xl transition-shadow duration-300", className)}
       sx={{
-        borderRadius: 3,
+        borderRadius: 2,
         overflow: 'hidden',
         border: '1px solid',
         borderColor: 'divider',
@@ -257,7 +262,7 @@ const PatientDetailsLabEntry: React.FC<PatientDetailsLabEntryProps> = ({
           background: '#92b7ff',
           color: 'white',
           py: 1,
-          px: 2,
+          px: 1,
           position: 'relative',
           '&::after': {
             content: '""',
@@ -270,7 +275,7 @@ const PatientDetailsLabEntry: React.FC<PatientDetailsLabEntryProps> = ({
           }
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 0.5 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 0.1 }}>
           <div className="flex items-center gap-2">
             <div className="text-black! text-4xl font-bold">
               {visitId}
@@ -290,25 +295,23 @@ const PatientDetailsLabEntry: React.FC<PatientDetailsLabEntryProps> = ({
     
       </Box>
 
-      <MuiCardContent sx={{ p: 2 }}>
+      <MuiCardContent sx={{ p: 1 }}>
         {/* Patient Information Section */}
         <Paper 
           elevation={0} 
-          sx={{ 
-            p: 1.5, 
-            mb: 2, 
-            borderColor: 'divider',
-            bgcolor: 'background.default'
-          }}
+        
         >
    
 
-          <Box>
-            <ItemRow label="الطبيب" value={doctorName || "-"} icon={User} />
-            <ItemRow label="التاريخ" value={`${dayjs(date).format('DD/MM/YYYY')} ${dayjs(date).format('hh:mm A')}` || "-"} icon={CalendarDays} />
-            <ItemRow label="الهاتف" value={phone || "-"} icon={Phone} />
-            <ItemRow label="سُجل بواسطة" value={registeredBy || "-"} icon={UserCircle2} />
-            <ItemRow label="العمر" value={age ?? "-"} icon={Clock} isLast={true} />
+          <Box sx={{ mb: 0 }}>
+            <ItemRow dense label="الطبيب" value={doctorName || "-"} icon={User} />
+            <ItemRow dense label="التاريخ" value={date ? `${dayjs(date).format('DD/MM/YYYY')} ${dayjs(date).format('hh:mm A')}` : "-"} icon={CalendarDays} />
+            <ItemRow dense label="الهاتف" value={phone || "-"} icon={Phone} />
+            <ItemRow dense label="سُجل بواسطة" value={registeredBy || "-"} icon={UserCircle2} />
+            <ItemRow dense label="العمر" value={age ?? "-"} icon={Clock}  />
+            <ItemRow dense label=" العينه" value={selectedQueueItem?.sample_collection_time ?? "-"} icon={Clock} />
+            <ItemRow dense label=" التحقيق" icon={Shield} value={dayjs(selectedQueueItem?.auth_date).format('DD/MM/YYYY hh:mm A') ?? "-"}  />
+            <ItemRow dense label=" الطباعة" icon={Printer} value={selectedQueueItem?.print_date ? dayjs(selectedQueueItem?.print_date).format('DD/MM/YYYY hh:mm A')  : "-"}  isLast={true} />
           </Box>
           
       {/* Patient Company Details */}
@@ -332,6 +335,7 @@ const PatientDetailsLabEntry: React.FC<PatientDetailsLabEntryProps> = ({
           
           <Box 
             sx={{ 
+              m:1,
               display: 'flex', 
               gap: 1, 
               justifyContent: 'space-between',

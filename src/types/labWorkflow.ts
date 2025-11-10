@@ -18,6 +18,7 @@ export interface PatientLabQueueItem { // For the leftmost list
   is_last_result_pending?: boolean; 
   has_cbc?: boolean;
   is_ready_for_print?: boolean;
+  sample_collection_time?: string | null;
   company?: unknown; // Company information from backend
   auth_date?: string | null;
   result_auth?: boolean | null;

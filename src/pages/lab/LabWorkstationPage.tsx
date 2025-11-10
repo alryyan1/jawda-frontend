@@ -1287,6 +1287,7 @@ const LabWorkstationPage: React.FC = () => {
         >
           {selectedQueueItem ? (
             <StatusAndInfoPanel
+            selectedQueueItem={selectedQueueItem}
             handlePatientSelectFromQueue={handlePatientSelectFromQueue}
             setQueueItems={setQueueItems}
               key={`info-panel-${selectedQueueItem.visit_id}-${

@@ -13,6 +13,7 @@ import apiClient from "@/services/api";
 
 
 interface StatusAndInfoPanelProps {
+  selectedQueueItem: PatientLabQueueItem | null;
   patientId: number | null;
   visitId: number | null;
   patientLabQueueItem: PatientLabQueueItem | null;
@@ -26,6 +27,7 @@ interface StatusAndInfoPanelProps {
 
 
 const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
+  selectedQueueItem,
   patientId,
   visitId,
   patientLabQueueItem,
@@ -110,7 +112,7 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
   // console.log(patientLabQueueItem,'patientLabQueueItem')
   const patientStatuses = useMemo(() => ({
     payment: { done: currentQueueItem?.all_requests_paid, by: currentQueueItem?.all_requests_paid ? 'paid' : null },
-    collected: { time: undefined, by: undefined },
+    collected: { done:selectedQueueItem?.sample_collection_time !== null, by: undefined },
     print: { done: currentQueueItem?.is_printed, by: null },
     authentication: { done: currentQueueItem?.result_auth ?? false },
   }), [currentQueueItem?.result_auth, currentQueueItem?.is_printed, currentQueueItem?.all_requests_paid]);
@@ -156,9 +158,10 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
 
   return (
     <div dir="rtl" className="h-full bg-slate-50 dark:bg-slate-800/30 overflow-y-auto">
-      <div className="p-2 sm:p-3 space-y-2 sm:space-y-3">
+      <div className="p-1 sm:p-1 space-y-1 sm:space-y-3">
         {patient ? (
           <PatientDetailsLabEntry
+            selectedQueueItem={selectedQueueItem}
             visitId={visitId}
             patient={patient}
             patientName={patient.name}
@@ -169,21 +172,21 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
             registeredBy={(currentQueueItem as unknown as { registered_by?: string })?.registered_by ?? null}
             age={getAgeString(patient)}
             statuses={patientStatuses}
-            className="mb-2"
+            className="mb-1"
             onAuthenticationToggle={handleAuthenticationToggle}
           />
         ) : isLoadingPatient ? (
-          <div className="mb-2">
+          <div className="mb-1">
             <div className="bg-card border border-border rounded-xl overflow-hidden">
-              <div className="bg-blue-200 p-3">
-                <div className="flex items-center justify-center mb-2">
+              <div className="bg-blue-200 p-1">
+                <div className="flex items-center justify-center mb-1">
                   <Skeleton className="h-8 w-24" />
                 </div>
                 <div className="flex items-center justify-center">
                   <Skeleton className="h-6 w-40" />
                 </div>
               </div>
-              <div className="p-3 space-y-3">
+              <div className="p-1 space-y-1">
                 <div className="space-y-2">
                   <div className="flex items-center gap-3">
                     <Skeleton className="h-6 w-6 rounded-full" />

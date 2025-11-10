@@ -1,10 +1,10 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 // MUI
-import { Box, Card, CardContent, CardHeader, Typography, FormControl, InputLabel, Select, MenuItem, TextField, CircularProgress, Button, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip } from '@mui/material';
+import { Box, Card, CardContent, CardHeader, Typography, FormControl, InputLabel, Select, MenuItem, TextField, CircularProgress, Button, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, Autocomplete } from '@mui/material';
 import { PictureAsPdf as PdfIcon, Delete as DeleteIcon } from '@mui/icons-material';
 
 import { formatNumber } from '@/lib/utils';
@@ -16,6 +16,8 @@ import type { Shift } from '@/types/shifts';
 import UserMoneySummary from '@/components/UserMoneySummary';
 import apiClient from '@/services/api';
 import { webUrl } from '@/pages/constants';
+import { getUsers } from '@/services/userService';
+import type { User } from '@/types/users';
 
 // Cost interface
 interface Cost {
@@ -47,6 +49,27 @@ const CashReconciliationPage: React.FC = () => {
     queryKey: ['allShiftsForReconciliation'],
     queryFn: () => getShiftsList({per_page: 0}),
   });
+
+  // Fetch all users for the autocomplete
+  const { data: usersData, isLoading: isLoadingUsers } = useQuery({
+    queryKey: ['allUsersForReconciliation'],
+    queryFn: () => getUsers(1, { per_page: 0 }),
+  });
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const hasInitializedUser = useRef(false);
+
+  const usersList = useMemo(() => usersData?.data || [], [usersData?.data]);
+
+  // Set default selected user to current logged in user
+  useEffect(() => {
+    if (user?.id && usersList.length > 0 && !hasInitializedUser.current) {
+      const currentUserInList = usersList.find(u => u.id === user.id);
+      if (currentUserInList) {
+        setSelectedUser(currentUserInList);
+        hasInitializedUser.current = true;
+      }
+    }
+  }, [user, usersList]);
 
   // Fetch denominations for the selected shift
   const { data: fetchedDenominations, isLoading: isLoadingDenominations } = useQuery<Denomination[], Error>({
@@ -176,13 +199,14 @@ const CashReconciliationPage: React.FC = () => {
       return;
     }
 
-    try {
-      // Get the current shift name
-      const currentShift = shiftsList?.find(s => s.id.toString() === selectedShiftId);
-     
+    if (!selectedUser) {
+      toast.error('يرجى اختيار مستخدم أولاً');
+      return;
+    }
 
+    try {
       // Create URL for web route that opens PDF in new tab
-      const pdfUrl = `${webUrl}reports/cash-reconciliation/pdf?shift_id=${selectedShiftId}&user_id=${user?.id}`;
+      const pdfUrl = `${webUrl}reports/cash-reconciliation/pdf?shift_id=${selectedShiftId}&user_id=${selectedUser.id}`;
 
       // Open PDF in new tab
       window.open(pdfUrl, '_blank');
@@ -260,6 +284,31 @@ const CashReconciliationPage: React.FC = () => {
             </Select>
           </FormControl>
         </Box>
+
+        {/* User Autocomplete */}
+        <Box sx={{ maxWidth: 360, flex: 1, minWidth: 200 }}>
+          <Autocomplete
+            options={usersList}
+            getOptionLabel={(option) => option.name || ''}
+            value={selectedUser}
+            onChange={(_, newValue) => setSelectedUser(newValue)}
+            loading={isLoadingUsers}
+            size="small"
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="اختر المستخدم"
+                placeholder="ابحث عن مستخدم..."
+              />
+            )}
+            renderOption={(props, option) => (
+              <Box component="li" {...props} key={option.id}>
+                {option.name}
+              </Box>
+            )}
+            isOptionEqualToValue={(option, value) => option.id === value?.id}
+          />
+        </Box>
         
         {/* PDF Generation Button */}
         <Button
@@ -267,7 +316,7 @@ const CashReconciliationPage: React.FC = () => {
           color="primary"
           startIcon={<PdfIcon />}
           onClick={handleGeneratePdf}
-          disabled={!selectedShiftId || isLoading}
+          disabled={!selectedShiftId || !selectedUser || isLoading}
           sx={{ minWidth: 160 }}
         >
           إنشاء تقرير PDF

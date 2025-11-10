@@ -50,7 +50,12 @@ const DiscountCommentDialog: React.FC<DiscountCommentDialogProps> = ({
     onOpenChange(false);
   };
   
-  const handleDialogClose = () => {
+  const handleDialogClose = (_event: unknown, reason?: 'backdropClick' | 'escapeKeyDown') => {
+    // Prevent closing when clicking outside the dialog
+    if (reason === 'backdropClick') {
+      return;
+    }
+    
     if (currentComment !== commentText) {
       if(window.confirm('هل تريد تجاهل التغييرات؟')) {
         onOpenChange(false);
@@ -94,13 +99,13 @@ const DiscountCommentDialog: React.FC<DiscountCommentDialogProps> = ({
         </Box>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button 
+        {/* <Button 
           variant="outlined" 
           onClick={handleDialogClose}
           disabled={isSaving}
         >
           إلغاء
-        </Button>
+        </Button> */}
         <Button 
           variant="contained"
           onClick={handleSave} 

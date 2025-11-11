@@ -65,9 +65,10 @@ import {
   ClipboardEditIcon,
   Eye,
   EyeOff,
+  RefreshCw,
 } from "lucide-react";
 import { Toaster } from "sonner";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Tooltip,
   TooltipContent,
@@ -90,6 +91,7 @@ import queueWorkerService from "@/services/queueWorkerService";
 import type { QueueWorkerStatus } from "@/services/queueWorkerService";
 import { toast } from "sonner";
 import { useAuthorization } from "@/hooks/useAuthorization";
+import { clearAllCaches } from "@/hooks/useCachedData";
 
 // Define navigation items structure
 export interface NavItem {
@@ -493,6 +495,7 @@ const AppLayout: React.FC = () => {
   const handleQueueWorkerToggle = () => {
     queueWorkerToggleMutation.mutate();
   };
+
   // Monitor realtime connection status
   useEffect(() => {
     const checkConnection = () => {
@@ -598,6 +601,18 @@ const AppLayout: React.FC = () => {
   // Inner component that uses the PDF preview visibility hook
   const AppLayoutContent: React.FC = () => {
     const { isVisible: isPdfPreviewVisible, toggle: togglePdfPreviewVisibility } = usePdfPreviewVisibility();
+    const queryClient = useQueryClient();
+    
+    // Clear all caches handler
+    const handleClearAllCaches = () => {
+      clearAllCaches();
+      // Invalidate all cached queries to force refetch
+      queryClient.invalidateQueries({ queryKey: ['cachedDoctorsList'] });
+      queryClient.invalidateQueries({ queryKey: ['cachedCompaniesList'] });
+      queryClient.invalidateQueries({ queryKey: ['cachedCompanyRelationsList'] });
+      queryClient.invalidateQueries({ queryKey: ['cachedMainTestsList'] });
+      toast.success('تم مسح جميع البيانات المخزنة مؤقتاً بنجاح');
+    };
     
     return (
       <TooltipProvider delayDuration={100}>
@@ -759,6 +774,24 @@ const AppLayout: React.FC = () => {
                           : 'معالج الإشعارات متوقف'
                         }
                       </p>
+                    </TooltipContent>
+                  </Tooltip>
+
+                  {/* Clear Cache Button */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleClearAllCaches}
+                        className="h-8 w-8"
+                        aria-label="clear-cache"
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>مسح البيانات المخزنة مؤقتاً</p>
                     </TooltipContent>
                   </Tooltip>
 

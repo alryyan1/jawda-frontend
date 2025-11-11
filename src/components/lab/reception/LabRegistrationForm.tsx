@@ -96,6 +96,11 @@ const LabRegistrationForm: React.FC<LabRegistrationFormProps> = React.memo(({
   // Only watch company_id for conditional rendering, not for every keystroke
   const companyId = watch("company_id");
   const isCompanySelected = useMemo(() => !!companyId && companyId !== "", [companyId]);
+  
+  // Clear company_relation_id when company changes
+  useEffect(() => {
+    setValue("company_relation_id", null);
+  }, [companyId, setValue]);
 
   // Use a state to track the name value for debounced search
   const [nameValue, setNameValue] = useState<string>("");
@@ -147,6 +152,13 @@ const LabRegistrationForm: React.FC<LabRegistrationFormProps> = React.memo(({
     enabled: !!companyId,
   });
   const { data: companyRelations = [] } = useCachedCompanyRelationsList();
+  
+  // Filter company relations based on selected company
+  const filteredCompanyRelations = useMemo(() => {
+    if (!companyId || companyId === "") return [];
+    const companyIdNum = Number(companyId);
+    return companyRelations.filter((rel) => rel.company_id === companyIdNum);
+  }, [companyRelations, companyId]);
 
   const registrationMutation = useMutation({
     mutationFn: (data: LabRegistrationFormValues) => {
@@ -300,17 +312,47 @@ const LabRegistrationForm: React.FC<LabRegistrationFormProps> = React.memo(({
                     </Select>
                   </FormControl>
                 )} />
-                <Controller name="company_id" control={control} render={({ field }) => (
-                  <FormControl fullWidth size="small">
-                    <InputLabel id="company-label">الشركة</InputLabel>
-                    <Select labelId="company-label" value={field.value || ""} label="الشركة" onChange={(e) => field.onChange(e.target.value)} disabled={currentIsLoading}>
-                      <MenuItem value=" ">لا يوجد</MenuItem>
-                      {companies.map((company) => (
-                        <MenuItem key={company.id} value={company.id.toString()}>{company.name}</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                )} />
+                <Controller name="company_id" control={control} render={({ field, fieldState }) => {
+                  const selectedCompany = companies.find(
+                    (company) => company.id.toString() === field.value
+                  ) || null;
+                  
+                  return (
+                    <FormControl fullWidth size="small">
+                      <Autocomplete
+                        value={selectedCompany}
+                        options={companies}
+                        loading={isLoadingCompanies}
+                        getOptionLabel={(option) => option.name}
+                        isOptionEqualToValue={(option, value) => option.id === value.id}
+                        onChange={(_, newValue) => {
+                          field.onChange(newValue ? newValue.id.toString() : null);
+                        }}
+                        size="small"
+                        disabled={currentIsLoading}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            placeholder="اختر الشركة"
+                            variant="outlined"
+                            error={!!fieldState.error}
+                            helperText={fieldState.error?.message}
+                            InputProps={{
+                              ...params.InputProps,
+                              endAdornment: (
+                                <>
+                                  {isLoadingCompanies ? <CircularProgress size={16} /> : null}
+                                  {params.InputProps.endAdornment}
+                                </>
+                              ),
+                            }}
+                          />
+                        )}
+                        PaperComponent={(props) => <Paper {...props} />}
+                      />
+                    </FormControl>
+                  );
+                }} />
               </Box>
               <Box>
                 <Typography variant="body2" sx={{ mb: 1 }}>العمر</Typography>
@@ -341,27 +383,74 @@ const LabRegistrationForm: React.FC<LabRegistrationFormProps> = React.memo(({
                     )} />
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <FormControl fullWidth size="small">
-                        <InputLabel id="subcompany-label">الشركة الفرعية</InputLabel>
-                        <Select labelId="subcompany-label" value={form.getValues('subcompany_id') || ''} label="الشركة الفرعية" onChange={(e) => setValue('subcompany_id', String(e.target.value))} disabled={currentIsLoading}>
-                          <MenuItem value=" ">لا يوجد</MenuItem>
-                          {subcompanies.map((sub) => (
-                            <MenuItem key={sub.id} value={String(sub.id)}>{sub.name}</MenuItem>
-                          ))}
-                        </Select>
+                        <Controller
+                          name="subcompany_id"
+                          control={control}
+                          render={({ field, fieldState }) => {
+                            const selectedSubcompany = subcompanies.find(
+                              (sub) => sub.id.toString() === field.value
+                            ) || null;
+                            
+                            return (
+                              <Autocomplete
+                                value={selectedSubcompany}
+                                options={subcompanies}
+                                getOptionLabel={(option) => option.name}
+                                isOptionEqualToValue={(option, value) => option.id === value.id}
+                                onChange={(_, newValue) => {
+                                  field.onChange(newValue ? newValue.id.toString() : null);
+                                }}
+                                size="small"
+                                disabled={currentIsLoading}
+                                renderInput={(params) => (
+                                  <TextField
+                                    {...params}
+                                    placeholder="اختر الشركة الفرعية"
+                                    variant="outlined"
+                                    error={!!fieldState.error}
+                                    helperText={fieldState.error?.message}
+                                  />
+                                )}
+                                PaperComponent={(props) => <Paper {...props} />}
+                              />
+                            );
+                          }}
+                        />
                       </FormControl>
-                      <Button onClick={() => setShowSubcompanyDialog(true)} disabled={currentIsLoading} size="small">إضافة</Button>
+                      {/* <Button onClick={() => setShowSubcompanyDialog(true)} disabled={currentIsLoading} size="small">إضافة</Button> */}
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <FormControl fullWidth size="small">
-                        <InputLabel id="relation-label">العلاقة</InputLabel>
-                        <Select labelId="relation-label" value={form.getValues('company_relation_id') || ''} label="العلاقة" onChange={(e) => setValue('company_relation_id', String(e.target.value))} disabled={currentIsLoading}>
-                          <MenuItem value=" ">لا يوجد</MenuItem>
-                          {companyRelations.map((rel) => (
-                            <MenuItem key={rel.id} value={String(rel.id)}>{rel.name}</MenuItem>
-                          ))}
-                        </Select>
+                        <Controller
+                          name="company_relation_id"
+                          control={control}
+                          render={({ field, fieldState }) => (
+                            <>
+                              <InputLabel id="relation-label">العلاقة</InputLabel>
+                              <Select 
+                                labelId="relation-label" 
+                                value={field.value || " "} 
+                                label="العلاقة" 
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  field.onChange(value === " " ? null : value);
+                                }} 
+                                disabled={currentIsLoading}
+                                error={!!fieldState.error}
+                              >
+                                <MenuItem value=" ">لا يوجد</MenuItem>
+                                {filteredCompanyRelations.map((rel) => (
+                                  <MenuItem key={rel.id} value={String(rel.id)}>{rel.name}</MenuItem>
+                                ))}
+                              </Select>
+                              {fieldState.error && (
+                                <FormHelperText error>{fieldState.error.message}</FormHelperText>
+                              )}
+                            </>
+                          )}
+                        />
                       </FormControl>
-                      <Button onClick={() => setShowRelationDialog(true)} disabled={currentIsLoading} size="small">إضافة</Button>
+                      {/* <Button onClick={() => setShowRelationDialog(true)} disabled={currentIsLoading} size="small">إضافة</Button> */}
                     </Box>
                   </Box>
                 </Card>

@@ -7,7 +7,8 @@ import {
   useQueryClient,
   keepPreviousData,
 } from "@tanstack/react-query";
-import { getCompanies, deleteCompany, activateAllCompanies } from "@/services/companyService";
+import { getCompanies, deleteCompany, activateAllCompanies, getSubcompaniesList, getCompanyRelationsList, updateCompanyRelation, updateSubcompany, createSubcompany, createCompanyRelation } from "@/services/companyService";
+import type { Subcompany, CompanyRelation } from "@/types/companies";
 import {
   Button,
   Card,
@@ -33,6 +34,8 @@ import {
   DialogActions,
   TextField,
   Stack,
+  Collapse,
+  InputAdornment,
 } from "@mui/material";
 import {
   MoreHorizontal,
@@ -41,16 +44,647 @@ import {
   FileText,
   Building,
   Download,
+  Plus,
+  ChevronDown,
+  ChevronUp,
+  Search,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthorization } from "@/hooks/useAuthorization"; // For permission checks
 import { webUrl } from "../constants";
+
+// Company Relations List Component
+function CompanyRelationsListContent({ companyId }: { companyId?: number }) {
+  const queryClient = useQueryClient();
+  const [editingValues, setEditingValues] = useState<Record<number, { service_endurance?: string; lab_endurance?: string }>>({});
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newRelation, setNewRelation] = useState({ name: '', lab_endurance: '0', service_endurance: '0' });
+
+  const { data: companyRelations, isLoading, error } = useQuery<CompanyRelation[], Error>({
+    queryKey: ['companyRelationsList'],
+    queryFn: () => getCompanyRelationsList(),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ relationId, data }: { relationId: number; data: { service_endurance?: number; lab_endurance?: number } }) =>
+      updateCompanyRelation(relationId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['companyRelationsList'] });
+      toast.success('تم تحديث العلاقة بنجاح');
+    },
+    onError: (err: { response?: { data?: { message?: string } }; message?: string }) => {
+      toast.error('فشل التحديث', { description: err.response?.data?.message || err.message });
+    },
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (data: { name: string; lab_endurance: number; service_endurance: number; company_id: number }) =>
+      createCompanyRelation(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['companyRelationsList'] });
+      toast.success('تم إضافة العلاقة بنجاح');
+      setNewRelation({ name: '', lab_endurance: '0', service_endurance: '0' });
+      setShowAddForm(false);
+    },
+    onError: (err: { response?: { data?: { message?: string } }; message?: string }) => {
+      toast.error('فشل الإضافة', { description: err.response?.data?.message || err.message });
+    },
+  });
+
+  const handleAddRelation = () => {
+    if (!companyId) {
+      toast.error('يرجى اختيار شركة');
+      return;
+    }
+    if (!newRelation.name.trim()) {
+      toast.error('الاسم مطلوب');
+      return;
+    }
+    createMutation.mutate({
+      name: newRelation.name,
+      lab_endurance: parseFloat(newRelation.lab_endurance || '0') || 0,
+      service_endurance: parseFloat(newRelation.service_endurance || '0') || 0,
+      company_id: companyId,
+    });
+  };
+
+  const handleValueChange = (relationId: number, field: 'service_endurance' | 'lab_endurance', value: string) => {
+    setEditingValues(prev => ({
+      ...prev,
+      [relationId]: {
+        ...prev[relationId],
+        [field]: value,
+      },
+    }));
+  };
+
+  const handleSave = (relation: CompanyRelation) => {
+    const edited = editingValues[relation.id];
+    if (!edited) return;
+
+    const updates: { service_endurance?: number; lab_endurance?: number } = {};
+    if (edited.service_endurance !== undefined) {
+      const numValue = parseFloat(edited.service_endurance);
+      if (!isNaN(numValue)) {
+        updates.service_endurance = numValue;
+      }
+    }
+    if (edited.lab_endurance !== undefined) {
+      const numValue = parseFloat(edited.lab_endurance);
+      if (!isNaN(numValue)) {
+        updates.lab_endurance = numValue;
+      }
+    }
+
+    if (Object.keys(updates).length > 0) {
+      updateMutation.mutate({ relationId: relation.id, data: updates });
+      setEditingValues(prev => {
+        const newValues = { ...prev };
+        delete newValues[relation.id];
+        return newValues;
+      });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Typography variant="body2" color="error" sx={{ py: 2 }}>
+        حدث خطأ أثناء جلب العلاقات: {error.message}
+      </Typography>
+    );
+  }
+
+  // Filter relations by company if companyId is provided
+  const filteredRelations = companyId 
+    ? companyRelations?.filter(relation => relation.company_id === companyId) || []
+    : companyRelations || [];
+
+  if (filteredRelations.length === 0 && !showAddForm) {
+    return (
+      <Box>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={showAddForm ? <ChevronUp /> : <ChevronDown />}
+            onClick={() => setShowAddForm(!showAddForm)}
+            disabled={!companyId}
+          >
+            {showAddForm ? 'إخفاء النموذج' : 'إضافة علاقة جديدة'}
+          </Button>
+        </Box>
+        <Collapse in={showAddForm}>
+          <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
+            <Stack spacing={2}>
+              <TextField
+                label="اسم العلاقة"
+                value={newRelation.name}
+                onChange={(e) => setNewRelation(prev => ({ ...prev, name: e.target.value }))}
+                size="small"
+                fullWidth
+              />
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <TextField
+                  label="تحمل المختبر"
+                  type="number"
+                  value={newRelation.lab_endurance}
+                  onChange={(e) => setNewRelation(prev => ({ ...prev, lab_endurance: e.target.value }))}
+                  size="small"
+                  inputProps={{ step: '0.01', min: 0 }}
+                  sx={{ flex: 1 }}
+                />
+                <TextField
+                  label="تحمل الخدمات"
+                  type="number"
+                  value={newRelation.service_endurance}
+                  onChange={(e) => setNewRelation(prev => ({ ...prev, service_endurance: e.target.value }))}
+                  size="small"
+                  inputProps={{ step: '0.01', min: 0 }}
+                  sx={{ flex: 1 }}
+                />
+              </Box>
+              <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                <Button onClick={() => { setShowAddForm(false); setNewRelation({ name: '', lab_endurance: '0', service_endurance: '0' }); }} size="small">
+                  إلغاء
+                </Button>
+                <Button
+                  variant="contained"
+                  onClick={handleAddRelation}
+                  disabled={createMutation.isPending}
+                  size="small"
+                  startIcon={createMutation.isPending ? <CircularProgress size={16} /> : <Plus />}
+                >
+                  إضافة
+                </Button>
+              </Box>
+            </Stack>
+          </Paper>
+        </Collapse>
+        <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
+          لا توجد علاقات متاحة {companyId ? 'لهذه الشركة' : ''}
+        </Typography>
+      </Box>
+    );
+  }
+
+  return (
+    <Box>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={showAddForm ? <ChevronUp /> : <ChevronDown />}
+          onClick={() => setShowAddForm(!showAddForm)}
+          disabled={!companyId}
+        >
+          {showAddForm ? 'إخفاء النموذج' : 'إضافة علاقة جديدة'}
+        </Button>
+      </Box>
+      <Collapse in={showAddForm}>
+        <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
+          <Stack spacing={2}>
+            <TextField
+              label="اسم العلاقة"
+              value={newRelation.name}
+              onChange={(e) => setNewRelation(prev => ({ ...prev, name: e.target.value }))}
+              size="small"
+              fullWidth
+            />
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField
+                label="تحمل المختبر"
+                type="number"
+                value={newRelation.lab_endurance}
+                onChange={(e) => setNewRelation(prev => ({ ...prev, lab_endurance: e.target.value }))}
+                size="small"
+                inputProps={{ step: '0.01', min: 0 }}
+                sx={{ flex: 1 }}
+              />
+              <TextField
+                label="تحمل الخدمات"
+                type="number"
+                value={newRelation.service_endurance}
+                onChange={(e) => setNewRelation(prev => ({ ...prev, service_endurance: e.target.value }))}
+                size="small"
+                inputProps={{ step: '0.01', min: 0 }}
+                sx={{ flex: 1 }}
+              />
+            </Box>
+            <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+              <Button onClick={() => { setShowAddForm(false); setNewRelation({ name: '', lab_endurance: '0', service_endurance: '0' }); }} size="small">
+                إلغاء
+              </Button>
+              <Button
+                variant="contained"
+                onClick={handleAddRelation}
+                disabled={createMutation.isPending}
+                size="small"
+                startIcon={createMutation.isPending ? <CircularProgress size={16} /> : <Plus />}
+              >
+                إضافة
+              </Button>
+            </Box>
+          </Stack>
+        </Paper>
+      </Collapse>
+      <TableContainer component={Paper} variant="outlined" sx={{ mt: 2 }}>
+        <Table size="small">
+          <TableHead>
+            <TableRow>
+              <TableCell sx={{ textAlign: 'center', fontWeight: 'bold' }}>المعرف</TableCell>
+              <TableCell sx={{ textAlign: 'center', fontWeight: 'bold' }}>الاسم</TableCell>
+              <TableCell sx={{ textAlign: 'center', fontWeight: 'bold' }}>تحمل الخدمات</TableCell>
+              <TableCell sx={{ textAlign: 'center', fontWeight: 'bold' }}>تحمل المختبر</TableCell>
+            </TableRow>
+          </TableHead>
+        <TableBody>
+          {filteredRelations.map((relation) => {
+            const edited = editingValues[relation.id];
+            const serviceEndurance = edited?.service_endurance !== undefined 
+              ? edited.service_endurance 
+              : (relation.service_endurance != null ? relation.service_endurance.toString() : '0');
+            const labEndurance = edited?.lab_endurance !== undefined 
+              ? edited.lab_endurance 
+              : (relation.lab_endurance != null ? relation.lab_endurance.toString() : '0');
+
+            return (
+              <TableRow key={relation.id}>
+                <TableCell sx={{ textAlign: 'center' }}>{relation.id}</TableCell>
+                <TableCell sx={{ textAlign: 'center' }}>{relation.name}</TableCell>
+                <TableCell sx={{ textAlign: 'center' }}>
+                  <TextField
+                    type="number"
+                    value={serviceEndurance}
+                    onChange={(e) => handleValueChange(relation.id, 'service_endurance', e.target.value)}
+                    onBlur={() => handleSave(relation)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSave(relation);
+                        (e.target as HTMLInputElement).blur();
+                      }
+                    }}
+                    size="small"
+                    inputProps={{ min: 0, step: 0.01, style: { textAlign: 'center', width: '80px' } }}
+                    sx={{ '& .MuiInputBase-root': { width: '100px' } }}
+                  />
+                </TableCell>
+                <TableCell sx={{ textAlign: 'center' }}>
+                  <TextField
+                    type="number"
+                    value={labEndurance}
+                    onChange={(e) => handleValueChange(relation.id, 'lab_endurance', e.target.value)}
+                    onBlur={() => handleSave(relation)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSave(relation);
+                        (e.target as HTMLInputElement).blur();
+                      }
+                    }}
+                    size="small"
+                    inputProps={{ min: 0, step: 0.01, style: { textAlign: 'center', width: '80px' } }}
+                    sx={{ '& .MuiInputBase-root': { width: '100px' } }}
+                  />
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </TableContainer>
+    </Box>
+  );
+}
+
+// Subcompanies List Component
+function SubcompaniesListContent({ companyId }: { companyId?: number }) {
+  const queryClient = useQueryClient();
+  const [editingValues, setEditingValues] = useState<Record<number, { service_endurance?: string; lab_endurance?: string }>>({});
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newSubcompany, setNewSubcompany] = useState({ name: '', lab_endurance: '0', service_endurance: '0' });
+
+  const { data: subcompanies, isLoading, error } = useQuery<Subcompany[], Error>({
+    queryKey: ['subcompaniesList', companyId],
+    queryFn: () => companyId ? getSubcompaniesList(companyId) : Promise.resolve([]),
+    enabled: !!companyId,
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ subcompanyId, data }: { subcompanyId: number; data: { service_endurance?: number; lab_endurance?: number } }) => {
+      if (!companyId) throw new Error('Company ID is required');
+      return updateSubcompany(companyId, subcompanyId, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['subcompaniesList', companyId] });
+      toast.success('تم تحديث الجهة بنجاح');
+    },
+    onError: (err: { response?: { data?: { message?: string } }; message?: string }) => {
+      toast.error('فشل التحديث', { description: err.response?.data?.message || err.message });
+    },
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (data: { name: string; lab_endurance: number; service_endurance: number; company_id: number }) =>
+      createSubcompany(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['subcompaniesList', companyId] });
+      toast.success('تم إضافة الجهة بنجاح');
+      setNewSubcompany({ name: '', lab_endurance: '0', service_endurance: '0' });
+      setShowAddForm(false);
+    },
+    onError: (err: { response?: { data?: { message?: string } }; message?: string }) => {
+      toast.error('فشل الإضافة', { description: err.response?.data?.message || err.message });
+    },
+  });
+
+  const handleAddSubcompany = () => {
+    if (!companyId) {
+      toast.error('يرجى اختيار شركة');
+      return;
+    }
+    if (!newSubcompany.name.trim()) {
+      toast.error('الاسم مطلوب');
+      return;
+    }
+    createMutation.mutate({
+      name: newSubcompany.name,
+      lab_endurance: parseFloat(newSubcompany.lab_endurance || '0') || 0,
+      service_endurance: parseFloat(newSubcompany.service_endurance || '0') || 0,
+      company_id: companyId,
+    });
+  };
+
+  const handleValueChange = (subcompanyId: number, field: 'service_endurance' | 'lab_endurance', value: string) => {
+    setEditingValues(prev => ({
+      ...prev,
+      [subcompanyId]: {
+        ...prev[subcompanyId],
+        [field]: value,
+      },
+    }));
+  };
+
+  const handleSave = (subcompany: Subcompany) => {
+    const edited = editingValues[subcompany.id];
+    if (!edited) return;
+
+    const updates: { service_endurance?: number; lab_endurance?: number } = {};
+    if (edited.service_endurance !== undefined) {
+      const numValue = parseFloat(edited.service_endurance);
+      if (!isNaN(numValue)) {
+        updates.service_endurance = numValue;
+      }
+    }
+    if (edited.lab_endurance !== undefined) {
+      const numValue = parseFloat(edited.lab_endurance);
+      if (!isNaN(numValue)) {
+        updates.lab_endurance = numValue;
+      }
+    }
+
+    if (Object.keys(updates).length > 0) {
+      updateMutation.mutate({ subcompanyId: subcompany.id, data: updates });
+      setEditingValues(prev => {
+        const newValues = { ...prev };
+        delete newValues[subcompany.id];
+        return newValues;
+      });
+    }
+  };
+
+  if (!companyId) {
+    return (
+      <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
+        يرجى اختيار شركة
+      </Typography>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Typography variant="body2" color="error" sx={{ py: 2 }}>
+        حدث خطأ أثناء جلب الجهات: {error.message}
+      </Typography>
+    );
+  }
+
+  if (!subcompanies || subcompanies.length === 0) {
+    return (
+      <Box>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={showAddForm ? <ChevronUp /> : <ChevronDown />}
+            onClick={() => setShowAddForm(!showAddForm)}
+            disabled={!companyId}
+          >
+            {showAddForm ? 'إخفاء النموذج' : 'إضافة جهة جديدة'}
+          </Button>
+        </Box>
+        <Collapse in={showAddForm}>
+          <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
+            <Stack spacing={2}>
+              <TextField
+                label="اسم الجهة"
+                value={newSubcompany.name}
+                onChange={(e) => setNewSubcompany(prev => ({ ...prev, name: e.target.value }))}
+                size="small"
+                fullWidth
+              />
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <TextField
+                  label="تحمل المختبر"
+                  type="number"
+                  value={newSubcompany.lab_endurance}
+                  onChange={(e) => setNewSubcompany(prev => ({ ...prev, lab_endurance: e.target.value }))}
+                  size="small"
+                  inputProps={{ step: '0.01', min: 0 }}
+                  sx={{ flex: 1 }}
+                />
+                <TextField
+                  label="تحمل الخدمات"
+                  type="number"
+                  value={newSubcompany.service_endurance}
+                  onChange={(e) => setNewSubcompany(prev => ({ ...prev, service_endurance: e.target.value }))}
+                  size="small"
+                  inputProps={{ step: '0.01', min: 0 }}
+                  sx={{ flex: 1 }}
+                />
+              </Box>
+              <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                <Button onClick={() => { setShowAddForm(false); setNewSubcompany({ name: '', lab_endurance: '0', service_endurance: '0' }); }} size="small">
+                  إلغاء
+                </Button>
+                <Button
+                  variant="contained"
+                  onClick={handleAddSubcompany}
+                  disabled={createMutation.isPending}
+                  size="small"
+                  startIcon={createMutation.isPending ? <CircularProgress size={16} /> : <Plus />}
+                >
+                  إضافة
+                </Button>
+              </Box>
+            </Stack>
+          </Paper>
+        </Collapse>
+        <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
+          لا توجد جهات متاحة لهذه الشركة
+        </Typography>
+      </Box>
+    );
+  }
+
+  return (
+    <Box>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={showAddForm ? <ChevronUp /> : <ChevronDown />}
+          onClick={() => setShowAddForm(!showAddForm)}
+          disabled={!companyId}
+        >
+          {showAddForm ? 'إخفاء النموذج' : 'إضافة جهة جديدة'}
+        </Button>
+      </Box>
+      <Collapse in={showAddForm}>
+        <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
+          <Stack spacing={2}>
+            <TextField
+              label="اسم الجهة"
+              value={newSubcompany.name}
+              onChange={(e) => setNewSubcompany(prev => ({ ...prev, name: e.target.value }))}
+              size="small"
+              fullWidth
+            />
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField
+                label="تحمل المختبر"
+                type="number"
+                value={newSubcompany.lab_endurance}
+                onChange={(e) => setNewSubcompany(prev => ({ ...prev, lab_endurance: e.target.value }))}
+                size="small"
+                inputProps={{ step: '0.01', min: 0 }}
+                sx={{ flex: 1 }}
+              />
+              <TextField
+                label="تحمل الخدمات"
+                type="number"
+                value={newSubcompany.service_endurance}
+                onChange={(e) => setNewSubcompany(prev => ({ ...prev, service_endurance: e.target.value }))}
+                size="small"
+                inputProps={{ step: '0.01', min: 0 }}
+                sx={{ flex: 1 }}
+              />
+            </Box>
+            <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+              <Button onClick={() => { setShowAddForm(false); setNewSubcompany({ name: '', lab_endurance: '0', service_endurance: '0' }); }} size="small">
+                إلغاء
+              </Button>
+              <Button
+                variant="contained"
+                onClick={handleAddSubcompany}
+                disabled={createMutation.isPending}
+                size="small"
+                startIcon={createMutation.isPending ? <CircularProgress size={16} /> : <Plus />}
+              >
+                إضافة
+              </Button>
+            </Box>
+          </Stack>
+        </Paper>
+      </Collapse>
+      <TableContainer component={Paper} variant="outlined" sx={{ mt: 2 }}>
+        <Table size="small">
+          <TableHead>
+            <TableRow>
+              <TableCell sx={{ textAlign: 'center', fontWeight: 'bold' }}>المعرف</TableCell>
+              <TableCell sx={{ textAlign: 'center', fontWeight: 'bold' }}>الاسم</TableCell>
+              <TableCell sx={{ textAlign: 'center', fontWeight: 'bold' }}>تحمل الخدمات</TableCell>
+              <TableCell sx={{ textAlign: 'center', fontWeight: 'bold' }}>تحمل المختبر</TableCell>
+            </TableRow>
+          </TableHead>
+        <TableBody>
+          {subcompanies.map((subcompany) => {
+            const edited = editingValues[subcompany.id];
+            const serviceEndurance = edited?.service_endurance !== undefined 
+              ? edited.service_endurance 
+              : (subcompany.service_endurance != null ? subcompany.service_endurance.toString() : '0');
+            const labEndurance = edited?.lab_endurance !== undefined 
+              ? edited.lab_endurance 
+              : (subcompany.lab_endurance != null ? subcompany.lab_endurance.toString() : '0');
+
+            return (
+              <TableRow key={subcompany.id}>
+                <TableCell sx={{ textAlign: 'center' }}>{subcompany.id}</TableCell>
+                <TableCell sx={{ textAlign: 'center' }}>{subcompany.name}</TableCell>
+                <TableCell sx={{ textAlign: 'center' }}>
+                  <TextField
+                    type="number"
+                    value={serviceEndurance}
+                    onChange={(e) => handleValueChange(subcompany.id, 'service_endurance', e.target.value)}
+                    onBlur={() => handleSave(subcompany)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSave(subcompany);
+                        (e.target as HTMLInputElement).blur();
+                      }
+                    }}
+                    size="small"
+                    inputProps={{ min: 0, step: 0.01, style: { textAlign: 'center', width: '80px' } }}
+                    sx={{ '& .MuiInputBase-root': { width: '100px' } }}
+                  />
+                </TableCell>
+                <TableCell sx={{ textAlign: 'center' }}>
+                  <TextField
+                    type="number"
+                    value={labEndurance}
+                    onChange={(e) => handleValueChange(subcompany.id, 'lab_endurance', e.target.value)}
+                    onBlur={() => handleSave(subcompany)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSave(subcompany);
+                        (e.target as HTMLInputElement).blur();
+                      }
+                    }}
+                    size="small"
+                    inputProps={{ min: 0, step: 0.01, style: { textAlign: 'center', width: '80px' } }}
+                    sx={{ '& .MuiInputBase-root': { width: '100px' } }}
+                  />
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </TableContainer>
+    </Box>
+  );
+}
 
 export default function CompaniesListPage() {
   // i18n removed
   const queryClient = useQueryClient();
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState("");
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const { can ,user} = useAuthorization(); // Get permission checking function
     console.log(user,'user')
@@ -67,8 +701,8 @@ export default function CompaniesListPage() {
     error,
     isFetching,
   } = useQuery({
-    queryKey: ["companies", currentPage],
-    queryFn: () => getCompanies(currentPage),
+    queryKey: ["companies", currentPage, searchQuery],
+    queryFn: () => getCompanies(currentPage, searchQuery ? { search: searchQuery } : {}),
     placeholderData: keepPreviousData,
   });
 
@@ -109,6 +743,14 @@ export default function CompaniesListPage() {
   const [reclaimCompany, setReclaimCompany] = useState<{ id: number; name: string } | null>(null);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+
+  // Company relations dialog state
+  const [relationsDialogOpen, setRelationsDialogOpen] = useState(false);
+  const [relationsCompany, setRelationsCompany] = useState<{ id: number; name: string } | null>(null);
+  
+  // Subcompanies dialog state
+  const [subcompaniesDialogOpen, setSubcompaniesDialogOpen] = useState(false);
+  const [subcompaniesCompany, setSubcompaniesCompany] = useState<{ id: number; name: string } | null>(null);
   const handleRowClick = (company: { id: number; name: string }) => {
     setSelectedCompany(company);
     setRowDialogOpen(true);
@@ -153,6 +795,32 @@ export default function CompaniesListPage() {
     }
   };
 
+  const handleOpenRelationsDialog = (company: { id: number; name: string }) => {
+    setRelationsCompany(company);
+    setRelationsDialogOpen(true);
+  };
+
+  const handleCloseRelationsDialog = (event?: {}, reason?: string) => {
+    if (reason === 'backdropClick' || reason === 'escapeKeyDown') {
+      // Allow closing on backdrop click or escape key
+    }
+    setRelationsDialogOpen(false);
+    setRelationsCompany(null);
+  };
+
+  const handleOpenSubcompaniesDialog = (company: { id: number; name: string }) => {
+    setSubcompaniesCompany(company);
+    setSubcompaniesDialogOpen(true);
+  };
+
+  const handleCloseSubcompaniesDialog = (event?: {}, reason?: string) => {
+    if (reason === 'backdropClick' || reason === 'escapeKeyDown') {
+      // Allow closing on backdrop click or escape key
+    }
+    setSubcompaniesDialogOpen(false);
+    setSubcompaniesCompany(null);
+  };
+
   if (isLoading && !isFetching)
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 256 }}>
@@ -171,6 +839,11 @@ export default function CompaniesListPage() {
 
   const companies = paginatedData?.data || [];
   const meta = paginatedData?.meta;
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    setCurrentPage(1); // Reset to first page when search changes
+  };
 
   return (
     <div className="container mx-auto py-4 sm:py-6 lg:py-8">
@@ -217,6 +890,25 @@ export default function CompaniesListPage() {
           </Button>
         </div>
       </div>
+      {/* Search Field */}
+      <Box sx={{ mb: 3 }}>
+        <TextField
+          fullWidth
+          placeholder="البحث عن شركة..."
+          value={searchQuery}
+          onChange={(e) => handleSearchChange(e.target.value)}
+          size="small"
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <Search className="h-4 w-4" />
+              </InputAdornment>
+            ),
+          }}
+          sx={{ maxWidth: 400 }}
+        />
+      </Box>
+
       {isFetching && (
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
           جاري تحديث القائمة...
@@ -427,6 +1119,40 @@ export default function CompaniesListPage() {
                 تعديل الشركة
               </Button>
             )}
+            {selectedCompany && (
+              <Button
+                variant="outlined"
+                color="primary"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const company = selectedCompany;
+                  handleCloseRowDialog();
+                  // Use setTimeout to ensure the main dialog closes before opening the new one
+                  setTimeout(() => {
+                    handleOpenRelationsDialog(company);
+                  }, 100);
+                }}
+              >
+                العلاقات
+              </Button>
+            )}
+            {selectedCompany && (
+              <Button
+                variant="outlined"
+                color="primary"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const company = selectedCompany;
+                  handleCloseRowDialog();
+                  // Use setTimeout to ensure the main dialog closes before opening the new one
+                  setTimeout(() => {
+                    handleOpenSubcompaniesDialog(company);
+                  }, 100);
+                }}
+              >
+                الجهات
+              </Button>
+            )}
             {canDeleteCompany && selectedCompany && (
               <Button
                 color="error"
@@ -487,6 +1213,44 @@ export default function CompaniesListPage() {
           >
             إنشاء المطالبة
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Company Relations Dialog */}
+      <Dialog 
+        open={relationsDialogOpen} 
+        onClose={handleCloseRelationsDialog} 
+        fullWidth 
+        maxWidth="md"
+      >
+        <DialogTitle>العلاقات - {relationsCompany?.name}</DialogTitle>
+        <DialogContent onClick={(e) => e.stopPropagation()}>
+          <CompanyRelationsListContent companyId={relationsCompany?.id} />
+        </DialogContent>
+        <DialogActions onClick={(e) => e.stopPropagation()}>
+          <Button onClick={(e) => {
+            e.stopPropagation();
+            handleCloseRelationsDialog();
+          }}>إغلاق</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Subcompanies Dialog */}
+      <Dialog 
+        open={subcompaniesDialogOpen} 
+        onClose={handleCloseSubcompaniesDialog} 
+        fullWidth 
+        maxWidth="md"
+      >
+        <DialogTitle>الجهات - {subcompaniesCompany?.name}</DialogTitle>
+        <DialogContent onClick={(e) => e.stopPropagation()}>
+          <SubcompaniesListContent companyId={subcompaniesCompany?.id} />
+        </DialogContent>
+        <DialogActions onClick={(e) => e.stopPropagation()}>
+          <Button onClick={(e) => {
+            e.stopPropagation();
+            handleCloseSubcompaniesDialog();
+          }}>إغلاق</Button>
         </DialogActions>
       </Dialog>
 

@@ -373,7 +373,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
   const generateDiscountOptions = () => {
     const options: React.ReactNode[] = [];
     // Only specific discount values: 10%, 20%, 30%, 40%, 50%, 100%
-    const discountValues = [0,10, 20, 30, 40, 50, 100];
+    const discountValues = [0,10,15, 20,25, 30, 35, 40, 45, 50, 100];
     
     discountValues.forEach(value => {
       options.push(

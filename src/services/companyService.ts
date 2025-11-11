@@ -268,6 +268,16 @@ export const getCompanyRelationsList = async (): Promise<CompanyRelation[]> => {
   const response = await apiClient.get<{ data: CompanyRelation[] }>('/company-relations');
   return response.data.data;
 };
+
+export const updateCompanyRelation = async (relationId: number, data: { service_endurance?: number; lab_endurance?: number }): Promise<CompanyRelation> => {
+  const response = await apiClient.put<{ data: CompanyRelation }>(`/company-relations/${relationId}`, data);
+  return response.data.data;
+};
+
+export const updateSubcompany = async (companyId: number, subcompanyId: number, data: { service_endurance?: number; lab_endurance?: number }): Promise<Subcompany> => {
+  const response = await apiClient.put<{ data: Subcompany }>(`${API_URL}/${companyId}/subcompanies/${subcompanyId}`, data);
+  return response.data.data;
+};
 // /reports/company/{company}/test-contracts/pdf
 // --- PDF Generation ---
 export const generateCompanyMainTestContractPdf = async (

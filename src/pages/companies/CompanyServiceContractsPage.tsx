@@ -35,6 +35,10 @@ import {
   Switch,
   Checkbox,
   InputAdornment,
+  Pagination,
+  FormControl,
+  InputLabel,
+  Select,
 } from "@mui/material";
 import {
   MoreHorizontal,
@@ -65,6 +69,8 @@ import {
   getCompanyContractedServices,
   removeServiceFromCompanyContract,
 } from "@/services/companyService"; // Service functions related to contracts
+import { getAllServiceGroupsList } from "@/services/serviceGroupService";
+import type { ServiceGroup } from "@/types/services";
 
 import type { PaginatedResponse } from "@/types/common";
 import AddCompanyServiceDialog from "./AddCompanyServiceDialog";
@@ -111,38 +117,6 @@ export default function CompanyServiceContractsPage() {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
-  const handleGenerateServiceContractPdf = async () => {
-    if (!companyId) return;
-    setIsGeneratingPdf(true);
-    try {
-      const filters: CompanyContractPdfFilters = {};
-      if (searchTerm) filters.search = searchTerm;
-
-      const blob = await downloadCompanyServiceContractPdf(
-        Number(companyId),
-        filters
-      );
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `company_${companyId}_service_contracts_${new Date()
-        .toISOString()
-        .slice(0, 10)}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      a.remove();
-      toast.success("تم إنشاء ملف PDF بنجاح");
-    } catch (error: unknown) {
-      const apiError = error as ApiError;
-      toast.error("فشل في إنشاء ملف PDF", {
-        description: apiError.response?.data?.message || apiError.message,
-      });
-    } finally {
-      setIsGeneratingPdf(false);
-    }
-  };
-
   const { companyId } = useParams<{ companyId: string }>();
   const [isCopyContractDialogOpen, setIsCopyContractDialogOpen] = useState(false);
   const navigate = useNavigate();
@@ -150,6 +124,8 @@ export default function CompanyServiceContractsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
+  const [perPage, setPerPage] = useState(15);
+  const [selectedServiceGroupId, setSelectedServiceGroupId] = useState<number | ''>('');
   const [isImportAllDialogOpen, setIsImportAllDialogOpen] = useState(false);
   const [isImportPreferenceDialogOpen, setIsImportPreferenceDialogOpen] = useState(false);
   const [importAllPayloadOverrides, setImportAllPayloadOverrides] = useState<ImportAllServicesPayload | undefined>(undefined);
@@ -162,9 +138,9 @@ export default function CompanyServiceContractsPage() {
   const { control, getValues, formState: { dirtyFields } } = form;
   const { fields, replace } = useFieldArray({ control, name: "contracts" });
 
-  useEffect(() => { setCurrentPage(1); }, [debouncedSearchTerm]);
+  useEffect(() => { setCurrentPage(1); }, [debouncedSearchTerm, selectedServiceGroupId, perPage]);
 
-  const contractedServicesQueryKey = ['companyContractedServices', companyId, currentPage, debouncedSearchTerm] as const;
+  const contractedServicesQueryKey = ['companyContractedServices', companyId, currentPage, debouncedSearchTerm, selectedServiceGroupId, perPage] as const;
 
   // --- Data Fetching ---
   const { data: company, isLoading: isLoadingCompany } = useQuery<
@@ -174,6 +150,12 @@ export default function CompanyServiceContractsPage() {
     queryKey: ["company", companyId],
     queryFn: () => getCompanyById(Number(companyId)).then((res) => res.data),
     enabled: !!companyId,
+  });
+
+  // Fetch service groups for filter
+  const { data: serviceGroups = [] } = useQuery<ServiceGroup[], Error>({
+    queryKey: ['serviceGroupsList'],
+    queryFn: () => getAllServiceGroupsList(),
   });
 
   const {
@@ -186,6 +168,8 @@ export default function CompanyServiceContractsPage() {
     queryFn: () =>
       getCompanyContractedServices(Number(companyId), currentPage, {
         search: debouncedSearchTerm,
+        per_page: perPage,
+        service_group_id: selectedServiceGroupId || undefined,
       }),
     enabled: !!companyId,
     placeholderData: keepPreviousData,
@@ -311,6 +295,39 @@ export default function CompanyServiceContractsPage() {
       );
     },
   });
+
+  const handleGenerateServiceContractPdf = async () => {
+    if (!companyId) return;
+    setIsGeneratingPdf(true);
+    try {
+      const filters: CompanyContractPdfFilters = {};
+      if (searchTerm) filters.search = searchTerm;
+      if (selectedServiceGroupId) filters.service_group_id = Number(selectedServiceGroupId);
+
+      const blob = await downloadCompanyServiceContractPdf(
+        Number(companyId),
+        filters
+      );
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `company_${companyId}_service_contracts_${new Date()
+        .toISOString()
+        .slice(0, 10)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+      toast.success("تم إنشاء ملف PDF بنجاح");
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      toast.error("فشل في إنشاء ملف PDF", {
+        description: apiError.response?.data?.message || apiError.message,
+      });
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
 
   const handleContractAdded = () => {
     // The dialog already invalidates queries
@@ -441,22 +458,55 @@ export default function CompanyServiceContractsPage() {
       </Box>
 
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: 'center', gap: 2, mb: 2 }}>
-        <Box sx={{ position: 'relative', width: { xs: '100%', sm: 'auto' }, maxWidth: { sm: 320 } }}>
-          <TextField
-            type="search"
-            placeholder="البحث في الخدمات..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            size="small"
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search className="h-4 w-4" />
-                </InputAdornment>
-              ),
-            }}
-            sx={{ width: '100%' }}
-          />
+        <Box sx={{ display: 'flex', gap: 2, width: { xs: '100%', sm: 'auto' }, flexWrap: 'wrap' }}>
+          <Box sx={{ position: 'relative', width: { xs: '100%', sm: 'auto' }, maxWidth: { sm: 320 }, minWidth: { sm: 200 } }}>
+            <TextField
+              type="search"
+              placeholder="البحث في الخدمات..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              size="small"
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search className="h-4 w-4" />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{ width: '100%' }}
+            />
+          </Box>
+          <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 180 } }}>
+            <InputLabel>مجموعة الخدمات</InputLabel>
+            <Select
+              value={selectedServiceGroupId}
+              onChange={(e) => setSelectedServiceGroupId(e.target.value as number | '')}
+              label="مجموعة الخدمات"
+            >
+              <MenuItem value="">
+                <em>الكل</em>
+              </MenuItem>
+              {serviceGroups.map((group) => (
+                <MenuItem key={group.id} value={group.id}>
+                  {group.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 120 } }}>
+            <InputLabel>عدد الصفوف</InputLabel>
+            <Select
+              value={perPage}
+              onChange={(e) => setPerPage(Number(e.target.value))}
+              label="عدد الصفوف"
+            >
+              <MenuItem value={10}>10</MenuItem>
+              <MenuItem value={15}>15</MenuItem>
+              <MenuItem value={25}>25</MenuItem>
+              <MenuItem value={50}>50</MenuItem>
+              <MenuItem value={100}>100</MenuItem>
+            </Select>
+          </FormControl>
         </Box>
       </Box>
 
@@ -743,30 +793,27 @@ export default function CompanyServiceContractsPage() {
         </Card>
       )}
 
+      {/* Pagination */}
       {meta && meta.last_page > 1 && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3, gap: 1 }}>
-          <Button
-            size="small"
-            variant="outlined"
-            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-            disabled={currentPage === 1}
-          >
-            السابق
-          </Button>
-          <Typography variant="body2" sx={{ px: 2, py: 1, display: 'flex', alignItems: 'center' }}>
-            صفحة {currentPage} من {meta.last_page}
-          </Typography>
-          <Button
-            size="small"
-            variant="outlined"
-            onClick={() =>
-              setCurrentPage((prev) => Math.min(prev + 1, meta.last_page))
-            }
-            disabled={currentPage === meta.last_page}
-          >
-            التالي
-          </Button>
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+          <Pagination
+            count={meta.last_page}
+            page={currentPage}
+            onChange={(_, page) => setCurrentPage(page)}
+            color="primary"
+            showFirstButton
+            showLastButton
+            siblingCount={1}
+            boundaryCount={1}
+          />
         </Box>
+      )}
+
+      {/* Results info */}
+      {meta && (
+        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mt: 2 }}>
+          عرض {meta.from} إلى {meta.to} من أصل {meta.total} نتيجة
+        </Typography>
       )}
 
       <Dialog

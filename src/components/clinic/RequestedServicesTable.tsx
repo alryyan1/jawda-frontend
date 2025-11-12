@@ -62,6 +62,7 @@ import PdfPreviewDialog from "../common/PdfPreviewDialog";
 import { usePdfPreviewVisibility } from "@/contexts/PdfPreviewVisibilityContext";
 import realtimeService from "@/services/realtimeService";
 import { useAuth } from "@/contexts/AuthContext";
+import type { User } from "@/types/users";
 
 interface RequestedServicesTableProps {
   visitId: number;
@@ -85,12 +86,16 @@ interface ToggleDepositsButtonProps {
   requestedServiceId: number;
   updatingServiceId: number | null;
   onToggle: (serviceId: number) => void;
+  requestedService: RequestedService;
+  user: User | null;
 }
 
 const ToggleDepositsButton: React.FC<ToggleDepositsButtonProps> = ({
   requestedServiceId,
   updatingServiceId,
+  user,
   onToggle,
+  requestedService,
 }) => {
   const { data: deposits = [] } = useQuery({
     queryKey: ["depositsForRequestedService", requestedServiceId],
@@ -109,7 +114,8 @@ const ToggleDepositsButton: React.FC<ToggleDepositsButtonProps> = ({
     : "لا توجد دفعات";
 
   const buttonColor = allAreBank ? "primary" : "default";
-
+console.log('user', user);
+console.log('requestedService.user_deposited_id', requestedService.user_deposited_id);
   return (
     <Tooltip title={tooltipTitle}>
       <IconButton
@@ -123,13 +129,14 @@ const ToggleDepositsButton: React.FC<ToggleDepositsButtonProps> = ({
       >
         {isUpdating ? (
           <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
+        ) : requestedService.user_deposited == user?.id ? (
           <Checkbox
+            disabled={requestedService.user_deposited != user?.id}
             checked={allAreBank}
             size="small"
             sx={{ p: 0 }}
           />
-        )}
+        ) : null}
       </IconButton>
     </Tooltip>
   );
@@ -643,7 +650,9 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                               >
                                 {calculateItemBalance(rs) <= 0.01 ? (
                                      <ToggleDepositsButton 
+                                     user={user}
                                      requestedServiceId={rs.id}
+                                     requestedService={rs}
                                      updatingServiceId={updatingServiceId}
                                      onToggle={(serviceId) => {
                                        setAllDepositsBankMutation.mutate(serviceId);

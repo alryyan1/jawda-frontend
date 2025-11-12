@@ -22,6 +22,7 @@ export interface RequestedService {
   price: number;
   amount_paid: number;
   endurance: number;
+  user_deposited?: number | null;
   is_paid: boolean;
   discount: number;
   discount_per: number;

@@ -296,6 +296,17 @@ const AppHeaderSearch: React.FC = () => {
     fetchActiveDoctorShifts();
   }, [isClinicRoute]);
 
+  // Auto-focus the input when component mounts or route changes to clinic
+  useEffect(() => {
+    if (isClinicRoute && inputRef.current) {
+      // Small delay to ensure the component is fully rendered
+      const timer = setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isClinicRoute]);
+
   useEffect(() => {
     let active = true;
     const term = inputValue.trim();

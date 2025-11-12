@@ -13,6 +13,7 @@ import { realtimeUrlFromConstants } from "@/pages/constants";
 import LabReportPdfPreviewDialog from "@/components/common/LabReportPdfPreviewDialog";
 import { hasPatientResultUrl } from "@/services/firebaseStorageService";
 import { useAuthorization } from "@/hooks/useAuthorization";
+import EditPatientInfoDialog from "@/components/clinic/EditPatientInfoDialog";
 
 interface PatientDetailsColumnV1Props {
   activeVisitId: number | null;
@@ -38,6 +39,7 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
 }, ref) => {
   const queryClient = useQueryClient();
   const [isPatientInfoDialogOpen, setIsPatientInfoDialogOpen] = useState(false);
+  const [isEditPatientInfoDialogOpen, setIsEditPatientInfoDialogOpen] = useState(false);
   const [isSmsDialogOpen, setIsSmsDialogOpen] = useState(false);
   const [smsMessage, setSmsMessage] = useState("");
   const [isSendingSms, setIsSendingSms] = useState(false);
@@ -205,7 +207,7 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
 
   // Placeholder data for demonstration
   const patientName = visit?.patient?.name 
-  const doctorName = visit?.doctor?.name 
+  const doctorName = visit?.patient.doctor?.name 
   const phone = visit?.patient?.phone 
   const date = visit?.created_at ? visit.created_at.slice(0, 10) : "";
   const serial = visit?.id?.toString() 
@@ -233,7 +235,7 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setIsPatientInfoDialogOpen(true)}
+            onClick={() => setIsEditPatientInfoDialogOpen(true)}
             className="w-full flex items-center justify-center gap-2"
           >
             <Edit className="h-4 w-4" />
@@ -469,6 +471,22 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
         title={pdfPreviewTitle}
         fileName={pdfFileName}
       />
+      {/* Edit Patient Info Dialog */}
+      {visit && (
+        <EditPatientInfoDialog
+          isOpen={isEditPatientInfoDialogOpen}
+          onOpenChange={setIsEditPatientInfoDialogOpen}
+          patientId={visit.patient.id}
+          visit={visit}
+          onPatientInfoUpdated={() => {
+            // Invalidate queries to refresh patient data
+            queryClient.invalidateQueries({ queryKey: ["activeVisitForLabRequests", activeVisitId] });
+            queryClient.invalidateQueries({ queryKey: ["doctorVisit", activeVisitId] });
+            queryClient.invalidateQueries({ queryKey: ["patientDetailsForInfoPanel", visit.patient.id] });
+            toast.success("تم تحديث بيانات المريض بنجاح");
+          }}
+        />
+      )}
     </div>
       </div>
       

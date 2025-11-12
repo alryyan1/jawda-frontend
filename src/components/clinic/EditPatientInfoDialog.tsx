@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import {
@@ -22,13 +23,17 @@ import {
   IconButton,
   Grid,
   Divider,
+  Autocomplete,
 } from '@mui/material';
 import { Add as PlusCircle } from '@mui/icons-material';
 
 import type { Patient, PatientFormData } from '@/types/patients';
 import type { Subcompany, CompanyRelation } from '@/types/companies';
+import type { DoctorStripped } from '@/types/doctors';
+import type { DoctorVisit } from '@/types/visits';
 import { getPatientById, updatePatient } from '@/services/patientService';
 import { getSubcompaniesList, getCompanyRelationsList } from '@/services/companyService';
+import { getDoctorsList } from '@/services/doctorService';
 import AddSubcompanyDialog from './AddSubcompanyDialog';
 import AddCompanyRelationDialog from './AddCompanyRelationDialog';
 
@@ -45,6 +50,7 @@ interface EditPatientInfoDialogProps {
   onOpenChange: (open: boolean) => void;
   patientId: number;
   onPatientInfoUpdated: (updatedPatient: Patient) => void;
+  visit?: DoctorVisit | null;
 }
 
 interface EditPatientFormValues {
@@ -58,12 +64,15 @@ interface EditPatientFormValues {
   guarantor?: string | null;
   subcompany_id?: string | null;
   company_relation_id?: string | null;
+  doctor_id?: number | null;
 }
 
 const EditPatientInfoDialog: React.FC<EditPatientInfoDialogProps> = ({
-  isOpen, onOpenChange, patientId, onPatientInfoUpdated
+  isOpen, onOpenChange, patientId, onPatientInfoUpdated, visit
 }) => {
   // Translation hook removed since we're not using translations
+  const location = useLocation();
+  const isLabReceptionRoute = location.pathname.startsWith('/lab-reception');
   const queryClient = useQueryClient();
   const [showSubcompanyDialog, setShowSubcompanyDialog] = useState(false);
   const [showRelationDialog, setShowRelationDialog] = useState(false);
@@ -88,6 +97,7 @@ const EditPatientInfoDialog: React.FC<EditPatientInfoDialogProps> = ({
       guarantor: '',
       subcompany_id: '',
       company_relation_id: '',
+      doctor_id: null,
     },
   });
   const { control, handleSubmit, reset, setValue, formState: { errors } } = form;
@@ -106,6 +116,13 @@ const EditPatientInfoDialog: React.FC<EditPatientInfoDialogProps> = ({
     enabled: isOpen && !!currentCompanyId, // Only if company patient
   });
 
+  // Fetch doctors list (only when on lab-reception route)
+  const { data: doctorsList = [], isLoading: isLoadingDoctors } = useQuery<DoctorStripped[], Error>({
+    queryKey: ['doctorsListForEditPatient'],
+    queryFn: () => getDoctorsList({ active: true }),
+    enabled: isOpen && isLabReceptionRoute,
+  });
+
   useEffect(() => {
     if (isOpen && patientData) {
       reset({
@@ -119,11 +136,12 @@ const EditPatientInfoDialog: React.FC<EditPatientInfoDialogProps> = ({
         guarantor: patientData.guarantor || '',
         subcompany_id: patientData.subcompany_id ? String(patientData.subcompany_id) : '',
         company_relation_id: patientData.company_relation_id ? String(patientData.company_relation_id) : '',
+        doctor_id: visit?.patient?.doctor?.id || patientData.doctor?.id || null,
       });
     } else if (!isOpen) {
       reset();
     }
-  }, [isOpen, patientData, reset]);
+  }, [isOpen, patientData, visit, reset]);
 
   const updateMutation = useMutation<Patient, ApiError, Partial<PatientFormData>>({
     mutationFn: (data: Partial<PatientFormData>) => updatePatient(patientId, data),
@@ -172,6 +190,11 @@ const EditPatientInfoDialog: React.FC<EditPatientInfoDialogProps> = ({
       payload.guarantor = data.guarantor || undefined;
       payload.subcompany_id = data.subcompany_id || undefined;
       payload.company_relation_id = data.company_relation_id || undefined;
+    }
+    
+    // Include doctor_id only when on lab-reception route
+    if (isLabReceptionRoute) {
+      payload.doctor_id = data.doctor_id || undefined;
     }
     
     updateMutation.mutate(payload);
@@ -340,6 +363,49 @@ const EditPatientInfoDialog: React.FC<EditPatientInfoDialogProps> = ({
                 />
               </Grid>
             </Grid>
+
+            {/* Doctor Selection (only on lab-reception route) */}
+            {isLabReceptionRoute && (
+              <Box sx={{ mt: 3 }}>
+                <Controller
+                  name="doctor_id"
+                  control={control}
+                  render={({ field, fieldState: { error } }) => (
+                    <Autocomplete
+                      options={doctorsList}
+                      getOptionLabel={(option) => option.name || ''}
+                      isOptionEqualToValue={(option, value) => option.id === value.id}
+                      loading={isLoadingDoctors}
+                      value={doctorsList.find(d => d.id === field.value) || null}
+                      onChange={(_e, newValue) => {
+                        field.onChange(newValue?.id || null);
+                      }}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="الطبيب"
+                          fullWidth
+                          margin="normal"
+                          error={!!error}
+                          helperText={error?.message}
+                          InputProps={{
+                            ...params.InputProps,
+                            endAdornment: (
+                              <>
+                                {isLoadingDoctors ? <CircularProgress size={20} /> : null}
+                                {params.InputProps.endAdornment}
+                              </>
+                            ),
+                          }}
+                        />
+                      )}
+                      noOptionsText="لا توجد أطباء متاحة"
+                      loadingText="جاري التحميل..."
+                    />
+                  )}
+                />
+              </Box>
+            )}
 
             {/* Insurance Info (only if company_id exists on patientData) */}
             {isCompanyPatient && currentCompanyId && (

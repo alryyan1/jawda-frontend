@@ -672,6 +672,7 @@ const PatientInfoDialog: React.FC<PatientInfoDialogProps> = ({
           isOpen={isEditPatientDialogOpen}
           onOpenChange={setIsEditPatientDialogOpen}
           patientId={visit?.patient.id}
+          visit={visit || null}
           onPatientInfoUpdated={handlePatientInfoUpdated}
         />
       )}

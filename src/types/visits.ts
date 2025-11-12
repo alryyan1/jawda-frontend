@@ -136,9 +136,10 @@ export interface DoctorVisit {
   id: number;
   patient_id: number;
   patient: Patient; // Full patient object, or PatientStripped if that's enough for most views
-
+  auth_date: string | null;
   doctor_id: number;
   doctor?: DoctorStripped; // Or full Doctor object
+  result_auth: boolean | null;
 
 
   user_id: number; // User who created the visit entry (e.g., receptionist)
@@ -186,6 +187,7 @@ export interface DoctorVisit {
   total_lab_paid?: number;
   total_lab_balance?: number;
   requested_services_count?: number; // Count of services for this visit
+
 }
 
 // --- For UI Lists (e.g., TodaysPatientsPage) ---

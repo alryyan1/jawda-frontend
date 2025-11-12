@@ -567,13 +567,13 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
                         </Select>
                         {errors.subcompany_id && <FormHelperText>{errors.subcompany_id}</FormHelperText>}
                       </FormControl>
-                      <IconButton
+                      {/* <IconButton
                         onClick={() => setShowSubcompanyDialog(true)}
                         disabled={isSubmitting}
                         size="small"
                       >
                         <AddIcon />
-                      </IconButton>
+                      </IconButton> */}
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <FormControl fullWidth error={!!errors.company_relation_id}>
@@ -586,21 +586,23 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
                           size="small"
                         >
                           <MenuItem value="">لا يوجد</MenuItem>
-                          {companyRelations.map(relation => (
-                            <MenuItem key={relation.id} value={String(relation.id)}>
-                              {relation.name}
-                            </MenuItem>
-                          ))}
+                          {companyRelations
+                            .filter(relation => formData.company_id && relation.company_id === Number(formData.company_id))
+                            .map(relation => (
+                              <MenuItem key={relation.id} value={String(relation.id)}>
+                                {relation.name}
+                              </MenuItem>
+                            ))}
                         </Select>
                         {errors.company_relation_id && <FormHelperText>{errors.company_relation_id}</FormHelperText>}
                       </FormControl>
-                      <IconButton
+                      {/* <IconButton
                         onClick={() => setShowRelationDialog(true)}
                         disabled={isSubmitting}
                         size="small"
                       >
                         <AddIcon />
-                      </IconButton>
+                      </IconButton> */}
                     </Box>
                   </Box>
                 </Card>

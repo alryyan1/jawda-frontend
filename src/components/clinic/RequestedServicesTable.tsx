@@ -9,6 +9,7 @@ import {
   Button,
   Card,
   CardContent,
+  Checkbox,
   Dialog,
   DialogActions,
   DialogContent,
@@ -123,7 +124,11 @@ const ToggleDepositsButton: React.FC<ToggleDepositsButtonProps> = ({
         {isUpdating ? (
           <Loader2 className="h-4 w-4 animate-spin" />
         ) : (
-          "بنكك"
+          <Checkbox
+            checked={allAreBank}
+            size="small"
+            sx={{ p: 0 }}
+          />
         )}
       </IconButton>
     </Tooltip>
@@ -538,7 +543,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                   <TableHead>
                     <TableRow>
                       <TableCell className="text-xl!" align="center">
-                        اسم الخدمة
+                        اسم 
                       </TableCell>
                       <TableCell
                         className="text-xl!    "
@@ -597,7 +602,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                               }
                             }}
                           >
-                            <TableCell className="text-xl!" align="center">
+                            <TableCell  className="text-xl! " align="center">
                               {rs.service?.name || "خدمة غير معروفة"}
                             </TableCell>
                             <TableCell className="text-xl!" align="center">
@@ -637,44 +642,31 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                                 gap={0.5}
                               >
                                 {calculateItemBalance(rs) <= 0.01 ? (
-                                  <CheckCircle
-                                    className="h-5 w-5 text-green-600"
-                                    aria-label="مدفوع بالكامل"
-                                  />
+                                     <ToggleDepositsButton 
+                                     requestedServiceId={rs.id}
+                                     updatingServiceId={updatingServiceId}
+                                     onToggle={(serviceId) => {
+                                       setAllDepositsBankMutation.mutate(serviceId);
+                                     }}
+                                   />
                                 ) : (
-                                  <>
-                                    <Button
+                                  <Tooltip title="دفع سريع (نقدي)">
+                                    <IconButton
                                       size="small"
-                                      variant="outlined"
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        setPayingService(rs);
+                                        handleQuickPayment(rs);
                                       }}
-                                      disabled={!currentClinicShiftId || !can('سداد خدمه')}
-                                      startIcon={
-                                        <DollarSign className="h-3 w-3" />
-                                      }
+                                      disabled={!currentClinicShiftId || quickPayingServiceId === rs.id || !can('سداد خدمه')}
+                                      color="primary"
                                     >
-                                      دفع
-                                    </Button>
-                                    <Tooltip title="دفع سريع (نقدي)">
-                                      <IconButton
-                                        size="small"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleQuickPayment(rs);
-                                        }}
-                                        disabled={!currentClinicShiftId || quickPayingServiceId === rs.id || !can('سداد خدمه')}
-                                        color="primary"
-                                      >
-                                        {quickPayingServiceId === rs.id ? (
-                                          <Loader2 className="h-4 w-4 animate-spin" />
-                                        ) : (
-                                          <Zap className="h-4 w-4" />
-                                        )}
-                                      </IconButton>
-                                    </Tooltip>
-                                  </>
+                                      {quickPayingServiceId === rs.id ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                      ) : (
+                                        <Zap className="h-4 w-4" />
+                                      )}
+                                    </IconButton>
+                                  </Tooltip>
                                 )}
                                 <Tooltip title="طباعة إيصال الخدمة">
                                   <IconButton
@@ -702,13 +694,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                                     )}
                                   </IconButton>
                                 </Tooltip>
-                                <ToggleDepositsButton 
-                                  requestedServiceId={rs.id}
-                                  updatingServiceId={updatingServiceId}
-                                  onToggle={(serviceId) => {
-                                    setAllDepositsBankMutation.mutate(serviceId);
-                                  }}
-                                />
+                             
                               </Box>
                             </TableCell>
                           </TableRow>
@@ -902,6 +888,19 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                   
                   المدفوعات
                 </Button>
+                {rowOptionsService && calculateItemBalance(rowOptionsService) > 0.01 && (
+                  <Button
+                    variant="outlined"
+                    onClick={() => {
+                      setIsRowOptionsDialogOpen(false);
+                      setPayingService(rowOptionsService);
+                    }}
+                    disabled={!currentClinicShiftId || !can('سداد خدمه')}
+                    startIcon={<DollarSign className="h-4 w-4" />}
+                  >
+                    دفع
+                  </Button>
+                )}
                 <Button
                   color="error"
                   variant="outlined"

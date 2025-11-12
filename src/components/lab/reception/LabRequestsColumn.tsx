@@ -82,6 +82,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
   isLoading,
   onPrintReceipt,
 }) => {
+  console.log(visit,'visit in LabRequestsColumn');
   const queryClient = useQueryClient();
   const { currentClinicShift , user  } = useAuth();
   const { can } = useAuthorization();
@@ -657,7 +658,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                               size="sm"
                               className="h-8 w-8 p-0 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50"
                               onClick={() => handleUnpayLabRequest(request.id)}
-                              disabled={unpayLabRequestMutation.isPending || visit?.patient?.result_print_date != null || !can('الغاء سداد فحص')}
+                              disabled={unpayLabRequestMutation.isPending || visit?.patient?.result_print_date != null || !can('الغاء سداد فحص') || visit?.result_auth == true}
                               title="إلغاء السداد"
                             >
                               {unpayLabRequestMutation.isPending ? (
@@ -694,7 +695,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                             size="sm"
                             className="h-8 w-8 p-0 text-red-600 hover:text-red-800 hover:bg-red-50"
                             onClick={() => handleDeleteRequest(request.id)}
-                            disabled={deleteRequestMutation.isPending || visit?.patient?.result_print_date != null || !can('حذف فحص مضاف')}
+                            disabled={deleteRequestMutation.isPending || visit?.patient?.result_print_date != null || !can('حذف فحص مضاف') || visit?.result_auth == true}
                             title="حذف"
                           >
                             {deleteRequestMutation.isPending ? (

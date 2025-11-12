@@ -66,6 +66,7 @@ import {
   Eye,
   EyeOff,
   RefreshCw,
+  Star,
 } from "lucide-react";
 import { Toaster } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -92,6 +93,7 @@ import type { QueueWorkerStatus } from "@/services/queueWorkerService";
 import { toast } from "sonner";
 import { useAuthorization } from "@/hooks/useAuthorization";
 import { clearAllCaches } from "@/hooks/useCachedData";
+import FavoriteServiceGroupsDialog from "@/components/clinic/FavoriteServiceGroupsDialog";
 
 // Define navigation items structure
 export interface NavItem {
@@ -405,6 +407,7 @@ const AppHeaderSearch: React.FC = () => {
         inputValue={inputValue}
         onInputChange={(_, newInputValue) => setInputValue(newInputValue)}
         onChange={handleSelect}
+        autoFocus={true}
         filterOptions={(x) => x}
         getOptionLabel={(o) => o.label}
         noOptionsText="لا توجد نتائج"
@@ -602,6 +605,7 @@ const AppLayout: React.FC = () => {
   const AppLayoutContent: React.FC = () => {
     const { isVisible: isPdfPreviewVisible, toggle: togglePdfPreviewVisibility } = usePdfPreviewVisibility();
     const queryClient = useQueryClient();
+    const [isFavoriteServiceGroupsDialogOpen, setIsFavoriteServiceGroupsDialogOpen] = useState(false);
     
     // Clear all caches handler
     const handleClearAllCaches = () => {
@@ -872,6 +876,11 @@ const AppLayout: React.FC = () => {
                         <Link to="/profile" className="w-full flex items-center"><Users className="mr-2 h-4 w-4" /> الملف الشخصي</Link>
                       </DropdownMenuItem>
                       
+                      <DropdownMenuItem onClick={() => setIsFavoriteServiceGroupsDialogOpen(true)}>
+                        <Star className="mr-2 h-4 w-4" />
+                        <span>المجموعات المفضلة</span>
+                      </DropdownMenuItem>
+                      
                       {/* Reports and Settings for admin users */}
                      
                         <>
@@ -941,6 +950,10 @@ const AppLayout: React.FC = () => {
                 <Outlet />
             </main>
         </div>
+        <FavoriteServiceGroupsDialog
+          open={isFavoriteServiceGroupsDialogOpen}
+          onOpenChange={setIsFavoriteServiceGroupsDialogOpen}
+        />
         <Toaster richColors position="top-right" />
       </div>
     </TooltipProvider>

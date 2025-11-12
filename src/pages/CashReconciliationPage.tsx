@@ -53,7 +53,7 @@ const CashReconciliationPage: React.FC = () => {
   // Fetch all users for the autocomplete
   const { data: usersData, isLoading: isLoadingUsers } = useQuery({
     queryKey: ['allUsersForReconciliation'],
-    queryFn: () => getUsers(1, { per_page: 0 }),
+    queryFn: () => getUsers(1, { per_page: 400 }),
   });
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const hasInitializedUser = useRef(false);

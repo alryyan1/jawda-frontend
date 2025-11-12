@@ -16,6 +16,7 @@ import { Loader2 } from 'lucide-react';
 import RequestedServicesTable from './RequestedServicesTable';
 import { useAuth } from '@/contexts/AuthContext';
 import { getServiceById } from '@/services/serviceService';
+import { getFavoriteServiceGroups } from '@/lib/favoriteServiceGroups';
 
 interface ServicesRequestComponentProps {
   visitId: number;
@@ -65,6 +66,20 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ vis
   // Let it be controlled only by user action and successful additions
 
 
+  // Get favorite service groups from localStorage and listen for changes
+  const [favoriteGroupIds, setFavoriteGroupIds] = React.useState<number[]>(() => getFavoriteServiceGroups());
+  
+  React.useEffect(() => {
+    const handleFavoriteChange = () => {
+      setFavoriteGroupIds(getFavoriteServiceGroups());
+    };
+    
+    window.addEventListener('favoriteServiceGroupsChanged', handleFavoriteChange);
+    return () => {
+      window.removeEventListener('favoriteServiceGroupsChanged', handleFavoriteChange);
+    };
+  }, []);
+
   // Fetch all service groups with their services (standard catalog)
   const { 
     data: baseServiceCatalog, 
@@ -78,6 +93,22 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ vis
     },
     staleTime: 1000 * 60 * 10,
   });
+
+  // Filter baseServiceCatalog based on favorite groups if any are selected
+  const filteredBaseServiceCatalog = React.useMemo<ServiceGroupWithServices[] | undefined>(() => {
+    if (!baseServiceCatalog) return undefined;
+    
+    // If no favorites are selected, return all groups
+    if (favoriteGroupIds.length === 0) {
+      return baseServiceCatalog;
+    }
+    
+    // Filter to only include favorite groups
+    return baseServiceCatalog.filter((group) => favoriteGroupIds.includes(group.id));
+  }, [baseServiceCatalog, favoriteGroupIds]);
+  
+  console.log('baseServiceCatalog', baseServiceCatalog);
+  console.log('filteredBaseServiceCatalog', filteredBaseServiceCatalog);
   
   // Fetch company-specific contracted services if it's a company patient
   const { data: companyContracts, isLoading: isLoadingCompanyContracts } = useQuery<CompanyServiceContract[], Error>({
@@ -87,14 +118,16 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ vis
   });
 
   const serviceCatalogForGrid = useMemo<ServiceGroupWithServices[] | undefined>(() => {
-    if (!baseServiceCatalog) return [];
+    // Use filtered catalog if favorites are set, otherwise use base catalog
+    const catalogToUse = filteredBaseServiceCatalog ?? baseServiceCatalog;
+    if (!catalogToUse) return [];
     if (isCompanyPatient && companyContracts) {
       const contractMap = new Map<number, CompanyServiceContract>();
       companyContracts.forEach(contract => {
         contractMap.set((contract as CompanyServiceContract).service_id, contract);
       });
 
-      return (baseServiceCatalog as ServiceGroupWithServices[]).map((group: ServiceGroupWithServices) => ({
+      return (catalogToUse as ServiceGroupWithServices[]).map((group: ServiceGroupWithServices) => ({
         ...group,
         services: group.services.map((service) => {
           const contractDetails = contractMap.get((service as unknown as { id: number }).id);
@@ -109,8 +142,8 @@ const ServicesRequestComponent: React.FC<ServicesRequestComponentProps> = ({ vis
         }),
       })).filter(group => group.services.length > 0);
     }
-    return baseServiceCatalog;
-  }, [baseServiceCatalog, isCompanyPatient, companyContracts]);
+    return catalogToUse;
+  }, [filteredBaseServiceCatalog, baseServiceCatalog, isCompanyPatient, companyContracts]);
 
 
   const addMultipleServicesMutation = useMutation({

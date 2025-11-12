@@ -1153,26 +1153,7 @@ export default function CompaniesListPage() {
                 الجهات
               </Button>
             )}
-            {canDeleteCompany && selectedCompany && (
-              <Button
-                color="error"
-                variant="outlined"
-                onClick={() => {
-                  handleDelete(selectedCompany.id, selectedCompany.name);
-                  handleCloseRowDialog();
-                }}
-                disabled={deleteMutation.isPending && (deleteMutation.variables as number) === selectedCompany?.id}
-              >
-                {deleteMutation.isPending && (deleteMutation.variables as number) === selectedCompany?.id ? (
-                  <>
-                    <CircularProgress size={16} className="rtl:ml-2 ltr:mr-2" />
-                    جارٍ الحذف...
-                  </>
-                ) : (
-                  'حذف الشركة'
-                )}
-              </Button>
-            )}
+      
           </Box>
         </DialogContent>
         <DialogActions>

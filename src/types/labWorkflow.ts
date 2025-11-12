@@ -2,6 +2,51 @@ import type { ChildGroup, ChildTestOption, Unit } from "./labTests";
 import type { RequestedOrganism } from "./visits";
 
 export interface PatientLabQueueItem { // For the leftmost list
+  // Extended properties from DoctorVisit
+  id?: number;
+  visit_time?: string | null;
+  visit_time_formatted?: string | null;
+  status?: string;
+  visit_type?: string | null;
+  company?: unknown | null;
+  queue_number?: number | null;
+  number?: number;
+  reason_for_visit?: string | null;
+  visit_notes?: string | null;
+  is_new?: boolean;
+  only_lab?: boolean;
+  requested_services_count?: number | null;
+  patient?: any; // Full patient object
+  patient_subcompany?: unknown | null;
+  doctor_id?: number;
+  doctor?: unknown | null;
+  doctor_name?: string;
+  user_id?: number;
+  created_by_user?: unknown | null;
+  shift_id?: number;
+  doctor_shift_id?: number | null;
+  total_services_amount?: number;
+  total_services_paid?: number;
+  total_lab_value_will_pay?: number;
+  lab_paid?: number;
+  total_lab_amount?: number;
+  total_paid?: number;
+  total_discount?: number;
+  balance_due?: number;
+  total_lab_paid?: number;
+  total_lab_discount?: number;
+  total_lab_endurance?: number;
+  total_lab_balance?: number;
+  requested_services?: unknown[];
+  lab_requests?: unknown[];
+  requested_services_summary?: unknown[];
+  created_at?: string;
+  updated_at?: string;
+  company_relation?: unknown | null;
+  result_auth?: boolean | null;
+  auth_date?: string | null;
+  
+  // Original PatientLabQueueItem properties (for backward compatibility)
   visit_id: number; // DoctorVisit ID
   patient_id: number;
   lab_number: string;
@@ -19,9 +64,6 @@ export interface PatientLabQueueItem { // For the leftmost list
   has_cbc?: boolean;
   is_ready_for_print?: boolean;
   sample_collection_time?: string | null;
-  company?: unknown; // Company information from backend
-  auth_date?: string | null;
-  result_auth?: boolean | null;
   total_result_count: number; // Total number of results for this patient
   pending_result_count: number; // Number of pending results
   lab_to_lab_object_id?: string | null; // Present if this patient came from lab-to-lab integration

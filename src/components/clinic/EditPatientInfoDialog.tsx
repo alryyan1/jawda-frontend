@@ -389,7 +389,7 @@ const EditPatientInfoDialog: React.FC<EditPatientInfoDialogProps> = ({
                   />
                   
                   <Box display="flex" alignItems="center" gap={1}>
-                    <Controller
+                    {/* <Controller
                       name="subcompany_id"
                       control={control}
                       render={({ field, fieldState: { error } }) => (
@@ -411,7 +411,7 @@ const EditPatientInfoDialog: React.FC<EditPatientInfoDialogProps> = ({
                           {error && <Typography variant="caption" color="error">{error.message}</Typography>}
                         </FormControl>
                       )}
-                    />
+                    /> */}
                     <IconButton 
                       size="small" 
                       onClick={() => setShowSubcompanyDialog(true)}
@@ -421,7 +421,7 @@ const EditPatientInfoDialog: React.FC<EditPatientInfoDialogProps> = ({
                     </IconButton>
                   </Box>
                   
-                  <Box display="flex" alignItems="center" gap={1}>
+                  {/* <Box display="flex" alignItems="center" gap={1}>
                     <Controller
                       name="company_relation_id"
                       control={control}
@@ -452,7 +452,7 @@ const EditPatientInfoDialog: React.FC<EditPatientInfoDialogProps> = ({
                     >
                       <PlusCircle fontSize="small" />
                     </IconButton>
-                  </Box>
+                  </Box> */}
                 </Box>
               </Paper>
             )}
@@ -480,22 +480,22 @@ const EditPatientInfoDialog: React.FC<EditPatientInfoDialogProps> = ({
       </Dialog>
       
       {/* Quick Add Dialogs */}
-      {currentCompanyId && (
+      {/* {currentCompanyId && (
         <AddSubcompanyDialog
             companyId={currentCompanyId}
             open={showSubcompanyDialog}
             onOpenChange={setShowSubcompanyDialog}
             onSubcompanyAdded={handleSubcompanyAdded}
         />
-      )}
-      {currentCompanyId && (
+      )} */}
+      {/* {currentCompanyId && (
         <AddCompanyRelationDialog
             companyId={currentCompanyId}
             open={showRelationDialog}
             onOpenChange={setShowRelationDialog}
             onCompanyRelationAdded={handleRelationAdded}
         />
-      )}
+      )} */}
     </>
   );
 };

@@ -229,7 +229,7 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
             </Button>
             {!isUnifiedCashier && canAddService && (
               <Button disabled={!can('اضافه خدمه')} onClick={() => setOpenSelectionGridCommand(c => c + 1)} variant="default" size="sm">
-                عرض الخدمات
+                قائمه الخدمات
               </Button>
             )}
             {hasSelectedServices && (

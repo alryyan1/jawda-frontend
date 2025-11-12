@@ -92,10 +92,133 @@ const LabReceptionPage: React.FC = () => {
   const convertVisitToQueueItem = (visit: DoctorVisit): PatientLabQueueItem => {
     const labRequests = visit.lab_requests || [];
     const oldestRequest = labRequests.length > 0 ? labRequests[0] : null;
+    
+    // Format visit_time to AM/PM format
+    const formatTimeToAMPM = (timeString: string | null | undefined): string | null => {
+      if (!timeString) return null;
+      try {
+        const [hours, minutes] = timeString.split(':');
+        const hour = parseInt(hours, 10);
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const hour12 = hour % 12 || 12;
+        const mins = minutes || '00';
+        return `${hour12.toString().padStart(2, '0')}:${mins} ${ampm}`;
+      } catch {
+        return null;
+      }
+    };
+
+    // Calculate totals
+    const requestedServices = visit.requested_services || [];
+    const totalServicesAmount = requestedServices.reduce((sum, svc) => sum + (svc.price * svc.count), 0);
+    const totalServicesPaid = requestedServices.reduce((sum, svc) => sum + svc.amount_paid, 0);
+    const totalLabAmount = labRequests.reduce((sum, req) => sum + req.price, 0);
+    const totalLabPaid = labRequests.reduce((sum, req) => sum + req.amount_paid, 0);
+    const totalLabDiscount = labRequests.reduce((sum, req) => sum + ((req.price * req.discount_per) / 100), 0);
+    const totalLabEndurance = labRequests.reduce((sum, req) => sum + req.endurance, 0);
+    const totalLabBalance = totalLabAmount - totalLabPaid - totalLabDiscount - totalLabEndurance;
+    const totalDiscount = requestedServices.reduce((sum, svc) => sum + svc.discount + ((svc.price * svc.discount_per * svc.count) / 100), 0);
+    const totalAmount = totalServicesAmount + totalLabAmount;
+    const totalPaid = totalServicesPaid + totalLabPaid;
+    const balanceDue = totalAmount - totalPaid - totalDiscount;
+
     return {
-      visit_id: visit.id,
+      id: visit.id,
+      visit_time: visit.visit_time || null,
+      visit_time_formatted: formatTimeToAMPM(visit.visit_time),
+      status: visit.status,
+      visit_type: visit.visit_type || null,
+      company: visit.company || visit.patient?.company || null,
+      queue_number: visit.queue_number || visit.number || null,
+      number: visit.number,
+      reason_for_visit: visit.reason_for_visit || '',
+      visit_notes: visit.visit_notes || null,
+      is_new: visit.is_new,
+      only_lab: visit.only_lab,
+      requested_services_count: visit.requested_services_count || requestedServices.length || null,
       patient_id: visit.patient_id,
-      lab_number: visit.patient?.visit_number?.toString() || visit.id.toString(), // Using visit ID as lab number
+      patient: visit.patient ? {
+        id: visit.patient.id,
+        name: visit.patient.name,
+        phone: visit.patient.phone || '',
+        gender: visit.patient.gender,
+        age_year: visit.patient.age_year || 0,
+        age_month: visit.patient.age_month || null,
+        age_day: visit.patient.age_day || null,
+        full_age: (visit.patient as any).full_age || 'N/A',
+        doctor: visit.patient.doctor || null,
+        result_is_locked: visit.patient.result_is_locked || false,
+        address: visit.patient.address || null,
+        gov_id: (visit.patient as any).gov_id || null,
+        company_id: visit.patient.company_id || null,
+        company: visit.patient.company || null,
+        subcompany_id: visit.patient.subcompany_id || null,
+        subcompany: visit.patient.subcompany || null,
+        company_relation_id: visit.patient.company_relation_id || null,
+        company_relation: visit.patient.company_relation || null,
+        insurance_no: (visit.patient as any).insurance_no || null,
+        expire_date: (visit.patient as any).expire_date || null,
+        guarantor: (visit.patient as any).guarantor || null,
+        paper_fees: (visit.patient as any).paper_fees || 0,
+        is_lab_paid: (visit.patient as any).is_lab_paid || false,
+        lab_paid: (visit.patient as any).lab_paid || 0,
+        sample_collected: (visit.patient as any).sample_collected || false,
+        sample_collect_time: (visit.patient as any).sample_collect_time || null,
+        result_print_date: visit.patient.result_print_date || null,
+        sample_print_date: (visit.patient as any).sample_print_date || null,
+        visit_number: (visit.patient as any).visit_number || 0,
+        result_auth: visit.patient.result_auth || false,
+        auth_date: visit.patient.auth_date || null,
+        discount: (visit.patient as any).discount || 0,
+        discount_comment: (visit.patient as any).discount_comment || '',
+        doctor_finish: (visit.patient as any).doctor_finish || false,
+        doctor_lab_request_confirm: (visit.patient as any).doctor_lab_request_confirm || false,
+        doctor_lab_urgent_confirm: (visit.patient as any).doctor_lab_urgent_confirm || false,
+        created_at: (visit.patient as any).created_at,
+        updated_at: (visit.patient as any).updated_at,
+        user: visit.patient.user || null,
+        has_cbc: visit.patient.has_cbc || false,
+        result_url: visit.patient.result_url || null,
+      } : null,
+      patient_subcompany: visit.patient?.subcompany || null,
+      doctor_id: visit.doctor_id,
+      doctor: visit.doctor || null,
+      doctor_name: visit.doctor?.name || '',
+      user_id: visit.user_id,
+      created_by_user: visit.created_by_user || null,
+      shift_id: visit.shift_id,
+      doctor_shift_id: visit.doctor_shift_id || null,
+      total_services_amount: totalServicesAmount,
+      total_services_paid: totalServicesPaid,
+      total_lab_value_will_pay: totalLabAmount - totalLabEndurance,
+      lab_paid: (visit.patient as any)?.lab_paid || 0,
+      total_lab_amount: totalLabAmount,
+      total_paid: totalPaid,
+      total_discount: totalDiscount,
+      balance_due: balanceDue,
+      total_lab_paid: totalLabPaid,
+      total_lab_discount: totalLabDiscount,
+      total_lab_endurance: totalLabEndurance,
+      total_lab_balance: totalLabBalance,
+      requested_services: requestedServices,
+      lab_requests: labRequests,
+      requested_services_summary: requestedServices.map(svc => ({
+        id: svc.id,
+        service_name: svc.service?.name || '',
+        price: svc.price,
+        count: svc.count,
+        amount_paid: svc.amount_paid,
+        is_paid: svc.is_paid,
+        done: svc.done,
+      })),
+      created_at: visit.created_at,
+      updated_at: visit.updated_at,
+      company_relation: visit.patient?.company_relation || null,
+      result_auth: visit.result_auth || false,
+      auth_date: visit.auth_date || null,
+      // Keep existing PatientLabQueueItem properties for backward compatibility
+      visit_id: visit.id,
+      lab_number: (visit.patient as any)?.visit_number?.toString() || visit.id.toString(),
       patient_name: visit.patient?.name || '',
       phone: visit.patient?.phone || '',
       sample_id: oldestRequest?.id?.toString() || visit.id.toString(),
@@ -105,8 +228,12 @@ const LabReceptionPage: React.FC = () => {
       result_is_locked: visit.patient?.result_is_locked || false,
       all_requests_paid: labRequests.length > 0 ? labRequests.every((req: LabRequest) => req.amount_paid > 0) : false,
       is_result_locked: visit.patient?.result_is_locked || false,
-      is_printed: false, // This would need to be determined from lab results
-      company: visit.patient?.company,
+      is_printed: false,
+      total_result_count: labRequests.reduce((sum, req) => sum + (req.results?.length || 0), 0),
+      pending_result_count: labRequests.reduce((sum, req) => {
+        const results = (req as any).results || [];
+        return sum + results.filter((r: { result?: string }) => !r.result || r.result === '').length;
+      }, 0),
     };
   };
 

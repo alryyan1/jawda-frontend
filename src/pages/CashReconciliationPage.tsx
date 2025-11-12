@@ -36,6 +36,7 @@ const CashReconciliationPage: React.FC = () => {
     const { user } = useAuth();
   const [selectedShiftId, setSelectedShiftId] = useState<string | null>(currentClinicShift?.id.toString() || null);
   const [denominations, setDenominations] = useState<Denomination[]>([]);
+  const inputRefs = useRef<{ [key: number]: HTMLInputElement | null }>({});
   
   // Cost creation form state
   const [costForm, setCostForm] = useState({
@@ -147,11 +148,16 @@ const CashReconciliationPage: React.FC = () => {
   const handleCountKeyPress = (id: number, count: string, event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') {
       const newCount = parseInt(count, 10);
-      if (!isNaN(newCount) && newCount >= 0) {
+      if (!isNaN(newCount)) {
         setDenominations(prev => {
-          const updatedDenominations = prev.map(deno => 
-            deno.id === id ? { ...deno, count: deno.count + newCount } : deno
-          );
+          const updatedDenominations = prev.map(deno => {
+            if (deno.id === id) {
+              // Allow negative values to decrease the count
+              const updatedCount = Math.max(0, deno.count + newCount); // Ensure count doesn't go below 0
+              return { ...deno, count: updatedCount };
+            }
+            return deno;
+          });
           if (selectedShiftId) {
             saveMutation.mutate({ 
               shiftId: Number(selectedShiftId), 
@@ -160,7 +166,11 @@ const CashReconciliationPage: React.FC = () => {
           }
           return updatedDenominations;
         });
-        (event.currentTarget as HTMLInputElement).value = '';
+        // Clear the input after adding/subtracting
+        const inputElement = inputRefs.current[id];
+        if (inputElement) {
+          inputElement.value = '';
+        }
       }
     }
   };
@@ -362,10 +372,12 @@ const CashReconciliationPage: React.FC = () => {
                       <TextField
                         type="number"
                         defaultValue=""
+                        inputRef={(el) => {
+                          inputRefs.current[deno.id] = el;
+                        }}
                         onKeyPress={e => handleCountKeyPress(deno.id, (e.target as HTMLInputElement).value, e as React.KeyboardEvent<HTMLInputElement>)}
                         placeholder="  "
                         size="small"
-                        inputProps={{ min: 0 }}
                       />
                       <TextField 
                         value={deno.count} 

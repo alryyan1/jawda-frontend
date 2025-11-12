@@ -58,6 +58,7 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
   const handleProfileClickForList = (visit: DoctorVisit) => {
     setPatientInfoVisit(visit);
     setShowPatientInfoDialog(true);
+    console.log(visit,'visit')
   };
 
   if (isLoading && !isFetching) {

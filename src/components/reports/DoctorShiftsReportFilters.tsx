@@ -58,20 +58,23 @@ const DoctorShiftsReportFilters: React.FC<DoctorShiftsReportFiltersProps> = ({
               <Autocomplete<AutocompleteOption>
                 id="dsr-user-filter"
                 options={[
-                  { id: "all", name: "كل المستخدمين" },
+                  ...(canViewAllUsersShifts ? [{ id: "all", name: "كل المستخدمين" }] : []),
                   ...usersForFilter.map((u) => ({ id: u.id.toString(), name: u.name }))
                 ]}
                 getOptionLabel={(option) => option.name}
                 isOptionEqualToValue={(option, value) => option.id === value.id}
                 value={(() => {
+                  if (!filters.userIdOpened || filters.userIdOpened === "") {
+                    return null;
+                  }
                   if (filters.userIdOpened === "all") {
-                    return { id: "all", name: "كل المستخدمين" };
+                    return canViewAllUsersShifts ? { id: "all", name: "كل المستخدمين" } : null;
                   }
                   const user = usersForFilter.find(u => u.id.toString() === filters.userIdOpened);
                   return user ? { id: user.id.toString(), name: user.name } : null;
                 })()}
                 onChange={(_, newValue) => {
-                  onFilterChange("userIdOpened", newValue?.id || "all");
+                  onFilterChange("userIdOpened", newValue?.id || "");
                 }}
                 disabled={isLoadingUIData || isFetching}
                 sx={{

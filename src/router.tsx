@@ -84,6 +84,7 @@ import CashReconciliationPage from "./pages/CashReconciliationPage";
 
 import AppointmentsPlaceholderPage from "./pages/AppointmentsPlaceholderPage";
 import HL7ParserPage from "./pages/HL7ParserPage";
+import OnlineBookingPage from "./pages/onlineBooking/OnlineBookingPage";
 
 const router = createBrowserRouter([
   // --- PUBLIC ROUTES ---
@@ -145,6 +146,10 @@ const router = createBrowserRouter([
           {
             path: "hl7-parser",
             element: <HL7ParserPage />,
+          },
+          {
+            path: "online-booking",
+            element: <OnlineBookingPage />,
           },
 
           {

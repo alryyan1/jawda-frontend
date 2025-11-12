@@ -133,6 +133,8 @@ const allMainNavItems: NavItem[] = [
   // { to: '/laboratory/offers', label: 'عروض التحاليل', icon: Package },
   { to: '/attendance/sheet', label: 'سجل الحضور', icon: ClipboardEditIcon },
   { to: '/patients', label: 'المرضى', icon: Users },
+  { to: '/online-booking', label: 'الحجز الطبي', icon: CalendarCheck2 },
+
   // { to: '/doctors', label: 'الأطباء', icon: Stethoscope },
   // { to: '/analysis', label: 'التحليل', icon: FileBarChart2 },
   // { to: '/schedules-appointments', label: 'المواعيد والجداول', icon: CalendarClock },

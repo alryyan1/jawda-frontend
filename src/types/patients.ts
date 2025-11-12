@@ -221,6 +221,7 @@ export interface ActivePatientVisit {
 
 export interface Patient {
   id: number;
+  user_id: number;
   name: string;
   patient_id: number;
   lab_to_lab_object_id?: string | null;

@@ -166,8 +166,9 @@ const PatientInfoDialog: React.FC<PatientInfoDialogProps> = ({
   const queryClient = useQueryClient();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const { currentClinicShift } = useAuth();
+  const { currentClinicShift,user } = useAuth();
   const { can } = useAuthorization();
+  console.log(visit,'visit in patient info dialog')
   // State for Edit Dialog
   const [isEditPatientDialogOpen, setIsEditPatientDialogOpen] = useState(false);
 
@@ -247,7 +248,10 @@ const PatientInfoDialog: React.FC<PatientInfoDialogProps> = ({
     }
     onOpenChange(open);
   };
-
+ console.log( visit?.patient.user_id !== user?.id ,' visit?.patient.user_id !== user?.id')
+ console.log( visit?.lab_requests?.length > 0 ,' visit?.lab_requests?.length > 0')
+ console.log(patient,'patient')
+ console.log(user,'user')
   return (
     <>
       <Dialog 
@@ -315,7 +319,7 @@ const PatientInfoDialog: React.FC<PatientInfoDialogProps> = ({
                   size="medium" 
                   onClick={openEditDialog}
                   startIcon={<EditIcon />}
-                  disabled={!can('تعديل بيانات')}
+                  disabled={!can('تعديل بيانات') || patient.user?.id !== user?.id || visit?.lab_requests?.length > 0 }
                   sx={{
                     bgcolor: 'rgba(255,255,255,0.2)',
                     backdropFilter: 'blur(10px)',

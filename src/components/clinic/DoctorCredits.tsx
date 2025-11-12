@@ -19,6 +19,7 @@ import dayjs from "dayjs";
 import { Eye } from "lucide-react";
 import { formatNumber } from "@/lib/utils";
 import type { DoctorShift as DoctorShiftType, Doctor } from "@/types/doctors";
+import type { DoctorShiftFinancialSummary } from "@/types/reports";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAuthorization } from "@/hooks/useAuthorization";
 
@@ -103,6 +104,7 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
     doctorShiftId: number,
     amountCash: number,
     amountBank: number,
+    doctorName: string,
     setIsLoading: (loading: boolean) => void
   ) => {
     setIsLoading(true);
@@ -128,8 +130,8 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
       .post('/costs', {
         shift_id: currentShiftId,
         doctor_shift_id: doctorShiftId,
-        description: 'خصم استحقاق الطبيب',
-        comment: 'خصم تلقائي من استحقاق الطبيب',
+        description: `خصم استحقاق الطبيب ${doctorName}`,
+        comment: `خصم تلقائي من استحقاق الطبيب ${doctorName}`,
         amount_cash_input: amountCash,
         amount_bank_input: amountBank,
         doctor_shift_id_for_sub_cost: doctorShiftId,
@@ -155,9 +157,9 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
     setBankAmount(0);
     if (selectedDoctorShift) {
       const api = selectedDoctorShift.doctor?.calc_insurance ? "doctor-shifts" : "doctor-shifts";
-      apiClient.get(`${api}/${selectedDoctorShift.id}/financial-summary`).then(({ data }) => {
-        const summary = data?.data ?? data;
-        const cashAmount = summary?.doctor_cash_share_total || 0;
+      apiClient.get<{ data: DoctorShiftFinancialSummary }>(`${api}/${selectedDoctorShift.id}/financial-summary`).then(({ data }) => {
+        const summary: DoctorShiftFinancialSummary = data?.data ?? data;
+        const cashAmount = summary?.total_doctor_share || 0;
         setCashAmount(cashAmount);
         setTemp(cashAmount);
       });
@@ -179,7 +181,7 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
       return;
     }
 
-    addCost(selectedDoctorShift.id, cashAmount, bankAmount, setIsLoading);
+    addCost(selectedDoctorShift.id, cashAmount, bankAmount, selectedDoctorShift.doctor?.name || selectedDoctorShift.doctor_name || '', setIsLoading);
 
     // Use the available proofing flags endpoint
     apiClient
@@ -199,7 +201,6 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
   return (
     <Paper elevation={2} sx={{ p: 1 }}>
       <Typography variant="h6" sx={{ mb: 1 }}>
-        استحقاقات الأطباء - الورديات المفتوحة
       </Typography>
         <Table style={{ direction: "rtl" }} className="text-xl!" size="small">
         <TableHead>

@@ -89,14 +89,14 @@ export interface PatientVisitFinancialBreakdown {
 export interface DoctorShiftFinancialSummary {
   doctor_shift_id: number;
   doctor_name: string;
-  start_time?: string | null;
-  end_time?: string | null;
+  start_time: string | null;
+  end_time: string | null;
   status: string; // 'Open' or 'Closed'
   total_patients: number;
-  doctor_fixed_share_for_shift: number;
+  doctor_fixed_share_for_shift: number | string; // Can be "0.00" string or number
   doctor_cash_share_total: number;
-  doctor_insurance_share_total: number;
   total_doctor_share: number;
+  doctor_insurance_share_total: number;
   patients_breakdown: PatientVisitFinancialBreakdown[];
 }
 export interface DailyServiceIncomeData {

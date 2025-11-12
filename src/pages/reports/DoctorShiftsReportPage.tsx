@@ -109,9 +109,7 @@ const DoctorShiftsReportPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(50);
   const [filters, setFilters] = useState<Filters>({
-    userIdOpened: canViewAllUsersShifts
-      ? "all"
-      : currentUser?.id?.toString() || "all",
+    userIdOpened: "",
     doctorId: "all",
     generalShiftId: "all",
     dateFrom: defaultDateFrom,
@@ -206,7 +204,7 @@ const DoctorShiftsReportPage: React.FC = () => {
         shift_id:
           filters.generalShiftId === "all" ? undefined : parseInt(filters.generalShiftId),
         user_id_opened:
-          filters.userIdOpened === "all"
+          filters.userIdOpened === "all" || filters.userIdOpened === ""
             ? undefined
             : parseInt(filters.userIdOpened),
         doctor_name_search: debouncedSearchDoctorName || undefined,
@@ -251,7 +249,7 @@ const DoctorShiftsReportPage: React.FC = () => {
         doctor_id: filters.doctorId === "all" ? undefined : parseInt(filters.doctorId),
         status: filters.status === "all" ? undefined : filters.status === "open" ? "1" : "0",
         shift_id: filters.generalShiftId === "all" ? undefined : parseInt(filters.generalShiftId),
-        user_id_opened: filters.userIdOpened === "all" ? undefined : parseInt(filters.userIdOpened),
+        user_id_opened: filters.userIdOpened === "all" || filters.userIdOpened === "" ? undefined : parseInt(filters.userIdOpened),
         doctor_name_search: debouncedSearchDoctorName || undefined,
       }),
       'تقرير مناوبات الأطباء',
@@ -274,7 +272,7 @@ const DoctorShiftsReportPage: React.FC = () => {
         doctor_id: filters.doctorId === "all" ? undefined : parseInt(filters.doctorId),
         status: filters.status === "all" ? undefined : filters.status === "open" ? "1" : "0",
         shift_id: filters.generalShiftId === "all" ? undefined : parseInt(filters.generalShiftId),
-        user_id_opened: filters.userIdOpened === "all" ? undefined : parseInt(filters.userIdOpened),
+        user_id_opened: filters.userIdOpened === "all" || filters.userIdOpened === "" ? undefined : parseInt(filters.userIdOpened),
         doctor_name_search: debouncedSearchDoctorName || undefined,
       }),
       'تقرير مناوبات الأطباء Excel',

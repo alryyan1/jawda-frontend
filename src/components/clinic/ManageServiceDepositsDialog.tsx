@@ -52,6 +52,7 @@ interface DepositItemFormValues {
   user_name?: string;
   created_at?: string;
   user_id: number;
+  requested_service: RequestedService;
 }
 
 interface ManageServiceDepositsDialogProps {
@@ -109,6 +110,8 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
   const formattedDeposits = useMemo(() => {
     if (!Array.isArray(existingDeposits)) return [];
     return existingDeposits.map(dep => ({
+      user_id: dep.user_id,
+      requested_service: dep.requested_service,
       id: dep.id,
       amount: String(dep.amount),
       is_bank: dep.is_bank,
@@ -234,6 +237,7 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
 
   if (!isOpen) return null;
 
+  console.log('deposits', deposits,user,'user');
   return (
     <>
     <Dialog 
@@ -338,7 +342,7 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
                                     onClick={() => handleDelete(deposit)}
                                     disabled={
                                       deleteMutation.isPending &&
-                                      deleteMutation.variables === Number(deposit.id) || !can('الغاء سداد خدمه') || deposit.user_id !== user?.id
+                                      deleteMutation.variables === Number(deposit.id) || !can('الغاء سداد خدمه') || deposit.requested_service?.user_deposited !== user?.id
                                     }
                                   >
                                     {deleteMutation.isPending &&

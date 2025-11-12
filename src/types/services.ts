@@ -72,6 +72,7 @@ export interface RequestedServiceDeposit {
   is_claimed: boolean; // For reconciliation later
   shift_id: number;
   created_at: string;
+  requested_service: RequestedService;
 }
 
 export   const ServiceFormMode =  { CREATE : 'create', EDIT : 'edit' }

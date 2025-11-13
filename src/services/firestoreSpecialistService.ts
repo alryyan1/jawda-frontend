@@ -1,4 +1,4 @@
-import { collection, getDocs, query, where, orderBy, doc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, doc, addDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 export interface FirestoreSpecialist {
@@ -175,7 +175,8 @@ export interface FirestoreAppointment {
 
 export const fetchAppointmentsByDoctor = async (
   specialistId: string,
-  doctorId: string
+  doctorId: string,
+  date?: string
 ): Promise<FirestoreAppointment[]> => {
   try {
     // Reference to the doctor document
@@ -191,12 +192,17 @@ export const fetchAppointmentsByDoctor = async (
     // Reference to the appointments subcollection
     const appointmentsRef = collection(doctorDocRef, 'appointments');
     
-    // Query to get all appointments, ordered by date
-    const q = query(
-      appointmentsRef,
-      orderBy('date', 'asc'),
-      orderBy('time', 'asc')
-    );
+    // Build query with optional date filter
+    const queryConstraints: any[] = [];
+    
+    if (date) {
+      queryConstraints.push(where('date', '==', date));
+    }
+    
+    queryConstraints.push(orderBy('date', 'asc'));
+    queryConstraints.push(orderBy('time', 'asc'));
+    
+    const q = query(appointmentsRef, ...queryConstraints);
     
     const querySnapshot = await getDocs(q);
     const appointments: FirestoreAppointment[] = [];
@@ -257,5 +263,96 @@ export const createAppointment = async (
   } catch (error) {
     console.error('Error creating appointment:', error);
     throw new Error('Failed to create appointment in Firestore');
+  }
+};
+
+export interface UpdateDoctorData {
+  centralDoctorId?: string;
+  docName?: string;
+  eveningPatientLimit?: number;
+  isActive?: boolean;
+  isBookingEnabled?: boolean;
+  morningPatientLimit?: number;
+  phoneNumber?: string;
+  photoUrl?: string;
+  specialization?: string;
+}
+
+export const updateDoctor = async (
+  specialistId: string,
+  doctorId: string,
+  doctorData: UpdateDoctorData
+): Promise<void> => {
+  try {
+    // Reference to the doctor document
+    const doctorDocRef = doc(
+      db,
+      'medicalFacilities',
+      FACILITY_ID,
+      'specializations',
+      specialistId,
+      'doctors',
+      doctorId
+    );
+    
+    // Update doctor document
+    await updateDoc(doctorDocRef, {
+      ...doctorData,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error('Error updating doctor:', error);
+    throw new Error('Failed to update doctor in Firestore');
+  }
+};
+
+export interface AppointmentWithDoctor extends FirestoreAppointment {
+  doctorId: string;
+  doctorName: string;
+  specialistId: string;
+  specialistName: string;
+}
+
+export const fetchAllAppointments = async (): Promise<AppointmentWithDoctor[]> => {
+  try {
+    const allAppointments: AppointmentWithDoctor[] = [];
+    
+    // Get all specialists
+    const specialists = await fetchAllFirestoreSpecialists();
+    
+    // For each specialist, get all doctors and their appointments
+    for (const specialist of specialists) {
+      const doctors = await fetchAllDoctorsBySpecialist(specialist.id);
+      
+      for (const doctor of doctors) {
+        try {
+          const appointments = await fetchAppointmentsByDoctor(specialist.id, doctor.id);
+          
+          // Add doctor and specialist info to each appointment
+          appointments.forEach((appointment) => {
+            allAppointments.push({
+              ...appointment,
+              doctorId: doctor.id,
+              doctorName: doctor.docName,
+              specialistId: specialist.id,
+              specialistName: specialist.specName,
+            });
+          });
+        } catch (error) {
+          console.error(`Error fetching appointments for doctor ${doctor.id}:`, error);
+          // Continue with other doctors
+        }
+      }
+    }
+    
+    // Sort by date and time (newest first)
+    return allAppointments.sort((a, b) => {
+      const dateCompare = b.date.localeCompare(a.date);
+      if (dateCompare !== 0) return dateCompare;
+      return b.time.localeCompare(a.time);
+    });
+  } catch (error) {
+    console.error('Error fetching all appointments:', error);
+    throw new Error('Failed to fetch all appointments from Firestore');
   }
 };

@@ -82,7 +82,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
   isLoading,
   onPrintReceipt,
 }) => {
-  console.log(visit,'visit in LabRequestsColumn');
+//  console.log(visit,'visit in LabRequestsColumn');
   const queryClient = useQueryClient();
   const { currentClinicShift , user  } = useAuth();
   const { can } = useAuthorization();
@@ -419,7 +419,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
     );
   }
 
-  console.log(can('تخفيض فحص'),'can')
+//  console.log(can('تخفيض فحص'),'can')
   return (
     <div className="h-full flex flex-col">
       {/* Header with Print Receipt and Remove All Pending buttons */}

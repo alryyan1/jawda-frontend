@@ -56,10 +56,24 @@ const PatientHistoryTable: React.FC<PatientHistoryTableProps> = ({
 
 
   const handleSelect = (patientId: number) => {
-    // Get the selected doctor and company for this patient
+    // Find the patient in search results
+    const patient = searchResults.find(p => p.id === patientId);
+    if (!patient) return;
+    
+    // Get the selected doctor and company for this patient from state
     const patientSelection = patientSelections[patientId];
-    const selectedDoctor = patientSelection?.doctor;
-    const selectedCompany = patientSelection?.company;
+    let selectedDoctor = patientSelection?.doctor;
+    let selectedCompany = patientSelection?.company;
+    
+    // If no doctor was explicitly selected, use the last visit doctor from patient data
+    if (!selectedDoctor && patient.last_visit_doctor_id) {
+      selectedDoctor = doctors?.find(doctor => doctor.id === patient.last_visit_doctor_id) || null;
+    }
+    
+    // If no company was explicitly selected, use the last visit company from patient data
+    if (!selectedCompany && patient.last_visit_company_id) {
+      selectedCompany = companies?.find(company => company.id === patient.last_visit_company_id) || null;
+    }
     
     // Use selected doctor if available, otherwise fall back to referring doctor
     const doctorToUse = selectedDoctor || referringDoctor;
@@ -80,7 +94,7 @@ const PatientHistoryTable: React.FC<PatientHistoryTableProps> = ({
       [patientId]: { ...prev[patientId], doctor }
     }));
   };
-console.log(can('تسجيل مريض تامين'),'can');
+// console.log(can('تسجيل مريض تامين'),'can');
   const handleCompanyChange = (patientId: number, company: Company | null) => {
     setPatientSelections(prev => ({
       ...prev,

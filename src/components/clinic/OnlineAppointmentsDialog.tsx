@@ -1,5 +1,5 @@
 // src/components/clinic/OnlineAppointmentsDialog.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   Dialog,
@@ -20,7 +20,7 @@ import {
   CircularProgress,
   Alert
 } from '@mui/material';
-import { Refresh as RefreshIcon, Search as SearchIcon } from '@mui/icons-material';
+import { Refresh as RefreshIcon, Search as SearchIcon, NavigateBefore as NavigateBeforeIcon, NavigateNext as NavigateNextIcon } from '@mui/icons-material';
 import { TextField, InputAdornment } from '@mui/material';
 import type { ChipProps } from '@mui/material';
 import { fetchDoctorAppointments } from '@/services/firestoreDoctorService';
@@ -44,6 +44,8 @@ const OnlineAppointmentsDialog: React.FC<OnlineAppointmentsDialogProps> = ({
   const [selectedDate, setSelectedDate] = useState<string>(dayjs().format('YYYY-MM-DD'));
   const [searchName, setSearchName] = useState<string>('');
   const [savingAppointmentId, setSavingAppointmentId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const itemsPerPage = 10;
 
   // Get the required IDs from the active doctor shift
   type ShiftWithFirestoreIds = DoctorShift & {
@@ -104,6 +106,37 @@ const OnlineAppointmentsDialog: React.FC<OnlineAppointmentsDialogProps> = ({
       : true;
     return matchesDate && matchesName;
   });
+
+  // Sort appointments by date and time descending (newest first)
+  const sortedAppointments = [...filteredAppointments].sort((a, b) => {
+    const dateCompare = dayjs(b.date).valueOf() - dayjs(a.date).valueOf();
+    if (dateCompare !== 0) return dateCompare;
+    // If dates are equal, compare by time (descending)
+    return b.time.localeCompare(a.time);
+  });
+
+  // Calculate pagination
+  const totalPages = Math.ceil(sortedAppointments.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedAppointments = sortedAppointments.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedDate, searchName]);
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(prev => prev + 1);
+    }
+  };
+
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
+    }
+  };
 
   const handleSaveToShift = async (appointment: { id: string; patientName: string; patientPhone: string }) => {
     if (!activeDoctorShift) {
@@ -219,7 +252,7 @@ const OnlineAppointmentsDialog: React.FC<OnlineAppointmentsDialogProps> = ({
                       </Box>
                     </TableCell>
                   </TableRow>
-                ) : filteredAppointments.length === 0 ? (
+                ) : sortedAppointments.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} align="center">
                       <Typography color="text.secondary" py={2}>
@@ -228,7 +261,7 @@ const OnlineAppointmentsDialog: React.FC<OnlineAppointmentsDialogProps> = ({
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredAppointments.map((appointment) => (
+                  paginatedAppointments.map((appointment) => (
                     <TableRow key={appointment.id} hover>
                       <TableCell>
                         <Typography variant="body2" fontWeight="medium">
@@ -279,6 +312,37 @@ const OnlineAppointmentsDialog: React.FC<OnlineAppointmentsDialogProps> = ({
               </TableBody>
               </Table>
             </TableContainer>
+            {/* Pagination Controls */}
+            {sortedAppointments.length > 0 && (
+              <Box display="flex" justifyContent="space-between" alignItems="center" mt={2} px={2}>
+                <Typography variant="body2" color="text.secondary">
+                  عرض {startIndex + 1} - {Math.min(endIndex, sortedAppointments.length)} من {sortedAppointments.length} حجز
+                </Typography>
+                <Box display="flex" gap={1} alignItems="center">
+                  <Button
+                    startIcon={<NavigateBeforeIcon />}
+                    onClick={handlePreviousPage}
+                    disabled={currentPage === 1}
+                    size="small"
+                    variant="outlined"
+                  >
+                    السابق
+                  </Button>
+                  <Typography variant="body2" sx={{ minWidth: '80px', textAlign: 'center' }}>
+                    صفحة {currentPage} من {totalPages}
+                  </Typography>
+                  <Button
+                    endIcon={<NavigateNextIcon />}
+                    onClick={handleNextPage}
+                    disabled={currentPage >= totalPages}
+                    size="small"
+                    variant="outlined"
+                  >
+                    التالي
+                  </Button>
+                </Box>
+              </Box>
+            )}
           </>
         )}
       </DialogContent>

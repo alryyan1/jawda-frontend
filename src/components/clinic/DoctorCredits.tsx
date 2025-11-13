@@ -89,10 +89,11 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
   }, []);
 
   useEffect(() => {
-    // Get only currently open doctor shifts
+    // Get all doctor shifts
     apiClient.get("/doctor-shifts", {
       params: {
-        status: '1' // Only open shifts
+        status: '1', // Only open shifts
+        per_page: 100
       }
     }).then(({ data }) => {
       const list = Array.isArray(data?.data) ? data.data : data;

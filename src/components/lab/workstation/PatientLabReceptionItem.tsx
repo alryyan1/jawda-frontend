@@ -77,7 +77,7 @@ const PatientLabReceptionItem: React.FC<PatientLabReceptionItemProps> = ({
     return Math.round((completedCount / item.total_result_count) * 100);
   }, [item.total_result_count, item.pending_result_count]);
 
-  console.log(item,'item');
+  // console.log(item,'item');
 //  console.log(isLastResultPending,'isLastResultPending',isSelected,'isSelected',isReadyForPrint,'isReadyForPrint')
 const paymentStatusBadgeStyle = useMemo(() => {
     if (allRequestsPaid === undefined) return { backgroundColor: appearanceSettings.default.badgeBackgroundColor, color: appearanceSettings.default.badgeTextColor };

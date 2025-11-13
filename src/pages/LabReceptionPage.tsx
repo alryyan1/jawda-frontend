@@ -408,9 +408,9 @@ const LabReceptionPage: React.FC = () => {
       //   queryKey: ["labReceptionQueue", currentClinicShift?.id],
       // });
       
-      console.log('handlePatientActivated called with:', patientWithVisit);
-      console.log('patientWithVisit.doctor_visit:', patientWithVisit.doctor_visit);
-      console.log('patientWithVisit.doctorVisit:', patientWithVisit.doctorVisit);
+//  console.log('handlePatientActivated called with:', patientWithVisit);
+//  console.log('patientWithVisit.doctor_visit:', patientWithVisit.doctor_visit);
+//  console.log('patientWithVisit.doctorVisit:', patientWithVisit.doctorVisit);
       // testSelectionAutocompleteRef.current?.focus();
       // alert("focusing on test selection autocomplete");
       
@@ -418,7 +418,7 @@ const LabReceptionPage: React.FC = () => {
       const doctorVisit = patientWithVisit.doctor_visit || patientWithVisit.doctorVisit;
       
       if (doctorVisit) {
-        console.log('Found doctor visit:', doctorVisit);
+//  console.log('Found doctor visit:', doctorVisit);
         setActiveVisitId(doctorVisit.id);
         
         // Hide the form to show the queue with the selected patient
@@ -426,7 +426,7 @@ const LabReceptionPage: React.FC = () => {
         
         // Immediately add the patient to the queue using the API response data
         const newQueueItem = convertVisitToQueueItem(doctorVisit);
-        console.log('Adding patient to queue immediately from API response:', newQueueItem);
+//  console.log('Adding patient to queue immediately from API response:', newQueueItem);
         
         if (labPatientQueueRef.current) {
           labPatientQueueRef.current.appendPatientToQueue(newQueueItem);
@@ -435,7 +435,7 @@ const LabReceptionPage: React.FC = () => {
         // Focus on test selection autocomplete after patient is activated
         setTimeout(() => {
           if (testSelectionAutocompleteRef.current) {
-            console.log("testSelectionAutocompleteRef", testSelectionAutocompleteRef.current);
+//  console.log("testSelectionAutocompleteRef", testSelectionAutocompleteRef.current);
             // Find the input element within the Autocomplete
             const inputElement = testSelectionAutocompleteRef.current.querySelector('input');
             if (inputElement) {
@@ -464,7 +464,7 @@ const LabReceptionPage: React.FC = () => {
     // Focus on test selection autocomplete after a short delay
     setTimeout(() => {
       if (testSelectionAutocompleteRef.current) {
-        console.log(testSelectionAutocompleteRef.current, "testSelectionAutocompleteRef.current");
+//  console.log(testSelectionAutocompleteRef.current, "testSelectionAutocompleteRef.current");
         console.log("Focusing on test selection autocomplete after patient save");
         // Find the input element within the Autocomplete
         const inputElement = testSelectionAutocompleteRef.current.querySelector('input');
@@ -483,7 +483,7 @@ const LabReceptionPage: React.FC = () => {
       setTimeout(() => {
         if (testSelectionAutocompleteRef.current) {
           console.log(testSelectionAutocompleteRef.current, "testSelectionAutocompleteRef.current");
-          console.log("Focusing on test selection autocomplete after patient save");
+//  console.log("Focusing on test selection autocomplete after patient save");
           // Find the input element within the Autocomplete
           const inputElement = testSelectionAutocompleteRef.current.querySelector('input');
           if (inputElement) {

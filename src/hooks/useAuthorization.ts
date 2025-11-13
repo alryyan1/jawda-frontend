@@ -84,7 +84,7 @@ export const useAuthorization = () => {
         if (userRoles.includes('Super Admin')) {
             return true;
         }
-        console.log(userAllPermissions,'userAllPermissions')
+        // console.log(userAllPermissions,'userAllPermissions')
         return userAllPermissions.includes(permissionName);
     };
 

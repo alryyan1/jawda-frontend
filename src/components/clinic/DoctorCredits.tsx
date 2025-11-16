@@ -36,6 +36,16 @@ type DoctorShiftItem = DoctorShiftType & {
   is_company_reclaim_prooved?: boolean;
   created_at?: string;
   doctor?: Doctor;
+  // Additional properties from API response
+  doctor_shift_id?: number;
+  status?: string | boolean; // Can be "Open" string or boolean
+  total_patients?: number;
+  doctor_fixed_share_for_shift?: string;
+  doctor_cash_share_total?: number;
+  total_doctor_share?: number;
+  doctor_insurance_share_total?: number;
+  patients_breakdown?: unknown[];
+  doctor_visits_count?: number;
 };
 
 interface DoctorsCreditsProps {
@@ -232,7 +242,7 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
                 <TableRow key={shift.id}>
                   <TableCell className="text-xl!">{shift.doctor?.name || shift.doctor_name}</TableCell>
                   <ValueLoader api={`doctor-shifts/${shift.id}/financial-summary`} field="total_doctor_share" />
-                  <TableCell className="text-xl!">{formatNumber(Number(shift.doctor?.static_wage || 0))}</TableCell>
+                  <TableCell className="text-xl!">{shift.doctor_visits_count}</TableCell>
                   <ValueLoader api={`doctor-shifts/${shift.id}/financial-summary`} field="doctor_cash_share_total" />
                   <ValueLoader api={`doctor-shifts/${shift.id}/financial-summary`} field="doctor_insurance_share_total" />
                   <TableCell className="text-xl!">

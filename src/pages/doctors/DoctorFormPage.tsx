@@ -26,7 +26,7 @@ import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { Save as SaveIcon } from '@mui/icons-material';
 import { toast } from "sonner";
 
-import type { DoctorFormData, Specialist, FinanceAccount } from "@/types/doctors";
+import type { DoctorFormData, Specialist, FinanceAccount, DoctorStripped, Doctor } from "@/types/doctors";
 import {
   createDoctor,
   updateDoctor,
@@ -39,6 +39,7 @@ import {
 import { fetchFirestoreDoctors, type FirestoreDoctor } from "@/services/firestoreDoctorService";
 import { DarkThemeAutocomplete } from "@/components/ui/mui-autocomplete";
 import AddSpecialistDialog from "./AddSpecialistDialog";
+import ManageDoctorServicesDialog from "@/components/doctors/ManageDoctorServicesDialog";
 
 interface DoctorFormValues {
   name: string;
@@ -67,6 +68,7 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
   const queryClient = useQueryClient();
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [selectedFirestoreDoctor, setSelectedFirestoreDoctor] = useState<FirestoreDoctor | null>(null);
+  const [showManageServicesDialog, setShowManageServicesDialog] = useState(false);
 
   const isEditMode = mode === DoctorFormMode.EDIT;
   const { data: specialists, isLoading: isLoadingSpecialists } = useQuery<
@@ -328,9 +330,19 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
         title={isEditMode ? 'تعديل طبيب' : 'إضافة طبيب'}
         subheader="يرجى تعبئة البيانات التالية"
         action={isEditMode ? (
-          <Button variant="outlined" size="small" onClick={() => navigate(-1)} startIcon={<ArrowBackIcon fontSize="small" />}>
-            رجوع
-          </Button>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button 
+              variant="contained" 
+              size="small" 
+              onClick={() => setShowManageServicesDialog(true)}
+              disabled={!doctorId || !doctorData}
+            >
+              إدارة الخدمات
+            </Button>
+            <Button variant="outlined" size="small" onClick={() => navigate(-1)} startIcon={<ArrowBackIcon fontSize="small" />}>
+              رجوع
+            </Button>
+          </Box>
         ) : null}
       />
       <CardContent>
@@ -509,6 +521,19 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
           </CardActions>
         </Box>
       </CardContent>
+
+      {/* Manage Doctor Services Dialog - Only in edit mode */}
+      {isEditMode && doctorData && (
+        <ManageDoctorServicesDialog
+          isOpen={showManageServicesDialog}
+          onOpenChange={setShowManageServicesDialog}
+          doctor={{
+            id: doctorData.id,
+            name: doctorData.name,
+            specialist_name: doctorData.specialist_name || null,
+          } as DoctorStripped}
+        />
+      )}
     </Card>
   );
 };

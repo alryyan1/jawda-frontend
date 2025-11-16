@@ -449,27 +449,22 @@ const SettingsPage: React.FC = () => {
                   />
                 </Stack>
                 
-                <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
-                  <TextField
-                    {...control.register("currency")}
-                    label="العملة"
-                    placeholder="SDG"
-                    fullWidth
-                    variant="outlined"
-                  />
-                  <TextField
-                    {...control.register("vatin")}
-                    label="الرقم الضريبي"
-                    placeholder="الرقم الضريبي"
-                    fullWidth
-                    variant="outlined"
-                  />
-                  <TextField
-                    {...control.register("cr")}
-                    label="رقم السجل التجاري"
-                    placeholder="رقم السجل التجاري"
-                    fullWidth
-                    variant="outlined"
+                <Stack spacing={3}>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        {...control.register("disable_doctor_service_check")}
+                        checked={!!watchedValues.disable_doctor_service_check}
+                      />
+                    }
+                    label={
+                      <Box>
+                        <Typography variant="body1">تعطيل فحص خدمة الطبيب</Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          تعطيل التحقق من خدمة الطبيب عند إضافة الخدمات
+                        </Typography>
+                      </Box>
+                    }
                   />
                 </Stack>
               </Stack>

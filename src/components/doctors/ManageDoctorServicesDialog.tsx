@@ -1,44 +1,31 @@
 // src/components/doctors/ManageDoctorServicesDialog.tsx
 import React, { useState, useEffect } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Dialog,
-  DialogContent,
-  DialogHeader,
   DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogClose,
-} from "@/components/ui/dialog";
-import {
-  Form,
-  FormField,
-  FormMessage,
-} from "@/components/ui/form";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import {
+  DialogContent,
+  DialogActions,
+  Button,
+  TextField,
   Table,
   TableBody,
   TableCell,
   TableHead,
-  TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Loader2, PlusCircle, Trash2, Save } from "lucide-react";
+  Box,
+  Typography,
+  CircularProgress,
+  IconButton,
+  FormHelperText,
+} from "@mui/material";
+import { DarkThemeAutocomplete } from "@/components/ui/mui-autocomplete";
+import { PlusCircle, Trash2, Save } from "lucide-react";
 
 import type {
   DoctorStripped,
@@ -148,17 +135,17 @@ const ManageDoctorServicesDialog: React.FC<ManageDoctorServicesDialogProps> = ({
 
   const handleServiceSelectionForNewRow = (
     index: number,
-    serviceId: string
+    service: ServiceType | null
   ) => {
-    setValue(`configuredServices.${index}.service_id`, serviceId);
-    const selectedService = availableServices.find(
-      (s) => String(s.id) === serviceId
-    );
-    if (selectedService) {
+    if (service) {
+      setValue(`configuredServices.${index}.service_id`, String(service.id));
       setValue(
         `configuredServices.${index}.service_name`,
-        selectedService.name
+        service.name
       );
+    } else {
+      setValue(`configuredServices.${index}.service_id`, "");
+      setValue(`configuredServices.${index}.service_name`, "");
     }
   };
 
@@ -250,52 +237,51 @@ const ManageDoctorServicesDialog: React.FC<ManageDoctorServicesDialogProps> = ({
     updateMutation.isPending ||
     deleteMutation.isPending;
 
-  if (!isOpen) return null;
-
   return (
     <Dialog
       open={isOpen}
-      onOpenChange={(open) => {
-        if (!isMutating) onOpenChange(open);
+      onClose={() => {
+        if (!isMutating) onOpenChange(false);
+      }}
+      maxWidth="md"
+      fullWidth
+      PaperProps={{
+        sx: {
+          maxHeight: '85vh',
+          display: 'flex',
+          flexDirection: 'column',
+        },
       }}
     >
-      <DialogContent className="max-w-2xl xl:max-w-2xl max-h-[85vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle>
-            إدارة خدمات الطبيب: {doctor.name}
-          </DialogTitle>
-          <DialogDescription>
-            إدارة الخدمات المخصصة لهذا الطبيب
-          </DialogDescription>
-        </DialogHeader>
-
+      <DialogTitle>
+        إدارة خدمات الطبيب: {doctor.name}
+      </DialogTitle>
+      <DialogContent dividers sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', p: 0 }}>
         {isLoadingConfigured || isLoadingAvailable ? (
-          <div className="flex justify-center items-center py-10">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 5 }}>
+            <CircularProgress size={32} />
+          </Box>
         ) : (
-          <Form {...form}>
-            {/* No global form onSubmit, saves happen per row */}
-            <form className="flex-grow flex flex-col overflow-hidden">
-              <ScrollArea className="flex-grow pr-1 -mr-2">
-                <Table dir="rtl" className="text-xs">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="min-w-[200px]">
-                        اسم الخدمة
-                      </TableHead>
-                      <TableHead className="w-[120px] text-center">
-                        النسبة
-                      </TableHead>
-                      <TableHead className="w-[120px] text-center">
-                        المبلغ الثابت
-                      </TableHead>
-                      <TableHead className="w-[100px] text-center">
-                        الإجراءات
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+          <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+            <Box sx={{ overflow: 'auto', flex: 1, p: 2 }}>
+              <Table size="small" dir="rtl" sx={{ fontSize: '0.75rem' }}>
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ minWidth: 200, fontWeight: 'bold' }}>
+                      اسم الخدمة
+                    </TableCell>
+                    <TableCell align="center" sx={{ width: 120, fontWeight: 'bold' }}>
+                      النسبة
+                    </TableCell>
+                    <TableCell align="center" sx={{ width: 120, fontWeight: 'bold' }}>
+                      المبلغ الثابت
+                    </TableCell>
+                    <TableCell align="center" sx={{ width: 100, fontWeight: 'bold' }}>
+                      الإجراءات
+                    </TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
                     {fields.map((fieldItem, index) => {
                       const isNewRow =
                         !fieldItem.doctor_service_id &&
@@ -303,179 +289,221 @@ const ManageDoctorServicesDialog: React.FC<ManageDoctorServicesDialogProps> = ({
                         isAddingNew;
                       return (
                         <TableRow key={fieldItem.fieldId}>
-                          <TableCell className="py-1 align-top">
+                          <TableCell sx={{ py: 0.5, verticalAlign: 'top' }}>
                             {isNewRow ? (
-                              <FormField
+                              <Controller
                                 control={control}
                                 name={`configuredServices.${index}.service_id`}
-                                render={({ field: f }) => (
-                                  <Select
-                                    value={f.value}
-                                    onValueChange={(val) =>
-                                      handleServiceSelectionForNewRow(
-                                        index,
-                                        val
-                                      )
-                                    }
-                                    disabled={isLoadingAvailable || isMutating}
-                                  >
-                                    <SelectTrigger className="h-7 text-xs">
-                                      <SelectValue
-                                        placeholder="اختر الخدمة..."
+                                render={({ field: f, fieldState: { error } }) => {
+                                  const selectedService = availableServices.find(
+                                    (s) => String(s.id) === f.value
+                                  );
+                                  return (
+                                    <Box>
+                                      <DarkThemeAutocomplete
+                                        options={availableServices}
+                                        getOptionLabel={(option) => 
+                                          `${option.name} (${option.service_group?.name || ''})`
+                                        }
+                                        value={selectedService || null}
+                                        onChange={(_, newValue) =>
+                                          handleServiceSelectionForNewRow(
+                                            index,
+                                            newValue
+                                          )
+                                        }
+                                        disabled={isLoadingAvailable || isMutating}
+                                        size="small"
+                                        renderInput={(params) => (
+                                          <TextField
+                                            {...params}
+                                            placeholder="اختر الخدمة..."
+                                            size="small"
+                                            error={!!error}
+                                            sx={{
+                                              '& .MuiOutlinedInput-root': {
+                                                height: '28px',
+                                                fontSize: '0.75rem',
+                                              },
+                                              '& .MuiInputBase-input': {
+                                                padding: '4px 8px',
+                                                fontSize: '0.75rem',
+                                              },
+                                            }}
+                                          />
+                                        )}
+                                        isOptionEqualToValue={(option, value) => 
+                                          option.id === value?.id
+                                        }
                                       />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {availableServices.map((s) => (
-                                        <SelectItem
-                                          key={s.id}
-                                          value={String(s.id)}
-                                        >
-                                          {s.name} ({s.service_group?.name})
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                )}
+                                      {error && (
+                                        <FormHelperText error sx={{ fontSize: '0.625rem', m: 0, mt: 0.5 }}>
+                                          {error.message}
+                                        </FormHelperText>
+                                      )}
+                                    </Box>
+                                  );
+                                }}
                               />
                             ) : (
-                              <span>
+                              <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
                                 {fieldItem.service_name ||
                                   configuredServicesList.find(
                                     (cs) =>
                                       cs.doctor_service_id ===
                                       fieldItem.doctor_service_id
                                   )?.service_name}
-                              </span>
+                              </Typography>
                             )}
                           </TableCell>
-                          <TableCell className="py-1 align-top">
-                            <FormField
+                          <TableCell sx={{ py: 0.5, verticalAlign: 'top' }}>
+                            <Controller
                               control={control}
                               name={`configuredServices.${index}.percentage`}
-                              render={({ field: f }) => (
-                                <Input
-                                  type="number"
-                                  {...f}
-                                  value={f.value || ""}
-                                  className="h-7 text-xs text-center"
-                                  placeholder="%"
-                                  disabled={isMutating}
-                                />
+                              render={({ field: f, fieldState: { error } }) => (
+                                <Box>
+                                  <TextField
+                                    {...f}
+                                    type="number"
+                                    size="small"
+                                    value={f.value || ""}
+                                    placeholder="%"
+                                    disabled={isMutating}
+                                    error={!!error}
+                                    sx={{
+                                      '& .MuiOutlinedInput-root': {
+                                        height: '28px',
+                                        fontSize: '0.75rem',
+                                      },
+                                      '& .MuiInputBase-input': {
+                                        padding: '4px 8px',
+                                        fontSize: '0.75rem',
+                                        textAlign: 'center',
+                                      },
+                                    }}
+                                  />
+                                  {error && (
+                                    <FormHelperText error sx={{ fontSize: '0.625rem', m: 0, mt: 0.5 }}>
+                                      {error.message}
+                                    </FormHelperText>
+                                  )}
+                                </Box>
                               )}
                             />
-                            <FormMessage className="text-[10px]">
-                              {
-                                form.formState.errors.configuredServices?.[
-                                  index
-                                ]?.percentage?.message
-                              }
-                            </FormMessage>
                           </TableCell>
-                          <TableCell className="py-1 align-top">
-                            <FormField
+                          <TableCell sx={{ py: 0.5, verticalAlign: 'top' }}>
+                            <Controller
                               control={control}
                               name={`configuredServices.${index}.fixed`}
-                              render={({ field: f }) => (
-                                <Input
-                                  type="number"
-                                  {...f}
-                                  value={f.value || ""}
-                                  className="h-7 text-xs text-center"
-                                  placeholder="ج.س"
-                                  disabled={isMutating}
-                                />
+                              render={({ field: f, fieldState: { error } }) => (
+                                <Box>
+                                  <TextField
+                                    {...f}
+                                    type="number"
+                                    size="small"
+                                    value={f.value || ""}
+                                    placeholder="ج.س"
+                                    disabled={isMutating}
+                                    error={!!error}
+                                    sx={{
+                                      '& .MuiOutlinedInput-root': {
+                                        height: '28px',
+                                        fontSize: '0.75rem',
+                                      },
+                                      '& .MuiInputBase-input': {
+                                        padding: '4px 8px',
+                                        fontSize: '0.75rem',
+                                        textAlign: 'center',
+                                      },
+                                    }}
+                                  />
+                                  {error && (
+                                    <FormHelperText error sx={{ fontSize: '0.625rem', m: 0, mt: 0.5 }}>
+                                      {error.message}
+                                    </FormHelperText>
+                                  )}
+                                </Box>
                               )}
                             />
-                            <FormMessage className="text-[10px]">
-                              {
-                                form.formState.errors.configuredServices?.[
-                                  index
-                                ]?.fixed?.message
-                              }
-                            </FormMessage>
                           </TableCell>
-                          <TableCell className="py-1 text-center align-top">
-                            <div className="flex items-center justify-center">
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7"
+                          <TableCell align="center" sx={{ py: 0.5, verticalAlign: 'top' }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5 }}>
+                              <IconButton
+                                size="small"
                                 onClick={() => handleSaveRow(index)}
                                 disabled={isMutating}
+                                sx={{ width: 28, height: 28 }}
                               >
                                 {(addMutation.isPending && isNewRow) ||
                                 (updateMutation.isPending &&
                                   updateMutation.variables?.service_id ===
                                     fieldItem.service_id) ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                  <CircularProgress size={16} />
                                 ) : (
-                                  <Save className="h-4 w-4 text-green-600" />
+                                  <Save size={16} style={{ color: '#22c55e' }} />
                                 )}
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-destructive"
+                              </IconButton>
+                              <IconButton
+                                size="small"
                                 onClick={() => {
                                   if (fieldItem.doctor_service_id) {
+                                    // Pass service_id (not doctor_service_id) to match backend route model binding
                                     deleteMutation.mutate(
-                                      fieldItem.doctor_service_id
+                                      parseInt(fieldItem.service_id)
                                     );
                                   } else {
-                                    handleCancelAddNew(index); // Remove new, unsaved row
+                                    handleCancelAddNew(index);
                                   }
                                 }}
                                 disabled={
                                   deleteMutation.isPending &&
                                   deleteMutation.variables ===
-                                    fieldItem.doctor_service_id
+                                    parseInt(fieldItem.service_id)
                                 }
+                                sx={{ width: 28, height: 28, color: 'error.main' }}
                               >
                                 {deleteMutation.isPending &&
                                 deleteMutation.variables ===
-                                  fieldItem.doctor_service_id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                  parseInt(fieldItem.service_id) ? (
+                                  <CircularProgress size={16} />
                                 ) : (
-                                  <Trash2 className="h-4 w-4" />
+                                  <Trash2 size={16} />
                                 )}
-                              </Button>
-                            </div>
+                              </IconButton>
+                            </Box>
                           </TableCell>
                         </TableRow>
                       );
                     })}
                   </TableBody>
                 </Table>
-              </ScrollArea>
-              {!isAddingNew && ( // Show Add button only if not currently adding a new row
-                <div className="pt-3 flex justify-start">
+              </Box>
+              {!isAddingNew && (
+                <Box sx={{ p: 2, pt: 1 }}>
                   <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
+                    variant="outlined"
+                    size="small"
                     onClick={handleAddNewField}
-                    className="text-xs"
                     disabled={isMutating}
+                    startIcon={<PlusCircle size={14} />}
+                    sx={{ fontSize: '0.75rem' }}
                   >
-                    <PlusCircle className="h-3.5 w-3.5 ltr:mr-1 rtl:ml-1" />{" "}
                     إضافة تكوين خدمة
                   </Button>
-                </div>
+                </Box>
               )}
-              <DialogFooter className="mt-auto pt-4">
-                <DialogClose asChild>
-                  <Button type="button" variant="outline" disabled={isMutating}>
-                    تم
-                  </Button>
-                </DialogClose>
-                {/* No global save button for the whole form as saves are per row */}
-              </DialogFooter>
-            </form>
-          </Form>
-        )}
+            </Box>
+          )}
       </DialogContent>
+      <DialogActions sx={{ p: 2 }}>
+        <Button
+          onClick={() => onOpenChange(false)}
+          disabled={isMutating}
+          variant="outlined"
+        >
+          تم
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 };

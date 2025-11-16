@@ -133,7 +133,7 @@ const allMainNavItems: NavItem[] = [
   // { to: '/laboratory/offers', label: 'عروض التحاليل', icon: Package },
   { to: '/attendance/sheet', label: 'سجل الحضور', icon: ClipboardEditIcon },
   { to: '/patients', label: 'المرضى', icon: Users },
-  { to: '/online-booking', label: 'الحجز الطبي', icon: CalendarCheck2 },
+  { to: '/online-booking', label: 'الحجز ', icon: CalendarCheck2 },
 
   // { to: '/doctors', label: 'الأطباء', icon: Stethoscope },
   // { to: '/analysis', label: 'التحليل', icon: FileBarChart2 },
@@ -190,21 +190,25 @@ const getMainNavItems = (userType?: UserType): NavItem[] => {
       item.to === '/dashboard' || 
       item.to === '/lab-reception' || 
       item.to === '/lab-sample-collection' ||
-      item.to === '/cash-reconciliation'
+      item.to === '/cash-reconciliation' ||
+      item.to === '/patients'
     );
   }
   if (userType === UserType.lab_results) {
     return allMainNavItems.filter(item => 
       item.to === '/dashboard' || 
       item.to === '/lab-workstation' || 
-      item.to === '/lab-sample-collection'
+      item.to === '/lab-sample-collection' ||
+      item.to === '/patients'
     );
   }
   if (userType === UserType.clinic_reception) {
     return allMainNavItems.filter(item => 
       item.to === '/dashboard' || 
       item.to === '/clinic' ||
-      item.to === '/cash-reconciliation'
+      item.to === '/cash-reconciliation' ||
+      item.to === '/patients'
+      || item.to === '/online-booking'
 
     );
   }
@@ -212,7 +216,8 @@ const getMainNavItems = (userType?: UserType): NavItem[] => {
     return allMainNavItems.filter(item => 
       item.to === '/dashboard' || 
       item.to === '/clinic' ||
-      item.to === '/cash-reconciliation'
+      item.to === '/cash-reconciliation' ||
+      item.to === '/patients'
     );
   }
   if (userType === UserType.insurance) {
@@ -221,7 +226,8 @@ const getMainNavItems = (userType?: UserType): NavItem[] => {
       item.to === '/clinic' ||
       item.to === '/cash-reconciliation'||
       item.to === '/lab-reception' ||
-      item.to === '/lab-sample-collection'
+      item.to === '/lab-sample-collection'  ||
+      item.to === '/patients'
     );
   }
   

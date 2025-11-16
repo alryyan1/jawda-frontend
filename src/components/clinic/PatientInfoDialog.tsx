@@ -252,6 +252,7 @@ const PatientInfoDialog: React.FC<PatientInfoDialogProps> = ({
 //  console.log( visit?.lab_requests?.length > 0 ,' visit?.lab_requests?.length > 0')
 //  console.log(patient,'patient')
 //  console.log(user,'user')
+ console.log(visit,'visit in patient info dialog')
   return (
     <>
       <Dialog 
@@ -319,7 +320,7 @@ const PatientInfoDialog: React.FC<PatientInfoDialogProps> = ({
                   size="medium" 
                   onClick={openEditDialog}
                   startIcon={<EditIcon />}
-                  disabled={!can('تعديل بيانات') || patient.user?.id !== user?.id || visit?.lab_requests?.length > 0 }
+                  disabled={!can('تعديل بيانات') || patient.user?.id !== user?.id || visit?.lab_requests?.length > 0 || visit?.total_services_paid > 0}
                   sx={{
                     bgcolor: 'rgba(255,255,255,0.2)',
                     backdropFilter: 'blur(10px)',

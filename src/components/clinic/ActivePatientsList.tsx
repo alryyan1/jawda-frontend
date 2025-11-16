@@ -103,6 +103,9 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
                 if(visit.patient.company_id == null && user?.user_type == 'تامين'){
                   return false;
                 }
+                if(visit.patient.company && user?.user_type == 'خزنه موحده'){
+                  return false;
+                }
                 return true;
               }).map((visit: ActivePatientVisit) => (
                 <ActivePatientCard

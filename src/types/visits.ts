@@ -6,7 +6,7 @@ import type { UserStripped } from "./auth"; // Assuming UserStripped is here or 
 import type { Shift } from "./shifts";
 import type { Service, RequestedServiceDeposit } from "./services"; // Assuming RequestedServiceDeposit is here
 import type { ChildTest, MainTest } from "./labTests"; // MainTest now includes childTests
-import type { Company } from "./companies";
+import type { Company, Subcompany, CompanyRelation } from "./companies";
 
 // --- RequestedResult based on your latest decision to include tracking fields ---
 export interface RequestedResult {
@@ -125,6 +125,10 @@ export interface RequestedService {
   done: boolean; // If the service was performed
   approval: boolean; // If this service needed specific approval (e.g., insurance)
 
+  sub_total?: number; // Subtotal for this service (price * count)
+  net_payable?: number | null; // Net payable amount after discounts
+  balance_due?: number; // Balance due for this service
+
   created_at: string;
   updated_at: string;
   deposits?: RequestedServiceDeposit[]; // If tracking multiple payments per service
@@ -139,6 +143,7 @@ export interface DoctorVisit {
   auth_date: string | null;
   doctor_id: number;
   doctor?: DoctorStripped; // Or full Doctor object
+  doctor_name?: string; // Doctor name for quick display
   result_auth: boolean | null;
 
 
@@ -155,6 +160,7 @@ export interface DoctorVisit {
 
   visit_date: string; // YYYY-MM-DD
   visit_time?: string | null; // HH:MM:SS
+  visit_time_formatted?: string | null; // Formatted time string for display
   status: 'waiting' | 'with_doctor' | 'lab_pending' | 'imaging_pending' | 'payment_pending' | 'completed' | 'cancelled' | 'no_show' | string;
   visit_type?: string | null; // e.g., New, Follow-up, Emergency
   queue_number?: number | null;
@@ -168,8 +174,11 @@ export interface DoctorVisit {
   only_lab: boolean; // Is this visit *only* for lab tests without doctor consultation?
 
   company?: Company; // Eager loaded if patient is insured
+  company_relation?: CompanyRelation | null; // Company relation at visit level
+  patient_subcompany?: Subcompany | null; // Patient subcompany
 
   requested_services?: RequestedService[];
+  requested_services_summary?: RequestedServiceSummary[]; // Summary of requested services
   lab_requests?: LabRequest[];
   // vitals?: Vital[];
   // clinical_notes?: ClinicalNote[];
@@ -182,10 +191,16 @@ export interface DoctorVisit {
   total_amount?: number;
   total_paid?: number;
   balance_due?: number;
-  total_discount?:number;
+  total_discount?: number;
+  total_services_amount?: number; // Total amount for services
+  total_services_paid?: number; // Total paid for services
   total_lab_amount?: number;
   total_lab_paid?: number;
   total_lab_balance?: number;
+  total_lab_discount?: number; // Total discount for lab services
+  total_lab_endurance?: number; // Total endurance for lab services
+  total_lab_value_will_pay?: number; // Total lab value that will be paid
+  lab_paid?: number; // Lab paid amount at visit level
   requested_services_count?: number; // Count of services for this visit
 
 }

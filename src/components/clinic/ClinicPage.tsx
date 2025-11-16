@@ -3,13 +3,15 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import './clinicpage.css';
+import { Box } from '@mui/material';
 
 // Import Child Components (we will create/update these)
 import DoctorsTabs from '@/components/clinic/DoctorsTabs';
 import PatientRegistrationForm from '@/components/clinic/PatientRegistrationForm';
 import ActivePatientsList from '@/components/clinic/ActivePatientsList';
+import PatientistorytableClinc from '@/components/clinic/PatientistorytableClinc';
 
-import type { Patient } from '@/types/patients'; // Or your more specific ActivePatientListItem
+import type { Patient, PatientSearchResult } from '@/types/patients'; // Or your more specific ActivePatientListItem
 import { useClinicSelection } from '@/contexts/ClinicSelectionContext';
 import type { DoctorShift } from '@/types/doctors'; // Assuming a DoctorShift type for Tabs
 import { useAuth } from '@/contexts/AuthContext';
@@ -30,6 +32,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { FileText } from 'lucide-react';
 import { useAuthorization } from '@/hooks/useAuthorization';
+import apiClient from '@/services/api';
 
 const ClinicPage: React.FC = () => {
   const { requestSelection } = useClinicSelection();
@@ -70,6 +73,12 @@ const ClinicPage: React.FC = () => {
   const [isPatientDetailsDialogOpen, setIsPatientDetailsDialogOpen] = useState(false);
   const patientDetailsRef = React.useRef<PatientDetailsColumnClinicRef>(null);
 
+  // Patient search state for history table
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<PatientSearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showPatientHistory, setShowPatientHistory] = useState(false);
+
   const handleDoctorShiftSelectedFromFinder = useCallback((shift: DoctorShift) => {
     setActiveDoctorShift(shift);
     setIsDoctorFinderDialogOpen(false); // Close dialog after selection
@@ -96,7 +105,65 @@ const ClinicPage: React.FC = () => {
     if (patient.phone) {
       toast.success('تمت جدولة رسالة ترحيب للمريض');
     }
+    // Reset search state
+    setSearchQuery('');
+    setShowPatientHistory(false);
   }, []);
+
+  // Search patients function
+  const searchPatients = useCallback(async (query: string) => {
+    try {
+      setIsSearching(true);
+      const response = await apiClient.get(`/patients/search-existing?term=${encodeURIComponent(query)}`);
+      setSearchResults(response.data.data || []);
+    } catch (error) {
+      console.error('Error searching patients:', error);
+    } finally {
+      setIsSearching(false);
+    }
+  }, []);
+
+  // Search patients when query changes
+  useEffect(() => {
+    if (searchQuery.length >= 2) {
+      searchPatients(searchQuery);
+      setShowPatientHistory(true);
+    } else {
+      setSearchResults([]);
+      setShowPatientHistory(false);
+    }
+  }, [searchQuery, searchPatients]);
+
+  // Handle patient selection from history
+  const handleSelectPatientFromHistory = useCallback(async (patientId: number, _doctorId: number, companyId?: number) => {
+    if (!activeDoctorShift?.doctor_id) {
+      toast.error('حدث خطأ');
+      return;
+    }
+
+    try {
+      // First, we need to get the doctor visit ID from the search results
+      const patientSearchResult = searchResults.find(p => p.id === patientId);
+      if (!patientSearchResult?.last_visit_id) {
+        toast.error('لم يتم العثور على زيارة سابقة للمريض');
+        return;
+      }
+
+      const response = await apiClient.post(`/doctor-visits/${patientSearchResult.last_visit_id}/create-clinic-visit-from-history`, { 
+        doctor_id: activeDoctorShift.doctor_id,
+        doctor_shift_id: activeDoctorShift.id,
+        company_id: companyId,
+        reason_for_visit: 'متابعة'
+      });
+
+      const newPatient = response.data.data;
+      handlePatientRegistered(newPatient as Patient);
+      
+    } catch (error: unknown) {
+      console.error('Failed to create visit:', error);
+      toast.error('حدث خطأ');
+    }
+  }, [activeDoctorShift, searchResults, handlePatientRegistered]);
 
   const handlePatientSelected = useCallback((patient: Patient, visitId: number) => {
     setSelectedPatientVisit({ patient, visitId });
@@ -208,7 +275,7 @@ const ClinicPage: React.FC = () => {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [selectedPatientVisit, showRegistrationForm]);
+  }, [selectedPatientVisit, showRegistrationForm, can]);
 
   // Subscribe to realtime patient-registered events
   useEffect(() => {
@@ -306,12 +373,35 @@ const ClinicPage: React.FC = () => {
 
         {/* Section 2: Patient Registration Form Panel (Conditional Visibility) */}
         {showRegistrationForm && !isUnifiedCashier && (
-
-          <PatientRegistrationForm
-            isVisible={showRegistrationForm}
-            activeDoctorShift={activeDoctorShift}
-            onPatientRegistered={handlePatientRegistered}
-          />
+          <Box sx={{ position: 'relative' }}>
+            <PatientRegistrationForm
+              isVisible={showRegistrationForm}
+              activeDoctorShift={activeDoctorShift}
+              onPatientRegistered={handlePatientRegistered}
+              onSearchQueryChange={setSearchQuery}
+            />
+            
+            {/* Patient History Table - positioned opposite to the form */}
+            {showPatientHistory && (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: 0,
+                  left: '100%',
+                  transform: 'translateX(16px)',
+                  width: 850,
+                  zIndex: 10,
+                }}
+              >
+                <PatientistorytableClinc
+                  searchResults={searchResults}
+                  isLoading={isSearching}
+                  onSelectPatient={handleSelectPatientFromHistory}
+                  referringDoctor={activeDoctorShift ? { id: activeDoctorShift.doctor_id || 0, name: activeDoctorShift.doctor_name || '' } : null}
+                />
+              </Box>
+            )}
+          </Box>
         )}
 
         {/* Section 3: Active Patients List Panel */}

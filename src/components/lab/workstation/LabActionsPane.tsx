@@ -552,7 +552,7 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
                       {populateChemistryMutation.isPending ? (
                           <Loader2 className="h-7! w-7! animate-spin" />
                       ) : (
-                          <FontAwesomeIcon icon={faBolt} className="h-7! w-7!" />
+                          <FontAwesomeIcon icon={faBolt} style={{color: currentPatientData?.has_chemistry ? 'yellow' : ''}} className="h-7! w-7!" />
                       )}
                   </Button>
               </TooltipTrigger>

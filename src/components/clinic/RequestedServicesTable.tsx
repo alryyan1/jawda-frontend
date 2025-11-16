@@ -806,7 +806,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                   <TextField
                     type="number"
                     size="small"
-                    disabled={rowOptionsService.amount_paid > 0}
+                    disabled={rowOptionsService.amount_paid > 0  || user?.id != rowOptionsService.user_id}
                     inputProps={{ min: 1 }}
                     value={rowOptionsData.count ?? 1}
                     onChange={(e) =>
@@ -828,6 +828,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                       type="number"
                       size="small"
                       inputProps={{ min: 0 }}
+                      disabled={user?.id != rowOptionsService.user_id || rowOptionsService.amount_paid > 0}
                       value={rowOptionsData.endurance ?? 0}
                       onChange={(e) =>
                         setRowOptionsData({
@@ -847,7 +848,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                     <Select
                       label="نسبة التخفيض"
                       size="small"
-                      disabled={!can('تخفيض خدمه')}
+                      disabled={!can('تخفيض خدمه') || user?.id != rowOptionsService.user_id || rowOptionsService.amount_paid > 0}
                       value={rowOptionsData.discount_per}
                       onChange={(e) =>
                         setRowOptionsData({

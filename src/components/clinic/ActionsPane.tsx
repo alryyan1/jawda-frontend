@@ -179,7 +179,7 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
 
 
 
-        <Tooltip title="الحجوزات الإلكترونية" placement="left">
+       {authUser?.user_type !== 'خزنه موحده' && <Tooltip title="الحجوزات الإلكترونية" placement="left">
           <IconButton
             onClick={() => setIsOnlineAppointmentsOpen(true)}
             disabled={!activeDoctorShift}
@@ -187,7 +187,7 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
           >
             <FontAwesomeIcon icon={faGlobe} />
           </IconButton>
-        </Tooltip>
+        </Tooltip>}
 
         {/* Bankak Gallery Button */}
         <Tooltip title="بنك الصور" placement="left">

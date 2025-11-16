@@ -554,8 +554,8 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                           </div>
                           <span className="text-xs text-slate-500">
                             ID: {request.id}
-                            {request.is_bankak && (
-                              <span className="ml-2 text-xs text-gray-500">bankak</span>
+                            {request.user_deposited && (
+                              <span className="ml-2 text-xs text-blue-500"> {request.deposit_user_name}</span>
                             )}
                           </span>
                           {/* Mobile-only info */}
@@ -669,25 +669,22 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                             </Button>
                           )}
                           
-                          {/* Bankak Toggle Button */}
-                        {request.amount_paid > 0 &&  <Button
-                            variant="ghost"
-                            size="sm"
-                            className={`h-8 w-12 p-0 border-2 border-blue-200 ${
-                              request.is_bankak 
-                                ? "text-blue-600 hover:text-blue-800 hover:bg-blue-50" 
-                                : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
-                            }`}
-                            onClick={() => handleToggleBankak(request.id, !request.is_bankak)}
-                            disabled={toggleBankakMutation.isPending || !request.is_paid}
-                            title={request.is_bankak ? "إلغاء بنكك" : "تعيين بنكك"}
-                          >
-                            {toggleBankakMutation.isPending ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              'بنكك'
-                            )}
-                          </Button> }
+                          {/* Bankak Toggle Checkbox */}
+                          {request.amount_paid > 0 && (
+                            <div className="flex items-center gap-1" title={request.is_bankak ? "إلغاء بنكك" : "تعيين بنكك"}>
+                              {toggleBankakMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                              ) : (
+                                <Checkbox
+                                  checked={!!request.is_bankak}
+                                  onCheckedChange={(checked) => handleToggleBankak(request.id, !!checked)}
+                                  disabled={toggleBankakMutation.isPending || !request.is_paid || user?.id != request.user_deposited}
+                                  className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                                />
+                              )}
+                              <span className="text-xs text-slate-600">بنكك</span>
+                            </div>
+                          )}
 
                           {/* Delete Button */}
                           <Button
@@ -695,7 +692,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                             size="sm"
                             className="h-8 w-8 p-0 text-red-600 hover:text-red-800 hover:bg-red-50"
                             onClick={() => handleDeleteRequest(request.id)}
-                            disabled={deleteRequestMutation.isPending || visit?.patient?.result_print_date != null || !can('حذف فحص مضاف') || visit?.result_auth == true}
+                            disabled={deleteRequestMutation.isPending || visit?.patient?.result_print_date != null || !can('حذف فحص مضاف') || visit?.result_auth == true || user?.id != request.user_deposited}
                             title="حذف"
                           >
                             {deleteRequestMutation.isPending ? (

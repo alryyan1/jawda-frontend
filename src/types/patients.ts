@@ -117,6 +117,7 @@ export interface ActivePatientVisit {
     subcompany_id: number | null;
     subcompany: any | null;
     company_relation_id: number | null;
+    company_relation: any | null;
     insurance_no: string | null;
     expire_date: string | null;
     guarantor: string | null;
@@ -144,6 +145,7 @@ export interface ActivePatientVisit {
     };
     has_cbc: boolean;
     result_url: string | null;
+    doctor_in_patient: string | null;
   };
   patient_subcompany: any | null;
   doctor_id: number;
@@ -164,6 +166,13 @@ export interface ActivePatientVisit {
   total_lab_discount: number;
   total_lab_endurance: number;
   total_lab_balance: number;
+  total_services_amount: number;
+  total_services_paid: number;
+  total_lab_value_will_pay: number;
+  lab_paid: number;
+  company_relation: any | null;
+  result_auth: boolean;
+  auth_date: string | null;
   requested_services: Array<{
     id: number;
     doctorvisits_id: number;

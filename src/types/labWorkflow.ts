@@ -15,6 +15,7 @@ export interface PatientLabQueueItem { // For the leftmost list
   visit_notes?: string | null;
   is_new?: boolean;
   only_lab?: boolean;
+  has_chemistry?: boolean;
   requested_services_count?: number | null;
   patient?: any; // Full patient object
   patient_subcompany?: unknown | null;

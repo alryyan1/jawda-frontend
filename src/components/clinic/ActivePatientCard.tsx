@@ -23,7 +23,7 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 
-import type { Patient } from "@/types/patients";
+import type { ActivePatientVisit, Patient } from "@/types/patients";
 import type { DoctorShift } from "@/types/doctors";
 // Removed unused updateDoctorVisitStatus import
 import { getActiveDoctorShifts } from "@/services/clinicService";
@@ -49,19 +49,7 @@ const VISIT_STATUSES_FOR_DROPDOWN = [
 ] as const;
 type VisitStatus = (typeof VISIT_STATUSES_FOR_DROPDOWN)[number];
 
-interface ActivePatientVisit {
-  id: number;
-  status: VisitStatus;
-  patient: Patient;
-  company?: Company;
-  doctor?: { id: number; name: string };
-  doctor_shift_id?: number | null;
-  queue_number?: number;
-  number?: number;
-  requested_services_count: number;
-  created_at: string;
-  updated_at: string;
-}
+
 
 // Removed unused PaginatedActivePatientVisitsResponse and ApiError types
 
@@ -229,6 +217,7 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
     queryClient.invalidateQueries({ queryKey: ["activePatients"] }); // Refresh patient lists
     toast.success("تم إنشاء زيارة جديدة للمريض بنجاح");
   };
+  console.log('visit in active patient card', visit);
   return (
     <>
       <ContextMenu>
@@ -253,7 +242,7 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
             {/* Queue number or Heart for company patients */}
             {visit.company ? (
               <div
-                className="flex-shrink-0 w-8 h-8 flex items-center justify-center ltr:mr-3 rtl:ml-3"
+                className="flex-shrink-0 w-8 h-8 flex items-center justify-center ltr:mr-3 rtl:ml-3 " 
                 title={`رقم : ${queueNumberOrVisitId}`}
               >
                 {/* Custom heart shape with solid background */}
@@ -273,7 +262,8 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
               <div
                 className={cn(
                   "flex-shrink-0 w-8 h-8 flex items-center justify-center rounded text-white text-sm font-bold shadow ltr:mr-3 rtl:ml-3",
-                  getStatusColor(visit.status)
+                  visit.balance_due > 0 ? "bg-red-500" : "bg-green-500"
+                  // getStatusColor(visit.status)
                 )}
                 title={`رقم : ${queueNumberOrVisitId}`}
               >

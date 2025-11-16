@@ -110,13 +110,7 @@ const DoctorFinderDialog: React.FC<DoctorFinderDialogProps> = ({
       }}
       onClick={() => handleDoctorSelectAndClose(shift)}
     >
-      <Avatar
-        sx={{ width: 48, height: 48, mb: 1 }}
-        src={shift.doctor_avatar_url || undefined}
-        alt={shift.doctor_name}
-      >
-        {getInitials(shift.doctor_name)}
-      </Avatar>
+    
       <Typography variant="subtitle2" fontWeight="medium" textAlign="center">
         {shift.doctor_name}
       </Typography>

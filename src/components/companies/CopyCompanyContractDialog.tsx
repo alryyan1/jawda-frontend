@@ -1,20 +1,22 @@
 // src/components/companies/CopyCompanyContractDialog.tsx
-import React, { useState, useEffect, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
+import React, { useEffect, useMemo } from 'react';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
-  Dialog, DialogContent, DialogDescription, DialogFooter,
-  DialogHeader, DialogTitle, DialogClose,
-} from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Loader2 } from 'lucide-react';
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  TextField,
+  Autocomplete,
+  CircularProgress,
+  Box,
+} from '@mui/material';
 
 import type { Company } from '@/types/companies';
 import { getCompaniesList, copyServiceContractsFromCompany } from '@/services/companyService';
@@ -28,25 +30,24 @@ interface CopyCompanyContractDialogProps {
 }
 
 const copyContractSchema = z.object({
-  source_company_id: z.string().min(1, "Please select a source company."),
+  source_company_id: z.number().min(1, "يرجى اختيار الشركة المصدر"),
 });
 type CopyContractFormValues = z.infer<typeof copyContractSchema>;
 
 const CopyCompanyContractDialog: React.FC<CopyCompanyContractDialogProps> = ({
   isOpen, onOpenChange, targetCompanyId, targetCompanyName, onContractsCopied
 }) => {
-  const { t, i18n } = useTranslation(['companies', 'common']);
   const queryClient = useQueryClient();
 
   const form = useForm<CopyContractFormValues>({
     resolver: zodResolver(copyContractSchema),
-    defaultValues: { source_company_id: '' },
+    defaultValues: { source_company_id: 0 },
   });
 
   // Fetch list of all other companies to select from
   const { data: allCompanies, isLoading: isLoadingCompanies } = useQuery<Company[], Error>({
     queryKey: ['companiesListForCopyContract'],
-    queryFn: () => getCompaniesList({ status: true }), // Fetch active companies
+    queryFn: () => getCompaniesList({ status: true ,per_page: 1000}), // Fetch active companies
     enabled: isOpen,
   });
 
@@ -58,7 +59,7 @@ const CopyCompanyContractDialog: React.FC<CopyCompanyContractDialogProps> = ({
     mutationFn: (data: { sourceCompanyId: number }) => 
         copyServiceContractsFromCompany(targetCompanyId, data.sourceCompanyId),
     onSuccess: (response) => {
-      toast.success(response.message || t('companies:serviceContracts.copiedSuccess'));
+      toast.success(response.message || 'تم نسخ العقود بنجاح');
       queryClient.invalidateQueries({ 
         queryKey: ['companyContractedServices'],
         refetchType: 'all'
@@ -68,12 +69,12 @@ const CopyCompanyContractDialog: React.FC<CopyCompanyContractDialogProps> = ({
       onOpenChange(false);
     },
     onError: (error: Error & { response?: { data?: { message?: string } } }) => {
-      toast.error(error.response?.data?.message || t('common:error.operationFailed'));
+      toast.error(error.response?.data?.message || 'فشلت العملية');
     },
   });
 
   const onSubmit = (data: CopyContractFormValues) => {
-    copyMutation.mutate({ sourceCompanyId: parseInt(data.source_company_id) });
+    copyMutation.mutate({ sourceCompanyId: data.source_company_id });
   };
 
   useEffect(() => {
@@ -83,62 +84,74 @@ const CopyCompanyContractDialog: React.FC<CopyCompanyContractDialogProps> = ({
   }, [isOpen, form]);
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>{t('companies:serviceContracts.copyDialogTitle', { companyName: targetCompanyName })}</DialogTitle>
-          <DialogDescription>{t('companies:serviceContracts.copyDialogDescription')}</DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2">
-            <FormField
-              control={form.control}
-              name="source_company_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('companies:serviceContracts.selectSourceCompany')}</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    defaultValue={field.value}
-                    dir={i18n.dir()}
-                    disabled={isLoadingCompanies || copyMutation.isPending}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder={t('companies:serviceContracts.sourceCompanyPlaceholder')} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {isLoadingCompanies ? (
-                        <SelectItem value="loading" disabled>{t('common:loading')}</SelectItem>
-                      ) : sourceCompanyOptions.length === 0 ? (
-                        <div className="p-4 text-center text-sm text-muted-foreground">
-                            {t('companies:serviceContracts.noOtherCompanies')}
-                        </div>
-                      ) : (
-                        sourceCompanyOptions.map(comp => (
-                          <SelectItem key={comp.id} value={String(comp.id)}>{comp.name}</SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <DialogFooter className="pt-4">
-              <DialogClose asChild>
-                <Button type="button" variant="outline" disabled={copyMutation.isPending}>{t('common:cancel')}</Button>
-              </DialogClose>
-              <Button type="submit" disabled={isLoadingCompanies || copyMutation.isPending || sourceCompanyOptions.length === 0}>
-                {copyMutation.isPending && <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />}
-                {t('companies:serviceContracts.copyButton')}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+    <Dialog open={isOpen} onClose={() => onOpenChange(false)} maxWidth="sm" fullWidth>
+      <DialogTitle>
+        نسخ عقود الخدمات من شركة أخرى إلى {targetCompanyName}
+      </DialogTitle>
+      <DialogContent>
+        <Box component="form" onSubmit={form.handleSubmit(onSubmit)} sx={{ mt: 2 }}>
+          <Controller
+            name="source_company_id"
+            control={form.control}
+            render={({ field, fieldState: { error } }) => (
+              <Autocomplete
+                options={sourceCompanyOptions}
+                getOptionLabel={(option) => option.name || ''}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
+                loading={isLoadingCompanies}
+                value={sourceCompanyOptions.find(c => c.id === field.value) || null}
+                onChange={(_e, newValue) => {
+                  field.onChange(newValue?.id || 0);
+                }}
+                disabled={copyMutation.isPending}
+                noOptionsText={
+                  isLoadingCompanies 
+                    ? 'جاري التحميل...' 
+                    : sourceCompanyOptions.length === 0 
+                    ? 'لا توجد شركات أخرى متاحة'
+                    : 'لا توجد خيارات'
+                }
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="اختر الشركة المصدر"
+                    fullWidth
+                    margin="normal"
+                    error={!!error}
+                    helperText={error?.message}
+                    InputProps={{
+                      ...params.InputProps,
+                      endAdornment: (
+                        <>
+                          {isLoadingCompanies ? <CircularProgress size={20} /> : null}
+                          {params.InputProps.endAdornment}
+                        </>
+                      ),
+                    }}
+                  />
+                )}
+              />
+            )}
+          />
+        </Box>
       </DialogContent>
+      <DialogActions>
+        <Button 
+          onClick={() => onOpenChange(false)} 
+          disabled={copyMutation.isPending}
+          variant="outlined"
+        >
+          إلغاء
+        </Button>
+        <Button 
+          onClick={form.handleSubmit(onSubmit)}
+          disabled={isLoadingCompanies || copyMutation.isPending || sourceCompanyOptions.length === 0}
+          variant="contained"
+          startIcon={copyMutation.isPending ? <CircularProgress size={16} /> : null}
+        >
+          نسخ
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 };

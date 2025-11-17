@@ -1,17 +1,15 @@
-// src/components/companies/dialogs/ImportPricePreferenceDialog.tsx (New File)
+// src/components/companies/dialogs/ImportPricePreferenceDialog.tsx
 import React from 'react';
-import { useTranslation } from 'react-i18next';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"; // shadcn/ui
-import { Button } from '@/components/ui/button'; // shadcn/ui
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Typography,
+  Box,
+  Stack,
+} from '@mui/material';
 
 export type PriceImportPreference = 'standard_price' | 'zero_price';
 
@@ -28,41 +26,56 @@ const ImportPricePreferenceDialog: React.FC<ImportPricePreferenceDialogProps> = 
   onConfirm,
   companyName,
 }) => {
-  const { t } = useTranslation(['companies', 'common']);
+  const handleClose = () => {
+    onOpenChange(false);
+  };
+
+  const handleConfirm = (preference: PriceImportPreference) => {
+    onConfirm(preference);
+    handleClose();
+  };
 
   return (
-    <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>
-            {t('companies:contracts.importPricePreferenceDialog.title')}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            {t('companies:contracts.importPricePreferenceDialog.description', { companyName })}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0 justify-between sm:justify-end pt-4">
-          <AlertDialogCancel className="w-full sm:w-auto">
-            {t('common:cancel')}
-          </AlertDialogCancel>
-          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+    <Dialog open={isOpen} onClose={handleClose} maxWidth="sm" fullWidth>
+      <DialogTitle>
+        تفضيل السعر للاستيراد
+      </DialogTitle>
+      <DialogContent>
+        <Typography variant="body1" sx={{ mb: 2 }}>
+          كيف تريد تعيين أسعار الخدمات عند استيرادها إلى {companyName}؟
+        </Typography>
+      </DialogContent>
+      <DialogActions>
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, width: '100%', justifyContent: 'space-between' }}>
+          <Button
+            onClick={handleClose}
+            variant="outlined"
+            fullWidth={false}
+            sx={{ minWidth: { xs: '100%', sm: 'auto' } }}
+          >
+            إلغاء
+          </Button>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ width: { xs: '100%', sm: 'auto' } }}>
             <Button
-              variant="outline"
-              onClick={() => onConfirm('zero_price')}
-              className="w-full sm:w-auto"
+              onClick={() => handleConfirm('zero_price')}
+              variant="outlined"
+              fullWidth={false}
+              sx={{ minWidth: { xs: '100%', sm: 'auto' } }}
             >
-              {t('companies:contracts.importPricePreferenceDialog.setZeroPriceButton')}
+              تعيين السعر بصفر
             </Button>
-            <AlertDialogAction
-              onClick={() => onConfirm('standard_price')}
-              className="w-full sm:w-auto"
+            <Button
+              onClick={() => handleConfirm('standard_price')}
+              variant="contained"
+              fullWidth={false}
+              sx={{ minWidth: { xs: '100%', sm: 'auto' } }}
             >
-              {t('companies:contracts.importPricePreferenceDialog.useStandardPriceButton')}
-            </AlertDialogAction>
-          </div>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+              استخدام السعر القياسي
+            </Button>
+          </Stack>
+        </Box>
+      </DialogActions>
+    </Dialog>
   );
 };
 

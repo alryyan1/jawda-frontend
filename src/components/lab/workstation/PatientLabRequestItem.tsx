@@ -7,6 +7,7 @@ import {
   Heart,
   Globe,
   Shield,
+  Printer,
 } from "lucide-react";
 import type { PatientLabQueueItem } from "@/types/labWorkflow";
 
@@ -101,6 +102,7 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
         "flex flex-col items-center justify-center relative group border",
         // "hover:scale-105 f focus:ring-2 focus:ring-offset-2 bg-[#f0f5f7]",
         item.is_printed && "bg-[#01b9ff] text-black! font-bold",
+        item.result_auth != false && "bg-[#01b9ff] text-black! font-bold",
         isSelected && "bg-[#fee685]",
         "active:scale-95 transform-gpu",
         isLastResultPending &&   "animate-heartbeat",
@@ -129,9 +131,9 @@ const PatientLabRequestItem: React.FC<PatientLabRequestItemProps> = ({
           {item.test_count}
         </div>
       )}
-    {item.result_auth != false && (
+    {item.is_printed && (
       <div className="absolute -bottom-1 -right-1 p-0.5 bg-[var(--bg-color)] rounded-full shadow-sm border border-[var(--border-color)]">
-        <Shield className="h-3 w-3" style={{ color: 'black' }} />
+        <Printer className="h-3 w-3" style={{ color: 'black' }} />
       </div>
     )}
       {item.is_result_locked && (

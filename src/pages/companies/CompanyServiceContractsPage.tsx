@@ -410,7 +410,7 @@ export default function CompanyServiceContractsPage() {
           onClick={() => setIsCopyContractDialogOpen(true)}
           variant="outlined"
           size="small"
-          disabled={!canCopyContracts || importAllMutation.isPending}
+          disabled={ importAllMutation.isPending}
           sx={{ height: 36 }}
         >
           <Copy className="h-4 w-4 ltr:mr-2 rtl:ml-2" />

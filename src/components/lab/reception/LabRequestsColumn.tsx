@@ -692,7 +692,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                             size="sm"
                             className="h-8 w-8 p-0 text-red-600 hover:text-red-800 hover:bg-red-50"
                             onClick={() => handleDeleteRequest(request.id)}
-                            disabled={deleteRequestMutation.isPending || visit?.patient?.result_print_date != null || !can('حذف فحص مضاف') || visit?.result_auth == true || user?.id != request.user_deposited}
+                            disabled={deleteRequestMutation.isPending || visit?.patient?.result_print_date != null || !can('حذف فحص مضاف') || visit?.result_auth == true || (user?.id != request.user_deposited && request.user_deposited != null)}
                             title="حذف"
                           >
                             {deleteRequestMutation.isPending ? (

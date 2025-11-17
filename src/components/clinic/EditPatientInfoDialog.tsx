@@ -20,12 +20,9 @@ import {
   Typography,
   Paper,
   CircularProgress,
-  IconButton,
   Grid,
-  Divider,
   Autocomplete,
 } from '@mui/material';
-import { Add as PlusCircle } from '@mui/icons-material';
 
 import type { Patient, PatientFormData } from '@/types/patients';
 import type { Subcompany, CompanyRelation } from '@/types/companies';
@@ -34,6 +31,7 @@ import type { DoctorVisit } from '@/types/visits';
 import { getPatientById, updatePatient } from '@/services/patientService';
 import { getSubcompaniesList, getCompanyRelationsList } from '@/services/companyService';
 import { getDoctorsList } from '@/services/doctorService';
+import { getDoctorVisitById } from '@/services/visitService';
 import AddSubcompanyDialog from './AddSubcompanyDialog';
 import AddCompanyRelationDialog from './AddCompanyRelationDialog';
 
@@ -82,9 +80,19 @@ const EditPatientInfoDialog: React.FC<EditPatientInfoDialogProps> = ({
     queryFn: () => getPatientById(patientId),
     enabled: isOpen && !!patientId,
   });
+
+  // Refetch visit when dialog opens
+  const { data: refetchedVisit } = useQuery<DoctorVisit, Error>({
+    queryKey: ['doctorVisit', visit?.id],
+    queryFn: () => getDoctorVisitById(visit!.id),
+    enabled: isOpen && !!visit?.id,
+  });
+  
+  // Use refetched visit if available, otherwise fall back to prop
+  const currentVisit = refetchedVisit || visit;
   
   const isCompanyPatient = !!patientData?.company_id;
-
+  console.log(patientData,'patientData');
   const form = useForm<EditPatientFormValues>({
     defaultValues: {
       name: '',
@@ -136,12 +144,12 @@ const EditPatientInfoDialog: React.FC<EditPatientInfoDialogProps> = ({
         guarantor: patientData.guarantor || '',
         subcompany_id: patientData.subcompany_id ? String(patientData.subcompany_id) : '',
         company_relation_id: patientData.company_relation_id ? String(patientData.company_relation_id) : '',
-        doctor_id: visit?.patient?.doctor?.id || patientData.doctor?.id || null,
+        doctor_id: currentVisit?.patient?.doctor?.id || patientData.doctor?.id || null,
       });
     } else if (!isOpen) {
       reset();
     }
-  }, [isOpen, patientData, visit, reset]);
+  }, [isOpen, patientData, currentVisit, reset]);
 
   const updateMutation = useMutation<Patient, ApiError, Partial<PatientFormData>>({
     mutationFn: (data: Partial<PatientFormData>) => updatePatient(patientId, data),
@@ -455,7 +463,7 @@ const EditPatientInfoDialog: React.FC<EditPatientInfoDialogProps> = ({
                   />
                   
                   <Box display="flex" alignItems="center" gap={1}>
-                    {/* <Controller
+                    <Controller
                       name="subcompany_id"
                       control={control}
                       render={({ field, fieldState: { error } }) => (
@@ -465,7 +473,7 @@ const EditPatientInfoDialog: React.FC<EditPatientInfoDialogProps> = ({
                             {...field}
                             label="الشركة الفرعية"
                             value={field.value || ''}
-                            disabled={isLoadingSubcompanies}
+                            disabled={isLoadingSubcompanies || (currentVisit?.lab_requests?.length ?? 0) > 0 || (currentVisit?.requested_services?.length ?? 0) > 0}
                           >
                             <MenuItem value="">لا يوجد</MenuItem>
                             {subcompanies?.map(sub => (
@@ -477,17 +485,17 @@ const EditPatientInfoDialog: React.FC<EditPatientInfoDialogProps> = ({
                           {error && <Typography variant="caption" color="error">{error.message}</Typography>}
                         </FormControl>
                       )}
-                    /> */}
-                    <IconButton 
+                    />
+                    {/* <IconButton 
                       size="small" 
                       onClick={() => setShowSubcompanyDialog(true)}
                       sx={{ flexShrink: 0 }}
                     >
                       <PlusCircle fontSize="small" />
-                    </IconButton>
+                    </IconButton> */}
                   </Box>
                   
-                  {/* <Box display="flex" alignItems="center" gap={1}>
+                  <Box display="flex" alignItems="center" gap={1}>
                     <Controller
                       name="company_relation_id"
                       control={control}
@@ -495,30 +503,33 @@ const EditPatientInfoDialog: React.FC<EditPatientInfoDialogProps> = ({
                         <FormControl fullWidth size="small" error={!!error}>
                           <InputLabel>العلاقة</InputLabel>
                           <Select
+                           
                             {...field}
                             label="العلاقة"
                             value={field.value || ''}
-                            disabled={isLoadingRelations}
+                            disabled={isLoadingRelations || (currentVisit?.lab_requests?.length ?? 0) > 0 || (currentVisit?.requested_services?.length ?? 0) > 0}
                           >
                             <MenuItem value="">لا يوجد</MenuItem>
-                            {companyRelations?.map(rel => (
-                              <MenuItem key={rel.id} value={String(rel.id)}>
-                                {rel.name}
-                              </MenuItem>
-                            ))}
+                            {companyRelations
+                              ?.filter(relation => currentCompanyId && relation.company_id === currentCompanyId)
+                              .map(rel => (
+                                <MenuItem key={rel.id} value={String(rel.id)}>
+                                  {rel.name}
+                                </MenuItem>
+                              ))}
                           </Select>
                           {error && <Typography variant="caption" color="error">{error.message}</Typography>}
                         </FormControl>
                       )}
                     />
-                    <IconButton 
+                    {/* <IconButton 
                       size="small" 
                       onClick={() => setShowRelationDialog(true)}
                       sx={{ flexShrink: 0 }}
                     >
                       <PlusCircle fontSize="small" />
-                    </IconButton>
-                  </Box> */}
+                    </IconButton> */}
+                  </Box>
                 </Box>
               </Paper>
             )}
@@ -546,22 +557,22 @@ const EditPatientInfoDialog: React.FC<EditPatientInfoDialogProps> = ({
       </Dialog>
       
       {/* Quick Add Dialogs */}
-      {/* {currentCompanyId && (
+      {currentCompanyId && (
         <AddSubcompanyDialog
             companyId={currentCompanyId}
             open={showSubcompanyDialog}
             onOpenChange={setShowSubcompanyDialog}
             onSubcompanyAdded={handleSubcompanyAdded}
         />
-      )} */}
-      {/* {currentCompanyId && (
+      )}
+      {currentCompanyId && (
         <AddCompanyRelationDialog
             companyId={currentCompanyId}
             open={showRelationDialog}
             onOpenChange={setShowRelationDialog}
             onCompanyRelationAdded={handleRelationAdded}
         />
-      )} */}
+      )}
     </>
   );
 };

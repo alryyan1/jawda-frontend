@@ -10,6 +10,9 @@ import ActivePatientCard from "./ActivePatientCard";
 import PatientInfoDialog from "./PatientInfoDialog";
 import type { DoctorVisit } from "@/types/visits";
 import { useAuth } from "@/contexts/AuthContext";
+import apiClient from "@/services/api";
+import type { DoctorShift } from "@/types/doctors";
+import type { PaginatedResponse } from "@/types/common";
 
 interface ActivePatientsListProps {
   onPatientSelect: (patient: Patient, visitId: number) => void;
@@ -26,15 +29,89 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
 }) => {
 
   const { user } = useAuth();
-  const [navigationOffset, setNavigationOffset] = useState<number>(0);
+  const [currentDisplayedShiftId, setCurrentDisplayedShiftId] = useState<number | null>(null);
+  const [currentDoctorId, setCurrentDoctorId] = useState<number | null>(null);
 
-  // Calculate the target doctor shift ID based on navigation offset
-  const targetDoctorShiftId = doctorShiftId ? doctorShiftId + navigationOffset : null;
+  // Fetch current doctor shift to get doctor_id
+  const { data: currentDoctorShift } = useQuery<DoctorShift | null, Error>({
+    queryKey: ['doctorShift', doctorShiftId],
+    queryFn: async (): Promise<DoctorShift | null> => {
+      if (!doctorShiftId) return null;
+      const response = await apiClient.get<{ data: DoctorShift }>(`/doctor-shifts/${doctorShiftId}`);
+      return response.data.data;
+    },
+    enabled: !!doctorShiftId,
+  });
 
-  // Reset navigation offset when doctorShiftId changes
+  // Update current doctor ID when shift changes
   useEffect(() => {
-    setNavigationOffset(0);
+    if (currentDoctorShift?.doctor_id) {
+      setCurrentDoctorId(currentDoctorShift.doctor_id);
+    }
+  }, [currentDoctorShift]);
+
+  // Reset displayed shift when doctorShiftId changes
+  useEffect(() => {
+    setCurrentDisplayedShiftId(doctorShiftId);
   }, [doctorShiftId]);
+
+  // Fetch all doctor shifts for the current doctor
+  const { data: doctorShiftsList } = useQuery<DoctorShift[], Error>({
+    queryKey: ['doctorShiftsForDoctor', currentDoctorId],
+    queryFn: async () => {
+      if (!currentDoctorId) return [];
+      
+      // Fetch all pages to get all shifts for this doctor
+      let allShifts: DoctorShift[] = [];
+      let currentPage = 1;
+      let hasMorePages = true;
+      
+      while (hasMorePages) {
+        const response = await apiClient.get<PaginatedResponse<DoctorShift>>('/doctor-shifts', {
+          params: {
+            doctor_id: currentDoctorId,
+            per_page: 100, // Max allowed by backend
+            page: currentPage,
+            sort_by: 'id',
+            sort_direction: 'desc', // Most recent first
+          },
+        });
+        
+        const shifts = response.data.data || [];
+        allShifts = [...allShifts, ...shifts];
+        
+        // Check if there are more pages
+        const meta = response.data.meta;
+        hasMorePages = meta && currentPage < meta.last_page;
+        currentPage++;
+      }
+      
+      return allShifts;
+    },
+    enabled: !!currentDoctorId,
+  });
+
+  // Find previous and next shift IDs
+  const previousShiftId = React.useMemo(() => {
+    if (!currentDisplayedShiftId || !doctorShiftsList) return null;
+    // Find the shift with the highest ID that is less than current
+    const previousShifts = doctorShiftsList
+      .filter(shift => shift.id < currentDisplayedShiftId)
+      .sort((a, b) => b.id - a.id); // Sort descending to get the closest one
+    return previousShifts.length > 0 ? previousShifts[0].id : null;
+  }, [currentDisplayedShiftId, doctorShiftsList]);
+
+  const nextShiftId = React.useMemo(() => {
+    if (!currentDisplayedShiftId || !doctorShiftsList) return null;
+    // Find the shift with the lowest ID that is greater than current
+    const nextShifts = doctorShiftsList
+      .filter(shift => shift.id > currentDisplayedShiftId)
+      .sort((a, b) => a.id - b.id); // Sort ascending to get the closest one
+    return nextShifts.length > 0 ? nextShifts[0].id : null;
+  }, [currentDisplayedShiftId, doctorShiftsList]);
+
+  // Use current displayed shift ID or fallback to doctorShiftId
+  const targetDoctorShiftId = currentDisplayedShiftId || doctorShiftId;
 
   const {
     data: visits,
@@ -91,20 +168,20 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
   console.log(visitsList,'visitsList')
 
   const handlePreviousShift = () => {
-    if (doctorShiftId) {
-      setNavigationOffset(prev => prev - 1);
+    if (previousShiftId) {
+      setCurrentDisplayedShiftId(previousShiftId);
     }
   };
 
   const handleNextShift = () => {
-    if (doctorShiftId) {
-      setNavigationOffset(prev => prev + 1);
+    if (nextShiftId) {
+      setCurrentDisplayedShiftId(nextShiftId);
     }
   };
 
-  const canNavigatePrevious = doctorShiftId !== null && (doctorShiftId + navigationOffset - 1) > 0;
-  // Disable next button only when on current shift (offset === 0)
-  const canNavigateNext = doctorShiftId !== null && navigationOffset !== 0;
+  const canNavigatePrevious = previousShiftId !== null;
+  // Disable next button only when on current shift (no next shift available)
+  const canNavigateNext = nextShiftId !== null;
 
   return (
     <div className="h-full flex flex-col">
@@ -122,12 +199,11 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
             <ChevronRight className="h-4 w-4" />
           </Button>
           <span className="text-xs text-muted-foreground px-2">
-            {navigationOffset !== 0 && (
-              <span>
-                {navigationOffset > 0 ? `+${navigationOffset}` : navigationOffset}
-              </span>
+            {currentDisplayedShiftId !== doctorShiftId ? (
+              <span>ID: {currentDisplayedShiftId}</span>
+            ) : (
+              'الحالية'
             )}
-            {navigationOffset === 0 && 'الحالية'}
           </span>
           <Button
             variant="outline"

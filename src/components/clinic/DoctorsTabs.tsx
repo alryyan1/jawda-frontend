@@ -66,8 +66,16 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId 
   useEffect(() => {
     const handleDoctorShiftClosed = (data: { doctor_shift: DoctorShift }) => {
       console.log('Doctor shift closed event received:', data);
-      // Invalidate the query to refetch active doctor shifts
-      queryClient.invalidateQueries({ queryKey: ['activeDoctorShifts', currentClinicShift?.id] });
+      
+      // Update the cached data directly by removing the closed shift
+      queryClient.setQueryData<DoctorShift[]>(
+        ['activeDoctorShifts', currentClinicShift?.id],
+        (oldData) => {
+          if (!oldData) return oldData;
+          // Filter out the closed shift
+          return oldData.filter(shift => shift.id !== data.doctor_shift.id);
+        }
+      );
       
       // If the closed shift was the active one, clear the selection
       if (data.doctor_shift.id === activeShiftId) {

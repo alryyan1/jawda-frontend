@@ -14,6 +14,7 @@ import {
   TableRow,
   TextField,
   Typography,
+  Box,
 } from "@mui/material";
 import dayjs from "dayjs";
 import { Eye } from "lucide-react";
@@ -102,14 +103,16 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
     // Get all doctor shifts
     apiClient.get("/doctor-shifts", {
       params: {
-        status: '1', // Only open shifts
-        per_page: 100
+        // status: '1', // Only open shiftst
+        today: true,
+        per_page: 100,
+        shift_id: currentClinicShift?.id
       }
     }).then(({ data }) => {
       const list = Array.isArray(data?.data) ? data.data : data;
       setDoctorShifts(list);
     });
-  }, [update]);
+  }, [update, currentClinicShift?.id]);
 
   const addCost = (
     doctorShiftId: number,
@@ -216,6 +219,7 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
         <Table style={{ direction: "rtl" }} className="text-xl!" size="small">
         <TableHead>
           <TableRow>
+            <TableCell>الحالة</TableCell>
             <TableCell>الاسم</TableCell>
             <TableCell>اجمالي الاستحقاق</TableCell>
             <TableCell>عدد المرضي</TableCell>
@@ -238,8 +242,29 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
               return d.user_id_opened === user?.id;
             })
             .map((shift) => {
+              // Determine if shift is open - status can be boolean, number, or string
+              const statusValue = shift.status;
+              const isOpen = statusValue === true || 
+                            (typeof statusValue === 'number' && statusValue === 1) || 
+                            (typeof statusValue === 'string' && (statusValue === "1" || statusValue === "Open"));
+              
               return (
                 <TableRow key={shift.id}>
+                  <TableCell className="text-xl!">
+                    <Box
+                      sx={{
+                        width: 12,
+                        height: 12,
+                        borderRadius: '50%',
+                        backgroundColor: isOpen ? '#4CAF50' : '#F44336', // Green for open, red for closed
+                        margin: '0 auto',
+                        border: '2px solid',
+                        borderColor: isOpen ? '#2E7D32' : '#C62828', // Darker border
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                      }}
+                      title={isOpen ? 'مفتوح' : 'مغلق'}
+                    />
+                  </TableCell>
                   <TableCell className="text-xl!">{shift.doctor?.name || shift.doctor_name}</TableCell>
                   <ValueLoader api={`doctor-shifts/${shift.id}/financial-summary`} field="total_doctor_share" />
                   <TableCell className="text-xl!">{shift.doctor_visits_count}</TableCell>

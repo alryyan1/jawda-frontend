@@ -264,7 +264,11 @@ const ClinicPage: React.FC = () => {
           if (!isTextInput) {
             event.preventDefault();
             if(can('سداد خدمه')){ 
-              patientDetailsRef.current?.triggerPayAll();
+              if(user?.user_type === 'خزنه موحده'){
+                // patientDetailsRef.current?.triggerPayAll();
+              }else{
+                patientDetailsRef.current?.triggerPayAll();
+              }
             }
           }
         }

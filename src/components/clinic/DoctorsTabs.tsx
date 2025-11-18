@@ -6,13 +6,14 @@ import {
   Paper,
   Typography,
 } from '@mui/material';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import type { DoctorShift } from '@/types/doctors';
 import type { Patient } from '@/types/patients';
 import { getActiveDoctorShifts } from '@/services/clinicService';
 import './DoctorsTabs.css';
 import { useAuthorization } from '@/hooks/useAuthorization';
+import realtimeService from '@/services/realtimeService';
 
 interface DoctorsTabsProps {
   onShiftSelect: (shift: DoctorShift | null) => void;
@@ -24,6 +25,8 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId 
   const { currentClinicShift, user } = useAuth();
   const tabRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
   const { hasRole } = useAuthorization();
+  const queryClient = useQueryClient();
+  
   // Use React Query to fetch doctor shifts
   // This will automatically update when shifts are opened/closed from ManageDoctorShiftsDialog
   const { 
@@ -58,6 +61,26 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId 
       return () => clearTimeout(timeoutId);
     }
   }, [activeShiftId]);
+
+  // Listen for doctor-shift-closed real-time events
+  useEffect(() => {
+    const handleDoctorShiftClosed = (data: { doctor_shift: DoctorShift }) => {
+      console.log('Doctor shift closed event received:', data);
+      // Invalidate the query to refetch active doctor shifts
+      queryClient.invalidateQueries({ queryKey: ['activeDoctorShifts', currentClinicShift?.id] });
+      
+      // If the closed shift was the active one, clear the selection
+      if (data.doctor_shift.id === activeShiftId) {
+        onShiftSelect(null);
+      }
+    };
+
+    realtimeService.onDoctorShiftClosed(handleDoctorShiftClosed);
+
+    return () => {
+      realtimeService.offDoctorShiftClosed(handleDoctorShiftClosed);
+    };
+  }, [queryClient, currentClinicShift?.id, activeShiftId, onShiftSelect]);
 
 
   

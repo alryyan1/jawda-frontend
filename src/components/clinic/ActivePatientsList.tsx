@@ -1,12 +1,11 @@
 // src/components/clinic/ActivePatientsList.tsx
 import React, { useState, useEffect } from "react";
-import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import type { Patient } from "../../types/patients";
 import type { ActivePatientVisit } from "@/types/patients";
-import { Loader2, Users } from "lucide-react";
+import { Loader2, Users, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getActiveClinicPatients } from "@/services/clinicService";
-import type { PaginatedResponse } from "@/types/common";
 import ActivePatientCard from "./ActivePatientCard";
 import PatientInfoDialog from "./PatientInfoDialog";
 import type { DoctorVisit } from "@/types/visits";
@@ -27,6 +26,15 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
 }) => {
 
   const { user } = useAuth();
+  const [navigationOffset, setNavigationOffset] = useState<number>(0);
+
+  // Calculate the target doctor shift ID based on navigation offset
+  const targetDoctorShiftId = doctorShiftId ? doctorShiftId + navigationOffset : null;
+
+  // Reset navigation offset when doctorShiftId changes
+  useEffect(() => {
+    setNavigationOffset(0);
+  }, [doctorShiftId]);
 
   const {
     data: visits,
@@ -37,20 +45,21 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
   } = useQuery<ActivePatientVisit[], Error>({
     queryKey: [
       "activePatients",
-      doctorShiftId,
+      targetDoctorShiftId,
     ],
     queryFn: async (): Promise<ActivePatientVisit[]> => {
+      if (!targetDoctorShiftId) return [];
       const response = await getActiveClinicPatients({
-        doctor_shift_id: doctorShiftId,
+        doctor_shift_id: targetDoctorShiftId,
       });
       // Handle both paginated and non-paginated responses
       if (response && typeof response === 'object' && 'data' in response) {
-        return (response as any).data;
+        return (response as { data: ActivePatientVisit[] }).data;
       }
       return (response as ActivePatientVisit[]) || [];
     },
     // placeholderData: keepPreviousData,
-    enabled: !!doctorShiftId,
+    enabled: !!targetDoctorShiftId,
   });
   const [showPatientInfoDialog, setShowPatientInfoDialog] = useState(false);
   const [patientInfoVisit, setPatientInfoVisit] = useState<DoctorVisit | null>(null);
@@ -81,8 +90,57 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
   const visitsList = Array.isArray(visits) ? visits : [];
   console.log(visitsList,'visitsList')
 
+  const handlePreviousShift = () => {
+    if (doctorShiftId) {
+      setNavigationOffset(prev => prev - 1);
+    }
+  };
+
+  const handleNextShift = () => {
+    if (doctorShiftId) {
+      setNavigationOffset(prev => prev + 1);
+    }
+  };
+
+  const canNavigatePrevious = doctorShiftId !== null && (doctorShiftId + navigationOffset - 1) > 0;
+  // Disable next button only when on current shift (offset === 0)
+  const canNavigateNext = doctorShiftId !== null && navigationOffset !== 0;
+
   return (
     <div className="h-full flex flex-col">
+      {/* Navigation Buttons */}
+      {doctorShiftId && (
+        <div className="flex items-center justify-center gap-2 p-2 border-b bg-card">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handlePreviousShift}
+            disabled={!canNavigatePrevious}
+            className="h-8 w-8"
+            title="الوردية السابقة"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+          <span className="text-xs text-muted-foreground px-2">
+            {navigationOffset !== 0 && (
+              <span>
+                {navigationOffset > 0 ? `+${navigationOffset}` : navigationOffset}
+              </span>
+            )}
+            {navigationOffset === 0 && 'الحالية'}
+          </span>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleNextShift}
+            disabled={!canNavigateNext}
+            className="h-8 w-8"
+            title="الوردية التالية"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
       {isFetching && (
         <div className="text-xs text-muted-foreground p-1 text-center">
           <Loader2 className="inline h-3 w-3 animate-spin ltr:mr-1 rtl:ml-1" />

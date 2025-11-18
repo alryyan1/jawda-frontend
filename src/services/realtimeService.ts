@@ -235,6 +235,27 @@ class RealtimeService {
     }
   }
 
+  // Subscribe to doctor-shift-closed events
+  public onDoctorShiftClosed(callback: (data: { doctor_shift: any }) => void): void {
+    if (this.socket) {
+      this.socket.on('doctor-shift-closed', (data: { doctor_shift: any }) => {
+        console.log('Received doctor-shift-closed event:', data);
+        callback(data);
+      });
+    }
+  }
+
+  // Unsubscribe from doctor-shift-closed events
+  public offDoctorShiftClosed(callback?: (data: { doctor_shift: any }) => void): void {
+    if (this.socket) {
+      if (callback) {
+        this.socket.off('doctor-shift-closed', callback);
+      } else {
+        this.socket.off('doctor-shift-closed');
+      }
+    }
+  }
+
   // Print services receipt
   public async printServicesReceipt(visitId: number, patientId?: number): Promise<{ success: boolean; message?: string; error?: string }> {
     try {

@@ -1,207 +1,192 @@
-import React from "react";
-import { Loader2, Search, X } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
-import type { FirestoreDoctor, FirestoreAppointment } from "@/services/firestoreSpecialistService";
+import React, { useMemo } from "react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  Typography,
+  TextField,
+  Box,
+  CircularProgress,
+  InputAdornment,
+  Chip,
+  Divider,
+} from "@mui/material";
+import { Search as SearchIcon, Close as CloseIcon } from "@mui/icons-material";
+import type { FacilityAppointment } from "@/services/firestoreSpecialistService";
 
 interface AppointmentsListProps {
-  selectedDoctor: FirestoreDoctor | null;
-  appointments: FirestoreAppointment[] | undefined;
+  appointments: FacilityAppointment[] | undefined;
   isLoading: boolean;
   error: Error | null;
-  filteredAppointments: FirestoreAppointment[];
-  appointmentSearch: string;
-  filteredDate: string | null;
   formatDateDisplay: (dateString: string) => string;
   formatRelativeTime: (createdAt: unknown) => string;
   onSearchChange: (value: string) => void;
-  onClearDateFilter: () => void;
+  appointmentSearch: string;
 }
 
 const AppointmentsList: React.FC<AppointmentsListProps> = ({
-  selectedDoctor,
   appointments,
   isLoading,
   error,
-  filteredAppointments,
-  appointmentSearch,
-  filteredDate,
   formatDateDisplay,
   formatRelativeTime,
   onSearchChange,
-  onClearDateFilter,
+  appointmentSearch,
 }) => {
+  // Filter appointments based on search query (patient name or doctor name)
+  const filteredAppointments = useMemo(() => {
+    if (!appointments) return [];
+    
+    if (!appointmentSearch.trim()) {
+      return appointments;
+    }
+    
+    const searchLower = appointmentSearch.toLowerCase();
+    return appointments.filter((appointment) => {
+      return (
+        appointment.patientName?.toLowerCase().includes(searchLower) ||
+        appointment.doctorName?.toLowerCase().includes(searchLower) ||
+        appointment.patientPhone?.includes(searchLower)
+      );
+    });
+  }, [appointments, appointmentSearch]);
+
   return (
-    <Card className="col-span-1">
-      <CardHeader>
-        <CardTitle>
-          المواعيد
-          {selectedDoctor && (
-            <span className="text-sm font-normal text-gray-500 dark:text-gray-400 mr-2">
-              ({selectedDoctor.docName})
-            </span>
-          )}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {!selectedDoctor ? (
-          <div className="text-center py-8 text-gray-500">
-            اختر طبيباً لعرض المواعيد
-          </div>
-        ) : isLoading ? (
-          <>
-            {/* Date Filter Badge */}
-            {filteredDate && (
-              <div className="mb-3">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-sm">
-                  <span>مواعيد {formatDateDisplay(filteredDate)}</span>
-                  <button
-                    onClick={onClearDateFilter}
-                    className="hover:bg-blue-200 dark:hover:bg-blue-800 rounded-full p-0.5 transition-colors"
-                    aria-label="إزالة فلتر التاريخ"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              </div>
+    <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <CardHeader
+        title={
+          <Typography variant="h6" component="div">
+            المواعيد
+            {appointments && (
+              <Typography component="span" variant="body2" color="text.secondary" sx={{ mr: 1 }}>
+                ({appointments.length})
+              </Typography>
             )}
-
-            {/* Search Input */}
-            <div className="mb-4">
-              <div className="relative">
-                <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  type="text"
-                  placeholder="بحث في المواعيد..."
-                  value={appointmentSearch}
-                  onChange={(e) => onSearchChange(e.target.value)}
-                  className="pr-10"
-                  disabled
-                />
-              </div>
-            </div>
-
-            {/* Skeleton Loading */}
-            <div className="max-h-[500px] overflow-y-auto">
-              <div className="divide-y divide-gray-200 dark:divide-gray-700">
-                {[...Array(5)].map((_, index) => (
-                  <div key={index} className="py-3 px-2">
-                    <div className="space-y-2">
-                      <Skeleton className="h-4 w-32" />
-                      <Skeleton className="h-3 w-24" />
-                      <div className="flex items-center justify-between mt-2">
-                        <Skeleton className="h-3 w-28" />
-                        <div className="flex items-center gap-2">
-                          <Skeleton className="h-5 w-12" />
-                          <Skeleton className="h-5 w-16" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </>
+          </Typography>
+        }
+      />
+      <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 2 }}>
+        {isLoading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8, flexGrow: 1 }}>
+            <CircularProgress />
+          </Box>
         ) : error ? (
-          <div className="text-red-500 text-center py-4">
-            فشل تحميل المواعيد
-          </div>
+          <Box sx={{ textAlign: 'center', py: 4, color: 'error.main' }}>
+            <Typography>فشل تحميل المواعيد</Typography>
+          </Box>
         ) : (
           <>
-            {/* Date Filter Badge */}
-            {filteredDate && (
-              <div className="mb-3">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-sm">
-                  <span>مواعيد {formatDateDisplay(filteredDate)}</span>
-                  <button
-                    onClick={onClearDateFilter}
-                    className="hover:bg-blue-200 dark:hover:bg-blue-800 rounded-full p-0.5 transition-colors"
-                    aria-label="إزالة فلتر التاريخ"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              </div>
-            )}
-
             {/* Search Input */}
-            <div className="mb-4">
-              <div className="relative">
-                <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  type="text"
-                  placeholder="بحث في المواعيد..."
-                  value={appointmentSearch}
-                  onChange={(e) => onSearchChange(e.target.value)}
-                  className="pr-10"
-                />
-              </div>
-            </div>
+            <TextField
+              fullWidth
+              placeholder="بحث بالاسم أو الطبيب..."
+              value={appointmentSearch}
+              onChange={(e) => onSearchChange(e.target.value)}
+              size="small"
+              sx={{ mb: 2 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+                endAdornment: appointmentSearch ? (
+                  <InputAdornment position="end">
+                    <Box
+                      component="button"
+                      onClick={() => onSearchChange("")}
+                      sx={{
+                        border: 'none',
+                        background: 'transparent',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        p: 0.5,
+                        '&:hover': { opacity: 0.7 }
+                      }}
+                    >
+                      <CloseIcon fontSize="small" />
+                    </Box>
+                  </InputAdornment>
+                ) : null,
+              }}
+            />
 
             {/* Appointments List */}
             {filteredAppointments && filteredAppointments.length > 0 ? (
-              <div className="max-h-[500px] overflow-y-auto">
-                <div className="divide-y divide-gray-200 dark:divide-gray-700">
-                  {filteredAppointments.map((appointment) => (
-                    <div
-                      key={appointment.id}
-                      className="py-3 px-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              <Box sx={{ flexGrow: 1, overflowY: 'auto', maxHeight: '500px' }}>
+                {filteredAppointments.map((appointment, index) => (
+                  <Box key={appointment.id}>
+                    <Box
+                      sx={{
+                        py: 2,
+                        px: 1,
+                        '&:hover': {
+                          bgcolor: 'action.hover',
+                        },
+                        transition: 'background-color 0.2s',
+                      }}
                     >
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="font-medium text-sm">
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                        <Box>
+                          <Typography variant="subtitle2" fontWeight="medium">
                             {appointment.patientName}
-                          </div>
-                          {appointment.createdAt && (
-                            <div className="text-xs text-gray-400 dark:text-gray-500">
-                              {formatRelativeTime(appointment.createdAt)}
-                            </div>
-                          )}
-                        </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                          {appointment.patientPhone}
-                        </div>
-                        <div className="flex items-center justify-between mt-2">
-                          <div className="text-xs text-gray-600 dark:text-gray-400">
-                            {appointment.date} - {appointment.time}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`text-xs px-2 py-1 rounded ${
-                                appointment.period === "morning"
-                                  ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-                                  : "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300"
-                              }`}
-                            >
-                              {appointment.period === "morning" ? "صباح" : "مساء"}
-                            </span>
-                            {appointment.isConfirmed ? (
-                              <span className="text-xs px-2 py-1 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">
-                                مؤكد
-                              </span>
-                            ) : (
-                              <span className="text-xs px-2 py-1 rounded bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300">
-                                غير مؤكد
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : appointmentSearch || filteredDate ? (
-              <div className="text-center py-8 text-gray-500">
-                {appointmentSearch
-                  ? "لا توجد نتائج للبحث"
-                  : "لا توجد مواعيد في هذا التاريخ"}
-              </div>
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {appointment.patientPhone}
+                          </Typography>
+                        </Box>
+                        {appointment.createdAt && (
+                          <Typography variant="caption" color="text.secondary">
+                            {formatRelativeTime(appointment.createdAt)}
+                          </Typography>
+                        )}
+                      </Box>
+
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1.5 }}>
+                        <Box>
+                          <Typography variant="body2" color="text.secondary">
+                            {formatDateDisplay(appointment.date)}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            الطبيب: {appointment.doctorName}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" display="block">
+                            التخصص: {appointment.specializationName}
+                          </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                          <Chip
+                            label={appointment.period === "morning" ? "صباح" : "مساء"}
+                            size="small"
+                            color={appointment.period === "morning" ? "primary" : "warning"}
+                            sx={{ fontSize: '0.7rem', height: 20 }}
+                          />
+                          <Chip
+                            label={appointment.isConfirmed ? "مؤكد" : "غير مؤكد"}
+                            size="small"
+                            color={appointment.isConfirmed ? "success" : "default"}
+                            sx={{ fontSize: '0.7rem', height: 20 }}
+                          />
+                        </Box>
+                      </Box>
+                    </Box>
+                    {index < filteredAppointments.length - 1 && <Divider />}
+                  </Box>
+                ))}
+              </Box>
+            ) : appointmentSearch ? (
+              <Box sx={{ textAlign: 'center', py: 8, flexGrow: 1 }}>
+                <Typography variant="body2" color="text.secondary">
+                  لا توجد نتائج للبحث
+                </Typography>
+              </Box>
             ) : (
-              <div className="text-center py-8 text-gray-500">
-                لا توجد مواعيد متاحة
-              </div>
+              <Box sx={{ textAlign: 'center', py: 8, flexGrow: 1 }}>
+                <Typography variant="body2" color="text.secondary">
+                  لا توجد مواعيد متاحة
+                </Typography>
+              </Box>
             )}
           </>
         )}
@@ -211,4 +196,3 @@ const AppointmentsList: React.FC<AppointmentsListProps> = ({
 };
 
 export default AppointmentsList;
-

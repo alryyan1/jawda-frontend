@@ -11,6 +11,21 @@ export interface FirestoreSpecialist {
   specName: string;
 }
 
+export interface ApiSpecialization {
+  id?: string;
+  createdAt: string | { seconds?: number; nanoseconds?: number } | any; // Timestamp
+  isActive: boolean;
+  order: number;
+  specName: string;
+}
+
+export interface AllDoctor {
+  id: string;
+  name: string;
+  phoneNumber: string;
+  specialization: string;
+}
+
 // Firestore path structure: medicalFacilities/{facilityId}/specializations
 const FACILITY_ID = 'KyKrjLBHMBGHtLzU3RS3';
 
@@ -173,6 +188,23 @@ export interface FirestoreAppointment {
   time: string;
 }
 
+// New appointment structure from /medicalFacilities/{facilityId}/appointments
+export interface FacilityAppointment {
+  id: string;
+  centralSpecialtyId: string;
+  createdAt: any; // Firestore timestamp
+  date: string;
+  doctorId: string;
+  doctorName: string;
+  facilityId: string;
+  isConfirmed: boolean;
+  patientId: string;
+  patientName: string;
+  patientPhone: string;
+  period: "morning" | "evening";
+  specializationName: string;
+}
+
 export const fetchAppointmentsByDoctor = async (
   specialistId: string,
   doctorId: string,
@@ -221,6 +253,8 @@ export const fetchAppointmentsByDoctor = async (
   }
 };
 
+
+
 export interface CreateAppointmentData {
   date: string;
   patientName: string;
@@ -230,6 +264,60 @@ export interface CreateAppointmentData {
   patientId?: string;
   isConfirmed?: boolean;
 }
+
+export interface CreateFacilityAppointmentData {
+  centralSpecialtyId: string;
+  date: string;
+  doctorId: string;
+  doctorName: string;
+  patientName: string;
+  patientPhone: string;
+  period: "morning" | "evening";
+  specializationName: string;
+  time?: string;
+  isConfirmed?: boolean;
+  patientId?: string;
+}
+
+export const createFacilityAppointment = async (
+  appointmentData: CreateFacilityAppointmentData
+): Promise<string> => {
+  try {
+    // Reference to the facility document
+    const facilityDocRef = doc(db, 'medicalFacilities', FACILITY_ID);
+    // Reference to the appointments collection
+    const appointmentsRef = collection(facilityDocRef, 'appointments');
+    
+    // Generate patientId if not provided
+    const patientId = appointmentData.patientId || `patient_${Date.now()}_${appointmentData.patientPhone.replace(/\D/g, '')}`;
+    
+    // Generate default time based on period if not provided
+    const time = appointmentData.time || (appointmentData.period === "morning" ? "09:00" : "18:00");
+    
+    // Create appointment document
+    const newAppointment = {
+      centralSpecialtyId: appointmentData.centralSpecialtyId,
+      createdAt: serverTimestamp(),
+      date: appointmentData.date,
+      doctorId: appointmentData.doctorId,
+      doctorName: appointmentData.doctorName,
+      facilityId: FACILITY_ID,
+      isConfirmed: appointmentData.isConfirmed ?? false,
+      patientId: patientId,
+      patientName: appointmentData.patientName,
+      patientPhone: appointmentData.patientPhone,
+      period: appointmentData.period,
+      specializationName: appointmentData.specializationName,
+      time: time,
+    };
+    
+    const docRef = await addDoc(appointmentsRef, newAppointment);
+    return docRef.id;
+  } catch (error) {
+    console.error('Error creating facility appointment:', error);
+    throw new Error('Failed to create appointment in Firestore');
+  }
+};
 
 export const createAppointment = async (
   specialistId: string,
@@ -313,6 +401,38 @@ export interface AppointmentWithDoctor extends FirestoreAppointment {
   specialistName: string;
 }
 
+// Fetch all appointments from the facility-level appointments collection
+export const fetchAllFacilityAppointments = async (): Promise<FacilityAppointment[]> => {
+  try {
+    // Reference to the facility document
+    const facilityDocRef = doc(db, 'medicalFacilities', FACILITY_ID);
+    // Reference to the appointments collection
+    const appointmentsRef = collection(facilityDocRef, 'appointments');
+    
+    // Query to get all appointments, ordered by date (newest first)
+    const q = query(
+      appointmentsRef,
+      orderBy('date', 'desc'),
+      orderBy('createdAt', 'desc')
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const appointments: FacilityAppointment[] = [];
+    
+    querySnapshot.forEach((doc) => {
+      appointments.push({
+        id: doc.id,
+        ...doc.data()
+      } as FacilityAppointment);
+    });
+    
+    return appointments;
+  } catch (error) {
+    console.error('Error fetching facility appointments:', error);
+    throw new Error('Failed to fetch appointments from Firestore');
+  }
+};
+
 export const fetchAllAppointments = async (): Promise<AppointmentWithDoctor[]> => {
   try {
     const allAppointments: AppointmentWithDoctor[] = [];
@@ -354,5 +474,67 @@ export const fetchAllAppointments = async (): Promise<AppointmentWithDoctor[]> =
   } catch (error) {
     console.error('Error fetching all appointments:', error);
     throw new Error('Failed to fetch all appointments from Firestore');
+  }
+};
+
+// Fetch specializations from Firestore
+export const fetchSpecializationsFromApi = async (facilityId: string = 'KyKrjLBHMBGHtLzU3RS3'): Promise<ApiSpecialization[]> => {
+  try {
+    // Reference to the parent document
+    const facilityDocRef = doc(db, 'medicalFacilities', facilityId);
+    // Reference to the subcollection
+    const specialistsRef = collection(facilityDocRef, 'specializations');
+    
+    // Query to get all specialists, ordered by order field
+    const q = query(
+      specialistsRef,
+      orderBy('order', 'asc')
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const specializations: ApiSpecialization[] = [];
+    
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      specializations.push({
+        id: doc.id,
+        createdAt: data.createdAt,
+        isActive: data.isActive ?? true,
+        order: data.order ?? 0,
+        specName: data.specName || '',
+      });
+    });
+    
+    return specializations;
+  } catch (error) {
+    console.error('Error fetching specializations from Firestore:', error);
+    throw new Error('Failed to fetch specializations from Firestore');
+  }
+};
+
+// Fetch all doctors from Firestore allDoctors collection
+export const fetchAllDoctors = async (): Promise<AllDoctor[]> => {
+  try {
+    // Reference to the allDoctors collection
+    const doctorsRef = collection(db, 'allDoctors');
+    
+    // Query to get all doctors
+    const querySnapshot = await getDocs(doctorsRef);
+    const doctors: AllDoctor[] = [];
+    
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      doctors.push({
+        id: doc.id,
+        name: data.name || '',
+        phoneNumber: data.phoneNumber || '',
+        specialization: data.specialization || '',
+      });
+    });
+    
+    return doctors;
+  } catch (error) {
+    console.error('Error fetching all doctors from Firestore:', error);
+    throw new Error('Failed to fetch all doctors from Firestore');
   }
 };

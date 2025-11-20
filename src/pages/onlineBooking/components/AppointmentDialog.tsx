@@ -1,24 +1,20 @@
 import React from "react";
-import { Loader2 } from "lucide-react";
 import {
   Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import {
+  DialogContent,
+  DialogActions,
+  Button,
+  TextField,
+  Typography,
+  Box,
+  FormControl,
+  InputLabel,
   Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import type { FirestoreDoctor, DaySchedule } from "@/services/firestoreSpecialistService";
+  MenuItem,
+  CircularProgress,
+} from "@mui/material";
+import type { FirestoreDoctor } from "@/services/firestoreSpecialistService";
 
 interface AppointmentDialogProps {
   isOpen: boolean;
@@ -30,9 +26,7 @@ interface AppointmentDialogProps {
     patientName: string;
     patientPhone: string;
     period: "morning" | "evening";
-    time: string;
   };
-  availableTimeSlots: string[];
   formatDateDisplay: (dateString: string) => string;
   isPending: boolean;
   onFormDataChange: (data: Partial<AppointmentDialogProps["formData"]>) => void;
@@ -46,7 +40,6 @@ const AppointmentDialog: React.FC<AppointmentDialogProps> = ({
   selectedDate,
   selectedDoctor,
   formData,
-  availableTimeSlots,
   formatDateDisplay,
   isPending,
   onFormDataChange,
@@ -56,137 +49,84 @@ const AppointmentDialog: React.FC<AppointmentDialogProps> = ({
     ? selectedDoctor.workingSchedule[selectedDay]
     : null;
 
-  const filteredTimeSlots = availableTimeSlots.filter((slot) => {
-    if (!selectedDay || !selectedDoctor?.workingSchedule) return false;
-    const schedule = selectedDoctor.workingSchedule[selectedDay];
-    if (!schedule) return false;
-
-    if (formData.period === "morning") {
-      if (!schedule.morning) return false;
-      const [slotHour, slotMin] = slot.split(":").map(Number);
-      const [startHour, startMin] = schedule.morning.start.split(":").map(Number);
-      const [endHour, endMin] = schedule.morning.end.split(":").map(Number);
-      const slotMinutes = slotHour * 60 + slotMin;
-      const startMinutes = startHour * 60 + startMin;
-      const endMinutes = endHour * 60 + endMin;
-      return slotMinutes >= startMinutes && slotMinutes < endMinutes;
-    } else {
-      if (!schedule.evening) return false;
-      const [slotHour, slotMin] = slot.split(":").map(Number);
-      const [startHour, startMin] = schedule.evening.start.split(":").map(Number);
-      const [endHour, endMin] = schedule.evening.end.split(":").map(Number);
-      const slotMinutes = slotHour * 60 + slotMin;
-      const startMinutes = startHour * 60 + startMin;
-      const endMinutes = endHour * 60 + endMin;
-      return slotMinutes >= startMinutes && slotMinutes < endMinutes;
-    }
-  });
-
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>إنشاء موعد جديد</DialogTitle>
-          <DialogDescription>
-            {selectedDay && selectedDate && (
-              <span>
-                {selectedDay} - {formatDateDisplay(selectedDate)}
-              </span>
-            )}
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={onSubmit}>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="patientName">اسم المريض</Label>
-              <Input
-                id="patientName"
-                value={formData.patientName}
-                onChange={(e) =>
-                  onFormDataChange({ patientName: e.target.value })
-                }
-                placeholder="أدخل اسم المريض"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="patientPhone">رقم الهاتف</Label>
-              <Input
-                id="patientPhone"
-                value={formData.patientPhone}
-                onChange={(e) =>
-                  onFormDataChange({ patientPhone: e.target.value })
-                }
-                placeholder="أدخل رقم الهاتف"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="period">الفترة</Label>
+    <Dialog 
+      open={isOpen} 
+      onClose={() => onOpenChange(false)}
+      maxWidth="sm"
+      fullWidth
+    >
+      <DialogTitle>إنشاء موعد جديد</DialogTitle>
+      <DialogContent dividers>
+        {selectedDay && selectedDate && (
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            {selectedDay} - {formatDateDisplay(selectedDate)}
+          </Typography>
+        )}
+        <form onSubmit={onSubmit} id="appointment-form">
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <TextField
+              label="اسم المريض"
+              value={formData.patientName}
+              onChange={(e) =>
+                onFormDataChange({ patientName: e.target.value })
+              }
+              placeholder="أدخل اسم المريض"
+              required
+              fullWidth
+              size="small"
+            />
+            <TextField
+              label="رقم الهاتف"
+              value={formData.patientPhone}
+              onChange={(e) =>
+                onFormDataChange({ patientPhone: e.target.value })
+              }
+              placeholder="أدخل رقم الهاتف"
+              required
+              fullWidth
+              size="small"
+            />
+            <FormControl fullWidth size="small" required>
+              <InputLabel>الفترة</InputLabel>
               <Select
                 value={formData.period}
-                onValueChange={(value: "morning" | "evening") => {
-                  onFormDataChange({ period: value, time: "" });
+                label="الفترة"
+                onChange={(e) => {
+                  onFormDataChange({ period: e.target.value as "morning" | "evening" });
                 }}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="اختر الفترة" />
-                </SelectTrigger>
-                <SelectContent>
-                  {daySchedule?.morning && (
-                    <SelectItem value="morning">صباح</SelectItem>
-                  )}
-                  {daySchedule?.evening && (
-                    <SelectItem value="evening">مساء</SelectItem>
-                  )}
-                </SelectContent>
+                {daySchedule?.morning && (
+                  <MenuItem value="morning">صباح</MenuItem>
+                )}
+                {daySchedule?.evening && (
+                  <MenuItem value="evening">مساء</MenuItem>
+                )}
               </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="time">الوقت</Label>
-              <Select
-                value={formData.time}
-                onValueChange={(value) => onFormDataChange({ time: value })}
-                disabled={!formData.period}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="اختر الوقت" />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredTimeSlots.map((slot) => (
-                    <SelectItem key={slot} value={slot}>
-                      {slot}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isPending}
-            >
-              إلغاء
-            </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  جاري الإنشاء...
-                </>
-              ) : (
-                "إنشاء الموعد"
-              )}
-            </Button>
-          </DialogFooter>
+            </FormControl>
+          </Box>
         </form>
       </DialogContent>
+      <DialogActions>
+        <Button
+          onClick={() => onOpenChange(false)}
+          disabled={isPending}
+          variant="outlined"
+        >
+          إلغاء
+        </Button>
+        <Button
+          type="submit"
+          form="appointment-form"
+          disabled={isPending}
+          variant="contained"
+          startIcon={isPending ? <CircularProgress size={16} /> : null}
+        >
+          {isPending ? "جاري الإنشاء..." : "إنشاء الموعد"}
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 };
 
 export default AppointmentDialog;
-

@@ -2,22 +2,27 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { smsService } from "@/services/smsService";
 import { 
   fetchAllFirestoreSpecialists, 
   fetchAllDoctorsBySpecialist,
   fetchAppointmentsByDoctor,
-  createAppointment,
+  createFacilityAppointment,
   updateDoctor,
-  fetchAllAppointments,
+  fetchAllFacilityAppointments,
+  fetchSpecializationsFromApi,
+  fetchAllDoctors,
   type FirestoreSpecialist,
   type FirestoreDoctor,
   type FirestoreAppointment,
+  type FacilityAppointment,
   type DaySchedule,
   type UpdateDoctorData,
-  type AppointmentWithDoctor
+  type ApiSpecialization,
+  type AllDoctor
 } from "@/services/firestoreSpecialistService";
 import { format } from "date-fns";
-import { arabicDayToNumber, getDateForDay, formatDateDisplay, formatRelativeTime, generateTimeSlots } from "./utils/dateHelpers";
+import { arabicDayToNumber, getDateForDay, formatDateDisplay, formatRelativeTime } from "./utils/dateHelpers";
 import SpecialistsList from "./components/SpecialistsList";
 import DoctorsList from "./components/DoctorsList";
 import DoctorSchedule from "./components/DoctorSchedule";
@@ -25,6 +30,8 @@ import AppointmentsList from "./components/AppointmentsList";
 import AppointmentDialog from "./components/AppointmentDialog";
 import EditDoctorDialog from "./components/EditDoctorDialog";
 import AllAppointmentsDialog from "./components/AllAppointmentsDialog";
+import SpecializationsDialog from "./components/SpecializationsDialog";
+import AllDoctorsDialog from "./components/AllDoctorsDialog";
 
 const OnlineBookingPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -34,16 +41,16 @@ const OnlineBookingPage: React.FC = () => {
   const [isAppointmentDialogOpen, setIsAppointmentDialogOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>("");
-  const [filteredDate, setFilteredDate] = useState<string | null>(null);
   const [isEditDoctorDialogOpen, setIsEditDoctorDialogOpen] = useState(false);
   const [doctorToEdit, setDoctorToEdit] = useState<FirestoreDoctor | null>(null);
   const [doctorEditForm, setDoctorEditForm] = useState<UpdateDoctorData>({});
   const [isAllAppointmentsDialogOpen, setIsAllAppointmentsDialogOpen] = useState(false);
+  const [isSpecializationsDialogOpen, setIsSpecializationsDialogOpen] = useState(false);
+  const [isAllDoctorsDialogOpen, setIsAllDoctorsDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     patientName: "",
     patientPhone: "",
     period: "morning" as "morning" | "evening",
-    time: "",
   });
 
   // Fetch all specialists from Firestore
@@ -79,7 +86,7 @@ const OnlineBookingPage: React.FC = () => {
     appointmentsQueries.forEach((query, index) => {
       if (query.data && doctors?.[index]) {
         const doctorId = doctors[index].id;
-        const futureAppointments = query.data.filter((appointment) => {
+        const futureAppointments = query.data.filter((appointment: FirestoreAppointment) => {
           return appointment.date >= today;
         });
         counts[doctorId] = futureAppointments.length;
@@ -97,11 +104,10 @@ const OnlineBookingPage: React.FC = () => {
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 
-  // Fetch appointments for selected doctor (with optional date filter)
-  const { data: appointments, isLoading: isLoadingAppointments, error: appointmentsError } = useQuery<FirestoreAppointment[], Error>({
-    queryKey: ["firestoreAppointments", selectedSpecialistId, selectedDoctor?.id, filteredDate],
-    queryFn: () => fetchAppointmentsByDoctor(selectedSpecialistId!, selectedDoctor!.id, filteredDate || undefined),
-    enabled: !!selectedSpecialistId && !!selectedDoctor?.id,
+  // Fetch all facility appointments (from the new path)
+  const { data: appointments, isLoading: isLoadingAppointments, error: appointmentsError } = useQuery<FacilityAppointment[], Error>({
+    queryKey: ["facilityAppointments"],
+    queryFn: fetchAllFacilityAppointments,
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 
@@ -129,19 +135,67 @@ const OnlineBookingPage: React.FC = () => {
 
   // Create appointment mutation
   const createAppointmentMutation = useMutation({
-    mutationFn: async (data: { patientName: string; patientPhone: string; period: "morning" | "evening"; time: string }) => {
-      if (!selectedSpecialistId || !selectedDoctor?.id) throw new Error("No doctor selected");
-      return createAppointment(selectedSpecialistId, selectedDoctor.id, {
+    mutationFn: async (data: { patientName: string; patientPhone: string; period: "morning" | "evening" }) => {
+      if (!selectedSpecialistId || !selectedDoctor?.id || !specialists) {
+        throw new Error("No doctor or specialist selected");
+      }
+      
+      // Find the selected specialist to get centralSpecialtyId and specializationName
+      const selectedSpecialist = specialists.find(s => s.id === selectedSpecialistId);
+      if (!selectedSpecialist) {
+        throw new Error("Specialist not found");
+      }
+      
+      return createFacilityAppointment({
+        centralSpecialtyId: selectedSpecialist.centralSpecialtyId,
         date: selectedDate,
-        ...data,
+        doctorId: selectedDoctor.id,
+        doctorName: selectedDoctor.docName,
+        patientName: data.patientName,
+        patientPhone: data.patientPhone,
+        period: data.period,
+        specializationName: selectedSpecialist.specName,
+        isConfirmed: false,
       });
     },
-    onSuccess: () => {
+    onSuccess: async (_, variables) => {
       toast.success("تم إنشاء الموعد بنجاح");
+      
+      // Send SMS notification
+      try {
+        toast.info("جاري إرسال رسالة SMS...");
+        
+        // Format phone number (add 249 prefix if needed)
+        const phoneNumber = variables.patientPhone.startsWith('249') 
+          ? variables.patientPhone 
+          : `249${variables.patientPhone.replace(/^0/, '')}`;
+        
+        // Create Arabic SMS template
+        const periodText = variables.period === "morning" ? "صباح" : "مساء";
+        const doctorName = selectedDoctor?.docName || "الطبيب";
+        const dateDisplay = formatDateDisplay(selectedDate);
+        const smsMessage = `تم حجز موعدك بنجاح!\n\nالطبيب: ${doctorName}\nالتاريخ: ${dateDisplay}\nالفترة: ${periodText}\n\nنتمنى لك دوام الصحة والعافية\nعيادة جودة الطبية`;
+        
+        const smsResponse = await smsService.sendSms(phoneNumber, smsMessage, "Jawda");
+        
+        if (smsResponse.success) {
+          toast.success("تم إرسال رسالة SMS بنجاح");
+        } else {
+          toast.warning(`تم إنشاء الموعد ولكن فشل إرسال SMS: ${smsResponse.error || "خطأ غير معروف"}`);
+        }
+      } catch (smsError: unknown) {
+        console.error('SMS sending failed:', smsError);
+        const errorMessage = (smsError as { response?: { data?: { error?: string; message?: string } }; message?: string })?.response?.data?.error 
+          || (smsError as { response?: { data?: { error?: string; message?: string } }; message?: string })?.response?.data?.message 
+          || (smsError as { message?: string })?.message 
+          || "خطأ غير معروف";
+        toast.warning(`تم إنشاء الموعد ولكن فشل إرسال SMS: ${errorMessage}`);
+      }
+      
       setIsAppointmentDialogOpen(false);
-      setFormData({ patientName: "", patientPhone: "", period: "morning", time: "" });
+      setFormData({ patientName: "", patientPhone: "", period: "morning" });
       // Invalidate appointments query to refresh the list
-      queryClient.invalidateQueries({ queryKey: ["firestoreAppointments", selectedSpecialistId, selectedDoctor?.id] });
+      queryClient.invalidateQueries({ queryKey: ["facilityAppointments"] });
       // Invalidate all appointments query for schedule counts
       queryClient.invalidateQueries({ queryKey: ["firestoreAppointmentsAll", selectedSpecialistId, selectedDoctor?.id] });
       // Invalidate appointment counts for all doctors
@@ -153,47 +207,32 @@ const OnlineBookingPage: React.FC = () => {
   });
 
   // Filter and sort appointments based on search (newest first)
-  // Note: Date filtering is now done on the server side
+  // Note: Search is now handled in AppointmentsList component
   const filteredAppointments = useMemo(() => {
     if (!appointments) return [];
     
-    let filtered = appointments;
-    
-    // Apply search filter if search term exists
-    if (appointmentSearch.trim()) {
-      const searchLower = appointmentSearch.toLowerCase();
-      filtered = filtered.filter((appointment) => {
-        return (
-          appointment.patientName.toLowerCase().includes(searchLower) ||
-          appointment.patientPhone.includes(searchLower) ||
-          appointment.date.includes(searchLower) ||
-          appointment.time.includes(searchLower)
-        );
-      });
-    }
-    
-    // Sort by newest first (date descending, then time descending)
-    return filtered.sort((a, b) => {
+    // Sort by newest first (date descending, then createdAt descending)
+    return appointments.sort((a, b) => {
       // First compare dates (descending - newest first)
       const dateCompare = b.date.localeCompare(a.date);
       if (dateCompare !== 0) return dateCompare;
       
-      // If dates are the same, compare times (descending - latest first)
-      return b.time.localeCompare(a.time);
+      // If dates are the same, compare createdAt (descending - latest first)
+      const aTime = a.createdAt?.seconds || 0;
+      const bTime = b.createdAt?.seconds || 0;
+      return bTime - aTime;
     });
-  }, [appointments, appointmentSearch]);
+  }, [appointments]);
 
   // Reset selected doctor and search when specialist changes
   useEffect(() => {
     setSelectedDoctor(null);
     setAppointmentSearch("");
-    setFilteredDate(null);
   }, [selectedSpecialistId]);
 
-  // Reset search and date filter when doctor changes
+  // Reset search when doctor changes
   useEffect(() => {
     setAppointmentSearch("");
-    setFilteredDate(null);
   }, [selectedDoctor?.id]);
 
   // Sort schedule days starting from tomorrow
@@ -247,46 +286,12 @@ const OnlineBookingPage: React.FC = () => {
     return counts;
   }, [allAppointmentsForDoctor, selectedDoctor?.workingSchedule]);
 
-  // Get available time slots for selected day
-  const availableTimeSlots = useMemo(() => {
-    if (!selectedDay || !selectedDoctor?.workingSchedule) return [];
-    
-    const daySchedule = selectedDoctor.workingSchedule[selectedDay];
-    if (!daySchedule) return [];
-    
-    const slots: string[] = [];
-    
-    if (daySchedule.morning) {
-      const morningSlots = generateTimeSlots(
-        daySchedule.morning.start,
-        daySchedule.morning.end
-      );
-      slots.push(...morningSlots);
-    }
-    
-    if (daySchedule.evening) {
-      const eveningSlots = generateTimeSlots(
-        daySchedule.evening.start,
-        daySchedule.evening.end
-      );
-      slots.push(...eveningSlots);
-    }
-    
-    return slots;
-  }, [selectedDay, selectedDoctor?.workingSchedule]);
 
-  // Handle day row click - filter appointments by date
-  const handleDayRowClick = (day: string, dateString: string) => {
-    if (!selectedDoctor) return;
-    
-    const daySchedule = selectedDoctor.workingSchedule[day];
-    if (!daySchedule || (!daySchedule.morning && !daySchedule.evening)) {
-      toast.info("لا يوجد جدول متاح لهذا اليوم");
-      return;
-    }
-    
-    // Filter appointments by selected date
-    setFilteredDate(dateString);
+  // Handle day row click - filter appointments by date (removed, using search instead)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleDayRowClick = (_day: string, _dateString: string) => {
+    // Note: Date filtering is now handled via search in AppointmentsList
+    // Parameters are kept for compatibility with DoctorSchedule component
   };
 
   // Handle booking button click - open booking form
@@ -301,12 +306,10 @@ const OnlineBookingPage: React.FC = () => {
     
     setSelectedDay(day);
     setSelectedDate(dateString);
-    setFilteredDate(dateString); // Filter appointments by selected date
     setFormData({
       patientName: "",
       patientPhone: "",
       period: daySchedule.morning ? "morning" : "evening",
-      time: "",
     });
     setIsAppointmentDialogOpen(true);
   };
@@ -315,7 +318,7 @@ const OnlineBookingPage: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.patientName.trim() || !formData.patientPhone.trim() || !formData.time) {
+    if (!formData.patientName.trim() || !formData.patientPhone.trim()) {
       toast.error("يرجى ملء جميع الحقول المطلوبة");
       return;
     }
@@ -324,23 +327,53 @@ const OnlineBookingPage: React.FC = () => {
   };
 
   // Fetch all appointments for the all appointments dialog
-  const { data: allAppointments, isLoading: isLoadingAllAppointments } = useQuery<AppointmentWithDoctor[], Error>({
-    queryKey: ["allAppointments"],
-    queryFn: fetchAllAppointments,
+  const { data: allAppointments, isLoading: isLoadingAllAppointments } = useQuery<FacilityAppointment[], Error>({
+    queryKey: ["facilityAppointments"],
+    queryFn: fetchAllFacilityAppointments,
     enabled: isAllAppointmentsDialogOpen,
     staleTime: 1 * 60 * 1000, // 1 minute
+  });
+
+  // Fetch specializations from API for the specializations dialog
+  const { data: apiSpecializations, isLoading: isLoadingApiSpecializations } = useQuery<ApiSpecialization[], Error>({
+    queryKey: ["apiSpecializations"],
+    queryFn: () => fetchSpecializationsFromApi('KyKrjLBHMBGHtLzU3RS3'),
+    enabled: isSpecializationsDialogOpen,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Fetch all doctors from Firestore for the all doctors dialog
+  const { data: allDoctors, isLoading: isLoadingAllDoctors } = useQuery<AllDoctor[], Error>({
+    queryKey: ["allDoctors"],
+    queryFn: fetchAllDoctors,
+    enabled: isAllDoctorsDialogOpen,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   return (
     <div className="container mx-auto py-1 sm:py-6 lg:py-1 space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         {/* <h1 className="text-2xl font-bold">الحجز الإلكتروني</h1> */}
-        <Button
-          onClick={() => setIsAllAppointmentsDialogOpen(true)}
-          variant="outline"
-        >
-          عرض جميع المواعيد
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => setIsSpecializationsDialogOpen(true)}
+            variant="outline"
+          >
+            التخصصات
+          </Button>
+          <Button
+            onClick={() => setIsAllDoctorsDialogOpen(true)}
+            variant="outline"
+          >
+            الأطباء
+          </Button>
+          <Button
+            onClick={() => setIsAllAppointmentsDialogOpen(true)}
+            variant="outline"
+          >
+            عرض جميع المواعيد
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -390,17 +423,13 @@ const OnlineBookingPage: React.FC = () => {
 
         {/* Fourth Column - Appointments */}
         <AppointmentsList
-          selectedDoctor={selectedDoctor}
-          appointments={appointments}
+          appointments={filteredAppointments}
           isLoading={isLoadingAppointments}
           error={appointmentsError}
-          filteredAppointments={filteredAppointments}
-          appointmentSearch={appointmentSearch}
-          filteredDate={filteredDate}
           formatDateDisplay={formatDateDisplay}
           formatRelativeTime={formatRelativeTime}
           onSearchChange={setAppointmentSearch}
-          onClearDateFilter={() => setFilteredDate(null)}
+          appointmentSearch={appointmentSearch}
         />
       </div>
 
@@ -412,7 +441,6 @@ const OnlineBookingPage: React.FC = () => {
         selectedDate={selectedDate}
         selectedDoctor={selectedDoctor}
         formData={formData}
-        availableTimeSlots={availableTimeSlots}
         formatDateDisplay={formatDateDisplay}
         isPending={createAppointmentMutation.isPending}
         onFormDataChange={(data) => setFormData({ ...formData, ...data })}
@@ -440,6 +468,23 @@ const OnlineBookingPage: React.FC = () => {
         appointments={allAppointments}
         isLoading={isLoadingAllAppointments}
         formatRelativeTime={formatRelativeTime}
+        formatDateDisplay={formatDateDisplay}
+      />
+
+      {/* Specializations Dialog */}
+      <SpecializationsDialog
+        isOpen={isSpecializationsDialogOpen}
+        onOpenChange={setIsSpecializationsDialogOpen}
+        specializations={apiSpecializations}
+        isLoading={isLoadingApiSpecializations}
+      />
+
+      {/* All Doctors Dialog */}
+      <AllDoctorsDialog
+        isOpen={isAllDoctorsDialogOpen}
+        onOpenChange={setIsAllDoctorsDialogOpen}
+        doctors={allDoctors}
+        isLoading={isLoadingAllDoctors}
       />
     </div>
   );

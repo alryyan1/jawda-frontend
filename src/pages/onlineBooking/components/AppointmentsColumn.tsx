@@ -1,14 +1,13 @@
 import React from "react";
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
+  Card,
+  CardContent,
+  CardHeader,
   Typography,
   Box,
   CircularProgress,
   Chip,
+  IconButton,
   Table,
   TableBody,
   TableCell,
@@ -17,67 +16,93 @@ import {
   TableRow,
   Paper,
 } from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
 import type { FacilityAppointment } from "@/services/firestoreSpecialistService";
 
-interface AllAppointmentsDialogProps {
-  isOpen: boolean;
-  onOpenChange: (open: boolean) => void;
+interface AppointmentsColumnProps {
   appointments: FacilityAppointment[] | undefined;
   isLoading: boolean;
+  selectedDate: string;
+  selectedDoctorName: string;
   formatRelativeTime: (createdAt: unknown) => string;
   formatDateDisplay: (dateString: string) => string;
+  onClose: () => void;
 }
 
-const AllAppointmentsDialog: React.FC<AllAppointmentsDialogProps> = ({
-  isOpen,
-  onOpenChange,
+const AppointmentsColumn: React.FC<AppointmentsColumnProps> = ({
   appointments,
   isLoading,
-  formatRelativeTime,
+  selectedDate,
+  selectedDoctorName,
+  formatRelativeTime, // eslint-disable-line @typescript-eslint/no-unused-vars
   formatDateDisplay,
+  onClose,
 }) => {
   return (
-    <Dialog
-      open={isOpen}
-      onClose={() => onOpenChange(false)}
-      maxWidth="lg"
-      fullWidth
-      PaperProps={{
-        sx: {
-          maxHeight: '90vh',
+    <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <CardHeader
+        title={
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+              <Typography variant="h6" component="div">
+                مواعيد اليوم
+              </Typography>
+              {selectedDate && (
+                <Chip
+                  label={formatDateDisplay(selectedDate)}
+                  size="small"
+                  color="primary"
+                  variant="outlined"
+                />
+              )}
+              {selectedDoctorName && (
+                <Chip
+                  label={`الطبيب: ${selectedDoctorName}`}
+                  size="small"
+                  color="secondary"
+                  variant="outlined"
+                />
+              )}
+              {appointments && (
+                <Chip
+                  label={`${appointments.length} موعد`}
+                  size="small"
+                  color="info"
+                  variant="outlined"
+                />
+              )}
+            </Box>
+            <IconButton
+              size="small"
+              onClick={onClose}
+              sx={{ ml: 1 }}
+            >
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          </Box>
         }
-      }}
-    >
-      <DialogTitle>
-        جميع المواعيد
-        {appointments && (
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-            ({appointments.length} موعد)
-          </Typography>
-        )}
-      </DialogTitle>
-      <DialogContent dividers>
+      />
+      <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', pt: 0, overflow: 'hidden' }}>
         {isLoading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
             <CircularProgress />
           </Box>
         ) : appointments && appointments.length > 0 ? (
-          <TableContainer component={Paper} sx={{ maxHeight: '600px' }}>
+            <TableContainer component={Paper} sx={{ maxHeight: window.innerHeight - 100, flexGrow: 1 }}>
             <Table stickyHeader size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 'bold' }}>اسم المريض</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>رقم الهاتف</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>التاريخ</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>الطبيب</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>التخصص</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', width: '50px' }}>#</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>اسم </TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}> الهاتف</TableCell>
+                  {/* <TableCell sx={{ fontWeight: 'bold' }}>التخصص</TableCell> */}
                   <TableCell sx={{ fontWeight: 'bold' }}>الفترة</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>الحالة</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>تاريخ الإنشاء</TableCell>
+                  {/* <TableCell sx={{ fontWeight: 'bold' }}>الحالة</TableCell> */}
+                  {/* <TableCell sx={{ fontWeight: 'bold' }}>تاريخ الإنشاء</TableCell> */}
                 </TableRow>
               </TableHead>
               <TableBody>
-                {appointments.map((appointment) => (
+                {appointments.map((appointment, index) => (
                   <TableRow
                     key={appointment.id}
                     sx={{
@@ -88,6 +113,11 @@ const AllAppointmentsDialog: React.FC<AllAppointmentsDialogProps> = ({
                     }}
                   >
                     <TableCell>
+                      <Typography variant="body2" color="text.secondary">
+                        {index + 1}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
                       <Typography variant="body2" fontWeight="medium">
                         {appointment.patientName}
                       </Typography>
@@ -97,21 +127,11 @@ const AllAppointmentsDialog: React.FC<AllAppointmentsDialogProps> = ({
                         {appointment.patientPhone}
                       </Typography>
                     </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" color="text.secondary">
-                        {formatDateDisplay(appointment.date)}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" color="text.secondary">
-                        {appointment.doctorName}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
+                    {/* <TableCell>
                       <Typography variant="body2" color="text.secondary">
                         {appointment.specializationName}
                       </Typography>
-                    </TableCell>
+                    </TableCell> */}
                     <TableCell>
                       <Chip
                         label={appointment.period === "morning" ? "صباح" : "مساء"}
@@ -120,21 +140,21 @@ const AllAppointmentsDialog: React.FC<AllAppointmentsDialogProps> = ({
                         sx={{ fontSize: '0.7rem', height: 20 }}
                       />
                     </TableCell>
-                    <TableCell>
+                    {/* <TableCell>
                       <Chip
                         label={appointment.isConfirmed ? "مؤكد" : "غير مؤكد"}
                         size="small"
                         color={appointment.isConfirmed ? "success" : "default"}
                         sx={{ fontSize: '0.7rem', height: 20 }}
                       />
-                    </TableCell>
-                    <TableCell>
+                    </TableCell> */}
+                    {/* <TableCell>
                       {appointment.createdAt && (
                         <Typography variant="caption" color="text.secondary">
                           {formatRelativeTime(appointment.createdAt)}
                         </Typography>
                       )}
-                    </TableCell>
+                    </TableCell> */}
                   </TableRow>
                 ))}
               </TableBody>
@@ -143,18 +163,14 @@ const AllAppointmentsDialog: React.FC<AllAppointmentsDialogProps> = ({
         ) : (
           <Box sx={{ textAlign: 'center', py: 8 }}>
             <Typography variant="body2" color="text.secondary">
-              لا توجد مواعيد متاحة
+              لا توجد مواعيد متاحة لهذا اليوم
             </Typography>
           </Box>
         )}
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={() => onOpenChange(false)} variant="outlined">
-          إغلاق
-        </Button>
-      </DialogActions>
-    </Dialog>
+      </CardContent>
+    </Card>
   );
 };
 
-export default AllAppointmentsDialog;
+export default AppointmentsColumn;
+

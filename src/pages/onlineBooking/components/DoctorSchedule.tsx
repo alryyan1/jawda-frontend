@@ -1,6 +1,20 @@
 import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  Typography,
+  Box,
+  Button,
+  Chip,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+} from "@mui/material";
 import type { FirestoreDoctor, DaySchedule } from "@/services/firestoreSpecialistService";
 
 interface DoctorScheduleProps {
@@ -11,6 +25,7 @@ interface DoctorScheduleProps {
   formatDateDisplay: (dateString: string) => string;
   onDayRowClick: (day: string, dateString: string) => void;
   onDayClick: (day: string, dateString: string) => void;
+  selectedDayForViewing: string | null;
 }
 
 const DoctorSchedule: React.FC<DoctorScheduleProps> = ({
@@ -21,95 +36,143 @@ const DoctorSchedule: React.FC<DoctorScheduleProps> = ({
   formatDateDisplay,
   onDayRowClick,
   onDayClick,
+  selectedDayForViewing,
 }) => {
   return (
-    <Card className="col-span-1">
-      <CardHeader>
-        <CardTitle>
-          الجدول الزمني
-          {selectedDoctor && (
-            <span className="text-sm font-normal text-gray-500 dark:text-gray-400 mr-2">
-              ({selectedDoctor.docName})
-            </span>
-          )}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
+    <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <CardHeader
+        title={
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="h6" component="div">
+              الجدول الزمني
+            </Typography>
+            {selectedDoctor && (
+              <Typography variant="body1" color="text.secondary" fontWeight="600">
+                ({selectedDoctor.docName})
+              </Typography>
+            )}
+          </Box>
+        }
+      />
+      <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', pt: 0 }}>
         {!selectedDoctor ? (
-          <div className="text-center py-8 text-gray-500">
-            اختر طبيباً لعرض جدوله الزمني
-          </div>
+          <Box sx={{ textAlign: 'center', py: 8 }}>
+            <Typography variant="body1" color="text.secondary">
+              اختر طبيباً لعرض جدوله الزمني
+            </Typography>
+          </Box>
         ) : selectedDoctor.workingSchedule &&
           Object.keys(selectedDoctor.workingSchedule).length > 0 ? (
-          <div className="max-h-[600px] overflow-y-auto">
-            <div className="divide-y divide-gray-200 dark:divide-gray-700">
-              {sortedScheduleDays.map(([day, schedule]) => {
-                const hasSchedule = schedule.morning || schedule.evening;
-                const dateString = getDateForDay(day);
-                const formattedDate = formatDateDisplay(dateString);
-                return (
-                  <div
-                    key={day}
-                    onClick={() => hasSchedule && onDayRowClick(day, dateString)}
-                    className={`py-3 px-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${
-                      !hasSchedule
-                        ? "opacity-50 cursor-not-allowed"
-                        : "cursor-pointer"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <div className="text-sm font-medium">{day}</div>
-                        {dateString &&
-                          scheduleDayAppointmentCounts[dateString] !== undefined &&
-                          scheduleDayAppointmentCounts[dateString] > 0 && (
-                            <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 min-w-[20px]">
-                              {scheduleDayAppointmentCounts[dateString]}
-                            </span>
+          <TableContainer component={Paper} sx={{ maxHeight: 600, flexGrow: 1 }}>
+            <Table stickyHeader size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 'bold' }}>اليوم</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>التاريخ</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>عدد المواعيد</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>الفترات</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>الإجراء</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {sortedScheduleDays.map(([day, schedule]) => {
+                  const hasSchedule = schedule.morning || schedule.evening;
+                  const dateString = getDateForDay(day);
+                  const formattedDate = formatDateDisplay(dateString);
+                  const isSelected = selectedDayForViewing === day;
+                  return (
+                    <TableRow
+                      key={day}
+                      onClick={() => hasSchedule && onDayRowClick(day, dateString)}
+                      sx={{
+                        cursor: hasSchedule ? 'pointer' : 'not-allowed',
+                        opacity: hasSchedule ? 1 : 0.5,
+                        border: isSelected ? 2 : 0,
+                        borderColor: isSelected ? 'primary.main' : 'transparent',
+                        bgcolor: isSelected ? 'primary.light' : 'transparent',
+                        '&:hover': hasSchedule 
+                          ? { 
+                              bgcolor: isSelected ? 'primary.light' : 'action.hover' 
+                            } 
+                          : {},
+                        transition: 'all 0.2s ease-in-out',
+                      }}
+                    >
+                      <TableCell>
+                        <Typography variant="body2" fontWeight="bold">
+                          {day}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        {formattedDate && (
+                          <Typography variant="body2" color="text.secondary">
+                            {formattedDate}
+                          </Typography>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {dateString && (
+                          <Chip
+                            label={scheduleDayAppointmentCounts[dateString] || 0}
+                            size="small"
+                            color={scheduleDayAppointmentCounts[dateString] > 0 ? "success" : "default"}
+                            sx={{ 
+                              minWidth: 28, 
+                              height: 24, 
+                              fontSize: '0.85rem',
+                              fontWeight: 'bold',
+                              borderRadius: '12px'
+                            }}
+                          />
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                          {schedule.morning && (
+                            <Chip
+                              label="صباح"
+                              size="small"
+                              color="info"
+                              sx={{ fontSize: '0.85rem', fontWeight: '600' }}
+                            />
                           )}
-                      </div>
-                      {formattedDate && (
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                          {formattedDate}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex items-center justify-between mt-2">
-                      <div className="flex gap-2">
-                        {schedule.morning && (
-                          <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
-                            صباح
-                          </span>
+                          {schedule.evening && (
+                            <Chip
+                              label="مساء"
+                              size="small"
+                              color="warning"
+                              sx={{ fontSize: '0.85rem', fontWeight: '600' }}
+                            />
+                          )}
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        {hasSchedule && (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDayClick(day, dateString);
+                            }}
+                            sx={{ fontSize: '0.9rem', fontWeight: '600', minWidth: 'auto', px: 1, py: 0.5 }}
+                          >
+                            حجز
+                          </Button>
                         )}
-                        {schedule.evening && (
-                          <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300">
-                            مساء
-                          </span>
-                        )}
-                      </div>
-                      {hasSchedule && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onDayClick(day, dateString);
-                          }}
-                          className="text-xs h-7 px-2"
-                        >
-                          حجز
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
         ) : (
-          <div className="text-center py-8 text-gray-500">
-            لا يوجد جدول زمني متاح
-          </div>
+          <Box sx={{ textAlign: 'center', py: 8 }}>
+            <Typography variant="body1" color="text.secondary">
+              لا يوجد جدول زمني متاح
+            </Typography>
+          </Box>
         )}
       </CardContent>
     </Card>
@@ -117,4 +180,3 @@ const DoctorSchedule: React.FC<DoctorScheduleProps> = ({
 };
 
 export default DoctorSchedule;
-

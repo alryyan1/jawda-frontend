@@ -8,19 +8,18 @@ export { arabicDayToNumber };
 export const getDateForDay = (dayName: string): string => {
   const today = new Date();
   const todayDay = today.getDay();
-  const tomorrowDay = (todayDay + 1) % 7;
   const targetDay = arabicDayToNumber[dayName] ?? -1;
 
   if (targetDay === -1) return "";
 
-  // Calculate days until target day (starting from tomorrow)
+  // Calculate days until target day (starting from today)
   const daysUntilTarget =
-    targetDay >= tomorrowDay
-      ? targetDay - tomorrowDay
-      : 7 - tomorrowDay + targetDay;
+    targetDay >= todayDay
+      ? targetDay - todayDay
+      : 7 - todayDay + targetDay;
 
   const targetDate = new Date(today);
-  targetDate.setDate(today.getDate() + daysUntilTarget + 1); // +1 because we start from tomorrow
+  targetDate.setDate(today.getDate() + daysUntilTarget);
 
   return format(targetDate, "yyyy-MM-dd", { locale: arSA });
 };

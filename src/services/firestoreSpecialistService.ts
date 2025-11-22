@@ -24,6 +24,7 @@ export interface AllDoctor {
   name: string;
   phoneNumber: string;
   specialization: string;
+  photoUrl?: string;
 }
 
 // Firestore path structure: medicalFacilities/{facilityId}/specializations
@@ -283,6 +284,29 @@ export const createFacilityAppointment = async (
   appointmentData: CreateFacilityAppointmentData
 ): Promise<string> => {
   try {
+    // Validate required fields
+    if (!appointmentData.centralSpecialtyId) {
+      throw new Error("centralSpecialtyId is required");
+    }
+    if (!appointmentData.date) {
+      throw new Error("date is required");
+    }
+    if (!appointmentData.doctorId) {
+      throw new Error("doctorId is required");
+    }
+    if (!appointmentData.doctorName) {
+      throw new Error("doctorName is required");
+    }
+    if (!appointmentData.patientName) {
+      throw new Error("patientName is required");
+    }
+    if (!appointmentData.patientPhone) {
+      throw new Error("patientPhone is required");
+    }
+    if (!appointmentData.specializationName) {
+      throw new Error("specializationName is required");
+    }
+    
     // Reference to the facility document
     const facilityDocRef = doc(db, 'medicalFacilities', FACILITY_ID);
     // Reference to the appointments collection
@@ -294,7 +318,7 @@ export const createFacilityAppointment = async (
     // Generate default time based on period if not provided
     const time = appointmentData.time || (appointmentData.period === "morning" ? "09:00" : "18:00");
     
-    // Create appointment document
+    // Create appointment document - ensure all fields are defined
     const newAppointment = {
       centralSpecialtyId: appointmentData.centralSpecialtyId,
       createdAt: serverTimestamp(),
@@ -364,6 +388,7 @@ export interface UpdateDoctorData {
   phoneNumber?: string;
   photoUrl?: string;
   specialization?: string;
+  workingSchedule?: WorkingSchedule;
 }
 
 export const updateDoctor = async (
@@ -429,6 +454,115 @@ export const fetchAllFacilityAppointments = async (): Promise<FacilityAppointmen
     return appointments;
   } catch (error) {
     console.error('Error fetching facility appointments:', error);
+    throw new Error('Failed to fetch appointments from Firestore');
+  }
+};
+
+// Fetch appointments from facility-level appointments collection filtered by doctorId
+export const fetchFacilityAppointmentsByDoctor = async (
+  doctorId: string,
+  date?: string
+): Promise<FacilityAppointment[]> => {
+  try {
+    // Reference to the facility document
+    const facilityDocRef = doc(db, 'medicalFacilities', FACILITY_ID);
+    // Reference to the appointments collection
+    const appointmentsRef = collection(facilityDocRef, 'appointments');
+    
+    // Try both string and number formats for doctorId
+    // Firestore requires exact type matches, so we need to handle both cases
+    const doctorIdAsNumber = !isNaN(Number(doctorId)) && doctorId.trim() !== '' ? Number(doctorId) : null;
+    
+    let appointments: FacilityAppointment[] = [];
+    
+    // Try querying with string format first
+    try {
+      const queryConstraints: any[] = [where('doctorId', '==', doctorId)];
+      
+      if (date) {
+        queryConstraints.push(where('date', '==', date));
+      }
+      
+      // Try to add orderBy, but don't fail if index is missing
+      try {
+        queryConstraints.push(orderBy('date', 'asc'));
+      } catch (e) {
+        // Index might not exist, continue without orderBy
+      }
+      
+      const q = query(appointmentsRef, ...queryConstraints);
+      const querySnapshot = await getDocs(q);
+      
+      querySnapshot.forEach((doc) => {
+        appointments.push({
+          id: doc.id,
+          ...doc.data()
+        } as FacilityAppointment);
+      });
+    } catch (stringQueryError) {
+      console.log('String query failed, trying number format:', stringQueryError);
+    }
+    
+    // If no results and doctorId can be a number, try number format
+    if (appointments.length === 0 && doctorIdAsNumber !== null) {
+      try {
+        const queryConstraints: any[] = [where('doctorId', '==', doctorIdAsNumber)];
+        
+        if (date) {
+          queryConstraints.push(where('date', '==', date));
+        }
+        
+        try {
+          queryConstraints.push(orderBy('date', 'asc'));
+        } catch (e) {
+          // Index might not exist
+        }
+        
+        const q = query(appointmentsRef, ...queryConstraints);
+        const querySnapshot = await getDocs(q);
+        
+        querySnapshot.forEach((doc) => {
+          appointments.push({
+            id: doc.id,
+            ...doc.data()
+          } as FacilityAppointment);
+        });
+      } catch (numberQueryError) {
+        console.log('Number query also failed:', numberQueryError);
+      }
+    }
+    
+    // If still no results, fallback to fetching all and filtering client-side
+    if (appointments.length === 0) {
+      console.log('No results from query, fetching all appointments and filtering client-side');
+      const allAppointments = await fetchAllFacilityAppointments();
+      appointments = allAppointments.filter((appt) => {
+        const apptDoctorId = appt.doctorId;
+        // Check multiple format matches
+        return String(apptDoctorId) === String(doctorId) || 
+               (doctorIdAsNumber !== null && Number(apptDoctorId) === doctorIdAsNumber);
+      });
+    }
+    
+    // Filter by date if specified
+    if (date && appointments.length > 0) {
+      appointments = appointments.filter((appt) => appt.date === date);
+    }
+    
+    // Sort appointments
+    appointments.sort((a, b) => {
+      const dateCompare = a.date.localeCompare(b.date);
+      if (dateCompare !== 0) return dateCompare;
+      const aTime = a.createdAt?.seconds || 0;
+      const bTime = b.createdAt?.seconds || 0;
+      return aTime - bTime; // Ascending by creation time for same date
+    });
+    
+    console.log(`Fetched ${appointments.length} appointments for doctor ${doctorId}${date ? ` on date ${date}` : ''}`);
+    
+    return appointments;
+  } catch (error) {
+    console.error('Error fetching facility appointments by doctor:', error);
     throw new Error('Failed to fetch appointments from Firestore');
   }
 };
@@ -529,6 +663,7 @@ export const fetchAllDoctors = async (): Promise<AllDoctor[]> => {
         name: data.name || '',
         phoneNumber: data.phoneNumber || '',
         specialization: data.specialization || '',
+        photoUrl: data.photoUrl || undefined,
       });
     });
     

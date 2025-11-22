@@ -1,15 +1,25 @@
 import React, { useState, useMemo } from "react";
-import { Loader2, Search } from "lucide-react";
 import {
   Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+  DialogContent,
+  DialogActions,
+  Button,
+  TextField,
+  Typography,
+  Box,
+  CircularProgress,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  InputAdornment,
+  Chip,
+} from "@mui/material";
+import { Search as SearchIcon } from "@mui/icons-material";
 import type { ApiSpecialization } from "@/services/firestoreSpecialistService";
 import { format } from "date-fns";
 
@@ -91,102 +101,112 @@ const SpecializationsDialog: React.FC<SpecializationsDialogProps> = ({
   }, [specializations, searchQuery]);
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>التخصصات</DialogTitle>
-          <DialogDescription>عرض جميع التخصصات من API</DialogDescription>
-        </DialogHeader>
+    <Dialog
+      open={isOpen}
+      onClose={() => onOpenChange(false)}
+      maxWidth="md"
+      fullWidth
+      PaperProps={{
+        sx: {
+          maxHeight: '90vh',
+        }
+      }}
+    >
+      <DialogTitle>التخصصات</DialogTitle>
+      <DialogContent dividers>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          عرض جميع التخصصات من API
+        </Typography>
         
         {/* Search Input */}
-        <div className="relative">
-          <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            type="text"
-            placeholder="بحث في التخصصات..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pr-10"
-          />
-        </div>
+        <TextField
+          fullWidth
+          placeholder="بحث في التخصصات..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          size="small"
+          sx={{ mb: 2 }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+          }}
+        />
 
-        <div className="py-4">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin" />
-            </div>
-          ) : filteredSpecializations && filteredSpecializations.length > 0 ? (
-            <div className="max-h-[500px] overflow-y-auto">
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0">
-                    <tr>
-                      <th className="border border-gray-200 dark:border-gray-700 px-4 py-3 text-right text-sm font-medium text-gray-700 dark:text-gray-300">
-                        اسم التخصص
-                      </th>
-                      <th className="border border-gray-200 dark:border-gray-700 px-4 py-3 text-right text-sm font-medium text-gray-700 dark:text-gray-300">
-                        الترتيب
-                      </th>
-                      <th className="border border-gray-200 dark:border-gray-700 px-4 py-3 text-right text-sm font-medium text-gray-700 dark:text-gray-300">
-                        الحالة
-                      </th>
-                      <th className="border border-gray-200 dark:border-gray-700 px-4 py-3 text-right text-sm font-medium text-gray-700 dark:text-gray-300">
-                        تاريخ الإنشاء
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredSpecializations.map((spec, index) => (
-                      <tr
-                        key={spec.id || index}
-                        className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                      >
-                        <td className="border border-gray-200 dark:border-gray-700 px-4 py-3 text-sm">
-                          {spec.specName || "غير محدد"}
-                        </td>
-                        <td className="border border-gray-200 dark:border-gray-700 px-4 py-3 text-sm text-center">
-                          {spec.order ?? 0}
-                        </td>
-                        <td className="border border-gray-200 dark:border-gray-700 px-4 py-3 text-sm">
-                          <span
-                            className={`inline-flex px-2 py-1 rounded text-xs font-medium ${
-                              spec.isActive
-                                ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
-                                : "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
-                            }`}
-                          >
-                            {spec.isActive ? "نشط" : "غير نشط"}
-                          </span>
-                        </td>
-                        <td className="border border-gray-200 dark:border-gray-700 px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
-                          {formatTimestamp(spec.createdAt)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="mt-4 text-sm text-gray-500 dark:text-gray-400 text-center">
-                إجمالي النتائج: {filteredSpecializations.length}
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500">
+        {isLoading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
+            <CircularProgress />
+          </Box>
+        ) : filteredSpecializations && filteredSpecializations.length > 0 ? (
+          <Box>
+            <TableContainer component={Paper} sx={{ maxHeight: 500 }}>
+              <Table stickyHeader size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>
+                      اسم التخصص
+                    </TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>
+                      الترتيب
+                    </TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>
+                      الحالة
+                    </TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>
+                      تاريخ الإنشاء
+                    </TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {filteredSpecializations.map((spec, index) => (
+                    <TableRow
+                      key={spec.id || index}
+                      hover
+                    >
+                      <TableCell align="right">
+                        {spec.specName || "غير محدد"}
+                      </TableCell>
+                      <TableCell align="center">
+                        {spec.order ?? 0}
+                      </TableCell>
+                      <TableCell align="right">
+                        <Chip
+                          label={spec.isActive ? "نشط" : "غير نشط"}
+                          size="small"
+                          color={spec.isActive ? "success" : "error"}
+                        />
+                      </TableCell>
+                      <TableCell align="right" sx={{ color: 'text.secondary' }}>
+                        {formatTimestamp(spec.createdAt)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
+              إجمالي النتائج: {filteredSpecializations.length}
+            </Typography>
+          </Box>
+        ) : (
+          <Box sx={{ textAlign: 'center', py: 8 }}>
+            <Typography variant="body1" color="text.secondary">
               {searchQuery.trim()
                 ? "لا توجد نتائج للبحث"
                 : "لا توجد تخصصات متاحة"}
-            </div>
-          )}
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            إغلاق
-          </Button>
-        </DialogFooter>
+            </Typography>
+          </Box>
+        )}
       </DialogContent>
+      <DialogActions>
+        <Button variant="outlined" onClick={() => onOpenChange(false)}>
+          إغلاق
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 };
 
 export default SpecializationsDialog;
-

@@ -20,7 +20,7 @@ import {
   InputAdornment,
 } from "@mui/material";
 import { Search as SearchIcon } from "@mui/icons-material";
-import { DarkThemeAutocomplete } from "@/components/ui/mui-autocomplete";
+import { Autocomplete } from "@mui/material";
 import { toast } from "sonner";
 import type { AllDoctor } from "@/services/firestoreSpecialistService";
 import { getDoctorsList, updateDoctorFirebaseId, getDoctors } from "@/services/doctorService";
@@ -270,7 +270,7 @@ const AllDoctorsDialog: React.FC<AllDoctorsDialogProps> = ({
                         </TableCell>
                         <TableCell align="right">
                           <Box sx={{ minWidth: 250 }}>
-                            <DarkThemeAutocomplete
+                            <Autocomplete
                               options={doctors || []}
                               getOptionLabel={(option) => option.name || ""}
                               value={selectedFirestoreDoctor || null}

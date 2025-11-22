@@ -23,7 +23,7 @@ import {
 import { Refresh as RefreshIcon, Search as SearchIcon, NavigateBefore as NavigateBeforeIcon, NavigateNext as NavigateNextIcon } from '@mui/icons-material';
 import { TextField, InputAdornment } from '@mui/material';
 import type { ChipProps } from '@mui/material';
-import { fetchDoctorAppointments } from '@/services/firestoreDoctorService';
+import { fetchDoctorAppointments, type FacilityAppointment } from '@/services/firestoreDoctorService';
 import { registerNewPatientFromLab } from '@/services/patientService';
 import { toast } from 'sonner';
 import type { DoctorShift } from '@/types/doctors';
@@ -49,10 +49,8 @@ const OnlineAppointmentsDialog: React.FC<OnlineAppointmentsDialogProps> = ({
 
   // Get the required IDs from the active doctor shift
   type ShiftWithFirestoreIds = DoctorShift & {
-    specialist_firestore_id?: string;
     firebase_id?: string;
   };
-  const specialistFirestoreId = (activeDoctorShift as ShiftWithFirestoreIds | null)?.specialist_firestore_id;
   const doctorFirebaseId = (activeDoctorShift as ShiftWithFirestoreIds | null)?.firebase_id;
 
   const {
@@ -60,15 +58,16 @@ const OnlineAppointmentsDialog: React.FC<OnlineAppointmentsDialogProps> = ({
     isLoading,
     error,
     refetch
-  } = useQuery({
-    queryKey: ['doctorAppointments', specialistFirestoreId, doctorFirebaseId, selectedDate, searchName, refreshKey],
+  } = useQuery<FacilityAppointment[]>({
+    queryKey: ['doctorAppointments', doctorFirebaseId, selectedDate, searchName, refreshKey],
     queryFn: () => {
-      if (!specialistFirestoreId || !doctorFirebaseId) {
+      if (!doctorFirebaseId) {
         return Promise.resolve([]);
       }
-      return fetchDoctorAppointments(specialistFirestoreId, doctorFirebaseId, selectedDate);
+      // Fetch from facility-level appointments collection, filtered by doctorId
+      return fetchDoctorAppointments('', doctorFirebaseId, selectedDate);
     },
-    enabled: isOpen && !!specialistFirestoreId && !!doctorFirebaseId,
+    enabled: isOpen && !!doctorFirebaseId,
     staleTime: 30000, // 30 seconds
   });
 
@@ -218,9 +217,9 @@ const OnlineAppointmentsDialog: React.FC<OnlineAppointmentsDialogProps> = ({
           <Alert severity="warning">
             يرجى اختيار طبيب أولاً لعرض الحجوزات الإلكترونية
           </Alert>
-        ) : !specialistFirestoreId || !doctorFirebaseId ? (
+        ) : !doctorFirebaseId ? (
           <Alert severity="error">
-            لا يمكن العثور على معرفات الطبيب المطلوبة في Firestore
+            لا يمكن العثور على معرف الطبيب المطلوب في Firestore
           </Alert>
         ) : error ? (
           <Alert severity="error">

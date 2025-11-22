@@ -1,30 +1,32 @@
 // src/components/lab/workstation/dialog/WhatsAppWorkAreaDialog.tsx
 import React, { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { arSA } from "date-fns/locale";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose, DialogFooter } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Loader2, Send, Wifi, WifiOff, FileText, CheckCircle, XCircle } from "lucide-react";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
+import Button from "@mui/material/Button";
+import TextField from "@mui/material/TextField";
+import Chip from "@mui/material/Chip";
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
+import CircularProgress from "@mui/material/CircularProgress";
+import Divider from "@mui/material/Divider";
+import { Send, Wifi, WifiOff, FileText, CheckCircle, XCircle } from "lucide-react";
 
 import type { Patient } from "@/types/patients";
 import type { LabRequest } from "@/types/visits";
 import { 
-  sendUltramsgText, 
   sendUltramsgDocumentFromUrl, 
   getUltramsgInstanceStatus, 
   isUltramsgConfigured,
-  type UltramsgTextPayload,
   type UltramsgInstanceStatus 
 } from "@/services/ultramsgService";
 import { getPatientById } from "@/services/patientService";
@@ -41,7 +43,6 @@ interface WhatsAppWorkAreaDialogProps {
 
 const whatsappSchema = z.object({
   phoneNumber: z.string().min(1, { message: "رقم الهاتف مطلوب" }).regex(/^0?[1-9]\d{8,14}$/, { message: "رقم هاتف غير صحيح (مثال: 0991961111)" }),
-  message: z.string().min(1, { message: "الرسالة مطلوبة" }).max(4096, { message: "الرسالة طويلة جداً" }),
 });
 
 type WhatsAppFormValues = z.infer<typeof whatsappSchema>;
@@ -55,18 +56,15 @@ const WhatsAppWorkAreaDialog: React.FC<WhatsAppWorkAreaDialogProps> = ({
   const [instanceStatus, setInstanceStatus] = useState<UltramsgInstanceStatus | null>(null);
   const [isCheckingStatus, setIsCheckingStatus] = useState(false);
   const [isSendingDoc, setIsSendingDoc] = useState(false);
-  const queryClient = useQueryClient();
 
   const form = useForm<WhatsAppFormValues>({
     resolver: zodResolver(whatsappSchema),
     defaultValues: {
       phoneNumber: "",
-      message: "",
     },
   });
 
-  const { setValue, reset, control, watch } = form;
-  const phoneNumber = watch("phoneNumber");
+  const { setValue, reset, control } = form;
   
   // Check if Ultramsg is configured
   const { data: configStatus } = useQuery({
@@ -75,25 +73,11 @@ const WhatsAppWorkAreaDialog: React.FC<WhatsAppWorkAreaDialogProps> = ({
     enabled: isOpen,
   });
 
-  // Refresh patient data when dialog opens to check for updated result_url
-  const { data: refreshedPatientData } = useQuery({
-    queryKey: ["patientDetailsForWhatsApp", currentPatient?.id],
-    queryFn: () => getPatientById(currentPatient!.id),
-    enabled: isOpen && !!currentPatient?.id,
-    staleTime: 0, // Always fetch fresh data when dialog opens
-  });
-
-  // Use refreshed patient data if available, otherwise fall back to currentPatient
-  const effectivePatientData = refreshedPatientData || currentPatient;
+  // Use currentPatient directly
+  const effectivePatientData = currentPatient;
 
   // Initialize form with patient data when dialog opens
   useEffect(() => {
-    const generateDefaultMessage = (): string => {
-      const date = format(new Date(), "PPP", { locale: arSA });
-      
-      return `عزيزي/عزيزتي ${effectivePatientData?.name}، نتائج فحص جاهزة بتاريخ ${date}. يمكنك مراجعة العيادة أو التواصل معنا للاستفسار.`;
-    };
-
     if (isOpen && effectivePatientData?.phone) {
       // Format phone number to local format (remove + and country code if present)
       let formattedPhone = effectivePatientData.phone;
@@ -114,71 +98,23 @@ const WhatsAppWorkAreaDialog: React.FC<WhatsAppWorkAreaDialogProps> = ({
       }
       
       setValue("phoneNumber", formattedPhone);
-      
-      // Generate default message
-      const defaultMessage = generateDefaultMessage();
-      setValue("message", defaultMessage);
     } else if (!isOpen) {
       reset();
       setInstanceStatus(null);
     }
   }, [isOpen, effectivePatientData, setValue, reset]);
 
-  // Update query cache with refreshed patient data when dialog closes
-  useEffect(() => {
-    if (!isOpen && refreshedPatientData && currentPatient?.id) {
-      // Update the main patient query cache with the refreshed data
-      queryClient.setQueryData(['patientDetailsForActionPane', currentPatient.id], refreshedPatientData);
-      queryClient.setQueryData(['patientDetailsForInfoPanel', currentPatient.id], (old: { data?: Patient } | undefined) => {
-        if (old?.data) {
-          return {
-            ...old,
-            data: refreshedPatientData
-          };
-        }
-        return { data: refreshedPatientData };
-      });
-      queryClient.setQueryData(['patientDetailsForLabDisplay', currentPatient.id], (old: { data?: Patient } | undefined) => {
-        if (old?.data) {
-          return {
-            ...old,
-            data: refreshedPatientData
-          };
-        }
-        return { data: refreshedPatientData };
-      });
-    }
-  }, [isOpen, refreshedPatientData, currentPatient?.id, queryClient]);
 
-  // Send text message mutation
-  const sendTextMutation = useMutation({
-    mutationFn: async (data: WhatsAppFormValues) => {
-      const payload: UltramsgTextPayload = {
-        to: data.phoneNumber,
-        body: data.message,
-      };
-      return sendUltramsgText(payload);
-    },
-    onSuccess: (response) => {
-      if (response.success) {
-        toast.success("تم إرسال الرسالة بنجاح");
-        if (onMessageSent) onMessageSent();
-        onOpenChange(false);
-      } else {
-        toast.error(response.error || "فشل إرسال الرسالة");
-      }
-    },
-    onError: (error: AxiosError) => {
-      console.log(error,'error');
-      toast.error(error.response?.data?.data.error || "فشل إرسال الرسالة");
-    },
-  });
+  // Generate default message
+  const generateDefaultMessage = (): string => {
+    const date = format(new Date(), "PPP", { locale: arSA });
+    return `عزيزي/عزيزتي ${effectivePatientData?.name}، نتائج فحص جاهزة بتاريخ ${date}. يمكنك مراجعة العيادة أو التواصل معنا للاستفسار.`;
+  };
 
   // Send document mutation (if lab request has PDF)
   const sendDocumentMutation = useMutation({
     mutationFn: async (data: WhatsAppFormValues) => {
       // Check if patient has result_url from Firebase
-      // alert()
       if (!effectivePatientData?.result_url) {
         throw new Error("لا يوجد رابط للتقرير. يرجى التأكد من رفع التقرير إلى التخزين السحابي أولاً.");
       }
@@ -193,7 +129,7 @@ const WhatsAppWorkAreaDialog: React.FC<WhatsAppWorkAreaDialogProps> = ({
         to: data.phoneNumber,
         document_url: documentUrl,
         filename: filename,
-        caption: data.message,
+        caption: generateDefaultMessage(),
       });
     },
     onSuccess: (response) => {
@@ -230,10 +166,6 @@ const WhatsAppWorkAreaDialog: React.FC<WhatsAppWorkAreaDialogProps> = ({
     } finally {
       setIsCheckingStatus(false);
     }
-  };
-
-  const handleSendText = (data: WhatsAppFormValues) => {
-    sendTextMutation.mutate(data);
   };
 
   const handleSendDocument = (data: WhatsAppFormValues) => {
@@ -274,7 +206,7 @@ const WhatsAppWorkAreaDialog: React.FC<WhatsAppWorkAreaDialogProps> = ({
           to: data.phoneNumber,
           document_url: resultUrl,
           filename: 'result.pdf',
-          caption: data.message,
+          caption: generateDefaultMessage(),
         });
         if (resp.success) {
           toast.success("تم إرسال التقرير بنجاح");
@@ -294,165 +226,154 @@ const WhatsAppWorkAreaDialog: React.FC<WhatsAppWorkAreaDialogProps> = ({
   };
 
   const isConfigured = configStatus?.configured ?? false;
-  const isLoading = sendTextMutation.isPending || sendDocumentMutation.isPending;
-  // console.log(isConfigured,'isConfigured',configStatus,phoneNumber,effectivePatientData?.result_url)
+  const isLoading = sendDocumentMutation.isPending;
+  const { errors } = form.formState;
+
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Send className="h-5 w-5" />
-            إرسال واتساب - نتائج المختبر
-          </DialogTitle>
-          <DialogDescription>
-            {effectivePatientData ? `إرسال إلى: ${effectivePatientData.name}` : "إرسال رسالة واتساب"}
-          </DialogDescription>
-        </DialogHeader>
+    <Dialog 
+      open={isOpen} 
+      onClose={() => onOpenChange(false)}
+      maxWidth="sm"
+      fullWidth
+      PaperProps={{
+        sx: {
+          backgroundColor: 'var(--background)',
+          color: 'var(--foreground)',
+        }
+      }}
+    >
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Send style={{ width: 20, height: 20 }} />
+        <Typography variant="h6" component="span">
+          إرسال واتساب - نتائج المختبر
+        </Typography>
+      </DialogTitle>
+      
+      <DialogContent>
+        {effectivePatientData && (
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            إرسال إلى: {effectivePatientData.name}
+          </Typography>
+        )}
 
         {/* Configuration Status */}
-        <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">حالة الخدمة:</span>
-            <Badge variant={isConfigured ? "default" : "destructive"}>
-              {isConfigured ? "مُعدة" : "غير مُعدة"}
-            </Badge>
-          </div>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, bgcolor: 'action.hover', borderRadius: 1, mb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="body2" fontWeight="medium">
+              حالة الخدمة:
+            </Typography>
+            <Chip 
+              label={isConfigured ? "مُعدة" : "غير مُعدة"} 
+              color={isConfigured ? "primary" : "error"}
+              size="small"
+            />
+          </Box>
           <Button
-            variant="outline"
-            size="sm"
+            variant="outlined"
+            size="small"
             onClick={checkInstanceStatus}
             disabled={isCheckingStatus || !isConfigured}
-            className="flex items-center gap-2"
+            startIcon={
+              isCheckingStatus ? (
+                <CircularProgress size={16} />
+              ) : instanceStatus?.success ? (
+                <Wifi style={{ width: 16, height: 16, color: 'green' }} />
+              ) : (
+                <WifiOff style={{ width: 16, height: 16, color: 'red' }} />
+              )
+            }
           >
-            {isCheckingStatus ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : instanceStatus?.success ? (
-              <Wifi className="h-4 w-4 text-green-500" />
-            ) : (
-              <WifiOff className="h-4 w-4 text-red-500" />
-            )}
             فحص الحالة
           </Button>
-        </div>
+        </Box>
 
         {/* Document Status */}
         {effectivePatientData && (
-          <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">حالة التقرير:</span>
-              <Badge variant={effectivePatientData.result_url ? "default" : "secondary"}>
-                {effectivePatientData.result_url ? "متوفر في السحابة" : "غير متوفر"}
-              </Badge>
-            </div>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, bgcolor: 'action.hover', borderRadius: 1, mb: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="body2" fontWeight="medium">
+                حالة التقرير:
+              </Typography>
+              <Chip 
+                label={effectivePatientData.result_url ? "متوفر في السحابة" : "غير متوفر"} 
+                color={effectivePatientData.result_url ? "primary" : "default"}
+                size="small"
+              />
+            </Box>
             {effectivePatientData.result_url && (
-              <div className="flex items-center gap-1 text-green-600">
-                <span className="text-xs">☁️</span>
-                <span className="text-xs">متاح للإرسال</span>
-              </div>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'success.main' }}>
+                <Typography variant="caption">☁️</Typography>
+                <Typography variant="caption">متاح للإرسال</Typography>
+              </Box>
             )}
-          </div>
+          </Box>
         )}
 
         {/* Instance Status Display */}
         {instanceStatus && (
-          <div className="flex items-center gap-2 p-2 bg-muted rounded">
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1.5, bgcolor: 'action.hover', borderRadius: 1, mb: 2 }}>
             {instanceStatus.success ? (
               <>
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                <span className="text-sm text-green-700">الخدمة متصلة ومتاحة</span>
+                <CheckCircle style={{ width: 16, height: 16, color: 'green' }} />
+                <Typography variant="body2" color="success.main">
+                  الخدمة متصلة ومتاحة
+                </Typography>
               </>
             ) : (
               <>
-                <XCircle className="h-4 w-4 text-red-500" />
-                <span className="text-sm text-red-700">
+                <XCircle style={{ width: 16, height: 16, color: 'red' }} />
+                <Typography variant="body2" color="error.main">
                   {instanceStatus.error || "الخدمة غير متاحة"}
-                </span>
+                </Typography>
               </>
             )}
-          </div>
+          </Box>
         )}
 
-        <Form {...form}>
-          <form className="space-y-4 py-2">
-            <FormField
-              control={control}
-              name="phoneNumber"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>رقم الهاتف</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      placeholder="0991961111"
-                      disabled={isLoading}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        <Box component="form" sx={{ display: 'flex', flexDirection: 'column', gap: 2, py: 2 }}>
+          <Controller
+            name="phoneNumber"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                label="رقم الهاتف"
+                placeholder="0991961111"
+                disabled={isLoading}
+                error={!!errors.phoneNumber}
+                helperText={errors.phoneNumber?.message}
+                fullWidth
+              />
+            )}
+          />
 
-            <FormField
-              control={control}
-              name="message"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>الرسالة</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      {...field}
-                      rows={4}
-                      placeholder="اكتب رسالتك هنا..."
-                      disabled={isLoading}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <Divider />
 
-            <Separator />
-
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={form.handleSubmit(handleSendText)}
-                disabled={isLoading || !isConfigured || !phoneNumber}
-                className="flex-1"
-              >
-                {sendTextMutation.isPending ? (
-                  <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />
-                ) : null}
-                {sendTextMutation.isPending ? "جاري الإرسال..." : "إرسال نص"}
-              </Button>
-
-              <Button
-                type="button"
-                variant="default"
-                onClick={form.handleSubmit(handleSendDocument)}
-                className="flex-1"
-                disabled={isSendingDoc}
-              >
-                {isSendingDoc || sendDocumentMutation.isPending ? (
-                  <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button
+              variant="contained"
+              onClick={form.handleSubmit(handleSendDocument)}
+              disabled={isSendingDoc}
+              fullWidth
+              startIcon={
+                isSendingDoc || sendDocumentMutation.isPending ? (
+                  <CircularProgress size={16} />
                 ) : (
-                  <FileText className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-                )}
-                {isSendingDoc || sendDocumentMutation.isPending ? "جاري الإرسال..." : "إرسال تقرير"}
-              </Button>
-            </div>
-
-            <DialogFooter className="pt-4">
-              <DialogClose asChild>
-                <Button type="button" variant="outline" disabled={isLoading}>
-                  إلغاء
-                </Button>
-              </DialogClose>
-            </DialogFooter>
-          </form>
-        </Form>
+                  <FileText style={{ width: 16, height: 16 }} />
+                )
+              }
+            >
+              {isSendingDoc || sendDocumentMutation.isPending ? "جاري الإرسال..." : "إرسال تقرير"}
+            </Button>
+          </Box>
+        </Box>
       </DialogContent>
+
+      <DialogActions>
+        <Button onClick={() => onOpenChange(false)} disabled={isLoading}>
+          إلغاء
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 };

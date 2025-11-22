@@ -1,7 +1,19 @@
 import React from "react";
-import { Loader2, Settings } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  Typography,
+  Box,
+  CircularProgress,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemText,
+  IconButton,
+  Chip,
+} from "@mui/material";
+import { Settings as SettingsIcon } from "@mui/icons-material";
 import type { FirestoreDoctor, FirestoreSpecialist } from "@/services/firestoreSpecialistService";
 
 interface DoctorsListProps {
@@ -30,66 +42,95 @@ const DoctorsList: React.FC<DoctorsListProps> = ({
   const specialistName = specialists?.find((s) => s.id === selectedSpecialistId)?.specName;
 
   return (
-    <Card className="col-span-1">
-      <CardHeader>
-        <CardTitle>
-          الأطباء
-          {selectedSpecialistId && specialistName && (
-            <span className="text-sm font-normal text-gray-500 dark:text-gray-400 mr-2">
-              ({specialistName})
-            </span>
-          )}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="p-0">
+    <Card sx={{ height: window.innerHeight - 100 }} >
+   
+      <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', pt: 0, px: 0 }}>
         {!selectedSpecialistId ? (
-          <div className="text-center py-8 text-gray-500 px-6">
-            اختر تخصصاً لعرض الأطباء
-          </div>
+          <Box sx={{ textAlign: 'center', py: 8, px: 3 }}>
+            <Typography variant="body1" color="text.secondary">
+              اختر تخصصاً لعرض الأطباء
+            </Typography>
+          </Box>
         ) : isLoading ? (
-          <div className="flex items-center justify-center py-8 px-6">
-            <Loader2 className="h-6 w-6 animate-spin" />
-          </div>
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 1, px: 3 }}>
+            <CircularProgress />
+          </Box>
         ) : error ? (
-          <div className="text-red-500 text-center py-4 px-6">
+          <Typography color="error" sx={{ textAlign: 'center', py: 4, px: 3 }}>
             فشل تحميل الأطباء
-          </div>
+          </Typography>
         ) : doctors && doctors.length > 0 ? (
-          <div className="space-y-2 max-h-[calc(100vh-250px)] overflow-y-auto px-6 pb-6 pt-6">
-            {doctors.map((doctor) => (
-              <div
-                key={doctor.id}
-                onClick={() => onSelectDoctor(doctor)}
-                className={`p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors ${
-                  selectedDoctor?.id === doctor.id
-                    ? "bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700"
-                    : !doctor.isBookingEnabled
-                    ? "border-orange-400 dark:border-orange-600"
-                    : ""
-                }`}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="font-medium">{doctor.docName}</div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEditDoctor(doctor);
+          <Box sx={{ overflowY: 'auto', px: 3, pb: 3, pt: 0 }}>
+            <List sx={{ p: 0 }}>
+              {doctors.map((doctor) => (
+                <ListItem key={doctor.id} disablePadding sx={{ mb: 0.5 }}>
+                  <ListItemButton
+                    onClick={() => onSelectDoctor(doctor)}
+                    selected={selectedDoctor?.id === doctor.id}
+                    sx={{
+                      border: selectedDoctor?.id === doctor.id ? 2 : 1,
+                      borderColor: selectedDoctor?.id === doctor.id
+                        ? 'primary.main'
+                        : !doctor.isBookingEnabled
+                        ? 'warning.main'
+                        : 'divider',
+                      borderRadius: 1,
+                      bgcolor: selectedDoctor?.id === doctor.id 
+                        ? 'primary.light' 
+                        : 'transparent',
+                      py: 0.75,
+                      '&:hover': {
+                        bgcolor: selectedDoctor?.id === doctor.id 
+                          ? 'primary.light' 
+                          : 'action.hover',
+                      },
+                      '&.Mui-selected': {
+                        bgcolor: 'primary.light',
+                        borderColor: 'primary.main',
+                        borderWidth: 2,
+                        '&:hover': {
+                          bgcolor: 'primary.light',
+                        },
+                      },
+                      transition: 'all 0.2s ease-in-out',
                     }}
-                    className="h-8 w-8 p-0"
-                    title="إعدادات الطبيب"
                   >
-                    <Settings className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
+                    <ListItemText
+                      primary={
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Typography variant="body1" fontWeight="medium">
+                              {doctor.docName}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
+                              ID: {doctor.id}
+                            </Typography>
+                          </Box>
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onEditDoctor(doctor);
+                            }}
+                            sx={{ ml: 'auto' }}
+                            title="إعدادات الطبيب"
+                          >
+                            <SettingsIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      }
+                    />
+                  </ListItemButton>
+                </ListItem>
+              ))}
+            </List>
+          </Box>
         ) : (
-          <div className="text-center py-8 text-gray-500 px-6">
-            لا يوجد أطباء متاحون لهذا التخصص
-          </div>
+          <Box sx={{ textAlign: 'center', py: 8, px: 3 }}>
+            <Typography variant="body1" color="text.secondary">
+              لا يوجد أطباء متاحون لهذا التخصص
+            </Typography>
+          </Box>
         )}
       </CardContent>
     </Card>
@@ -97,4 +138,3 @@ const DoctorsList: React.FC<DoctorsListProps> = ({
 };
 
 export default DoctorsList;
-

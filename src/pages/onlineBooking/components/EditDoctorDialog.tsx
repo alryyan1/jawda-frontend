@@ -1,18 +1,25 @@
-import React from "react";
-import { Loader2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import type { FirestoreDoctor, UpdateDoctorData } from "@/services/firestoreSpecialistService";
+  DialogContent,
+  DialogActions,
+  Button,
+  TextField,
+  Typography,
+  Box,
+  FormControlLabel,
+  Switch,
+  CircularProgress,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  IconButton,
+  Divider,
+  Grid,
+} from "@mui/material";
+import { ExpandMore as ExpandMoreIcon, Delete as DeleteIcon, Add as AddIcon } from "@mui/icons-material";
+import type { FirestoreDoctor, UpdateDoctorData, WorkingSchedule, DaySchedule } from "@/services/firestoreSpecialistService";
 
 interface EditDoctorDialogProps {
   isOpen: boolean;
@@ -24,6 +31,17 @@ interface EditDoctorDialogProps {
   onSubmit: (e: React.FormEvent) => void;
 }
 
+// Arabic day names
+const ARABIC_DAYS = [
+  "الأحد",
+  "الاثنين",
+  "الثلاثاء",
+  "الأربعاء",
+  "الخميس",
+  "الجمعة",
+  "السبت",
+];
+
 const EditDoctorDialog: React.FC<EditDoctorDialogProps> = ({
   isOpen,
   onOpenChange,
@@ -33,48 +51,112 @@ const EditDoctorDialog: React.FC<EditDoctorDialogProps> = ({
   onFormChange,
   onSubmit,
 }) => {
+  const [workingSchedule, setWorkingSchedule] = useState<WorkingSchedule>({});
+
+  // Initialize working schedule from doctorToEdit or doctorEditForm
+  useEffect(() => {
+    if (doctorToEdit?.workingSchedule) {
+      setWorkingSchedule(doctorToEdit.workingSchedule);
+    } else if ((doctorEditForm as any).workingSchedule) {
+      setWorkingSchedule((doctorEditForm as any).workingSchedule);
+    } else {
+      setWorkingSchedule({});
+    }
+  }, [doctorToEdit, doctorEditForm, isOpen]);
+
+  const handleScheduleChange = (day: string, period: "morning" | "evening", field: "start" | "end", value: string) => {
+    const newSchedule = { ...workingSchedule };
+    if (!newSchedule[day]) {
+      newSchedule[day] = {};
+    }
+    if (!newSchedule[day][period]) {
+      newSchedule[day][period] = { start: "", end: "" };
+    }
+    newSchedule[day][period] = {
+      ...newSchedule[day][period],
+      [field]: value,
+    };
+    setWorkingSchedule(newSchedule);
+    onFormChange({ ...doctorEditForm, workingSchedule: newSchedule });
+  };
+
+  const handleRemovePeriod = (day: string, period: "morning" | "evening") => {
+    const newSchedule = { ...workingSchedule };
+    if (newSchedule[day] && newSchedule[day][period]) {
+      delete newSchedule[day][period];
+      // If day has no periods, remove the day
+      if (!newSchedule[day].morning && !newSchedule[day].evening) {
+        delete newSchedule[day];
+      }
+      setWorkingSchedule(newSchedule);
+      onFormChange({ ...doctorEditForm, workingSchedule: newSchedule });
+    }
+  };
+
+  const handleAddDay = (day: string) => {
+    const newSchedule = { ...workingSchedule };
+    if (!newSchedule[day]) {
+      newSchedule[day] = {};
+    }
+    setWorkingSchedule(newSchedule);
+    onFormChange({ ...doctorEditForm, workingSchedule: newSchedule });
+  };
+
+  const handleRemoveDay = (day: string) => {
+    const newSchedule = { ...workingSchedule };
+    delete newSchedule[day];
+    setWorkingSchedule(newSchedule);
+    onFormChange({ ...doctorEditForm, workingSchedule: newSchedule });
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>تعديل بيانات الطبيب</DialogTitle>
-          <DialogDescription>{doctorToEdit?.docName}</DialogDescription>
-        </DialogHeader>
-        <form onSubmit={onSubmit}>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="docName">اسم الطبيب</Label>
-              <Input
-                id="docName"
-                value={doctorEditForm.docName || ""}
-                onChange={(e) =>
-                  onFormChange({ ...doctorEditForm, docName: e.target.value })
-                }
-                placeholder="اسم الطبيب"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="phoneNumber">رقم الهاتف</Label>
-              <Input
-                id="phoneNumber"
-                value={doctorEditForm.phoneNumber || ""}
-                onChange={(e) =>
-                  onFormChange({
-                    ...doctorEditForm,
-                    phoneNumber: e.target.value,
-                  })
-                }
-                placeholder="رقم الهاتف"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="morningPatientLimit">حد المرضى الصباحي</Label>
-                <Input
-                  id="morningPatientLimit"
+    <Dialog
+      open={isOpen}
+      onClose={() => onOpenChange(false)}
+      maxWidth="md"
+      fullWidth
+      PaperProps={{
+        sx: {
+          maxHeight: '90vh',
+        }
+      }}
+    >
+      <DialogTitle>تعديل بيانات الطبيب</DialogTitle>
+      <DialogContent dividers>
+        <form onSubmit={onSubmit} id="edit-doctor-form">
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <TextField
+              label="اسم الطبيب"
+              value={doctorEditForm.docName || ""}
+              onChange={(e) =>
+                onFormChange({ ...doctorEditForm, docName: e.target.value })
+              }
+              placeholder="اسم الطبيب"
+              required
+              fullWidth
+              size="small"
+            />
+
+            <TextField
+              label="رقم الهاتف"
+              value={doctorEditForm.phoneNumber || ""}
+              onChange={(e) =>
+                onFormChange({
+                  ...doctorEditForm,
+                  phoneNumber: e.target.value,
+                })
+              }
+              placeholder="رقم الهاتف"
+              fullWidth
+              size="small"
+            />
+
+            <Grid container spacing={2}>
+              <Grid item xs={6}>
+                <TextField
+                  label="حد المرضى الصباحي"
                   type="number"
-                  min="0"
+                  inputProps={{ min: 0 }}
                   value={doctorEditForm.morningPatientLimit || 0}
                   onChange={(e) =>
                     onFormChange({
@@ -83,14 +165,15 @@ const EditDoctorDialog: React.FC<EditDoctorDialogProps> = ({
                     })
                   }
                   placeholder="حد المرضى الصباحي"
+                  fullWidth
+                  size="small"
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="eveningPatientLimit">حد المرضى المسائي</Label>
-                <Input
-                  id="eveningPatientLimit"
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  label="حد المرضى المسائي"
                   type="number"
-                  min="0"
+                  inputProps={{ min: 0 }}
                   value={doctorEditForm.eveningPatientLimit || 0}
                   onChange={(e) =>
                     onFormChange({
@@ -99,60 +182,234 @@ const EditDoctorDialog: React.FC<EditDoctorDialogProps> = ({
                     })
                   }
                   placeholder="حد المرضى المسائي"
+                  fullWidth
+                  size="small"
                 />
-              </div>
-            </div>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="isActive">نشط</Label>
-                <Switch
-                  id="isActive"
-                  checked={doctorEditForm.isActive ?? true}
-                  onCheckedChange={(checked) =>
-                    onFormChange({ ...doctorEditForm, isActive: checked })
-                  }
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <Label htmlFor="isBookingEnabled">الحجز متاح</Label>
-                <Switch
-                  id="isBookingEnabled"
-                  checked={doctorEditForm.isBookingEnabled ?? false}
-                  onCheckedChange={(checked) =>
-                    onFormChange({
-                      ...doctorEditForm,
-                      isBookingEnabled: checked,
-                    })
-                  }
-                />
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isPending}
-            >
-              إلغاء
-            </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  جاري التحديث...
-                </>
-              ) : (
-                "حفظ التغييرات"
-              )}
-            </Button>
-          </DialogFooter>
+              </Grid>
+            </Grid>
+
+            <Box>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={doctorEditForm.isActive ?? true}
+                    onChange={(e) =>
+                      onFormChange({ ...doctorEditForm, isActive: e.target.checked })
+                    }
+                  />
+                }
+                label="نشط"
+              />
+            </Box>
+
+            <Box>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={doctorEditForm.isBookingEnabled ?? false}
+                    onChange={(e) =>
+                      onFormChange({
+                        ...doctorEditForm,
+                        isBookingEnabled: e.target.checked,
+                      })
+                    }
+                  />
+                }
+                label="الحجز متاح"
+              />
+            </Box>
+
+            <Divider />
+
+            {/* Working Schedule Section */}
+            <Box>
+              <Typography variant="h6" sx={{ mb: 2 }}>
+                الجدول الزمني
+              </Typography>
+
+              {/* Days with existing schedule */}
+              {Object.keys(workingSchedule).map((day) => (
+                <Accordion key={day} defaultExpanded>
+                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', mr: 1 }}>
+                      <Typography variant="subtitle1" fontWeight="medium">
+                        {day}
+                      </Typography>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveDay(day);
+                        }}
+                        sx={{ ml: 'auto' }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+                  </AccordionSummary>
+                  <AccordionDetails>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      {/* Morning Period */}
+                      {workingSchedule[day]?.morning ? (
+                        <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                            <Typography variant="subtitle2" fontWeight="medium">
+                              فترة الصباح
+                            </Typography>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleRemovePeriod(day, "morning")}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Box>
+                          <Grid container spacing={2}>
+                            <Grid item xs={6}>
+                              <TextField
+                                label="وقت البداية"
+                                type="time"
+                                value={workingSchedule[day].morning?.start || ""}
+                                onChange={(e) =>
+                                  handleScheduleChange(day, "morning", "start", e.target.value)
+                                }
+                                InputLabelProps={{ shrink: true }}
+                                fullWidth
+                                size="small"
+                              />
+                            </Grid>
+                            <Grid item xs={6}>
+                              <TextField
+                                label="وقت النهاية"
+                                type="time"
+                                value={workingSchedule[day].morning?.end || ""}
+                                onChange={(e) =>
+                                  handleScheduleChange(day, "morning", "end", e.target.value)
+                                }
+                                InputLabelProps={{ shrink: true }}
+                                fullWidth
+                                size="small"
+                              />
+                            </Grid>
+                          </Grid>
+                        </Box>
+                      ) : (
+                        <Button
+                          size="small"
+                          startIcon={<AddIcon />}
+                          onClick={() => {
+                            handleScheduleChange(day, "morning", "start", "09:00");
+                            handleScheduleChange(day, "morning", "end", "12:00");
+                          }}
+                          variant="outlined"
+                        >
+                          إضافة فترة صباحية
+                        </Button>
+                      )}
+
+                      {/* Evening Period */}
+                      {workingSchedule[day]?.evening ? (
+                        <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                            <Typography variant="subtitle2" fontWeight="medium">
+                              فترة المساء
+                            </Typography>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleRemovePeriod(day, "evening")}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Box>
+                          <Grid container spacing={2}>
+                            <Grid item xs={6}>
+                              <TextField
+                                label="وقت البداية"
+                                type="time"
+                                value={workingSchedule[day].evening?.start || ""}
+                                onChange={(e) =>
+                                  handleScheduleChange(day, "evening", "start", e.target.value)
+                                }
+                                InputLabelProps={{ shrink: true }}
+                                fullWidth
+                                size="small"
+                              />
+                            </Grid>
+                            <Grid item xs={6}>
+                              <TextField
+                                label="وقت النهاية"
+                                type="time"
+                                value={workingSchedule[day].evening?.end || ""}
+                                onChange={(e) =>
+                                  handleScheduleChange(day, "evening", "end", e.target.value)
+                                }
+                                InputLabelProps={{ shrink: true }}
+                                fullWidth
+                                size="small"
+                              />
+                            </Grid>
+                          </Grid>
+                        </Box>
+                      ) : (
+                        <Button
+                          size="small"
+                          startIcon={<AddIcon />}
+                          onClick={() => {
+                            handleScheduleChange(day, "evening", "start", "18:00");
+                            handleScheduleChange(day, "evening", "end", "22:00");
+                          }}
+                          variant="outlined"
+                        >
+                          إضافة فترة مسائية
+                        </Button>
+                      )}
+                    </Box>
+                  </AccordionDetails>
+                </Accordion>
+              ))}
+
+              {/* Add new day */}
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  إضافة يوم جديد:
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  {ARABIC_DAYS.filter(day => !workingSchedule[day]).map((day) => (
+                    <Button
+                      key={day}
+                      size="small"
+                      variant="outlined"
+                      onClick={() => handleAddDay(day)}
+                      startIcon={<AddIcon />}
+                    >
+                      {day}
+                    </Button>
+                  ))}
+                </Box>
+              </Box>
+            </Box>
+          </Box>
         </form>
       </DialogContent>
+      <DialogActions>
+        <Button
+          onClick={() => onOpenChange(false)}
+          disabled={isPending}
+          variant="outlined"
+        >
+          إلغاء
+        </Button>
+        <Button
+          type="submit"
+          form="edit-doctor-form"
+          disabled={isPending}
+          variant="contained"
+          startIcon={isPending ? <CircularProgress size={16} /> : null}
+        >
+          {isPending ? "جاري التحديث..." : "حفظ التغييرات"}
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 };
 
 export default EditDoctorDialog;
-

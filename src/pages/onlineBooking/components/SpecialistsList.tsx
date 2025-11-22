@@ -1,6 +1,17 @@
 import React from "react";
-import { Loader2 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  Typography,
+  Box,
+  CircularProgress,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemText,
+  Chip,
+} from "@mui/material";
 import type { FirestoreSpecialist } from "@/services/firestoreSpecialistService";
 
 interface SpecialistsListProps {
@@ -19,49 +30,76 @@ const SpecialistsList: React.FC<SpecialistsListProps> = ({
   onSelectSpecialist,
 }) => {
   return (
-    <Card className="col-span-1">
-      <CardHeader>
-        <CardTitle>التخصصات</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <Card sx={{ height: window.innerHeight - 100, display: 'flex', flexDirection: 'column' }}>
+
+      <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', pt: 0 }}>
         {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin" />
-          </div>
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 1 }}>
+            <CircularProgress />
+          </Box>
         ) : error ? (
-          <div className="text-red-500 text-center py-4">
+          <Typography color="error" sx={{ textAlign: 'center', py: 4 }}>
             فشل تحميل التخصصات
-          </div>
+          </Typography>
         ) : specialists && specialists.length > 0 ? (
-          <div className="space-y-2 max-h-[600px] overflow-y-auto">
-            {specialists.map((specialist) => (
-              <div
-                key={specialist.id}
-                onClick={() => onSelectSpecialist(specialist.id)}
-                className={`p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors ${
-                  selectedSpecialistId === specialist.id
-                    ? "bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700"
-                    : ""
-                }`}
-              >
-                <div className="font-medium">{specialist.specName}</div>
-                {specialist.description && (
-                  <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    {specialist.description}
-                  </div>
-                )}
-                {!specialist.isActive && (
-                  <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                    غير نشط
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+          <Box sx={{ maxHeight: 600, overflowY: 'auto' }}>
+            <List sx={{ p: 0 }}>
+              {specialists.map((specialist) => (
+                <ListItem key={specialist.id} disablePadding sx={{ mb: 1 }}>
+                  <ListItemButton
+                    onClick={() => onSelectSpecialist(specialist.id)}
+                    selected={selectedSpecialistId === specialist.id}
+                    sx={{
+                      border: 1,
+                      borderColor: selectedSpecialistId === specialist.id ? 'primary.main' : 'divider',
+                      borderRadius: 1,
+                      bgcolor: selectedSpecialistId === specialist.id ? 'action.selected' : 'transparent',
+                      '&:hover': {
+                        bgcolor: 'action.hover',
+                      },
+                      '&.Mui-selected': {
+                        bgcolor: 'action.selected',
+                        '&:hover': {
+                          bgcolor: 'action.selected',
+                        },
+                      },
+                    }}
+                  >
+                    <ListItemText
+                      primary={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography variant="body1" fontWeight="medium">
+                            {specialist.specName}
+                          </Typography>
+                          {!specialist.isActive && (
+                            <Chip
+                              label="غير نشط"
+                              size="small"
+                              color="default"
+                              sx={{ height: 20, fontSize: '0.7rem' }}
+                            />
+                          )}
+                        </Box>
+                      }
+                      secondary={
+                        specialist.description && (
+                          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                            {specialist.description}
+                          </Typography>
+                        )
+                      }
+                    />
+                  </ListItemButton>
+                </ListItem>
+              ))}
+            </List>
+          </Box>
         ) : (
-          <div className="text-center py-4 text-gray-500">
-            لا توجد تخصصات متاحة
-          </div>
+          <Box sx={{ textAlign: 'center', py: 8 }}>
+            <Typography variant="body1" color="text.secondary">
+              لا توجد تخصصات متاحة
+            </Typography>
+          </Box>
         )}
       </CardContent>
     </Card>
@@ -69,4 +107,3 @@ const SpecialistsList: React.FC<SpecialistsListProps> = ({
 };
 
 export default SpecialistsList;
-

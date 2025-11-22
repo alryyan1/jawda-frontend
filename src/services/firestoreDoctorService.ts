@@ -97,43 +97,75 @@ export const fetchAllFirestoreDoctors = async (specializationId: string): Promis
   }
 };
 
+// New interface matching the facility-level appointment structure
+export interface FacilityAppointment {
+  id: string;
+  centralSpecialtyId: string;
+  createdAt: any; // Firestore timestamp
+  date: string;
+  doctorId: string;
+  doctorName: string;
+  facilityId: string;
+  isConfirmed: boolean;
+  patientId: string;
+  patientName: string;
+  patientPhone: string;
+  period: "morning" | "evening";
+  specializationName: string;
+  time: string;
+}
+
 export const fetchDoctorAppointments = async (
   specializationId: string,
   doctorId: string,
   date?: string
-): Promise<OnlineAppointment[]> => {
+): Promise<FacilityAppointment[]> => {
   try {
-    if (!specializationId || !doctorId) {
+    if (!doctorId) {
       return [];
     }
 
-    // Reference to the appointments collection: medicalFacilities/{facilityId}/specializations/{specializationId}/doctors/{doctorId}/appointments
-    const doctorDocRef = doc(db, 'medicalFacilities', FACILITY_ID, 'specializations', specializationId, 'doctors', doctorId);
-    const appointmentsRef = collection(doctorDocRef, 'appointments');
-    const datePart = (date && new Date(date).toISOString().split('T')[0]) || new Date().toISOString().split('T')[0];
-    // Query to get all appointments, ordered by date and time
-    const q = query(
-      appointmentsRef,
-      where('date', '==', datePart),
-      orderBy('date', 'desc')
-    );
+    // Reference to the facility-level appointments collection: medicalFacilities/{facilityId}/appointments
+    const facilityDocRef = doc(db, 'medicalFacilities', FACILITY_ID);
+    const appointmentsRef = collection(facilityDocRef, 'appointments');
+    
+    // Build query constraints
+    const queryConstraints: any[] = [
+      where('doctorId', '==', doctorId)
+    ];
+    
+    // Add date filter if provided
+    if (date) {
+      const datePart = new Date(date).toISOString().split('T')[0];
+      queryConstraints.push(where('date', '==', datePart));
+    }
+    
+    // Order by date descending (newest first)
+    queryConstraints.push(orderBy('date', 'desc'));
+    
+    const q = query(appointmentsRef, ...queryConstraints);
     
     const querySnapshot = await getDocs(q);
-    const appointments: OnlineAppointment[] = [];
+    const appointments: FacilityAppointment[] = [];
     
     querySnapshot.forEach((doc) => {
       const data = doc.data();
       appointments.push({
         id: doc.id,
-        createdAt: data.createdAt?.toDate() || new Date(),
+        centralSpecialtyId: data.centralSpecialtyId || '',
+        createdAt: data.createdAt,
         date: data.date,
-        isConfirmed: data.isConfirmed,
-        patientId: data.patientId,
-        patientName: data.patientName,
-        patientPhone: data.patientPhone,
-        period: data.period,
-        time: data.time
-      } as OnlineAppointment);
+        doctorId: data.doctorId,
+        doctorName: data.doctorName || '',
+        facilityId: data.facilityId || FACILITY_ID,
+        isConfirmed: data.isConfirmed ?? false,
+        patientId: data.patientId || '',
+        patientName: data.patientName || '',
+        patientPhone: data.patientPhone || '',
+        period: data.period || 'morning',
+        specializationName: data.specializationName || '',
+        time: data.time || ''
+      } as FacilityAppointment);
     });
     
     return appointments;

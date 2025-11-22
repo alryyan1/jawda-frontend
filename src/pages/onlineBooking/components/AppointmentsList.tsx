@@ -9,7 +9,13 @@ import {
   CircularProgress,
   InputAdornment,
   Chip,
-  Divider,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
 } from "@mui/material";
 import { Search as SearchIcon, Close as CloseIcon } from "@mui/icons-material";
 import type { FacilityAppointment } from "@/services/firestoreSpecialistService";
@@ -51,21 +57,39 @@ const AppointmentsList: React.FC<AppointmentsListProps> = ({
     });
   }, [appointments, appointmentSearch]);
 
+  // Sort appointments by date (newest first)
+  const sortedAppointments = useMemo(() => {
+    return [...filteredAppointments].sort((a, b) => {
+      // First compare dates (descending - newest first)
+      const dateCompare = b.date.localeCompare(a.date);
+      if (dateCompare !== 0) return dateCompare;
+      
+      // If dates are the same, compare createdAt (descending - latest first)
+      const aTime = a.createdAt?.seconds || 0;
+      const bTime = b.createdAt?.seconds || 0;
+      return bTime - aTime;
+    });
+  }, [filteredAppointments]);
+
   return (
     <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <CardHeader
         title={
-          <Typography variant="h6" component="div">
-            المواعيد
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="h6" component="div">
+              المواعيد
+            </Typography>
             {appointments && (
-              <Typography component="span" variant="body2" color="text.secondary" sx={{ mr: 1 }}>
-                ({appointments.length})
-              </Typography>
+              <Chip
+                label={appointments.length}
+                size="small"
+                color="primary"
+              />
             )}
-          </Typography>
+          </Box>
         }
       />
-      <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 2 }}>
+      <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', pt: 0 }}>
         {isLoading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8, flexGrow: 1 }}>
             <CircularProgress />
@@ -112,69 +136,86 @@ const AppointmentsList: React.FC<AppointmentsListProps> = ({
               }}
             />
 
-            {/* Appointments List */}
-            {filteredAppointments && filteredAppointments.length > 0 ? (
-              <Box sx={{ flexGrow: 1, overflowY: 'auto', maxHeight: '500px' }}>
-                {filteredAppointments.map((appointment, index) => (
-                  <Box key={appointment.id}>
-                    <Box
-                      sx={{
-                        py: 2,
-                        px: 1,
-                        '&:hover': {
-                          bgcolor: 'action.hover',
-                        },
-                        transition: 'background-color 0.2s',
-                      }}
-                    >
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-                        <Box>
-                          <Typography variant="subtitle2" fontWeight="medium">
+            {/* Appointments Table */}
+            {sortedAppointments && sortedAppointments.length > 0 ? (
+              <TableContainer component={Paper} sx={{ flexGrow: 1, maxHeight: 'calc(100vh - 300px)' }}>
+                <Table stickyHeader size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 'bold' }}>اسم المريض</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>رقم الهاتف</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>التاريخ</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>الطبيب</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>التخصص</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>الفترة</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>الحالة</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>تاريخ الإنشاء</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {sortedAppointments.map((appointment) => (
+                      <TableRow
+                        key={appointment.id}
+                        sx={{
+                          '&:hover': {
+                            bgcolor: 'action.hover',
+                          },
+                          transition: 'background-color 0.2s',
+                        }}
+                      >
+                        <TableCell>
+                          <Typography variant="body2" fontWeight="medium">
                             {appointment.patientName}
                           </Typography>
-                          <Typography variant="caption" color="text.secondary">
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" color="text.secondary">
                             {appointment.patientPhone}
                           </Typography>
-                        </Box>
-                        {appointment.createdAt && (
-                          <Typography variant="caption" color="text.secondary">
-                            {formatRelativeTime(appointment.createdAt)}
-                          </Typography>
-                        )}
-                      </Box>
-
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1.5 }}>
-                        <Box>
+                        </TableCell>
+                        <TableCell>
                           <Typography variant="body2" color="text.secondary">
                             {formatDateDisplay(appointment.date)}
                           </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            الطبيب: {appointment.doctorName}
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" color="text.secondary">
+                            {appointment.doctorName}
                           </Typography>
-                          <Typography variant="caption" color="text.secondary" display="block">
-                            التخصص: {appointment.specializationName}
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" color="text.secondary">
+                            {appointment.specializationName}
                           </Typography>
-                        </Box>
-                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                        </TableCell>
+                        <TableCell>
                           <Chip
                             label={appointment.period === "morning" ? "صباح" : "مساء"}
                             size="small"
                             color={appointment.period === "morning" ? "primary" : "warning"}
                             sx={{ fontSize: '0.7rem', height: 20 }}
                           />
+                        </TableCell>
+                        <TableCell>
                           <Chip
                             label={appointment.isConfirmed ? "مؤكد" : "غير مؤكد"}
                             size="small"
                             color={appointment.isConfirmed ? "success" : "default"}
                             sx={{ fontSize: '0.7rem', height: 20 }}
                           />
-                        </Box>
-                      </Box>
-                    </Box>
-                    {index < filteredAppointments.length - 1 && <Divider />}
-                  </Box>
-                ))}
-              </Box>
+                        </TableCell>
+                        <TableCell>
+                          {appointment.createdAt && (
+                            <Typography variant="caption" color="text.secondary">
+                              {formatRelativeTime(appointment.createdAt)}
+                            </Typography>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
             ) : appointmentSearch ? (
               <Box sx={{ textAlign: 'center', py: 8, flexGrow: 1 }}>
                 <Typography variant="body2" color="text.secondary">

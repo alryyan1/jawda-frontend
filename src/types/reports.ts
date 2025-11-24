@@ -364,3 +364,18 @@ export interface LabGeneralReportWithUserRevenue {
     total: number;
   };
 }
+
+// Specialist Shifts Report Types
+export interface SpecialistShiftReportItem {
+  specialist_id: number;
+  specialist_name: string;
+  doctors: DoctorShiftReportItem[];
+  totals: {
+    total_income: number;
+    clinic_enurance: number;
+    cash_entitlement: number;
+    insurance_entitlement: number;
+    total_doctor_entitlement: number;
+    shifts_count: number;
+  };
+}

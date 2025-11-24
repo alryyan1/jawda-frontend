@@ -1,4 +1,4 @@
-// src/pages/reports/DoctorShiftsReportPage.tsx
+// src/pages/reports/SpecialistShiftsReportPage.tsx
 import React, { useState, useEffect, useMemo } from "react";
 import {
   useQuery,
@@ -11,31 +11,30 @@ import { toast } from "sonner";
 import { createTheme, ThemeProvider } from "@mui/material";
 import { useTheme } from "next-themes";
 
-import { Loader2, Download, FileSpreadsheet, Users } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Loader2, Download, FileSpreadsheet } from "lucide-react";
 
 // Import the new components
-import DoctorShiftsReportFilters from "@/components/reports/DoctorShiftsReportFilters";
-import DoctorShiftsReportTable from "@/components/reports/DoctorShiftsReportTable";
-import DoctorShiftsReportPagination from "@/components/reports/DoctorShiftsReportPagination";
+import SpecialistShiftsReportFilters from "@/components/reports/SpecialistShiftsReportFilters";
+import SpecialistShiftsReportTable from "@/components/reports/SpecialistShiftsReportTable";
+import SpecialistShiftsReportPagination from "@/components/reports/SpecialistShiftsReportPagination";
 
 import type {
   DoctorShiftReportItem,
+  SpecialistShiftReportItem,
 } from "@/types/reports";
-import type { Doctor } from "@/types/doctors";
+import type { Specialist } from "@/types/doctors";
 import type { Shift as GeneralShiftType } from "@/types/shifts";
 import type { PaginatedResponse } from "@/types/common";
 import {
   getDoctorShiftsReport,
-  downloadDoctorShiftsReportPdf,
-  downloadDoctorShiftsReportExcel,
+  downloadSpecialistShiftsReportPdf,
+  downloadSpecialistShiftsReportExcel,
 } from "@/services/reportService";
-import { getDoctorsList } from "@/services/doctorService";
+import { getSpecialistsList } from "@/services/doctorService";
 import { getUsers } from "@/services/userService";
 import { getShiftsList } from "@/services/shiftService";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAuthorization } from "@/hooks/useAuthorization";
-// Removed PdfPreviewDialog; using MUI Dialog instead
 
 // MUI components for inline UI and PDF dialog
 import {
@@ -51,21 +50,18 @@ import { Button as UIButton } from "@/components/ui/button";
 
 interface Filters {
   userIdOpened: string;
-  doctorId: string;
+  specialistId: string;
   generalShiftId: string;
   dateFrom: string;
   dateTo: string;
-  searchDoctorName: string;
+  searchSpecialistName: string;
   status: "all" | "open" | "closed";
 }
 
-
-const DoctorShiftsReportPage: React.FC = () => {
-  // translations removed; using direct Arabic strings
+const SpecialistShiftsReportPage: React.FC = () => {
   const { user: currentUser } = useAuth();
   const { can } = useAuthorization();
   const { theme } = useTheme();
-  const navigate = useNavigate();
 
   // Create MUI theme that supports dark mode
   const muiTheme = useMemo(() => createTheme({
@@ -112,19 +108,19 @@ const DoctorShiftsReportPage: React.FC = () => {
   const [rowsPerPage, setRowsPerPage] = useState(50);
   const [filters, setFilters] = useState<Filters>({
     userIdOpened: "",
-    doctorId: "all",
+    specialistId: "",
     generalShiftId: "all",
     dateFrom: defaultDateFrom,
     dateTo: defaultDateTo,
-    searchDoctorName: "",
+    searchSpecialistName: "",
     status: "all",
   });
-  const [debouncedSearchDoctorName, setDebouncedSearchDoctorName] =
+  const [debouncedSearchSpecialistName, setDebouncedSearchSpecialistName] =
     useState("");
-
 
   const [isGeneratingListPdf, setIsGeneratingListPdf] = useState(false);
   const [isGeneratingExcel, setIsGeneratingExcel] = useState(false);
+  const [isGeneratingExcelSummary, setIsGeneratingExcelSummary] = useState(false);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false);
   const [pdfPreviewFilename, setPdfPreviewFilename] = useState("report.pdf");
@@ -132,15 +128,15 @@ const DoctorShiftsReportPage: React.FC = () => {
 
   useEffect(() => {
     const handler = setTimeout(
-      () => setDebouncedSearchDoctorName(filters.searchDoctorName),
+      () => setDebouncedSearchSpecialistName(filters.searchSpecialistName),
       500
     );
     return () => clearTimeout(handler);
-  }, [filters.searchDoctorName]);
+  }, [filters.searchSpecialistName]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [filters, debouncedSearchDoctorName, rowsPerPage]);
+  }, [filters, debouncedSearchSpecialistName, rowsPerPage]);
 
   useEffect(() => {
     if (
@@ -153,7 +149,7 @@ const DoctorShiftsReportPage: React.FC = () => {
   }, [canViewAllUsersShifts, currentUser, filters.userIdOpened]);
 
   const { data: usersForFilterResponse, isLoading: isLoadingUsers } = useQuery({
-    queryKey: ["usersListForDSRFilter"],
+    queryKey: ["usersListForSSRFilter"],
     queryFn: () => getUsers(1, { per_page: 200 }),
   });
   const usersForFilter = useMemo(
@@ -161,26 +157,26 @@ const DoctorShiftsReportPage: React.FC = () => {
     [usersForFilterResponse]
   );
 
-  const { data: doctorsForFilter, isLoading: isLoadingDoctors } = useQuery<
-    Doctor[],
+  const { data: specialistsForFilter, isLoading: isLoadingSpecialists } = useQuery<
+    Specialist[],
     Error
   >({
-    queryKey: ["doctorsListForDSRFilter"],
-    queryFn: () => getDoctorsList().then((res) => res as Doctor[]),
+    queryKey: ["specialistsListForSSRFilter"],
+    queryFn: () => getSpecialistsList(),
   });
 
   const { data: generalShiftsForFilter, isLoading: isLoadingGeneralShifts } =
     useQuery<GeneralShiftType[], Error>({
-      queryKey: ["generalShiftsListForDSRFilter"],
+      queryKey: ["generalShiftsListForSSRFilter"],
       queryFn: () => getShiftsList({ per_page: 100, is_closed: "" }),
     });
 
   const reportQueryKey = [
-    "doctorShiftsReport",
+    "specialistShiftsReport",
     currentPage,
     rowsPerPage,
     filters,
-    debouncedSearchDoctorName,
+    debouncedSearchSpecialistName,
   ] as const;
 
   const {
@@ -196,7 +192,7 @@ const DoctorShiftsReportPage: React.FC = () => {
         per_page: rowsPerPage,
         date_from: filters.dateFrom,
         date_to: filters.dateTo,
-        doctor_id: filters.doctorId === "all" || filters.doctorId === "" ? undefined : parseInt(filters.doctorId),
+        doctor_id: undefined, // We'll filter by specialist instead
         status:
           filters.status === "all"
             ? undefined
@@ -209,16 +205,88 @@ const DoctorShiftsReportPage: React.FC = () => {
           filters.userIdOpened === "all" || filters.userIdOpened === ""
             ? undefined
             : parseInt(filters.userIdOpened),
-        doctor_name_search: debouncedSearchDoctorName || undefined,
+        doctor_name_search: debouncedSearchSpecialistName || undefined,
       }),
     placeholderData: keepPreviousData,
   });
 
+  // Group doctor shifts by specialist
+  const groupedBySpecialist = useMemo(() => {
+    if (!paginatedData?.data || !specialistsForFilter) {
+      return [];
+    }
+
+    const shifts = paginatedData.data;
+    
+    // Filter by specialist if selected
+    let filteredShifts = shifts;
+    if (filters.specialistId && filters.specialistId !== "" && filters.specialistId !== "all") {
+      const specialistId = parseInt(filters.specialistId);
+      const selectedSpecialist = specialistsForFilter.find(s => s.id === specialistId);
+      if (selectedSpecialist) {
+        filteredShifts = shifts.filter(shift => 
+          shift.doctor_specialist_name === selectedSpecialist.name
+        );
+      }
+    }
+
+    // Group by specialist
+    const grouped = new Map<number, {
+      specialist_id: number;
+      specialist_name: string;
+      doctors: DoctorShiftReportItem[];
+    }>();
+
+    filteredShifts.forEach(shift => {
+      const specialistName = shift.doctor_specialist_name || "غير محدد";
+      const specialist = specialistsForFilter.find(s => s.name === specialistName);
+      const specialistId = specialist?.id || 0;
+
+      if (!grouped.has(specialistId)) {
+        grouped.set(specialistId, {
+          specialist_id: specialistId,
+          specialist_name: specialistName,
+          doctors: [],
+        });
+      }
+
+      grouped.get(specialistId)!.doctors.push(shift);
+    });
+
+    // Convert to array and calculate totals
+    const result: SpecialistShiftReportItem[] = Array.from(grouped.values()).map(group => {
+      const totals = group.doctors.reduce(
+        (acc, shift) => ({
+          total_income: acc.total_income + (shift.total_income || 0),
+          clinic_enurance: acc.clinic_enurance + (shift.clinic_enurance || 0),
+          cash_entitlement: acc.cash_entitlement + (shift.cash_entitlement || 0),
+          insurance_entitlement: acc.insurance_entitlement + (shift.insurance_entitlement || 0),
+          total_doctor_entitlement: acc.total_doctor_entitlement + (shift.total_doctor_entitlement || 0),
+          shifts_count: acc.shifts_count + 1,
+        }),
+        {
+          total_income: 0,
+          clinic_enurance: 0,
+          cash_entitlement: 0,
+          insurance_entitlement: 0,
+          total_doctor_entitlement: 0,
+          shifts_count: 0,
+        }
+      );
+
+      return {
+        ...group,
+        totals,
+      };
+    });
+
+    // Sort by specialist name
+    return result.sort((a, b) => a.specialist_name.localeCompare(b.specialist_name));
+  }, [paginatedData?.data, specialistsForFilter, filters.specialistId]);
 
   const handleFilterChange = (filterName: keyof Filters, value: string) => {
     setFilters((prev) => ({ ...prev, [filterName]: value }));
   };
-
 
   const generatePdf = async (
     fetchFn: () => Promise<Blob>,
@@ -239,50 +307,56 @@ const DoctorShiftsReportPage: React.FC = () => {
   };
 
   const handleDownloadListPdf = () => {
-    if (!paginatedData?.data.length) {
+    if (!groupedBySpecialist.length) {
       toast.info('لا توجد بيانات للتصدير');
       return;
     }
     setIsGeneratingListPdf(true);
     generatePdf(
-      () => downloadDoctorShiftsReportPdf({
+      () => downloadSpecialistShiftsReportPdf({
         date_from: filters.dateFrom,
         date_to: filters.dateTo,
-        doctor_id: filters.doctorId === "all" || filters.doctorId === "" ? undefined : parseInt(filters.doctorId),
+        specialist_id: filters.specialistId === "" || filters.specialistId === "all" ? undefined : parseInt(filters.specialistId),
         status: filters.status === "all" ? undefined : filters.status === "open" ? "1" : "0",
         shift_id: filters.generalShiftId === "all" ? undefined : parseInt(filters.generalShiftId),
         user_id_opened: filters.userIdOpened === "all" || filters.userIdOpened === "" ? undefined : parseInt(filters.userIdOpened),
-        doctor_name_search: debouncedSearchDoctorName || undefined,
+        doctor_name_search: debouncedSearchSpecialistName || undefined,
       }),
-      'تقرير مناوبات الأطباء',
-      `Doctor_Shifts_Report_${filters.dateFrom}_to_${filters.dateTo}.pdf`
+      'تقرير مناوبات الأطباء حسب التخصص',
+      `Specialist_Shifts_Report_${filters.dateFrom}_to_${filters.dateTo}.pdf`
     ).finally(() => setIsGeneratingListPdf(false));
   };
 
-  const handleDownloadExcel = async () => {
-    if (!paginatedData?.data.length) {
+  const handleDownloadExcel = async (includeBreakdown: boolean = true) => {
+    if (!groupedBySpecialist.length) {
       toast.info('لا توجد بيانات للتصدير');
       return;
     }
     
-    setIsGeneratingExcel(true);
+    if (includeBreakdown) {
+      setIsGeneratingExcel(true);
+    } else {
+      setIsGeneratingExcelSummary(true);
+    }
     
     try {
-      const blob = await downloadDoctorShiftsReportExcel({
+      const blob = await downloadSpecialistShiftsReportExcel({
         date_from: filters.dateFrom,
         date_to: filters.dateTo,
-        doctor_id: filters.doctorId === "all" || filters.doctorId === "" ? undefined : parseInt(filters.doctorId),
+        specialist_id: filters.specialistId === "" || filters.specialistId === "all" ? undefined : parseInt(filters.specialistId),
         status: filters.status === "all" ? undefined : filters.status === "open" ? "1" : "0",
         shift_id: filters.generalShiftId === "all" ? undefined : parseInt(filters.generalShiftId),
         user_id_opened: filters.userIdOpened === "all" || filters.userIdOpened === "" ? undefined : parseInt(filters.userIdOpened),
-        doctor_name_search: debouncedSearchDoctorName || undefined,
+        doctor_name_search: debouncedSearchSpecialistName || undefined,
+        include_breakdown: includeBreakdown,
       });
       
       // Create download link and trigger download
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Doctor_Shifts_Report_${filters.dateFrom}_to_${filters.dateTo}.xlsx`;
+      const fileNameSuffix = includeBreakdown ? 'With_Breakdown' : 'Summary_Only';
+      a.download = `Specialist_Shifts_Report_${fileNameSuffix}_${filters.dateFrom}_to_${filters.dateTo}.xlsx`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -293,20 +367,22 @@ const DoctorShiftsReportPage: React.FC = () => {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       toast.error('فشل تنزيل ملف Excel', { description: errorMessage });
     } finally {
-      setIsGeneratingExcel(false);
+      if (includeBreakdown) {
+        setIsGeneratingExcel(false);
+      } else {
+        setIsGeneratingExcelSummary(false);
+      }
     }
   };
 
-
-  const shifts = paginatedData?.data || [];
   const meta = paginatedData?.meta;
   const isLoadingUIData =
-    isLoadingUsers || isLoadingDoctors || isLoadingGeneralShifts;
+    isLoadingUsers || isLoadingSpecialists || isLoadingGeneralShifts;
 
   if (error)
     return (
       <Typography color="error" className="p-4 text-center">
-        فشل جلب البيانات: تقرير مناوبات الأطباء: {error.message}
+        فشل جلب البيانات: تقرير مناوبات الأطباء حسب التخصص: {error.message}
       </Typography>
     );
 
@@ -334,18 +410,10 @@ const DoctorShiftsReportPage: React.FC = () => {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex gap-2">
             <UIButton
-              onClick={() => navigate("/reports/specialist-shifts")}
-              variant="default"
-              size="sm"
-            >
-              <Users className="h-4 w-4" />
-              <span className="ltr:ml-2 rtl:mr-2">{"عرض حسب التخصص"}</span>
-            </UIButton>
-            <UIButton
               onClick={handleDownloadListPdf}
               variant="outline"
               size="sm"
-              disabled={isGeneratingListPdf || isLoading || !shifts.length}
+              disabled={isGeneratingListPdf || isLoading || !groupedBySpecialist.length}
             >
               {isGeneratingListPdf ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -355,33 +423,52 @@ const DoctorShiftsReportPage: React.FC = () => {
               <span className="ltr:ml-2 rtl:mr-2">{"تصدير PDF"}</span>
             </UIButton>
             <UIButton
-              onClick={handleDownloadExcel}
+              onClick={(e) => {
+                e.preventDefault();
+                handleDownloadExcel(true);
+              }}
               variant="outline"
               size="sm"
-              disabled={isGeneratingExcel || isLoading || !shifts.length}
+              disabled={isGeneratingExcel || isLoading || !groupedBySpecialist.length}
             >
               {isGeneratingExcel ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <FileSpreadsheet className="h-4 w-4" />
               )}
-              <span className="ltr:ml-2 rtl:mr-2">{"تصدير Excel"}</span>
+              <span className="ltr:ml-2 rtl:mr-2">{"تصدير Excel (مع التفاصيل)"}</span>
+            </UIButton>
+            <UIButton
+              onClick={(e) => {
+                e.preventDefault();
+                handleDownloadExcel(false);
+              }}
+              variant="outline"
+              size="sm"
+              disabled={isGeneratingExcelSummary || isLoading || !groupedBySpecialist.length}
+            >
+              {isGeneratingExcelSummary ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <FileSpreadsheet className="h-4 w-4" />
+              )}
+              <span className="ltr:ml-2 rtl:mr-2">{"تصدير Excel (ملخص فقط)"}</span>
             </UIButton>
           </div>
           
           {/* Count Display */}
-          {!isLoading && shifts.length > 0 && (
+          {!isLoading && groupedBySpecialist.length > 0 && (
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg px-4 py-2">
               <div className="flex items-center gap-3">
                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                 <span className="text-blue-700 dark:text-blue-300 font-medium text-sm">
-                  عدد مناوبات الأطباء المعروضة: {shifts.length}
+                  عدد التخصصات المعروضة: {groupedBySpecialist.length}
                 </span>
                 {meta && (
                   <span className="text-xs text-blue-600 dark:text-blue-400">
                     من {((currentPage - 1) * rowsPerPage) + 1} إلى {Math.min(currentPage * rowsPerPage, meta.total)}
                     {meta.total > 0 && (
-                      <span className="mr-1">من أصل {meta.total}</span>
+                      <span className="mr-1">من أصل {meta.total} مناوبة</span>
                     )}
                   </span>
                 )}
@@ -390,11 +477,11 @@ const DoctorShiftsReportPage: React.FC = () => {
           )}
         </div>
 
-        <DoctorShiftsReportFilters
+        <SpecialistShiftsReportFilters
           filters={filters}
           onFilterChange={handleFilterChange}
           usersForFilter={usersForFilter}
-          doctorsForFilter={doctorsForFilter}
+          specialistsForFilter={specialistsForFilter}
           generalShiftsForFilter={generalShiftsForFilter}
           isLoadingUIData={isLoadingUIData}
           isFetching={isFetching}
@@ -408,14 +495,14 @@ const DoctorShiftsReportPage: React.FC = () => {
           </Typography>
         )}
 
-        <DoctorShiftsReportTable
-          shifts={shifts}
+        <SpecialistShiftsReportTable
+          specialistShifts={groupedBySpecialist}
           isLoading={isLoading}
           rowsPerPage={rowsPerPage}
           onRowsPerPageChange={setRowsPerPage}
         />
 
-        <DoctorShiftsReportPagination
+        <SpecialistShiftsReportPagination
           meta={meta}
           currentPage={currentPage}
           isFetching={isFetching}
@@ -456,4 +543,5 @@ const DoctorShiftsReportPage: React.FC = () => {
   );
 };
 
-export default DoctorShiftsReportPage;
+export default SpecialistShiftsReportPage;
+

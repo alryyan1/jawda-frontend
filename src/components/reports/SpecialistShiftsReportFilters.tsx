@@ -1,21 +1,20 @@
 import React from "react";
 import { format, parseISO } from "date-fns";
 import { arSA } from "date-fns/locale";
-import { Autocomplete, TextField, Card, CardContent, CardHeader } from "@mui/material";
+import { Autocomplete, TextField, Card, CardContent } from "@mui/material";
 import { Typography } from "@mui/material";
 
-import type { Doctor } from "@/types/doctors";
+import type { Specialist } from "@/types/doctors";
 import type { User } from "@/types/auth";
 import type { Shift as GeneralShiftType } from "@/types/shifts";
-import showJsonDialog from "@/lib/showJsonDialog";
 
 interface Filters {
   userIdOpened: string;
-  doctorId: string;
+  specialistId: string;
   generalShiftId: string;
   dateFrom: string;
   dateTo: string;
-  searchDoctorName: string;
+  searchSpecialistName: string;
   status: "all" | "open" | "closed";
 }
 
@@ -24,107 +23,55 @@ interface AutocompleteOption {
   name: string;
 }
 
-interface DoctorShiftsReportFiltersProps {
+interface SpecialistShiftsReportFiltersProps {
   filters: Filters;
   onFilterChange: (filterName: keyof Filters, value: string) => void;
   usersForFilter: User[];
-  doctorsForFilter?: Doctor[];
+  specialistsForFilter?: Specialist[];
   generalShiftsForFilter?: GeneralShiftType[];
   isLoadingUIData: boolean;
   isFetching: boolean;
   canViewAllUsersShifts: boolean;
 }
 
-const DoctorShiftsReportFilters: React.FC<DoctorShiftsReportFiltersProps> = ({
+const SpecialistShiftsReportFilters: React.FC<SpecialistShiftsReportFiltersProps> = ({
   filters,
   onFilterChange,
   usersForFilter,
-  doctorsForFilter,
+  specialistsForFilter,
   generalShiftsForFilter,
   isLoadingUIData,
   isFetching,
   canViewAllUsersShifts,
 }) => {
   const dateLocale = arSA;
-//  showJsonDialog(usersForFilter, "usersForFilter");
+
   return (
     <Card>
-      {/* <CardHeader title={<Typography variant="h6">مرشحات التقرير</Typography>} /> */}
       <CardContent>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 items-end">
           {/* User Opened By Filter */}
-          
-            <div className="min-w-[150px]">
-              <Autocomplete<AutocompleteOption>
-                id="dsr-user-filter"
-                options={[
-                  ...(canViewAllUsersShifts ? [{ id: "all", name: "كل المستخدمين" }] : []),
-                  ...usersForFilter.map((u) => ({ id: u.id.toString(), name: u.name }))
-                ]}
-                getOptionLabel={(option) => option.name}
-                isOptionEqualToValue={(option, value) => option.id === value.id}
-                value={(() => {
-                  if (!filters.userIdOpened || filters.userIdOpened === "") {
-                    return null;
-                  }
-                  if (filters.userIdOpened === "all") {
-                    return canViewAllUsersShifts ? { id: "all", name: "كل المستخدمين" } : null;
-                  }
-                  const user = usersForFilter.find(u => u.id.toString() === filters.userIdOpened);
-                  return user ? { id: user.id.toString(), name: user.name } : null;
-                })()}
-                onChange={(_, newValue) => {
-                  onFilterChange("userIdOpened", newValue?.id || "");
-                }}
-                disabled={isLoadingUIData || isFetching}
-                sx={{
-                  '& .MuiAutocomplete-popper': {
-                    zIndex: 9999,
-                  },
-                }}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    size="small"
-                    label="المستخدم الذي فتح"
-                    placeholder="المستخدم الذي فتح"
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        height: '40px',
-                        fontSize: '16px',
-                      },
-                      '& .MuiInputLabel-root': {
-                        fontSize: '14px',
-                      },
-                      '& .MuiAutocomplete-listbox': {
-                        fontSize: '16px',
-                      },
-                    }}
-                  />
-                )}
-              />
-            </div>
-          
-          
-          {/* Doctor Filter */}
           <div className="min-w-[150px]">
             <Autocomplete<AutocompleteOption>
-              id="dsr-doctor-filter"
+              id="ssr-user-filter"
               options={[
-                { id: "all", name: "كل الأطباء" },
-                ...(doctorsForFilter?.map((doc) => ({ id: doc.id.toString(), name: doc.name })) || [])
+                ...(canViewAllUsersShifts ? [{ id: "all", name: "كل المستخدمين" }] : []),
+                ...usersForFilter.map((u) => ({ id: u.id.toString(), name: u.name }))
               ]}
               getOptionLabel={(option) => option.name}
               isOptionEqualToValue={(option, value) => option.id === value.id}
               value={(() => {
-                if (!filters.doctorId || filters.doctorId === "" || filters.doctorId === "all") {
+                if (!filters.userIdOpened || filters.userIdOpened === "") {
                   return null;
                 }
-                const doctor = doctorsForFilter?.find(doc => doc.id.toString() === filters.doctorId);
-                return doctor ? { id: doctor.id.toString(), name: doctor.name } : null;
+                if (filters.userIdOpened === "all") {
+                  return canViewAllUsersShifts ? { id: "all", name: "كل المستخدمين" } : null;
+                }
+                const user = usersForFilter.find(u => u.id.toString() === filters.userIdOpened);
+                return user ? { id: user.id.toString(), name: user.name } : null;
               })()}
               onChange={(_, newValue) => {
-                onFilterChange("doctorId", newValue?.id || "");
+                onFilterChange("userIdOpened", newValue?.id || "");
               }}
               disabled={isLoadingUIData || isFetching}
               sx={{
@@ -136,8 +83,57 @@ const DoctorShiftsReportFilters: React.FC<DoctorShiftsReportFiltersProps> = ({
                 <TextField
                   {...params}
                   size="small"
-                  label="الطبيب"
-                  placeholder="الطبيب"
+                  label="المستخدم الذي فتح"
+                  placeholder="المستخدم الذي فتح"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      height: '40px',
+                      fontSize: '16px',
+                    },
+                    '& .MuiInputLabel-root': {
+                      fontSize: '14px',
+                    },
+                    '& .MuiAutocomplete-listbox': {
+                      fontSize: '16px',
+                    },
+                  }}
+                />
+              )}
+            />
+          </div>
+          
+          {/* Specialist Filter */}
+          <div className="min-w-[150px]">
+            <Autocomplete<AutocompleteOption>
+              id="ssr-specialist-filter"
+              options={[
+                { id: "all", name: "كل التخصصات" },
+                ...(specialistsForFilter?.map((spec) => ({ id: spec.id.toString(), name: spec.name })) || [])
+              ]}
+              getOptionLabel={(option) => option.name}
+              isOptionEqualToValue={(option, value) => option.id === value.id}
+              value={(() => {
+                if (!filters.specialistId || filters.specialistId === "" || filters.specialistId === "all") {
+                  return null;
+                }
+                const specialist = specialistsForFilter?.find(spec => spec.id.toString() === filters.specialistId);
+                return specialist ? { id: specialist.id.toString(), name: specialist.name } : null;
+              })()}
+              onChange={(_, newValue) => {
+                onFilterChange("specialistId", newValue?.id || "");
+              }}
+              disabled={isLoadingUIData || isFetching}
+              sx={{
+                '& .MuiAutocomplete-popper': {
+                  zIndex: 9999,
+                },
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  size="small"
+                  label="التخصص"
+                  placeholder="التخصص"
                   sx={{
                     '& .MuiOutlinedInput-root': {
                       height: '40px',
@@ -158,7 +154,7 @@ const DoctorShiftsReportFilters: React.FC<DoctorShiftsReportFiltersProps> = ({
           {/* General Shift Filter */}
           <div className="min-w-[150px]">
             <Autocomplete<AutocompleteOption>
-              id="dsr-gshift-filter"
+              id="ssr-gshift-filter"
               options={[
                 { id: "all", name: "كل المناوبات" },
                 ...(generalShiftsForFilter?.map((s) => ({ 
@@ -213,7 +209,7 @@ const DoctorShiftsReportFilters: React.FC<DoctorShiftsReportFiltersProps> = ({
           {/* Date From Input */}
           <div className="min-w-[150px]">
             <TextField
-              id="dsr-date-from"
+              id="ssr-date-from"
               type="date"
               label="من تاريخ"
               value={filters.dateFrom}
@@ -228,7 +224,7 @@ const DoctorShiftsReportFilters: React.FC<DoctorShiftsReportFiltersProps> = ({
           {/* Date To Input */}
           <div className="min-w-[150px]">
             <TextField
-              id="dsr-date-to"
+              id="ssr-date-to"
               type="date"
               label="إلى تاريخ"
               value={filters.dateTo}
@@ -245,4 +241,5 @@ const DoctorShiftsReportFilters: React.FC<DoctorShiftsReportFiltersProps> = ({
   );
 };
 
-export default DoctorShiftsReportFilters; 
+export default SpecialistShiftsReportFilters;
+

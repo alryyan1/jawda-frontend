@@ -36,6 +36,7 @@ import TodaysPatientsPage from "./pages/patients/TodaysPatientsPage";
 import DoctorSchedulesPage from "./components/schedules/DoctorSchedulesPage";
 import DoctorShiftsReportPage from "./pages/reports/DoctorShiftsReportPage";
 import DoctorShiftDetailsPage from "./pages/reports/DoctorShiftDetailsPage";
+import SpecialistShiftsReportPage from "./pages/reports/SpecialistShiftsReportPage";
 import ReportsLayout from "./pages/reports/ReportsLayout";
 import ServiceStatisticsReportPage from "./pages/reports/ServiceStatisticsReportPage";
 import MainTestFormPage from "./pages/lab/MainTestFormPage";
@@ -273,6 +274,7 @@ const router = createBrowserRouter([
                 path: "doctor-shifts/:doctorShiftId",
                 element: <DoctorShiftDetailsPage />,
               },
+              { path: "specialist-shifts", element: <SpecialistShiftsReportPage /> },
               {
                 path: "service-statistics",
                 element: <ServiceStatisticsReportPage />,

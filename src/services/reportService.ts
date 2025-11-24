@@ -442,3 +442,53 @@ export const downloadLabGeneralReportPdf = async (filters: Omit<LabGeneralReport
   });
   return response.data;
 };
+
+// Specialist Shifts Report (grouped by specialist)
+export interface SpecialistShiftReportFilters extends Omit<DoctorShiftReportFilters, 'doctor_id'> {
+  specialist_id?: number | string | null;
+  include_breakdown?: boolean;
+}
+
+export const downloadSpecialistShiftsReportPdf = async (filters: Omit<SpecialistShiftReportFilters, 'page' | 'per_page'>): Promise<Blob> => {
+  // Use the doctor-shifts endpoint since specialist report is just a grouped view
+  // Note: specialist_id filtering is not supported by the backend endpoint
+  // The PDF will include all doctor shifts matching other filters
+  const doctorShiftsFilters: Omit<DoctorShiftReportFilters, 'page' | 'per_page'> = {
+    date_from: filters.date_from,
+    date_to: filters.date_to,
+    status: filters.status,
+    shift_id: filters.shift_id,
+    user_id_opened: filters.user_id_opened,
+    doctor_name_search: filters.doctor_name_search,
+  };
+  
+  const response = await apiClient.get<Blob>('/reports/doctor-shifts/pdf', {
+    params: doctorShiftsFilters,
+    responseType: 'blob',
+  });
+  return response.data;
+};
+
+export const downloadSpecialistShiftsReportExcel = async (filters: Omit<SpecialistShiftReportFilters, 'page' | 'per_page'>): Promise<Blob> => {
+  // Use the specialist-shifts endpoint that groups by specialist
+  const specialistShiftsFilters: any = {
+    date_from: filters.date_from,
+    date_to: filters.date_to,
+    status: filters.status,
+    shift_id: filters.shift_id,
+    user_id_opened: filters.user_id_opened,
+    doctor_name_search: filters.doctor_name_search,
+    specialist_id: filters.specialist_id,
+  };
+  
+  // Add include_breakdown parameter if provided
+  if (filters.include_breakdown !== undefined) {
+    specialistShiftsFilters.include_breakdown = filters.include_breakdown ? 'true' : 'false';
+  }
+  
+  const response = await apiClient.get<Blob>('/reports/specialist-shifts/excel', {
+    params: specialistShiftsFilters,
+    responseType: 'blob',
+  });
+  return response.data;
+};

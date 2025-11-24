@@ -170,9 +170,9 @@ export default function DoctorsListPage() {
                 <TableCell align="center">الاسم</TableCell>
                 <TableCell align="center">الهاتف</TableCell>
                 <TableCell align="center">الاختصاص</TableCell>
+                <TableCell align="center">الاختصاص الفرعي</TableCell>
                 <TableCell align="center">نسبة النقد</TableCell>
                 <TableCell align="center">نسبة الشركة</TableCell>
-                <TableCell align="center">الراتب الثابت</TableCell>
                 <TableCell align="center">إجراءات</TableCell>
               </TableRow>
             </TableHead>
@@ -192,9 +192,9 @@ export default function DoctorsListPage() {
                   </TableCell>
                   <TableCell align="center">{doctor.phone}</TableCell>
                   <TableCell align="center">{doctor.specialist?.name || doctor.specialist_name || 'N/A'}</TableCell>
+                  <TableCell align="center">{doctor.sub_specialist?.name || 'N/A'}</TableCell>
                   <TableCell align="center">{doctor.cash_percentage || 'N/A'}</TableCell>
                   <TableCell align="center">{doctor.company_percentage || 'N/A'}</TableCell>
-                  <TableCell align="center">{doctor.static_wage || 'N/A'}</TableCell>
                   <TableCell align="center">
                     <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleMenuOpen(e, doctor); }}>
                       <MoreHorizIcon fontSize="small" />

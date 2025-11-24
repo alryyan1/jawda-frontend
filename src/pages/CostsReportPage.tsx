@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import type { CostFilters, CostCategory, PaginatedCostsResponse, Cost } from "@/types/finance";
 import type { User } from "@/types/users";
 import type { Shift } from "@/types/shifts";
-import { getCostsReportData, getCostCategoriesList, downloadCostsReportPdf } from "@/services/costService";
+import { getCostsReportData, getCostCategoriesList, downloadCostsReportPdf, downloadCostsReportExcel } from "@/services/costService";
 import { getUsers } from "@/services/userService";
 import { getShiftsList } from "@/services/shiftService";
 import { formatNumber } from "@/lib/utils";
@@ -19,15 +19,11 @@ import { formatNumber } from "@/lib/utils";
 import {
   Box,
   Card,
-  CardHeader,
   CardContent,
   Typography,
   Button,
   TextField,
-  FormControl,
-  InputLabel,
-  Select as MUISelect,
-  MenuItem,
+  Autocomplete,
   Table as MUITable,
   TableHead as MUITableHead,
   TableBody as MUITableBody,
@@ -43,7 +39,7 @@ import {
   DialogContent,
   DialogActions,
 } from "@mui/material";
-import { Loader2, FileBarChart2, Filter, Printer, AlertTriangle } from "lucide-react";
+import { Loader2, FileBarChart2, Filter, Printer, AlertTriangle, FileSpreadsheet } from "lucide-react";
 
 const getCostReportFilterSchema = () =>
   z.object({
@@ -59,6 +55,11 @@ const getCostReportFilterSchema = () =>
 type CostReportFilterFormValues = z.infer<ReturnType<typeof getCostReportFilterSchema>>;
 
 type HasData<T> = { data: T[] };
+
+interface AutocompleteOption {
+  id: string;
+  name: string;
+}
 
 const CostsReportPage: React.FC = () => {
   const defaultDateFrom = startOfMonth(new Date());
@@ -84,6 +85,7 @@ const CostsReportPage: React.FC = () => {
   });
 
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isGeneratingExcel, setIsGeneratingExcel] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false);
   const [pdfFileName, setPdfFileName] = useState('costs_report.pdf');
@@ -160,6 +162,43 @@ const CostsReportPage: React.FC = () => {
     }
   };
 
+  const handleDownloadExcel = async () => {
+    if (!reportData?.data.length) {
+      toast.info('لا توجد بيانات للتصدير');
+      return;
+    }
+    setIsGeneratingExcel(true);
+
+    try {
+      const blob = await downloadCostsReportExcel({
+        date_from: appliedFilters.date_from,
+        date_to: appliedFilters.date_to,
+        cost_category_id: appliedFilters.cost_category_id,
+        user_cost_id: appliedFilters.user_cost_id,
+        shift_id: appliedFilters.shift_id,
+        payment_method: appliedFilters.payment_method,
+        search_description: appliedFilters.search_description,
+        sort_by: appliedFilters.sort_by,
+        sort_direction: appliedFilters.sort_direction,
+      });
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = `Costs_Report_${appliedFilters.date_from}_to_${appliedFilters.date_to}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(objectUrl);
+      toast.success('تم تصدير ملف Excel بنجاح');
+    } catch (err: unknown) {
+      console.error("Failed to generate Excel:", err);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      toast.error('فشل توليد ملف Excel', { description: errorMessage });
+    } finally {
+      setIsGeneratingExcel(false);
+    }
+  };
+
   useEffect(() => {
     return () => {
       if (pdfUrl) {
@@ -198,15 +237,8 @@ const CostsReportPage: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto py-4 sm:py-6 lg:py-8 space-y-6">
-      <div className="flex items-center gap-2">
-        <FileBarChart2 className="h-7 w-7 text-primary" />
-        <h1 className="text-2xl sm:text-3xl font-bold">تقرير التكاليف</h1>
-      </div>
-
-      <Card>
-        <CardHeader><Typography variant="h6">مرشحات التقرير</Typography></CardHeader>
-        <CardContent>
+    <div className="container mx-auto">
+     <div className="space-y-4">
           <form onSubmit={filterForm.handleSubmit(handleFilterFormSubmit)} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 items-end">
               <Controller control={filterForm.control} name="date_from" render={({ field }) => (
@@ -222,48 +254,165 @@ const CostsReportPage: React.FC = () => {
                 </div>
               )} />
               <Controller control={filterForm.control} name="cost_category_id" render={({ field }) => (
-                <FormControl size="small">
-                  <InputLabel id="cat-label">الفئة</InputLabel>
-                  <MUISelect labelId="cat-label" label="الفئة" value={field.value} onChange={field.onChange} disabled={isLoadingDropdowns || isFetching}>
-                    <MenuItem value="all">كل الفئات</MenuItem>
-                    {costCategories?.map((cat) => (
-                      <MenuItem key={cat.id} value={String(cat.id)}>{cat.name}</MenuItem>
-                    ))}
-                  </MUISelect>
-                </FormControl>
+                <Autocomplete<AutocompleteOption>
+                  options={[
+                    { id: "all", name: "كل الفئات" },
+                    ...(costCategories?.map((cat) => ({ id: String(cat.id), name: cat.name })) || [])
+                  ]}
+                  getOptionLabel={(option) => option.name}
+                  isOptionEqualToValue={(option, value) => option.id === value.id}
+                  value={(() => {
+                    if (!field.value || field.value === "all") {
+                      return { id: "all", name: "كل الفئات" };
+                    }
+                    const category = costCategories?.find(cat => String(cat.id) === field.value);
+                    return category ? { id: String(category.id), name: category.name } : null;
+                  })()}
+                  onChange={(_, newValue) => {
+                    field.onChange(newValue?.id || "all");
+                  }}
+                  disabled={isLoadingDropdowns || isFetching}
+                  size="small"
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="الفئة"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          height: '40px',
+                          fontSize: '16px',
+                        },
+                        '& .MuiInputLabel-root': {
+                          fontSize: '14px',
+                        },
+                      }}
+                    />
+                  )}
+                />
               )} />
               <Controller control={filterForm.control} name="user_cost_id" render={({ field }) => (
-                <FormControl size="small">
-                  <InputLabel id="user-label">المستخدم</InputLabel>
-                  <MUISelect labelId="user-label" label="المستخدم" value={field.value} onChange={field.onChange} disabled={isLoadingDropdowns || isFetching}>
-                    <MenuItem value="all">كل المستخدمين</MenuItem>
-                    {usersList?.map((u: User) => (
-                      <MenuItem key={u.id} value={String(u.id)}>{u.name}</MenuItem>
-                    ))}
-                  </MUISelect>
-                </FormControl>
+                <Autocomplete<AutocompleteOption>
+                  options={[
+                    { id: "all", name: "كل المستخدمين" },
+                    ...(usersList?.map((u: User) => ({ id: String(u.id), name: u.name })) || [])
+                  ]}
+                  getOptionLabel={(option) => option.name}
+                  isOptionEqualToValue={(option, value) => option.id === value.id}
+                  value={(() => {
+                    if (!field.value || field.value === "all") {
+                      return { id: "all", name: "كل المستخدمين" };
+                    }
+                    const user = usersList?.find(u => String(u.id) === field.value);
+                    return user ? { id: String(user.id), name: user.name } : null;
+                  })()}
+                  onChange={(_, newValue) => {
+                    field.onChange(newValue?.id || "all");
+                  }}
+                  disabled={isLoadingDropdowns || isFetching}
+                  size="small"
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="المستخدم"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          height: '40px',
+                          fontSize: '16px',
+                        },
+                        '& .MuiInputLabel-root': {
+                          fontSize: '14px',
+                        },
+                      }}
+                    />
+                  )}
+                />
               )} />
               <Controller control={filterForm.control} name="shift_id" render={({ field }) => (
-                <FormControl size="small">
-                  <InputLabel id="shift-label">المناوبة</InputLabel>
-                  <MUISelect labelId="shift-label" label="المناوبة" value={field.value} onChange={field.onChange} disabled={isLoadingDropdowns || isFetching}>
-                    <MenuItem value="all">كل المناوبات</MenuItem>
-                    {shiftsList?.map((s) => (
-                      <MenuItem key={s.id} value={String(s.id)}>{s.name || `#${s.id} (${format(parseISO(s.created_at!),"P")})`}</MenuItem>
-                    ))}
-                  </MUISelect>
-                </FormControl>
+                <Autocomplete<AutocompleteOption>
+                  options={[
+                    { id: "all", name: "كل المناوبات" },
+                    ...(shiftsList?.map((s) => ({
+                      id: String(s.id),
+                      name: s.name || `#${s.id} (${format(parseISO(s.created_at!), "P")})`
+                    })) || [])
+                  ]}
+                  getOptionLabel={(option) => option.name}
+                  isOptionEqualToValue={(option, value) => option.id === value.id}
+                  value={(() => {
+                    if (!field.value || field.value === "all") {
+                      return { id: "all", name: "كل المناوبات" };
+                    }
+                    const shift = shiftsList?.find(s => String(s.id) === field.value);
+                    return shift ? {
+                      id: String(shift.id),
+                      name: shift.name || `#${shift.id} (${format(parseISO(shift.created_at!), "P")})`
+                    } : null;
+                  })()}
+                  onChange={(_, newValue) => {
+                    field.onChange(newValue?.id || "all");
+                  }}
+                  disabled={isLoadingDropdowns || isFetching}
+                  size="small"
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="المناوبة"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          height: '40px',
+                          fontSize: '16px',
+                        },
+                        '& .MuiInputLabel-root': {
+                          fontSize: '14px',
+                        },
+                      }}
+                    />
+                  )}
+                />
               )} />
               <Controller control={filterForm.control} name="payment_method" render={({ field }) => (
-                <FormControl size="small">
-                  <InputLabel id="pm-label">طريقة الدفع</InputLabel>
-                  <MUISelect labelId="pm-label" label="طريقة الدفع" value={field.value} onChange={field.onChange} disabled={isFetching}>
-                    <MenuItem value="all">كل الطرق</MenuItem>
-                    <MenuItem value="cash">نقدي</MenuItem>
-                    <MenuItem value="bank">بنكي</MenuItem>
-                    <MenuItem value="mixed">مختلط</MenuItem>
-                  </MUISelect>
-                </FormControl>
+                <Autocomplete<AutocompleteOption>
+                  options={[
+                    { id: "all", name: "كل الطرق" },
+                    { id: "cash", name: "نقدي" },
+                    { id: "bank", name: "بنكي" },
+                    { id: "mixed", name: "مختلط" },
+                  ]}
+                  getOptionLabel={(option) => option.name}
+                  isOptionEqualToValue={(option, value) => option.id === value.id}
+                  value={(() => {
+                    if (!field.value || field.value === "all") {
+                      return { id: "all", name: "كل الطرق" };
+                    }
+                    const options = [
+                      { id: "all", name: "كل الطرق" },
+                      { id: "cash", name: "نقدي" },
+                      { id: "bank", name: "بنكي" },
+                      { id: "mixed", name: "مختلط" },
+                    ];
+                    return options.find(opt => opt.id === field.value) || { id: "all", name: "كل الطرق" };
+                  })()}
+                  onChange={(_, newValue) => {
+                    field.onChange(newValue?.id || "all");
+                  }}
+                  disabled={isFetching}
+                  size="small"
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="طريقة الدفع"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          height: '40px',
+                          fontSize: '16px',
+                        },
+                        '& .MuiInputLabel-root': {
+                          fontSize: '14px',
+                        },
+                      }}
+                    />
+                  )}
+                />
               )} />
               <Controller control={filterForm.control} name="search_description" render={({ field }) => (
                 <div className="lg:col-span-3 xl:col-span-1">
@@ -276,8 +425,16 @@ const CostsReportPage: React.FC = () => {
               </Button>
             </div>
           </form>
-        </CardContent>
-      </Card>
+
+        </div>
+      <div className="mt-6 flex justify-end gap-2">
+        <Button onClick={handleDownloadExcel} disabled={isGeneratingExcel || isLoading || costs.length === 0} size="small" variant="outlined" startIcon={!isGeneratingExcel ? <FileSpreadsheet className="h-4 w-4" /> : undefined}>
+          {isGeneratingExcel ? <Loader2 className="h-4 w-4 animate-spin" /> : 'تصدير Excel'}
+        </Button>
+        <Button onClick={handleGeneratePdf} disabled={isGeneratingPdf || isLoading || costs.length === 0} size="small" variant="contained" startIcon={!isGeneratingPdf ? <Printer className="h-4 w-4" /> : undefined}>
+          {isGeneratingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : 'توليد ومعاينة PDF'}
+        </Button>
+      </div>
 
       {(isLoading && !isFetching && costs.length === 0) && <div className="text-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}
       {isFetching && <div className="text-sm text-muted-foreground mb-2 text-center py-2"><Loader2 className="inline h-4 w-4 animate-spin"/> جاري تحديث القائمة...</div>}
@@ -355,11 +512,7 @@ const CostsReportPage: React.FC = () => {
         </div>
       )}
 
-      <div className="mt-6 flex justify-end">
-        <Button onClick={handleGeneratePdf} disabled={isGeneratingPdf || isLoading || costs.length === 0} size="small" variant="contained" startIcon={!isGeneratingPdf ? <Printer className="h-4 w-4" /> : undefined}>
-          {isGeneratingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : 'توليد ومعاينة PDF'}
-        </Button>
-      </div>
+     
 
       <Dialog open={isPdfPreviewOpen} onClose={() => setIsPdfPreviewOpen(false)} fullWidth maxWidth="lg">
         <DialogTitle>تقرير التكاليف</DialogTitle>

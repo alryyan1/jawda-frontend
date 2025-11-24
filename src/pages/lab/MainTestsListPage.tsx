@@ -198,20 +198,20 @@ export default function MainTestsListPage() {
       });
 
       // Then update Firestore across all labs
-      const test = tests.find(t => t.id === testId);
-      if (test) {
-        const firestoreResult = await updateTestAvailabilityAcrossAllLabs(
-          testId,
-          !currentAvailable,
-          test.main_test_name
-        );
+      // const test = tests.find(t => t.id === testId);
+      // if (test) {
+      //   const firestoreResult = await updateTestAvailabilityAcrossAllLabs(
+      //     testId,
+      //     !currentAvailable,
+      //     test.main_test_name
+      //   );
 
-        if (firestoreResult.success) {
-          toast.success(`تم تحديث التوفر في ${firestoreResult.updatedLabs} مختبر`);
-        } else {
-          toast.warning(`تم تحديث قاعدة البيانات الرئيسية، لكن حدث خطأ في Firestore: ${firestoreResult.error}`);
-        }
-      }
+      //   if (firestoreResult.success) {
+      //     toast.success(`تم تحديث التوفر في ${firestoreResult.updatedLabs} مختبر`);
+      //   } else {
+      //     toast.warning(`تم تحديث قاعدة البيانات الرئيسية، لكن حدث خطأ في Firestore: ${firestoreResult.error}`);
+      //   }
+      // }
     } catch (error) {
       console.error('Error toggling test availability:', error);
       toast.error('خطأ في تحديث حالة التوفر');
@@ -354,7 +354,7 @@ export default function MainTestsListPage() {
               >
                 قائمة الأسعار PDF
               </Button>
-              <Button
+              {/* <Button
                 onClick={handleUploadCashPriceList}
                 variant="contained"
                 size="small"
@@ -362,7 +362,7 @@ export default function MainTestsListPage() {
                 disabled={isUploadingPriceList}
               >
                 {isUploadingPriceList ? 'جاري الرفع...' : 'رفع الأسعار إلى Firestore'}
-              </Button>
+              </Button> */}
               {canCreateTests && (
                 <Button 
                   component={Link} 
@@ -371,7 +371,7 @@ export default function MainTestsListPage() {
                   size="small"
                   startIcon={<Add />}
                 >
-                  إضافة اختبار
+                  إضافة تحليل
                 </Button>
               )}
             </Stack>

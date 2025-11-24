@@ -275,7 +275,7 @@ const LabReceptionActionPage: React.FC<LabReceptionActionPageProps> = ({
         <Separator className="my-1" />
 
         {/* Button 4 (Globe): Open Online Lab Patients Dialog */}
-        {/* <Tooltip>
+         <Tooltip>
             <TooltipTrigger asChild>
                 <Button 
                     variant="ghost" 
@@ -293,7 +293,7 @@ const LabReceptionActionPage: React.FC<LabReceptionActionPageProps> = ({
             <TooltipContent side="left">
                 <p>المرضى من المختبرات الأخرى</p>
             </TooltipContent>
-        </Tooltip> */}
+        </Tooltip>
 
         {/* <Separator className="my-1" /> */}
 

@@ -364,6 +364,35 @@ export const getLabTestStatisticsReport = async (
   const response = await apiClient.get<PaginatedResponse<LabTestStatisticItem>>('/reports/lab-test-statistics', { params: filters });
   return response.data; // Backend structures pagination
 };
+
+export interface TestResultStatisticsFilters {
+  main_test_id: number;
+  date_from?: string;
+  date_to?: string;
+}
+
+export interface TestResultStatistic {
+  result: string;
+  count: number;
+  percentage: number;
+}
+
+export interface TestResultStatisticsResponse {
+  main_test: {
+    id: number;
+    name: string;
+  };
+  total_requests: number;
+  total_results: number;
+  statistics: TestResultStatistic[];
+}
+
+export const getTestResultStatistics = async (
+  filters: TestResultStatisticsFilters
+): Promise<TestResultStatisticsResponse> => {
+  const response = await apiClient.get<TestResultStatisticsResponse>('/reports/test-result-statistics', { params: filters });
+  return response.data;
+};
 // export const downloadYearlyPatientFrequencyPdf = async (filters: YearlyPatientFrequencyFilters): Promise<Blob> => { ... }; // For future PDF
 
 

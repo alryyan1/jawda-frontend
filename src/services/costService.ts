@@ -41,6 +41,13 @@ export const downloadCostsReportPdf = async (filters: Omit<CostFilters, 'page' |
   });
   return response.data;
 };
+export const downloadCostsReportExcel = async (filters: Omit<CostFilters, 'page' | 'per_page'>): Promise<Blob> => {
+  const response = await apiClient.get('/reports/costs/excel', {
+    params: filters,
+    responseType: 'blob',
+  });
+  return response.data;
+};
 export const deleteCost = async (costId: number): Promise<void> => {
   await apiClient.delete(`${API_URL}/${costId}`);
 };

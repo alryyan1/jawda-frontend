@@ -16,6 +16,14 @@ export interface SpecialistFormData {
   name: string;
 }
 
+export interface SubSpecialist {
+  id: number;
+  name: string;
+  specialists_id: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
 // Ensure Specialist has doctors_count if you use it
 export interface Specialist {
   id: number;
@@ -34,8 +42,10 @@ export interface Doctor {
   static_wage: number | string;
   lab_percentage: number | string;
   specialist_id: number;
+  sub_specialist_id?: number | null;
   specialist_name?: string; // from eager loading
   specialist?: Specialist; // if you embed the whole object
+  sub_specialist?: SubSpecialist; // if you embed the whole object
   start: number;
   image?: string | null; // path to image
   image_url?: string | null; // full URL for display
@@ -71,6 +81,7 @@ export interface DoctorFormData {
   static_wage: string;
   lab_percentage: string;
   specialist_id: string | undefined; // From select, will be string
+  sub_specialist_id?: string | undefined; // From select, will be string
   start: string; // Input as string
   image_file?: File | null; // For new image upload
   image?: string | null; // Existing image path (for edit view)

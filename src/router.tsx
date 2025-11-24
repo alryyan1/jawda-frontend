@@ -74,6 +74,7 @@ import ServiceGroupsPage from "./pages/settings/ServiceGroupsPage";
 import SampleCollectionPage from "./pages/lab/SampleCollectionPage";
 import MonthlyAttendanceSummaryPage from "./pages/attendance/MonthlyAttendanceSummaryPage";
 import LabTestStatisticsReportPage from "./pages/reports/LabTestStatisticsReportPage";
+import TestResultStatisticsPage from "./pages/reports/TestResultStatisticsPage";
 import LabGeneralReportPage from "./pages/reports/LabGeneralReportPage";
 import LabGeneralReportDetailsPage from "./pages/reports/LabGeneralReportDetailsPage";
 import LabReceptionPage from "./pages/LabReceptionPage";
@@ -279,6 +280,10 @@ const router = createBrowserRouter([
               {
                 path: "lab-test-statistics",
                 element: <LabTestStatisticsReportPage />,
+              },
+              {
+                path: "test-result-statistics",
+                element: <TestResultStatisticsPage />,
               },
               {
                 path: "lab-general",

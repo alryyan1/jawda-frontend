@@ -6,9 +6,11 @@ import * as z from 'zod';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { format } from 'date-fns';
 
-import { Loader2, FlaskConical as ReportIcon, Search } from 'lucide-react';
+import { Loader2, FlaskConical as ReportIcon, Search, BarChart3 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
-import type { LabTestStatisticItem, LabTestStatisticsFilters } from '@/types/reports';
+import type { LabTestStatisticItem } from '@/types/reports';
+import type { LabTestStatisticsFilters } from '@/services/reportService';
 import type { PaginatedResponse } from '@/types/common';
 import type { Container, Package } from '@/types/labTests';
 import { getLabTestStatisticsReport } from '@/services/reportService';
@@ -48,6 +50,7 @@ const getLabStatsFilterSchema = () => z.object({
 type LabStatsFilterFormValues = z.infer<ReturnType<typeof getLabStatsFilterSchema>>;
 
 const LabTestStatisticsReportPage: React.FC = () => {
+  const navigate = useNavigate();
   const defaultDateTo = format(new Date(), 'yyyy-MM-dd');
   const defaultDateFrom = format(new Date(new Date().setDate(new Date().getDate() - 30)), 'yyyy-MM-dd');
 
@@ -120,12 +123,19 @@ const LabTestStatisticsReportPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="space-y-6 p-4 md:p-1">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <ReportIcon className="h-7 w-7 text-primary" />
-          <h1 className="text-2xl sm:text-3xl font-bold">إحصائيات تحاليل المختبر</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">إحصائيات التحاليل</h1>
         </div>
+        <Button
+          variant="outlined"
+          startIcon={<BarChart3 className="h-4 w-4" />}
+          onClick={() => navigate('/reports/test-result-statistics')}
+        >
+          إحصائيات النتائج
+        </Button>
       </div>
       
       <Card>
@@ -158,7 +168,7 @@ const LabTestStatisticsReportPage: React.FC = () => {
                   <InputLabel id="package-label">الباقة</InputLabel>
                   <MUISelect labelId="package-label" label="الباقة" value={field.value} onChange={field.onChange} disabled={isLoadingDropdowns || isFetching}>
                     <MenuItem value="all">كل الباقات</MenuItem>
-                    {packages?.map(p => <MenuItem key={p.package_id} value={String(p.package_id)}>{p.package_name}</MenuItem>)}
+                    {packages?.map(p => <MenuItem key={p.package_id} value={String(p.package_id)}>{p.name}</MenuItem>)}
                   </MUISelect>
                 </FormControl>
               )} />

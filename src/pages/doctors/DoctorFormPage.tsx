@@ -26,7 +26,7 @@ import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { Save as SaveIcon } from '@mui/icons-material';
 import { toast } from "sonner";
 
-import type { DoctorFormData, Specialist, FinanceAccount, DoctorStripped, Doctor } from "@/types/doctors";
+import type { DoctorFormData, Specialist, FinanceAccount, DoctorStripped, Doctor, SubSpecialist } from "@/types/doctors";
 import {
   createDoctor,
   updateDoctor,
@@ -36,6 +36,7 @@ import {
   updateDoctorFirebaseId,
   DoctorFormMode,
 } from "@/services/doctorService";
+import { getSubSpecialists } from "@/services/subSpecialistService";
 import { fetchFirestoreDoctors, type FirestoreDoctor } from "@/services/firestoreDoctorService";
 import { DarkThemeAutocomplete } from "@/components/ui/mui-autocomplete";
 import AddSpecialistDialog from "./AddSpecialistDialog";
@@ -45,6 +46,7 @@ interface DoctorFormValues {
   name: string;
   phone: string;
   specialist_id?: string;
+  sub_specialist_id?: string;
   cash_percentage: string;
   company_percentage: string;
   static_wage: string;
@@ -69,6 +71,15 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [selectedFirestoreDoctor, setSelectedFirestoreDoctor] = useState<FirestoreDoctor | null>(null);
   const [showManageServicesDialog, setShowManageServicesDialog] = useState(false);
+  const [containerHeight, setContainerHeight] = useState<number>(window.innerHeight - 100);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setContainerHeight(window.innerHeight - 100);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const isEditMode = mode === DoctorFormMode.EDIT;
   const { data: specialists, isLoading: isLoadingSpecialists } = useQuery<
@@ -123,6 +134,7 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
       name: "",
       phone: "",
       specialist_id: undefined,
+      sub_specialist_id: undefined,
       cash_percentage: "0",
       company_percentage: "0",
       static_wage: "0",
@@ -137,6 +149,33 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
     },
   });
   const { control, handleSubmit, reset, watch, setValue, formState } = form;
+  
+  // Watch specialist_id to fetch sub specialists
+  const selectedSpecialistId = watch("specialist_id");
+  
+  // Fetch sub specialists based on selected specialist
+  const { data: subSpecialists, isLoading: isLoadingSubSpecialists } = useQuery<SubSpecialist[], Error>({
+    queryKey: ['subSpecialists', selectedSpecialistId],
+    queryFn: () => getSubSpecialists(Number(selectedSpecialistId)),
+    enabled: !!selectedSpecialistId && selectedSpecialistId !== '',
+  });
+
+  // Reset sub_specialist_id when specialist_id changes
+  useEffect(() => {
+    if (selectedSpecialistId) {
+      // Only reset if we're not in edit mode or if the specialist actually changed
+      const currentSubSpecialistId = watch("sub_specialist_id");
+      // Check if the current sub_specialist belongs to the new specialist
+      if (currentSubSpecialistId && subSpecialists) {
+        const currentSubSpec = subSpecialists.find(s => String(s.id) === currentSubSpecialistId);
+        if (!currentSubSpec) {
+          setValue("sub_specialist_id", undefined);
+        }
+      }
+    } else {
+      setValue("sub_specialist_id", undefined);
+    }
+  }, [selectedSpecialistId, subSpecialists, setValue, watch]);
   // console.log("Form State:", doctorData?.specialist_id); // Debugging line
   // Populate form with doctorData when it loads in edit mode
   useEffect(() => {
@@ -147,6 +186,9 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
         name: doctorData.name,
         phone: doctorData.phone,
         specialist_id: String(doctorData.specialist_id),
+        sub_specialist_id: (doctorData as Doctor & { sub_specialist_id?: number }).sub_specialist_id
+          ? String((doctorData as Doctor & { sub_specialist_id?: number }).sub_specialist_id)
+          : undefined,
         cash_percentage: String(doctorData.cash_percentage),
         company_percentage: String(doctorData.company_percentage),
         static_wage: String(doctorData.static_wage),
@@ -272,9 +314,10 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
       return;
     }
     // Ensure numeric fields are numbers, not strings, if backend expects numbers
-    const submissionData: DoctorFormData & { finanace_account_id_insurance?: string } = {
+    const submissionData: DoctorFormData & { finanace_account_id_insurance?: string; sub_specialist_id?: string } = {
       ...data,
       specialist_id: String(data.specialist_id!),
+      sub_specialist_id: data.sub_specialist_id ? String(data.sub_specialist_id) : undefined,
       cash_percentage: String(data.cash_percentage),
       company_percentage: String(data.company_percentage),
       static_wage: String(data.static_wage),
@@ -325,27 +368,28 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
       </Box>
     );
   return (
-    <Card sx={{ maxWidth: 960, mx: 'auto' }}>
-      <CardHeader
-        title={isEditMode ? 'تعديل طبيب' : 'إضافة طبيب'}
-        subheader="يرجى تعبئة البيانات التالية"
-        action={isEditMode ? (
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button 
-              variant="contained" 
-              size="small" 
-              onClick={() => setShowManageServicesDialog(true)}
-              disabled={!doctorId || !doctorData}
-            >
-              إدارة الخدمات
-            </Button>
-            <Button variant="outlined" size="small" onClick={() => navigate(-1)} startIcon={<ArrowBackIcon fontSize="small" />}>
-              رجوع
-            </Button>
-          </Box>
-        ) : null}
-      />
-      <CardContent>
+    <Box sx={{ height: `${containerHeight}px`, overflow: 'auto', py: 2 }}>
+      <Card sx={{ maxWidth: 960, mx: 'auto' }}>
+        <CardHeader
+          title={isEditMode ? 'تعديل طبيب' : 'إضافة طبيب'}
+          subheader="يرجى تعبئة البيانات التالية"
+          action={isEditMode ? (
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button 
+                variant="contained" 
+                size="small" 
+                onClick={() => setShowManageServicesDialog(true)}
+                disabled={!doctorId || !doctorData}
+              >
+                إدارة الخدمات
+              </Button>
+              <Button variant="outlined" size="small" onClick={() => navigate(-1)} startIcon={<ArrowBackIcon fontSize="small" />}>
+                رجوع
+              </Button>
+            </Box>
+          ) : null}
+        />
+        <CardContent>
         <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
             <Controller name="name" control={control} render={({ field }) => (
@@ -361,7 +405,17 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <FormControl fullWidth size="small">
                   <InputLabel id="specialist-label">التخصص</InputLabel>
-                  <Select labelId="specialist-label" label="التخصص" value={field.value ?? ''} onChange={(e) => field.onChange(e.target.value)} disabled={isLoadingSpecialists || formState.isSubmitting}>
+                  <Select 
+                    labelId="specialist-label" 
+                    label="التخصص" 
+                    value={field.value ?? ''} 
+                    onChange={(e) => {
+                      field.onChange(e.target.value);
+                      // Reset sub_specialist_id when specialist changes
+                      setValue('sub_specialist_id', undefined);
+                    }} 
+                    disabled={isLoadingSpecialists || formState.isSubmitting}
+                  >
                         {isLoadingSpecialists ? (
                       <MenuItem value="" disabled>جاري التحميل...</MenuItem>
                     ) : (
@@ -377,6 +431,32 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
               {fieldState.error && <FormHelperText error>{fieldState.error.message}</FormHelperText>}
             </Box>
           )} />
+
+          {/* Sub Specialist Selection - Only show when a specialist is selected */}
+          {selectedSpecialistId && selectedSpecialistId !== '' && (
+            <Controller name="sub_specialist_id" control={control} render={({ field, fieldState }) => (
+              <FormControl fullWidth size="small">
+                <InputLabel id="sub-specialist-label">الاختصاص الفرعي</InputLabel>
+                <Select 
+                  labelId="sub-specialist-label" 
+                  label="الاختصاص الفرعي" 
+                  value={field.value ?? ''} 
+                  onChange={field.onChange} 
+                  disabled={isLoadingSubSpecialists || formState.isSubmitting}
+                >
+                  <MenuItem value="">لا يوجد</MenuItem>
+                  {isLoadingSubSpecialists ? (
+                    <MenuItem value="" disabled>جاري التحميل...</MenuItem>
+                  ) : (
+                    (subSpecialists || []).map((subSpec) => (
+                      <MenuItem key={subSpec.id} value={String(subSpec.id)}>{subSpec.name}</MenuItem>
+                    ))
+                  )}
+                </Select>
+                {fieldState.error && <FormHelperText error>{fieldState.error.message}</FormHelperText>}
+              </FormControl>
+            )} />
+          )}
 
           {/* Firestore Doctor Selection - Only show in edit mode when specialist has firestore_id */}
           {isEditMode && specialistFirestoreId && (
@@ -534,7 +614,8 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
           } as DoctorStripped}
         />
       )}
-    </Card>
+      </Card>
+    </Box>
   );
 };
 

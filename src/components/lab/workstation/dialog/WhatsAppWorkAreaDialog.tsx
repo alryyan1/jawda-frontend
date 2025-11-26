@@ -129,7 +129,7 @@ const WhatsAppWorkAreaDialog: React.FC<WhatsAppWorkAreaDialogProps> = ({
         to: data.phoneNumber,
         document_url: documentUrl,
         filename: filename,
-        caption: generateDefaultMessage(),
+        caption: filename,
       });
     },
     onSuccess: (response) => {
@@ -206,7 +206,7 @@ const WhatsAppWorkAreaDialog: React.FC<WhatsAppWorkAreaDialogProps> = ({
           to: data.phoneNumber,
           document_url: resultUrl,
           filename: 'result.pdf',
-          caption: generateDefaultMessage(),
+          caption: 'result.pdf',
         });
         if (resp.success) {
           toast.success("تم إرسال التقرير بنجاح");

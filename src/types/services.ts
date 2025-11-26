@@ -159,3 +159,23 @@ export interface RequestedServiceDepositFormData {
   is_bank: boolean;
   // shift_id and user_id will usually be set by the backend or from context
 }
+
+// Snapshot of a deleted/voided requested service deposit
+export interface RequestedServiceDepositDeletion {
+  id: number;
+  requested_service_deposit_id: number;
+  requested_service_id: number;
+  amount: number;
+  user_id: number; // user who originally created the deposit
+  user?: Pick<User, 'id' | 'name'>;
+  is_bank: boolean;
+  is_claimed: boolean;
+  shift_id: number | null;
+  requested_service?: RequestedService;
+  deleted_by: number | null;
+  deleted_by_user?: Pick<User, 'id' | 'name'> | null;
+  original_created_at?: string | null;
+  deleted_at?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}

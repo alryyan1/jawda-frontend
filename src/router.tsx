@@ -87,6 +87,8 @@ import CashReconciliationPage from "./pages/CashReconciliationPage";
 import AppointmentsPlaceholderPage from "./pages/AppointmentsPlaceholderPage";
 import HL7ParserPage from "./pages/HL7ParserPage";
 import OnlineBookingPage from "./pages/onlineBooking/OnlineBookingPage";
+import DeletedServiceDepositsPage from "./pages/DeletedServiceDepositsPage";
+import JobsManagementPage from "./pages/JobsManagementPage.tsx";
 
 const router = createBrowserRouter([
   // --- PUBLIC ROUTES ---
@@ -134,6 +136,10 @@ const router = createBrowserRouter([
             element: <CashReconciliationPage />,
           },
           {
+            path: "deleted-service-deposits",
+            element: <DeletedServiceDepositsPage />,
+          },
+          {
             path: "specialists",
             element: <SpecialistsPage />,
           },
@@ -152,6 +158,10 @@ const router = createBrowserRouter([
           {
             path: "online-booking",
             element: <OnlineBookingPage />,
+          },
+          {
+            path: "jobs-management",
+            element: <JobsManagementPage />,
           },
 
           {

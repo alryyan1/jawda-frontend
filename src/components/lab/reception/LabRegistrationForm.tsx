@@ -268,11 +268,11 @@ const LabRegistrationForm: React.FC<LabRegistrationFormProps> = React.memo(({
   );
 
   return (
-    <Box sx={{ width: '100%', maxWidth: 380, mx: 'auto' }}>
+    <Box sx={{ width: '100%',height:window.innerHeight - 100,overflowY:'auto'}}>
       <Card >
         <CardContent>
           {/* <Typography variant="h6">تسجيل مريض جديد</Typography> */}
-          <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ mt: 2 ,height:window.innerHeight - 200,overflowY:'auto',pt:1}}>
+          <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ mt: 2 ,pt:1}}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <Controller name="phone" control={control} render={({ field }) => (
                 <TextField fullWidth label="رقم الهاتف" id="lab-phone" type="tel" inputProps={{ maxLength: 10 }} placeholder="0xxxxxxxxx" autoComplete="off" {...field} value={field.value || ""} inputRef={phoneInputRef} onChange={handleSearchInputChange} disabled={currentIsLoading}/>

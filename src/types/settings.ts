@@ -71,6 +71,7 @@ export interface Setting {
   report_header_cr?: string | null;
   default_lab_report_template?: string | null;
   firebase_enabled?: boolean;
+  storage_name?: string | null;
 
 }
 

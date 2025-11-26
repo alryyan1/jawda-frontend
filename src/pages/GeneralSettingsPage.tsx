@@ -42,6 +42,7 @@ type SettingsFormData = {
   currency?: string;
   vatin?: string;
   cr?: string;
+  storage_name?: string;
   
   // Ultramsg WhatsApp Settings
   ultramsg_instance_id?: string;
@@ -117,6 +118,7 @@ const SettingsPage: React.FC = () => {
       currency: undefined,
       vatin: undefined,
       cr: undefined,
+      storage_name: undefined,
       
       // Ultramsg WhatsApp Settings
       ultramsg_instance_id: undefined,
@@ -189,6 +191,7 @@ const SettingsPage: React.FC = () => {
         currency: settings.currency || undefined,
         vatin: settings.vatin || undefined,
         cr: settings.cr || undefined,
+        storage_name: (settings as any).storage_name || undefined,
         
         // Ultramsg WhatsApp Settings
         ultramsg_instance_id: settings.ultramsg_instance_id || undefined,
@@ -448,6 +451,15 @@ const SettingsPage: React.FC = () => {
                     variant="outlined"
                   />
                 </Stack>
+                
+                <TextField
+                  {...control.register("storage_name")}
+                  label="اسم التخزين (Storage Name)"
+                  placeholder="اسم المجلد في Firebase Storage"
+                  fullWidth
+                  variant="outlined"
+                  helperText="اسم المجلد المستخدم لتخزين ملفات النتائج في Firebase Storage"
+                />
                 
                 <Stack spacing={3}>
                   <FormControlLabel

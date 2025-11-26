@@ -1,6 +1,6 @@
 
 // src/components/lab/workstation/LabActionsPane.tsx
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 // استخدام نص عربي مباشر بدلاً من i18n
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -24,7 +24,7 @@ import { cn } from '@/lib/utils';
 import type { LabRequest } from '@/types/visits'; // Or types/visits
 import { toast } from 'sonner';
 import { setLabRequestResultsToDefault } from '@/services/labWorkflowService';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { populateCbcResults, addOrganism } from '@/services/labRequestService';
 import { togglePatientResultLock } from '@/services/patientService';
 import type { Patient } from '@/types/patients';
@@ -34,6 +34,9 @@ import { LisServerUrl } from '@/pages/constants';
 import { Button } from '@/components/ui/button';
 import apiClient from '@/services/api';
 import type { PatientLabQueueItem } from '@/types/labWorkflow';
+import { getMetadata, getStorage, ref } from 'firebase/storage';
+import { getSettings } from '@/services/settingService';
+import type { Setting } from '@/types/settings';
 // import { useAuthorization } from '@/hooks/useAuthorization';
 
 interface LabActionsPaneProps {
@@ -60,11 +63,40 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
   const queryClient = useQueryClient();
  // console.log(currentPatientData,'currentPatientData')
 //  showJsonDialog(currentPatientData)
+
+  // Fetch settings to get storage_name
+  const { data: appSettings } = useQuery<Setting | null, Error>({
+    queryKey: ["appSettingsForFirebase"],
+    queryFn: getSettings,
+    staleTime: 1000 * 60 * 60, // 1 hour
+  });
+
+  console.log(appSettings,'appSettings')
+  const [fileExistsInFirebase, setFileExistsInFirebase] = useState(false);
+
+  useEffect(() => {
+    const storageName = appSettings?.storage_name;
+    if (!storageName || !currentPatientData?.visit_id) {
+      setFileExistsInFirebase(false);
+      return;
+    }
+    
+    const storage = getStorage();
+    const fileRef = ref(storage, `results/${storageName}/${currentPatientData.visit_id}/result.pdf`);
+    getMetadata(fileRef).then((metadata) => {
+      console.log(metadata, 'metadata file exists in firebase');
+      setFileExistsInFirebase(true);
+    }).catch((error) => {
+      console.error('Error checking file in Firebase:', error);
+      setFileExistsInFirebase(false);
+    });
+  }, [appSettings?.storage_name, currentPatientData?.visit_id]);
   const patientIdForLock =  currentPatientData?.patient_id;
   const currentLockStatus = currentPatientData?.is_result_locked || false;
   const [isAppearanceDialogOpen, setIsAppearanceDialogOpen] = useState(false);
   const [isWhatsAppDialogOpen, setIsWhatsAppDialogOpen] = useState(false);
   const [isUploadingToFirebase, setIsUploadingToFirebase] = useState(false);
+
   // console.log('currentpatientdata',currentPatientData)
   const handleHl7ClientOpen = () => {
     window.open('http://127.0.0.1/jawda-medical/hl7-client.php', '_blank');
@@ -362,10 +394,20 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
       }
     } catch (error: unknown) {
       // console.error('Error uploading to Firebase:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      toast.error("حدث خطأ أثناء رفع الملف", {
-        description: errorMessage,
-      });
+      const axiosError = error as { response?: { data?: { message?: string; error?: string } } };
+      const errorMessage = axiosError?.response?.data?.message || 
+                          (error instanceof Error ? error.message : 'حدث خطأ غير معروف');
+      
+      // Check if it's the storage_name error
+      if (axiosError?.response?.data?.error === 'storage_name_not_set') {
+        toast.error("اسم التخزين غير محدد", {
+          description: errorMessage,
+        });
+      } else {
+        toast.error("حدث خطأ أثناء رفع الملف", {
+          description: errorMessage,
+        });
+      }
     } finally {
       setIsUploadingToFirebase(false);
     }
@@ -471,7 +513,7 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
                     {isUploadingToFirebase ? (
                         <Loader2 className="h-7! w-7! animate-spin" />
                     ) : (
-                        <FontAwesomeIcon icon={faCloudUploadAlt} className="h-7! w-7! text-blue-500" />
+                        <FontAwesomeIcon icon={faCloudUploadAlt} style={{color: fileExistsInFirebase ? 'lightgreen' : 'red'}} className={cn("h-7! w-7! ")} />
                     )}
                 </Button>
             </TooltipTrigger>

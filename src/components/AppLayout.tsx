@@ -927,6 +927,7 @@ const AppLayout: React.FC = () => {
                               <ReportMenuItem to="/reports/doctor-statistics" icon={BarChartBig} label="إحصائيات الأطباء" />
                               <ReportMenuItem to="/reports/service-statistics" icon={FileBarChart2} label="إحصائيات الخدمات" />
                               <ReportMenuItem to="/reports/lab-test-statistics" icon={BarChartBig} label="إحصائيات تحاليل المختبر" />
+                              <ReportMenuItem to="/deleted-service-deposits" icon={BarChartBig} label="الخدمات المحذوفة" />
                             </DropdownMenuSubContent>
                          
                           </DropdownMenuSub>}
@@ -950,7 +951,9 @@ const AppLayout: React.FC = () => {
                               <SettingsMenuItem to="/settings/attendance/shift-definitions" icon={BarChartBig} label="الورديات" />
                               <SettingsMenuItem to="/settings/roles" icon={ShieldCheck} label="الأدوار" />
                               <SettingsMenuItem to="/settings/lab-to-lab" icon={Link2} label="المعامل المتعاقدة" />
+                              <SettingsMenuItem to="/jobs-management" icon={BarChartBig} label="إدارة المهام" />
                             </DropdownMenuSubContent>
+
                           </DropdownMenuSub>}
                         </>
                     

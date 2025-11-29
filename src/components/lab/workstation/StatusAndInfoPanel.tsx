@@ -174,6 +174,7 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
             statuses={patientStatuses}
             className="mb-1"
             onAuthenticationToggle={handleAuthenticationToggle}
+            isAuthenticating={toggleAuthenticationMutation.isPending}
           />
         ) : isLoadingPatient ? (
           <div className="mb-1">

@@ -18,3 +18,23 @@ export interface DashboardSummary {
   revenueToday: number;
   appointmentsToday: number;
 }
+
+export interface FinancialSummary {
+  lab_revenue: {
+    cash: number;
+    bank: number;
+    total: number;
+  };
+  services_revenue: {
+    cash: number;
+    bank: number;
+    total: number;
+  };
+  costs: {
+    cash: number;
+    bank: number;
+    total: number;
+  };
+  net: number;
+  patients_count?: number;
+}

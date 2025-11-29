@@ -17,8 +17,10 @@ import {
   faCloudUploadAlt,
   faPlug,
   faMicroscope,
-  faBolt
+  faBolt,
+  
 } from '@fortawesome/free-solid-svg-icons';
+import { faWhatsapp } from '@fortawesome/free-brands-svg-icons';
 import { cn } from '@/lib/utils';
 
 import type { LabRequest } from '@/types/visits'; // Or types/visits
@@ -37,6 +39,7 @@ import type { PatientLabQueueItem } from '@/types/labWorkflow';
 import { getMetadata, getStorage, ref } from 'firebase/storage';
 import { getSettings } from '@/services/settingService';
 import type { Setting } from '@/types/settings';
+import axios from 'axios';
 // import { useAuthorization } from '@/hooks/useAuthorization';
 
 interface LabActionsPaneProps {
@@ -96,6 +99,7 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
   const [isAppearanceDialogOpen, setIsAppearanceDialogOpen] = useState(false);
   const [isWhatsAppDialogOpen, setIsWhatsAppDialogOpen] = useState(false);
   const [isUploadingToFirebase, setIsUploadingToFirebase] = useState(false);
+  const [isSendingWhatsapp, setIsSendingWhatsapp] = useState(false);
 
   // console.log('currentpatientdata',currentPatientData)
   const handleHl7ClientOpen = () => {
@@ -275,47 +279,32 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
     }
   };
 
-  // Add Organism mutation
-  const addOrganismMutation = useMutation({
-    mutationFn: (payload: { labRequestId: number; organism: string; sensitive?: string; resistant?: string }) =>
-      addOrganism(payload.labRequestId, { 
-        organism: payload.organism, 
-        sensitive: payload.sensitive, 
-        resistant: payload.resistant 
-      }),
-    onSuccess: (response) => {
-      toast.success('تم إضافة الكائن الحي بنجاح');
-      queryClient.invalidateQueries({ queryKey: ['labRequestForEntry', selectedLabRequest?.id] });
-      queryClient.invalidateQueries({ queryKey: ['labRequestsForVisit', selectedVisitId] });
-      if (onResultsModified && response.lab_request) {
-        onResultsModified(response.lab_request);
-      }
-    },
-    onError: (error: Error) => {
-      toast.error('فشل في إضافة الكائن الحي');
-      console.error('Add organism error:', error);
-    }
-  });
-
-  const handleAddOrganism = () => {
-    if (!selectedLabRequest) {
-      toast.error('يرجى اختيار طلب فحص أولاً');
+  const handleSendWhatsappDirectPdfReport = async () => {
+    if (!selectedVisitId) {
+      toast.error('يرجى اختيار زيارة أولاً');
       return;
     }
 
-    const organismName = prompt('أدخل اسم الكائن الحي:');
-    if (!organismName) return;
-
-    const sensitive = prompt('أدخل المضادات الحساسة (اختياري):') || '';
-    const resistant = prompt('أدخل المضادات المقاومة (اختياري):') || '';
-
-    addOrganismMutation.mutate({
-      labRequestId: selectedLabRequest.id,
-      organism: organismName,
-      sensitive: sensitive || undefined,
-      resistant: resistant || undefined
-    });
+    setIsSendingWhatsapp(true);
+    try {
+      const response = await apiClient.post(`/sendWhatsappDirectPdfReport`, {
+        visit_id: selectedVisitId,
+      });
+      
+      if (response.data.status) {
+        toast.success(response.data.message || 'تم إرسال التقرير بواسطة واتساب بنجاح');
+      } else {
+        toast.error(response.data.message || 'فشل إرسال التقرير');
+      }
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || error.message || 'حدث خطأ أثناء إرسال التقرير';
+      toast.error(errorMessage);
+    } finally {
+      setIsSendingWhatsapp(false);
+    }
   };
+
+  
   
 
 
@@ -463,6 +452,27 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
                 </TooltipTrigger>
                 <TooltipContent side="right" sideOffset={5}>
                     <p>فتح HL7 Client</p>
+                </TooltipContent>
+            </Tooltip>
+            {/* //whatsapp button */}
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="w-12 h-12"
+                        onClick={handleSendWhatsappDirectPdfReport}
+                        disabled={isSendingWhatsapp || !selectedVisitId}
+                    >
+                        {isSendingWhatsapp ? (
+                            <Loader2 className="h-7! w-7! animate-spin text-green-500" />
+                        ) : (
+                            <FontAwesomeIcon icon={faWhatsapp} className="h-7! w-7! text-green-500" />
+                        )}
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right" sideOffset={5}>
+                    <p>ارسال تقرير بواسطة واتساب</p>
                 </TooltipContent>
             </Tooltip>
            { selectedVisitId && <Tooltip>

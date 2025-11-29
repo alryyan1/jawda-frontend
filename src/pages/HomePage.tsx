@@ -31,6 +31,12 @@ import {
   ServerCrash,
   Sun,
   Moon,
+  DollarSign,
+  TrendingUp,
+  TrendingDown,
+  Calculator,
+  CalendarDays,
+  Users,
 } from "lucide-react";
 import type { Shift } from "@/types/shifts";
 import type { DashboardSummary } from "@/types/dashboard";
@@ -41,7 +47,8 @@ import {
   closeShift,
   getCurrentShift,
 } from "@/services/shiftService";
-import { getDashboardSummary } from "@/services/dashboardService";
+import { getDashboardSummary, getFinancialSummary } from "@/services/dashboardService";
+import type { FinancialSummary } from "@/types/dashboard";
 import { format, parseISO } from "date-fns";
 import { arSA } from "date-fns/locale";
 import { Link } from "react-router-dom";
@@ -51,6 +58,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 // import { AxiosError } from "axios";
 import { realtimeUrlFromConstants } from "@/pages/constants";
 import { useAuthorization } from "@/hooks/useAuthorization";
+
+// --- Utility function to format numbers with thousands separator ---
+const formatNumber = (num: number | string | undefined | null): string => {
+  if (num === null || num === undefined) return '0';
+  const number = typeof num === 'string' ? parseFloat(num) : num;
+  if (isNaN(number)) return '0';
+  return number.toLocaleString('en-US', { maximumFractionDigits: 2 });
+};
 
 // --- Reusable Stat Card Component ---
 interface StatCardProps {
@@ -118,7 +133,7 @@ export const StatCard: React.FC<StatCardProps> = ({
                 colorClasses[variant]
               )}
             >
-              {value}
+              {typeof value === 'number' ? formatNumber(value) : value}
               {unit && (
                 <span className="text-xs text-muted-foreground font-normal ml-1 rtl:mr-1">
                   {unit}
@@ -423,6 +438,10 @@ ShiftManagementCard.displayName = "ShiftManagementCard";
 
 const HomePage: React.FC = () => {
   const { user } = useAuth();
+  
+  // Date range state for financial summary
+  const [fromDate, setFromDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
+  const [toDate, setToDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
 
   const openShiftQueryKey = ["currentOpenShift"] as const;
   const {
@@ -476,6 +495,23 @@ const HomePage: React.FC = () => {
     enabled: !!user && !isLoadingShiftInitial, // Fetch summary only after initial shift status is known
   });
 
+  // Financial Summary Query
+  const {
+    data: financialSummary,
+    isLoading: isLoadingFinancialSummary,
+    isFetching: isFetchingFinancialSummary,
+    refetch: refetchFinancialSummary,
+  } = useQuery<FinancialSummary, Error>({
+    queryKey: ['financialSummary', currentOpenShift?.id, fromDate, toDate],
+    queryFn: () =>
+      getFinancialSummary({
+        shift_id: currentOpenShift?.id || null,
+        from_date: fromDate,
+        to_date: toDate,
+      }),
+    enabled: !!user && !isLoadingShiftInitial,
+  });
+
   const openShiftMutation = useMutation({
     mutationFn: () => openNewShift({ pharmacy_entry: false }),
     onSuccess: () => {
@@ -505,7 +541,7 @@ const HomePage: React.FC = () => {
       }
     },
     onError: () => {
-      toast.error('فشل فتح الوردية');
+      // toast.error('فشل فتح الوردية');
     },
   });
 
@@ -539,7 +575,7 @@ const HomePage: React.FC = () => {
       }
     },
     onError: () => {
-      toast.error('فشل إغلاق الوردية');
+      // toast.error('فشل إغلاق الوردية');
     },
   });
 
@@ -548,12 +584,13 @@ const HomePage: React.FC = () => {
     refetchOpenShift();
     refetchShift();
     refetchSummary();
-  }, [refetchOpenShift, refetchShift, refetchSummary]);
+    refetchFinancialSummary();
+  }, [refetchOpenShift, refetchShift, refetchSummary, refetchFinancialSummary]);
 
 
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 md:space-y-8">
+    <div className="container mx-auto px-1 sm:px-1 lg:px-1 py-1 sm:py-1 space-y-1 md:space-y-1" style={{ height: window.innerHeight - 100 , overflowY: 'auto'}}>
       <ShiftManagementCard
         currentShift={currentShift}
         currentOpenShift={currentOpenShift}
@@ -576,6 +613,92 @@ const HomePage: React.FC = () => {
         </Card>
       )}
 
+      {/* Financial Summary Section */}
+      <Card className="shadow-lg" >
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <CardTitle className="text-xl font-bold">ملخص مالي</CardTitle>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto">
+              <div className="flex items-center gap-2">
+                <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                <label htmlFor="from-date" className="text-sm font-medium text-muted-foreground whitespace-nowrap">
+                  من:
+                </label>
+                <input
+                  id="from-date"
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                  className="px-3 py-1.5 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                <label htmlFor="to-date" className="text-sm font-medium text-muted-foreground whitespace-nowrap">
+                  إلى:
+                </label>
+                <input
+                  id="to-date"
+                  type="date"
+                  value={toDate}
+                  onChange={(e) => setToDate(e.target.value)}
+                  min={fromDate}
+                  className="px-3 py-1.5 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                />
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {/* Financial Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          title="إجمالي إيرادات المختبر"
+          value={financialSummary?.lab_revenue.total ?? 0}
+          icon={DollarSign}
+          description={`نقدي: ${formatNumber(financialSummary?.lab_revenue.cash ?? 0)} | بنكي: ${formatNumber(financialSummary?.lab_revenue.bank ?? 0)}`}
+          isLoading={isLoadingFinancialSummary || isFetchingFinancialSummary}
+          variant="success"
+          unit="SDG"
+        />
+        <StatCard
+          title="إجمالي إيرادات الخدمات"
+          value={financialSummary?.services_revenue.total ?? 0}
+          icon={TrendingUp}
+          description={`نقدي: ${formatNumber(financialSummary?.services_revenue.cash ?? 0)} | بنكي: ${formatNumber(financialSummary?.services_revenue.bank ?? 0)}`}
+          isLoading={isLoadingFinancialSummary || isFetchingFinancialSummary}
+          variant="info"
+          unit="SDG"
+        />
+        <StatCard
+          title="إجمالي التكاليف"
+          value={financialSummary?.costs.total ?? 0}
+          icon={TrendingDown}
+          description={`نقدي: ${formatNumber(financialSummary?.costs.cash ?? 0)} | بنكي: ${formatNumber(financialSummary?.costs.bank ?? 0)}`}
+          isLoading={isLoadingFinancialSummary || isFetchingFinancialSummary}
+          variant="danger"
+          unit="SDG"
+        />
+        <StatCard
+          title="صافي الربح"
+          value={financialSummary?.net ?? 0}
+          icon={Calculator}
+          description={`(إيرادات - تكاليف)`}
+          isLoading={isLoadingFinancialSummary || isFetchingFinancialSummary}
+          variant={financialSummary && financialSummary.net >= 0 ? "success" : "danger"}
+          unit="SDG"
+        />
+        <StatCard
+          title="عدد المرضى"
+          value={financialSummary?.patients_count ?? 0}
+          icon={Users}
+          description="إجمالي عدد المرضى في الفترة المحددة"
+          isLoading={isLoadingFinancialSummary || isFetchingFinancialSummary}
+          variant="info"
+        />
+          </div>
+        </CardContent>
+      </Card>
 
       
     </div>

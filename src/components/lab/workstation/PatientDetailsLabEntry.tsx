@@ -10,7 +10,6 @@ import {
   Clock,
   Shield,
   Printer,
-  CreditCard,
   Copy
 } from "lucide-react";
 import { 
@@ -22,7 +21,8 @@ import {
   Avatar,
   Paper,
   LinearProgress,
-  Tooltip
+  Tooltip,
+  CircularProgress
 } from "@mui/material";
 import dayjs from "dayjs";
 import { useAuth } from "@/contexts/AuthContext";
@@ -57,6 +57,7 @@ export interface PatientDetailsLabEntryProps {
   className?: string;
   onAuthenticationToggle?: () => void;
   patientLabQueueItem?: PatientLabQueueItem | null;
+  isAuthenticating?: boolean;
 }
 
  export const ItemRow: React.FC<{
@@ -143,7 +144,8 @@ const StatusIcon: React.FC<{
   icon?: React.ElementType;
   onClick?: () => void;
   isClickable?: boolean;
-}> = ({ label, status, icon: Icon, onClick, isClickable = false }) => {
+  isLoading?: boolean;
+}> = ({ label, status, icon: Icon, onClick, isClickable = false, isLoading = false }) => {
   const isCompleted = status?.done;
   //  console.log(label,'label',status)
   return (
@@ -162,42 +164,49 @@ const StatusIcon: React.FC<{
           width: 50,
           height: 50,
           position: 'relative',
-          cursor: isClickable ? 'pointer' : 'default',
+          cursor: isClickable && !isLoading ? 'pointer' : 'default',
+          opacity: isLoading ? 0.6 : 1,
           '&:hover': {
             boxShadow: 2,
             transform: 'translateY(-2px)',
             borderColor: isCompleted ? 'success.main' : 'primary.light',
-            ...(isClickable && {
+            ...(isClickable && !isLoading && {
               borderColor: isCompleted ? 'error.main' : 'success.main',
               backgroundColor: isCompleted ? 'error.light' : 'success.light'
             })
           }
         }}
-        onClick={isClickable ? onClick : undefined}
+        onClick={isClickable && !isLoading ? onClick : undefined}
       >
-      <Avatar 
-        sx={{ 
-          width: 32, 
-          height: 32, 
-          bgcolor: isCompleted ? 'success.main' : 'grey.300',
-          transition: 'all 0.2s ease-in-out',
-          '&:hover': {
-            transform: 'scale(1.1)'
-          }
-        }}
-      >
-        {Icon ? <Icon size={18} color="white" /> : null}
-      </Avatar>
-      <CheckCircle2 
-        size={12} 
-        color={isCompleted ? '#4caf50' : '#9e9e9e'}
-        style={{ 
-          transition: 'color 0.2s ease-in-out',
-          position: 'absolute',
-          top: 2,
-          right: 2
-        }}
-      />
+      {isLoading ? (
+        <CircularProgress size={32} sx={{ color: 'primary.main' }} />
+      ) : (
+        <>
+          <Avatar 
+            sx={{ 
+              width: 32, 
+              height: 32, 
+              bgcolor: isCompleted ? 'success.main' : 'grey.300',
+              transition: 'all 0.2s ease-in-out',
+              '&:hover': {
+                transform: 'scale(1.1)'
+              }
+            }}
+          >
+            {Icon ? <Icon size={18} color="white" /> : null}
+          </Avatar>
+          <CheckCircle2 
+            size={12} 
+            color={isCompleted ? '#4caf50' : '#9e9e9e'}
+            style={{ 
+              transition: 'color 0.2s ease-in-out',
+              position: 'absolute',
+              top: 2,
+              right: 2
+            }}
+          />
+        </>
+      )}
     </Box>
     </Tooltip>
   );
@@ -216,7 +225,8 @@ const PatientDetailsLabEntry: React.FC<PatientDetailsLabEntryProps> = ({
   statuses,
   className,
   onAuthenticationToggle,
-  patientLabQueueItem
+  patientLabQueueItem,
+  isAuthenticating = false
 }) => {
   const { user } = useAuth();
   const isAdmin = user?.roles?.some(role => role.name === 'admin') || false;
@@ -365,6 +375,7 @@ const PatientDetailsLabEntry: React.FC<PatientDetailsLabEntryProps> = ({
               icon={Shield}
               onClick={onAuthenticationToggle}
               isClickable={isAdmin}
+              isLoading={isAuthenticating}
             />
           </Box>
         </Paper>

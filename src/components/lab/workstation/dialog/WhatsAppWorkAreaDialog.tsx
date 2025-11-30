@@ -130,6 +130,7 @@ const WhatsAppWorkAreaDialog: React.FC<WhatsAppWorkAreaDialogProps> = ({
         document_url: documentUrl,
         filename: filename,
         caption: filename,
+        visit_id: effectivePatientData?.doctor_visit?.id?.toString() || effectivePatientData?.id?.toString() || '',
       });
     },
     onSuccess: (response) => {
@@ -207,6 +208,7 @@ const WhatsAppWorkAreaDialog: React.FC<WhatsAppWorkAreaDialogProps> = ({
           document_url: resultUrl,
           filename: 'result.pdf',
           caption: 'result.pdf',
+          visit_id: currentPatient?.doctor_visit?.id?.toString() || currentPatient?.id?.toString() || '',
         });
         if (resp.success) {
           toast.success("تم إرسال التقرير بنجاح");

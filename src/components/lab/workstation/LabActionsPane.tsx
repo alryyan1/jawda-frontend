@@ -36,7 +36,8 @@ import { LisServerUrl } from '@/pages/constants';
 import { Button } from '@/components/ui/button';
 import apiClient from '@/services/api';
 import type { PatientLabQueueItem } from '@/types/labWorkflow';
-import { getMetadata, getStorage, ref } from 'firebase/storage';
+import { getMetadata, ref } from 'firebase/storage';
+import { storage } from '@/lib/firebase';
 import { getSettings } from '@/services/settingService';
 import type { Setting } from '@/types/settings';
 import axios from 'axios';
@@ -84,7 +85,13 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
       return;
     }
     
-    const storage = getStorage();
+    // Check if Firebase is initialized
+    if (!storage) {
+      console.warn('Firebase is not initialized. Cannot check file existence.');
+      setFileExistsInFirebase(false);
+      return;
+    }
+    
     const fileRef = ref(storage, `results/${storageName}/${currentPatientData.visit_id}/result.pdf`);
     getMetadata(fileRef).then((metadata) => {
       console.log(metadata, 'metadata file exists in firebase');

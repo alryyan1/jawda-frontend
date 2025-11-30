@@ -58,8 +58,9 @@ export const sendUltramsgDocumentFromUrl = async (payload: {
   document_url: string;
   filename: string;
   caption?: string;
+  visit_id:string;
 }): Promise<UltramsgResponse> => {
-  const response = await apiClient.post<UltramsgResponse>('/ultramsg/send-document-url', payload);
+  const response = await apiClient.post<UltramsgResponse>('/sendWhatsappDirectWithoutUpload', payload);
   return response.data;
 };
 

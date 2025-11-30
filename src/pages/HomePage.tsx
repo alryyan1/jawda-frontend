@@ -47,10 +47,11 @@ import {
   closeShift,
   getCurrentShift,
 } from "@/services/shiftService";
-import { getDashboardSummary, getFinancialSummary } from "@/services/dashboardService";
+import { getDashboardSummary, getFinancialSummary, getYearlyPatientFrequency, type YearlyPatientFrequencyResponse } from "@/services/dashboardService";
 import type { FinancialSummary } from "@/types/dashboard";
 import { format, parseISO } from "date-fns";
 import { arSA } from "date-fns/locale";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -512,6 +513,18 @@ const HomePage: React.FC = () => {
     enabled: !!user && !isLoadingShiftInitial,
   });
 
+  // Yearly Patient Frequency Query
+  const currentYear = new Date().getFullYear();
+  const {
+    data: yearlyPatientData,
+    isLoading: isLoadingYearlyPatients,
+    isFetching: isFetchingYearlyPatients,
+  } = useQuery<YearlyPatientFrequencyResponse, Error>({
+    queryKey: ['yearlyPatientFrequency', currentYear],
+    queryFn: () => getYearlyPatientFrequency(currentYear),
+    enabled: !!user,
+  });
+
   const openShiftMutation = useMutation({
     mutationFn: () => openNewShift({ pharmacy_entry: false }),
     onSuccess: () => {
@@ -586,6 +599,15 @@ const HomePage: React.FC = () => {
     refetchSummary();
     refetchFinancialSummary();
   }, [refetchOpenShift, refetchShift, refetchSummary, refetchFinancialSummary]);
+
+  // Prepare chart data for monthly patients
+  const monthlyPatientsChartData = useMemo(() => {
+    if (!yearlyPatientData?.data) return [];
+    return yearlyPatientData.data.map(item => ({
+      month: item.month_name,
+      patients: item.patient_count,
+    }));
+  }, [yearlyPatientData]);
 
 
 
@@ -697,6 +719,78 @@ const HomePage: React.FC = () => {
           variant="info"
         />
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Monthly Patients Chart */}
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-xl font-bold">عدد المرضى حسب الشهر - {currentYear}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoadingYearlyPatients || isFetchingYearlyPatients ? (
+            <div className="h-80 flex items-center justify-center">
+              <Skeleton className="h-full w-full" />
+            </div>
+          ) : yearlyPatientData && monthlyPatientsChartData.length > 0 ? (
+            <div className="w-full">
+              <ResponsiveContainer width="100%" height={400}>
+                <BarChart
+                  data={monthlyPatientsChartData}
+                  margin={{
+                    top: 20,
+                    right: 30,
+                    left: 20,
+                    bottom: 60,
+                  }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="month" 
+                    angle={-45}
+                    textAnchor="end"
+                    height={100}
+                    tick={{ fontSize: 12 }}
+                  />
+                  <YAxis 
+                    label={{ value: 'عدد المرضى', angle: -90, position: 'insideLeft' }}
+                    tick={{ fontSize: 12 }}
+                  />
+                  <Tooltip 
+                    formatter={(value: number) => [formatNumber(value), 'عدد المرضى']}
+                    labelStyle={{ color: '#000' }}
+                  />
+                  <Legend />
+                  <Bar 
+                    dataKey="patients" 
+                    fill="hsl(var(--primary))" 
+                    name="عدد المرضى"
+                    radius={[8, 8, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+              {yearlyPatientData.meta && (
+                <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div className="text-center p-3 bg-muted/50 rounded-lg">
+                    <p className="text-muted-foreground">إجمالي المرضى في السنة</p>
+                    <p className="text-2xl font-bold text-primary">{formatNumber(yearlyPatientData.meta.total_unique_patients_yearly)}</p>
+                  </div>
+                  <div className="text-center p-3 bg-muted/50 rounded-lg">
+                    <p className="text-muted-foreground">متوسط المرضى شهرياً</p>
+                    <p className="text-2xl font-bold text-primary">{formatNumber(yearlyPatientData.meta.average_monthly_patients)}</p>
+                  </div>
+                  <div className="text-center p-3 bg-muted/50 rounded-lg">
+                    <p className="text-muted-foreground">السنة</p>
+                    <p className="text-2xl font-bold text-primary">{yearlyPatientData.meta.year}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="h-80 flex items-center justify-center text-muted-foreground">
+              <p>لا توجد بيانات متاحة</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 

@@ -529,16 +529,16 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
 
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr 1fr' }, gap: 2 }}>
             <Controller name="cash_percentage" control={control} render={({ field }) => (
-              <TextField label="نسبة الكاش %" type="number" inputProps={{ step: '0.01' }} {...field} />
+              <TextField disabled={isEditMode} label="نسبة الكاش %" type="number" inputProps={{ step: '0.01' }} {...field} />
             )} />
             <Controller name="company_percentage" control={control} render={({ field }) => (
-              <TextField label="نسبة الشركات %" type="number" inputProps={{ step: '0.01' }} {...field} />
+              <TextField disabled={isEditMode} label="نسبة الشركات %" type="number" inputProps={{ step: '0.01' }} {...field} />
             )} />
             <Controller name="static_wage" control={control} render={({ field }) => (
-              <TextField label="الأجر الثابت" type="number" inputProps={{ step: '0.01' }} {...field} />
+              <TextField disabled={isEditMode} label="الأجر الثابت" type="number" inputProps={{ step: '0.01' }} {...field} />
             )} />
             <Controller name="lab_percentage" control={control} render={({ field }) => (
-              <TextField label="نسبة المختبر %" type="number" inputProps={{ step: '0.01' }} {...field} />
+              <TextField disabled={isEditMode} label="نسبة المختبر %" type="number" inputProps={{ step: '0.01' }} {...field} />
             )} />
           </Box>
 

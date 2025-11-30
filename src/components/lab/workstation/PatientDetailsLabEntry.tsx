@@ -229,6 +229,7 @@ const PatientDetailsLabEntry: React.FC<PatientDetailsLabEntryProps> = ({
   isAuthenticating = false
 }) => {
   const { user } = useAuth();
+  console.log(patient,'in in PatientDetailsLabEntry');
   const isAdmin = user?.roles?.some(role => role.name === 'admin') || false;
  // console.log(patientLabQueueItem,'patientLabQueueItem in PatientDetailsLabEntry');
   // Function to copy visit ID to clipboard
@@ -319,7 +320,7 @@ const PatientDetailsLabEntry: React.FC<PatientDetailsLabEntryProps> = ({
             <ItemRow dense label="الهاتف" value={phone || "-"} icon={Phone} />
             <ItemRow dense label="سُجل بواسطة" value={registeredBy || "-"} icon={UserCircle2} />
             <ItemRow dense label="العمر" value={age ?? "-"} icon={Clock}  />
-            <ItemRow dense label=" العينه" value={selectedQueueItem?.sample_collection_time ?? "-"} icon={Clock} />
+            <ItemRow dense label=" العينه" value={`${patient?.sample_collected_by?.name} - ${selectedQueueItem?.sample_collection_time ?? "-"}`} icon={Clock} />
             <ItemRow dense label=" التحقيق" icon={Shield} value={ selectedQueueItem?.result_auth == true ? dayjs(selectedQueueItem?.auth_date).format('DD/MM/YYYY hh:mm A') ?? "-" : "-"}  />
             <ItemRow dense label=" الطباعة" icon={Printer} value={selectedQueueItem?.print_date ? dayjs(selectedQueueItem?.print_date).format('DD/MM/YYYY hh:mm A')  : "-"}  isLast={true} />
           </Box>

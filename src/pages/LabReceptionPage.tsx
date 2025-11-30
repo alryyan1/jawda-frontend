@@ -445,7 +445,7 @@ const LabReceptionPage: React.FC = () => {
         }, 100);
         
         // Show success message
-        toast.success(`تم اختيار المريض تلقائياً: ${patientWithVisit.name} (زيارة ${doctorVisit.id})`);
+        // toast.success(`تم اختيار المريض تلقائياً: ${patientWithVisit.name} (زيارة ${doctorVisit.id})`);
       } else {
         console.error('No doctor visit found in patient response:', patientWithVisit);
         toast.error('لم يتم العثور على بيانات الزيارة في الاستجابة');

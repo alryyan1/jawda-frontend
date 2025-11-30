@@ -12,7 +12,7 @@ export interface Setting {
   footer_content?: string | null;
   lab_name?: string | null;
   hospital_name?: string | null;
-  print_direct: boolean;
+  firestore_result_collection?: string | null;
   inventory_notification_number?: string | null;
   disable_doctor_service_check: boolean;
   currency: string;

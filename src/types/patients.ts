@@ -238,6 +238,7 @@ export interface Patient {
   gender: 'male' | 'female' | 'other'; // Or string if backend doesn't strictly enforce enum
   age_year?: number | null;
   age_month?: number | null;
+  sample_collected_by?: UserStripped;
   age_day?: number | null;
   address?: string | null;
   doctor:DoctorStripped;

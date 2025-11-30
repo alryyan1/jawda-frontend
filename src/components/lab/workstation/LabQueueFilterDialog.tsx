@@ -6,10 +6,6 @@ import {
   DialogContent,
   DialogActions,
   Button,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Box,
   Typography,
   Stack,
@@ -160,37 +156,7 @@ const LabQueueFilterDialog: React.FC<LabQueueFilterDialogProps> = ({
       <DialogContent sx={{ flexGrow: 1, px: 3, py: 2 }}>
         <Stack spacing={3}>
           {/* Quick Filter Buttons */}
-          <Box sx={{ mb: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <Button
-              variant={localFilters.show_unfinished_only ? "contained" : "outlined"}
-              onClick={handleShowUnfinishedOnly}
-              size="small"
-              color={localFilters.show_unfinished_only ? "primary" : "inherit"}
-              sx={{ 
-                width: '100%',
-                justifyContent: 'flex-start',
-                textAlign: 'right',
-                direction: 'rtl'
-              }}
-            >
-              {localFilters.show_unfinished_only ? "إخفاء النتائج غير المكتملة" : "عرض النتائج غير المكتملة فقط"}
-            </Button>
-            
-            <Button
-              variant={localFilters.ready_for_print_only ? "contained" : "outlined"}
-              onClick={handleShowReadyForPrintOnly}
-              size="small"
-              color={localFilters.ready_for_print_only ? "success" : "inherit"}
-              sx={{ 
-                width: '100%',
-                justifyContent: 'flex-start',
-                textAlign: 'right',
-                direction: 'rtl'
-              }}
-            >
-              {localFilters.ready_for_print_only ? "إخفاء جاهز للطباعة" : "عرض جاهز للطباعة فقط"}
-            </Button>
-          </Box>
+      
 
           <Box>
             <Typography variant="body2" sx={{ mb: 1, fontSize: '0.75rem' }}>
@@ -263,56 +229,182 @@ const LabQueueFilterDialog: React.FC<LabQueueFilterDialogProps> = ({
             />
           </Box>
 
-          <FormControl fullWidth size="small" disabled={isLoadingPackages}>
-            <InputLabel>فلتره بالمجموعه</InputLabel>
-            <Select
-              value={localFilters.package_id || " "}
-              onChange={(e) => handleFilterChange("package_id", e.target.value === " " ? undefined : Number(e.target.value))}
-              label="فلتره بالمجموعه"
-              dir={isRTL ? "rtl" : "ltr"}
-            >
-              <MenuItem value=" ">جميع الباقات</MenuItem>
-              {packages?.map((pkg) => (
-                <MenuItem key={pkg.id} value={String(pkg.id)}>
-                  {pkg.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <Box>
+            <Typography variant="body2" sx={{ mb: 1, fontSize: '0.75rem' }}>
+              فلتره بالمجموعه
+            </Typography>
+            <Autocomplete
+              size="small"
+              options={packages || []}
+              getOptionLabel={(option) => option.name}
+              value={
+                localFilters.package_id && packages
+                  ? packages.find(pkg => pkg.id === localFilters.package_id) || null
+                  : null
+              }
+              onChange={(_, newValue) => {
+                if (newValue) {
+                  handleFilterChange("package_id", newValue.id);
+                } else {
+                  handleFilterChange("package_id", undefined);
+                }
+              }}
+              isOptionEqualToValue={(option, value) => {
+                if (!option || !value) return false;
+                return option.id === value.id;
+              }}
+              loading={isLoadingPackages}
+              disabled={isLoadingPackages}
+              disableClearable={false}
+              noOptionsText={
+                isLoadingPackages
+                  ? "جاري التحميل..."
+                  : "لا توجد نتائج"
+              }
+              renderOption={(props, option) => (
+                <li {...props} key={option.id}>
+                  {option.name}
+                </li>
+              )}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  placeholder="فلتره بالمجموعه ..."
+                  variant="outlined"
+                  dir={isRTL ? "rtl" : "ltr"}
+                  InputProps={{
+                    ...params.InputProps,
+                    endAdornment: (
+                      <>
+                        {isLoadingPackages ? (
+                          <CircularProgress color="inherit" size={16} />
+                        ) : null}
+                        {params.InputProps.endAdornment}
+                      </>
+                    ),
+                  }}
+                />
+              )}
+            />
+          </Box>
 
-          <FormControl fullWidth size="small" disabled={isLoadingCompanies}>
-            <InputLabel>فلتره بالشركة</InputLabel>
-            <Select
-              value={localFilters.company_id || " "}
-              onChange={(e) => handleFilterChange("company_id", e.target.value === " " ? undefined : Number(e.target.value))}
-              label="فلتره بالشركة"
-              dir={isRTL ? "rtl" : "ltr"}
-            >
-              <MenuItem value=" ">جميع الشركات</MenuItem>
-              {companies?.map((comp) => (
-                <MenuItem key={comp.id} value={String(comp.id)}>
-                  {comp.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <Box>
+            <Typography variant="body2" sx={{ mb: 1, fontSize: '0.75rem' }}>
+              فلتره بالشركة
+            </Typography>
+            <Autocomplete
+              size="small"
+              options={companies || []}
+              getOptionLabel={(option) => option.name}
+              value={
+                localFilters.company_id && companies
+                  ? companies.find(comp => comp.id === localFilters.company_id) || null
+                  : null
+              }
+              onChange={(_, newValue) => {
+                if (newValue) {
+                  handleFilterChange("company_id", newValue.id);
+                } else {
+                  handleFilterChange("company_id", undefined);
+                }
+              }}
+              isOptionEqualToValue={(option, value) => {
+                if (!option || !value) return false;
+                return option.id === value.id;
+              }}
+              loading={isLoadingCompanies}
+              disabled={isLoadingCompanies}
+              disableClearable={false}
+              noOptionsText={
+                isLoadingCompanies
+                  ? "جاري التحميل..."
+                  : "لا توجد نتائج"
+              }
+              renderOption={(props, option) => (
+                <li {...props} key={option.id}>
+                  {option.name}
+                </li>
+              )}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  placeholder="فلتره بالشركة ..."
+                  variant="outlined"
+                  dir={isRTL ? "rtl" : "ltr"}
+                  InputProps={{
+                    ...params.InputProps,
+                    endAdornment: (
+                      <>
+                        {isLoadingCompanies ? (
+                          <CircularProgress color="inherit" size={16} />
+                        ) : null}
+                        {params.InputProps.endAdornment}
+                      </>
+                    ),
+                  }}
+                />
+              )}
+            />
+          </Box>
 
-          <FormControl fullWidth size="small" disabled={isLoadingDoctors}>
-            <InputLabel>فلتره بالطبيب </InputLabel>
-            <Select
-              value={localFilters.doctor_id || " "}
-              onChange={(e) => handleFilterChange("doctor_id", e.target.value === " " ? undefined : Number(e.target.value))}
-              label="فلتره بالطبيب المحول"
-              dir={isRTL ? "rtl" : "ltr"}
-            >
-              <MenuItem value=" ">جميع الأطباء</MenuItem>
-              {doctors?.map((doc) => (
-                <MenuItem key={doc.id} value={String(doc.id)}>
-                  {doc.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <Box>
+            <Typography variant="body2" sx={{ mb: 1, fontSize: '0.75rem' }}>
+              فلتره بالطبيب
+            </Typography>
+            <Autocomplete
+              size="small"
+              options={doctors || []}
+              getOptionLabel={(option) => option.name}
+              value={
+                localFilters.doctor_id && doctors
+                  ? doctors.find(doc => doc.id === localFilters.doctor_id) || null
+                  : null
+              }
+              onChange={(_, newValue) => {
+                if (newValue) {
+                  handleFilterChange("doctor_id", newValue.id);
+                } else {
+                  handleFilterChange("doctor_id", undefined);
+                }
+              }}
+              isOptionEqualToValue={(option, value) => {
+                if (!option || !value) return false;
+                return option.id === value.id;
+              }}
+              loading={isLoadingDoctors}
+              disabled={isLoadingDoctors}
+              disableClearable={false}
+              noOptionsText={
+                isLoadingDoctors
+                  ? "جاري التحميل..."
+                  : "لا توجد نتائج"
+              }
+              renderOption={(props, option) => (
+                <li {...props} key={option.id}>
+                  {option.name}
+                </li>
+              )}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  placeholder="فلتره بالطبيب ..."
+                  variant="outlined"
+                  dir={isRTL ? "rtl" : "ltr"}
+                  InputProps={{
+                    ...params.InputProps,
+                    endAdornment: (
+                      <>
+                        {isLoadingDoctors ? (
+                          <CircularProgress color="inherit" size={16} />
+                        ) : null}
+                        {params.InputProps.endAdornment}
+                      </>
+                    ),
+                  }}
+                />
+              )}
+            />
+          </Box>
           
           {isLoadingDropdowns && (
             <Box display="flex" justifyContent="center" py={2}>

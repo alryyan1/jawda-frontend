@@ -54,7 +54,7 @@ type SettingsFormData = {
   send_result_after_auth?: boolean;
   send_result_after_result?: boolean;
   edit_result_after_auth?: boolean;
-  print_direct?: boolean;
+  firestore_result_collection?: string;
   disable_doctor_service_check?: boolean;
   barcode?: boolean;
   show_water_mark?: boolean;
@@ -130,7 +130,7 @@ const SettingsPage: React.FC = () => {
       send_result_after_auth: undefined,
       send_result_after_result: undefined,
       edit_result_after_auth: undefined,
-      print_direct: undefined,
+      firestore_result_collection: undefined,
       disable_doctor_service_check: undefined,
       barcode: undefined,
       show_water_mark: undefined,
@@ -203,7 +203,7 @@ const SettingsPage: React.FC = () => {
         send_result_after_auth: settings.send_result_after_auth || undefined,
         send_result_after_result: settings.send_result_after_result || undefined,
         edit_result_after_auth: settings.edit_result_after_auth || undefined,
-        print_direct: settings.print_direct || undefined,
+        firestore_result_collection: (settings as any).firestore_result_collection || undefined,
         disable_doctor_service_check: settings.disable_doctor_service_check || undefined,
         barcode: settings.barcode || undefined,
         show_water_mark: settings.show_water_mark || undefined,
@@ -874,6 +874,15 @@ const SettingsPage: React.FC = () => {
                     </Typography>
                   </Box>
                 }
+              />
+              
+              <TextField
+                {...control.register("firestore_result_collection")}
+                label="اسم مجموعة نتائج Firestore (Firestore Result Collection)"
+                placeholder="lab_results"
+                fullWidth
+                variant="outlined"
+                helperText="اسم المجموعة في Firestore التي سيتم حفظ نتائج المختبر فيها"
               />
             </Stack>
           </Paper>

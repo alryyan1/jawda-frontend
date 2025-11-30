@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Button, Box, Fade } from "@mui/material";
+import { Button, Box, Fade, Autocomplete, TextField } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import SearchIcon from "@mui/icons-material/Search";
 import { toast } from "sonner";
 import { smsService } from "@/services/smsService";
 import { sendUltramsgText } from "@/services/ultramsgService";
@@ -62,6 +63,12 @@ const OnlineBookingPage: React.FC = () => {
     patientPhone: "",
     period: "morning" as "morning" | "evening",
   });
+
+  // Type for doctor with specialist info for search
+  interface DoctorWithSpecialist extends FirestoreDoctor {
+    specialistId: string;
+    specialistName: string;
+  }
 
   // Fetch all specialists from Firestore
   const { data: specialists, isLoading, error } = useQuery<FirestoreSpecialist[], Error>({
@@ -433,6 +440,36 @@ const OnlineBookingPage: React.FC = () => {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
+  // Fetch all doctors from all specialists for search
+  const { data: allDoctorsWithSpecialists, isLoading: isLoadingAllDoctorsForSearch } = useQuery<DoctorWithSpecialist[], Error>({
+    queryKey: ["allDoctorsWithSpecialists"],
+    queryFn: async () => {
+      if (!specialists) return [];
+      
+      const allDoctors: DoctorWithSpecialist[] = [];
+      
+      // Fetch doctors for each specialist
+      for (const specialist of specialists) {
+        try {
+          const doctors = await fetchAllDoctorsBySpecialist(specialist.id);
+          doctors.forEach((doctor) => {
+            allDoctors.push({
+              ...doctor,
+              specialistId: specialist.id,
+              specialistName: specialist.specName,
+            });
+          });
+        } catch (error) {
+          console.error(`Error fetching doctors for specialist ${specialist.id}:`, error);
+        }
+      }
+      
+      return allDoctors;
+    },
+    enabled: !!specialists && specialists.length > 0,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
   // Fetch app config to get updateUrl from Firestore
   useEffect(() => {
     const fetchAppConfig = async () => {
@@ -456,17 +493,108 @@ const OnlineBookingPage: React.FC = () => {
     fetchAppConfig();
   }, []);
 
+  // State to track pending doctor selection from autocomplete
+  const [pendingDoctorSelection, setPendingDoctorSelection] = useState<{ doctorId: string; specialistId: string } | null>(null);
+
+  // Handle doctor selection from autocomplete
+  const handleDoctorSelect = (doctor: DoctorWithSpecialist | null) => {
+    if (!doctor) {
+      // Clear selection when autocomplete is cleared
+      setPendingDoctorSelection(null);
+      setSelectedDoctor(null);
+      setSelectedDayForViewing(null);
+      setSelectedDateForViewing("");
+      return;
+    }
+    
+    // Set the specialist first
+    setSelectedSpecialistId(doctor.specialistId);
+    
+    // Store pending selection to be applied when doctors are loaded
+    setPendingDoctorSelection({
+      doctorId: doctor.id,
+      specialistId: doctor.specialistId,
+    });
+  };
+
+  // Effect to set selected doctor when doctors list is loaded after autocomplete selection
+  useEffect(() => {
+    if (pendingDoctorSelection && doctors && selectedSpecialistId === pendingDoctorSelection.specialistId) {
+      const foundDoctor = doctors.find(d => d.id === pendingDoctorSelection.doctorId);
+      if (foundDoctor) {
+        setSelectedDoctor(foundDoctor);
+        setPendingDoctorSelection(null); // Clear pending selection
+      }
+    }
+  }, [doctors, selectedSpecialistId, pendingDoctorSelection]);
+
+  // Computed value for autocomplete - find the selected doctor in allDoctorsWithSpecialists
+  const autocompleteValue = useMemo(() => {
+    if (!selectedDoctor || !selectedSpecialistId || !allDoctorsWithSpecialists) {
+      return null;
+    }
+    return allDoctorsWithSpecialists.find(
+      d => d.id === selectedDoctor.id && d.specialistId === selectedSpecialistId
+    ) || null;
+  }, [selectedDoctor, selectedSpecialistId, allDoctorsWithSpecialists]);
+
   return (
     // <Container maxWidth={false} sx={{ py: { xs: 1, sm: 6, lg: 1 } }}>
     <>
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2, mb: 1 }}>
-        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center', flex: 1 }}>
+          {/* Doctor Search Autocomplete */}
+          <Autocomplete
+            options={allDoctorsWithSpecialists || []}
+            getOptionLabel={(option) => `${option.docName} - ${option.specialistName}`}
+            loading={isLoadingAllDoctorsForSearch}
+            value={autocompleteValue}
+            onChange={(_, newValue) => {
+              handleDoctorSelect(newValue);
+            }}
+            isOptionEqualToValue={(option, value) => option.id === value.id && option.specialistId === value.specialistId}
+            filterOptions={(options, { inputValue }) => {
+              if (!inputValue) return options;
+              const searchTerm = inputValue.toLowerCase();
+              return options.filter(
+                (option) =>
+                  option.docName.toLowerCase().includes(searchTerm) ||
+                  option.specialistName.toLowerCase().includes(searchTerm)
+              );
+            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                placeholder="ابحث عن طبيب..."
+                variant="outlined"
+                size="small"
+                sx={{ minWidth: 300 }}
+                InputProps={{
+                  ...params.InputProps,
+                  startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />,
+                }}
+              />
+            )}
+            renderOption={(props, option) => (
+              <Box component="li" {...props} key={option.id}>
+                <Box>
+                  <Box sx={{ fontWeight: 'medium' }}>{option.docName}</Box>
+                  <Box sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>
+                    {option.specialistName}
+                  </Box>
+                </Box>
+              </Box>
+            )}
+            sx={{ flex: 1, maxWidth: 400 }}
+          />
+          
           {selectedDoctor && (
             <Button
               onClick={() => {
                 setSelectedDoctor(null);
                 setSelectedDayForViewing(null);
                 setSelectedDateForViewing("");
+                setPendingDoctorSelection(null);
               }}
               variant="outlined"
               startIcon={<ArrowBackIcon />}

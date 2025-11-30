@@ -100,7 +100,7 @@
 
 /* RTL Support */
 .clinic-page-container[dir="rtl"] .clinic-main-content.with-registration {
-  grid-template-columns:  390px 395px minmax(320px, 1fr) ;
+  grid-template-columns:  350px 395px minmax(320px, 1fr) ;
 }
 
 .clinic-page-container[dir="rtl"] .clinic-main-content.without-registration {
@@ -133,7 +133,7 @@
   }
   
   .clinic-page-container[dir="rtl"] .clinic-main-content.with-registration {
-    grid-template-columns: 390px 395px minmax(320px, 1fr) 0px;
+    grid-template-columns: 350px 395px minmax(320px, 1fr) 0px;
   }
 }
 

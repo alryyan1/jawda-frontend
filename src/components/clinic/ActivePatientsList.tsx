@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { Patient } from "../../types/patients";
 import type { ActivePatientVisit } from "@/types/patients";
-import { Loader2, Users, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, Users, ChevronLeft, ChevronRight, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getActiveClinicPatients } from "@/services/clinicService";
 import ActivePatientCard from "./ActivePatientCard";
@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import apiClient from "@/services/api";
 import type { DoctorShift } from "@/types/doctors";
 import type { PaginatedResponse } from "@/types/common";
+import { webUrl } from "@/pages/constants";
 
 interface ActivePatientsListProps {
   onPatientSelect: (patient: Patient, visitId: number) => void;
@@ -183,6 +184,12 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
   // Disable next button only when on current shift (no next shift available)
   const canNavigateNext = nextShiftId !== null;
 
+  const handleViewReport = (doctorShiftId: number) => {
+    // Open doctor's clinic report in a new tab
+    const reportUrl = `${webUrl}reports/clinic-report-old/pdf?doctor_shift_id=${doctorShiftId}`;
+    window.open(reportUrl, '_blank');
+  };
+
   return (
     <div className="h-full flex flex-col">
       {/* Navigation Buttons */}
@@ -214,6 +221,17 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
             title="الوردية التالية"
           >
             <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleViewReport(targetDoctorShiftId!)}
+            disabled={!targetDoctorShiftId}
+            className="h-8"
+            title="عرض التقرير"
+          >
+            <FileText className="h-4 w-4 ml-2" />
+            عرض التقرير
           </Button>
         </div>
       )}

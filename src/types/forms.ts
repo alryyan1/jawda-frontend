@@ -5,7 +5,7 @@ export interface SettingsFormValues {
   is_logo: boolean;
   send_welcome_message: boolean;
   is_header: boolean;
-  print_direct: boolean;
+  firestore_result_collection?: string | null;
   barcode: boolean;
   show_water_mark: boolean;
   disable_doctor_service_check: boolean;

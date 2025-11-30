@@ -300,7 +300,7 @@ const ShiftManagementCard: React.FC<ShiftManagementCardProps> = ({
           <div className="text-sm text-destructive p-3 border border-destructive/30 bg-destructive/10 dark:bg-destructive/20 rounded-md flex items-center gap-2"><ServerCrash className="h-5 w-5 flex-shrink-0" /><span>{'فشل تحميل حالة الوردية الحالية'}:{" "}{openShiftError.message}</span></div>
         ) : currentShift ? (
           <div className="space-y-3">
-            <div className={`flex flex-col sm:flex-row items-center justify-between gap-3 p-3 border rounded-lg shadow-sm ${
+            <div className={`flex flex-col sm:flex-row items-center justify-between gap-3 p-1 border rounded-lg shadow-sm ${
               currentShift.is_closed 
                 ? "bg-red-50 dark:bg-red-800/20 border-red-300 dark:border-red-700/50"
                 : "bg-green-50 dark:bg-green-800/20 border-green-300 dark:border-green-700/50"

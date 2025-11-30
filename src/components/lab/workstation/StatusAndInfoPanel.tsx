@@ -10,6 +10,7 @@ import type { PatientLabQueueItem } from "@/types/labWorkflow";
 import PatientDetailsLabEntry from "@/components/lab/workstation/PatientDetailsLabEntry";
 import ActionsButtonsPanel from "@/components/lab/workstation/ActionsButtonsPanel";
 import apiClient from "@/services/api";
+import { useAuthorization } from "@/hooks/useAuthorization";
 
 
 interface StatusAndInfoPanelProps {
@@ -36,6 +37,7 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
   handlePatientSelectFromQueue,
 }) => {
   const [updatedQueueItem, setUpdatedQueueItem] = useState<PatientLabQueueItem | null>(null);
+  const { can } = useAuthorization();
 
   const handlePatientUpdate = useCallback((newQueueItem: PatientLabQueueItem) => {
     setUpdatedQueueItem(newQueueItem);
@@ -86,6 +88,10 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
 
   const handleAuthenticationToggle = useCallback(() => {
     if (!patientId) return;
+    if(!can('تحقيق نتيجه') ) {
+      toast.error('ليس لديك صلاحية لتحقيق النتائج');
+      return;
+    }
     toggleAuthenticationMutation.mutate(patientId);
   }, [patientId, toggleAuthenticationMutation]);
 

@@ -13,6 +13,7 @@ export interface DoctorShiftReportFilters {
   shift_id?: number | string | null; // General clinic shift ID
   user_id_opened?: number | string | null; // User who opened the DoctorShift
   doctor_name_search?: string; // Search by doctor name
+  include_financials?: boolean; // Include financial data (true/false)
 }
 export const downloadDoctorShiftsReportPdf = async (filters: Omit<DoctorShiftReportFilters, 'page' | 'per_page'>): Promise<Blob> => {
   const response = await apiClient.get<Blob>('/reports/doctor-shifts/pdf', {

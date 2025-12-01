@@ -210,6 +210,7 @@ const DoctorShiftsReportPage: React.FC = () => {
             ? undefined
             : parseInt(filters.userIdOpened),
         doctor_name_search: debouncedSearchDoctorName || undefined,
+        include_financials: true, // Request financial data for reports
       }),
     placeholderData: keepPreviousData,
   });

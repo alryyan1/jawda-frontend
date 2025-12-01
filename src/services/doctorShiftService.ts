@@ -56,6 +56,7 @@ export interface DoctorShiftReportFilters {
   status?: string | null;           // '0' or '1' or 'all' for DoctorShift status
   shift_id?: number | string | null;// General clinic shift ID
   user_id_opened?: number | string | null; // User who opened the DoctorShift
+  include_financials?: boolean; // Include financial data (true/false)
 }
 
 // This function fetches DoctorShiftReportItem which is a summary.

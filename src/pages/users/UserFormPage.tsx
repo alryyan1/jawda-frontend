@@ -25,7 +25,7 @@ import {
   Alert,
   Paper,
 } from '@mui/material';
-import { Key, ArrowLeft, UserPlus, UserCog } from "lucide-react";
+import { ArrowLeft, UserPlus, UserCog } from "lucide-react";
 import { toast } from "sonner";
 
 import type {
@@ -42,7 +42,6 @@ import {
   getRolesList,
 } from "@/services/userService";
 import { getDoctorsList as apiGetDoctorsList } from "@/services/doctorService";
-import ChangePasswordDialog from "@/components/users/ChangePasswordDialog";
 
 interface UserFormPageProps {
   mode: UserFormModeEnum;
@@ -70,8 +69,6 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
     () => (userId ? Number(userId) : null),
     [userId]
   );
-
-  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
 
   const form = useForm<UserFormValues>({
     defaultValues: {
@@ -275,17 +272,6 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
                 </Typography>
               </Box>
             </Box>
-            {isEditMode && numericUserId && (
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={() => setShowPasswordDialog(true)}
-                startIcon={<Key size={14} />}
-                sx={{ fontSize: '0.75rem' }}
-              >
-                تغيير كلمة المرور
-              </Button>
-            )}
           </CardHeader>
           <CardContent className="h-[calc(100vh-200px)] overflow-y-auto">
             <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ '& > *': { mb: 3 } }}>
@@ -352,44 +338,42 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
                 </Grid>
               </Grid>
 
-              {!isEditMode && (
-                <Grid container spacing={2}>
-                  <Grid item xs={12} md={6}>
-                    <Controller
-                      control={control}
-                      name="password"
-                      render={({ field, fieldState: { error } }) => (
-                        <TextField
-                          {...field}
-                          type="password"
-                          label="كلمة المرور"
-                          fullWidth
-                          disabled={mutation.isPending}
-                          error={!!error}
-                          helperText={error?.message || "يجب أن تكون كلمة المرور 8 أحرف على الأقل."}
-                        />
-                      )}
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Controller
-                      control={control}
-                      name="password_confirmation"
-                      render={({ field, fieldState: { error } }) => (
-                        <TextField
-                          {...field}
-                          type="password"
-                          label="تأكيد كلمة المرور"
-                          fullWidth
-                          disabled={mutation.isPending}
-                          error={!!error}
-                          helperText={error?.message}
-                        />
-                      )}
-                    />
-                  </Grid>
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={6}>
+                  <Controller
+                    control={control}
+                    name="password"
+                    render={({ field, fieldState: { error } }) => (
+                      <TextField
+                        {...field}
+                        type="password"
+                        label={isEditMode ? "كلمة المرور الجديدة (اختياري)" : "كلمة المرور"}
+                        fullWidth
+                        disabled={mutation.isPending}
+                        error={!!error}
+                        helperText={error?.message || (isEditMode ? "اتركه فارغاً إذا كنت لا تريد تغيير كلمة المرور." : "يجب أن تكون كلمة المرور 8 أحرف على الأقل.")}
+                      />
+                    )}
+                  />
                 </Grid>
-              )}
+                <Grid item xs={12} md={6}>
+                  <Controller
+                    control={control}
+                    name="password_confirmation"
+                    render={({ field, fieldState: { error } }) => (
+                      <TextField
+                        {...field}
+                        type="password"
+                        label={isEditMode ? "تأكيد كلمة المرور الجديدة" : "تأكيد كلمة المرور"}
+                        fullWidth
+                        disabled={mutation.isPending}
+                        error={!!error}
+                        helperText={error?.message}
+                      />
+                    )}
+                  />
+                </Grid>
+              </Grid>
 
               <Controller
                 control={control}
@@ -565,13 +549,6 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
         </Card>
       </Box>
 
-      {isEditMode && numericUserId && (
-        <ChangePasswordDialog
-          userId={numericUserId}
-          isOpen={showPasswordDialog}
-          onClose={() => setShowPasswordDialog(false)}
-        />
-      )}
     </>
   );
 };

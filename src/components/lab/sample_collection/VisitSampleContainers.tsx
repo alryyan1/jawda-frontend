@@ -121,7 +121,7 @@ const VisitSampleContainers: React.FC<VisitSampleContainersProps> = ({
 
   if (isLoading) {
     return (
-      <Card className="h-full flex flex-col shadow-lg">
+      <Card style={{ height: window.innerHeight - 200,overflowY: 'auto' }} className=" flex flex-col shadow-lg">
         <CardContent className="flex-grow flex items-center justify-center">
           <div className="text-center">
             <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto mb-4" />
@@ -135,7 +135,7 @@ const VisitSampleContainers: React.FC<VisitSampleContainersProps> = ({
   const uniqueContainers = getUniqueContainers();
 
   return (
-    <Card className="h-full flex flex-col shadow-sm">
+    <Card style={{ height: window.innerHeight - 100,overflowY: 'auto' }} className=" flex flex-col shadow-sm">
       <div className="p-4 border-b bg-background/40 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center justify-center gap-4">
           <FlaskConical className="h-6 w-6 text-primary" />
@@ -147,7 +147,7 @@ const VisitSampleContainers: React.FC<VisitSampleContainersProps> = ({
         </div>
       </div>
       
-      <CardContent className="flex-grow p-4">
+      <CardContent className="flex-grow p-1">
         <div className="">
           {/* <div>
             <span className="font-medium">الهاتف:</span> <span>{patientPhone ?? '-'}</span>
@@ -174,7 +174,7 @@ const VisitSampleContainers: React.FC<VisitSampleContainersProps> = ({
             {/* Removed: Print All Samples button */}
             
             {/* Container Grid */}
-            <div className="grid grid-cols-2  gap-4">
+            <div className="grid grid-cols-4  gap-4">
             {uniqueContainers.map((container) => (
               <Card
                 key={container.id}
@@ -182,7 +182,7 @@ const VisitSampleContainers: React.FC<VisitSampleContainersProps> = ({
                 data-pid={visitId}
                 data-pack={container.id}
               >
-                <CardContent className="p-3">
+                <CardContent className="p-1">
                   <div className="flex flex-col items-center">
                     <div className="mb-2 relative">
                       <img

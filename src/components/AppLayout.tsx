@@ -916,6 +916,7 @@ const AppLayout: React.FC = () => {
                               <ReportMenuItem to="/reports/doctor-shifts" icon={FileBarChart2} label="عيادات اليوم" />
                               <ReportMenuItem to="/reports/clinic-shift-summary" icon={FileSpreadsheet} label="التقرير العام" />
                               <ReportMenuItem to="/reports/costs" icon={FileSpreadsheet} label="المصروفات" />
+                              <ReportMenuItem to="/reports/daily-costs" icon={FileSpreadsheet} label="المصروفات اليومية" />
                               <ReportMenuItem to="/reports/monthly-lab-income" icon={BarChartBig} label="دخل المختبر الشهري" />
                               <ReportMenuItem to="/reports/monthly-service-income" icon={BarChartBig} label="دخل الخدمات الشهري" />
                               <ReportMenuItem to="/reports/service-cost-breakdown" icon={BarChartBig} label="تفصيل تكلفة الخدمات" />

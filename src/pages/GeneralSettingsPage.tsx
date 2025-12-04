@@ -19,7 +19,8 @@ import {
   FormControlLabel,
   Checkbox,
   Container,
-  CircularProgress
+  CircularProgress,
+  Divider
 } from '@mui/material';
 import { CloudUpload } from '@mui/icons-material';
 
@@ -39,7 +40,6 @@ type SettingsFormData = {
   address?: string;
   hospital_name?: string;
   lab_name?: string;
-  currency?: string;
   vatin?: string;
   cr?: string;
   storage_name?: string;
@@ -63,9 +63,12 @@ type SettingsFormData = {
   send_whatsapp_after_auth?: boolean;
   
   // Notification Settings
-  inventory_notification_number?: string;
   welcome_message?: string;
   send_welcome_message?: boolean;
+  
+  // WhatsApp Cloud API Settings
+  cloud_api_token?: string;
+  phone_number_id?: string;
   
   // Report Settings
   is_header?: boolean;
@@ -115,7 +118,6 @@ const SettingsPage: React.FC = () => {
       address: undefined,
       hospital_name: undefined,
       lab_name: undefined,
-      currency: undefined,
       vatin: undefined,
       cr: undefined,
       storage_name: undefined,
@@ -139,9 +141,12 @@ const SettingsPage: React.FC = () => {
       send_whatsapp_after_auth: undefined,
       
       // Notification Settings
-      inventory_notification_number: undefined,
       welcome_message: undefined,
       send_welcome_message: undefined,
+      
+      // WhatsApp Cloud API Settings
+      cloud_api_token: undefined,
+      phone_number_id: undefined,
       
       // Report Settings
       is_header: undefined,
@@ -188,7 +193,6 @@ const SettingsPage: React.FC = () => {
         address: settings.address || undefined,
         hospital_name: settings.hospital_name || undefined,
         lab_name: settings.lab_name || undefined,
-        currency: settings.currency || undefined,
         vatin: settings.vatin || undefined,
         cr: settings.cr || undefined,
         storage_name: (settings as any).storage_name || undefined,
@@ -212,9 +216,12 @@ const SettingsPage: React.FC = () => {
         send_whatsapp_after_auth: (settings as any).send_whatsapp_after_auth ?? undefined,
         
         // Notification Settings
-        inventory_notification_number: settings.inventory_notification_number || undefined,
         welcome_message: settings.welcome_message || undefined,
         send_welcome_message: settings.send_welcome_message || undefined,
+        
+        // WhatsApp Cloud API Settings
+        cloud_api_token: (settings as any).cloud_api_token || undefined,
+        phone_number_id: (settings as any).phone_number_id || undefined,
         
         // Report Settings
         is_header: settings.is_header || undefined,
@@ -766,6 +773,34 @@ const SettingsPage: React.FC = () => {
                   placeholder="249"
                   fullWidth
                   variant="outlined"
+                />
+              </Stack>
+              
+              <Divider />
+              <Typography variant="h6" gutterBottom>
+                إعدادات WhatsApp Cloud API
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                إعدادات API الخاص بـ WhatsApp Cloud API
+              </Typography>
+              
+              <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
+                <TextField
+                  {...control.register("cloud_api_token")}
+                  label="Cloud API Token"
+                  type="password"
+                  placeholder="EAAZBDm6SxCwMBQPScR2IZCBRTTqZAFEdQGzecTuHILZB5QEfQZBHbjvO3IyqV0CMfRnZCl7Sfdo2LupXfpJuhVt9UeArZCUHdFHZA9mZBQIcrT1TVJX6WSkZAZAel88RS1BA1MOLlE6YqJYiAB22u68oC3ut9N1wEzKVNwJNmIvx7rkBcSsbUWWf3qM5Y48XMWzx6Y07hbPTKo8DoIxaVojvvgvRklaG5H5ubYV2OxIjFEFD9Bqltf2CyfMo7r8XotTNQV6iOBpQFZC52BgyXZBHMHuXRdrprbgZDZD"
+                  fullWidth
+                  variant="outlined"
+                  helperText="Access token for WhatsApp Cloud API"
+                />
+                <TextField
+                  {...control.register("phone_number_id")}
+                  label="Phone Number ID"
+                  placeholder="814326295108130"
+                  fullWidth
+                  variant="outlined"
+                  helperText="Phone number ID from WhatsApp Business Account"
                 />
               </Stack>
             </Stack>

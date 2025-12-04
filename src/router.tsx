@@ -53,11 +53,13 @@ import NotFoundPage from "./pages/NotFoundPage";
 import ProfilePage from "./pages/ProfilePage";
 import ClinicShiftSummaryReportPage from "./pages/reports/ClinicShiftSummaryReportPage";
 import CostsReportPage from "./pages/CostsReportPage";
+import DailyCostsReportPage from "./pages/reports/DailyCostsReportPage";
 import InsuranceAuditPage from "./pages/audit/InsuranceAuditPage";
 import AuditRecordPage from "./pages/audit/AuditRecordPage";
 import MonthlyServiceIncomeReportPage from "./pages/reports/MonthlyServiceIncomeReportPage";
 import AnalysisPage from "./pages/anaylsis/AnalysisPage";
 import BulkWhatsAppPage from "./pages/communication/BulkWhatsAppPage";
+import WhatsAppCloudApiPage from "./pages/communication/WhatsAppCloudApiPage";
 import ServiceCostBreakdownReportPage from "./pages/reports/ServiceCostBreakdownReportPage";
 import DoctorStatisticsReportPage from "./pages/reports/DoctorStatisticsReportPage";
 import CompanyPerformanceReportPage from "./pages/reports/CompanyPerformanceReportPage";
@@ -150,6 +152,10 @@ const router = createBrowserRouter([
           {
             path: "bulk-whatsapp",
             element: <BulkWhatsAppPage />,
+          },
+          {
+            path: "whatsapp-cloud-api",
+            element: <WhatsAppCloudApiPage />,
           },
           {
             path: "hl7-parser",
@@ -320,6 +326,10 @@ const router = createBrowserRouter([
               {
                 path: "costs", // Or whatever path you chose for the backend route / allclinicsReportNew
                 element: <CostsReportPage />,
+              },
+              {
+                path: "daily-costs",
+                element: <DailyCostsReportPage />,
               },
               {
                 path: "doctor-statistics",

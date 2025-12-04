@@ -231,7 +231,7 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
       setPdfUrl(null);
     }
   }, [pdfUrl]);
-  // console.log(patientLabQueueItem,'patientLabQueueItem in ActionsButtonsPanel');
+  console.log(patientLabQueueItem,'patientLabQueueItem in ActionsButtonsPanel');
   return (
     <>
        

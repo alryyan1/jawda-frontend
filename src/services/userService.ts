@@ -81,3 +81,49 @@ export const fetchCurrentUserLabIncomeSummary = async (shiftId: number): Promise
   });
   return response.data.data;
 };
+
+export const getUsersWithShiftTransactions = async (shiftId: number): Promise<User[]> => {
+  const response = await apiClient.get<{ data: User[] }>('/users/with-shift-transactions', {
+    params: { shift_id: shiftId }
+  });
+  return response.data.data;
+};
+
+export interface PatientTransaction {
+  doctor_visit_id: number;
+  patient_id: number;
+  patient_name: string;
+  doctor_id: number;
+  doctor_name: string;
+  lab_transactions: Array<{
+    test_name: string;
+    amount: number;
+    is_bank: boolean;
+    date: string;
+  }>;
+  service_transactions: Array<{
+    service_name: string;
+    amount: number;
+    is_bank: boolean;
+    date: string;
+  }>;
+  total_lab_paid: number;
+  total_lab_bank: number;
+  total_lab_cash: number;
+  total_service_paid: number;
+  total_service_bank: number;
+  total_service_cash: number;
+}
+
+export const getUserShiftPatientTransactions = async (
+  shiftId: number,
+  userId: number
+): Promise<PatientTransaction[]> => {
+  const response = await apiClient.get<{ data: PatientTransaction[] }>(
+    '/users/shift-patient-transactions',
+    {
+      params: { shift_id: shiftId, user_id: userId }
+    }
+  );
+  return response.data.data;
+};

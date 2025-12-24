@@ -72,6 +72,7 @@ import PayrollAttendanceReportPage from "./pages/reports/PayrollAttendanceReport
 import ShiftDefinitionsPage from "./pages/settings/ShiftDefinitionsPage";
 import AttendanceSheetPage from "./pages/attendance/AttendanceSheetPage";
 import HolidaysPage from "./pages/settings/attendance/HolidaysPage";
+import BindingMatchingPage from "./pages/settings/BindingMatchingPage";
 import MonthlyLabIncomeReportPage from "./pages/reports/MonthlyLabIncomeReportPage";
 import ServiceGroupsPage from "./pages/settings/ServiceGroupsPage";
 import SampleCollectionPage from "./pages/lab/SampleCollectionPage";
@@ -479,6 +480,10 @@ const router = createBrowserRouter([
                   {
                     path: "price-list",
                     element: <LabPriceListPage />,
+                  },
+                  {
+                    path: "binding-matching",
+                    element: <BindingMatchingPage />,
                   },
                 ],
               },

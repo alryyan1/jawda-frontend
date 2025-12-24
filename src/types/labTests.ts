@@ -76,6 +76,7 @@ export interface ChildTestFormData {
   export interface ChildTest {
     id?: number; // Optional for new records in form state
     main_test_id: number;
+    main_test_name?: string;
     child_test_name: string;
     low?: number | string | null; // string from form, number from API
     upper?: number | string | null;

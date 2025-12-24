@@ -46,3 +46,11 @@ export const updateChildTestJsonParams = async (childTestId: number, json: unkno
   const response = await apiClient.put<{ data: { json_params: unknown } }>(`/child-tests/${childTestId}/json-params`, { json_params: json, json_parameter: json });
   return response.data.data.json_params;
 };
+
+export const getAllChildTests = async (search?: string, limit: number = 100): Promise<ChildTest[]> => {
+  const params = new URLSearchParams();
+  if (search) params.append('search', search);
+  params.append('limit', limit.toString());
+  const response = await apiClient.get<{ data: ChildTest[] }>(`/child-tests?${params.toString()}`);
+  return response.data.data;
+};

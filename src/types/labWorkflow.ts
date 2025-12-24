@@ -16,6 +16,7 @@ export interface PatientLabQueueItem { // For the leftmost list
   is_new?: boolean;
   only_lab?: boolean;
   has_chemistry?: boolean;
+  has_hormone?: boolean;
   requested_services_count?: number | null;
   patient?: any; // Full patient object
   patient_subcompany?: unknown | null;

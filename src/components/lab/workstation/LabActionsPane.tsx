@@ -18,6 +18,7 @@ import {
   faPlug,
   faMicroscope,
   faBolt,
+  faFlask,
   
 } from '@fortawesome/free-solid-svg-icons';
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons';
@@ -278,6 +279,42 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
   const handlePopulateChemistry = () => {
     if (selectedLabRequest && selectedVisitId) {
       populateChemistryMutation.mutate({
+        doctorVisitId: selectedVisitId,
+        mainTestId: selectedLabRequest.main_test_id
+      });
+    } else {
+      toast.error('يرجى اختيار طلب فحص أولاً');
+    }
+  };
+
+  // Populate Hormone mutation
+  const populateHormoneMutation = useMutation({
+    mutationFn: async (payload: { doctorVisitId: number; mainTestId: number }) => {
+      const response = await apiClient.post(`/populatePatientHormoneData/${payload.doctorVisitId}`, {
+        main_test_id: payload.mainTestId
+      });
+      return response.data;
+    },
+    onSuccess: (response) => {
+      if (response.status) {
+        toast.success('تم ملء نتائج الهرمونات بنجاح');
+        queryClient.invalidateQueries({ queryKey: ['labRequestForEntry', selectedLabRequest?.id] });
+        queryClient.invalidateQueries({ queryKey: ['labRequestsForVisit', selectedVisitId] });
+        queryClient.invalidateQueries({ queryKey: ['labPendingQueue'] });
+        // The queries are invalidated above, which will trigger a refetch
+        // If onResultsModified callback is needed, it can be called here with refetched data
+      } else {
+        toast.error(response.message || 'لا توجد بيانات لملء نتائج الهرمونات');
+      }
+    },
+    onError: (error: Error) => {
+      toast.error((error as { response?: { data?: { message?: string } } }).response?.data?.message || 'فشل ملء نتائج الهرمونات');
+    }
+  });
+
+  const handlePopulateHormone = () => {
+    if (selectedLabRequest && selectedVisitId) {
+      populateHormoneMutation.mutate({
         doctorVisitId: selectedVisitId,
         mainTestId: selectedLabRequest.main_test_id
       });
@@ -617,6 +654,28 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
               </TooltipTrigger>
               <TooltipContent side="right" sideOffset={5}>
                   <p>ملء نتائج الكيمياء</p>
+              </TooltipContent>
+          </Tooltip>
+
+          {/* Hormone Populate Button */}
+          <Tooltip>
+              <TooltipTrigger asChild>
+                  <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="w-12 h-12"
+                      onClick={handlePopulateHormone}
+                      disabled={populateHormoneMutation.isPending || !selectedLabRequest || !selectedVisitId}
+                  >
+                      {populateHormoneMutation.isPending ? (
+                          <Loader2 className="h-7! w-7! animate-spin" />
+                      ) : (
+                          <FontAwesomeIcon icon={faFlask} style={{color: currentPatientData?.has_hormone ? '#9b59b6' : ''}} className="h-7! w-7!" />
+                      )}
+                  </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right" sideOffset={5}>
+                  <p>ملء نتائج الهرمونات</p>
               </TooltipContent>
           </Tooltip>
         {/* <Tooltip>

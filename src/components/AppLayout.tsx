@@ -943,6 +943,7 @@ const AppLayout: React.FC = () => {
                               <SettingsMenuItem to="/settings/general" icon={Settings} label="عام" />
                               <SettingsMenuItem to="/settings/companies" icon={Building} label="الشركات" />
                               <SettingsMenuItem to="/settings/laboratory" icon={FlaskConical} label="المختبر" />
+                              <SettingsMenuItem to="/settings/laboratory/binding-matching" icon={Link2} label="جداول الربط" />
                               <SettingsMenuItem to="/settings/service-groups" icon={Layers} label="مجموعات الخدمات" />
                               <SettingsMenuItem to="/settings/services" icon={ListOrdered} label="إعدادات الخدمات" />
                               <SettingsMenuItem to="/settings/offers" icon={Tag} label="العروض" />

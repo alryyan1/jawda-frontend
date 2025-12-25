@@ -67,6 +67,7 @@ import {
   EyeOff,
   RefreshCw,
   Star,
+  Hospital,
 } from "lucide-react";
 import { Toaster } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -133,6 +134,7 @@ const allMainNavItems: NavItem[] = [
   // { to: '/laboratory/offers', label: 'عروض التحاليل', icon: Package },
   { to: '/attendance/sheet', label: 'سجل الحضور', icon: ClipboardEditIcon },
   { to: '/patients', label: 'المرضى', icon: Users },
+  { to: '/admissions', label: 'الإقامات', icon: Hospital },
   { to: '/online-booking', label: 'الحجز ', icon: CalendarCheck2 },
 
   // { to: '/doctors', label: 'الأطباء', icon: Stethoscope },
@@ -207,8 +209,9 @@ const getMainNavItems = (userType?: UserType): NavItem[] => {
       item.to === '/dashboard' || 
       item.to === '/clinic' ||
       item.to === '/cash-reconciliation' ||
-      item.to === '/patients'
-      || item.to === '/online-booking'
+      item.to === '/patients' ||
+      item.to === '/admissions' ||
+      item.to === '/online-booking'
 
     );
   }

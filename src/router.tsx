@@ -92,6 +92,16 @@ import HL7ParserPage from "./pages/HL7ParserPage";
 import OnlineBookingPage from "./pages/onlineBooking/OnlineBookingPage";
 import DeletedServiceDepositsPage from "./pages/DeletedServiceDepositsPage";
 import JobsManagementPage from "./pages/JobsManagementPage.tsx";
+import AdmissionsListPage from "./pages/admissions/AdmissionsListPage";
+import AdmissionFormPage from "./pages/admissions/AdmissionFormPage";
+import AdmissionDetailsPage from "./pages/admissions/AdmissionDetailsPage";
+import AdmissionsDashboardPage from "./pages/admissions/AdmissionsDashboardPage";
+import WardsListPage from "./pages/settings/wards/WardsListPage";
+import WardFormPage, { WardFormMode } from "./pages/settings/wards/WardFormPage";
+import RoomsListPage from "./pages/settings/rooms/RoomsListPage";
+import RoomFormPage, { RoomFormMode } from "./pages/settings/rooms/RoomFormPage";
+import BedsListPage from "./pages/settings/beds/BedsListPage";
+import BedFormPage, { BedFormMode } from "./pages/settings/beds/BedFormPage";
 
 const router = createBrowserRouter([
   // --- PUBLIC ROUTES ---
@@ -169,6 +179,26 @@ const router = createBrowserRouter([
           {
             path: "jobs-management",
             element: <JobsManagementPage />,
+          },
+          // Admissions Management
+          {
+            path: "admissions",
+            element: <Outlet />,
+            children: [
+              { index: true, element: <AdmissionsDashboardPage /> },
+              {
+                path: "list",
+                element: <AdmissionsListPage />,
+              },
+              {
+                path: "new",
+                element: <AdmissionFormPage />,
+              },
+              {
+                path: ":id",
+                element: <AdmissionDetailsPage />,
+              },
+            ],
           },
 
           {
@@ -404,6 +434,84 @@ const router = createBrowserRouter([
               {
                 path: "service-groups",
                 element: <ServiceGroupsPage />,
+              },
+              // Wards Management
+              {
+                path: "wards",
+                element: <Outlet />,
+                children: [
+                  { index: true, element: <WardsListPage /> },
+                  {
+                    path: "new",
+                    element: (
+                      <WardFormPage
+                        mode={WardFormMode.CREATE}
+                        key="wardCreate"
+                      />
+                    ),
+                  },
+                  {
+                    path: ":wardId/edit",
+                    element: (
+                      <WardFormPage
+                        mode={WardFormMode.EDIT}
+                        key="wardEdit"
+                      />
+                    ),
+                  },
+                ],
+              },
+              // Rooms Management
+              {
+                path: "rooms",
+                element: <Outlet />,
+                children: [
+                  { index: true, element: <RoomsListPage /> },
+                  {
+                    path: "new",
+                    element: (
+                      <RoomFormPage
+                        mode={RoomFormMode.CREATE}
+                        key="roomCreate"
+                      />
+                    ),
+                  },
+                  {
+                    path: ":roomId/edit",
+                    element: (
+                      <RoomFormPage
+                        mode={RoomFormMode.EDIT}
+                        key="roomEdit"
+                      />
+                    ),
+                  },
+                ],
+              },
+              // Beds Management
+              {
+                path: "beds",
+                element: <Outlet />,
+                children: [
+                  { index: true, element: <BedsListPage /> },
+                  {
+                    path: "new",
+                    element: (
+                      <BedFormPage
+                        mode={BedFormMode.CREATE}
+                        key="bedCreate"
+                      />
+                    ),
+                  },
+                  {
+                    path: ":bedId/edit",
+                    element: (
+                      <BedFormPage
+                        mode={BedFormMode.EDIT}
+                        key="bedEdit"
+                      />
+                    ),
+                  },
+                ],
               },
               {
                 path: "attendance",

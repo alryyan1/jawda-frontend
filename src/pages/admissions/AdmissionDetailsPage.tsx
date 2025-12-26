@@ -12,17 +12,33 @@ import {
   Button,
   Grid,
   Divider,
+  Paper,
 } from "@mui/material";
-import { ArrowLeft, Edit } from "lucide-react";
+import { formatNumber } from "@/lib/utils";
+import { ArrowLeft, FileText } from "lucide-react";
 import DischargeDialog from "@/components/admissions/DischargeDialog";
 import TransferDialog from "@/components/admissions/TransferDialog";
 import AdmissionServicesList from "@/components/admissions/AdmissionServicesList";
+import VitalSignsList from "@/components/admissions/VitalSignsList";
 import { useState } from "react";
+import {
+  generateServicesPdf,
+  generatePatientDetailsPdf,
+  generateVitalSignsPdf,
+  generateFullAdmissionPdf,
+  generateFilePdf,
+  downloadPdf,
+} from "@/services/admissionPdfService";
+import { getAdmissionServices } from "@/services/admissionServiceService";
+import { getAdmissionVitalSigns } from "@/services/admissionVitalSignService";
+import { Menu, MenuItem } from "@mui/material";
 
 export default function AdmissionDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const [dischargeDialogOpen, setDischargeDialogOpen] = useState(false);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [pdfMenuAnchor, setPdfMenuAnchor] = useState<null | HTMLElement>(null);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
 
   const { data: admissionData, isLoading, error } = useQuery({
     queryKey: ['admission', id],
@@ -60,7 +76,7 @@ export default function AdmissionDetailsPage() {
     return (
       <Card>
         <CardContent>
-          <Typography color="error">حدث خطأ أثناء جلب بيانات الإقامة</Typography>
+          <Typography color="error">حدث خطأ أثناء جلب بيانات التنويم</Typography>
         </CardContent>
       </Card>
     );
@@ -70,6 +86,69 @@ export default function AdmissionDetailsPage() {
   const roomDisplay = admissionData.room?.room_number 
     ? `${admissionData.room.room_number}${roomTypeLabel ? ` (${roomTypeLabel})` : ''}`
     : '-';
+  
+  // Calculate room charges
+  const daysAdmitted = admissionData.days_admitted ?? 0;
+  const pricePerDay = admissionData.room?.price_per_day ?? 0;
+  const roomCharges = daysAdmitted * pricePerDay;
+
+  const handlePdfMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setPdfMenuAnchor(event.currentTarget);
+  };
+
+  const handlePdfMenuClose = () => {
+    setPdfMenuAnchor(null);
+  };
+
+  const handleGeneratePdf = async (type: 'services' | 'patient' | 'vital-signs' | 'full' | 'file') => {
+    if (!admissionData) return;
+    setGeneratingPdf(true);
+    handlePdfMenuClose();
+
+    try {
+      let blob: Blob;
+      const filename = `admission-${admissionData.id}-${type}-${new Date().toISOString().split('T')[0]}.pdf`;
+
+      switch (type) {
+        case 'services': {
+          const services = await getAdmissionServices(admissionData.id);
+          blob = await generateServicesPdf(admissionData, services);
+          break;
+        }
+        case 'patient':
+          blob = await generatePatientDetailsPdf(admissionData);
+          break;
+        case 'vital-signs': {
+          const vitalSigns = await getAdmissionVitalSigns(admissionData.id);
+          blob = await generateVitalSignsPdf(admissionData, vitalSigns);
+          break;
+        }
+        case 'full': {
+          const [services, vitalSigns] = await Promise.all([
+            getAdmissionServices(admissionData.id),
+            getAdmissionVitalSigns(admissionData.id),
+          ]);
+          blob = await generateFullAdmissionPdf(admissionData, services, vitalSigns);
+          break;
+        }
+        case 'file': {
+          const [services, vitalSigns] = await Promise.all([
+            getAdmissionServices(admissionData.id),
+            getAdmissionVitalSigns(admissionData.id),
+          ]);
+          blob = await generateFilePdf(admissionData, services, vitalSigns);
+          break;
+        }
+      }
+
+      downloadPdf(blob, filename);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('حدث خطأ أثناء إنشاء PDF');
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
 
   return (
     <>
@@ -81,24 +160,63 @@ export default function AdmissionDetailsPage() {
               <Button component={Link} to="/admissions" startIcon={<ArrowLeft />} variant="outlined" size="small">
                 رجوع
               </Button>
-              <Typography variant="h5">تفاصيل الإقامة</Typography>
+              <Typography variant="h5">تفاصيل التنويم</Typography>
             </Box>
           }
           action={
-            admissionData.status === 'admitted' && (
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <Button variant="outlined" color="info" onClick={() => setTransferDialogOpen(true)}>
-                  نقل
-                </Button>
-                <Button variant="contained" color="error" onClick={() => setDischargeDialogOpen(true)}>
-                  إخراج
-                </Button>
-              </Box>
-            )
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                variant="outlined"
+                startIcon={<FileText size={16} />}
+                onClick={handlePdfMenuOpen}
+                disabled={generatingPdf}
+              >
+                طباعة PDF
+              </Button>
+              {admissionData.status === 'admitted' && (
+                <>
+                  <Button variant="outlined" color="info" onClick={() => setTransferDialogOpen(true)}>
+                    نقل
+                  </Button>
+                  <Button variant="contained" color="error" onClick={() => setDischargeDialogOpen(true)}>
+                    إخراج
+                  </Button>
+                </>
+              )}
+            </Box>
           }
         />
         <CardContent sx={{ flex: 1, overflowY: 'auto', pb: 3 }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+            {/* Days Admitted Counter */}
+            {admissionData.status === 'admitted' && (
+              <Paper
+                elevation={3}
+                sx={{
+                  p: 1,
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  textAlign: 'center',
+                }}
+              >
+                <Typography variant="h6" sx={{ mb: 1, opacity: 0.9 }}>
+                  عدد أيام الإقامة
+                </Typography>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontWeight: 700,
+                    lineHeight: 1,
+                  }}
+                >
+                  {admissionData.days_admitted ?? 0}
+                </Typography>
+                <Typography variant="body2" sx={{ mt: 1, opacity: 0.8 }}>
+                  يوم
+                </Typography>
+              </Paper>
+            )}
+
             {/* Patient and Status Section */}
             <Box>
               <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: 'text.secondary', borderBottom: 1, borderColor: 'divider', pb: 1 }}>
@@ -133,30 +251,50 @@ export default function AdmissionDetailsPage() {
                 <Grid item xs={12} md={4}>
                   <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5 }}>الغرفة</Typography>
                   <Typography variant="body1" sx={{ fontWeight: 500 }}>{roomDisplay}</Typography>
+                  {pricePerDay > 0 && (
+                    <Typography variant="caption" color="text.secondary">
+                      السعر اليومي: {pricePerDay.toFixed(2)} ر.س
+                    </Typography>
+                  )}
                 </Grid>
                 <Grid item xs={12} md={4}>
                   <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5 }}>السرير</Typography>
                   <Typography variant="body1" sx={{ fontWeight: 500 }}>{admissionData.bed?.bed_number || '-'}</Typography>
                 </Grid>
+                {pricePerDay > 0 && daysAdmitted > 0 && (
+                  <Grid item xs={12}>
+                    <Paper sx={{ p: 2, bgcolor: 'primary.light', color: 'primary.contrastText' }}>
+                      <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+                        تكلفة الإقامة
+                      </Typography>
+                      <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                        {formatNumber(roomCharges)} ر.س
+                      </Typography>
+                      <Typography variant="caption" sx={{ opacity: 0.9 }}>
+                        ({daysAdmitted} يوم × {formatNumber(pricePerDay)} ر.س/يوم)
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                )}
               </Grid>
             </Box>
 
             {/* Admission Details Section */}
             <Box>
               <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: 'text.secondary', borderBottom: 1, borderColor: 'divider', pb: 1 }}>
-                تفاصيل الإقامة
+                تفاصيل التنويم
               </Typography>
               <Grid container spacing={3}>
                 <Grid item xs={12} md={4}>
-                  <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5 }}>تاريخ الإقامة</Typography>
+                  <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5 }}>تاريخ التنويم</Typography>
                   <Typography variant="body1" sx={{ fontWeight: 500 }}>{admissionData.admission_date || '-'}</Typography>
                 </Grid>
                 <Grid item xs={12} md={4}>
-                  <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5 }}>وقت الإقامة</Typography>
+                  <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5 }}>وقت التنويم</Typography>
                   <Typography variant="body1" sx={{ fontWeight: 500 }}>{admissionData.admission_time || '-'}</Typography>
                 </Grid>
                 <Grid item xs={12} md={4}>
-                  <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5 }}>نوع الإقامة</Typography>
+                  <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5 }}>نوع التنويم</Typography>
                   <Typography variant="body1" sx={{ fontWeight: 500 }}>{admissionData.admission_type || '-'}</Typography>
                 </Grid>
               </Grid>
@@ -192,7 +330,7 @@ export default function AdmissionDetailsPage() {
                   <Typography variant="body1" sx={{ fontWeight: 500 }}>{admissionData.doctor?.name || '-'}</Typography>
                 </Grid>
                 <Grid item xs={12}>
-                  <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5 }}>سبب الإقامة</Typography>
+                  <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5 }}>سبب التنويم</Typography>
                   <Typography variant="body1" sx={{ 
                     fontWeight: 400,
                     bgcolor: 'background.paper',
@@ -242,6 +380,12 @@ export default function AdmissionDetailsPage() {
               </Box>
             )}
 
+            {/* Vital Signs Section */}
+            <Box>
+              <Divider sx={{ my: 2 }} />
+              <VitalSignsList admissionId={admissionData.id} />
+            </Box>
+
             {/* Services Section */}
             <Box>
               <Divider sx={{ my: 2 }} />
@@ -250,6 +394,28 @@ export default function AdmissionDetailsPage() {
           </Box>
         </CardContent>
       </Card>
+
+      <Menu
+        anchorEl={pdfMenuAnchor}
+        open={Boolean(pdfMenuAnchor)}
+        onClose={handlePdfMenuClose}
+      >
+        <MenuItem onClick={() => handleGeneratePdf('services')}>
+          طباعة الخدمات
+        </MenuItem>
+        <MenuItem onClick={() => handleGeneratePdf('patient')}>
+          طباعة تفاصيل المريض
+        </MenuItem>
+        <MenuItem onClick={() => handleGeneratePdf('vital-signs')}>
+          طباعة العلامات الحيوية
+        </MenuItem>
+        <MenuItem onClick={() => handleGeneratePdf('full')}>
+          طباعة التقرير الكامل
+        </MenuItem>
+        <MenuItem onClick={() => handleGeneratePdf('file')}>
+          طباعة الملف
+        </MenuItem>
+      </Menu>
 
       {admissionData && (
         <>

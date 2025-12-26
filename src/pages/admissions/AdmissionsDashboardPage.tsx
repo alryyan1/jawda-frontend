@@ -12,7 +12,6 @@ import {
   Building2,
   BedDouble,
   DoorOpen,
-  Users,
   Plus,
   Settings,
   Activity,
@@ -144,15 +143,15 @@ export default function AdmissionsDashboardPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">نظام إدارة الإقامات</h1>
+          <h1 className="text-3xl font-bold tracking-tight">نظام إدارة التنويم</h1>
           <p className="text-muted-foreground mt-1">
-            لوحة التحكم الرئيسية لإدارة الأقسام والغرف والأسرّة والإقامات
+            لوحة التحكم الرئيسية لإدارة الأقسام والغرف والأسرّة 
           </p>
         </div>
         <Button asChild size="lg" className="shadow-md">
           <Link to="/admissions/new">
             <Plus className="h-5 w-5 ml-2" />
-            إضافة إقامة جديدة
+            إضافة تنويم جديد
           </Link>
         </Button>
       </div>
@@ -163,7 +162,7 @@ export default function AdmissionsDashboardPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">الإقامات النشطة</p>
+                <p className="text-sm font-medium text-muted-foreground">التنويم النشط</p>
                 {isLoadingActive ? (
                   <Skeleton className="h-8 w-16 mt-2" />
                 ) : (
@@ -236,8 +235,8 @@ export default function AdmissionsDashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Admissions Management */}
         <DashboardCard
-          title="قائمة الإقامات"
-          description="عرض وإدارة جميع الإقامات"
+          title="قائمة التنويم"
+          description="عرض وإدارة جميع التنويم"
           icon={ClipboardList}
           link="/admissions/list"
           count={activeAdmissions?.length}
@@ -247,7 +246,7 @@ export default function AdmissionsDashboardPage() {
         />
 
         <DashboardCard
-          title="إضافة إقامة جديدة"
+          title="إضافة تنويم جديد"
           description="إدخال مريض جديد إلى المستشفى"
           icon={Plus}
           link="/admissions/new"
@@ -308,13 +307,13 @@ export default function AdmissionsDashboardPage() {
             <Button variant="outline" asChild>
               <Link to="/admissions/list">
                 <ClipboardList className="h-4 w-4 ml-2" />
-                جميع الإقامات
+                جميع التنويم
               </Link>
             </Button>
             <Button variant="outline" asChild>
               <Link to="/admissions/new">
                 <Plus className="h-4 w-4 ml-2" />
-                إضافة إقامة
+                إضافة تنويم
               </Link>
             </Button>
             <Button variant="outline" asChild>
@@ -356,10 +355,10 @@ export default function AdmissionsDashboardPage() {
               <li>ابدأ بإضافة الأقسام من صفحة إدارة الأقسام</li>
               <li>ثم أضف الغرف لكل قسم</li>
               <li>بعد ذلك أضف الأسرّة لكل غرفة</li>
-              <li>الآن يمكنك إضافة إقامات جديدة للمرضى</li>
+              <li>الآن يمكنك إضافة تنويم جديد للمرضى</li>
             </ol>
             <p className="mt-4">
-              <strong>ملاحظة:</strong> يجب إكمال إعداد الأقسام والغرف والأسرّة قبل إضافة الإقامات.
+              <strong>ملاحظة:</strong> يجب إكمال إعداد الأقسام والغرف والأسرّة قبل إضافة التنويم.
             </p>
           </div>
         </CardContent>

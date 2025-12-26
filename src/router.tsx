@@ -98,6 +98,7 @@ import AdmissionDetailsPage from "./pages/admissions/AdmissionDetailsPage";
 import AdmissionsDashboardPage from "./pages/admissions/AdmissionsDashboardPage";
 import WardsListPage from "./pages/settings/wards/WardsListPage";
 import WardFormPage, { WardFormMode } from "./pages/settings/wards/WardFormPage";
+import PdfSettingsPage from "./pages/settings/PdfSettingsPage";
 import RoomsListPage from "./pages/settings/rooms/RoomsListPage";
 import RoomFormPage, { RoomFormMode } from "./pages/settings/rooms/RoomFormPage";
 import BedsListPage from "./pages/settings/beds/BedsListPage";
@@ -434,6 +435,10 @@ const router = createBrowserRouter([
               {
                 path: "service-groups",
                 element: <ServiceGroupsPage />,
+              },
+              {
+                path: "pdf",
+                element: <PdfSettingsPage />,
               },
               // Wards Management
               {

@@ -134,7 +134,7 @@ const allMainNavItems: NavItem[] = [
   // { to: '/laboratory/offers', label: 'عروض التحاليل', icon: Package },
   { to: '/attendance/sheet', label: 'سجل الحضور', icon: ClipboardEditIcon },
   { to: '/patients', label: 'المرضى', icon: Users },
-  { to: '/admissions', label: 'الإقامات', icon: Hospital },
+  { to: '/admissions', label: 'التنويم', icon: Hospital },
   { to: '/online-booking', label: 'الحجز ', icon: CalendarCheck2 },
 
   // { to: '/doctors', label: 'الأطباء', icon: Stethoscope },
@@ -956,6 +956,7 @@ const AppLayout: React.FC = () => {
                               <SettingsMenuItem to="/settings/attendance/shift-definitions" icon={BarChartBig} label="الورديات" />
                               <SettingsMenuItem to="/settings/roles" icon={ShieldCheck} label="الأدوار" />
                               <SettingsMenuItem to="/settings/lab-to-lab" icon={Link2} label="المعامل المتعاقدة" />
+                              <SettingsMenuItem to="/settings/pdf" icon={FileText} label="إعدادات PDF" />
                               <SettingsMenuItem to="/jobs-management" icon={BarChartBig} label="إدارة المهام" />
                             </DropdownMenuSubContent>
 

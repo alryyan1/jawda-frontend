@@ -13,10 +13,14 @@ import type {
  * Get all requested services for an admission
  */
 export const getAdmissionServices = async (admissionId: number): Promise<AdmissionRequestedService[]> => {
-  const response = await apiClient.get<AdmissionRequestedService[]>(
+  const response = await apiClient.get<any>(
     `/admissions/${admissionId}/requested-services`
   );
-  // API returns collection directly, not wrapped in data
+  // API returns collection wrapped in data object: { data: [...] }
+  if (response.data && typeof response.data === 'object' && 'data' in response.data && Array.isArray((response.data as any).data)) {
+    return (response.data as any).data;
+  }
+  // Fallback: if data is array directly
   return Array.isArray(response.data) ? response.data : [];
 };
 

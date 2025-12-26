@@ -86,7 +86,7 @@ export default function AdmissionsListPage() {
             >
               رجوع
             </Button>
-            <Typography variant="h5">إدارة الإقامات</Typography>
+            <Typography variant="h5">إدارة التنويم</Typography>
           </Box>
           <Button
             component={Link}
@@ -94,7 +94,7 @@ export default function AdmissionsListPage() {
             variant="contained"
             startIcon={<Plus />}
           >
-            إضافة إقامة جديدة
+            إضافة تنويم جديد
           </Button>
         </Box>
 
@@ -141,7 +141,7 @@ export default function AdmissionsListPage() {
                 <TableCell>القسم</TableCell>
                 <TableCell>الغرفة</TableCell>
                 <TableCell>السرير</TableCell>
-                <TableCell>تاريخ الإقامة</TableCell>
+                <TableCell>تاريخ التنويم</TableCell>
                 <TableCell>الحالة</TableCell>
                 <TableCell align="center">الإجراءات</TableCell>
               </TableRow>

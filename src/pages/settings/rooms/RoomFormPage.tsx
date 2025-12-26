@@ -35,6 +35,7 @@ type RoomFormValues = {
   room_type: string;
   capacity: string;
   status: boolean;
+  price_per_day: string;
 };
 
 const RoomFormPage: React.FC<{ mode: typeof RoomFormMode[keyof typeof RoomFormMode] }> = ({ mode }) => {
@@ -61,6 +62,7 @@ const RoomFormPage: React.FC<{ mode: typeof RoomFormMode[keyof typeof RoomFormMo
       room_type: '',
       capacity: '1',
       status: true,
+      price_per_day: '0',
     },
   });
   const { control, handleSubmit, reset } = form;
@@ -73,6 +75,7 @@ const RoomFormPage: React.FC<{ mode: typeof RoomFormMode[keyof typeof RoomFormMo
         room_type: roomData.room_type ?? '',
         capacity: String(roomData.capacity ?? '1'),
         status: Boolean(roomData.status),
+        price_per_day: String(roomData.price_per_day ?? '0'),
       });
     }
   }, [isEditMode, roomData, reset]);
@@ -101,6 +104,7 @@ const RoomFormPage: React.FC<{ mode: typeof RoomFormMode[keyof typeof RoomFormMo
       room_type: data.room_type || null,
       capacity: data.capacity,
       status: Boolean(data.status),
+      price_per_day: data.price_per_day || '0',
     };
 
     mutation.mutate(submissionData);
@@ -150,6 +154,23 @@ const RoomFormPage: React.FC<{ mode: typeof RoomFormMode[keyof typeof RoomFormMo
           <Controller name="capacity" control={control} rules={{ required: 'السعة مطلوبة' }} render={({ field, fieldState }) => (
             <TextField fullWidth label="السعة" type="number" {...field} error={!!fieldState.error} helperText={fieldState.error?.message} disabled={mutation.isPending} />
           )} />
+
+          <Controller 
+            name="price_per_day" 
+            control={control} 
+            render={({ field, fieldState }) => (
+              <TextField 
+                fullWidth 
+                label="السعر اليومي (ر.س)" 
+                type="number" 
+                {...field} 
+                error={!!fieldState.error} 
+                helperText={fieldState.error?.message || (field.value && `السعر الافتراضي: ${field.value === '0' ? '0.00' : parseFloat(field.value).toFixed(2)} ر.س`)} 
+                disabled={mutation.isPending}
+                inputProps={{ min: 0, step: 0.01 }}
+              />
+            )} 
+          />
 
           <Controller name="status" control={control} render={({ field }) => (
             <FormControlLabel control={<Switch checked={field.value} onChange={field.onChange} disabled={mutation.isPending} />} label="نشط" />

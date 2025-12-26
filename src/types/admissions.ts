@@ -30,6 +30,7 @@ export interface Room {
   room_type?: 'normal' | 'vip' | null;
   capacity: number;
   status: boolean;
+  price_per_day?: number;
   created_at: string;
   updated_at: string;
   beds_count?: number;
@@ -87,6 +88,7 @@ export interface Admission {
   user_id: number;
   user?: UserStripped;
   notes?: string | null;
+  days_admitted?: number;
   created_at: string;
   updated_at: string;
 }
@@ -175,6 +177,37 @@ export interface AdmissionRequestedServiceDeposit {
   notes?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+// Vital Signs Types
+export interface AdmissionVitalSign {
+  id: number;
+  admission_id: number;
+  user_id: number;
+  user?: UserStripped;
+  reading_date: string;
+  reading_time: string;
+  temperature?: number | null;
+  blood_pressure_systolic?: number | null;
+  blood_pressure_diastolic?: number | null;
+  oxygen_saturation?: number | null; // SpO2
+  oxygen_flow?: number | null; // O2
+  pulse_rate?: number | null;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdmissionVitalSignFormData {
+  reading_date: string;
+  reading_time: string;
+  temperature?: number | null;
+  blood_pressure_systolic?: number | null;
+  blood_pressure_diastolic?: number | null;
+  oxygen_saturation?: number | null;
+  oxygen_flow?: number | null;
+  pulse_rate?: number | null;
+  notes?: string | null;
 }
 
 export interface AdmissionRequestedServiceFormData {

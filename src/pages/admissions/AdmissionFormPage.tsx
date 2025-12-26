@@ -121,12 +121,12 @@ export default function AdmissionFormPage() {
   const mutation = useMutation({
     mutationFn: (data: AdmissionFormData) => createAdmission(data),
     onSuccess: () => {
-      toast.success('تم إضافة الإقامة بنجاح');
+      toast.success('تم إضافة التنويم بنجاح');
       queryClient.invalidateQueries({ queryKey: ['admissions'] });
       navigate('/admissions/list');
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'فشل إضافة الإقامة');
+      toast.error(error.response?.data?.message || 'فشل إضافة التنويم');
     },
   });
 
@@ -135,7 +135,7 @@ export default function AdmissionFormPage() {
     if (!data.ward_id) return toast.error('يرجى اختيار القسم');
     if (!data.room_id) return toast.error('يرجى اختيار الغرفة');
     if (!data.bed_id) return toast.error('يرجى اختيار السرير');
-    if (!data.admission_date) return toast.error('يرجى اختيار تاريخ الإقامة');
+    if (!data.admission_date) return toast.error('يرجى اختيار تاريخ التنويم');
 
     // Convert time from HH:mm to H:i:s format
     let formattedTime: string | null = null;
@@ -182,7 +182,7 @@ export default function AdmissionFormPage() {
           >
             رجوع
           </Button>
-          <Typography variant="h5">إضافة إقامة جديدة</Typography>
+          <Typography variant="h5">إضافة تنويم جديد</Typography>
         </Box>
       </CardHeader>
       <CardContent sx={{ flex: 1, overflowY: 'auto', pb: 3 }}>
@@ -257,13 +257,13 @@ export default function AdmissionFormPage() {
           {/* Admission Details Section */}
           <Box>
             <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: 'text.secondary' }}>
-              تفاصيل الإقامة
+              تفاصيل التنويم
             </Typography>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' }, gap: 2 }}>
-              <Controller name="admission_date" control={control} rules={{ required: 'تاريخ الإقامة مطلوب' }} render={({ field, fieldState }) => (
+              <Controller name="admission_date" control={control} rules={{ required: 'تاريخ التنويم مطلوب' }} render={({ field, fieldState }) => (
                 <TextField
                   fullWidth
-                  label="تاريخ الإقامة"
+                  label="تاريخ التنويم"
                   type="date"
                   value={field.value ? field.value.toISOString().split('T')[0] : ''}
                   onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : null)}
@@ -276,7 +276,7 @@ export default function AdmissionFormPage() {
               <Controller name="admission_time" control={control} render={({ field }) => (
                 <TextField
                   fullWidth
-                  label="وقت الإقامة"
+                  label="وقت التنويم"
                   type="time"
                   {...field}
                   InputLabelProps={{ shrink: true }}
@@ -284,7 +284,7 @@ export default function AdmissionFormPage() {
                 />
               )} />
               <Controller name="admission_type" control={control} render={({ field }) => (
-                <TextField fullWidth label="نوع الإقامة" {...field} disabled={mutation.isPending} />
+                <TextField fullWidth label="نوع التنويم" {...field} disabled={mutation.isPending} />
               )} />
             </Box>
           </Box>
@@ -296,7 +296,7 @@ export default function AdmissionFormPage() {
             </Typography>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
               <Controller name="admission_reason" control={control} render={({ field }) => (
-                <TextField fullWidth label="سبب الإقامة" multiline rows={3} {...field} disabled={mutation.isPending} />
+                <TextField fullWidth label="سبب التنويم" multiline rows={3} {...field} disabled={mutation.isPending} />
               )} />
               <Controller name="diagnosis" control={control} render={({ field }) => (
                 <TextField fullWidth label="التشخيص" multiline rows={3} {...field} disabled={mutation.isPending} />

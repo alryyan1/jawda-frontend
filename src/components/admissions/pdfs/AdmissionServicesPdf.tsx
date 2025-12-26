@@ -41,9 +41,7 @@ export default function AdmissionServicesPdf({
   services,
   settings,
 }: AdmissionServicesPdfProps) {
-  const totalDebit = services.reduce((sum, s) => sum + (s.total_price || 0), 0);
-  const totalCredit = services.reduce((sum, s) => sum + (s.amount_paid || 0), 0);
-  const totalBalance = totalDebit - totalCredit;
+  const totalNetPayable = services.reduce((sum, s) => sum + (s.net_payable_by_patient || 0), 0);
 
   const fontFamily = settings?.font_family || 'Amiri';
   const fontName = fontFamily === 'Amiri' ? getAmiriFont() : fontFamily;
@@ -102,7 +100,7 @@ export default function AdmissionServicesPdf({
     <Document>
       <Page size="A4" style={dynamicStyles.page}>
         <PdfHeader settings={settings} />
-        <Text style={dynamicStyles.title}>تقرير الخدمات المطلوبة</Text>
+        <Text style={dynamicStyles.title}>تقرير الخدمات الطبية المطلوبة</Text>
 
         <View style={staticStyles.section}>
           <Text style={dynamicStyles.sectionTitle}>معلومات التنويم</Text>
@@ -111,7 +109,7 @@ export default function AdmissionServicesPdf({
             <Text style={staticStyles.value}>{admission.patient?.name || '-'}</Text>
           </View>
           <View style={dynamicStyles.row}>
-            <Text style={staticStyles.label}>تاريخ التنويم:</Text>
+            <Text style={staticStyles.label}>تاريخ القبول:</Text>
             <Text style={staticStyles.value}>{admission.admission_date || '-'}</Text>
           </View>
           <View style={dynamicStyles.row}>
@@ -124,32 +122,27 @@ export default function AdmissionServicesPdf({
         </View>
 
         <View style={staticStyles.section}>
-          <Text style={dynamicStyles.sectionTitle}>الخدمات المطلوبة</Text>
+          <Text style={dynamicStyles.sectionTitle}>الخدمات الطبية المطلوبة</Text>
           <View style={staticStyles.table}>
             <View style={dynamicStyles.tableHeader}>
               <Text style={staticStyles.tableCell}>الخدمة</Text>
               <Text style={staticStyles.tableCell}>السعر</Text>
               <Text style={staticStyles.tableCell}>العدد</Text>
-              <Text style={staticStyles.tableCell}>المدفوع</Text>
-              <Text style={staticStyles.tableCell}>المتبقي</Text>
+              <Text style={staticStyles.tableCell}>الصافي المستحق</Text>
             </View>
             {services.map((service) => (
               <View key={service.id} style={dynamicStyles.tableRow}>
                 <Text style={staticStyles.tableCell}>{service.service?.name || '-'}</Text>
                 <Text style={staticStyles.tableCell}>{formatNumber(service.price || 0)}</Text>
                 <Text style={staticStyles.tableCell}>{service.count || 1}</Text>
-                <Text style={staticStyles.tableCell}>{formatNumber(service.amount_paid || 0)}</Text>
-                <Text style={staticStyles.tableCell}>
-                  {formatNumber((service.total_price || 0) - (service.amount_paid || 0))}
-                </Text>
+                <Text style={staticStyles.tableCell}>{formatNumber(service.net_payable_by_patient || 0)}</Text>
               </View>
             ))}
             <View style={dynamicStyles.totalRow}>
               <Text style={staticStyles.tableCell}>الإجمالي</Text>
-              <Text style={staticStyles.tableCell}>{formatNumber(totalDebit)}</Text>
               <Text style={staticStyles.tableCell}></Text>
-              <Text style={staticStyles.tableCell}>{formatNumber(totalCredit)}</Text>
-              <Text style={staticStyles.tableCell}>{formatNumber(totalBalance)}</Text>
+              <Text style={staticStyles.tableCell}></Text>
+              <Text style={staticStyles.tableCell}>{formatNumber(totalNetPayable)}</Text>
             </View>
           </View>
         </View>

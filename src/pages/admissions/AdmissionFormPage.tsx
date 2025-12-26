@@ -135,7 +135,7 @@ export default function AdmissionFormPage() {
     if (!data.ward_id) return toast.error('يرجى اختيار القسم');
     if (!data.room_id) return toast.error('يرجى اختيار الغرفة');
     if (!data.bed_id) return toast.error('يرجى اختيار السرير');
-    if (!data.admission_date) return toast.error('يرجى اختيار تاريخ التنويم');
+    if (!data.admission_date) return toast.error('يرجى اختيار تاريخ القبول');
 
     // Convert time from HH:mm to H:i:s format
     let formattedTime: string | null = null;
@@ -260,10 +260,10 @@ export default function AdmissionFormPage() {
               تفاصيل التنويم
             </Typography>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' }, gap: 2 }}>
-              <Controller name="admission_date" control={control} rules={{ required: 'تاريخ التنويم مطلوب' }} render={({ field, fieldState }) => (
+              <Controller name="admission_date" control={control} rules={{ required: 'تاريخ القبول مطلوب' }} render={({ field, fieldState }) => (
                 <TextField
                   fullWidth
-                  label="تاريخ التنويم"
+                  label="تاريخ القبول"
                   type="date"
                   value={field.value ? field.value.toISOString().split('T')[0] : ''}
                   onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : null)}
@@ -276,7 +276,7 @@ export default function AdmissionFormPage() {
               <Controller name="admission_time" control={control} render={({ field }) => (
                 <TextField
                   fullWidth
-                  label="وقت التنويم"
+                  label="وقت القبول"
                   type="time"
                   {...field}
                   InputLabelProps={{ shrink: true }}
@@ -296,10 +296,10 @@ export default function AdmissionFormPage() {
             </Typography>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
               <Controller name="admission_reason" control={control} render={({ field }) => (
-                <TextField fullWidth label="سبب التنويم" multiline rows={3} {...field} disabled={mutation.isPending} />
+                <TextField fullWidth label="سبب القبول" multiline rows={3} {...field} disabled={mutation.isPending} />
               )} />
               <Controller name="diagnosis" control={control} render={({ field }) => (
-                <TextField fullWidth label="التشخيص" multiline rows={3} {...field} disabled={mutation.isPending} />
+                <TextField fullWidth label="التشخيص الطبي" multiline rows={3} {...field} disabled={mutation.isPending} />
               )} />
             </Box>
           </Box>
@@ -360,7 +360,7 @@ export default function AdmissionFormPage() {
                 </Button>
               </Box>
               <Controller name="notes" control={control} render={({ field }) => (
-                <TextField fullWidth label="ملاحظات" multiline rows={3} {...field} disabled={mutation.isPending} />
+                <TextField fullWidth label="ملاحظات طبية" multiline rows={3} {...field} disabled={mutation.isPending} />
               )} />
             </Box>
           </Box>

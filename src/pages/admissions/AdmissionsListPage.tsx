@@ -141,7 +141,7 @@ export default function AdmissionsListPage() {
                 <TableCell>القسم</TableCell>
                 <TableCell>الغرفة</TableCell>
                 <TableCell>السرير</TableCell>
-                <TableCell>تاريخ التنويم</TableCell>
+                <TableCell>تاريخ القبول</TableCell>
                 <TableCell>الحالة</TableCell>
                 <TableCell align="center">الإجراءات</TableCell>
               </TableRow>

@@ -7,7 +7,6 @@ import {
   Button,
   TextField,
   Box,
-  Grid,
   CircularProgress,
   Typography,
 } from '@mui/material';
@@ -107,30 +106,26 @@ export default function AddVitalSignDialog({
                 التاريخ والوقت
               </Typography>
             </Box>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="تاريخ القراءة"
-                  type="date"
-                  value={formData.reading_date}
-                  onChange={(e) => handleChange('reading_date', e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                  disabled={mutation.isPending}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="وقت القراءة"
-                  type="time"
-                  value={formData.reading_time}
-                  onChange={(e) => handleChange('reading_time', e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                  disabled={mutation.isPending}
-                />
-              </Grid>
-            </Grid>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+              <TextField
+                fullWidth
+                label="Reading Date"
+                type="date"
+                value={formData.reading_date}
+                onChange={(e) => handleChange('reading_date', e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                disabled={mutation.isPending}
+              />
+              <TextField
+                fullWidth
+                label="Reading Time"
+                type="time"
+                value={formData.reading_time}
+                onChange={(e) => handleChange('reading_time', e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                disabled={mutation.isPending}
+              />
+            </Box>
           </Box>
 
           {/* Vital Signs Section */}
@@ -140,74 +135,62 @@ export default function AddVitalSignDialog({
                 العلامات الحيوية
               </Typography>
             </Box>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6} md={4}>
-                <TextField
-                  fullWidth
-                  label="درجة الحرارة (°C)"
-                  type="number"
-                  value={formData.temperature ?? ''}
-                  onChange={(e) => handleChange('temperature', e.target.value ? parseFloat(e.target.value) : null)}
-                  inputProps={{ min: 0, max: 50, step: 0.1 }}
-                  disabled={mutation.isPending}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6} md={4}>
-                <TextField
-                  fullWidth
-                  label="ضغط الدم الانقباضي"
-                  type="number"
-                  value={formData.blood_pressure_systolic ?? ''}
-                  onChange={(e) => handleChange('blood_pressure_systolic', e.target.value ? parseInt(e.target.value) : null)}
-                  inputProps={{ min: 0, max: 300 }}
-                  disabled={mutation.isPending}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6} md={4}>
-                <TextField
-                  fullWidth
-                  label="ضغط الدم الانبساطي"
-                  type="number"
-                  value={formData.blood_pressure_diastolic ?? ''}
-                  onChange={(e) => handleChange('blood_pressure_diastolic', e.target.value ? parseInt(e.target.value) : null)}
-                  inputProps={{ min: 0, max: 300 }}
-                  disabled={mutation.isPending}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6} md={4}>
-                <TextField
-                  fullWidth
-                  label="تشبع الأكسجين (SpO2) %"
-                  type="number"
-                  value={formData.oxygen_saturation ?? ''}
-                  onChange={(e) => handleChange('oxygen_saturation', e.target.value ? parseFloat(e.target.value) : null)}
-                  inputProps={{ min: 0, max: 100, step: 0.1 }}
-                  disabled={mutation.isPending}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6} md={4}>
-                <TextField
-                  fullWidth
-                  label="تدفق الأكسجين (O2) L/min"
-                  type="number"
-                  value={formData.oxygen_flow ?? ''}
-                  onChange={(e) => handleChange('oxygen_flow', e.target.value ? parseFloat(e.target.value) : null)}
-                  inputProps={{ min: 0, max: 100, step: 0.1 }}
-                  disabled={mutation.isPending}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6} md={4}>
-                <TextField
-                  fullWidth
-                  label="معدل النبض (نبضة/دقيقة)"
-                  type="number"
-                  value={formData.pulse_rate ?? ''}
-                  onChange={(e) => handleChange('pulse_rate', e.target.value ? parseInt(e.target.value) : null)}
-                  inputProps={{ min: 0, max: 300 }}
-                  disabled={mutation.isPending}
-                />
-              </Grid>
-            </Grid>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr' }, gap: 2 }}>
+              <TextField
+                fullWidth
+                label="Temperature (°C)"
+                type="number"
+                value={formData.temperature ?? ''}
+                onChange={(e) => handleChange('temperature', e.target.value ? parseFloat(e.target.value) : null)}
+                inputProps={{ min: 0, max: 50, step: 0.1 }}
+                disabled={mutation.isPending}
+              />
+              <TextField
+                fullWidth
+                label="Blood Pressure (Systolic)"
+                type="number"
+                value={formData.blood_pressure_systolic ?? ''}
+                onChange={(e) => handleChange('blood_pressure_systolic', e.target.value ? parseInt(e.target.value) : null)}
+                inputProps={{ min: 0, max: 300 }}
+                disabled={mutation.isPending}
+              />
+              <TextField
+                fullWidth
+                label="Blood Pressure (Diastolic)"
+                type="number"
+                value={formData.blood_pressure_diastolic ?? ''}
+                onChange={(e) => handleChange('blood_pressure_diastolic', e.target.value ? parseInt(e.target.value) : null)}
+                inputProps={{ min: 0, max: 300 }}
+                disabled={mutation.isPending}
+              />
+              <TextField
+                fullWidth
+                label="Oxygen Saturation (SpO2 %)"
+                type="number"
+                value={formData.oxygen_saturation ?? ''}
+                onChange={(e) => handleChange('oxygen_saturation', e.target.value ? parseFloat(e.target.value) : null)}
+                inputProps={{ min: 0, max: 100, step: 0.1 }}
+                disabled={mutation.isPending}
+              />
+              <TextField
+                fullWidth
+                label="Oxygen Flow (O2 L/min)"
+                type="number"
+                value={formData.oxygen_flow ?? ''}
+                onChange={(e) => handleChange('oxygen_flow', e.target.value ? parseFloat(e.target.value) : null)}
+                inputProps={{ min: 0, max: 100, step: 0.1 }}
+                disabled={mutation.isPending}
+              />
+              <TextField
+                fullWidth
+                label="Pulse Rate (bpm)"
+                type="number"
+                value={formData.pulse_rate ?? ''}
+                onChange={(e) => handleChange('pulse_rate', e.target.value ? parseInt(e.target.value) : null)}
+                inputProps={{ min: 0, max: 300 }}
+                disabled={mutation.isPending}
+              />
+            </Box>
           </Box>
 
           {/* Notes Section */}
@@ -219,7 +202,7 @@ export default function AddVitalSignDialog({
             </Box>
             <TextField
               fullWidth
-              label="ملاحظات"
+              label="Notes"
               multiline
               rows={3}
               value={formData.notes ?? ''}

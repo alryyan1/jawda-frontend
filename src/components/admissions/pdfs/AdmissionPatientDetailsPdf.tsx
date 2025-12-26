@@ -123,21 +123,21 @@ export default function AdmissionPatientDetailsPdf({
         <View style={staticStyles.section}>
           <Text style={dynamicStyles.sectionTitle}>تفاصيل التنويم</Text>
           <View style={dynamicStyles.row}>
-            <Text style={staticStyles.label}>تاريخ التنويم:</Text>
+            <Text style={staticStyles.label}>تاريخ القبول:</Text>
             <Text style={staticStyles.value}>{admission.admission_date || '-'}</Text>
           </View>
           <View style={dynamicStyles.row}>
-            <Text style={staticStyles.label}>وقت التنويم:</Text>
+            <Text style={staticStyles.label}>وقت القبول:</Text>
             <Text style={staticStyles.value}>{admission.admission_time || '-'}</Text>
           </View>
           {admission.discharge_date && (
             <>
               <View style={dynamicStyles.row}>
-                <Text style={staticStyles.label}>تاريخ الإخراج:</Text>
+                <Text style={staticStyles.label}>تاريخ الخروج:</Text>
                 <Text style={staticStyles.value}>{admission.discharge_date}</Text>
               </View>
               <View style={dynamicStyles.row}>
-                <Text style={staticStyles.label}>وقت الإخراج:</Text>
+                <Text style={staticStyles.label}>وقت الخروج:</Text>
                 <Text style={staticStyles.value}>{admission.discharge_time || '-'}</Text>
               </View>
             </>
@@ -161,18 +161,18 @@ export default function AdmissionPatientDetailsPdf({
             <Text style={staticStyles.value}>{admission.doctor?.name || '-'}</Text>
           </View>
           <View style={dynamicStyles.row}>
-            <Text style={staticStyles.label}>سبب التنويم:</Text>
+            <Text style={staticStyles.label}>سبب القبول:</Text>
             <Text style={staticStyles.value}>{admission.admission_reason || '-'}</Text>
           </View>
           <View style={dynamicStyles.row}>
-            <Text style={staticStyles.label}>التشخيص:</Text>
+            <Text style={staticStyles.label}>التشخيص الطبي:</Text>
             <Text style={staticStyles.value}>{admission.diagnosis || '-'}</Text>
           </View>
         </View>
 
         {admission.notes && (
           <View style={staticStyles.section}>
-            <Text style={dynamicStyles.sectionTitle}>ملاحظات</Text>
+            <Text style={dynamicStyles.sectionTitle}>الملاحظات الطبية</Text>
             <View style={staticStyles.notesBox}>
               <Text>{admission.notes}</Text>
             </View>

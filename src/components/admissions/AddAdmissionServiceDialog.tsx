@@ -36,8 +36,8 @@ export default function AddAdmissionServiceDialog({
   const [selectedService, setSelectedService] = useState<Service | null>(null);
 
   const { data: servicesData } = useQuery({
-    queryKey: ['servicesList'],
-    queryFn: () => getServices(1, { activate: true }),
+    queryKey: ['servicesList', 'all'],
+    queryFn: () => getServices(1, { activate: true, per_page: 10000 }),
   });
   const services = servicesData?.data || [];
 
@@ -54,6 +54,9 @@ export default function AddAdmissionServiceDialog({
       toast.success('تم إضافة الخدمة بنجاح');
       queryClient.invalidateQueries({ queryKey: ['admissionServices', admissionId] });
       queryClient.invalidateQueries({ queryKey: ['admission', admissionId] });
+      queryClient.invalidateQueries({ queryKey: ['admissionBalance', admissionId] });
+      queryClient.invalidateQueries({ queryKey: ['admissionLedger', admissionId] });
+      queryClient.invalidateQueries({ queryKey: ['admissionTransactions', admissionId] });
       setSelectedService(null);
       onClose();
     },

@@ -130,7 +130,7 @@ export default function VitalSignsList({ admissionId }: VitalSignsListProps) {
                     <TableCell className="text-xl!" align="center">SpO2</TableCell>
                     <TableCell className="text-xl!" align="center">O2</TableCell>
                     <TableCell className="text-xl!" align="center">معدل النبض</TableCell>
-                    <TableCell className="text-xl!" align="center">ملاحظات</TableCell>
+                    <TableCell className="text-xl!" align="center">الملاحظات الطبية</TableCell>
                     <TableCell className="text-xl!" align="center">المسجل</TableCell>
                     <TableCell className="text-xl!" align="center">الإجراءات</TableCell>
                   </TableRow>
@@ -172,7 +172,7 @@ export default function VitalSignsList({ admissionId }: VitalSignsListProps) {
                         <TableCell align="center">
                           {vs.notes ? (
                             <Tooltip title={vs.notes}>
-                              <Chip label="ملاحظات" size="small" />
+                              <Chip label="ملاحظات طبية" size="small" />
                             </Tooltip>
                           ) : (
                             '-'

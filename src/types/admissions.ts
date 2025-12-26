@@ -88,6 +88,7 @@ export interface Admission {
   user_id: number;
   user?: UserStripped;
   notes?: string | null;
+  balance?: number;
   days_admitted?: number;
   created_at: string;
   updated_at: string;
@@ -134,12 +135,9 @@ export interface AdmissionRequestedService {
   doctor_id?: number | null;
   performing_doctor?: DoctorStripped;
   price: number;
-  amount_paid: number;
   endurance: number;
-  is_paid: boolean;
   discount: number;
   discount_per: number;
-  bank: boolean;
   count: number;
   doctor_note?: string | null;
   nurse_note?: string | null;
@@ -232,6 +230,103 @@ export interface AdmissionServiceDepositFormData {
   amount: number;
   is_bank: boolean;
   notes?: string | null;
+}
+
+export interface AdmissionDeposit {
+  id: number;
+  admission_id: number;
+  amount: number;
+  is_bank: boolean;
+  notes?: string | null;
+  user_id: number;
+  user?: UserStripped;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdmissionDepositFormData {
+  amount: number;
+  is_bank: boolean;
+  notes?: string | null;
+}
+
+export interface AdmissionBalance {
+  balance: number;
+  initial_deposit: number;
+  additional_deposits: number;
+  total_deposits: number;
+  total_paid_from_deposit: number;
+}
+
+export interface AdmissionLedgerEntry {
+  id: string | number;
+  type: 'deposit' | 'service';
+  description: string;
+  amount: number;
+  is_bank: boolean;
+  date: string;
+  time?: string;
+  user?: string;
+  notes?: string;
+  service_id?: number;
+  service_name?: string;
+  count?: number;
+  balance_after: number;
+}
+
+export interface AdmissionTransaction {
+  id: number;
+  admission_id: number;
+  type: 'debit' | 'credit';
+  amount: number;
+  description: string;
+  reference_type?: 'service' | 'deposit' | 'manual' | null;
+  reference_id?: number | null;
+  is_bank: boolean;
+  notes?: string | null;
+  user_id: number;
+  user?: UserStripped;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdmissionTransactionFormData {
+  type: 'debit' | 'credit';
+  amount: number;
+  description: string;
+  reference_type?: 'service' | 'deposit' | 'manual' | null;
+  reference_id?: number | null;
+  is_bank: boolean;
+  notes?: string | null;
+}
+
+export interface AdmissionLedgerEntry {
+  id: string | number;
+  type: 'debit' | 'credit';
+  description: string;
+  amount: number;
+  is_bank: boolean;
+  date: string;
+  time?: string;
+  user?: string;
+  notes?: string;
+  reference_type?: string;
+  reference_id?: number;
+  balance_after: number;
+}
+
+export interface AdmissionLedger {
+  admission_id: number;
+  patient: {
+    id: number;
+    name: string;
+  };
+  summary: {
+    total_credits: number;
+    total_debits: number;
+    balance: number;
+  };
+  entries: AdmissionLedgerEntry[];
 }
 
 export interface AdmissionServiceCostFormData {

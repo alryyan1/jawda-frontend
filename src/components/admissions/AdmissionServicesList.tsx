@@ -23,17 +23,12 @@ import {
   TableRow,
   TextField,
   Typography,
-  IconButton,
-  Tooltip,
-  Chip,
 } from "@mui/material";
 import {
   Loader2,
   Trash2,
   Save,
   Settings2,
-  PackageOpen,
-  Zap,
   Plus,
   FileText,
 } from "lucide-react";
@@ -44,16 +39,10 @@ import {
   updateAdmissionService,
   deleteAdmissionService,
   getAdmissionServices,
-  getAdmissionServiceDeposits,
-  updateAdmissionServiceDeposit,
-  addAdmissionServiceDeposit,
 } from "@/services/admissionServiceService";
 import AdmissionServiceCostsDialog from "./AdmissionServiceCostsDialog";
-import AdmissionServiceDepositsDialog from "./AdmissionServiceDepositsDialog";
 import AddAdmissionServiceDialog from "./AddAdmissionServiceDialog";
 import type { AxiosError } from "axios";
-import { useAuth } from "@/contexts/AuthContext";
-import type { User as UserType } from "@/types/users";
 import { generateServicesPdf, downloadPdf } from "@/services/admissionPdfService";
 import { getAdmissionById } from "@/services/admissionService";
 import type { Admission } from "@/types/admissions";
@@ -62,73 +51,11 @@ interface AdmissionServicesListProps {
   admissionId: number;
 }
 
-// Component to toggle deposits bank/cash state
-interface ToggleDepositsButtonProps {
-  requestedServiceId: number;
-  updatingServiceId: number | null;
-  onToggle: (serviceId: number) => void;
-  requestedService: AdmissionRequestedService;
-  user: UserType | null;
-}
-
-const ToggleDepositsButton: React.FC<ToggleDepositsButtonProps> = ({
-  requestedServiceId,
-  updatingServiceId,
-  user,
-  onToggle,
-  requestedService,
-}) => {
-  const { data: deposits = [] } = useQuery({
-    queryKey: ["admissionServiceDeposits", requestedServiceId],
-    queryFn: () => getAdmissionServiceDeposits(requestedServiceId),
-    enabled: !!requestedServiceId,
-  });
- 
-  // Determine if all deposits are bank
-  const allAreBank = deposits.length > 0 && deposits.every((deposit) => deposit.is_bank === true);
-  const isUpdating = updatingServiceId === requestedServiceId;
-
-  const tooltipTitle = allAreBank 
-    ? "تغيير جميع الدفعات إلى كاش" 
-    : deposits.length > 0 
-    ? "تغيير جميع الدفعات إلى بنك"
-    : "لا توجد دفعات";
-
-  const buttonColor = allAreBank ? "primary" : "default";
-
-  return (
-    <Tooltip title={tooltipTitle}>
-      <IconButton
-        size="small"
-        onClick={(e) => {
-          e.stopPropagation();
-          onToggle(requestedServiceId);
-        }}
-        disabled={isUpdating || !requestedServiceId || deposits.length === 0}
-        color={buttonColor as "primary" | "default"}
-      >
-        {isUpdating ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : requestedService.user_deposited === user?.id ? (
-          <Chip
-            label={allAreBank ? "بنك" : "كاش"}
-            size="small"
-            color={allAreBank ? "primary" : "default"}
-            sx={{ p: 0, minWidth: 50 }}
-          />
-        ) : null}
-      </IconButton>
-    </Tooltip>
-  );
-};
-
 const AdmissionServicesList: React.FC<AdmissionServicesListProps> = ({
   admissionId,
 }) => {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
   const [serviceToDelete, setServiceToDelete] = useState<number | null>(null);
-  const [quickPayingServiceId, setQuickPayingServiceId] = useState<number | null>(null);
   const [generatingPdf, setGeneratingPdf] = useState(false);
 
   // Get admission data for PDF
@@ -152,6 +79,7 @@ const AdmissionServicesList: React.FC<AdmissionServicesListProps> = ({
       setGeneratingPdf(false);
     }
   };
+
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   
   // Row options dialog
@@ -170,25 +98,11 @@ const AdmissionServicesList: React.FC<AdmissionServicesListProps> = ({
     selectedRequestedServiceForCosts,
     setSelectedRequestedServiceForCosts,
   ] = useState<AdmissionRequestedService | null>(null);
-  const [isManageDepositsDialogOpen, setIsManageDepositsDialogOpen] =
-    useState(false);
-  const [selectedServiceForDeposits, setSelectedServiceForDeposits] =
-    useState<AdmissionRequestedService | null>(null);
 
   const { data: requestedServices = [], isLoading } = useQuery({
     queryKey: ['admissionServices', admissionId],
     queryFn: () => getAdmissionServices(admissionId),
   });
-
-  const handleManageDeposits = (requestedService: AdmissionRequestedService) => {
-    setSelectedServiceForDeposits(requestedService);
-    setIsManageDepositsDialogOpen(true);
-  };
-
-  const handleCloseDeposits = () => {
-    setIsManageDepositsDialogOpen(false);
-    setSelectedServiceForDeposits(null);
-  };
 
   const updateMutation = useMutation({
     mutationFn: (data: {
@@ -203,6 +117,15 @@ const AdmissionServicesList: React.FC<AdmissionServicesListProps> = ({
       toast.success("تم التحديث بنجاح");
       queryClient.invalidateQueries({
         queryKey: ["admissionServices", admissionId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["admission", admissionId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["admissionLedger", admissionId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["admissionTransactions", admissionId],
       });
     },
     onError: (error: AxiosError) =>
@@ -221,6 +144,15 @@ const AdmissionServicesList: React.FC<AdmissionServicesListProps> = ({
         queryKey: ["admissionServices", admissionId],
         exact: true,
       });
+      queryClient.invalidateQueries({
+        queryKey: ["admission", admissionId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["admissionLedger", admissionId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["admissionTransactions", admissionId],
+      });
       setServiceToDelete(null);
     },
     onError: (error: AxiosError) => {
@@ -228,66 +160,6 @@ const AdmissionServicesList: React.FC<AdmissionServicesListProps> = ({
         (error.response?.data as { message?: string })?.message ||
           "فشل في الطلب"
       );
-    },
-  });
-
-  // Track which service is being updated
-  const [updatingServiceId, setUpdatingServiceId] = useState<number | null>(
-    null
-  );
-  // Mutation to toggle all deposits is_bank
-  const setAllDepositsBankMutation = useMutation({
-    mutationFn: async (requestedServiceId: number) => {
-      setUpdatingServiceId(requestedServiceId);
-      // Get all deposits for the requested service
-      const deposits = await getAdmissionServiceDeposits(requestedServiceId);
-
-      if (deposits.length === 0) {
-        toast.warning("لا توجد دفعات للخدمة");
-        return { count: 0, serviceId: requestedServiceId, newState: false };
-      }
-
-      // Check if all deposits are bank (is_bank = true)
-      const allAreBank = deposits.every((deposit) => deposit.is_bank === true);
-      
-      // Toggle: if all are bank, set to cash (false), otherwise set to bank (true)
-      const newBankState = !allAreBank;
-
-      // Update each deposit
-      const updatePromises = deposits.map((deposit) =>
-        updateAdmissionServiceDeposit(deposit.id, { 
-          amount: deposit.amount,
-          is_bank: newBankState 
-        })
-      );
-
-      await Promise.all(updatePromises);
-      return { 
-        count: deposits.length, 
-        serviceId: requestedServiceId, 
-        newState: newBankState 
-      };
-    },
-    onSuccess: ({ count, newState }) => {
-      if (count > 0) {
-        toast.success(
-          `تم تحديث ${count} دفعة إلى ${newState ? "بنك" : "كاش"}`
-        );
-      }
-      queryClient.invalidateQueries({
-        queryKey: ["admissionServices", admissionId],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["admissionServiceDeposits"],
-      });
-      setUpdatingServiceId(null);
-    },
-    onError: (error: AxiosError) => {
-      toast.error(
-        (error.response?.data as { message?: string })?.message ||
-          "فشل في تحديث الدفعات"
-      );
-      setUpdatingServiceId(null);
     },
   });
 
@@ -326,82 +198,11 @@ const AdmissionServicesList: React.FC<AdmissionServicesListProps> = ({
     setSelectedRequestedServiceForCosts(null);
   };
 
-  // Calculate payment amount for quick payment
-  const calculateQuickPaymentAmount = (rs: AdmissionRequestedService): number => {
-    // Use balance if available, otherwise calculate from net_payable_by_patient
-    if (rs.balance !== undefined && rs.balance > 0) {
-      return rs.balance;
-    }
-    const netPayable = rs.net_payable_by_patient || 0;
-    const amountPaid = Number(rs.amount_paid) || 0;
-    const paymentAmount = netPayable - amountPaid;
-    return paymentAmount < 0 ? 0 : paymentAmount;
-  };
-
-  // Quick payment mutation
-  const quickPaymentMutation = useMutation({
-    mutationFn: async (rs: AdmissionRequestedService) => {
-      const paymentAmount = calculateQuickPaymentAmount(rs);
-      if (paymentAmount <= 0) {
-        throw new Error("لا يوجد مبلغ للدفع");
-      }
-      
-      return await addAdmissionServiceDeposit(rs.id, {
-        amount: paymentAmount,
-        is_bank: false, // Default to cash
-        notes: "دفع سريع",
-      });
-    },
-    onSuccess: () => {
-      toast.success("تم الدفع بنجاح");
-      
-      // Invalidate queries
-      queryClient.invalidateQueries({
-        queryKey: ["admissionServices", admissionId],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["admission", admissionId],
-      });
-      
-      setQuickPayingServiceId(null);
-    },
-    onError: (error: Error & { response?: { data?: { message?: string } } }) => {
-      toast.error(error.response?.data?.message || "حدث خطأ في الدفع");
-      setQuickPayingServiceId(null);
-    },
-  });
-
-  const handleQuickPayment = (rs: AdmissionRequestedService) => {
-    const paymentAmount = calculateQuickPaymentAmount(rs);
-    if (paymentAmount <= 0) {
-      toast.info("لا يوجد مبلغ للدفع");
-      return;
-    }
-    setQuickPayingServiceId(rs.id);
-    quickPaymentMutation.mutate(rs);
-  };
-
-  const calculateItemBalance = (rs: AdmissionRequestedService) => {
-    // Use balance if available, otherwise calculate from net_payable_by_patient
-    if (rs.balance !== undefined) {
-      return rs.balance;
-    }
-    const netPayable = rs.net_payable_by_patient || 0;
-    const amountPaid = Number(rs.amount_paid) || 0;
-    return netPayable - amountPaid;
-  };
-
   // Calculate totals
-  const totalCredit = requestedServices.reduce((sum, rs) => {
+  const totalNetPayable = requestedServices.reduce((sum, rs) => {
     const netPayable = rs.net_payable_by_patient || rs.total_price || 0;
     return sum + netPayable;
   }, 0);
-
-  const totalDebit = requestedServices.reduce((sum, rs) => {
-    return sum + (Number(rs.amount_paid) || 0);
-  }, 0);
-
-  const totalBalance = totalCredit - totalDebit;
 
   if (isLoading) {
     return (
@@ -416,7 +217,7 @@ const AdmissionServicesList: React.FC<AdmissionServicesListProps> = ({
       <Box display="flex" flexDirection="column" gap={1}>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
           <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            الخدمات المطلوبة
+            الخدمات الطبية المطلوبة
           </Typography>
           <Box display="flex" gap={1}>
             <Button
@@ -461,14 +262,14 @@ const AdmissionServicesList: React.FC<AdmissionServicesListProps> = ({
                       <TableCell
                         className="text-xl!"
                         align="center"
-                        sx={{ width: 90 }}
+                        sx={{ width: 100 }}
                       >
                         السعر
                       </TableCell>
                       <TableCell
                         className="text-xl!"
                         align="center"
-                        sx={{ width: 90 }}
+                        sx={{ width: 80 }}
                       >
                         العدد
                       </TableCell>
@@ -477,102 +278,54 @@ const AdmissionServicesList: React.FC<AdmissionServicesListProps> = ({
                         align="center"
                         sx={{ width: 120 }}
                       >
-                        المدفوع
-                      </TableCell>
-                      <TableCell
-                        className="text-xl!"
-                        align="center"
-                        sx={{ width: 80 }}
-                      >
-                        دفع
+                        الصافي المستحق
                       </TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {requestedServices.map((rs) => {
                       const price = Number(rs.price) || 0;
-                      const hasPayment = Number(rs.amount_paid) > 0;
-                      const balance = calculateItemBalance(rs);
+                      const netPayable = rs.net_payable_by_patient || 0;
                       return (
-                        <React.Fragment key={rs.id}>
-                          <TableRow
-                            hover
-                            onClick={() => handleOpenRowOptions(rs)}
-                            sx={{ 
-                              cursor: "pointer",
-                              backgroundColor: hasPayment ? 'rgba(76, 175, 80, 0.1)' : 'transparent',
-                              '&:hover': {
-                                backgroundColor: hasPayment ? 'rgba(76, 175, 80, 0.15)' : undefined
-                              }
-                            }}
-                          >
-                            <TableCell className="text-xl!" align="center">
-                              {rs.service?.name || "خدمة غير معروفة"}
-                            </TableCell>
-                            <TableCell className="text-xl!" align="center">
-                              <Box
-                                display="flex"
-                                flexDirection="column"
-                                alignItems="center"
-                              >
-                                <span>{formatNumber(price)}</span>
-                                {Number(rs.count) > 1 && (
-                                  <Typography
-                                    component="span"
-                                    variant="caption"
-                                    color="error"
-                                  >
-                                    x {Number(rs.count)}
-                                  </Typography>
-                                )}
-                              </Box>
-                            </TableCell>
-                            <TableCell className="text-xl!" align="center">
-                              {Number(rs.count)}
-                            </TableCell>
-                            <TableCell className="text-xl!" align="center">
-                              {formatNumber(rs.amount_paid)}
-                            </TableCell>
-                            <TableCell className="text-xl!" align="center">
-                              <Box
-                                display="flex"
-                                alignItems="center"
-                                justifyContent="center"
-                                gap={0.5}
-                              >
-                                {balance <= 0.01 ? (
-                                  <ToggleDepositsButton 
-                                    user={user as UserType | null}
-                                    requestedServiceId={rs.id}
-                                    requestedService={rs}
-                                    updatingServiceId={updatingServiceId}
-                                    onToggle={(serviceId) => {
-                                      setAllDepositsBankMutation.mutate(serviceId);
-                                    }}
-                                  />
-                                ) : (
-                                  <Tooltip title="دفع سريع (نقدي)">
-                                    <IconButton
-                                      size="small"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleQuickPayment(rs);
-                                      }}
-                                      disabled={quickPayingServiceId === rs.id}
-                                      color="primary"
-                                    >
-                                      {quickPayingServiceId === rs.id ? (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                      ) : (
-                                        <Zap className="h-4 w-4" />
-                                      )}
-                                    </IconButton>
-                                  </Tooltip>
-                                )}
-                              </Box>
-                            </TableCell>
-                          </TableRow>
-                        </React.Fragment>
+                        <TableRow
+                          key={rs.id}
+                          hover
+                          onClick={() => handleOpenRowOptions(rs)}
+                          sx={{ cursor: "pointer" }}
+                        >
+                          <TableCell className="text-xl!" align="center">
+                            {rs.service?.name || "خدمة غير معروفة"}
+                          </TableCell>
+                          <TableCell className="text-xl!" align="center">
+                            <Box
+                              display="flex"
+                              flexDirection="column"
+                              alignItems="center"
+                            >
+                              <span>{formatNumber(price)}</span>
+                              {Number(rs.count) > 1 && (
+                                <Typography
+                                  component="span"
+                                  variant="caption"
+                                  color="text.secondary"
+                                >
+                                  x {Number(rs.count)}
+                                </Typography>
+                              )}
+                            </Box>
+                          </TableCell>
+                          <TableCell className="text-xl!" align="center">
+                            {Number(rs.count)}
+                          </TableCell>
+                          <TableCell className="text-xl!" align="center">
+                            <Typography
+                              variant="body2"
+                              sx={{ fontWeight: 600 }}
+                            >
+                              {formatNumber(netPayable)}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
                       );
                     })}
                     {/* Summary Row */}
@@ -592,49 +345,8 @@ const AdmissionServicesList: React.FC<AdmissionServicesListProps> = ({
                         </Typography>
                       </TableCell>
                       <TableCell className="text-xl!" align="center">
-                        <Box display="flex" flexDirection="column" alignItems="center">
-                          <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5 }}>
-                            المدين (المدفوع)
-                          </Typography>
-                          <Typography variant="body1" sx={{ fontWeight: 600, color: 'success.main' }}>
-                            {formatNumber(totalDebit)}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell className="text-xl!" align="center">
-                        <Box display="flex" flexDirection="column" alignItems="center">
-                          <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5 }}>
-                            الرصيد
-                          </Typography>
-                          <Typography
-                            variant="body1"
-                            sx={{
-                              fontWeight: 600,
-                              color: totalBalance > 0.01 ? 'error.main' : 'success.main',
-                            }}
-                          >
-                            {formatNumber(totalBalance)}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                    {/* Credit Row */}
-                    <TableRow
-                      sx={{
-                        backgroundColor: 'rgba(0, 0, 0, 0.02)',
-                        '& td': {
-                          fontWeight: 500,
-                        }
-                      }}
-                    >
-                      <TableCell className="text-xl!" align="center" colSpan={3}>
-                        <Typography variant="caption" color="text.secondary">
-                          الدائن (المستحق)
-                        </Typography>
-                      </TableCell>
-                      <TableCell className="text-xl!" align="center" colSpan={2}>
-                        <Typography variant="body2" sx={{ fontWeight: 600, color: 'primary.main' }}>
-                          {formatNumber(totalCredit)}
+                        <Typography variant="body1" sx={{ fontWeight: 600, color: 'primary.main' }}>
+                          {formatNumber(totalNetPayable)}
                         </Typography>
                       </TableCell>
                     </TableRow>
@@ -675,13 +387,6 @@ const AdmissionServicesList: React.FC<AdmissionServicesListProps> = ({
           </DialogActions>
         </Dialog>
 
-        {selectedServiceForDeposits && (
-          <AdmissionServiceDepositsDialog
-            open={isManageDepositsDialogOpen}
-            onClose={handleCloseDeposits}
-            service={selectedServiceForDeposits}
-          />
-        )}
         {selectedRequestedServiceForCosts && (
           <AdmissionServiceCostsDialog
             open={isManageServiceCostsDialogOpen}
@@ -715,7 +420,6 @@ const AdmissionServicesList: React.FC<AdmissionServicesListProps> = ({
                   <TextField
                     type="number"
                     size="small"
-                    disabled={rowOptionsService.amount_paid > 0}
                     inputProps={{ min: 1 }}
                     value={rowOptionsData.count ?? 1}
                     onChange={(e) =>
@@ -735,7 +439,6 @@ const AdmissionServicesList: React.FC<AdmissionServicesListProps> = ({
                   <Select
                     label="نسبة التخفيض"
                     size="small"
-                    disabled={rowOptionsService.amount_paid > 0}
                     value={rowOptionsData.discount_per}
                     onChange={(e) =>
                       setRowOptionsData({
@@ -761,7 +464,6 @@ const AdmissionServicesList: React.FC<AdmissionServicesListProps> = ({
                   <TextField
                     type="number"
                     size="small"
-                    disabled={rowOptionsService.amount_paid > 0}
                     inputProps={{ min: 0 }}
                     value={rowOptionsData.discount ?? 0}
                     onChange={(e) =>
@@ -793,16 +495,6 @@ const AdmissionServicesList: React.FC<AdmissionServicesListProps> = ({
                   التكاليف
                 </Button>
                 <Button
-                  variant="outlined"
-                  onClick={() => {
-                    setIsRowOptionsDialogOpen(false);
-                    handleManageDeposits(rowOptionsService);
-                  }}
-                  startIcon={<PackageOpen className="h-4 w-4" />}
-                >
-                  المدفوعات
-                </Button>
-                <Button
                   color="error"
                   variant="outlined"
                   onClick={() => {
@@ -810,7 +502,6 @@ const AdmissionServicesList: React.FC<AdmissionServicesListProps> = ({
                     setServiceToDelete(rowOptionsService.id);
                   }}
                   startIcon={<Trash2 className="h-4 w-4" />}
-                  disabled={rowOptionsService.is_paid}
                 >
                   حذف
                 </Button>
@@ -840,4 +531,5 @@ const AdmissionServicesList: React.FC<AdmissionServicesListProps> = ({
     </React.Fragment>
   );
 };
+
 export default AdmissionServicesList;

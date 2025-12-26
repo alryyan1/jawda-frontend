@@ -182,7 +182,7 @@ export default function AdmissionServiceDepositsDialog({
                       <TableRow>
                         <TableCell>المبلغ</TableCell>
                         <TableCell align="center">طريقة الدفع</TableCell>
-                        <TableCell>الملاحظات</TableCell>
+                        <TableCell>الملاحظات الطبية</TableCell>
                         <TableCell>المستخدم</TableCell>
                         <TableCell>التاريخ</TableCell>
                         <TableCell align="center">الإجراءات</TableCell>
@@ -290,7 +290,7 @@ export default function AdmissionServiceDepositsDialog({
                 render={({ field }) => (
                   <TextField
                     fullWidth
-                    label="ملاحظات"
+                    label="ملاحظات طبية"
                     multiline
                     rows={3}
                     {...field}

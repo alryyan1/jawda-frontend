@@ -1,22 +1,22 @@
-import React from 'react';
-import { View, Image, Text, StyleSheet } from '@react-pdf/renderer';
-import type { PdfSetting } from '@/types/pdfSettings';
-import { getAmiriFont } from '@/lib/pdfFonts';
+import React from "react";
+import { View, Image, Text, StyleSheet } from "@react-pdf/renderer";
+import type { PdfSetting } from "@/types/pdfSettings";
+import { getAmiriFont } from "@/lib/pdfFonts";
 
 interface PdfHeaderProps {
   settings: PdfSetting | null;
 }
 
 const PdfHeader: React.FC<PdfHeaderProps> = ({ settings }) => {
-  const fontFamily = settings?.font_family || 'Amiri';
-  const fontName = fontFamily === 'Amiri' ? getAmiriFont() : fontFamily;
-
+  const fontFamily = settings?.font_family || "Amiri";
+  const fontName = fontFamily === "Amiri" ? getAmiriFont() : fontFamily;
+  console.log(settings,'inside pdf header');
   // If header image exists, display it full width
-  if (settings?.header_image_path) {
+  if (settings?.header_image_url || settings?.header_image_path) {
     return (
       <View style={styles.headerImageContainer}>
         <Image
-          src={settings.header_image_url || ''}
+          src={settings.header_image_url || settings.header_image_path || ""}
           style={styles.headerImage}
         />
       </View>
@@ -26,19 +26,25 @@ const PdfHeader: React.FC<PdfHeaderProps> = ({ settings }) => {
   // Otherwise, display hospital name and logo
   return (
     <View style={styles.headerContainer}>
-      {settings?.logo_path && (
+      {(settings?.logo_url || settings?.logo_path) && (
         <View
           style={[
             styles.logoContainer,
-            settings.logo_position === 'left' ? styles.logoLeft : styles.logoRight,
+            settings.logo_position === "left"
+              ? styles.logoLeft
+              : styles.logoRight,
           ]}
         >
           <Image
-            src={settings.logo_url || ''}
+            src={settings.logo_url || settings.logo_path || ""}
             style={[
               styles.logo,
-              settings.logo_width && { width: `${settings.logo_width}mm` },
-              settings.logo_height && { height: `${settings.logo_height}mm` },
+              ...(settings.logo_width
+                ? [{ width: `${settings.logo_width}mm` }]
+                : []),
+              ...(settings.logo_height
+                ? [{ height: `${settings.logo_height}mm` }]
+                : []),
             ]}
           />
         </View>
@@ -56,48 +62,48 @@ const PdfHeader: React.FC<PdfHeaderProps> = ({ settings }) => {
 
 const styles = StyleSheet.create({
   headerImageContainer: {
-    width: '100%',
+    width: "100%",
     marginBottom: 10,
   },
   headerImage: {
-    width: '100%',
-    objectFit: 'contain',
+    width: "100%",
+    objectFit: "contain",
   },
   headerContainer: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 10,
     paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: "#e0e0e0",
   },
   logoContainer: {
     flexShrink: 0,
   },
   logoLeft: {
-    marginRight: 'auto',
+    marginRight: "auto",
     marginLeft: 0,
   },
   logoRight: {
-    marginLeft: 'auto',
+    marginLeft: "auto",
     marginRight: 0,
   },
   logo: {
-    maxWidth: '50mm',
-    maxHeight: '30mm',
-    objectFit: 'contain',
+    maxWidth: "50mm",
+    maxHeight: "30mm",
+    objectFit: "contain",
   },
   hospitalNameContainer: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   hospitalName: {
     fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'right',
-    color: '#000',
+    fontWeight: "bold",
+    textAlign: "right",
+    color: "#000",
   },
 });
 

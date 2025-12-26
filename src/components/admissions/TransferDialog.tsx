@@ -164,7 +164,7 @@ export default function TransferDialog({ open, onClose, admission }: TransferDia
               render={({ field }) => (
                 <TextField
                   fullWidth
-                  label="ملاحظات"
+                  label="ملاحظات طبية"
                   multiline
                   rows={3}
                   {...field}

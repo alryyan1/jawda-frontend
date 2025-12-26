@@ -121,7 +121,7 @@ export default function AdmissionVitalSignsPdf({
             <Text style={staticStyles.value}>{admission.patient?.name || '-'}</Text>
           </View>
           <View style={dynamicStyles.row}>
-            <Text style={staticStyles.label}>تاريخ التنويم:</Text>
+            <Text style={staticStyles.label}>تاريخ القبول:</Text>
             <Text style={staticStyles.value}>{admission.admission_date || '-'}</Text>
           </View>
         </View>

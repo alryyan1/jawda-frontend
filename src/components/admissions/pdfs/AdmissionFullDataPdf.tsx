@@ -163,7 +163,7 @@ export default function AdmissionFullDataPdf({
         <View style={staticStyles.section}>
           <Text style={dynamicStyles.sectionTitle}>تفاصيل التنويم</Text>
           <View style={dynamicStyles.row}>
-            <Text style={staticStyles.label}>تاريخ التنويم:</Text>
+            <Text style={staticStyles.label}>تاريخ القبول:</Text>
             <Text style={staticStyles.value}>{admission.admission_date || '-'}</Text>
           </View>
           {admission.days_admitted !== undefined && (
@@ -176,7 +176,7 @@ export default function AdmissionFullDataPdf({
 
         {/* Services */}
         <View style={staticStyles.section}>
-          <Text style={dynamicStyles.sectionTitle}>الخدمات المطلوبة</Text>
+          <Text style={dynamicStyles.sectionTitle}>الخدمات الطبية المطلوبة</Text>
           {services.length > 0 ? (
             <View style={staticStyles.table}>
               <View style={dynamicStyles.tableHeader}>

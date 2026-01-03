@@ -1,4 +1,5 @@
 // src/main.tsx
+import { Buffer } from 'buffer';
 import { Suspense } from 'react';
 import ReactDOM from 'react-dom/client';
 import { RouterProvider } from 'react-router-dom';
@@ -11,8 +12,20 @@ import { CacheProvider } from '@emotion/react';
 import createCache from '@emotion/cache';
 import { prefixer } from 'stylis';
 import rtlPlugin from 'stylis-plugin-rtl';
+import { preRegisterAllFonts } from './lib/pdfFonts';
 import './index.css';
 // i18n removed
+
+// Make Buffer available globally for react-pdf
+if (typeof window !== 'undefined') {
+  (window as any).Buffer = Buffer;
+  (window as any).global = window;
+  
+  // Pre-register all PDF fonts on app load to avoid delays
+  preRegisterAllFonts().catch((error) => {
+    console.warn('Failed to pre-register PDF fonts:', error);
+  });
+}
 
 const queryClient = new QueryClient(); // Create a client
 

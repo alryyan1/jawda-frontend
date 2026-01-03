@@ -89,7 +89,9 @@ export default function AdmissionDetailsPage() {
               <Button component={Link} to="/admissions" startIcon={<ArrowLeft />} variant="outlined" size="small">
                 رجوع
               </Button>
-              <Typography variant="h5">لوحة تحكم التنويم</Typography>
+              <Typography variant="h5">
+                لوحة تحكم التنويم {admissionData && `- رقم: ${admissionData.id}`}
+              </Typography>
             </Box>
           }
           action={

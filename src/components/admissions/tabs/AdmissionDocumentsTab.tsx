@@ -22,6 +22,15 @@ import {
   generateFullAdmissionPdf,
   generateFilePdf,
   generateLedgerPdf,
+  generateSummaryPdf,
+  generateAdditionalSignsFormPdf,
+  generateSugarAcetoneChartPdf,
+  generateTreatmentSheetPdf,
+  generateMedicationDoseFormPdf,
+  generateObservationSheetPdf,
+  generateOperationSheetPdf,
+  generateClaimFormPdf,
+  generateAdmissionDischargeFormPdf,
   openPdfInNewTab,
 } from "@/services/admissionPdfService";
 import { getAdmissionServices } from "@/services/admissionServiceService";
@@ -49,7 +58,7 @@ export default function AdmissionDocumentsTab({
   };
 
   const handleGeneratePdf = async (
-    type: "services" | "patient" | "vital-signs" | "full" | "file" | "ledger"
+    type: "services" | "patient" | "vital-signs" | "full" | "file" | "ledger" | "summary" | "additional-signs" | "sugar-acetone" | "treatment-sheet" | "medication-dose" | "observation-sheet" | "operation-sheet" | "claim-form" | "admission-discharge-form"
   ) => {
     setGeneratingPdf(type);
     handlePdfMenuClose();
@@ -96,6 +105,33 @@ export default function AdmissionDocumentsTab({
           blob = await generateLedgerPdf(admission, ledger);
           break;
         }
+        case "summary":
+          blob = await generateSummaryPdf(admission);
+          break;
+        case "additional-signs":
+          blob = await generateAdditionalSignsFormPdf(admission);
+          break;
+        case "sugar-acetone":
+          blob = await generateSugarAcetoneChartPdf(admission);
+          break;
+        case "treatment-sheet":
+          blob = await generateTreatmentSheetPdf(admission);
+          break;
+        case "medication-dose":
+          blob = await generateMedicationDoseFormPdf(admission);
+          break;
+        case "observation-sheet":
+          blob = await generateObservationSheetPdf(admission);
+          break;
+        case "operation-sheet":
+          blob = await generateOperationSheetPdf(admission);
+          break;
+        case "claim-form":
+          blob = await generateClaimFormPdf(admission);
+          break;
+        case "admission-discharge-form":
+          blob = await generateAdmissionDischargeFormPdf(admission);
+          break;
       }
 
       openPdfInNewTab(blob);
@@ -123,6 +159,15 @@ export default function AdmissionDocumentsTab({
     { type: "full" as const, label: "التقرير الكامل", icon: FileText },
     { type: "file" as const, label: "ملف التنويم", icon: FileText },
     { type: "ledger" as const, label: "كشف الحساب", icon: FileText },
+    { type: "summary" as const, label: "ملخص التنويم", icon: FileText },
+    { type: "additional-signs" as const, label: "نموذج العلامات الإضافية", icon: FileText },
+    { type: "sugar-acetone" as const, label: "نموذج السكر والأسيتون", icon: FileText },
+    { type: "treatment-sheet" as const, label: "نموذج العلاج", icon: FileText },
+    { type: "medication-dose" as const, label: "نموذج الجرعات", icon: FileText },
+    { type: "observation-sheet" as const, label: "نموذج الملاحظات", icon: FileText },
+    { type: "operation-sheet" as const, label: "نموذج العملية", icon: FileText },
+    { type: "claim-form" as const, label: "نموذج المطالبة", icon: FileText },
+    { type: "admission-discharge-form" as const, label: "استمارة الدخول والخروج", icon: FileText },
   ];
 
   return (

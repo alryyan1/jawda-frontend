@@ -10,3 +10,4 @@ export default function AdmissionVitalSignsTab({ admissionId }: AdmissionVitalSi
 }
 
 
+

@@ -253,6 +253,7 @@ const PdfSettingsPage: React.FC = () => {
                     <InputLabel>اسم الخط</InputLabel>
                     <Select {...field} label="اسم الخط">
                       <MenuItem value="Amiri">Amiri</MenuItem>
+                      <MenuItem value="Arial">Arial</MenuItem>
                       <MenuItem value="Helvetica">Helvetica</MenuItem>
                       <MenuItem value="Times-Roman">Times-Roman</MenuItem>
                       <MenuItem value="Courier">Courier</MenuItem>

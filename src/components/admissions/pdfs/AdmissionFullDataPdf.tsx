@@ -1,6 +1,6 @@
 import React from 'react';
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
-import { getAmiriFont } from '@/lib/pdfFonts';
+// Font is registered dynamically based on settings
 import type { Admission, AdmissionRequestedService, AdmissionVitalSign } from '@/types/admissions';
 import type { PdfSetting } from '@/types/pdfSettings';
 import { formatNumber } from '@/lib/utils';
@@ -49,7 +49,7 @@ export default function AdmissionFullDataPdf({
   const totalBalance = totalDebit - totalCredit;
 
   const fontFamily = settings?.font_family || 'Amiri';
-  const fontName = fontFamily === 'Amiri' ? getAmiriFont() : fontFamily;
+  const fontName = fontFamily; // Font is registered dynamically before PDF generation
   const fontSize = settings?.font_size || 10;
 
   const dynamicStyles = StyleSheet.create({
@@ -163,7 +163,7 @@ export default function AdmissionFullDataPdf({
         <View style={staticStyles.section}>
           <Text style={dynamicStyles.sectionTitle}>تفاصيل التنويم</Text>
           <View style={dynamicStyles.row}>
-            <Text style={staticStyles.label}>تاريخ القبول:</Text>
+            <Text style={staticStyles.label}>تاريخ التنويم:</Text>
             <Text style={staticStyles.value}>{admission.admission_date || '-'}</Text>
           </View>
           {admission.days_admitted !== undefined && (

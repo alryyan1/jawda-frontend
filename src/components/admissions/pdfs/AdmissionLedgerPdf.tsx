@@ -1,6 +1,6 @@
 import React from 'react';
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
-import { getAmiriFont } from '@/lib/pdfFonts';
+// Font is registered dynamically based on settings
 import type { Admission, AdmissionLedger } from '@/types/admissions';
 import type { PdfSetting } from '@/types/pdfSettings';
 import { formatNumber } from '@/lib/utils';
@@ -58,7 +58,7 @@ export default function AdmissionLedgerPdf({
   settings,
 }: AdmissionLedgerPdfProps) {
   const fontFamily = settings?.font_family || 'Amiri';
-  const fontName = fontFamily === 'Amiri' ? getAmiriFont() : fontFamily;
+  const fontName = fontFamily; // Font is registered dynamically before PDF generation
   const fontSize = settings?.font_size || 10;
 
   const dynamicStyles = StyleSheet.create({
@@ -137,7 +137,7 @@ export default function AdmissionLedgerPdf({
             <Text style={staticStyles.value}>{admission.id || '-'}</Text>
           </View>
           <View style={dynamicStyles.row}>
-            <Text style={staticStyles.label}>تاريخ القبول:</Text>
+            <Text style={staticStyles.label}>تاريخ التنويم:</Text>
             <Text style={staticStyles.value}>{admission.admission_date || '-'}</Text>
           </View>
           <View style={dynamicStyles.row}>
@@ -226,4 +226,5 @@ export default function AdmissionLedgerPdf({
     </Document>
   );
 }
+
 

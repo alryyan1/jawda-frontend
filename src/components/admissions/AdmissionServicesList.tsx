@@ -1,6 +1,6 @@
 // src/components/admissions/AdmissionServicesList.tsx
 import * as React from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import type { AdmissionRequestedService } from "@/types/admissions";
 import {
@@ -81,6 +81,27 @@ const AdmissionServicesList: React.FC<AdmissionServicesListProps> = ({
   };
 
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+
+  // Keyboard shortcut: Plus key to open add dialog
+  useEffect(() => {
+    const handleKeyPress = (event: KeyboardEvent) => {
+      // Check if Plus key is pressed (both + and = keys on keyboard)
+      if (event.key === '+' || event.key === '=' || (event.shiftKey && event.key === '=')) {
+        // Don't trigger if user is typing in an input field
+        const target = event.target as HTMLElement;
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+          return;
+        }
+        event.preventDefault();
+        setAddDialogOpen(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => {
+      window.removeEventListener('keydown', handleKeyPress);
+    };
+  }, []);
   
   // Row options dialog
   const [isRowOptionsDialogOpen, setIsRowOptionsDialogOpen] = useState(false);

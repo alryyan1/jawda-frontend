@@ -1,6 +1,6 @@
 import React from 'react';
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
-import { getAmiriFont } from '@/lib/pdfFonts';
+// Font is registered dynamically based on settings
 import type { Admission } from '@/types/admissions';
 import type { PdfSetting } from '@/types/pdfSettings';
 import PdfHeader from './PdfHeader';
@@ -46,7 +46,7 @@ export default function AdmissionPatientDetailsPdf({
       : '';
 
   const fontFamily = settings?.font_family || 'Amiri';
-  const fontName = fontFamily === 'Amiri' ? getAmiriFont() : fontFamily;
+  const fontName = fontFamily; // Font is registered dynamically before PDF generation
   const fontSize = settings?.font_size || 10;
 
   const dynamicStyles = StyleSheet.create({
@@ -123,11 +123,11 @@ export default function AdmissionPatientDetailsPdf({
         <View style={staticStyles.section}>
           <Text style={dynamicStyles.sectionTitle}>تفاصيل التنويم</Text>
           <View style={dynamicStyles.row}>
-            <Text style={staticStyles.label}>تاريخ القبول:</Text>
+            <Text style={staticStyles.label}>تاريخ التنويم:</Text>
             <Text style={staticStyles.value}>{admission.admission_date || '-'}</Text>
           </View>
           <View style={dynamicStyles.row}>
-            <Text style={staticStyles.label}>وقت القبول:</Text>
+            <Text style={staticStyles.label}>وقت التنويم:</Text>
             <Text style={staticStyles.value}>{admission.admission_time || '-'}</Text>
           </View>
           {admission.discharge_date && (
@@ -161,7 +161,7 @@ export default function AdmissionPatientDetailsPdf({
             <Text style={staticStyles.value}>{admission.doctor?.name || '-'}</Text>
           </View>
           <View style={dynamicStyles.row}>
-            <Text style={staticStyles.label}>سبب القبول:</Text>
+            <Text style={staticStyles.label}>سبب التنويم:</Text>
             <Text style={staticStyles.value}>{admission.admission_reason || '-'}</Text>
           </View>
           <View style={dynamicStyles.row}>

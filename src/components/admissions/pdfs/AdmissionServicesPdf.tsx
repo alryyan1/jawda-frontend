@@ -1,6 +1,6 @@
 import React from 'react';
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
-import { getAmiriFont } from '@/lib/pdfFonts';
+// Font is registered dynamically based on settings
 import type { Admission, AdmissionRequestedService } from '@/types/admissions';
 import type { PdfSetting } from '@/types/pdfSettings';
 import { formatNumber } from '@/lib/utils';
@@ -44,7 +44,7 @@ export default function AdmissionServicesPdf({
   const totalNetPayable = services.reduce((sum, s) => sum + (s.net_payable_by_patient || 0), 0);
 
   const fontFamily = settings?.font_family || 'Amiri';
-  const fontName = fontFamily === 'Amiri' ? getAmiriFont() : fontFamily;
+  const fontName = fontFamily; // Font is registered dynamically before PDF generation
   const fontSize = settings?.font_size || 10;
 
   const dynamicStyles = StyleSheet.create({
@@ -109,7 +109,7 @@ export default function AdmissionServicesPdf({
             <Text style={staticStyles.value}>{admission.patient?.name || '-'}</Text>
           </View>
           <View style={dynamicStyles.row}>
-            <Text style={staticStyles.label}>تاريخ القبول:</Text>
+            <Text style={staticStyles.label}>تاريخ التنويم:</Text>
             <Text style={staticStyles.value}>{admission.admission_date || '-'}</Text>
           </View>
           <View style={dynamicStyles.row}>

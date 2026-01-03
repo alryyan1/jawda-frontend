@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from '@react-pdf/renderer';
 import type { PdfSetting } from '@/types/pdfSettings';
-import { getAmiriFont } from '@/lib/pdfFonts';
+// Font is registered dynamically based on settings
 
 interface PdfFooterProps {
   settings: PdfSetting | null;
@@ -9,7 +9,7 @@ interface PdfFooterProps {
 
 const PdfFooter: React.FC<PdfFooterProps> = ({ settings }) => {
   const fontFamily = settings?.font_family || 'Amiri';
-  const fontName = fontFamily === 'Amiri' ? getAmiriFont() : fontFamily;
+  const fontName = fontFamily; // Font is registered dynamically before PDF generation
   const fontSize = settings?.font_size || 10;
 
   if (!settings?.footer_phone && !settings?.footer_address && !settings?.footer_email) {
@@ -21,17 +21,17 @@ const PdfFooter: React.FC<PdfFooterProps> = ({ settings }) => {
       <View style={styles.footerContent}>
         {settings.footer_phone && (
           <Text style={[styles.footerText, { fontFamily: fontName, fontSize }]}>
-            الهاتف: {settings.footer_phone}
+            الهاتف: {String(settings.footer_phone || '')}
           </Text>
         )}
         {settings.footer_email && (
           <Text style={[styles.footerText, { fontFamily: fontName, fontSize }]}>
-            البريد الإلكتروني: {settings.footer_email}
+            البريد الإلكتروني: {String(settings.footer_email || '')}
           </Text>
         )}
         {settings.footer_address && (
           <Text style={[styles.footerText, { fontFamily: fontName, fontSize }]}>
-            العنوان: {settings.footer_address}
+            العنوان: {String(settings.footer_address || '')}
           </Text>
         )}
       </View>
@@ -58,5 +58,6 @@ const styles = StyleSheet.create({
 });
 
 export default PdfFooter;
+
 
 

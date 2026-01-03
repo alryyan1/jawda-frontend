@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { getAdmissions } from "@/services/admissionService";
 import type { Admission } from "@/types/admissions";
@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 
 export default function AdmissionsListPage() {
+  const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
@@ -141,14 +142,23 @@ export default function AdmissionsListPage() {
                 <TableCell>القسم</TableCell>
                 <TableCell>الغرفة</TableCell>
                 <TableCell>السرير</TableCell>
-                <TableCell>تاريخ القبول</TableCell>
+                <TableCell>تاريخ التنويم</TableCell>
                 <TableCell>الحالة</TableCell>
                 <TableCell align="center">الإجراءات</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {data?.data.map((admission) => (
-                <TableRow key={admission.id}>
+                <TableRow 
+                  key={admission.id}
+                  onClick={() => navigate(`/admissions/${admission.id}`)}
+                  sx={{ 
+                    cursor: 'pointer',
+                    '&:hover': { 
+                      backgroundColor: 'action.hover' 
+                    } 
+                  }}
+                >
                   <TableCell>{admission.patient?.name || '-'}</TableCell>
                   <TableCell>{admission.ward?.name || '-'}</TableCell>
                   <TableCell>{admission.room?.room_number || '-'}</TableCell>
@@ -161,7 +171,7 @@ export default function AdmissionsListPage() {
                       size="small"
                     />
                   </TableCell>
-                  <TableCell align="center">
+                  <TableCell align="center" onClick={(e) => e.stopPropagation()}>
                     <Button
                       component={Link}
                       to={`/admissions/${admission.id}`}

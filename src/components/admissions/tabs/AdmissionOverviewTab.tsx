@@ -219,6 +219,50 @@ export default function AdmissionOverviewTab({ admission }: AdmissionOverviewTab
                 </Typography>
               </Paper>
             </Box>
+            {admission.provisional_diagnosis && (
+              <Box>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1, fontWeight: 500 }}>
+                  التشخيص المؤقت
+                </Typography>
+                <Paper 
+                  variant="outlined" 
+                  sx={{ 
+                    p: 2, 
+                    bgcolor: 'background.default',
+                    borderRadius: 1,
+                    minHeight: '60px',
+                    display: 'flex',
+                    alignItems: 'flex-start'
+                  }}
+                >
+                  <Typography variant="body2" sx={{ color: 'text.primary', whiteSpace: 'pre-wrap' }}>
+                    {admission.provisional_diagnosis}
+                  </Typography>
+                </Paper>
+              </Box>
+            )}
+            {admission.operations && (
+              <Box>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1, fontWeight: 500 }}>
+                  العمليات (مع التواريخ)
+                </Typography>
+                <Paper 
+                  variant="outlined" 
+                  sx={{ 
+                    p: 2, 
+                    bgcolor: 'background.default',
+                    borderRadius: 1,
+                    minHeight: '60px',
+                    display: 'flex',
+                    alignItems: 'flex-start'
+                  }}
+                >
+                  <Typography variant="body2" sx={{ color: 'text.primary', whiteSpace: 'pre-wrap' }}>
+                    {admission.operations}
+                  </Typography>
+                </Paper>
+              </Box>
+            )}
           </Box>
         </CardContent>
       </Card>

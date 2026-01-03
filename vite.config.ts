@@ -19,7 +19,12 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
       'react-i18next': path.resolve(__dirname, './src/lib/i18n-shim.ts'),
       'i18next': path.resolve(__dirname, './src/lib/i18n-shim.ts'),
+      buffer: 'buffer',
     },
+  },
+  define: {
+    'process.env': {},
+    global: 'globalThis',
   },
   build: {
     // sourcemap: true,
@@ -28,5 +33,12 @@ export default defineConfig({
   // Enable more detailed source maps in development
   css: {
     devSourcemap: true,
+  },
+  optimizeDeps: {
+    esbuildOptions: {
+      define: {
+        global: 'globalThis',
+      },
+    },
   },
 })

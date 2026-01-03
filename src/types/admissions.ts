@@ -90,6 +90,9 @@ export interface Admission {
   notes?: string | null;
   balance?: number;
   days_admitted?: number;
+  // New fields
+  provisional_diagnosis?: string | null;
+  operations?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -106,6 +109,8 @@ export interface AdmissionFormData {
   diagnosis?: string | null;
   doctor_id?: string | undefined;
   notes?: string | null;
+  provisional_diagnosis?: string | null;
+  operations?: string | null;
 }
 
 export interface DischargeFormData {

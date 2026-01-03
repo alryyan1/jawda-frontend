@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
@@ -65,7 +65,7 @@ export default function AddAdmissionServiceDialog({
     },
   });
 
-  const handleAdd = () => {
+  const handleAdd = React.useCallback(() => {
     if (!selectedService) {
       toast.error('يرجى اختيار خدمة');
       return;
@@ -76,7 +76,29 @@ export default function AddAdmissionServiceDialog({
       doctor_id: null,
     };
     addMutation.mutate(formData);
-  };
+  }, [selectedService, addMutation]);
+
+  // Keyboard shortcut: Enter key to submit
+  useEffect(() => {
+    const handleKeyPress = (event: KeyboardEvent) => {
+      if (event.key === 'Enter' && open && selectedService && !addMutation.isPending) {
+        // Don't trigger if user is typing in an input field (except the autocomplete)
+        const target = event.target as HTMLElement;
+        if (target.tagName === 'INPUT' && target.getAttribute('role') !== 'combobox') {
+          return;
+        }
+        event.preventDefault();
+        handleAdd();
+      }
+    };
+
+    if (open) {
+      window.addEventListener('keydown', handleKeyPress);
+      return () => {
+        window.removeEventListener('keydown', handleKeyPress);
+      };
+    }
+  }, [open, selectedService, addMutation.isPending, handleAdd]);
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>

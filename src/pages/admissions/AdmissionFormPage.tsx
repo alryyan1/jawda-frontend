@@ -17,6 +17,10 @@ import {
   Select,
   MenuItem,
   Autocomplete,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import { Loader2, ArrowRight, Plus } from 'lucide-react';
 import type { AdmissionFormData } from '@/types/admissions';
@@ -24,9 +28,9 @@ import { createAdmission } from '@/services/admissionService';
 import { getWardsList } from '@/services/wardService';
 import { getRooms } from '@/services/roomService';
 import { getAvailableBeds } from '@/services/bedService';
-import { searchExistingPatients } from '@/services/patientService';
+import { searchExistingPatients, registerNewPatient } from '@/services/patientService';
 import { getDoctorsList } from '@/services/doctorService';
-import type { PatientSearchResult } from '@/types/patients';
+import type { PatientSearchResult, PatientFormData } from '@/types/patients';
 import type { DoctorStripped } from '@/types/doctors';
 
 type AdmissionFormValues = {
@@ -41,6 +45,8 @@ type AdmissionFormValues = {
   diagnosis: string;
   doctor_id: string;
   notes: string;
+  provisional_diagnosis: string;
+  operations: string;
 };
 
 export default function AdmissionFormPage() {
@@ -50,6 +56,15 @@ export default function AdmissionFormPage() {
   const [selectedPatient, setSelectedPatient] = useState<PatientSearchResult | null>(null);
   const [selectedWardId, setSelectedWardId] = useState<number | null>(null);
   const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
+  const [quickAddDialogOpen, setQuickAddDialogOpen] = useState(false);
+  const [quickAddFormData, setQuickAddFormData] = useState({
+    name: '',
+    phone: '',
+    gender: '' as 'male' | 'female' | '',
+    age_year: '',
+    age_month: '',
+    age_day: '',
+  });
 
   const { data: wards } = useQuery({
     queryKey: ['wardsList'],
@@ -94,6 +109,8 @@ export default function AdmissionFormPage() {
       diagnosis: '',
       doctor_id: '',
       notes: '',
+      provisional_diagnosis: '',
+      operations: '',
     },
   });
   const { control, handleSubmit, watch, setValue } = form;
@@ -130,12 +147,70 @@ export default function AdmissionFormPage() {
     },
   });
 
+  const quickAddPatientMutation = useMutation({
+    mutationFn: async (data: Partial<PatientFormData>) => {
+      // Get first available doctor and shift for quick registration
+      const firstDoctor = doctors?.[0];
+      if (!firstDoctor) {
+        throw new Error('لا يوجد أطباء متاحين');
+      }
+      
+      // Create minimal patient data - backend should handle shift assignment
+      const patientData: PatientFormData = {
+        name: data.name!,
+        phone: data.phone!,
+        gender: data.gender as 'male' | 'female',
+        age_year: data.age_year ? Number(data.age_year) : null,
+        age_month: data.age_month ? Number(data.age_month) : null,
+        age_day: data.age_day ? Number(data.age_day) : null,
+        doctor_id: firstDoctor.id,
+        doctor_shift_id: 1, // Default shift - backend may override
+      };
+      
+      return registerNewPatient(patientData);
+    },
+    onSuccess: (patient) => {
+      toast.success('تم إضافة المريض بنجاح');
+      // Convert patient to PatientSearchResult format and select it
+      const patientResult: PatientSearchResult = {
+        id: patient.id,
+        name: patient.name,
+        phone: patient.phone || null,
+        gender: patient.gender,
+        age_year: patient.age_year || null,
+      };
+      setSelectedPatient(patientResult);
+      setValue('patient_id', String(patient.id));
+      setQuickAddDialogOpen(false);
+      setQuickAddFormData({
+        name: '',
+        phone: '',
+        gender: '',
+        age_year: '',
+        age_month: '',
+        age_day: '',
+      });
+      queryClient.invalidateQueries({ queryKey: ['patientSearch'] });
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'فشل إضافة المريض');
+    },
+  });
+
+  const handleQuickAddSubmit = () => {
+    if (!quickAddFormData.name || !quickAddFormData.phone || !quickAddFormData.gender) {
+      toast.error('يرجى إدخال الاسم والهاتف والنوع');
+      return;
+    }
+    quickAddPatientMutation.mutate(quickAddFormData);
+  };
+
   const onSubmit = (data: AdmissionFormValues) => {
     if (!selectedPatient) return toast.error('يرجى اختيار المريض');
     if (!data.ward_id) return toast.error('يرجى اختيار القسم');
     if (!data.room_id) return toast.error('يرجى اختيار الغرفة');
     if (!data.bed_id) return toast.error('يرجى اختيار السرير');
-    if (!data.admission_date) return toast.error('يرجى اختيار تاريخ القبول');
+    if (!data.admission_date) return toast.error('يرجى اختيار تاريخ التنويم');
 
     // Convert time from HH:mm to H:i:s format
     let formattedTime: string | null = null;
@@ -163,6 +238,8 @@ export default function AdmissionFormPage() {
       diagnosis: data.diagnosis || null,
       doctor_id: data.doctor_id || undefined,
       notes: data.notes || null,
+      provisional_diagnosis: data.provisional_diagnosis || null,
+      operations: data.operations || null,
     };
 
     mutation.mutate(submissionData);
@@ -192,19 +269,40 @@ export default function AdmissionFormPage() {
             <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600, color: 'text.secondary' }}>
               معلومات المريض
             </Typography>
-            <Autocomplete
-              options={patientSearchResults || []}
-              getOptionLabel={(option) => option.autocomplete_label || `${option.name} - ${option.phone || ''}`}
-              loading={isSearchingPatients}
-              onInputChange={(_, value) => setPatientSearchTerm(value)}
-              onChange={(_, value) => {
-                setSelectedPatient(value);
-                if (value) setValue('patient_id', String(value.id));
-              }}
-              renderInput={(params) => (
-                <TextField {...params} label="البحث عن المريض" placeholder="ابدأ بكتابة اسم أو رقم هاتف المريض" />
-              )}
-            />
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+              <Box sx={{ flex: 1 }}>
+                <Autocomplete
+                  options={patientSearchResults || []}
+                  getOptionLabel={(option) => option.autocomplete_label || `${option.name} - ${option.phone || ''}`}
+                  loading={isSearchingPatients}
+                  value={selectedPatient}
+                  onInputChange={(_, value) => setPatientSearchTerm(value)}
+                  onChange={(_, value) => {
+                    setSelectedPatient(value);
+                    if (value) setValue('patient_id', String(value.id));
+                  }}
+                  renderInput={(params) => (
+                    <TextField {...params} label="البحث عن المريض" placeholder="ابدأ بكتابة اسم أو رقم هاتف المريض" />
+                  )}
+                />
+              </Box>
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<Plus size={16} />}
+                onClick={() => setQuickAddDialogOpen(true)}
+                sx={{ 
+                  minWidth: 'auto',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                  mt: 0.5,
+                  height: '56px'
+                }}
+                disabled={mutation.isPending}
+              >
+                إضافة مريض جديد
+              </Button>
+            </Box>
           </Box>
 
           {/* Location Section */}
@@ -260,10 +358,10 @@ export default function AdmissionFormPage() {
               تفاصيل التنويم
             </Typography>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' }, gap: 2 }}>
-              <Controller name="admission_date" control={control} rules={{ required: 'تاريخ القبول مطلوب' }} render={({ field, fieldState }) => (
+              <Controller name="admission_date" control={control} rules={{ required: 'تاريخ التنويم مطلوب' }} render={({ field, fieldState }) => (
                 <TextField
                   fullWidth
-                  label="تاريخ القبول"
+                  label="تاريخ التنويم"
                   type="date"
                   value={field.value ? field.value.toISOString().split('T')[0] : ''}
                   onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : null)}
@@ -276,7 +374,7 @@ export default function AdmissionFormPage() {
               <Controller name="admission_time" control={control} render={({ field }) => (
                 <TextField
                   fullWidth
-                  label="وقت القبول"
+                  label="وقت التنويم"
                   type="time"
                   {...field}
                   InputLabelProps={{ shrink: true }}
@@ -296,10 +394,34 @@ export default function AdmissionFormPage() {
             </Typography>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
               <Controller name="admission_reason" control={control} render={({ field }) => (
-                <TextField fullWidth label="سبب القبول" multiline rows={3} {...field} disabled={mutation.isPending} />
+                <TextField fullWidth label="سبب التنويم" multiline rows={3} {...field} disabled={mutation.isPending} />
               )} />
               <Controller name="diagnosis" control={control} render={({ field }) => (
                 <TextField fullWidth label="التشخيص الطبي" multiline rows={3} {...field} disabled={mutation.isPending} />
+              )} />
+            </Box>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2, mt: 2 }}>
+              <Controller name="provisional_diagnosis" control={control} render={({ field }) => (
+                <TextField 
+                  fullWidth 
+                  label="التشخيص المؤقت" 
+                  multiline 
+                  rows={3} 
+                  {...field} 
+                  disabled={mutation.isPending}
+                  placeholder="أدخل التشخيص المؤقت..."
+                />
+              )} />
+              <Controller name="operations" control={control} render={({ field }) => (
+                <TextField 
+                  fullWidth 
+                  label="العمليات (مع التواريخ)" 
+                  multiline 
+                  rows={3} 
+                  {...field} 
+                  disabled={mutation.isPending}
+                  placeholder="اسم العملية - التاريخ (مثال: عملية القلب - 2024-01-15)"
+                />
               )} />
             </Box>
           </Box>
@@ -374,6 +496,81 @@ export default function AdmissionFormPage() {
           </Box>
         </Box>
       </CardContent>
+
+      {/* Quick Add Patient Dialog */}
+      <Dialog open={quickAddDialogOpen} onClose={() => setQuickAddDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>إضافة مريض جديد</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
+            <TextField
+              fullWidth
+              label="اسم المريض"
+              value={quickAddFormData.name}
+              onChange={(e) => setQuickAddFormData({ ...quickAddFormData, name: e.target.value })}
+              required
+              disabled={quickAddPatientMutation.isPending}
+            />
+            <TextField
+              fullWidth
+              label="رقم الهاتف"
+              value={quickAddFormData.phone}
+              onChange={(e) => setQuickAddFormData({ ...quickAddFormData, phone: e.target.value })}
+              required
+              disabled={quickAddPatientMutation.isPending}
+            />
+            <FormControl fullWidth required>
+              <InputLabel>النوع</InputLabel>
+              <Select
+                value={quickAddFormData.gender}
+                label="النوع"
+                onChange={(e) => setQuickAddFormData({ ...quickAddFormData, gender: e.target.value as 'male' | 'female' })}
+                disabled={quickAddPatientMutation.isPending}
+              >
+                <MenuItem value="male">ذكر</MenuItem>
+                <MenuItem value="female">أنثى</MenuItem>
+              </Select>
+            </FormControl>
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 2 }}>
+              <TextField
+                fullWidth
+                label="العمر (سنوات)"
+                type="number"
+                value={quickAddFormData.age_year}
+                onChange={(e) => setQuickAddFormData({ ...quickAddFormData, age_year: e.target.value })}
+                disabled={quickAddPatientMutation.isPending}
+              />
+              <TextField
+                fullWidth
+                label="العمر (أشهر)"
+                type="number"
+                value={quickAddFormData.age_month}
+                onChange={(e) => setQuickAddFormData({ ...quickAddFormData, age_month: e.target.value })}
+                disabled={quickAddPatientMutation.isPending}
+              />
+              <TextField
+                fullWidth
+                label="العمر (أيام)"
+                type="number"
+                value={quickAddFormData.age_day}
+                onChange={(e) => setQuickAddFormData({ ...quickAddFormData, age_day: e.target.value })}
+                disabled={quickAddPatientMutation.isPending}
+              />
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setQuickAddDialogOpen(false)} disabled={quickAddPatientMutation.isPending}>
+            إلغاء
+          </Button>
+          <Button
+            onClick={handleQuickAddSubmit}
+            variant="contained"
+            disabled={quickAddPatientMutation.isPending || !quickAddFormData.name || !quickAddFormData.phone || !quickAddFormData.gender}
+          >
+            {quickAddPatientMutation.isPending ? <CircularProgress size={20} /> : 'إضافة'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Card>
   );
 }

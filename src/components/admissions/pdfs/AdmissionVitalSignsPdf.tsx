@@ -1,6 +1,6 @@
 import React from 'react';
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
-import { getAmiriFont } from '@/lib/pdfFonts';
+// Font is registered dynamically based on settings
 import type { Admission, AdmissionVitalSign } from '@/types/admissions';
 import type { PdfSetting } from '@/types/pdfSettings';
 import PdfHeader from './PdfHeader';
@@ -49,7 +49,7 @@ export default function AdmissionVitalSignsPdf({
   settings,
 }: AdmissionVitalSignsPdfProps) {
   const fontFamily = settings?.font_family || 'Amiri';
-  const fontName = fontFamily === 'Amiri' ? getAmiriFont() : fontFamily;
+  const fontName = fontFamily; // Font is registered dynamically before PDF generation
   const fontSize = settings?.font_size || 10;
 
   const dynamicStyles = StyleSheet.create({
@@ -121,7 +121,7 @@ export default function AdmissionVitalSignsPdf({
             <Text style={staticStyles.value}>{admission.patient?.name || '-'}</Text>
           </View>
           <View style={dynamicStyles.row}>
-            <Text style={staticStyles.label}>تاريخ القبول:</Text>
+            <Text style={staticStyles.label}>تاريخ التنويم:</Text>
             <Text style={staticStyles.value}>{admission.admission_date || '-'}</Text>
           </View>
         </View>

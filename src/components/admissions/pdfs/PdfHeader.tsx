@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Image, Text, StyleSheet } from "@react-pdf/renderer";
 import type { PdfSetting } from "@/types/pdfSettings";
-import { getAmiriFont } from "@/lib/pdfFonts";
+// Font is registered dynamically based on settings
 
 interface PdfHeaderProps {
   settings: PdfSetting | null;
@@ -9,7 +9,7 @@ interface PdfHeaderProps {
 
 const PdfHeader: React.FC<PdfHeaderProps> = ({ settings }) => {
   const fontFamily = settings?.font_family || "Amiri";
-  const fontName = fontFamily === "Amiri" ? getAmiriFont() : fontFamily;
+  const fontName = fontFamily; // Font is registered dynamically before PDF generation
   console.log(settings,'inside pdf header');
   // If header image exists, display it full width
   if (settings?.header_image_url || settings?.header_image_path) {
@@ -52,7 +52,7 @@ const PdfHeader: React.FC<PdfHeaderProps> = ({ settings }) => {
       {settings?.hospital_name && (
         <View style={styles.hospitalNameContainer}>
           <Text style={[styles.hospitalName, { fontFamily: fontName }]}>
-            {settings.hospital_name}
+            {String(settings.hospital_name || '')}
           </Text>
         </View>
       )}
@@ -108,4 +108,5 @@ const styles = StyleSheet.create({
 });
 
 export default PdfHeader;
+
 

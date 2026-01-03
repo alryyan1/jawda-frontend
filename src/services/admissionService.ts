@@ -40,6 +40,8 @@ export const createAdmission = async (data: AdmissionFormData): Promise<{ data: 
     diagnosis: data.diagnosis || null,
     doctor_id: data.doctor_id ? parseInt(String(data.doctor_id)) : null,
     notes: data.notes || null,
+    provisional_diagnosis: data.provisional_diagnosis || null,
+    operations: data.operations || null,
   };
   const response = await apiClient.post<{ data: Admission }>(API_URL, payload);
   return response.data;

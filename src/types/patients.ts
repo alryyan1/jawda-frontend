@@ -31,6 +31,9 @@ export interface PatientFormData {
   expire_date?: Date | undefined; // For shadcn DatePicker
   // Discount comment (patient-level)
   discount_comment?: string | null;
+  // New fields
+  social_status?: 'single' | 'married' | 'widowed' | 'divorced' | null;
+  income_source?: string | null;
 }
 // src/types/patients.ts
 // ... (Patient, PatientFormData) ...
@@ -264,6 +267,9 @@ export interface Patient {
   guarantor?: string | null; // If you want to display this too
   // Patient-level discount comment
   discount_comment?: string | null;
+  // New fields
+  social_status?: 'single' | 'married' | 'widowed' | 'divorced' | null;
+  income_source?: string | null;
 
   // ... other existing patient fields ...
   created_at: string;

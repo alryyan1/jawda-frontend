@@ -85,6 +85,8 @@ export interface Admission {
   status: 'admitted' | 'discharged' | 'transferred';
   doctor_id?: number | null;
   doctor?: DoctorStripped;
+  specialist_doctor_id?: number | null;
+  specialist_doctor?: DoctorStripped;
   user_id: number;
   user?: UserStripped;
   notes?: string | null;
@@ -108,6 +110,7 @@ export interface AdmissionFormData {
   admission_reason?: string | null;
   diagnosis?: string | null;
   doctor_id?: string | undefined;
+  specialist_doctor_id?: string | undefined;
   notes?: string | null;
   provisional_diagnosis?: string | null;
   operations?: string | null;
@@ -340,6 +343,41 @@ export interface AdmissionServiceCostFormData {
     sub_service_cost_id?: number | null;
     amount: number;
   }>;
+}
+
+// Admission Requested Lab Test Types
+export interface AdmissionRequestedLabTest {
+  id: number;
+  admission_id: number;
+  admission?: Admission;
+  main_test_id: number;
+  main_test?: import('./labTests').MainTestStripped;
+  user_id: number;
+  requesting_user?: UserStripped;
+  price: number; // From main_test.price
+  discount: number;
+  discount_per: number;
+  doctor_id?: number | null;
+  performing_doctor?: DoctorStripped;
+  done: boolean;
+  approval: boolean;
+  created_at: string;
+  updated_at: string;
+  // Calculated fields
+  net_payable_by_patient?: number;
+  balance?: number;
+}
+
+export interface AdmissionRequestedLabTestFormData {
+  main_test_ids: number[];
+  doctor_id?: number | null;
+}
+
+export interface AdmissionRequestedLabTestUpdateData {
+  price?: number;
+  discount?: number;
+  discount_per?: number;
+  doctor_id?: number | null;
 }
 
 export type PaginatedWardsResponse = PaginatedResponse<Ward>;

@@ -21,6 +21,7 @@ import AdmissionVitalSignsTab from "@/components/admissions/tabs/AdmissionVitalS
 import AdmissionServicesTab from "@/components/admissions/tabs/AdmissionServicesTab";
 import AdmissionDocumentsTab from "@/components/admissions/tabs/AdmissionDocumentsTab";
 import AdmissionLedgerTab from "@/components/admissions/tabs/AdmissionLedgerTab";
+import AdmissionLabTestsTab from "@/components/admissions/tabs/AdmissionLabTestsTab";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -89,9 +90,21 @@ export default function AdmissionDetailsPage() {
               <Button component={Link} to="/admissions" startIcon={<ArrowLeft />} variant="outlined" size="small">
                 رجوع
               </Button>
-              <Typography variant="h5">
-                لوحة تحكم التنويم {admissionData && `- رقم: ${admissionData.id}`}
-              </Typography>
+              <Box>
+                <Typography variant="h5">
+                  {admissionData.patient?.name || 'مريض'}
+                  {admissionData.specialist_doctor?.name && (
+                    <Typography component="span" variant="h5" sx={{ color: 'text.secondary', fontWeight: 400 }}>
+                      {' '}({admissionData.specialist_doctor.name})
+                    </Typography>
+                  )}
+                </Typography>
+                {admissionData.admission_date && (
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                    تاريخ التنويم: {admissionData.admission_date}
+                  </Typography>
+                )}
+              </Box>
             </Box>
           }
           action={
@@ -117,6 +130,7 @@ export default function AdmissionDetailsPage() {
               <Tab label="الخدمات الطبية" />
               <Tab label="كشف الحساب" />
               <Tab label="الوثائق" />
+              <Tab label="الفحوصات المختبرية" />
             </Tabs>
           </Box>
           <Box sx={{ flex: 1, overflow: 'hidden' }}>
@@ -134,6 +148,9 @@ export default function AdmissionDetailsPage() {
             </TabPanel>
             <TabPanel value={currentTab} index={4}>
               <AdmissionDocumentsTab admission={admissionData} />
+            </TabPanel>
+            <TabPanel value={currentTab} index={5}>
+              <AdmissionLabTestsTab admissionId={admissionData.id} />
             </TabPanel>
           </Box>
         </CardContent>

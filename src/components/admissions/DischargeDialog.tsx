@@ -30,7 +30,7 @@ export default function DischargeDialog({ open, onClose, admission }: DischargeD
   const form = useForm<DischargeFormData>({
     defaultValues: {
       discharge_date: new Date(),
-      discharge_time: new Date().toTimeString().slice(0, 5),
+      discharge_time: new Date().toTimeString().slice(0, 8), // HH:mm:ss format
       notes: '',
     },
   });

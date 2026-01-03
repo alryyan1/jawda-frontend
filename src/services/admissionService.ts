@@ -63,7 +63,15 @@ export const dischargeAdmission = async (id: number, data: DischargeFormData): P
   if (data.discharge_date) {
     payload.discharge_date = data.discharge_date.toISOString().split('T')[0];
   }
-  if (data.discharge_time !== undefined) payload.discharge_time = data.discharge_time;
+  if (data.discharge_time !== undefined) {
+    // Convert HH:mm to HH:mm:ss format if needed
+    let timeStr = data.discharge_time;
+    if (timeStr && timeStr.length === 5 && timeStr.includes(':')) {
+      // Format is HH:mm, convert to HH:mm:ss
+      timeStr = timeStr + ':00';
+    }
+    payload.discharge_time = timeStr;
+  }
   if (data.notes !== undefined) payload.notes = data.notes;
   
   const response = await apiClient.put<{ data: Admission }>(`${API_URL}/${id}/discharge`, payload);

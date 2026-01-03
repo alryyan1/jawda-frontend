@@ -18,6 +18,7 @@ import {
   FileText,
   ArrowRight,
   ClipboardList,
+  LayoutGrid,
 } from "lucide-react";
 import { getActiveAdmissions } from "@/services/admissionService";
 import { getWardsList } from "@/services/wardService";
@@ -254,6 +255,15 @@ export default function AdmissionsDashboardPage() {
           actionText="إضافة الآن"
         />
 
+        <DashboardCard
+          title="العرض البصري للغرف"
+          description="عرض مرئي لحالة الغرف والأسرّة مع إمكانية نقل المرضى"
+          icon={LayoutGrid}
+          link="/admissions/visual"
+          variant="info"
+          actionText="عرض البصري"
+        />
+
         {/* Settings Section */}
         <div className="col-span-full">
           <div className="flex items-center gap-2 mb-4">
@@ -314,6 +324,12 @@ export default function AdmissionsDashboardPage() {
               <Link to="/admissions/new">
                 <Plus className="h-4 w-4 ml-2" />
                 إضافة تنويم
+              </Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link to="/admissions/visual">
+                <LayoutGrid className="h-4 w-4 ml-2" />
+                العرض البصري
               </Link>
             </Button>
             <Button variant="outline" asChild>

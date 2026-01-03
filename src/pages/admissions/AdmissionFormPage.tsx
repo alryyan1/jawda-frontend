@@ -44,6 +44,7 @@ type AdmissionFormValues = {
   admission_reason: string;
   diagnosis: string;
   doctor_id: string;
+  specialist_doctor_id: string;
   notes: string;
   provisional_diagnosis: string;
   operations: string;
@@ -84,6 +85,7 @@ export default function AdmissionFormPage() {
   });
 
   const [doctorSearchTerm, setDoctorSearchTerm] = useState("");
+  const [specialistDoctorSearchTerm, setSpecialistDoctorSearchTerm] = useState("");
 
   const { data: doctors } = useQuery({
     queryKey: ['doctorsList'],
@@ -108,6 +110,7 @@ export default function AdmissionFormPage() {
       admission_reason: '',
       diagnosis: '',
       doctor_id: '',
+      specialist_doctor_id: '',
       notes: '',
       provisional_diagnosis: '',
       operations: '',
@@ -237,6 +240,7 @@ export default function AdmissionFormPage() {
       admission_reason: data.admission_reason || null,
       diagnosis: data.diagnosis || null,
       doctor_id: data.doctor_id || undefined,
+      specialist_doctor_id: data.specialist_doctor_id || undefined,
       notes: data.notes || null,
       provisional_diagnosis: data.provisional_diagnosis || null,
       operations: data.operations || null,
@@ -382,7 +386,13 @@ export default function AdmissionFormPage() {
                 />
               )} />
               <Controller name="admission_type" control={control} render={({ field }) => (
-                <TextField fullWidth label="نوع التنويم" {...field} disabled={mutation.isPending} />
+                <FormControl fullWidth>
+                  <InputLabel>نوع الإقامة</InputLabel>
+                  <Select {...field} label="نوع الإقامة" disabled={mutation.isPending}>
+                    <MenuItem value="اقامه قصيره">إقامة قصيرة</MenuItem>
+                    <MenuItem value="اقامه طويله">إقامة طويلة</MenuItem>
+                  </Select>
+                </FormControl>
               )} />
             </Box>
           </Box>
@@ -481,6 +491,57 @@ export default function AdmissionFormPage() {
                   إضافة طبيب
                 </Button>
               </Box>
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+                <Box sx={{ flex: 1 }}>
+                  <Controller 
+                    name="specialist_doctor_id" 
+                    control={control} 
+                    render={({ field }) => (
+                      <Autocomplete
+                        fullWidth
+                        options={doctors || []}
+                        getOptionLabel={(option) => option.name || ''}
+                        value={doctors?.find(d => String(d.id) === field.value) || null}
+                        onChange={(_, newValue) => {
+                          field.onChange(newValue ? String(newValue.id) : '');
+                        }}
+                        onInputChange={(_, value) => setSpecialistDoctorSearchTerm(value)}
+                        inputValue={specialistDoctorSearchTerm}
+                        disabled={mutation.isPending}
+                        renderInput={(params) => (
+                          <TextField 
+                            {...params} 
+                            label="الطبيب الأخصائي" 
+                            placeholder="ابحث عن طبيب أخصائي..."
+                          />
+                        )}
+                        noOptionsText="لا يوجد أطباء"
+                      />
+                    )} 
+                  />
+                </Box>
+                <Button
+                  component={Link}
+                  to="/doctors/new"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  variant="outlined"
+                  size="small"
+                  startIcon={<Plus size={16} />}
+                  sx={{ 
+                    minWidth: 'auto',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    mt: 0.5,
+                    height: '56px'
+                  }}
+                  disabled={mutation.isPending}
+                >
+                  إضافة طبيب
+                </Button>
+              </Box>
+            </Box>
+            <Box sx={{ mt: 2 }}>
               <Controller name="notes" control={control} render={({ field }) => (
                 <TextField fullWidth label="ملاحظات طبية" multiline rows={3} {...field} disabled={mutation.isPending} />
               )} />

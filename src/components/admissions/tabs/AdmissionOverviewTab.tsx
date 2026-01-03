@@ -179,6 +179,9 @@ export default function AdmissionOverviewTab({ admission }: AdmissionOverviewTab
             {admission.doctor?.name && (
               <InfoItem label="الطبيب" value={admission.doctor.name} fullWidth />
             )}
+            {admission.specialist_doctor?.name && (
+              <InfoItem label="الطبيب الأخصائي" value={admission.specialist_doctor.name} fullWidth />
+            )}
             <Box>
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1, fontWeight: 500 }}>
                 سبب التنويم

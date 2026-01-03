@@ -96,6 +96,7 @@ import AdmissionsListPage from "./pages/admissions/AdmissionsListPage";
 import AdmissionFormPage from "./pages/admissions/AdmissionFormPage";
 import AdmissionDetailsPage from "./pages/admissions/AdmissionDetailsPage";
 import AdmissionsDashboardPage from "./pages/admissions/AdmissionsDashboardPage";
+import RoomsVisualPage from "./pages/admissions/RoomsVisualPage";
 import WardsListPage from "./pages/settings/wards/WardsListPage";
 import WardFormPage, { WardFormMode } from "./pages/settings/wards/WardFormPage";
 import PdfSettingsPage from "./pages/settings/PdfSettingsPage";
@@ -194,6 +195,10 @@ const router = createBrowserRouter([
               {
                 path: "new",
                 element: <AdmissionFormPage />,
+              },
+              {
+                path: "visual",
+                element: <RoomsVisualPage />,
               },
               {
                 path: ":id",

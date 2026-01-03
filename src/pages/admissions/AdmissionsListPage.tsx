@@ -37,13 +37,21 @@ export default function AdmissionsListPage() {
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [dateFilter, setDateFilter] = useState<string>("");
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['admissions', page, searchTerm, statusFilter],
-    queryFn: () => getAdmissions(page, { 
-      search: searchTerm, 
-      status: statusFilter || undefined 
-    }),
+    queryKey: ['admissions', page, searchTerm, statusFilter, dateFilter],
+    queryFn: () => {
+      const filters: Record<string, string | number | boolean | undefined> = {
+        search: searchTerm || undefined,
+        status: statusFilter || undefined,
+      };
+      if (dateFilter) {
+        filters.date_from = dateFilter;
+        filters.date_to = dateFilter; // Use same date for exact match
+      }
+      return getAdmissions(page, filters);
+    },
     keepPreviousData: true,
   });
 
@@ -116,6 +124,17 @@ export default function AdmissionsListPage() {
               ),
             }}
           />
+          <TextField
+            type="date"
+            label="تاريخ التنويم"
+            value={dateFilter}
+            onChange={(e) => {
+              setDateFilter(e.target.value);
+              setPage(1);
+            }}
+            InputLabelProps={{ shrink: true }}
+            sx={{ minWidth: 200 }}
+          />
           <FormControl sx={{ minWidth: 150 }}>
             <InputLabel>الحالة</InputLabel>
             <Select
@@ -139,6 +158,7 @@ export default function AdmissionsListPage() {
             <TableHead>
               <TableRow>
                 <TableCell>المريض</TableCell>
+                <TableCell>الطبيب الأخصائي</TableCell>
                 <TableCell>القسم</TableCell>
                 <TableCell>الغرفة</TableCell>
                 <TableCell>السرير</TableCell>
@@ -160,6 +180,7 @@ export default function AdmissionsListPage() {
                   }}
                 >
                   <TableCell>{admission.patient?.name || '-'}</TableCell>
+                  <TableCell>{admission.specialist_doctor?.name || '-'}</TableCell>
                   <TableCell>{admission.ward?.name || '-'}</TableCell>
                   <TableCell>{admission.room?.room_number || '-'}</TableCell>
                   <TableCell>{admission.bed?.bed_number || '-'}</TableCell>

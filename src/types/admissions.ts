@@ -268,7 +268,7 @@ export interface AdmissionBalance {
 
 export interface AdmissionLedgerEntry {
   id: string | number;
-  type: 'deposit' | 'service';
+  type: 'debit' | 'credit';
   description: string;
   amount: number;
   is_bank: boolean;
@@ -280,6 +280,8 @@ export interface AdmissionLedgerEntry {
   service_name?: string;
   count?: number;
   balance_after: number;
+  reference_type?: 'service' | 'deposit' | 'manual' | 'lab_test' | null;
+  reference_id?: number | null;
 }
 
 export interface AdmissionTransaction {

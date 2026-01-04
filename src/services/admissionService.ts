@@ -115,6 +115,10 @@ export const addAdmissionTransaction = async (id: number, data: AdmissionTransac
   return response.data;
 };
 
+export const deleteAdmissionTransaction = async (admissionId: number, transactionId: number): Promise<void> => {
+  await apiClient.delete(`${API_URL}/${admissionId}/transactions/${transactionId}`);
+};
+
 // Backward compatibility - redirects to transactions
 export const getAdmissionDeposits = async (id: number): Promise<AdmissionDeposit[]> => {
   const response = await apiClient.get<{ data: AdmissionDeposit[] }>(`${API_URL}/${id}/deposits`);

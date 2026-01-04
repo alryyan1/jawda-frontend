@@ -16,11 +16,8 @@ import {
   DoorOpen,
   Plus,
   Settings,
-  Activity,
-  FileText,
   ArrowRight,
   ClipboardList,
-  LayoutGrid,
 } from "lucide-react";
 import { getActiveAdmissions } from "@/services/admissionService";
 import { getWardsList } from "@/services/wardService";
@@ -119,7 +116,6 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
 };
 
 export default function AdmissionsDashboardPage() {
-  const [visualDialogOpen, setVisualDialogOpen] = useState(false);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
 
   const { data: activeAdmissions, isLoading: isLoadingActive } = useQuery({
@@ -143,7 +139,7 @@ export default function AdmissionsDashboardPage() {
   });
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6 overflow-y-auto max-h-full">
+    <div style={{height:window.innerHeight - 100}} className="container mx-auto px-4 py-6 space-y-6 overflow-y-auto  ">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -172,23 +168,25 @@ export default function AdmissionsDashboardPage() {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="border-primary/30 bg-primary/5">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">التنويم النشط</p>
-                {isLoadingActive ? (
-                  <Skeleton className="h-8 w-16 mt-2" />
-                ) : (
-                  <p className="text-2xl font-bold text-primary mt-1">
-                    {activeAdmissions?.length || 0}
-                  </p>
-                )}
+        <Link to="/admissions/list" className="block">
+          <Card className="border-primary/30 bg-primary/5 hover:border-primary/50 hover:bg-primary/10 transition-all duration-300 cursor-pointer">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">قائمة التنويم</p>
+                  {isLoadingActive ? (
+                    <Skeleton className="h-8 w-16 mt-2" />
+                  ) : (
+                    <p className="text-2xl font-bold text-primary mt-1">
+                      {activeAdmissions?.length || 0}
+                    </p>
+                  )}
+                </div>
+                <ClipboardList className="h-8 w-8 text-primary" />
               </div>
-              <Activity className="h-8 w-8 text-primary" />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </Link>
 
         <Card className="border-primary/30 bg-primary/5">
           <CardContent className="pt-6">
@@ -246,164 +244,14 @@ export default function AdmissionsDashboardPage() {
       </div>
 
       {/* Main Actions Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Admissions Management */}
-        <DashboardCard
-          title="قائمة التنويم"
-          description="عرض وإدارة جميع التنويم"
-          icon={ClipboardList}
-          link="/admissions/list"
-          count={activeAdmissions?.length}
-          isLoading={isLoadingActive}
-          variant="primary"
-          actionText="عرض القائمة"
-        />
-
-        <DashboardCard
-          title="إضافة تنويم جديد"
-          description="إدخال مريض جديد إلى المستشفى"
-          icon={Plus}
-          link="/admissions/new"
-          variant="success"
-          actionText="إضافة الآن"
-        />
-
-        <Card
-          className={cn(
-            "transition-all duration-300 hover:shadow-lg cursor-pointer group",
-            "border-primary/30 bg-primary/5 hover:border-primary/50 hover:bg-primary/10"
-          )}
-          onClick={() => setVisualDialogOpen(true)}
-        >
-          <div className="block h-full">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <CardTitle className="text-lg font-semibold mb-1">العرض البصري للغرف</CardTitle>
-                  <CardDescription className="text-sm">عرض مرئي لحالة الغرف والأسرّة مع إمكانية نقل المرضى</CardDescription>
-                </div>
-                <div
-                  className={cn(
-                    "p-3 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 group-hover:scale-110 transition-transform"
-                  )}
-                >
-                  <LayoutGrid className="h-6 w-6 text-primary" />
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="group-hover:text-primary transition-colors"
-                >
-                  <span className="flex items-center gap-1">
-                    عرض البصري
-                    <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                  </span>
-                </Button>
-              </div>
-            </CardContent>
-          </div>
-        </Card>
-
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+   
       </div>
 
-      {/* Quick Links */}
-      <Card className="border-dashed">
-        <CardHeader>
-          <CardTitle className="text-lg">روابط سريعة</CardTitle>
-          <CardDescription>الوصول السريع إلى الصفحات المهمة</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" asChild>
-              <Link to="/admissions/list">
-                <ClipboardList className="h-4 w-4 ml-2" />
-                جميع التنويم
-              </Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link to="/admissions/new">
-                <Plus className="h-4 w-4 ml-2" />
-                إضافة تنويم
-              </Link>
-            </Button>
-            <Button variant="outline" onClick={() => setVisualDialogOpen(true)}>
-              <LayoutGrid className="h-4 w-4 ml-2" />
-              العرض البصري
-            </Button>
-            <Button variant="outline" asChild>
-              <Link to="/settings/wards">
-                <Building2 className="h-4 w-4 ml-2" />
-                الأقسام
-              </Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link to="/settings/rooms">
-                <DoorOpen className="h-4 w-4 ml-2" />
-                الغرف
-              </Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link to="/settings/beds">
-                <BedDouble className="h-4 w-4 ml-2" />
-                الأسرّة
-              </Link>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Help Section */}
-      <Card className="bg-muted/50">
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            دليل الاستخدام
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2 text-sm text-muted-foreground">
-            <p>
-              <strong>خطوات البدء:</strong>
-            </p>
-            <ol className="list-decimal list-inside space-y-1 rtl:list-inside">
-              <li>ابدأ بإضافة الأقسام من صفحة إدارة الأقسام</li>
-              <li>ثم أضف الغرف لكل قسم</li>
-              <li>بعد ذلك أضف الأسرّة لكل غرفة</li>
-              <li>الآن يمكنك إضافة تنويم جديد للمرضى</li>
-            </ol>
-            <p className="mt-4">
-              <strong>ملاحظة:</strong> يجب إكمال إعداد الأقسام والغرف والأسرّة قبل إضافة التنويم.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Visual Rooms Dialog */}
-      <Dialog
-        open={visualDialogOpen}
-        onClose={() => setVisualDialogOpen(false)}
-        maxWidth={false}
-        fullWidth
-        PaperProps={{
-          sx: {
-            width: '95vw',
-            height: '95vh',
-            maxWidth: 'none',
-            maxHeight: 'none',
-            m: 2,
-          },
-        }}
-      >
-        <DialogContent sx={{ p: 0, height: '100%', overflow: 'hidden' }}>
-          <Box sx={{ height: '100%', overflow: 'hidden' }}>
-            <RoomsVisualPage />
-          </Box>
-        </DialogContent>
-      </Dialog>
+      {/* Rooms Visual Page */}
+      <Box >
+        <RoomsVisualPage />
+      </Box>
 
       {/* Settings Dialog */}
       <Dialog

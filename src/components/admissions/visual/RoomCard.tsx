@@ -59,6 +59,7 @@ export default function RoomCard({ room, beds, isOver }: RoomCardProps) {
         boxShadow: isDroppable || isOver ? 6 : 2,
         transform: isDroppable || isOver ? "scale(1.02) translateY(-4px)" : "scale(1)",
         height: "100%",
+        minWidth: "300px",
         display: "flex",
         flexDirection: "column",
         "&:hover": {

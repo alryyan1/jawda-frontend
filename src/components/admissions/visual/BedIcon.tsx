@@ -1,6 +1,8 @@
 import { useDraggable } from "@dnd-kit/core";
 import { Tooltip, Box, Typography } from "@mui/material";
 import { BedDouble } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useRef, useEffect } from "react";
 import type { Bed } from "@/types/admissions";
 
 interface BedIconProps {
@@ -10,6 +12,9 @@ interface BedIconProps {
 }
 
 export default function BedIcon({ bed, roomId, isDragging }: BedIconProps) {
+  const navigate = useNavigate();
+  const hasDraggedRef = useRef(false);
+  
   const { attributes, listeners, setNodeRef, transform, isDragging: isDraggingState } = useDraggable({
     id: `bed-${bed.id}`,
     data: {
@@ -19,6 +24,18 @@ export default function BedIcon({ bed, roomId, isDragging }: BedIconProps) {
     },
     disabled: bed.status !== "occupied" || !bed.current_admission,
   });
+
+  // Track if dragging is happening
+  useEffect(() => {
+    if (isDraggingState) {
+      hasDraggedRef.current = true;
+    } else {
+      // Reset after drag ends
+      setTimeout(() => {
+        hasDraggedRef.current = false;
+      }, 100);
+    }
+  }, [isDraggingState]);
 
   const getBedColor = () => {
     if (bed.status === "maintenance") return "#9e9e9e"; // Gray
@@ -41,22 +58,34 @@ export default function BedIcon({ bed, roomId, isDragging }: BedIconProps) {
 
   const isDraggable = bed.status === "occupied" && bed.current_admission;
 
+  const handleClick = (e: React.MouseEvent) => {
+    // Only navigate if:
+    // 1. Bed has an admission
+    // 2. Not currently dragging
+    // 3. No drag occurred (transform is null or hasn't changed)
+    if (
+      bed.current_admission?.id &&
+      !isDraggingState &&
+      !hasDraggedRef.current &&
+      !transform
+    ) {
+      e.stopPropagation();
+      navigate(`/admissions/${bed.current_admission.id}`);
+    }
+  };
+
   const tooltipContent = bed.current_admission ? (
     <Box sx={{ p: 1 }}>
       <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
         {bed.current_admission.patient?.name || "مريض"}
       </Typography>
       <Typography variant="caption" display="block">
-        تاريخ الدخول: {bed.current_admission.admission_date || "-"}
+        الطبيب: {bed.current_admission.doctor?.name || "غير محدد"}
       </Typography>
-      {bed.current_admission.discharge_date && (
+      {bed.current_admission.specialist_doctor?.name && 
+       bed.current_admission.specialist_doctor?.name !== bed.current_admission.doctor?.name && (
         <Typography variant="caption" display="block">
-          تاريخ الخروج: {bed.current_admission.discharge_date}
-        </Typography>
-      )}
-      {bed.current_admission.doctor?.name && (
-        <Typography variant="caption" display="block">
-          الطبيب: {bed.current_admission.doctor.name}
+          الطبيب الأخصائي: {bed.current_admission.specialist_doctor.name}
         </Typography>
       )}
     </Box>
@@ -70,6 +99,7 @@ export default function BedIcon({ bed, roomId, isDragging }: BedIconProps) {
         ref={setNodeRef}
         style={style}
         {...(isDraggable ? { ...listeners, ...attributes } : {})}
+        onClick={handleClick}
         sx={{
           width: 50,
           height: 50,
@@ -80,7 +110,7 @@ export default function BedIcon({ bed, roomId, isDragging }: BedIconProps) {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          cursor: isDraggable ? "grab" : "default",
+          cursor: bed.current_admission ? "pointer" : isDraggable ? "grab" : "default",
           transition: "all 0.2s ease-in-out",
           "&:hover": {
             transform: isDraggable ? "scale(1.1)" : "scale(1.05)",
@@ -88,7 +118,7 @@ export default function BedIcon({ bed, roomId, isDragging }: BedIconProps) {
             zIndex: 10,
           },
           "&:active": {
-            cursor: isDraggable ? "grabbing" : "default",
+            cursor: isDraggable ? "grabbing" : bed.current_admission ? "pointer" : "default",
             transform: isDraggable ? "scale(0.95)" : "scale(1)",
           },
           opacity: isDraggingState ? 0.5 : 1,

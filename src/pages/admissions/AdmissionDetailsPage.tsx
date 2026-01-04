@@ -115,7 +115,7 @@ export default function AdmissionDetailsPage() {
                     نقل
                   </Button>
                   <Button variant="contained" color="error" onClick={() => setDischargeDialogOpen(true)}>
-                    إخراج
+                    خروج
                   </Button>
                 </>
               )}

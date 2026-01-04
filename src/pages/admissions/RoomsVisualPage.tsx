@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   DndContext,
-  DragEndEvent,
+  type DragEndEvent,
   DragOverlay,
   closestCenter,
   PointerSensor,
@@ -12,7 +12,6 @@ import {
 import {
   Box,
   Typography,
-  Grid,
   CircularProgress,
   Dialog,
   DialogTitle,
@@ -20,11 +19,10 @@ import {
   DialogActions,
   Button,
   Alert,
-  IconButton,
   Card,
   CardContent,
 } from "@mui/material";
-import { RefreshCw, AlertCircle } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { getRooms } from "@/services/roomService";
 import { getBeds } from "@/services/bedService";
@@ -188,7 +186,7 @@ export default function RoomsVisualPage() {
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          minHeight: "400px",
+          minHeight: "300px",
         }}
       >
         <CircularProgress />
@@ -242,13 +240,24 @@ export default function RoomsVisualPage() {
             </CardContent>
           </Card>
         ) : (
-          <Grid container spacing={3}>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: {
+                xs: '1fr',
+                sm: 'repeat(2, 1fr)',
+                md: 'repeat(3, 1fr)',
+                lg: 'repeat(4, 1fr)',
+              },
+              gap: 1,
+            }}
+          >
             {roomsWithBeds.map((room) => (
-              <Grid item xs={12} sm={6} md={4} lg={3} key={room.id}>
+              <Box key={room.id} sx={{ minWidth: '300px' }}>
                 <RoomCard room={room} beds={room.beds} />
-              </Grid>
+              </Box>
             ))}
-          </Grid>
+          </Box>
         )}
 
         <DragOverlay>

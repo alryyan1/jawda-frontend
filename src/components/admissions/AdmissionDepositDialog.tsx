@@ -1,6 +1,7 @@
 import { useForm, Controller } from 'react-hook-form';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -20,14 +21,17 @@ interface AdmissionDepositDialogProps {
   open: boolean;
   onClose: () => void;
   admissionId: number;
+  balance?: number;
 }
 
 export default function AdmissionDepositDialog({
   open,
   onClose,
   admissionId,
+  balance,
 }: AdmissionDepositDialogProps) {
   const queryClient = useQueryClient();
+  const amountInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<AdmissionDepositFormData>({
     defaultValues: {
@@ -38,6 +42,23 @@ export default function AdmissionDepositDialog({
   });
 
   const { control, handleSubmit, reset } = form;
+
+  // Reset form with balance when dialog opens
+  useEffect(() => {
+    if (open && balance !== undefined) {
+      reset({
+        amount: Math.abs(balance) || 0,
+        is_bank: false,
+        notes: '',
+      });
+    } else if (open) {
+      reset({
+        amount: 0,
+        is_bank: false,
+        notes: '',
+      });
+    }
+  }, [open, balance, reset]);
 
   const mutation = useMutation({
     mutationFn: (data: AdmissionDepositFormData) => addAdmissionDeposit(admissionId, data),
@@ -80,8 +101,10 @@ export default function AdmissionDepositDialog({
                   fullWidth
                   label="المبلغ"
                   type="number"
+                  inputRef={amountInputRef}
                   {...field}
                   onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                  onFocus={(e) => e.target.select()}
                   error={!!fieldState.error}
                   helperText={fieldState.error?.message}
                   disabled={mutation.isPending}

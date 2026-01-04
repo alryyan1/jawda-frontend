@@ -70,7 +70,6 @@ export default function DischargeDialog({ open, onClose, admission }: DischargeD
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <form onSubmit={handleSubmit(onSubmit)}>
-        <DialogTitle>إخراج المريض</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
             {/* Balance Check */}
@@ -88,11 +87,7 @@ export default function DischargeDialog({ open, onClose, admission }: DischargeD
                     {formatNumber(balance)}
                   </Typography>
                 </Paper>
-                {!canDischarge && (
-                  <Alert severity="error">
-                    لا يمكن إخراج المريض. الرصيد يجب أن يكون صفراً. الرصيد الحالي: {formatNumber(balance)}
-                  </Alert>
-                )}
+             
               </>
             )}
             <Controller

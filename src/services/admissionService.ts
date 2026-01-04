@@ -28,12 +28,12 @@ export const getAdmissionById = async (id: number): Promise<{ data: Admission }>
 };
 
 export const createAdmission = async (data: AdmissionFormData): Promise<{ data: Admission }> => {
-  const payload = {
+  const payload: Record<string, any> = {
     patient_id: parseInt(String(data.patient_id)),
     ward_id: parseInt(String(data.ward_id)),
     room_id: parseInt(String(data.room_id)),
     bed_id: parseInt(String(data.bed_id)),
-    admission_date: data.admission_date ? data.admission_date.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+    admission_date: data.admission_date ? (data.admission_date instanceof Date ? data.admission_date.toISOString().split('T')[0] : data.admission_date) : new Date().toISOString().split('T')[0],
     admission_time: data.admission_time || null,
     admission_type: data.admission_type || null,
     admission_reason: data.admission_reason || null,
@@ -43,6 +43,12 @@ export const createAdmission = async (data: AdmissionFormData): Promise<{ data: 
     provisional_diagnosis: data.provisional_diagnosis || null,
     operations: data.operations || null,
   };
+  
+  // Add specialist_doctor_id if provided
+  if (data.specialist_doctor_id) {
+    payload.specialist_doctor_id = parseInt(String(data.specialist_doctor_id));
+  }
+  
   const response = await apiClient.post<{ data: Admission }>(API_URL, payload);
   return response.data;
 };

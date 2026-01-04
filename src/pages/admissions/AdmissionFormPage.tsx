@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -22,7 +22,7 @@ import {
   DialogContent,
   DialogActions,
 } from '@mui/material';
-import { Loader2, ArrowRight, Plus } from 'lucide-react';
+import { ArrowRight, Plus } from 'lucide-react';
 import type { AdmissionFormData } from '@/types/admissions';
 import { createAdmission } from '@/services/admissionService';
 import { getWardsList } from '@/services/wardService';
@@ -31,7 +31,6 @@ import { getAvailableBeds } from '@/services/bedService';
 import { searchExistingPatients, registerNewPatient } from '@/services/patientService';
 import { getDoctorsList } from '@/services/doctorService';
 import type { PatientSearchResult, PatientFormData } from '@/types/patients';
-import type { DoctorStripped } from '@/types/doctors';
 
 type AdmissionFormValues = {
   patient_id: string;
@@ -148,7 +147,16 @@ export default function AdmissionFormPage() {
       navigate('/admissions/list');
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'فشل إضافة التنويم');
+      const errorMessage = error.response?.data?.message || 'فشل إضافة التنويم';
+      const errorDetails = error.response?.data?.errors;
+      
+      if (errorDetails?.patient_id) {
+        toast.error('خطأ في بيانات المريض', {
+          description: 'يرجى التأكد من اختيار مريض صحيح أو إنشاء مريض جديد'
+        });
+      } else {
+        toast.error(errorMessage);
+      }
     },
   });
 
@@ -201,8 +209,8 @@ export default function AdmissionFormPage() {
       });
       queryClient.invalidateQueries({ queryKey: ['patientSearch'] });
     },
-    onError: (error: any) => {
-      // toast.error(error.response?.data?.message || 'فشل إضافة المريض');
+    onError: () => {
+      // Error handling is commented out as per user preference
     },
   });
 
@@ -211,7 +219,20 @@ export default function AdmissionFormPage() {
       toast.error('يرجى إدخال الاسم والهاتف والنوع');
       return;
     }
-    quickAddPatientMutation.mutate(quickAddFormData);
+    // Convert form data to PatientFormData format
+    const patientData: PatientFormData = {
+      name: quickAddFormData.name,
+      phone: quickAddFormData.phone,
+      gender: quickAddFormData.gender as 'male' | 'female',
+      age_year: quickAddFormData.age_year ? Number(quickAddFormData.age_year) : null,
+      age_month: quickAddFormData.age_month ? Number(quickAddFormData.age_month) : null,
+      age_day: quickAddFormData.age_day ? Number(quickAddFormData.age_day) : null,
+      income_source: quickAddFormData.income_source || null,
+      social_status: (quickAddFormData.social_status as 'single' | 'married' | 'widowed' | 'divorced' | null) || null,
+      doctor_id: doctors?.[0]?.id,
+      doctor_shift_id: 1,
+    };
+    quickAddPatientMutation.mutate(patientData);
   };
 
   const onSubmit = (data: AdmissionFormValues) => {
@@ -256,12 +277,11 @@ export default function AdmissionFormPage() {
   };
 
   return (
-    <Card className="max-w-6xl mx-auto h-full flex flex-col">
-      <CardHeader sx={{ flexShrink: 0 }}>
+    <Card className="max-w-5xl mx-auto h-full flex flex-col">
+      <CardHeader sx={{ flexShrink: 0, pb: 2, pt: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Button
-            component={Link}
-            to="/admissions"
+            onClick={() => navigate(-1)}
             variant="outlined"
             size="small"
             startIcon={<ArrowRight />}
@@ -269,21 +289,21 @@ export default function AdmissionFormPage() {
           >
             رجوع
           </Button>
-          <Typography variant="h5">إضافة تنويم جديد</Typography>
+          <Typography variant="h6">إضافة تنويم جديد</Typography>
         </Box>
       </CardHeader>
-      <CardContent sx={{ flex: 1, overflowY: 'auto', pb: 3 }}>
-        <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      <CardContent sx={{ flex: 1, overflowY: 'auto', pb: 2, pt: 2 }}>
+        <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {/* Patient Selection - Full Width */}
           <Box>
-            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600, color: 'text.secondary' }}>
+            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600, color: 'text.secondary', fontSize: '0.875rem' }}>
               معلومات المريض
             </Typography>
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
               <Box sx={{ flex: 1 }}>
                 <Autocomplete
                   options={patientSearchResults || []}
-                  getOptionLabel={(option) => option.autocomplete_label || `${option.name} - ${option.phone || ''}`}
+                  getOptionLabel={(option) => `${option.name} - ${option.phone || ''}`}
                   loading={isSearchingPatients}
                   value={selectedPatient}
                   onInputChange={(_, value) => setPatientSearchTerm(value)}
@@ -317,10 +337,10 @@ export default function AdmissionFormPage() {
 
           {/* Location Section */}
           <Box>
-            <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: 'text.secondary' }}>
+            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600, color: 'text.secondary', fontSize: '0.875rem' }}>
               الموقع (القسم - الغرفة - السرير)
             </Typography>
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' }, gap: 2 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' }, gap: 1.5 }}>
               <Controller name="ward_id" control={control} rules={{ required: 'القسم مطلوب' }} render={({ field, fieldState }) => (
                 <FormControl fullWidth error={!!fieldState.error}>
                   <InputLabel>القسم</InputLabel>
@@ -364,10 +384,10 @@ export default function AdmissionFormPage() {
 
           {/* Admission Details Section */}
           <Box>
-            <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: 'text.secondary' }}>
+            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600, color: 'text.secondary', fontSize: '0.875rem' }}>
               تفاصيل التنويم
             </Typography>
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' }, gap: 2 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' }, gap: 1.5 }}>
               <Controller name="admission_date" control={control} rules={{ required: 'تاريخ التنويم مطلوب' }} render={({ field, fieldState }) => (
                 <TextField
                   fullWidth
@@ -405,24 +425,25 @@ export default function AdmissionFormPage() {
 
           {/* Medical Information Section */}
           <Box>
-            <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: 'text.secondary' }}>
+            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600, color: 'text.secondary', fontSize: '0.875rem' }}>
               المعلومات الطبية
             </Typography>
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 1.5 }}>
               <Controller name="admission_reason" control={control} render={({ field }) => (
-                <TextField fullWidth label="سبب التنويم" multiline rows={3} {...field} disabled={mutation.isPending} />
+                <TextField fullWidth label="سبب التنويم" multiline rows={2} size="small" {...field} disabled={mutation.isPending} />
               )} />
               <Controller name="diagnosis" control={control} render={({ field }) => (
-                <TextField fullWidth label="التشخيص الطبي" multiline rows={3} {...field} disabled={mutation.isPending} />
+                <TextField fullWidth label="التشخيص الطبي" multiline rows={2} size="small" {...field} disabled={mutation.isPending} />
               )} />
             </Box>
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2, mt: 2 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 1.5, mt: 1.5 }}>
               <Controller name="provisional_diagnosis" control={control} render={({ field }) => (
                 <TextField 
                   fullWidth 
                   label="التشخيص المؤقت" 
                   multiline 
-                  rows={3} 
+                  rows={2} 
+                  size="small"
                   {...field} 
                   disabled={mutation.isPending}
                   placeholder="أدخل التشخيص المؤقت..."
@@ -433,7 +454,8 @@ export default function AdmissionFormPage() {
                   fullWidth 
                   label="العمليات (مع التواريخ)" 
                   multiline 
-                  rows={3} 
+                  rows={2} 
+                  size="small"
                   {...field} 
                   disabled={mutation.isPending}
                   placeholder="اسم العملية - التاريخ (مثال: عملية القلب - 2024-01-15)"
@@ -444,10 +466,10 @@ export default function AdmissionFormPage() {
 
           {/* Doctor and Notes Section */}
           <Box>
-            <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: 'text.secondary' }}>
+            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600, color: 'text.secondary', fontSize: '0.875rem' }}>
               الطبيب والملاحظات
             </Typography>
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 1.5 }}>
               <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
                 <Box sx={{ flex: 1 }}>
                   <Controller 
@@ -490,7 +512,7 @@ export default function AdmissionFormPage() {
                     whiteSpace: 'nowrap',
                     flexShrink: 0,
                     mt: 0.5,
-                    height: '56px'
+                    height: '40px'
                   }}
                   disabled={mutation.isPending}
                 >
@@ -539,7 +561,7 @@ export default function AdmissionFormPage() {
                     whiteSpace: 'nowrap',
                     flexShrink: 0,
                     mt: 0.5,
-                    height: '56px'
+                    height: '40px'
                   }}
                   disabled={mutation.isPending}
                 >
@@ -547,18 +569,18 @@ export default function AdmissionFormPage() {
                 </Button>
               </Box>
             </Box>
-            <Box sx={{ mt: 2 }}>
+            <Box sx={{ mt: 1.5 }}>
               <Controller name="notes" control={control} render={({ field }) => (
-                <TextField fullWidth label="ملاحظات طبية" multiline rows={3} {...field} disabled={mutation.isPending} />
+                <TextField fullWidth label="ملاحظات طبية" multiline rows={2} size="small" {...field} disabled={mutation.isPending} />
               )} />
             </Box>
           </Box>
 
           {/* Action Buttons */}
-          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 2, pt: 2, borderTop: 1, borderColor: 'divider' }}>
-            <Button variant="outlined" onClick={() => navigate('/admissions/list')} disabled={mutation.isPending}>إلغاء</Button>
-            <Button type="submit" variant="contained" disabled={mutation.isPending || !selectedPatient}>
-              {mutation.isPending ? <CircularProgress size={20} /> : 'إضافة'}
+          <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'flex-end', mt: 1.5, pt: 1.5, borderTop: 1, borderColor: 'divider' }}>
+            <Button variant="outlined" onClick={() => navigate(-1)} disabled={mutation.isPending} size="small">إلغاء</Button>
+            <Button type="submit" variant="contained" disabled={mutation.isPending || !selectedPatient} size="small">
+              {mutation.isPending ? <CircularProgress size={18} /> : 'إضافة'}
             </Button>
           </Box>
         </Box>

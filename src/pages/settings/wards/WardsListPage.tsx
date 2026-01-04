@@ -31,6 +31,7 @@ import {
   Trash2,
   Plus,
   Search,
+  ArrowRight,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -91,7 +92,18 @@ export default function WardsListPage() {
     <Card>
       <CardContent>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h5">إدارة الأقسام</Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Button
+              component={Link}
+              to="/admissions"
+              variant="outlined"
+              size="small"
+              startIcon={<ArrowRight />}
+            >
+              رجوع
+            </Button>
+            <Typography variant="h5">إدارة الأقسام</Typography>
+          </Box>
           <Button
             component={Link}
             to="/settings/wards/new"

@@ -161,11 +161,11 @@ const RoomFormPage: React.FC<{ mode: typeof RoomFormMode[keyof typeof RoomFormMo
             render={({ field, fieldState }) => (
               <TextField 
                 fullWidth 
-                label="السعر اليومي (ر.س)" 
+                label="السعر اليومي" 
                 type="number" 
                 {...field} 
                 error={!!fieldState.error} 
-                helperText={fieldState.error?.message || (field.value && `السعر الافتراضي: ${field.value === '0' ? '0.00' : parseFloat(field.value).toFixed(2)} ر.س`)} 
+                helperText={fieldState.error?.message || (field.value && `السعر الافتراضي: ${field.value === '0' ? '0.00' : parseFloat(field.value).toFixed(2)}`)} 
                 disabled={mutation.isPending}
                 inputProps={{ min: 0, step: 0.01 }}
               />

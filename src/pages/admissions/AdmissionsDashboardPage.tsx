@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Dialog, DialogContent, Box } from "@mui/material";
 import {
   Card,
   CardContent,
@@ -26,6 +28,7 @@ import { getRooms } from "@/services/roomService";
 import { getBeds } from "@/services/bedService";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import RoomsVisualPage from "./RoomsVisualPage";
 
 interface DashboardCardProps {
   title: string;
@@ -49,19 +52,19 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   actionText = "عرض",
 }) => {
   const variantStyles = {
-    default: "border-border hover:border-primary/50",
+    default: "border-primary/30 bg-primary/5 hover:border-primary/50 hover:bg-primary/10",
     primary: "border-primary/30 bg-primary/5 hover:border-primary/50 hover:bg-primary/10",
-    success: "border-green-500/30 bg-green-500/5 hover:border-green-500/50 hover:bg-green-500/10",
-    warning: "border-amber-500/30 bg-amber-500/5 hover:border-amber-500/50 hover:bg-amber-500/10",
-    info: "border-blue-500/30 bg-blue-500/5 hover:border-blue-500/50 hover:bg-blue-500/10",
+    success: "border-primary/30 bg-primary/5 hover:border-primary/50 hover:bg-primary/10",
+    warning: "border-primary/30 bg-primary/5 hover:border-primary/50 hover:bg-primary/10",
+    info: "border-primary/30 bg-primary/5 hover:border-primary/50 hover:bg-primary/10",
   };
 
   const iconColors = {
     default: "text-primary",
     primary: "text-primary",
-    success: "text-green-600 dark:text-green-400",
-    warning: "text-amber-600 dark:text-amber-400",
-    info: "text-blue-600 dark:text-blue-400",
+    success: "text-primary",
+    warning: "text-primary",
+    info: "text-primary",
   };
 
   return (
@@ -80,10 +83,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
             </div>
             <div
               className={cn(
-                "p-3 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 group-hover:scale-110 transition-transform",
-                variant === "success" && "from-green-500/20 to-green-500/5",
-                variant === "warning" && "from-amber-500/20 to-amber-500/5",
-                variant === "info" && "from-blue-500/20 to-blue-500/5"
+                "p-3 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 group-hover:scale-110 transition-transform"
               )}
             >
               <Icon className={cn("h-6 w-6", iconColors[variant])} />
@@ -119,6 +119,9 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
 };
 
 export default function AdmissionsDashboardPage() {
+  const [visualDialogOpen, setVisualDialogOpen] = useState(false);
+  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
+
   const { data: activeAdmissions, isLoading: isLoadingActive } = useQuery({
     queryKey: ['activeAdmissions'],
     queryFn: () => getActiveAdmissions(),
@@ -143,11 +146,21 @@ export default function AdmissionsDashboardPage() {
     <div className="container mx-auto px-4 py-6 space-y-6 overflow-y-auto max-h-full">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">نظام إدارة التنويم</h1>
-          <p className="text-muted-foreground mt-1">
-            لوحة التحكم الرئيسية لإدارة الأقسام والغرف والأسرّة 
-          </p>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setSettingsDialogOpen(true)}
+            className="h-10 w-10"
+          >
+            <Settings className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">نظام إدارة التنويم</h1>
+            <p className="text-muted-foreground mt-1">
+              لوحة التحكم الرئيسية لإدارة الأقسام والغرف والأسرّة 
+            </p>
+          </div>
         </div>
         <Button asChild size="lg" className="shadow-md">
           <Link to="/admissions/new">
@@ -159,7 +172,7 @@ export default function AdmissionsDashboardPage() {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="border-green-500/30 bg-green-500/5">
+        <Card className="border-primary/30 bg-primary/5">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
@@ -167,17 +180,17 @@ export default function AdmissionsDashboardPage() {
                 {isLoadingActive ? (
                   <Skeleton className="h-8 w-16 mt-2" />
                 ) : (
-                  <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">
+                  <p className="text-2xl font-bold text-primary mt-1">
                     {activeAdmissions?.length || 0}
                   </p>
                 )}
               </div>
-              <Activity className="h-8 w-8 text-green-600 dark:text-green-400" />
+              <Activity className="h-8 w-8 text-primary" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-blue-500/30 bg-blue-500/5">
+        <Card className="border-primary/30 bg-primary/5">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
@@ -185,17 +198,17 @@ export default function AdmissionsDashboardPage() {
                 {isLoadingWards ? (
                   <Skeleton className="h-8 w-16 mt-2" />
                 ) : (
-                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">
+                  <p className="text-2xl font-bold text-primary mt-1">
                     {wards?.length || 0}
                   </p>
                 )}
               </div>
-              <Building2 className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+              <Building2 className="h-8 w-8 text-primary" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-amber-500/30 bg-amber-500/5">
+        <Card className="border-primary/30 bg-primary/5">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
@@ -203,17 +216,17 @@ export default function AdmissionsDashboardPage() {
                 {isLoadingRooms ? (
                   <Skeleton className="h-8 w-16 mt-2" />
                 ) : (
-                  <p className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1">
+                  <p className="text-2xl font-bold text-primary mt-1">
                     {roomsData?.total || 0}
                   </p>
                 )}
               </div>
-              <DoorOpen className="h-8 w-8 text-amber-600 dark:text-amber-400" />
+              <DoorOpen className="h-8 w-8 text-primary" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-purple-500/30 bg-purple-500/5">
+        <Card className="border-primary/30 bg-primary/5">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
@@ -221,12 +234,12 @@ export default function AdmissionsDashboardPage() {
                 {isLoadingBeds ? (
                   <Skeleton className="h-8 w-16 mt-2" />
                 ) : (
-                  <p className="text-2xl font-bold text-purple-600 dark:text-purple-400 mt-1">
+                  <p className="text-2xl font-bold text-primary mt-1">
                     {bedsData?.total || 0}
                   </p>
                 )}
               </div>
-              <BedDouble className="h-8 w-8 text-purple-600 dark:text-purple-400" />
+              <BedDouble className="h-8 w-8 text-primary" />
             </div>
           </CardContent>
         </Card>
@@ -255,55 +268,46 @@ export default function AdmissionsDashboardPage() {
           actionText="إضافة الآن"
         />
 
-        <DashboardCard
-          title="العرض البصري للغرف"
-          description="عرض مرئي لحالة الغرف والأسرّة مع إمكانية نقل المرضى"
-          icon={LayoutGrid}
-          link="/admissions/visual"
-          variant="info"
-          actionText="عرض البصري"
-        />
-
-        {/* Settings Section */}
-        <div className="col-span-full">
-          <div className="flex items-center gap-2 mb-4">
-            <Settings className="h-5 w-5 text-muted-foreground" />
-            <h2 className="text-xl font-semibold">الإعدادات والإدارة</h2>
+        <Card
+          className={cn(
+            "transition-all duration-300 hover:shadow-lg cursor-pointer group",
+            "border-primary/30 bg-primary/5 hover:border-primary/50 hover:bg-primary/10"
+          )}
+          onClick={() => setVisualDialogOpen(true)}
+        >
+          <div className="block h-full">
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <CardTitle className="text-lg font-semibold mb-1">العرض البصري للغرف</CardTitle>
+                  <CardDescription className="text-sm">عرض مرئي لحالة الغرف والأسرّة مع إمكانية نقل المرضى</CardDescription>
+                </div>
+                <div
+                  className={cn(
+                    "p-3 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 group-hover:scale-110 transition-transform"
+                  )}
+                >
+                  <LayoutGrid className="h-6 w-6 text-primary" />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="group-hover:text-primary transition-colors"
+                >
+                  <span className="flex items-center gap-1">
+                    عرض البصري
+                    <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  </span>
+                </Button>
+              </div>
+            </CardContent>
           </div>
-        </div>
+        </Card>
 
-        <DashboardCard
-          title="إدارة الأقسام"
-          description="إضافة وتعديل الأقسام"
-          icon={Building2}
-          link="/settings/wards"
-          count={wards?.length}
-          isLoading={isLoadingWards}
-          variant="info"
-          actionText="إدارة الأقسام"
-        />
-
-        <DashboardCard
-          title="إدارة الغرف"
-          description="إضافة وتعديل الغرف"
-          icon={DoorOpen}
-          link="/settings/rooms"
-          count={roomsData?.total}
-          isLoading={isLoadingRooms}
-          variant="warning"
-          actionText="إدارة الغرف"
-        />
-
-        <DashboardCard
-          title="إدارة الأسرّة"
-          description="إضافة وتعديل الأسرّة"
-          icon={BedDouble}
-          link="/settings/beds"
-          count={bedsData?.total}
-          isLoading={isLoadingBeds}
-          variant="default"
-          actionText="إدارة الأسرّة"
-        />
       </div>
 
       {/* Quick Links */}
@@ -326,11 +330,9 @@ export default function AdmissionsDashboardPage() {
                 إضافة تنويم
               </Link>
             </Button>
-            <Button variant="outline" asChild>
-              <Link to="/admissions/visual">
-                <LayoutGrid className="h-4 w-4 ml-2" />
-                العرض البصري
-              </Link>
+            <Button variant="outline" onClick={() => setVisualDialogOpen(true)}>
+              <LayoutGrid className="h-4 w-4 ml-2" />
+              العرض البصري
             </Button>
             <Button variant="outline" asChild>
               <Link to="/settings/wards">
@@ -379,6 +381,80 @@ export default function AdmissionsDashboardPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Visual Rooms Dialog */}
+      <Dialog
+        open={visualDialogOpen}
+        onClose={() => setVisualDialogOpen(false)}
+        maxWidth={false}
+        fullWidth
+        PaperProps={{
+          sx: {
+            width: '95vw',
+            height: '95vh',
+            maxWidth: 'none',
+            maxHeight: 'none',
+            m: 2,
+          },
+        }}
+      >
+        <DialogContent sx={{ p: 0, height: '100%', overflow: 'hidden' }}>
+          <Box sx={{ height: '100%', overflow: 'hidden' }}>
+            <RoomsVisualPage />
+          </Box>
+        </DialogContent>
+      </Dialog>
+
+      {/* Settings Dialog */}
+      <Dialog
+        open={settingsDialogOpen}
+        onClose={() => setSettingsDialogOpen(false)}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogContent>
+          <div className="space-y-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Settings className="h-5 w-5 text-muted-foreground" />
+              <h2 className="text-xl font-semibold">الإعدادات والإدارة</h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <DashboardCard
+                title="إدارة الأقسام"
+                description="إضافة وتعديل الأقسام"
+                icon={Building2}
+                link="/settings/wards"
+                count={wards?.length}
+                isLoading={isLoadingWards}
+                variant="info"
+                actionText="إدارة الأقسام"
+              />
+
+              <DashboardCard
+                title="إدارة الغرف"
+                description="إضافة وتعديل الغرف"
+                icon={DoorOpen}
+                link="/settings/rooms"
+                count={roomsData?.total}
+                isLoading={isLoadingRooms}
+                variant="warning"
+                actionText="إدارة الغرف"
+              />
+
+              <DashboardCard
+                title="إدارة الأسرّة"
+                description="إضافة وتعديل الأسرّة"
+                icon={BedDouble}
+                link="/settings/beds"
+                count={bedsData?.total}
+                isLoading={isLoadingBeds}
+                variant="default"
+                actionText="إدارة الأسرّة"
+              />
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

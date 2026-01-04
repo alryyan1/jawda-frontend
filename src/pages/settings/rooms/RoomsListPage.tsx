@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getRooms, deleteRoom } from "@/services/roomService";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getRooms } from "@/services/roomService";
 import { getWardsList } from "@/services/wardService";
 import type { Room } from "@/types/admissions";
 import {
@@ -22,10 +22,6 @@ import {
   Typography,
   TextField,
   InputAdornment,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   FormControl,
   InputLabel,
   Select,
@@ -33,9 +29,9 @@ import {
 } from "@mui/material";
 import {
   Edit,
-  Trash2,
   Plus,
   Search,
+  ArrowRight,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -44,8 +40,6 @@ export default function RoomsListPage() {
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [wardFilter, setWardFilter] = useState<number | "">("");
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [roomToDelete, setRoomToDelete] = useState<Room | null>(null);
 
   const { data: wards } = useQuery({
     queryKey: ['wardsList'],
@@ -58,29 +52,6 @@ export default function RoomsListPage() {
     keepPreviousData: true,
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: deleteRoom,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['rooms'] });
-      toast.success('تم حذف الغرفة بنجاح');
-      setDeleteDialogOpen(false);
-      setRoomToDelete(null);
-    },
-    onError: (err: any) => {
-      toast.error('فشل الحذف', { description: err.response?.data?.message || err.message });
-    },
-  });
-
-  const handleDeleteClick = (room: Room) => {
-    setRoomToDelete(room);
-    setDeleteDialogOpen(true);
-  };
-
-  const handleDeleteConfirm = () => {
-    if (roomToDelete) {
-      deleteMutation.mutate(roomToDelete.id);
-    }
-  };
 
   if (isLoading && !data) {
     return (
@@ -94,7 +65,18 @@ export default function RoomsListPage() {
     <Card>
       <CardContent>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h5">إدارة الغرف</Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Button
+              component={Link}
+              to="/admissions"
+              variant="outlined"
+              size="small"
+              startIcon={<ArrowRight />}
+            >
+              رجوع
+            </Button>
+            <Typography variant="h5">إدارة الغرف</Typography>
+          </Box>
           <Button
             component={Link}
             to="/settings/rooms/new"
@@ -147,7 +129,6 @@ export default function RoomsListPage() {
                 <TableCell>رقم الغرفة</TableCell>
                 <TableCell>القسم</TableCell>
                 <TableCell>نوع الغرفة</TableCell>
-                <TableCell>السعة</TableCell>
                 <TableCell>الحالة</TableCell>
                 <TableCell>عدد الأسرّة</TableCell>
                 <TableCell align="center">الإجراءات</TableCell>
@@ -161,7 +142,6 @@ export default function RoomsListPage() {
                   <TableCell>
                     {room.room_type === 'normal' ? 'عادي' : room.room_type === 'vip' ? 'VIP' : '-'}
                   </TableCell>
-                  <TableCell>{room.capacity}</TableCell>
                   <TableCell>
                     <Chip
                       label={room.status ? 'نشط' : 'غير نشط'}
@@ -179,13 +159,6 @@ export default function RoomsListPage() {
                     >
                       <Edit size={16} />
                     </IconButton>
-                    <IconButton
-                      onClick={() => handleDeleteClick(room)}
-                      size="small"
-                      color="error"
-                    >
-                      <Trash2 size={16} />
-                    </IconButton>
                   </TableCell>
                 </TableRow>
               ))}
@@ -201,17 +174,6 @@ export default function RoomsListPage() {
           </Box>
         )}
       </CardContent>
-
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-        <DialogTitle>تأكيد الحذف</DialogTitle>
-        <DialogContent>
-          <Typography>هل أنت متأكد من حذف الغرفة "{roomToDelete?.room_number}"؟</Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>إلغاء</Button>
-          <Button onClick={handleDeleteConfirm} color="error" variant="contained">حذف</Button>
-        </DialogActions>
-      </Dialog>
     </Card>
   );
 }

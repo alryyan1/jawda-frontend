@@ -28,11 +28,9 @@ import { RefreshCw, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { getRooms } from "@/services/roomService";
 import { getBeds } from "@/services/bedService";
-import { getWardsList } from "@/services/wardService";
 import { transferAdmission } from "@/services/admissionService";
 import type { Room, Bed, Admission, TransferFormData } from "@/types/admissions";
 import RoomCard from "@/components/admissions/visual/RoomCard";
-import VisualFilters from "@/components/admissions/visual/VisualFilters";
 import BedIcon from "@/components/admissions/visual/BedIcon";
 
 interface RoomWithBeds extends Room {
@@ -41,10 +39,6 @@ interface RoomWithBeds extends Room {
 
 export default function RoomsVisualPage() {
   const queryClient = useQueryClient();
-  const [selectedWard, setSelectedWard] = useState<number | "">("");
-  const [selectedRoomType, setSelectedRoomType] = useState<string>("all");
-  const [selectedStatus, setSelectedStatus] = useState<string>("all");
-  const [searchTerm, setSearchTerm] = useState<string>("");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [transferData, setTransferData] = useState<{
@@ -63,11 +57,6 @@ export default function RoomsVisualPage() {
   );
 
   // Fetch data
-  const { data: wards } = useQuery({
-    queryKey: ["wardsList"],
-    queryFn: () => getWardsList({ status: true }),
-  });
-
   const { data: roomsData, isLoading: isLoadingRooms, refetch: refetchRooms } = useQuery({
     queryKey: ["rooms", "visual"],
     queryFn: () => getRooms(1, { per_page: 1000 }),
@@ -98,54 +87,6 @@ export default function RoomsVisualPage() {
     })) as RoomWithBeds[];
   }, [roomsData, bedsData]);
 
-  // Filter rooms
-  const filteredRooms = useMemo(() => {
-    let filtered = roomsWithBeds;
-
-    // Ward filter
-    if (selectedWard !== "") {
-      filtered = filtered.filter((room) => room.ward_id === selectedWard);
-    }
-
-    // Room type filter
-    if (selectedRoomType !== "all") {
-      filtered = filtered.filter((room) => room.room_type === selectedRoomType);
-    }
-
-    // Search filter
-    if (searchTerm) {
-      filtered = filtered.filter((room) =>
-        room.room_number.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Status filter
-    if (selectedStatus !== "all") {
-      filtered = filtered.filter((room) => {
-        const occupied = room.beds.filter((b) => b.status === "occupied").length;
-        const total = room.beds.length;
-        const percentage = total > 0 ? (occupied / total) * 100 : 0;
-
-        if (selectedStatus === "available") return percentage === 0;
-        if (selectedStatus === "partial") return percentage > 0 && percentage < 100;
-        if (selectedStatus === "occupied") return percentage === 100;
-        return true;
-      });
-    }
-
-    return filtered;
-  }, [roomsWithBeds, selectedWard, selectedRoomType, selectedStatus, searchTerm]);
-
-  // Quick filter handler
-  const handleQuickFilter = (filter: "available" | "occupied" | "all") => {
-    if (filter === "available") {
-      setSelectedStatus("available");
-    } else if (filter === "occupied") {
-      setSelectedStatus("occupied");
-    } else {
-      setSelectedStatus("all");
-    }
-  };
 
   // Drag handlers
   const handleDragStart = (event: any) => {
@@ -271,107 +212,6 @@ export default function RoomsVisualPage() {
           flex: 1,
         }}
       >
- 
-
-      {/* Filters */}
-      {wards && (
-        <VisualFilters
-          wards={wards}
-          selectedWard={selectedWard}
-          selectedRoomType={selectedRoomType}
-          selectedStatus={selectedStatus}
-          searchTerm={searchTerm}
-          onWardChange={setSelectedWard}
-          onRoomTypeChange={setSelectedRoomType}
-          onStatusChange={setSelectedStatus}
-          onSearchChange={setSearchTerm}
-          onQuickFilter={handleQuickFilter}
-        />
-      )}
-
-      {/* Stats */}
-      <Box
-        sx={{
-          mb: 3,
-          display: "grid",
-          gridTemplateColumns: { xs: "repeat(2, 1fr)", sm: "repeat(4, 1fr)" },
-          gap: 2,
-        }}
-      >
-        <Card
-          variant="outlined"
-          sx={{
-            px: 2,
-            py: 1.5,
-            transition: "all 0.2s",
-            "&:hover": { boxShadow: 2, transform: "translateY(-2px)" },
-          }}
-        >
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-            إجمالي الغرف
-          </Typography>
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            {filteredRooms.length}
-          </Typography>
-        </Card>
-        <Card
-          variant="outlined"
-          sx={{
-            px: 2,
-            py: 1.5,
-            transition: "all 0.2s",
-            "&:hover": { boxShadow: 2, transform: "translateY(-2px)" },
-          }}
-        >
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-            إجمالي الأسرّة
-          </Typography>
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            {filteredRooms.reduce((sum, room) => sum + room.beds.length, 0)}
-          </Typography>
-        </Card>
-        <Card
-          variant="outlined"
-          sx={{
-            px: 2,
-            py: 1.5,
-            transition: "all 0.2s",
-            "&:hover": { boxShadow: 2, transform: "translateY(-2px)" },
-            borderColor: "error.light",
-          }}
-        >
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-            الأسرّة المشغولة
-          </Typography>
-          <Typography variant="h6" sx={{ fontWeight: 600, color: "error.main" }}>
-            {filteredRooms.reduce(
-              (sum, room) => sum + room.beds.filter((b) => b.status === "occupied").length,
-              0
-            )}
-          </Typography>
-        </Card>
-        <Card
-          variant="outlined"
-          sx={{
-            px: 2,
-            py: 1.5,
-            transition: "all 0.2s",
-            "&:hover": { boxShadow: 2, transform: "translateY(-2px)" },
-            borderColor: "success.light",
-          }}
-        >
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-            الأسرّة المتاحة
-          </Typography>
-          <Typography variant="h6" sx={{ fontWeight: 600, color: "success.main" }}>
-            {filteredRooms.reduce(
-              (sum, room) => sum + room.beds.filter((b) => b.status === "available").length,
-              0
-            )}
-          </Typography>
-        </Card>
-      </Box>
-
       {/* Rooms Grid */}
       <DndContext
         sensors={sensors}
@@ -379,7 +219,7 @@ export default function RoomsVisualPage() {
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        {filteredRooms.length === 0 ? (
+        {roomsWithBeds.length === 0 ? (
           <Card>
             <CardContent>
               <Box
@@ -403,7 +243,7 @@ export default function RoomsVisualPage() {
           </Card>
         ) : (
           <Grid container spacing={3}>
-            {filteredRooms.map((room) => (
+            {roomsWithBeds.map((room) => (
               <Grid item xs={12} sm={6} md={4} lg={3} key={room.id}>
                 <RoomCard room={room} beds={room.beds} />
               </Grid>

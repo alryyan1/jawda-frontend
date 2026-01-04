@@ -65,6 +65,8 @@ export default function AdmissionFormPage() {
     age_year: '',
     age_month: '',
     age_day: '',
+    income_source: '',
+    social_status: '',
   });
 
   const { data: wards } = useQuery({
@@ -168,6 +170,8 @@ export default function AdmissionFormPage() {
         age_day: data.age_day ? Number(data.age_day) : null,
         doctor_id: firstDoctor.id,
         doctor_shift_id: 1, // Default shift - backend may override
+        income_source: data.income_source || null,
+        social_status: (data.social_status as 'single' | 'married' | 'widowed' | 'divorced' | null) || null,
       };
       
       return registerNewPatient(patientData);
@@ -192,11 +196,13 @@ export default function AdmissionFormPage() {
         age_year: '',
         age_month: '',
         age_day: '',
+        income_source: '',
+        social_status: '',
       });
       queryClient.invalidateQueries({ queryKey: ['patientSearch'] });
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'فشل إضافة المريض');
+      // toast.error(error.response?.data?.message || 'فشل إضافة المريض');
     },
   });
 
@@ -562,7 +568,17 @@ export default function AdmissionFormPage() {
       <Dialog open={quickAddDialogOpen} onClose={() => setQuickAddDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>إضافة مريض جديد</DialogTitle>
         <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
+          <Box 
+            sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !(e.target instanceof HTMLTextAreaElement)) {
+                e.preventDefault();
+                if (!quickAddPatientMutation.isPending && quickAddFormData.name && quickAddFormData.phone && quickAddFormData.gender) {
+                  handleQuickAddSubmit();
+                }
+              }
+            }}
+          >
             <TextField
               fullWidth
               label="اسم المريض"
@@ -617,6 +633,27 @@ export default function AdmissionFormPage() {
                 disabled={quickAddPatientMutation.isPending}
               />
             </Box>
+            <FormControl fullWidth>
+              <InputLabel>الحالة الاجتماعية</InputLabel>
+              <Select
+                value={quickAddFormData.social_status}
+                label="الحالة الاجتماعية"
+                onChange={(e) => setQuickAddFormData({ ...quickAddFormData, social_status: e.target.value })}
+                disabled={quickAddPatientMutation.isPending}
+              >
+                <MenuItem value="single">أعزب</MenuItem>
+                <MenuItem value="married">متزوج</MenuItem>
+                <MenuItem value="widowed">أرمل</MenuItem>
+                <MenuItem value="divorced">مطلق</MenuItem>
+              </Select>
+            </FormControl>
+            <TextField
+              fullWidth
+              label="مصدر الدخل"
+              value={quickAddFormData.income_source}
+              onChange={(e) => setQuickAddFormData({ ...quickAddFormData, income_source: e.target.value })}
+              disabled={quickAddPatientMutation.isPending}
+            />
           </Box>
         </DialogContent>
         <DialogActions>

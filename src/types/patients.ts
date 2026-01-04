@@ -270,6 +270,8 @@ export interface Patient {
   // New fields
   social_status?: 'single' | 'married' | 'widowed' | 'divorced' | null;
   income_source?: string | null;
+  specialist_doctor_id?: number | null;
+  specialist_doctor?: DoctorStripped;
 
   // ... other existing patient fields ...
   created_at: string;

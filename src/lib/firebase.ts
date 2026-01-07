@@ -7,14 +7,15 @@ import { getAuth, Auth, signInAnonymously } from "firebase/auth";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyAkjo7wFjRMjyDfssFPVqG-nfoNDfv_jk0",
-  authDomain: "hospitalapp-681f1.firebaseapp.com",
-  projectId: "hospitalapp-681f1",
-  storageBucket: "hospitalapp-681f1.firebasestorage.app",
-  messagingSenderId: "340060147561",
-  appId: "1:340060147561:web:f09f004b0acb873fdc77f8",
-  measurementId: "G-X6T5P6YK10"
+  apiKey: "AIzaSyAzlWmFKDOeP1WUnG1NWVDUgPw7cnoC7f4",
+  authDomain: "jawda-6af63.firebaseapp.com",
+  projectId: "jawda-6af63",
+  storageBucket: "jawda-6af63.firebasestorage.app",
+  messagingSenderId: "348613982664",
+  appId: "1:348613982664:web:a051589c3bf8a7c08be8fd",
+  measurementId: "G-6RZY8NXN7Q"
 };
+
 
 // Check if Firebase is enabled (defaults to true if not set)
 const isFirebaseEnabled = (): boolean => {

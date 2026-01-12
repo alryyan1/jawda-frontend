@@ -35,6 +35,7 @@ import type { Patient } from "@/types/patients";
 
 import SendWhatsAppTextDialogSC from "@/components/lab/sample_collection/SendWhatsAppTextDialogSC";
 import SendPdfToCustomNumberDialogSC from "@/components/lab/sample_collection/SendPdfToCustomNumberDialogSC";
+import BarcodePrintDialog from "@/components/lab/sample_collection/BarcodePrintDialog";
 
 // Global event handler manager to prevent multiple handlers
 class GlobalEventManager {
@@ -338,6 +339,10 @@ const SampleCollectionPage: React.FC = () => {
     isOpen: boolean;
     queueItem: PatientLabQueueItem | null;
   }>({ isOpen: false, queueItem: null });
+  const [barcodePrintDialogData, setBarcodePrintDialogData] = useState<{
+    isOpen: boolean;
+    queueItem: PatientLabQueueItem | null;
+  }>({ isOpen: false, queueItem: null });
 
   useEffect(() => {
     if (
@@ -461,6 +466,8 @@ const SampleCollectionPage: React.FC = () => {
     setWhatsAppTextData({ isOpen: true, queueItem });
   const handleSendPdfToCustomNumber = (queueItem: PatientLabQueueItem) =>
     setSendPdfCustomData({ isOpen: true, queueItem });
+  const handleOpenBarcodePrintDialog = (queueItem: PatientLabQueueItem) =>
+    setBarcodePrintDialogData({ isOpen: true, queueItem });
 
   const handleToggleResultLock = async (queueItem: PatientLabQueueItem) => {
     if (!queueItem?.patient_id) return;
@@ -495,103 +502,63 @@ const SampleCollectionPage: React.FC = () => {
     }
   };
   const printBarcodeLabels = async () => {
-    const visitIdToUse = selectedQueueItem?.visit_id;
-    if (!visitIdToUse) {
+    if (!selectedQueueItem?.visit_id) {
       toast.error("يرجى اختيار زيارة أولاً");
       return;
     }
 
-    // Debug: Check authentication status
-    const authToken = localStorage.getItem('authToken');
-    console.log('Auth token exists:', !!authToken);
-    console.log('Making request to:', `/visits/${visitIdToUse}/lab-barcode/pdf`);
-
+    // Get dimensions from localStorage (same as BarcodePrintDialog)
+    const BARCODE_LABEL_DIMENSIONS_KEY = "barcodeLabelDimensions";
+    let dimensions = { width: 50, height: 25 };
     try {
-      // Make both requests in parallel
-      const [zebraResult, pdfResult] = await Promise.allSettled([
-        // Print barcode to Zebra printer
-        printToZebra(visitIdToUse),
-        // Generate PDF with viewer
-        // apiClient.get(`/visits/${visitIdToUse}/lab-barcode/pdf`, { responseType: "blob" })
-      ]);
-
-      // Handle Zebra printer result
-      if (zebraResult.status === 'fulfilled') {
-        console.log('Zebra printer request completed successfully');
-      } else {
-        console.error('Zebra printer request failed:', zebraResult.reason);
-        toast.error("فشل في طباعة الباركود على الطابعة");
+      const stored = localStorage.getItem(BARCODE_LABEL_DIMENSIONS_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.width && parsed.height) {
+          dimensions = { width: Number(parsed.width), height: Number(parsed.height) };
+        }
       }
+    } catch (error) {
+      console.error("Error reading stored dimensions:", error);
+    }
 
-      // Handle PDF generation result
-      // if (pdfResult.status === 'fulfilled') {
-      //   const response = pdfResult.value;
-      //   const blob = new Blob([response.data], { type: "application/pdf" });
-        
-      //   // Method 1: Try to open in new tab with blob URL
-      //   try {
-      //     const objectUrl = URL.createObjectURL(blob);
-      //     const newWindow = window.open(objectUrl, '_blank', 'noopener,noreferrer');
-          
-      //     if (newWindow) {
-      //       // Clean up the object URL after a delay
-      //       setTimeout(() => {
-      //         URL.revokeObjectURL(objectUrl);
-      //       }, 5000);
-      //       console.log('PDF opened in new tab successfully');
-      //     } else {
-      //       // Fallback: Download the PDF
-      //       const link = document.createElement('a');
-      //       link.href = objectUrl;
-      //       link.download = `barcode_labels_visit_${visitIdToUse}.pdf`;
-      //       document.body.appendChild(link);
-      //       link.click();
-      //       document.body.removeChild(link);
-            
-      //       setTimeout(() => {
-      //         URL.revokeObjectURL(objectUrl);
-      //       }, 1000);
-      //       console.log('PDF downloaded as fallback');
-      //     }
-      //   } catch (error) {
-      //     // Fallback: Direct download
-      //     const objectUrl = URL.createObjectURL(blob);
-      //     const link = document.createElement('a');
-      //     link.href = objectUrl;
-      //     link.download = `barcode_labels_visit_${visitIdToUse}.pdf`;
-      //     document.body.appendChild(link);
-      //     link.click();
-      //     document.body.removeChild(link);
-          
-      //     setTimeout(() => {
-      //       URL.revokeObjectURL(objectUrl);
-      //     }, 1000);
-      //     console.log('PDF downloaded due to error:', error);
-      //   }
-        
-      //   console.log('PDF generation completed successfully');
-      // } else {
-      //   console.error('PDF generation failed:', pdfResult.reason);
-        
-      //   // Check if it's an authentication error
-      //   if (pdfResult.reason?.response?.status === 401) {
-      //     toast.error("انتهت صلاحية الجلسة - يرجى تسجيل الدخول مرة أخرى");
-      //   } else if (pdfResult.reason?.response?.status === 500) {
-      //     toast.error("خطأ في الخادم - تحقق من صحة البيانات");
-      //   } else {
-      //     toast.error("فشل في إنشاء ملف PDF");
-      //   }
-      // }
+    // Call print server to automatically print barcode
+    const printServerUrl = 'http://localhost:4002';
+    fetch(`${printServerUrl}/emit/print-barcode`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-internal-token': import.meta.env.VITE_SERVER_AUTH_TOKEN || 'changeme'
+      },
+      body: JSON.stringify({
+        visit_id: selectedQueueItem.visit_id,
+        width: dimensions.width,
+        height: dimensions.height,
+      })
+    })
+    .then(async (response) => {
+      const result = await response.json();
+      if (response.ok) {
+        toast.success("تم إرسال طلب الطباعة بنجاح");
+      } else {
+        console.error('Print server error:', result);
+        toast.error(result.error || "فشل في إرسال طلب الطباعة");
+      }
+    })
+    .catch((error) => {
+      console.error('Error calling print server:', error);
+      toast.error("فشل في الاتصال بخادم الطباعة");
+    });
 
-      // Show overall success message if at least one request succeeded
-      // if (zebraResult.status === 'fulfilled' || pdfResult.status === 'fulfilled') {
-      //   toast.success("تم تنفيذ طلب الطباعة");
-      // }
+    // Open the barcode print dialog for preview
+    handleOpenBarcodePrintDialog(selectedQueueItem);
 
-    } catch (error: unknown) {
-      console.error('Error in printBarcodeLabels:', error);
-      const errorMessage = error instanceof Error ? error.message : "فشل في تنفيذ طلب الطباعة";
-      toast.error(errorMessage);
+    // Optionally print to Zebra printer in the background
+    try {
+      await printToZebra(selectedQueueItem.visit_id);
+    } catch (error) {
+      console.error('Zebra printer request failed:', error);
+      // Don't show error toast as dialog will handle PDF display
     }
   };
 
@@ -857,6 +824,20 @@ const SampleCollectionPage: React.FC = () => {
         }
         queueItem={sendPdfCustomData.queueItem}
         pdfType="sample_collection_slip" // Or dynamically determine what PDF to send
+      />
+      <BarcodePrintDialog
+        isOpen={barcodePrintDialogData.isOpen}
+        onOpenChange={(open) =>
+          setBarcodePrintDialogData({
+            isOpen: open,
+            queueItem: open ? barcodePrintDialogData.queueItem : null,
+          })
+        }
+        queueItem={barcodePrintDialogData.queueItem}
+        onAfterPrint={() => {
+          fetchQueueData();
+          refetchLabRequestsForVisit();
+        }}
       />
     </>
   );

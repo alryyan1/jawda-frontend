@@ -72,41 +72,66 @@ const VisitSampleContainers: React.FC<VisitSampleContainersProps> = ({
     }
   };
 
-  const getContainerWidth = (containerId: number) => {
-    // Special width for containers 5 and 6 as per PHP code
+  const getContainerDimensions = (containerId: number) => {
+    // Special dimensions for containers 5 and 6 as per PHP code
     if (containerId === 5 || containerId === 6) {
-      return 90;
+      return { width: 90, height: 130 };
     }
-    return 55;
+    return { width: 55, height: 130 };
   };
 
   const handlePrintContainerBarcode = async (containerId: number, containerName: string) => {
     try {
       toast.info('جاري إنشاء الباركود...');
       
-      // Call the backend API to generate the barcode PDF
-      const response = await apiClient.get(`/visits/${visitId}/container-barcode/${containerId}`, { 
-        responseType: 'blob' 
+      // Get dimensions from localStorage (same as BarcodePrintDialog)
+      const BARCODE_LABEL_DIMENSIONS_KEY = "barcodeLabelDimensions";
+      let dimensions = { width: 50, height: 25 };
+      try {
+        const stored = localStorage.getItem(BARCODE_LABEL_DIMENSIONS_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed.width && parsed.height) {
+            dimensions = { width: Number(parsed.width), height: Number(parsed.height) };
+          }
+        }
+      } catch (error) {
+        console.error("Error reading stored dimensions:", error);
+      }
+      
+      // Call the same backend API endpoint with container_id filter
+      const response = await apiClient.get(`/visits/${visitId}/lab-barcode/pdf`, { 
+        responseType: 'blob',
+        params: {
+          container_id: containerId,
+          width: dimensions.width,
+          height: dimensions.height,
+        }
       });
       
-      // Create and download the PDF
+      // Create blob URL and open in new window for printing
       const blob = new Blob([response.data], { type: 'application/pdf' });
       const fileURL = URL.createObjectURL(blob);
-      const pdfWindow = window.open(fileURL, '_blank');
       
-      if (pdfWindow) {
-        pdfWindow.addEventListener('load', () => {
+      // Create iframe for printing
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = fileURL;
+      document.body.appendChild(iframe);
+      
+      iframe.onload = () => {
+        iframe.contentWindow?.print();
+        // Cleanup after printing
+        setTimeout(() => {
+          document.body.removeChild(iframe);
           URL.revokeObjectURL(fileURL);
-        });
+        }, 1000);
         toast.success(`تم إنشاء باركود ${containerName} بنجاح`);
-      } else {
-        toast.error('فشل في فتح نافذة الطباعة');
-      }
+      };
 
       // After printing trigger mark patient sample collected
       try {
         await markPatientSampleCollectedForVisitApi(visitId);
-        toast.success('تم تحديث حالة جمع العينة للمريض');
         if (onAfterPrint) onAfterPrint();
       } catch {
         // Silently ignore if it fails, printing succeeded
@@ -134,8 +159,57 @@ const VisitSampleContainers: React.FC<VisitSampleContainersProps> = ({
 
   const uniqueContainers = getUniqueContainers();
 
+  // Calculate dynamic grid columns based on number of containers
+  const getGridColsClass = (containerCount: number) => {
+    if (containerCount === 1) {
+      return 'grid-cols-1';
+    } else if (containerCount === 2) {
+      return 'grid-cols-2';
+    } else if (containerCount === 3) {
+      return 'grid-cols-3';
+    } else if (containerCount === 4) {
+      return 'grid-cols-2 sm:grid-cols-4';
+    } else if (containerCount <= 6) {
+      return 'grid-cols-2 sm:grid-cols-3 md:grid-cols-3';
+    } else if (containerCount <= 9) {
+      return 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4';
+    } else if (containerCount <= 12) {
+      return 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4';
+    } else {
+      return 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5';
+    }
+  };
+
+  // Calculate dynamic container size based on number of containers
+  const getDynamicContainerSize = (containerCount: number, containerId: number) => {
+    const baseDimensions = getContainerDimensions(containerId);
+    let scaleFactor = 1;
+
+    // Scale down containers when there are more of them
+    if (containerCount === 1) {
+      scaleFactor = 1.5; // Make single container larger
+    } else if (containerCount === 2) {
+      scaleFactor = 1.2; // Make 2 containers slightly larger
+    } else if (containerCount === 3) {
+      scaleFactor = 1.1;
+    } else if (containerCount <= 6) {
+      scaleFactor = 1.0; // Normal size
+    } else if (containerCount <= 9) {
+      scaleFactor = 0.9; // Slightly smaller
+    } else if (containerCount <= 12) {
+      scaleFactor = 0.85; // Smaller
+    } else {
+      scaleFactor = 0.8; // Smallest for many containers
+    }
+
+    return {
+      width: Math.round(baseDimensions.width * scaleFactor),
+      height: Math.round(baseDimensions.height * scaleFactor),
+    };
+  };
+
   return (
-    <Card style={{ height: window.innerHeight - 100,overflowY: 'auto' }} className=" flex flex-col shadow-sm">
+    <Card style={{ height: window.innerHeight - 100, overflowY: 'auto' }} className="flex flex-col shadow-sm">
       <div className="p-4 border-b bg-background/40 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center justify-center gap-4">
           <FlaskConical className="h-6 w-6 text-primary" />
@@ -145,25 +219,14 @@ const VisitSampleContainers: React.FC<VisitSampleContainersProps> = ({
             <span className="text-3xl font-extrabold">{visitId}</span>
           </div>
         </div>
+        <div className="mt-2 text-center text-sm text-muted-foreground">
+          <span className="font-medium">التاريخ:</span> <span>{formatDate(visitDateTime)} · {formatTime(visitDateTime)}</span>
+        </div>
       </div>
       
-      <CardContent className="flex-grow p-1">
-        <div className="">
-          {/* <div>
-            <span className="font-medium">الهاتف:</span> <span>{patientPhone ?? '-'}</span>
-          </div>
-          <div>
-            <span className="font-medium">العمر:</span> <span>{patientAge ?? '-'}</span>
-          </div> */}
-          {/* <div>
-            <span className="font-medium">الطبيب:</span> <span>{doctorName ?? '-'}</span>
-          </div> */}
-          <div>
-            <span className="font-medium">التاريخ:</span> <span>{formatDate(visitDateTime)} · {formatTime(visitDateTime)}</span>
-          </div>
-        </div>
+      <CardContent className="flex-grow p-4">
         {uniqueContainers.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-center">
+          <div className="h-full flex flex-col items-center justify-center text-center py-12">
             <FlaskConical className="h-12 w-12 text-muted-foreground mb-3" />
             <p className="text-sm font-medium text-muted-foreground">
               لا توجد حاويات مطلوبة لهذه الزيارة
@@ -171,46 +234,60 @@ const VisitSampleContainers: React.FC<VisitSampleContainersProps> = ({
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Removed: Print All Samples button */}
-            
-            {/* Container Grid */}
-            <div className="grid grid-cols-4  gap-4">
-            {uniqueContainers.map((container) => (
-              <Card
-                key={container.id}
-                className="group cursor-pointer hover:shadow-md transition-all duration-200 border-muted/60"
-                data-pid={visitId}
-                data-pack={container.id}
-              >
-                <CardContent className="p-1">
-                  <div className="flex flex-col items-center">
-                    <div className="mb-2 relative">
-                      <img
-                        src={getContainerImageSrc(container.id)}
-                        alt={`Container ${container.id}`}
-                        width={getContainerWidth(container.id)}
-                        height={130}
-                        className="object-contain transition-transform duration-200 group-hover:scale-105"
-                        onError={(e) => {
-                          // Fallback to default image if the specific one doesn't exist
-                          (e.target as HTMLImageElement).src = new URL(`../../../assets/containers/1.png`, import.meta.url).href;
-                        }}
-                      />
-                      {container.count > 1 && (
-                        <span className="absolute -top-2 -left-2 rounded-full bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 shadow">
-                          {container.count}
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-center">
-                      <p className="text-xs font-medium text-muted-foreground">
-                        {container.name}
-                      </p>
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            {/* Container Grid - Dynamic based on container count */}
+            <div className={`grid ${getGridColsClass(uniqueContainers.length)} gap-4`}>
+            {uniqueContainers.map((container) => {
+              const dimensions = getDynamicContainerSize(uniqueContainers.length, container.id);
+              return (
+                <Card
+                  key={container.id}
+                  className="group cursor-pointer hover:shadow-lg transition-all duration-200 border-muted/60 hover:border-primary/50"
+                  data-pid={visitId}
+                  data-pack={container.id}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex flex-col items-center">
+                      <div className="mb-3 relative w-full flex justify-center">
+                        <div 
+                          className="relative mx-auto"
+                          style={{ 
+                            width: `${dimensions.width}px`,
+                            height: `${dimensions.height}px`,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          <img
+                            src={getContainerImageSrc(container.id)}
+                            alt={`Container ${container.id}`}
+                            className="max-w-full max-h-full object-contain transition-transform duration-200 group-hover:scale-105"
+                            style={{
+                              width: 'auto',
+                              height: 'auto',
+                              maxWidth: '100%',
+                              maxHeight: '100%'
+                            }}
+                            onError={(e) => {
+                              // Fallback to default image if the specific one doesn't exist
+                              (e.target as HTMLImageElement).src = new URL(`../../../assets/containers/1.png`, import.meta.url).href;
+                            }}
+                          />
+                          {container.count > 1 && (
+                            <span className="absolute -top-2 -right-2 rounded-full bg-primary text-primary-foreground text-xs font-bold px-2 py-1 shadow-md min-w-[24px] text-center">
+                              {container.count}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-center w-full">
+                        <p className="text-sm font-medium text-foreground mb-2 line-clamp-2">
+                          {container.name}
+                        </p>
                         <Button
                           size="sm"
                           variant="outline"
-                          className="mt-2 h-7 px-2 text-xs"
+                          className="w-full h-8 text-xs"
                           onClick={() => handlePrintContainerBarcode(container.id, container.name)}
                         >
                           <Printer className="h-3 w-3 mr-1" />
@@ -218,10 +295,10 @@ const VisitSampleContainers: React.FC<VisitSampleContainersProps> = ({
                         </Button>
                       </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
             </div>
           </div>
         )}

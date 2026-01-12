@@ -367,6 +367,100 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
     }
   };
 
+  // Print barcode PDF using the same endpoint as ReportController
+  const printBarcodePdf = async () => {
+    if (!activeVisitId) {
+      toast.error("يرجى اختيار زيارة أولاً");
+      return;
+    }
+    
+    try {
+      toast.info('جاري إنشاء الباركود...');
+      
+      // Get dimensions from localStorage (same as BarcodePrintDialog)
+      const BARCODE_LABEL_DIMENSIONS_KEY = "barcodeLabelDimensions";
+      let dimensions = { width: 50, height: 25 };
+      try {
+        const stored = localStorage.getItem(BARCODE_LABEL_DIMENSIONS_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed.width && parsed.height) {
+            dimensions = { width: Number(parsed.width), height: Number(parsed.height) };
+          }
+        }
+      } catch (error) {
+        console.error("Error reading stored dimensions:", error);
+      }
+
+      // Call print server to automatically print barcode
+      const printServerUrl = 'http://localhost:4002';
+      fetch(`${printServerUrl}/emit/print-barcode`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-internal-token': import.meta.env.VITE_SERVER_AUTH_TOKEN || 'changeme'
+        },
+        body: JSON.stringify({
+          visit_id: activeVisitId,
+          width: dimensions.width,
+          height: dimensions.height,
+        })
+      })
+      .then(async (response) => {
+        const result = await response.json();
+        if (response.ok) {
+          toast.success("تم إرسال طلب الطباعة بنجاح");
+        } else {
+          console.error('Print server error:', result);
+          toast.error(result.error || "فشل في إرسال طلب الطباعة");
+        }
+      })
+      .catch((error) => {
+        console.error('Error calling print server:', error);
+        toast.error("فشل في الاتصال بخادم الطباعة");
+      });
+      
+      // Also open PDF in iframe for manual printing/fallback
+      try {
+        // Call the same backend API endpoint
+        const response = await apiClient.get(`/visits/${activeVisitId}/lab-barcode/pdf`, { 
+          responseType: 'blob',
+          params: {
+            width: dimensions.width,
+            height: dimensions.height,
+          }
+        });
+        
+        // Create blob URL and open in iframe for printing
+        const blob = new Blob([response.data], { type: 'application/pdf' });
+        const fileURL = URL.createObjectURL(blob);
+        
+        // Create iframe for printing
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = fileURL;
+        document.body.appendChild(iframe);
+        
+        iframe.onload = () => {
+          // Auto-print via iframe as fallback
+          iframe.contentWindow?.print();
+          // Cleanup after printing
+          setTimeout(() => {
+            document.body.removeChild(iframe);
+            URL.revokeObjectURL(fileURL);
+          }, 1000);
+        };
+      } catch (error) {
+        console.error('Error opening PDF in iframe:', error);
+        // Don't show error toast here as print server might have succeeded
+      }
+    } catch (error: unknown) {
+      console.error('Error printing barcode PDF:', error);
+      const errorMessage = error instanceof Error ? error.message : "فشل في إنشاء باركود PDF";
+      toast.error(errorMessage);
+    }
+  };
+
   const calculateDiscountedAmount = (price: number, discountPer: number) => {
     return price - (price * discountPer / 100);
   };
@@ -435,11 +529,11 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
             <span className="hidden sm:inline">طباعة الإيصال</span>
           </Button>
           <Button
-            onClick={printToZebra}
+            onClick={printBarcodePdf}
             variant="outline"
             size="sm"
             disabled={visit?.lab_requests?.length === 0}
-            title="طباعة الباركود على طابعة Zebra"
+            title="طباعة الباركود PDF"
           >
             {/* <Barcode className="h-4 w-4 mr-2" /> */}
             <span className="hidden sm:inline">طباعة الباركود</span>

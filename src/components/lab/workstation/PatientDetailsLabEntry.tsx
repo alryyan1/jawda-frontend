@@ -47,6 +47,7 @@ export interface PatientDetailsLabEntryProps {
   phone?: string | null;
   paymentMethod?: string | null;
   registeredBy?: string | null;
+  canAuth:boolean
   age?: string | number | null;
   statuses?: {
     payment?: StatusItem;
@@ -67,6 +68,8 @@ export interface PatientDetailsLabEntryProps {
   isLast?: boolean;
   dense?: boolean;
 }> = ({ label, value, icon: Icon, isLast = false, dense = false }) => (
+
+  // const can = useAuth();
   <>
     <Box 
       sx={{ 
@@ -226,6 +229,7 @@ const PatientDetailsLabEntry: React.FC<PatientDetailsLabEntryProps> = ({
   className,
   onAuthenticationToggle,
   patientLabQueueItem,
+  canAuth,
   isAuthenticating = false
 }) => {
   const { user } = useAuth();
@@ -375,7 +379,7 @@ const PatientDetailsLabEntry: React.FC<PatientDetailsLabEntryProps> = ({
               status={statuses?.authentication} 
               icon={Shield}
               onClick={onAuthenticationToggle}
-              isClickable={isAdmin}
+              isClickable={canAuth}
               isLoading={isAuthenticating}
             />
           </Box>

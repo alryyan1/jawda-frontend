@@ -111,7 +111,7 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
 
   // console.log('currentpatientdata',currentPatientData)
   const handleHl7ClientOpen = () => {
-    window.open('http://127.0.0.1/jawda-medical/hl7-client.php', '_blank');
+    window.open('http://127.0.0.1/server/Classes/client.php', '_blank');
   };
 
   const toggleLockMutation = useMutation({

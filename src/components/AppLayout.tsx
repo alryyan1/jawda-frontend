@@ -10,9 +10,6 @@ import { useAuth } from "../contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
 import {
@@ -125,7 +122,7 @@ const SettingsMenuItem: React.FC<{ to: string; icon: React.ElementType; label: s
 );
 
 // Main Navigation Items - All available items
-const allMainNavItems: NavItem[] = [
+export const allMainNavItems: NavItem[] = [
   { to: '/dashboard', label: 'لوحة التحكم', icon: Home },
   { to: '/clinic', label: 'العيادة', icon: Pencil },
   { to: '/lab-reception', label: 'استقبال المختبر', icon: Microscope },
@@ -136,16 +133,18 @@ const allMainNavItems: NavItem[] = [
   { to: '/patients', label: 'المرضى', icon: Users },
   { to: '/admissions', label: 'التنويم', icon: Hospital },
   { to: '/online-booking', label: 'الحجز ', icon: CalendarCheck2 },
-
-  // { to: '/doctors', label: 'الأطباء', icon: Stethoscope },
-  // { to: '/analysis', label: 'التحليل', icon: FileBarChart2 },
-  // { to: '/schedules-appointments', label: 'المواعيد والجداول', icon: CalendarClock },
-  // { to: '/cash-reconciliation', label: 'الفئات', icon: Banknote },
-  // { to: '/hl7-parser', label: 'محلل HL7', icon: FileText },
-  // { to: '/bankak-gallery', label: 'بنك الصور', icon: Image },
-
-  // { to: '/bulk-whatsapp', label: 'الواتساب الجماعي', icon: MessageCircle },
+  { to: '/cash-reconciliation', label: 'المصالحة المالية', icon: CreditCard },
 ];
+
+// Default nav items per user_type (for fallback when nav_items is null)
+export const DEFAULT_NAV_ITEMS_BY_TYPE: Record<string, string[]> = {
+  'استقبال معمل': ['/dashboard', '/lab-reception', '/lab-sample-collection', '/cash-reconciliation', '/patients'],
+  'ادخال نتائج': ['/dashboard', '/lab-workstation', '/lab-sample-collection', '/patients'],
+  'استقبال عياده': ['/dashboard', '/clinic', '/cash-reconciliation', '/patients', '/admissions', '/online-booking'],
+  'خزنه موحده': ['/dashboard', '/clinic', '/cash-reconciliation', '/patients'],
+  'تامين': ['/dashboard', '/clinic', '/cash-reconciliation', '/lab-reception', '/lab-sample-collection', '/patients'],
+};
+
 // 'استقبال معمل','ادخال نتائج','استقبال عياده','خزنه موحده','تامين'
 const UserType = {
   lab_reception: 'استقبال معمل',
@@ -184,58 +183,24 @@ const userTypeStyles: Record<UserType, { border: string; text: string; bg: strin
     bg: 'bg-rose-50',
   },
 };
-// Function to get navigation items based on user type
-const getMainNavItems = (userType?: UserType): NavItem[] => {
-  // If user type is 'استقبال معمل', show only specific items
-  if (userType === UserType.lab_reception) {
-    return allMainNavItems.filter(item => 
-      item.to === '/dashboard' || 
-      item.to === '/lab-reception' || 
-      item.to === '/lab-sample-collection' ||
-      item.to === '/cash-reconciliation' ||
-      item.to === '/patients'
-    );
+// Function to get navigation items based on user's nav_items or user_type defaults
+const getMainNavItems = (user?: { nav_items?: string[] | null; user_type?: string | null } | null): NavItem[] => {
+  if (!user) {
+    return [];
   }
-  if (userType === UserType.lab_results) {
-    return allMainNavItems.filter(item => 
-      item.to === '/dashboard' || 
-      item.to === '/lab-workstation' || 
-      item.to === '/lab-sample-collection' ||
-      item.to === '/patients'
-    );
-  }
-  if (userType === UserType.clinic_reception) {
-    return allMainNavItems.filter(item => 
-      item.to === '/dashboard' || 
-      item.to === '/clinic' ||
-      item.to === '/cash-reconciliation' ||
-      item.to === '/patients' ||
-      item.to === '/admissions' ||
-      item.to === '/online-booking'
-
-    );
-  }
-  if (userType === UserType.cash_reconciliation) {
-    return allMainNavItems.filter(item => 
-      item.to === '/dashboard' || 
-      item.to === '/clinic' ||
-      item.to === '/cash-reconciliation' ||
-      item.to === '/patients'
-    );
-  }
-  if (userType === UserType.insurance) {
-    return allMainNavItems.filter(item => 
-      item.to === '/dashboard' || 
-      item.to === '/clinic' ||
-      item.to === '/cash-reconciliation'||
-      item.to === '/lab-reception' ||
-      item.to === '/lab-sample-collection'  ||
-      item.to === '/patients'
-    );
+  // If user has custom nav_items, use those
+  if (user?.nav_items && user.nav_items.length > 0) {
+    return allMainNavItems.filter(item => user.nav_items!.includes(item.to));
   }
   
-  // For all other user types, show all items
-  return allMainNavItems;
+  // If no custom nav_items but user has a user_type, use defaults for that type
+  if (user?.user_type && DEFAULT_NAV_ITEMS_BY_TYPE[user.user_type]) {
+    const defaultRoutes = DEFAULT_NAV_ITEMS_BY_TYPE[user.user_type];
+    return allMainNavItems.filter(item => defaultRoutes.includes(item.to));
+  }
+  
+  // Admin users (no user_type and no nav_items) - return empty array (must configure manually)
+  return [];
 };
 
 // Function to get utility navigation items based on user type
@@ -602,10 +567,9 @@ const AppLayout: React.FC = () => {
   };
 
   const SidebarContent: React.FC<{isMobile?: boolean}> = ({ isMobile = false }) => {
-    // Get filtered navigation items based on user type
-    const filteredMainNavItems = getMainNavItems(user?.user_type as UserType);
+    // Get filtered navigation items based on user's nav_items or user_type defaults
+    const filteredMainNavItems = getMainNavItems(user);
     const filteredUtilityNavItems = getUtilityNavItems(user?.user_type as UserType);
-    const { can } = useAuthorization();
     return (
       <div className="flex flex-col h-full">
         <ScrollArea className="flex-1 min-h-0"> {/* Changed from flex-grow to flex-1 min-h-0 for proper flex behavior */}

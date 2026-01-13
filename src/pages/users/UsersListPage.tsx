@@ -48,7 +48,9 @@ import {
   CheckCircle2,
   XCircle,
   UserCheck,
+  Menu as MenuIcon,
 } from "lucide-react";
+import UserNavItemsDialog from "@/components/users/UserNavItemsDialog";
 
 export default function UsersListPage() {
   const queryClient = useQueryClient();
@@ -127,6 +129,8 @@ export default function UsersListPage() {
 
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [menuUserId, setMenuUserId] = useState<number | null>(null);
+  const [navItemsDialogOpen, setNavItemsDialogOpen] = useState(false);
+  const [selectedUserForNavItems, setSelectedUserForNavItems] = useState<User | null>(null);
 
   const openMenuFor = (event: React.MouseEvent<HTMLButtonElement>, userId: number) => {
     setMenuAnchorEl(event.currentTarget);
@@ -136,6 +140,18 @@ export default function UsersListPage() {
   const closeMenu = () => {
     setMenuAnchorEl(null);
     setMenuUserId(null);
+  };
+
+  const handleOpenNavItemsDialog = (user: User, event?: React.MouseEvent) => {
+    event?.stopPropagation();
+    event?.preventDefault();
+    setSelectedUserForNavItems(user);
+    setNavItemsDialogOpen(true);
+    closeMenu();
+  };
+
+  const handleNavItemsDialogSuccess = () => {
+    queryClient.invalidateQueries({ queryKey: ["users"] });
   };
 
   if (isLoading && !isFetching && currentPage === 1 && !paginatedData) {
@@ -254,8 +270,8 @@ export default function UsersListPage() {
       ) : (
         <Card>
           <CardContent sx={{ p: 0 }}>
-            <TableContainer>
-              <Table className="text-2xl!">
+            <TableContainer sx={{ maxHeight: 'calc(100vh - 300px)', overflowY: 'auto' }}>
+              <Table className="text-2xl!" stickyHeader>
                 <TableHead>
                   <TableRow>
                     <TableCell className="text-xl!"  align="center" sx={{ display: { xs: 'none', sm: 'table-cell' }, width: 50 }}>م</TableCell>
@@ -320,7 +336,12 @@ export default function UsersListPage() {
                           } size="small" sx={{ fontSize: 12 }} />
                         )}
                       </TableCell>
-                      <TableCell className="text-xl!"     align="right" sx={{ py: 1.25 }}>
+                      <TableCell 
+                        className="text-xl!" 
+                        align="right" 
+                        sx={{ py: 1.25 }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <IconButton
                           size="small"
                           onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); openMenuFor(e, u.id); }}
@@ -342,11 +363,23 @@ export default function UsersListPage() {
                           dir="rtl"
                         >
                           {canEditUsers && (
-                            <MenuItem onClick={closeMenu}>
-                              <Link to={`/users/${u.id}/edit`} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                <Edit className="h-4 w-4" /> تعديل
-                              </Link>
-                            </MenuItem>
+                            <>
+                              <MenuItem onClick={closeMenu}>
+                                <Link to={`/users/${u.id}/edit`} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                  <Edit className="h-4 w-4" /> تعديل
+                                </Link>
+                              </MenuItem>
+                              <MenuItem 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenNavItemsDialog(u, e);
+                                }}
+                              >
+                                <Box display="flex" alignItems="center" gap={1}>
+                                  <MenuIcon className="h-4 w-4" /> إدارة القوائم
+                                </Box>
+                              </MenuItem>
+                            </>
                           )}
                           {canDeleteUsers && currentUser && currentUser.id !== u.id && (
                             <>
@@ -394,6 +427,14 @@ export default function UsersListPage() {
           </Button>
         </Box>
       )}
+
+      {/* Nav Items Management Dialog */}
+      <UserNavItemsDialog
+        open={navItemsDialogOpen}
+        onOpenChange={setNavItemsDialogOpen}
+        user={selectedUserForNavItems}
+        onSuccess={handleNavItemsDialogSuccess}
+      />
     </Container>
   );
 }

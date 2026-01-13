@@ -55,6 +55,7 @@ export interface User {
   is_active?: boolean;
   user_money_collector_type?: "lab" | "company" | "clinic" | "all";
   user_type?: string | null; // Arabic enum from backend; nullable when clearing
+  nav_items?: string[] | null; // Array of route paths for navigation items
   roles?: Role[];
   created_at?: string;
   updated_at?: string;
@@ -71,6 +72,7 @@ export interface UserFormData {
   is_active?: boolean;
   user_money_collector_type?: "lab" | "company" | "clinic" | "all";
   user_type?: string | null;
+  nav_items?: string[] | null;
   roles: string[];
 }
 

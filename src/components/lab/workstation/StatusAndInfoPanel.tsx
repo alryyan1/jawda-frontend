@@ -180,6 +180,7 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
             statuses={patientStatuses}
             className="mb-1"
             onAuthenticationToggle={handleAuthenticationToggle}
+            canAuth ={can('تحقيق نتيجه')}
             isAuthenticating={toggleAuthenticationMutation.isPending}
           />
         ) : isLoadingPatient ? (

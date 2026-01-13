@@ -31,6 +31,7 @@ export interface User {
   is_nurse: boolean;
   user_money_collector_type: 'lab' | 'company' | 'clinic' | 'all';
   user_type?: string; // Arabic enum from backend migration
+  nav_items?: string[] | null; // Array of route paths for navigation items
   created_at: string;
   updated_at: string;
   roles?: Role[];

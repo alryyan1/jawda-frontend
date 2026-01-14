@@ -51,11 +51,11 @@ const ConfigurationStatusCard: React.FC<ConfigurationStatusCardProps> = ({
         {config ? (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
             <Box display="flex" alignItems="center" gap={1}>
-                {config.configured ? (
-                  <CheckCircle sx={{ color: "green", fontSize: 20 }} />
-                ) : (
-                  <CancelIcon sx={{ color: "red", fontSize: 20 }} />
-                )}
+              {config.configured ? (
+                <CheckCircle sx={{ color: "green", fontSize: 20 }} />
+              ) : (
+                <CancelIcon sx={{ color: "red", fontSize: 20 }} />
+              )}
               <Typography variant="body1" fontWeight="medium">
                 Service: {config.configured ? "Configured" : "Not Configured"}
               </Typography>
@@ -90,8 +90,11 @@ const ConfigurationStatusCard: React.FC<ConfigurationStatusCardProps> = ({
             {!config.configured && (
               <Alert severity="warning">
                 <AlertTitle>Configuration Required</AlertTitle>
-                Please configure WhatsApp Cloud API settings in your database:
-                whatsapp_cloud_access_token, whatsapp_cloud_phone_number_id
+                Please configure WhatsApp Cloud API credentials in your server's{" "}
+                <code>.env</code> file:
+                <code>WHATSAPP_CLOUD_API_TOKEN</code>,{" "}
+                <code>WHATSAPP_CLOUD_PHONE_NUMBER_ID</code>,{" "}
+                <code>WHATSAPP_CLOUD_WABA_ID</code>
               </Alert>
             )}
           </Box>
@@ -107,4 +110,3 @@ const ConfigurationStatusCard: React.FC<ConfigurationStatusCardProps> = ({
 };
 
 export default ConfigurationStatusCard;
-

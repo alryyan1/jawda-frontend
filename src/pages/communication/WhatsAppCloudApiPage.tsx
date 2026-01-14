@@ -2,14 +2,7 @@
 import React, { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import {
-  Box,
-  Typography,
-  Button,
-  Tabs,
-  Tab,
-  Container,
-} from "@mui/material";
+import { Box, Typography, Button, Tabs, Tab, Container } from "@mui/material";
 import { Message, Refresh } from "@mui/icons-material";
 import {
   sendWhatsAppCloudText,
@@ -26,15 +19,15 @@ import {
   type WhatsAppCloudDocumentPayload,
   type WhatsAppCloudImagePayload,
 } from "@/services/whatsappCloudApiService";
-import { getSettings } from "@/services/settingService";
-import type { Setting } from "@/types/settings";
 import ConfigurationStatusCard from "./whatsapp-cloud/ConfigurationStatusCard";
 import TextMessageForm from "./whatsapp-cloud/TextMessageForm";
 import TemplateMessageForm from "./whatsapp-cloud/TemplateMessageForm";
 import DocumentMessageForm from "./whatsapp-cloud/DocumentMessageForm";
 import ImageMessageForm from "./whatsapp-cloud/ImageMessageForm";
 import PhoneNumbersTable from "./whatsapp-cloud/PhoneNumbersTable";
-import MessageHistoryCard, { type MessageHistoryItem } from "./whatsapp-cloud/MessageHistoryCard";
+import MessageHistoryCard, {
+  type MessageHistoryItem,
+} from "./whatsapp-cloud/MessageHistoryCard";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -58,18 +51,16 @@ function TabPanel(props: TabPanelProps) {
 }
 
 const WhatsAppCloudApiPage: React.FC = () => {
-  const [messageHistory, setMessageHistory] = useState<MessageHistoryItem[]>([]);
+  const [messageHistory, setMessageHistory] = useState<MessageHistoryItem[]>(
+    []
+  );
   const [activeTab, setActiveTab] = useState(0);
 
-  // Fetch settings to get cloud_api_token and phone_number_id
-  const { data: settings } = useQuery<Setting | null, Error>({
-    queryKey: ["settings"],
-    queryFn: getSettings,
-    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
-  });
-
   // Check configuration
-  const { data: config, refetch: refetchConfig } = useQuery<WhatsAppCloudConfigResponse, Error>({
+  const { data: config, refetch: refetchConfig } = useQuery<
+    WhatsAppCloudConfigResponse,
+    Error
+  >({
     queryKey: ["whatsappCloudConfig"],
     queryFn: isWhatsAppCloudConfigured,
     retry: 1,
@@ -126,7 +117,9 @@ const WhatsAppCloudApiPage: React.FC = () => {
       }
     },
     onError: (error: any, variables) => {
-      toast.error(error.response?.data?.error || error.message || "Failed to send message");
+      toast.error(
+        error.response?.data?.error || error.message || "Failed to send message"
+      );
       addToHistory({
         type: "text",
         to: variables.to,
@@ -161,7 +154,11 @@ const WhatsAppCloudApiPage: React.FC = () => {
       }
     },
     onError: (error: any, variables) => {
-      toast.error(error.response?.data?.error || error.message || "Failed to send template");
+      toast.error(
+        error.response?.data?.error ||
+          error.message ||
+          "Failed to send template"
+      );
       addToHistory({
         type: "template",
         to: variables.to,
@@ -196,7 +193,11 @@ const WhatsAppCloudApiPage: React.FC = () => {
       }
     },
     onError: (error: any, variables) => {
-      toast.error(error.response?.data?.error || error.message || "Failed to send document");
+      toast.error(
+        error.response?.data?.error ||
+          error.message ||
+          "Failed to send document"
+      );
       addToHistory({
         type: "document",
         to: variables.to,
@@ -231,7 +232,9 @@ const WhatsAppCloudApiPage: React.FC = () => {
       }
     },
     onError: (error: any, variables) => {
-      toast.error(error.response?.data?.error || error.message || "Failed to send image");
+      toast.error(
+        error.response?.data?.error || error.message || "Failed to send image"
+      );
       addToHistory({
         type: "image",
         to: variables.to,
@@ -242,45 +245,20 @@ const WhatsAppCloudApiPage: React.FC = () => {
     },
   });
 
-  // Get default values from settings
-  const defaultAccessToken = (settings as any)?.cloud_api_token || undefined;
-  const defaultPhoneNumberId = (settings as any)?.phone_number_id || undefined;
-
   const handleSendText = (payload: WhatsAppCloudTextPayload) => {
-    // Use settings values if not provided in payload
-    const finalPayload: WhatsAppCloudTextPayload = {
-      ...payload,
-      access_token: payload.access_token || defaultAccessToken,
-      phone_number_id: payload.phone_number_id || defaultPhoneNumberId,
-    };
-    sendTextMutation.mutate(finalPayload);
+    sendTextMutation.mutate(payload);
   };
 
   const handleSendTemplate = (payload: WhatsAppCloudTemplatePayload) => {
-    const finalPayload: WhatsAppCloudTemplatePayload = {
-      ...payload,
-      access_token: payload.access_token || defaultAccessToken,
-      phone_number_id: payload.phone_number_id || defaultPhoneNumberId,
-    };
-    sendTemplateMutation.mutate(finalPayload);
+    sendTemplateMutation.mutate(payload);
   };
 
   const handleSendDocument = (payload: WhatsAppCloudDocumentPayload) => {
-    const finalPayload: WhatsAppCloudDocumentPayload = {
-      ...payload,
-      access_token: payload.access_token || defaultAccessToken,
-      phone_number_id: payload.phone_number_id || defaultPhoneNumberId,
-    };
-    sendDocumentMutation.mutate(finalPayload);
+    sendDocumentMutation.mutate(payload);
   };
 
   const handleSendImage = (payload: WhatsAppCloudImagePayload) => {
-    const finalPayload: WhatsAppCloudImagePayload = {
-      ...payload,
-      access_token: payload.access_token || defaultAccessToken,
-      phone_number_id: payload.phone_number_id || defaultPhoneNumberId,
-    };
-    sendImageMutation.mutate(finalPayload);
+    sendImageMutation.mutate(payload);
   };
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
@@ -292,10 +270,19 @@ const WhatsAppCloudApiPage: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="lg"  sx={{ py: 4,height:window.innerHeight - 100,overflow:'auto'}}>
+    <Container
+      maxWidth="lg"
+      sx={{ py: 4, height: window.innerHeight - 100, overflow: "auto" }}
+    >
       <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
         {/* Header */}
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+          }}
+        >
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             <Message sx={{ fontSize: 32 }} />
             <Box>

@@ -4,11 +4,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { Building2, MessageSquare, Settings, Database } from "lucide-react";
-import { 
-  Box, 
-  Paper, 
-  Typography, 
-  Stack, 
+import {
+  Box,
+  Paper,
+  Typography,
+  Stack,
   Avatar,
   IconButton,
   Chip,
@@ -20,15 +20,17 @@ import {
   Checkbox,
   Container,
   CircularProgress,
-  Divider
-} from '@mui/material';
-import { CloudUpload } from '@mui/icons-material';
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
+  Grid,
+} from "@mui/material";
+import { CloudUpload } from "@mui/icons-material";
 
 import type { Setting } from "@/types/settings";
 import { getSettings, updateSettings } from "@/services/settingService";
-import { api } from "@/lib/axios";
 import apiClient from "@/services/api";
-import showJsonDialog from "@/lib/showJsonDialog";
 import { webUrl } from "./constants";
 import { setFirebaseEnabled, checkFirebaseEnabled } from "@/lib/firebase";
 
@@ -43,13 +45,13 @@ type SettingsFormData = {
   vatin?: string;
   cr?: string;
   storage_name?: string;
-  
+
   // Ultramsg WhatsApp Settings
   ultramsg_instance_id?: string;
   ultramsg_token?: string;
   ultramsg_base_url?: string;
   ultramsg_default_country_code?: string;
-  
+
   // Lab Workflow Settings
   send_result_after_auth?: boolean;
   send_result_after_result?: boolean;
@@ -61,15 +63,13 @@ type SettingsFormData = {
   // NEW flags
   send_sms_after_auth?: boolean;
   send_whatsapp_after_auth?: boolean;
-  
+
   // Notification Settings
   welcome_message?: string;
   send_welcome_message?: boolean;
-  
+
   // WhatsApp Cloud API Settings
-  cloud_api_token?: string;
-  phone_number_id?: string;
-  
+
   // Report Settings
   is_header?: boolean;
   is_footer?: boolean;
@@ -94,6 +94,24 @@ type SettingsFormData = {
   show_logo_only_whatsapp?: boolean;
   show_title_in_lab_result?: boolean;
   firebase_enabled?: boolean;
+  prevent_backdated_entry?: boolean;
+  whatsapp_number?: string;
+  pdf_header_type?: "logo" | "full_width" | "none";
+  pdf_header_logo_position?: "left" | "right";
+  pdf_header_logo_width?: number;
+  pdf_header_logo_height?: number;
+  pdf_header_logo_x_offset?: number;
+  pdf_header_logo_y_offset?: number;
+  pdf_header_image_width?: number;
+  pdf_header_image_height?: number;
+  pdf_header_image_x_offset?: number;
+  pdf_header_image_y_offset?: number;
+  pdf_header_title?: string;
+  pdf_header_subtitle?: string;
+  pdf_header_title_font_size?: number;
+  pdf_header_subtitle_font_size?: number;
+  pdf_header_title_y_offset?: number;
+  pdf_header_subtitle_y_offset?: number;
 };
 
 const SettingsPage: React.FC = () => {
@@ -120,14 +138,14 @@ const SettingsPage: React.FC = () => {
       lab_name: undefined,
       vatin: undefined,
       cr: undefined,
-      storage_name: undefined,
-      
+      whatsapp_number: undefined,
+
       // Ultramsg WhatsApp Settings
       ultramsg_instance_id: undefined,
       ultramsg_token: undefined,
       ultramsg_base_url: undefined,
       ultramsg_default_country_code: undefined,
-      
+
       // Lab Workflow Settings
       send_result_after_auth: undefined,
       send_result_after_result: undefined,
@@ -139,15 +157,13 @@ const SettingsPage: React.FC = () => {
       // NEW flags
       send_sms_after_auth: undefined,
       send_whatsapp_after_auth: undefined,
-      
+
       // Notification Settings
       welcome_message: undefined,
       send_welcome_message: undefined,
-      
+
       // WhatsApp Cloud API Settings
-      cloud_api_token: undefined,
-      phone_number_id: undefined,
-      
+
       // Report Settings
       is_header: undefined,
       is_footer: undefined,
@@ -171,6 +187,22 @@ const SettingsPage: React.FC = () => {
       show_logo_only_whatsapp: undefined,
       show_title_in_lab_result: undefined,
       firebase_enabled: undefined,
+      pdf_header_type: "logo",
+      pdf_header_logo_position: "left",
+      pdf_header_logo_width: 40,
+      pdf_header_logo_height: 40,
+      pdf_header_logo_x_offset: 5,
+      pdf_header_logo_y_offset: 5,
+      pdf_header_image_width: 200,
+      pdf_header_image_height: 30,
+      pdf_header_image_x_offset: 10,
+      pdf_header_image_y_offset: 10,
+      pdf_header_title: "",
+      pdf_header_subtitle: "",
+      pdf_header_title_font_size: 25,
+      pdf_header_subtitle_font_size: 17,
+      pdf_header_title_y_offset: 18,
+      pdf_header_subtitle_y_offset: 5,
     },
   });
   const { control, handleSubmit, reset, watch } = form;
@@ -178,7 +210,9 @@ const SettingsPage: React.FC = () => {
   const [headerPreview, setHeaderPreview] = useState<string | null>(null);
   const [footerPreview, setFooterPreview] = useState<string | null>(null);
   const [watermarkPreview, setWatermarkPreview] = useState<string | null>(null);
-  const [firebaseEnabled, setFirebaseEnabledState] = useState<boolean>(checkFirebaseEnabled());
+  const [firebaseEnabled, setFirebaseEnabledState] = useState<boolean>(
+    checkFirebaseEnabled()
+  );
 
   // Watch form values for immediate updates
   const watchedValues = watch();
@@ -196,63 +230,99 @@ const SettingsPage: React.FC = () => {
         vatin: settings.vatin || undefined,
         cr: settings.cr || undefined,
         storage_name: (settings as any).storage_name || undefined,
-        
+        prevent_backdated_entry:
+          (settings as any).prevent_backdated_entry ?? undefined,
+        whatsapp_number: settings.whatsapp_number || undefined,
+
         // Ultramsg WhatsApp Settings
         ultramsg_instance_id: settings.ultramsg_instance_id || undefined,
         ultramsg_token: settings.ultramsg_token || undefined,
         ultramsg_base_url: settings.ultramsg_base_url || undefined,
-        ultramsg_default_country_code: settings.ultramsg_default_country_code || undefined,
-        
+        ultramsg_default_country_code:
+          settings.ultramsg_default_country_code || undefined,
+
         // Lab Workflow Settings
         send_result_after_auth: settings.send_result_after_auth || undefined,
-        send_result_after_result: settings.send_result_after_result || undefined,
+        send_result_after_result:
+          settings.send_result_after_result || undefined,
         edit_result_after_auth: settings.edit_result_after_auth || undefined,
-        firestore_result_collection: (settings as any).firestore_result_collection || undefined,
-        disable_doctor_service_check: settings.disable_doctor_service_check || undefined,
+        firestore_result_collection:
+          (settings as any).firestore_result_collection || undefined,
+        disable_doctor_service_check:
+          settings.disable_doctor_service_check || undefined,
         barcode: settings.barcode || undefined,
         show_water_mark: settings.show_water_mark || undefined,
         // NEW flags
         send_sms_after_auth: (settings as any).send_sms_after_auth ?? undefined,
-        send_whatsapp_after_auth: (settings as any).send_whatsapp_after_auth ?? undefined,
-        
+        send_whatsapp_after_auth:
+          (settings as any).send_whatsapp_after_auth ?? undefined,
+
         // Notification Settings
         welcome_message: settings.welcome_message || undefined,
         send_welcome_message: settings.send_welcome_message || undefined,
-        
+
         // WhatsApp Cloud API Settings
-        cloud_api_token: (settings as any).cloud_api_token || undefined,
-        phone_number_id: (settings as any).phone_number_id || undefined,
-        
+
         // Report Settings
         is_header: settings.is_header || undefined,
         is_footer: settings.is_footer || undefined,
         is_logo: settings.is_logo || undefined,
         header_content: settings.header_content || undefined,
         footer_content: settings.footer_content || undefined,
-        report_header_company_name: settings.report_header_company_name || undefined,
-        report_header_address_line1: settings.report_header_address_line1 || undefined,
-        report_header_address_line2: settings.report_header_address_line2 || undefined,
+        report_header_company_name:
+          settings.report_header_company_name || undefined,
+        report_header_address_line1:
+          settings.report_header_address_line1 || undefined,
+        report_header_address_line2:
+          settings.report_header_address_line2 || undefined,
         report_header_phone: settings.report_header_phone || undefined,
         report_header_email: settings.report_header_email || undefined,
         report_header_vatin: settings.report_header_vatin || undefined,
         report_header_cr: settings.report_header_cr || undefined,
-        default_lab_report_template: settings.default_lab_report_template || undefined,
-        header_base64: (settings as Setting & { header_base64?: string }).header_base64 || undefined,
-        footer_base64: (settings as Setting & { footer_base64?: string }).footer_base64 || undefined,
+        default_lab_report_template:
+          settings.default_lab_report_template || undefined,
+        header_base64:
+          (settings as Setting & { header_base64?: string }).header_base64 ||
+          undefined,
+        footer_base64:
+          (settings as Setting & { footer_base64?: string }).footer_base64 ||
+          undefined,
         // NEW watermark asset
         watermark_image: (settings as any).watermark_image || undefined,
         // Logo display controls
         show_logo: (settings as any).show_logo ?? undefined,
-        show_logo_only_whatsapp: (settings as any).show_logo_only_whatsapp ?? undefined,
-        show_title_in_lab_result: (settings as any).show_title_in_lab_result ?? undefined,
-        firebase_enabled: (settings as any).firebase_enabled !== undefined 
-          ? (settings as any).firebase_enabled 
-          : (localStorage.getItem('firebase_enabled') === 'true'),
+        show_logo_only_whatsapp:
+          (settings as any).show_logo_only_whatsapp ?? undefined,
+        show_title_in_lab_result:
+          (settings as any).show_title_in_lab_result ?? undefined,
+        firebase_enabled:
+          (settings as any).firebase_enabled !== undefined
+            ? (settings as any).firebase_enabled
+            : localStorage.getItem("firebase_enabled") === "true",
+        pdf_header_type: settings.pdf_header_type || "logo",
+        pdf_header_logo_position: settings.pdf_header_logo_position || "left",
+        pdf_header_logo_width: settings.pdf_header_logo_width ?? 40,
+        pdf_header_logo_height: settings.pdf_header_logo_height ?? 40,
+        pdf_header_logo_x_offset: settings.pdf_header_logo_x_offset ?? 5,
+        pdf_header_logo_y_offset: settings.pdf_header_logo_y_offset ?? 5,
+        pdf_header_image_width: settings.pdf_header_image_width ?? 200,
+        pdf_header_image_height: settings.pdf_header_image_height ?? 30,
+        pdf_header_image_x_offset: settings.pdf_header_image_x_offset ?? 10,
+        pdf_header_image_y_offset: settings.pdf_header_image_y_offset ?? 10,
+        pdf_header_title: settings.pdf_header_title || "",
+        pdf_header_subtitle: settings.pdf_header_subtitle || "",
+        pdf_header_title_font_size: settings.pdf_header_title_font_size ?? 25,
+        pdf_header_subtitle_font_size:
+          settings.pdf_header_subtitle_font_size ?? 17,
+        pdf_header_title_y_offset: settings.pdf_header_title_y_offset ?? 18,
+        pdf_header_subtitle_y_offset:
+          settings.pdf_header_subtitle_y_offset ?? 5,
       });
       // Sync Firebase enabled state
-      const fbEnabled = (settings as any).firebase_enabled !== undefined 
-        ? (settings as any).firebase_enabled 
-        : checkFirebaseEnabled();
+      const fbEnabled =
+        (settings as any).firebase_enabled !== undefined
+          ? (settings as any).firebase_enabled
+          : checkFirebaseEnabled();
       setFirebaseEnabledState(fbEnabled);
       setFirebaseEnabled(fbEnabled);
     }
@@ -267,7 +337,11 @@ const SettingsPage: React.FC = () => {
       queryClient.setQueryData(["settings"], updatedSettings);
     },
     onError: (error: Error) => {
-      const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || error?.message || "فشل حفظ الإعدادات";
+      const errorMessage =
+        (error as { response?: { data?: { message?: string } } })?.response
+          ?.data?.message ||
+        error?.message ||
+        "فشل حفظ الإعدادات";
       toast.error(errorMessage);
     },
   });
@@ -281,51 +355,71 @@ const SettingsPage: React.FC = () => {
   const handleFirebaseToggle = async (enabled: boolean) => {
     setFirebaseEnabledState(enabled);
     setFirebaseEnabled(enabled);
-    setValue('firebase_enabled', enabled);
+    setValue("firebase_enabled", enabled);
     // Save to backend
-    await mutation.mutateAsync({ firebase_enabled: enabled } as unknown as SettingsFormData);
-    toast.success(enabled ? 'تم تفعيل Firebase' : 'تم تعطيل Firebase');
-    toast.info('يرجى إعادة تحميل الصفحة لتطبيق التغييرات');
+    await mutation.mutateAsync({
+      firebase_enabled: enabled,
+    } as unknown as SettingsFormData);
+    toast.success(enabled ? "تم تفعيل Firebase" : "تم تعطيل Firebase");
+    toast.info("يرجى إعادة تحميل الصفحة لتطبيق التغييرات");
   };
 
   // Upload helper for report header/footer/watermark assets
-  const uploadSettingAsset = async (field: 'header_base64' | 'footer_base64' | 'watermark_image', file: File) => {
+  const uploadSettingAsset = async (
+    field: "header_base64" | "footer_base64" | "watermark_image",
+    file: File
+  ) => {
     // Show preview immediately
     const localUrl = URL.createObjectURL(file);
-    if (field === 'header_base64') setHeaderPreview(localUrl);
-    if (field === 'footer_base64') setFooterPreview(localUrl);
-    if (field === 'watermark_image') setWatermarkPreview(localUrl);
-    
+    if (field === "header_base64") setHeaderPreview(localUrl);
+    if (field === "footer_base64") setFooterPreview(localUrl);
+    if (field === "watermark_image") setWatermarkPreview(localUrl);
+
     const formData = new FormData();
-    formData.append('file', file);
-    formData.append('field', field);
+    formData.append("file", file);
+    formData.append("field", field);
     try {
-      const res = await apiClient.post('/settings/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+      const res = await apiClient.post("/settings/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
       const data = res.data;
-      const path: string = data?.path || data?.url || '';
-      if (!path) throw new Error('Invalid upload response');
+      const path: string = data?.path || data?.url || "";
+      if (!path) throw new Error("Invalid upload response");
       setValue(field as any, path);
-      await mutation.mutateAsync({ [field]: path } as unknown as SettingsFormData);
+      await mutation.mutateAsync({
+        [field]: path,
+      } as unknown as SettingsFormData);
       toast.success(
-        field === 'header_base64' ? 'تم رفع ترويسة التقرير' : field === 'footer_base64' ? 'تم رفع تذييل التقرير' : 'تم رفع علامة مائية'
+        field === "header_base64"
+          ? "تم رفع ترويسة التقرير"
+          : field === "footer_base64"
+          ? "تم رفع تذييل التقرير"
+          : "تم رفع علامة مائية"
       );
     } catch (e: unknown) {
-      const error = e as { response?: { data?: { message?: string } }; message?: string };
-      const msg = error?.response?.data?.message || error?.message || 'فشل رفع الملف';
+      const error = e as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      const msg =
+        error?.response?.data?.message || error?.message || "فشل رفع الملف";
       toast.error(msg);
       // Clear preview on error
-      if (field === 'header_base64') setHeaderPreview(null);
-      if (field === 'footer_base64') setFooterPreview(null);
-      if (field === 'watermark_image') setWatermarkPreview(null);
+      if (field === "header_base64") setHeaderPreview(null);
+      if (field === "footer_base64") setFooterPreview(null);
+      if (field === "watermark_image") setWatermarkPreview(null);
     }
   };
 
   if (isLoadingSettings)
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
+        <Box
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          minHeight="50vh"
+        >
           <Stack direction="row" spacing={2} alignItems="center">
             <CircularProgress />
             <Typography>جاري تحميل الإعدادات...</Typography>
@@ -338,7 +432,9 @@ const SettingsPage: React.FC = () => {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <Box textAlign="center" color="error.main">
-          <Typography variant="h6" gutterBottom>فشل جلب الإعدادات</Typography>
+          <Typography variant="h6" gutterBottom>
+            فشل جلب الإعدادات
+          </Typography>
           <Typography variant="body2" component="pre">
             {error?.message}
           </Typography>
@@ -348,63 +444,63 @@ const SettingsPage: React.FC = () => {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-   
       <Box component="form" onSubmit={handleSubmit(onSubmit)}>
         <Paper elevation={1} sx={{ mb: 3 }}>
-          <Tabs 
-            value={activeTab} 
+          <Tabs
+            value={activeTab}
             onChange={(_, newValue) => setActiveTab(newValue)}
             variant="fullWidth"
-            sx={{ borderBottom: 1, borderColor: 'divider' }}
+            sx={{ borderBottom: 1, borderColor: "divider" }}
           >
-            <Tab 
-              value="basic" 
+            <Tab
+              value="basic"
               label={
                 <Stack direction="row" spacing={1} alignItems="center">
                   <Building2 size={16} />
                   <span>الأساسية</span>
                 </Stack>
-              } 
+              }
             />
-            <Tab 
-              value="whatsapp" 
+            <Tab
+              value="whatsapp"
               label={
                 <Stack direction="row" spacing={1} alignItems="center">
                   <MessageSquare size={16} />
                   <span>واتساب</span>
                 </Stack>
-              } 
+              }
             />
-            <Tab 
-              value="workflow" 
+            <Tab
+              value="workflow"
               label={
                 <Stack direction="row" spacing={1} alignItems="center">
                   <Settings size={16} />
                   <span>سير العمل</span>
                 </Stack>
-              } 
+              }
             />
-            <Tab 
-              value="firebase" 
+            <Tab
+              value="firebase"
               label={
                 <Stack direction="row" spacing={1} alignItems="center">
                   <Database size={16} />
                   <span>Firebase</span>
                 </Stack>
-              } 
+              }
             />
-            <Tab 
-              value="lab_canceled_report" 
+            <Tab
+              value="lab_canceled_report"
               label={
                 <Stack direction="row" spacing={1} alignItems="center">
-                  <span>تقرير ملغات المختبر</span>
+                  <Settings size={16} />
+                  <span>إعدادات التقارير</span>
                 </Stack>
-              } 
+              }
             />
           </Tabs>
         </Paper>
 
-            {/* Basic Information Tab */}
+        {/* Basic Information Tab */}
         {activeTab === "basic" && (
           <Stack spacing={3}>
             <Paper elevation={2} sx={{ p: 3 }}>
@@ -414,9 +510,9 @@ const SettingsPage: React.FC = () => {
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                 المعلومات الأساسية للمستشفى والمختبر
               </Typography>
-              
+
               <Stack spacing={3}>
-                <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
+                <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
                   <TextField
                     {...control.register("phone")}
                     label="رقم الهاتف"
@@ -433,7 +529,7 @@ const SettingsPage: React.FC = () => {
                     variant="outlined"
                   />
                 </Stack>
-                
+
                 <TextField
                   {...control.register("address")}
                   label="العنوان"
@@ -441,8 +537,8 @@ const SettingsPage: React.FC = () => {
                   fullWidth
                   variant="outlined"
                 />
-                
-                <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
+
+                <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
                   <TextField
                     {...control.register("hospital_name")}
                     label="اسم المستشفى"
@@ -458,7 +554,7 @@ const SettingsPage: React.FC = () => {
                     variant="outlined"
                   />
                 </Stack>
-                
+
                 <TextField
                   {...control.register("storage_name")}
                   label="اسم التخزين (Storage Name)"
@@ -467,7 +563,7 @@ const SettingsPage: React.FC = () => {
                   variant="outlined"
                   helperText="اسم المجلد المستخدم لتخزين ملفات النتائج في Firebase Storage"
                 />
-                
+
                 <Stack spacing={3}>
                   <FormControlLabel
                     control={
@@ -478,7 +574,9 @@ const SettingsPage: React.FC = () => {
                     }
                     label={
                       <Box>
-                        <Typography variant="body1">تعطيل فحص خدمة الطبيب</Typography>
+                        <Typography variant="body1">
+                          تعطيل فحص خدمة الطبيب
+                        </Typography>
                         <Typography variant="body2" color="text.secondary">
                           تعطيل التحقق من خدمة الطبيب عند إضافة الخدمات
                         </Typography>
@@ -491,16 +589,17 @@ const SettingsPage: React.FC = () => {
           </Stack>
         )}
 
-        {/* Lab Report Tab */}
+        {/* Report Settings Tab */}
         {activeTab === "lab_canceled_report" && (
           <Paper elevation={2} sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
               ملفات تقرير المختبر
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              رفع صور الترويسة والتذييل وعلامة مائية لاستخدامها في تقارير النتائج
+              رفع صور الترويسة والتذييل وعلامة مائية لاستخدامها في تقارير
+              النتائج
             </Typography>
-            
+
             <Stack spacing={3}>
               {/* Logo Display Controls */}
               <FormControlLabel
@@ -512,7 +611,9 @@ const SettingsPage: React.FC = () => {
                 }
                 label={
                   <Box>
-                    <Typography variant="body1">إظهار الشعار في التقارير</Typography>
+                    <Typography variant="body1">
+                      إظهار الشعار في التقارير
+                    </Typography>
                     <Typography variant="body2" color="text.secondary">
                       تفعيل أو تعطيل إظهار الشعار لجميع التقارير
                     </Typography>
@@ -528,7 +629,9 @@ const SettingsPage: React.FC = () => {
                 }
                 label={
                   <Box>
-                    <Typography variant="body1">إظهار الشعار عند الإرسال عبر واتساب فقط</Typography>
+                    <Typography variant="body1">
+                      إظهار الشعار عند الإرسال عبر واتساب فقط
+                    </Typography>
                     <Typography variant="body2" color="text.secondary">
                       عند التفعيل سيظهر الشعار فقط عند إرسال التقرير على واتساب
                     </Typography>
@@ -538,28 +641,28 @@ const SettingsPage: React.FC = () => {
               {/* Header Image Upload */}
               <Box>
                 <Typography variant="subtitle1" gutterBottom>
-                  صورة  (Header)
+                  صورة (Header)
                 </Typography>
                 <Stack direction="row" spacing={2} alignItems="center">
                   <input
                     type="file"
                     accept="image/*"
                     id="header-upload"
-                    style={{ display: 'none' }}
+                    style={{ display: "none" }}
                     onChange={(e) => {
                       const file = e.target.files?.[0];
-                      if (file) uploadSettingAsset('header_base64', file);
+                      if (file) uploadSettingAsset("header_base64", file);
                     }}
                   />
                   <label htmlFor="header-upload">
                     <IconButton
                       color="primary"
                       component="span"
-                      sx={{ 
-                        border: '2px dashed',
-                        borderColor: 'primary.main',
+                      sx={{
+                        border: "2px dashed",
+                        borderColor: "primary.main",
                         borderRadius: 2,
-                        p: 2
+                        p: 2,
                       }}
                     >
                       <CloudUpload sx={{ fontSize: 32 }} />
@@ -568,18 +671,25 @@ const SettingsPage: React.FC = () => {
                   {(headerPreview || watchedValues.header_base64) && (
                     <Stack direction="row" spacing={2} alignItems="center">
                       <Avatar
-                        src={headerPreview || `${webUrl}${watchedValues.header_base64}`}
+                        src={
+                          headerPreview ||
+                          `${webUrl}${watchedValues.header_base64}`
+                        }
                         variant="rounded"
                         sx={{ width: 80, height: 60 }}
                       />
                       <Box>
-                        <Chip 
-                          label="تم الرفع" 
-                          color="success" 
-                          size="small" 
+                        <Chip
+                          label="تم الرفع"
+                          color="success"
+                          size="small"
                           sx={{ mb: 1 }}
                         />
-                        <Typography variant="caption" display="block" color="text.secondary">
+                        <Typography
+                          variant="caption"
+                          display="block"
+                          color="text.secondary"
+                        >
                           {watchedValues.header_base64}
                         </Typography>
                       </Box>
@@ -598,21 +708,21 @@ const SettingsPage: React.FC = () => {
                     type="file"
                     accept="image/*"
                     id="footer-upload"
-                    style={{ display: 'none' }}
+                    style={{ display: "none" }}
                     onChange={(e) => {
                       const file = e.target.files?.[0];
-                      if (file) uploadSettingAsset('footer_base64', file);
+                      if (file) uploadSettingAsset("footer_base64", file);
                     }}
                   />
                   <label htmlFor="footer-upload">
                     <IconButton
                       color="primary"
                       component="span"
-                      sx={{ 
-                        border: '2px dashed',
-                        borderColor: 'primary.main',
+                      sx={{
+                        border: "2px dashed",
+                        borderColor: "primary.main",
                         borderRadius: 2,
-                        p: 2
+                        p: 2,
                       }}
                     >
                       <CloudUpload sx={{ fontSize: 32 }} />
@@ -621,18 +731,25 @@ const SettingsPage: React.FC = () => {
                   {(footerPreview || watchedValues.footer_base64) && (
                     <Stack direction="row" spacing={2} alignItems="center">
                       <Avatar
-                        src={footerPreview || `${webUrl}${watchedValues.footer_base64!}`}
+                        src={
+                          footerPreview ||
+                          `${webUrl}${watchedValues.footer_base64!}`
+                        }
                         variant="rounded"
                         sx={{ width: 80, height: 60 }}
                       />
                       <Box>
-                        <Chip 
-                          label="تم الرفع" 
-                          color="success" 
-                          size="small" 
+                        <Chip
+                          label="تم الرفع"
+                          color="success"
+                          size="small"
                           sx={{ mb: 1 }}
                         />
-                        <Typography variant="caption" display="block" color="text.secondary">
+                        <Typography
+                          variant="caption"
+                          display="block"
+                          color="text.secondary"
+                        >
                           {watchedValues.footer_base64}
                         </Typography>
                       </Box>
@@ -651,21 +768,21 @@ const SettingsPage: React.FC = () => {
                     type="file"
                     accept="image/*"
                     id="watermark-upload"
-                    style={{ display: 'none' }}
+                    style={{ display: "none" }}
                     onChange={(e) => {
                       const file = e.target.files?.[0];
-                      if (file) uploadSettingAsset('watermark_image', file);
+                      if (file) uploadSettingAsset("watermark_image", file);
                     }}
                   />
                   <label htmlFor="watermark-upload">
                     <IconButton
                       color="primary"
                       component="span"
-                      sx={{ 
-                        border: '2px dashed',
-                        borderColor: 'primary.main',
+                      sx={{
+                        border: "2px dashed",
+                        borderColor: "primary.main",
                         borderRadius: 2,
-                        p: 2
+                        p: 2,
                       }}
                     >
                       <CloudUpload sx={{ fontSize: 32 }} />
@@ -674,18 +791,25 @@ const SettingsPage: React.FC = () => {
                   {(watermarkPreview || watchedValues.watermark_image) && (
                     <Stack direction="row" spacing={2} alignItems="center">
                       <Avatar
-                        src={watermarkPreview || `${webUrl}${watchedValues.watermark_image}`}
+                        src={
+                          watermarkPreview ||
+                          `${webUrl}${watchedValues.watermark_image}`
+                        }
                         variant="rounded"
                         sx={{ width: 80, height: 60 }}
                       />
                       <Box>
-                        <Chip 
-                          label="تم الرفع" 
-                          color="success" 
-                          size="small" 
+                        <Chip
+                          label="تم الرفع"
+                          color="success"
+                          size="small"
                           sx={{ mb: 1 }}
                         />
-                        <Typography variant="caption" display="block" color="text.secondary">
+                        <Typography
+                          variant="caption"
+                          display="block"
+                          color="text.secondary"
+                        >
                           {watchedValues.watermark_image}
                         </Typography>
                       </Box>
@@ -704,8 +828,7 @@ const SettingsPage: React.FC = () => {
                 }
                 label={
                   <Box>
-                    <Typography variant="body1">إظهار الشعار   كلوقو </Typography>
-                    
+                    <Typography variant="body1">إظهار الشعار كلوقو </Typography>
                   </Box>
                 }
               />
@@ -720,13 +843,198 @@ const SettingsPage: React.FC = () => {
                 }
                 label={
                   <Box>
-                    <Typography variant="body1">إظهار العنوان في نتائج المختبر</Typography>
+                    <Typography variant="body1">
+                      إظهار العنوان في نتائج المختبر (قديم)
+                    </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      عند التفعيل سيظهر عنوان التقرير في نتائج المختبر
+                      عند التفعيل سيظهر عنوان التقرير في نتائج المختبر (يستخدم
+                      lab_name في حال عدم تحديد عنوان مخصص أدناه)
                     </Typography>
                   </Box>
                 }
               />
+
+              <Typography variant="h6" sx={{ mt: 4, mb: 2 }}>
+                إعدادات متقدمة لترويسة التقرير
+              </Typography>
+
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth>
+                    <InputLabel id="pdf-header-type-label">
+                      نوع الترويسة
+                    </InputLabel>
+                    <Select
+                      labelId="pdf-header-type-label"
+                      {...control.register("pdf_header_type")}
+                      value={watchedValues.pdf_header_type || "logo"}
+                      label="نوع الترويسة"
+                      onChange={(e) =>
+                        setValue("pdf_header_type", e.target.value as any)
+                      }
+                    >
+                      <MenuItem value="logo">شعار (Logo)</MenuItem>
+                      <MenuItem value="full_width">
+                        صورة كاملة العرض (Full Width)
+                      </MenuItem>
+                      <MenuItem value="none">بدون صورة</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+                {watchedValues.pdf_header_type === "logo" && (
+                  <Grid item xs={12} md={6}>
+                    <FormControl fullWidth>
+                      <InputLabel id="pdf-logo-position-label">
+                        موقع الشعار
+                      </InputLabel>
+                      <Select
+                        labelId="pdf-logo-position-label"
+                        {...control.register("pdf_header_logo_position")}
+                        value={watchedValues.pdf_header_logo_position || "left"}
+                        label="موقع الشعار"
+                        onChange={(e) =>
+                          setValue(
+                            "pdf_header_logo_position",
+                            e.target.value as any
+                          )
+                        }
+                      >
+                        <MenuItem value="left">يسار</MenuItem>
+                        <MenuItem value="right">يمين</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                )}
+              </Grid>
+
+              {watchedValues.pdf_header_type === "logo" && (
+                <Grid container spacing={2} sx={{ mt: 1 }}>
+                  <Grid item xs={6} md={3}>
+                    <TextField
+                      {...control.register("pdf_header_logo_width")}
+                      label="عرض الشعار"
+                      type="number"
+                      fullWidth
+                    />
+                  </Grid>
+                  <Grid item xs={6} md={3}>
+                    <TextField
+                      {...control.register("pdf_header_logo_height")}
+                      label="ارتفاع الشعار"
+                      type="number"
+                      fullWidth
+                    />
+                  </Grid>
+                  <Grid item xs={6} md={3}>
+                    <TextField
+                      {...control.register("pdf_header_logo_x_offset")}
+                      label="إزاحة X"
+                      type="number"
+                      fullWidth
+                    />
+                  </Grid>
+                  <Grid item xs={6} md={3}>
+                    <TextField
+                      {...control.register("pdf_header_logo_y_offset")}
+                      label="إزاحة Y"
+                      type="number"
+                      fullWidth
+                    />
+                  </Grid>
+                </Grid>
+              )}
+
+              {watchedValues.pdf_header_type === "full_width" && (
+                <Grid container spacing={2} sx={{ mt: 1 }}>
+                  <Grid item xs={6} md={3}>
+                    <TextField
+                      {...control.register("pdf_header_image_width")}
+                      label="عرض الصورة"
+                      type="number"
+                      fullWidth
+                    />
+                  </Grid>
+                  <Grid item xs={6} md={3}>
+                    <TextField
+                      {...control.register("pdf_header_image_height")}
+                      label="ارتفاع الصورة"
+                      type="number"
+                      fullWidth
+                    />
+                  </Grid>
+                  <Grid item xs={6} md={3}>
+                    <TextField
+                      {...control.register("pdf_header_image_x_offset")}
+                      label="إزاحة X"
+                      type="number"
+                      fullWidth
+                    />
+                  </Grid>
+                  <Grid item xs={6} md={3}>
+                    <TextField
+                      {...control.register("pdf_header_image_y_offset")}
+                      label="إزاحة Y"
+                      type="number"
+                      fullWidth
+                    />
+                  </Grid>
+                </Grid>
+              )}
+
+              <Box sx={{ mt: 4 }}>
+                <Typography variant="subtitle1" gutterBottom>
+                  نصوص الترويسة
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      {...control.register("pdf_header_title")}
+                      label="العنوان الرئيسي"
+                      fullWidth
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      {...control.register("pdf_header_subtitle")}
+                      label="العنوان الفرعي"
+                      fullWidth
+                    />
+                  </Grid>
+                  <Grid item xs={6} md={3}>
+                    <TextField
+                      {...control.register("pdf_header_title_font_size")}
+                      label="حجم خط العنوان"
+                      type="number"
+                      fullWidth
+                    />
+                  </Grid>
+                  <Grid item xs={6} md={3}>
+                    <TextField
+                      {...control.register("pdf_header_subtitle_font_size")}
+                      label="حجم خط الفرعي"
+                      type="number"
+                      fullWidth
+                    />
+                  </Grid>
+                  <Grid item xs={6} md={3}>
+                    <TextField
+                      {...control.register("pdf_header_title_y_offset")}
+                      label="إزاحة Y للعنوان"
+                      type="number"
+                      fullWidth
+                    />
+                  </Grid>
+                  <Grid item xs={6} md={3}>
+                    <TextField
+                      {...control.register("pdf_header_subtitle_y_offset")}
+                      label="إزاحة Y للفرعي"
+                      type="number"
+                      fullWidth
+                    />
+                  </Grid>
+                </Grid>
+              </Box>
             </Stack>
           </Paper>
         )}
@@ -740,9 +1048,9 @@ const SettingsPage: React.FC = () => {
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
               إعدادات خدمة واتساب
             </Typography>
-            
+
             <Stack spacing={3}>
-              <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
+              <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
                 <TextField
                   {...control.register("ultramsg_instance_id")}
                   label="instance id"
@@ -759,7 +1067,7 @@ const SettingsPage: React.FC = () => {
                   variant="outlined"
                 />
               </Stack>
-              <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
+              <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
                 <TextField
                   {...control.register("ultramsg_base_url")}
                   label="رابط الخدمة"
@@ -775,34 +1083,14 @@ const SettingsPage: React.FC = () => {
                   variant="outlined"
                 />
               </Stack>
-              
-              <Divider />
-              <Typography variant="h6" gutterBottom>
-                إعدادات WhatsApp Cloud API
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                إعدادات API الخاص بـ WhatsApp Cloud API
-              </Typography>
-              
-              <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
-                <TextField
-                  {...control.register("cloud_api_token")}
-                  label="Cloud API Token"
-                  type="password"
-                  placeholder="EAAZBDm6SxCwMBQPScR2IZCBRTTqZAFEdQGzecTuHILZB5QEfQZBHbjvO3IyqV0CMfRnZCl7Sfdo2LupXfpJuhVt9UeArZCUHdFHZA9mZBQIcrT1TVJX6WSkZAZAel88RS1BA1MOLlE6YqJYiAB22u68oC3ut9N1wEzKVNwJNmIvx7rkBcSsbUWWf3qM5Y48XMWzx6Y07hbPTKo8DoIxaVojvvgvRklaG5H5ubYV2OxIjFEFD9Bqltf2CyfMo7r8XotTNQV6iOBpQFZC52BgyXZBHMHuXRdrprbgZDZD"
-                  fullWidth
-                  variant="outlined"
-                  helperText="Access token for WhatsApp Cloud API"
-                />
-                <TextField
-                  {...control.register("phone_number_id")}
-                  label="Phone Number ID"
-                  placeholder="814326295108130"
-                  fullWidth
-                  variant="outlined"
-                  helperText="Phone number ID from WhatsApp Business Account"
-                />
-              </Stack>
+              <TextField
+                {...control.register("whatsapp_number")}
+                label="رقم الواتساب للمشاركة"
+                placeholder="96878622990"
+                fullWidth
+                variant="outlined"
+                helperText="هذا الرقم سيظهر في رابط الواتساب المرسل للمريض في رسالة SMS"
+              />
             </Stack>
           </Paper>
         )}
@@ -816,7 +1104,7 @@ const SettingsPage: React.FC = () => {
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
               إعدادات تدفق العمل والرسائل
             </Typography>
-            
+
             <Stack spacing={3}>
               <FormControlLabel
                 control={
@@ -831,7 +1119,8 @@ const SettingsPage: React.FC = () => {
                       إرسال رسالة ترحيبية تلقائياً
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      عند تفعيل هذا الخيار سيتم إرسال رسالة ترحيبية عند تسجيل زيارة جديدة
+                      عند تفعيل هذا الخيار سيتم إرسال رسالة ترحيبية عند تسجيل
+                      زيارة جديدة
                     </Typography>
                   </Box>
                 }
@@ -847,9 +1136,12 @@ const SettingsPage: React.FC = () => {
                 }
                 label={
                   <Box>
-                    <Typography variant="body1">إرسال رسالة SMS بعد الإعتماد</Typography>
+                    <Typography variant="body1">
+                      إرسال رسالة SMS بعد الإعتماد
+                    </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      عند الاعتماد يتم إرسال رسالة نصية تحتوي على إشعار وجزء من التفاصيل
+                      عند الاعتماد يتم إرسال رسالة نصية تحتوي على إشعار وجزء من
+                      التفاصيل
                     </Typography>
                   </Box>
                 }
@@ -865,9 +1157,31 @@ const SettingsPage: React.FC = () => {
                 }
                 label={
                   <Box>
-                    <Typography variant="body1">إرسال رسالة واتساب بعد الإعتماد</Typography>
+                    <Typography variant="body1">
+                      إرسال رسالة واتساب بعد الإعتماد
+                    </Typography>
                     <Typography variant="body2" color="text.secondary">
                       سيتم إرسال رسالة واتساب للمريض بعد اعتماد النتائج
+                    </Typography>
+                  </Box>
+                }
+              />
+
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    {...control.register("prevent_backdated_entry")}
+                    checked={!!watchedValues.prevent_backdated_entry}
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography variant="body1">
+                      منع تسجيل مريض لوردية سابقة
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      عند التفعيل، يمنع النظام تسجيل مرضى جدد إذا لم تكن الوردية
+                      بتاريخ اليوم
                     </Typography>
                   </Box>
                 }
@@ -885,7 +1199,7 @@ const SettingsPage: React.FC = () => {
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
               تفعيل أو تعطيل خدمات Firebase (التخزين، قاعدة البيانات، والمصادقة)
             </Typography>
-            
+
             <Stack spacing={3}>
               <FormControlLabel
                 control={
@@ -896,21 +1210,24 @@ const SettingsPage: React.FC = () => {
                 }
                 label={
                   <Box>
-                    <Typography variant="body1">
-                      تفعيل Firebase
-                    </Typography>
+                    <Typography variant="body1">تفعيل Firebase</Typography>
                     <Typography variant="body2" color="text.secondary">
-                      {firebaseEnabled 
-                        ? 'Firebase مفعل حالياً. سيتم تعطيل جميع خدمات Firebase عند إلغاء التفعيل.'
-                        : 'Firebase معطل حالياً. سيتم تفعيل جميع خدمات Firebase عند التفعيل.'}
+                      {firebaseEnabled
+                        ? "Firebase مفعل حالياً. سيتم تعطيل جميع خدمات Firebase عند إلغاء التفعيل."
+                        : "Firebase معطل حالياً. سيتم تفعيل جميع خدمات Firebase عند التفعيل."}
                     </Typography>
-                    <Typography variant="caption" color="warning.main" sx={{ mt: 1, display: 'block' }}>
-                      ملاحظة: يرجى إعادة تحميل الصفحة بعد تغيير هذا الإعداد لتطبيق التغييرات.
+                    <Typography
+                      variant="caption"
+                      color="warning.main"
+                      sx={{ mt: 1, display: "block" }}
+                    >
+                      ملاحظة: يرجى إعادة تحميل الصفحة بعد تغيير هذا الإعداد
+                      لتطبيق التغييرات.
                     </Typography>
                   </Box>
                 }
               />
-              
+
               <TextField
                 {...control.register("firestore_result_collection")}
                 label="اسم مجموعة نتائج Firestore (Firestore Result Collection)"
@@ -924,12 +1241,14 @@ const SettingsPage: React.FC = () => {
         )}
 
         <Box display="flex" justifyContent="flex-end" pt={3}>
-          <Button 
-            type="submit" 
-            variant="contained" 
+          <Button
+            type="submit"
+            variant="contained"
             size="large"
             disabled={mutation.isPending}
-            startIcon={mutation.isPending ? <CircularProgress size={20} /> : null}
+            startIcon={
+              mutation.isPending ? <CircularProgress size={20} /> : null
+            }
           >
             حفظ الإعدادات
           </Button>

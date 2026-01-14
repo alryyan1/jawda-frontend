@@ -39,9 +39,7 @@ import LabActionsPane from "@/components/lab/workstation/LabActionsPane";
 import StatusAndInfoPanel from "@/components/lab/workstation/StatusAndInfoPanel";
 import MainCommentDialog from "@/components/lab/workstation/MainCommentDialog";
 
-import type {
-  PatientLabQueueItem,
-} from "@/types/labWorkflow";
+import type { PatientLabQueueItem } from "@/types/labWorkflow";
 import type { Shift } from "@/types/shifts";
 import type { DoctorVisit } from "@/types/visits";
 
@@ -59,8 +57,12 @@ import {
   getLabHistory,
   type LabHistoryItem,
 } from "@/services/patientService"; // Updated service function
-import { getLabRequestsForVisit, updateLabRequestDetails } from "@/services/labRequestService";
+import {
+  getLabRequestsForVisit,
+  updateLabRequestDetails,
+} from "@/services/labRequestService";
 import { getSinglePatientLabQueueItem } from "@/services/labWorkflowService";
+import { getSettings } from "@/services/settingService";
 import apiClient from "@/services/api";
 import LabQueueFilterDialog, {
   type LabQueueFilters,
@@ -100,7 +102,7 @@ const LabWorkstationPage: React.FC = () => {
   // --- Core State ---
   const [selectedQueueItem, setSelectedQueueItem] =
     useState<PatientLabQueueItem | null>(null);
-    // console.log(selectedQueueItem, "selectedQueueItem");
+  // console.log(selectedQueueItem, "selectedQueueItem");
   const [selectedLabRequestForEntry, setSelectedLabRequestForEntry] =
     useState<LabRequest | null>(null);
   const [currentShiftForQueue, setCurrentShiftForQueue] =
@@ -123,7 +125,7 @@ const LabWorkstationPage: React.FC = () => {
   const handleUploadStatusChange = (isUploading: boolean) => {
     setIsUploadingToFirebase(isUploading);
   };
-// console.log(selectedLabRequestForEntry,'selectedLabRequestForEntry')
+  // console.log(selectedLabRequestForEntry,'selectedLabRequestForEntry')
   const [appliedQueueFilters, setAppliedQueueFilters] =
     useState<LabQueueFilters>({
       result_status_filter: "pending", // Default to show pending results
@@ -131,17 +133,15 @@ const LabWorkstationPage: React.FC = () => {
       // other filters undefined initially
     });
   // Single shared patient query for all components
-  const { data: patientDetails } = useQuery<Patient | null, Error>(
-    {
-      queryKey: ["patientDetails", selectedQueueItem?.patient_id],
-      queryFn: () =>
-        selectedQueueItem?.patient_id
-          ? getPatientById(selectedQueueItem.patient_id)
-          : Promise.resolve(null),
-      enabled: !!selectedQueueItem?.patient_id, // Fetch when a patient is selected in the queue
-      staleTime: 5 * 60 * 1000, // Cache for 5 mins
-    }
-  );
+  const { data: patientDetails } = useQuery<Patient | null, Error>({
+    queryKey: ["patientDetails", selectedQueueItem?.patient_id],
+    queryFn: () =>
+      selectedQueueItem?.patient_id
+        ? getPatientById(selectedQueueItem.patient_id)
+        : Promise.resolve(null),
+    enabled: !!selectedQueueItem?.patient_id, // Fetch when a patient is selected in the queue
+    staleTime: 5 * 60 * 1000, // Cache for 5 mins
+  });
   // Global states
   const [debouncedGlobalSearch] = useState("");
   const [pdfPreviewData, setPdfPreviewData] = useState<{
@@ -157,30 +157,34 @@ const LabWorkstationPage: React.FC = () => {
     useState<RecentDoctorVisitSearchItem | null>(null);
   const [isShiftFinderDialogOpen, setIsShiftFinderDialogOpen] = useState(false);
   const [isUploadingToFirebase, setIsUploadingToFirebase] = useState(false);
-  
+
   // Comment Dialog State
   const [isCommentDialogOpen, setIsCommentDialogOpen] = useState(false);
-  const [selectedLabRequestForComment, setSelectedLabRequestForComment] = useState<number | null>(null);
+  const [selectedLabRequestForComment, setSelectedLabRequestForComment] =
+    useState<number | null>(null);
   const [currentTestResults, setCurrentTestResults] = useState<any>(null);
 
   // Get lab requests for comment dialog
   const { data: labRequestsForComment } = useQuery<LabRequest[], Error>({
-    queryKey: ['labRequestsForVisit', selectedQueueItem?.visit_id],
+    queryKey: ["labRequestsForVisit", selectedQueueItem?.visit_id],
     queryFn: () => getLabRequestsForVisit(selectedQueueItem!.visit_id),
     enabled: !!selectedQueueItem?.visit_id,
   });
-  
+
   // Lab History State
   const [labHistoryData, setLabHistoryData] = useState<LabHistoryItem[]>([]);
-  const [selectedLabHistoryItem, setSelectedLabHistoryItem] = useState<LabHistoryItem | null>(null);
+  const [selectedLabHistoryItem, setSelectedLabHistoryItem] =
+    useState<LabHistoryItem | null>(null);
   const [isLoadingLabHistory, setIsLoadingLabHistory] = useState(false);
 
-
   // New Payment Badge State
-  const [newPaymentBadges, setNewPaymentBadges] = useState<Set<number>>(new Set());
-  
+  const [newPaymentBadges, setNewPaymentBadges] = useState<Set<number>>(
+    new Set()
+  );
+
   // Updated item state for PatientQueuePanel
-  const [updatedQueueItem, setUpdatedQueueItem] = useState<PatientLabQueueItem | null>(null);
+  const [updatedQueueItem, setUpdatedQueueItem] =
+    useState<PatientLabQueueItem | null>(null);
 
   // Sound system state
   const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
@@ -188,11 +192,11 @@ const LabWorkstationPage: React.FC = () => {
 
   // Function to add and remove payment badge
   const addPaymentBadge = useCallback((visitId: number) => {
-    setNewPaymentBadges(prev => new Set(prev).add(visitId));
-    
+    setNewPaymentBadges((prev) => new Set(prev).add(visitId));
+
     // Remove badge after 15 seconds
     setTimeout(() => {
-      setNewPaymentBadges(prev => {
+      setNewPaymentBadges((prev) => {
         const newSet = new Set(prev);
         newSet.delete(visitId);
         return newSet;
@@ -204,11 +208,13 @@ const LabWorkstationPage: React.FC = () => {
   const initializeAudio = useCallback(() => {
     if (!audioContext) {
       try {
-        const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+        const ctx = new (window.AudioContext ||
+          (window as unknown as { webkitAudioContext: typeof AudioContext })
+            .webkitAudioContext)();
         setAudioContext(ctx);
         // console.log('Audio context initialized');
       } catch (error) {
-        console.warn('Could not initialize audio context:', error);
+        console.warn("Could not initialize audio context:", error);
         setSoundEnabled(false);
       }
     }
@@ -224,10 +230,10 @@ const LabWorkstationPage: React.FC = () => {
         initializeAudio();
       }
 
-      const audio = new Audio('/new-payment.mp3');
+      const audio = new Audio("/new-payment.mp3");
       audio.volume = 0.7;
-      audio.preload = 'auto';
-      
+      audio.preload = "auto";
+
       // Try to play the sound
       const playPromise = audio.play();
       if (playPromise !== undefined) {
@@ -235,9 +241,9 @@ const LabWorkstationPage: React.FC = () => {
         // console.log('Payment sound played successfully');
       }
     } catch (error) {
-      console.warn('Could not play payment sound:', error);
+      console.warn("Could not play payment sound:", error);
       // If autoplay is blocked, try to enable it for future plays
-      if (error instanceof Error && error.name === 'NotAllowedError') {
+      if (error instanceof Error && error.name === "NotAllowedError") {
         // console.warn('Autoplay blocked - user interaction required to enable sound');
         setSoundEnabled(false);
       }
@@ -286,9 +292,13 @@ const LabWorkstationPage: React.FC = () => {
 
   // Real-time event subscription for lab payments
   useEffect(() => {
-    const handleLabPayment = async (data: { visit: DoctorVisit; patient: Patient; labRequests: LabRequest[] }) => {
+    const handleLabPayment = async (data: {
+      visit: DoctorVisit;
+      patient: Patient;
+      labRequests: LabRequest[];
+    }) => {
       // console.log('Lab payment event received in LabWorkstationPage:', data);
-      
+
       try {
         // Convert the visit data to PatientLabQueueItem format (for reference)
         // const queueItemLike: PatientLabQueueItem = {
@@ -322,15 +332,14 @@ const LabWorkstationPage: React.FC = () => {
 
         // Show a toast notification
         // toast.success(`تم دفع فحوصات المختبر للمريض: ${data.patient.name}`);
-        
+
         // Invalidate the queue to refresh with the new paid patient
         queryClientRef.current.invalidateQueries({
           queryKey: ["labPendingQueue", currentShiftForQueueRef.current?.id],
         });
-        
       } catch (error) {
-        console.error('Error processing lab payment event:', error);
-        toast.error('فشل في تحديث قائمة المختبر');
+        console.error("Error processing lab payment event:", error);
+        toast.error("فشل في تحديث قائمة المختبر");
       }
     };
 
@@ -349,96 +358,110 @@ const LabWorkstationPage: React.FC = () => {
   useEffect(() => {
     // Debounce map to prevent duplicate processing of the same event
     const processedEvents = new Set<string>();
-    
+
     const handleSysmexResultInserted = async (data: SysmexResultEventData) => {
       // Create a unique key for this event to prevent duplicate processing
       const eventKey = `sysmex-${data.doctorVisit.id}-${data.patient.id}`;
-      
+
       // Check if we've already processed this event recently
       if (processedEvents.has(eventKey)) {
-        console.log('Skipping duplicate sysmex result event:', eventKey);
+        console.log("Skipping duplicate sysmex result event:", eventKey);
         return;
       }
-      
+
       // Mark this event as processed
       processedEvents.add(eventKey);
-      
+
       // Clean up old processed events after 5 seconds
       setTimeout(() => {
         processedEvents.delete(eventKey);
       }, 5000);
-      
-      console.log('Sysmex result inserted event received in LabWorkstationPage:', data);
-      
+
+      console.log(
+        "Sysmex result inserted event received in LabWorkstationPage:",
+        data
+      );
+
       try {
         // Play notification sound
         await playPaymentSoundRef.current();
 
         // Show a toast notification
         toast.success(`تم استلام نتائج Sysmex للمريض: ${data.patient.name}`, {
-          description: `زيارة رقم ${data.doctorVisit.id} - CBC Results Available`
+          description: `زيارة رقم ${data.doctorVisit.id} - CBC Results Available`,
         });
 
         // Fetch the updated queue item for this specific patient
         try {
-          const updatedQueueItem = await getSinglePatientLabQueueItem(data.doctorVisit.id);
-          console.log('Fetched updated queue item for sysmex result:', updatedQueueItem);
-          
+          const updatedQueueItem = await getSinglePatientLabQueueItem(
+            data.doctorVisit.id
+          );
+          console.log(
+            "Fetched updated queue item for sysmex result:",
+            updatedQueueItem
+          );
+
           // Update the queue item in the PatientQueuePanel
           setUpdatedQueueItem(updatedQueueItem);
-          
+
           // Use refs to get current values to avoid stale closures
           const currentSelectedQueueItem = selectedQueueItemRef.current;
-          if (currentSelectedQueueItem && currentSelectedQueueItem.visit_id === data.doctorVisit.id) {
+          if (
+            currentSelectedQueueItem &&
+            currentSelectedQueueItem.visit_id === data.doctorVisit.id
+          ) {
             setSelectedQueueItem(updatedQueueItem);
-            
+
             // Refresh lab requests and patient details for the current patient
             queryClientRef.current.invalidateQueries({
-              queryKey: ['labRequestsForVisit', data.doctorVisit.id]
+              queryKey: ["labRequestsForVisit", data.doctorVisit.id],
             });
             queryClientRef.current.invalidateQueries({
-              queryKey: ["patientDetails", data.patient.id]
+              queryKey: ["patientDetails", data.patient.id],
             });
           }
         } catch (fetchError) {
-          console.error('Error fetching updated queue item:', fetchError);
+          console.error("Error fetching updated queue item:", fetchError);
           // Fallback to invalidating the entire queue if single fetch fails
           queryClientRef.current.invalidateQueries({
             queryKey: ["labPendingQueue", currentShiftForQueueRef.current?.id],
           });
         }
-        
       } catch (error) {
-        console.error('Error processing sysmex result event:', error);
-        toast.error('فشل في تحديث بيانات المختبر');
+        console.error("Error processing sysmex result event:", error);
+        toast.error("فشل في تحديث بيانات المختبر");
       }
     };
 
-    console.log('LabWorkstationPage: Setting up sysmex result event listener');
+    console.log("LabWorkstationPage: Setting up sysmex result event listener");
     // Subscribe to sysmex-result-inserted events
     realtimeService.onSysmexResultInserted(handleSysmexResultInserted);
 
     // Cleanup subscription on component unmount
     return () => {
-      console.log('LabWorkstationPage: Cleaning up sysmex result event listener');
+      console.log(
+        "LabWorkstationPage: Cleaning up sysmex result event listener"
+      );
       realtimeService.offSysmexResultInserted(handleSysmexResultInserted);
     };
   }, []); // Empty dependency array - only run once on mount to prevent multiple subscriptions
 
   // Real-time event subscription for lab queue item updates
   useEffect(() => {
-    const handleLabQueueItemUpdated = (data: { queueItem: PatientLabQueueItem }) => {
-      console.log('Lab queue item updated event received:', data);
-      
+    const handleLabQueueItemUpdated = (data: {
+      queueItem: PatientLabQueueItem;
+    }) => {
+      console.log("Lab queue item updated event received:", data);
+
       const updatedItem = data.queueItem;
-      
+
       // Update queueItems state
-      setQueueItems(prevItems => 
-        prevItems.map(item => 
+      setQueueItems((prevItems) =>
+        prevItems.map((item) =>
           item.visit_id === updatedItem.visit_id ? updatedItem : item
         )
       );
-      
+
       // If this is the currently selected item, update it
       if (selectedQueueItemRef.current?.visit_id === updatedItem.visit_id) {
         setSelectedQueueItem(updatedItem);
@@ -460,6 +483,13 @@ const LabWorkstationPage: React.FC = () => {
       queryFn: getCurrentOpenShift,
       // Removed refetchInterval - fetch only once
     });
+
+  // Fetch settings once for the page
+  const { data: settings } = useQuery({
+    queryKey: ["settings"],
+    queryFn: getSettings,
+    staleTime: 10 * 60 * 1000, // 10 minutes
+  });
 
   // Initialize or update currentShiftForQueue based on global shift
   useEffect(() => {
@@ -505,48 +535,67 @@ const LabWorkstationPage: React.FC = () => {
       if (data && data.patient && data.lab_requests) {
         // alert("data")
         // Calculate total and pending result counts from lab requests
-        const allResults = data.lab_requests.flatMap(lr => lr.results || []);
+        const allResults = data.lab_requests.flatMap((lr) => lr.results || []);
         const totalResultCount = allResults.length;
-        const pendingResultCount = allResults.filter(r => !r.result || r.result === '').length;
-        
+        const pendingResultCount = allResults.filter(
+          (r) => !r.result || r.result === ""
+        ).length;
+
         // Check if all requests are paid
-        const allRequestsPaid = data.lab_requests.length > 0 
-          ? data.lab_requests.every((lr: LabRequest) => (lr.amount_paid || 0) > 0)
-          : true;
-        
+        const allRequestsPaid =
+          data.lab_requests.length > 0
+            ? data.lab_requests.every(
+                (lr: LabRequest) => (lr.amount_paid || 0) > 0
+              )
+            : true;
+
         // Find oldest request time
-        const oldestRequestTime = data.lab_requests.length > 0
-          ? data.lab_requests.reduce(
-              (oldest, lr) =>
-                new Date(lr.created_at!) < new Date(oldest)
-                  ? lr.created_at!
-                  : oldest,
-              data.lab_requests[0].created_at!
-            )
-          : data.created_at || null;
-        
+        const oldestRequestTime =
+          data.lab_requests.length > 0
+            ? data.lab_requests.reduce(
+                (oldest, lr) =>
+                  new Date(lr.created_at!) < new Date(oldest)
+                    ? lr.created_at!
+                    : oldest,
+                data.lab_requests[0].created_at!
+              )
+            : data.created_at || null;
+
         // Get sample_id from first lab request that has one
-        const sampleId = data.lab_requests?.find((lr) => lr.sample_id)?.sample_id?.toString() || null;
-        
+        const sampleId =
+          data.lab_requests
+            ?.find((lr) => lr.sample_id)
+            ?.sample_id?.toString() || null;
+
         // Check if last result is pending
         const lastResult = allResults[allResults.length - 1];
-        const isLastResultPending = lastResult ? (!lastResult.result || lastResult.result === '') : false;
-        
+        const isLastResultPending = lastResult
+          ? !lastResult.result || lastResult.result === ""
+          : false;
+
         // Check if ready for print (all results entered and lab request authorized)
         // Check if all lab requests are authorized
-        const allLabRequestsAuthorized = data.lab_requests.every(lr => lr.authorized_at !== null);
-        const isReadyForPrint = totalResultCount > 0 && pendingResultCount === 0 && allLabRequestsAuthorized;
-        
+        const allLabRequestsAuthorized = data.lab_requests.every(
+          (lr) => lr.authorized_at !== null
+        );
+        const isReadyForPrint =
+          totalResultCount > 0 &&
+          pendingResultCount === 0 &&
+          allLabRequestsAuthorized;
+
         // Get auth date from the most recent authorized lab request
-        const authDate = data.lab_requests
-          .filter(lr => lr.authorized_at)
-          .map(lr => lr.authorized_at!)
-          .sort()
-          .reverse()[0] || null;
-        
+        const authDate =
+          data.lab_requests
+            .filter((lr) => lr.authorized_at)
+            .map((lr) => lr.authorized_at!)
+            .sort()
+            .reverse()[0] || null;
+
         // Check if any lab request is authorized
-        const resultAuth = data.lab_requests.some(lr => lr.authorized_at !== null);
-        
+        const resultAuth = data.lab_requests.some(
+          (lr) => lr.authorized_at !== null
+        );
+
         const queueItemLike: PatientLabQueueItem = {
           visit_id: data.id,
           patient_id: data.patient.id,
@@ -554,7 +603,7 @@ const LabWorkstationPage: React.FC = () => {
           sample_id: sampleId || `V${data.id}`,
           lab_number: data.number?.toString() || `L${data.id}`,
           lab_request_ids: data.lab_requests.map((lr) => lr.id),
-          oldest_request_time: oldestRequestTime || data.created_at || '',
+          oldest_request_time: oldestRequestTime || data.created_at || "",
           test_count: data.lab_requests.length,
           phone: data.patient.phone || "",
           result_is_locked: data.patient.result_is_locked || false,
@@ -573,7 +622,10 @@ const LabWorkstationPage: React.FC = () => {
         };
         console.log(queueItemLike, "queueItemLike");
         getSinglePatientLabQueueItem(data.id).then((queueItem) => {
-          console.log(queueItem, "queueItem in LabWorkstationPage after getSinglePatientLabQueueItem");
+          console.log(
+            queueItem,
+            "queueItem in LabWorkstationPage after getSinglePatientLabQueueItem"
+          );
           setSelectedQueueItem(queueItem);
         });
         // setSelectedQueueItem(queueItemLike); // This makes it appear "selected" in the context
@@ -673,7 +725,6 @@ const LabWorkstationPage: React.FC = () => {
   );
   const isCurrentResultLocked = selectedQueueItem?.result_is_locked || false;
 
-
   const handlePatientSelectFromQueue = useCallback(
     async (queueItem: PatientLabQueueItem | null) => {
       setSelectedQueueItem(queueItem);
@@ -682,18 +733,18 @@ const LabWorkstationPage: React.FC = () => {
       setVisitIdSearchTerm("");
       setAutocompleteInputValue(""); // Clear autocomplete text field
       setSelectedLabHistoryItem(null); // Clear lab history selection
-      
+
       // If a patient is selected, fetch their lab requests and auto-select the first one
       if (queueItem) {
         try {
           // console.log(queueItem, "queueItem in handlePatientSelectFromQueue");
           // Fetch lab requests for this visit
           const labRequests = await queryClient.fetchQuery({
-            queryKey: ['labRequestsForVisit', queueItem.visit_id],
+            queryKey: ["labRequestsForVisit", queueItem.visit_id],
             queryFn: () => getLabRequestsForVisit(queueItem.visit_id),
             staleTime: 5 * 60 * 1000, // Cache for 5 minutes
           });
-          
+
           // Auto-select the first lab request if available
           if (labRequests && labRequests.length > 0) {
             setSelectedLabRequestForEntry(labRequests[0]);
@@ -703,10 +754,13 @@ const LabWorkstationPage: React.FC = () => {
           if (queueItem.phone) {
             setIsLoadingLabHistory(true);
             try {
-              const historyResponse = await getLabHistory(queueItem.patient_id, queueItem.phone);
+              const historyResponse = await getLabHistory(
+                queueItem.patient_id,
+                queueItem.phone
+              );
               setLabHistoryData(historyResponse.data);
             } catch (error) {
-              console.error('Failed to fetch lab history:', error);
+              console.error("Failed to fetch lab history:", error);
               setLabHistoryData([]);
             } finally {
               setIsLoadingLabHistory(false);
@@ -715,7 +769,10 @@ const LabWorkstationPage: React.FC = () => {
             setLabHistoryData([]);
           }
         } catch (error) {
-          console.error('Failed to fetch lab requests for auto-selection:', error);
+          console.error(
+            "Failed to fetch lab requests for auto-selection:",
+            error
+          );
           // Don't show error toast as this is automatic behavior
         }
       } else {
@@ -732,28 +789,29 @@ const LabWorkstationPage: React.FC = () => {
     []
   );
 
-  const handleOpenComment = useCallback(
-    (labRequestId: number) => {
-      setSelectedLabRequestForComment(labRequestId);
-      setIsCommentDialogOpen(true);
-    },
-    []
-  );
+  const handleOpenComment = useCallback((labRequestId: number) => {
+    setSelectedLabRequestForComment(labRequestId);
+    setIsCommentDialogOpen(true);
+  }, []);
 
   const handleSaveComment = useCallback(
     async (comment: string) => {
       if (!selectedLabRequestForComment) return;
-      
+
       try {
-        await updateLabRequestDetails(selectedLabRequestForComment, { comment });
-        toast.success('تم حفظ الملاحظة بنجاح');
-        
+        await updateLabRequestDetails(selectedLabRequestForComment, {
+          comment,
+        });
+        toast.success("تم حفظ الملاحظة بنجاح");
+
         // Invalidate the lab requests query to refresh the data
         queryClient.invalidateQueries({
-          queryKey: ['labRequestsForVisit', selectedQueueItem?.visit_id]
+          queryKey: ["labRequestsForVisit", selectedQueueItem?.visit_id],
         });
       } catch (error) {
-        const errorMessage = (error as { response?: { data?: { message?: string } } }).response?.data?.message || 'فشل حفظ الملاحظة';
+        const errorMessage =
+          (error as { response?: { data?: { message?: string } } }).response
+            ?.data?.message || "فشل حفظ الملاحظة";
         toast.error(errorMessage);
       }
     },
@@ -763,25 +821,6 @@ const LabWorkstationPage: React.FC = () => {
   const handleTestResultsChange = useCallback((testResults: any) => {
     setCurrentTestResults(testResults);
   }, []);
-
-  const handleSaveAIInterpretation = useCallback(async (interpretation: string) => {
-    if (!selectedLabRequestForComment) return;
-    
-    try {
-      await updateLabRequestDetails(selectedLabRequestForComment, { comment: interpretation });
-      toast.success('تم حفظ التفسير الذكي بنجاح');
-      
-      // Invalidate the lab requests query to refresh the data
-      queryClient.invalidateQueries({
-        queryKey: ['labRequestsForVisit', selectedQueueItem?.visit_id]
-      });
-      
-      setIsCommentDialogOpen(false);
-    } catch (error) {
-      const errorMessage = (error as { response?: { data?: { message?: string } } }).response?.data?.message || 'فشل حفظ التفسير الذكي';
-      toast.error(errorMessage);
-    }
-  }, [selectedLabRequestForComment, selectedQueueItem?.visit_id, queryClient]);
 
   const handleLabHistoryItemSelect = useCallback(
     (historyItem: LabHistoryItem | null) => {
@@ -804,22 +843,26 @@ const LabWorkstationPage: React.FC = () => {
   }, []);
 
   // Handle single item updates from result entry
-  const handleItemUpdated = useCallback((updatedItem: PatientLabQueueItem) => {
-    // Update the selected queue item if it matches
-    if (selectedQueueItem && selectedQueueItem.visit_id === updatedItem.visit_id) {
-      setSelectedQueueItem(updatedItem);
-    }
-    
-    // Set the updated item for PatientQueuePanel to use
-    setUpdatedQueueItem(updatedItem);
-    
-    // Clear the updated item after a short delay to allow the update to be processed
-    setTimeout(() => {
-      setUpdatedQueueItem(null);
-    }, 1000);
-  }, [selectedQueueItem]);
+  const handleItemUpdated = useCallback(
+    (updatedItem: PatientLabQueueItem) => {
+      // Update the selected queue item if it matches
+      if (
+        selectedQueueItem &&
+        selectedQueueItem.visit_id === updatedItem.visit_id
+      ) {
+        setSelectedQueueItem(updatedItem);
+      }
 
+      // Set the updated item for PatientQueuePanel to use
+      setUpdatedQueueItem(updatedItem);
 
+      // Clear the updated item after a short delay to allow the update to be processed
+      setTimeout(() => {
+        setUpdatedQueueItem(null);
+      }, 1000);
+    },
+    [selectedQueueItem]
+  );
 
   const handleSearchByVisitIdEnter = (
     event: React.KeyboardEvent<HTMLInputElement>
@@ -944,7 +987,7 @@ const LabWorkstationPage: React.FC = () => {
       <header className="flex-shrink-0 h-auto p-1 border-b bg-card flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4 shadow-sm dark:border-slate-800">
         <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
           <FlaskConical className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
-         
+
           <Autocomplete
             id="recent-visits-by-patient-dropdown"
             options={recentVisitsData || []}
@@ -1059,7 +1102,7 @@ const LabWorkstationPage: React.FC = () => {
             }
             loadingText={AR.loading}
           />
-             <div className="w-full sm:w-auto">
+          <div className="w-full sm:w-auto">
             <TextField
               type="number"
               size="small"
@@ -1093,9 +1136,6 @@ const LabWorkstationPage: React.FC = () => {
               <span className="text-xs font-medium">جاري رفع الملف...</span>
             </div>
           )}
-       
-
-       
 
           {/* Lab History Autocomplete - Show skeleton when loading, autocomplete when data is ready */}
           {selectedQueueItem && (
@@ -1114,7 +1154,8 @@ const LabWorkstationPage: React.FC = () => {
                   }}
                   getOptionLabel={(option) => option.autocomplete_label}
                   isOptionEqualToValue={(option, value) =>
-                    option.patient_id === value.patient_id && option.visit_id === value.visit_id
+                    option.patient_id === value.patient_id &&
+                    option.visit_id === value.visit_id
                   }
                   loading={isLoadingLabHistory}
                   size="small"
@@ -1183,26 +1224,41 @@ const LabWorkstationPage: React.FC = () => {
               <Printer className="h-5 w-5" />
             </IconButton>
           </Tooltip> */}
-          
-          <Tooltip title={appliedQueueFilters.show_unfinished_only ? "إخفاء النتائج غير المكتملة" : "عرض النتائج غير المكتملة فقط"}>
+
+          <Tooltip
+            title={
+              appliedQueueFilters.show_unfinished_only
+                ? "إخفاء النتائج غير المكتملة"
+                : "عرض النتائج غير المكتملة فقط"
+            }
+          >
             <IconButton
               onClick={() => {
                 const newFilters = {
                   ...appliedQueueFilters,
-                  show_unfinished_only: !appliedQueueFilters.show_unfinished_only,
+                  show_unfinished_only:
+                    !appliedQueueFilters.show_unfinished_only,
                   ready_for_print_only: false, // Disable the other filter
                 };
                 setAppliedQueueFilters(newFilters);
                 setActiveQueueFilters(newFilters);
-                queryClient.invalidateQueries({ queryKey: ["labPendingQueue"] });
+                queryClient.invalidateQueries({
+                  queryKey: ["labPendingQueue"],
+                });
               }}
               size="small"
               sx={{
-                backgroundColor: appliedQueueFilters.show_unfinished_only ? 'warning.main' : 'transparent',
-                color: appliedQueueFilters.show_unfinished_only ? 'warning.contrastText' : 'inherit',
-                '&:hover': {
-                  backgroundColor: appliedQueueFilters.show_unfinished_only ? 'warning.dark' : 'action.hover',
-                }
+                backgroundColor: appliedQueueFilters.show_unfinished_only
+                  ? "warning.main"
+                  : "transparent",
+                color: appliedQueueFilters.show_unfinished_only
+                  ? "warning.contrastText"
+                  : "inherit",
+                "&:hover": {
+                  backgroundColor: appliedQueueFilters.show_unfinished_only
+                    ? "warning.dark"
+                    : "action.hover",
+                },
               }}
             >
               <Clock className="h-5 w-5" />
@@ -1230,7 +1286,7 @@ const LabWorkstationPage: React.FC = () => {
             </IconButton>
           </Tooltip> */}
           <Tooltip title={soundEnabled ? "إيقاف الصوت" : "تشغيل الصوت"}>
-            <IconButton 
+            <IconButton
               onClick={() => {
                 if (!soundEnabled) {
                   setSoundEnabled(true);
@@ -1240,13 +1296,17 @@ const LabWorkstationPage: React.FC = () => {
                   setSoundEnabled(false);
                   toast.info("تم إيقاف الصوت");
                 }
-              }} 
+              }}
               size="small"
               sx={{
-                color: soundEnabled ? 'success.main' : 'error.main',
+                color: soundEnabled ? "success.main" : "error.main",
               }}
             >
-              {soundEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+              {soundEnabled ? (
+                <Volume2 className="h-5 w-5" />
+              ) : (
+                <VolumeX className="h-5 w-5" />
+              )}
             </IconButton>
           </Tooltip>
         </div>
@@ -1274,7 +1334,7 @@ const LabWorkstationPage: React.FC = () => {
             />
           )}
         </aside>
-  <aside
+        <aside
           className={cn(
             "w-[290px] xl:w-[350px] flex-shrink-0 bg-card dark:bg-slate-800/50 flex-col h-full overflow-hidden shadow-md",
             isRTL
@@ -1287,9 +1347,9 @@ const LabWorkstationPage: React.FC = () => {
         >
           {selectedQueueItem ? (
             <StatusAndInfoPanel
-            selectedQueueItem={selectedQueueItem}
-            handlePatientSelectFromQueue={handlePatientSelectFromQueue}
-            setQueueItems={setQueueItems}
+              selectedQueueItem={selectedQueueItem}
+              handlePatientSelectFromQueue={handlePatientSelectFromQueue}
+              setQueueItems={setQueueItems}
               key={`info-panel-${selectedQueueItem.visit_id}-${
                 selectedQueueItem.patient_id
               }-${selectedLabRequestForEntry?.id || "none"}`}
@@ -1298,10 +1358,10 @@ const LabWorkstationPage: React.FC = () => {
               patientLabQueueItem={selectedQueueItem}
               patientData={patientDetails} // Pass shared patient data
               onUploadStatusChange={handleUploadStatusChange}
+              settings={settings}
             />
           ) : (
             <div className="p-4 text-center text-muted-foreground hidden lg:flex flex-col items-center justify-center h-full">
-              
               <Info size={32} className="mb-2 opacity-30" />
               <span>{AR.noInfoToShow}</span>
             </div>
@@ -1322,9 +1382,7 @@ const LabWorkstationPage: React.FC = () => {
             />
           ) : (
             <div className="flex-grow flex items-center justify-center p-10 text-center">
-              
               <div className="flex flex-col items-center text-muted-foreground">
-                
                 <Microscope size={48} className="mb-4 opacity-50" />
                 <p>
                   {selectedQueueItem
@@ -1336,7 +1394,6 @@ const LabWorkstationPage: React.FC = () => {
           )}
         </main>
 
-      
         <section
           className={cn(
             "w-[230px]  flex-shrink-0 bg-slate-50 dark:bg-slate-800 border-border flex-col h-full overflow-hidden shadow-md",
@@ -1358,7 +1415,6 @@ const LabWorkstationPage: React.FC = () => {
             />
           ) : (
             <div className="p-4 text-center text-muted-foreground hidden md:flex flex-col items-center justify-center h-full">
-              
               <Users size={32} className="mb-2 opacity-30" />
               <span>{AR.selectPatientPrompt}</span>
             </div>
@@ -1416,13 +1472,15 @@ const LabWorkstationPage: React.FC = () => {
       <MainCommentDialog
         isOpen={isCommentDialogOpen}
         onOpenChange={setIsCommentDialogOpen}
-        currentComment={selectedLabRequestForComment ? 
-          labRequestsForComment?.find(lr => lr.id === selectedLabRequestForComment)?.comment : 
-          null
+        currentComment={
+          selectedLabRequestForComment
+            ? labRequestsForComment?.find(
+                (lr) => lr.id === selectedLabRequestForComment
+              )?.comment
+            : null
         }
         onSave={handleSaveComment}
         testResults={currentTestResults}
-        onSaveAIInterpretation={handleSaveAIInterpretation}
       />
     </div>
   );

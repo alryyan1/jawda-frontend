@@ -12,7 +12,6 @@ import ActionsButtonsPanel from "@/components/lab/workstation/ActionsButtonsPane
 import apiClient from "@/services/api";
 import { useAuthorization } from "@/hooks/useAuthorization";
 
-
 interface StatusAndInfoPanelProps {
   selectedQueueItem: PatientLabQueueItem | null;
   patientId: number | null;
@@ -22,10 +21,8 @@ interface StatusAndInfoPanelProps {
   onUploadStatusChange?: (isUploading: boolean) => void;
   setQueueItems: React.Dispatch<React.SetStateAction<PatientLabQueueItem[]>>;
   handlePatientSelectFromQueue: (item: PatientLabQueueItem) => void;
+  settings?: any;
 }
-
-
-
 
 const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
   selectedQueueItem,
@@ -35,20 +32,25 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
   patientData,
   setQueueItems,
   handlePatientSelectFromQueue,
+  settings,
 }) => {
-  const [updatedQueueItem, setUpdatedQueueItem] = useState<PatientLabQueueItem | null>(null);
+  const [updatedQueueItem, setUpdatedQueueItem] =
+    useState<PatientLabQueueItem | null>(null);
   const { can } = useAuthorization();
 
-  const handlePatientUpdate = useCallback((newQueueItem: PatientLabQueueItem) => {
-    setUpdatedQueueItem(newQueueItem);
-    handlePatientSelectFromQueue(newQueueItem);
-    console.log(newQueueItem, "newQueueItem from handlePatientUpdate");
-    setQueueItems((prevItems: PatientLabQueueItem[]) => 
-      prevItems.map((item: PatientLabQueueItem) => 
-        item.visit_id === newQueueItem.visit_id ? newQueueItem : item
-      )
-    );
-  }, [handlePatientSelectFromQueue, setQueueItems]);
+  const handlePatientUpdate = useCallback(
+    (newQueueItem: PatientLabQueueItem) => {
+      setUpdatedQueueItem(newQueueItem);
+      handlePatientSelectFromQueue(newQueueItem);
+      console.log(newQueueItem, "newQueueItem from handlePatientUpdate");
+      setQueueItems((prevItems: PatientLabQueueItem[]) =>
+        prevItems.map((item: PatientLabQueueItem) =>
+          item.visit_id === newQueueItem.visit_id ? newQueueItem : item
+        )
+      );
+    },
+    [handlePatientSelectFromQueue, setQueueItems]
+  );
   // useEffect(() => {
   //     getSinglePatientLabQueueItem(visitId as number).then(data => {
   //       console.log(data, "data from getSinglePatientLabQueueItem");
@@ -63,43 +65,54 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
   // Mutation to toggle authentication status
   const toggleAuthenticationMutation = useMutation({
     mutationFn: async (patientId: number) => {
-      const response = await apiClient.patch(`/patients/${patientId}/toggle-authentication`);
+      const response = await apiClient.patch(
+        `/patients/${patientId}/toggle-authentication`
+      );
       return response.data;
     },
     onSuccess: (data) => {
       const updatedQueueItem = data.data as PatientLabQueueItem;
-      console.log(updatedQueueItem, "updatedQueueItem from toggleAuthenticationMutation");
+      console.log(
+        updatedQueueItem,
+        "updatedQueueItem from toggleAuthenticationMutation"
+      );
       handlePatientUpdate(updatedQueueItem);
-      
-      toast.success(updatedQueueItem.result_auth ? "تم اعتماد النتائج" : "تم إلغاء اعتماد النتائج");
-      
+
+      toast.success(
+        updatedQueueItem.result_auth
+          ? "تم اعتماد النتائج"
+          : "تم إلغاء اعتماد النتائج"
+      );
+
       // Invalidate the shared patient query
       queryClient.invalidateQueries({
         queryKey: ["patientDetails", patientId],
       });
     },
     onError: (error: unknown) => {
-      const errorMessage = error instanceof Error && 'response' in error 
-        ? (error as { response?: { data?: { message?: string } } }).response?.data?.message 
-        : "حدث خطأ أثناء تغيير حالة المصادقة";
+      const errorMessage =
+        error instanceof Error && "response" in error
+          ? (error as { response?: { data?: { message?: string } } }).response
+              ?.data?.message
+          : "حدث خطأ أثناء تغيير حالة المصادقة";
       toast.error(errorMessage);
     },
   });
 
   const handleAuthenticationToggle = useCallback(() => {
     if (!patientId) return;
-    if(!can('تحقيق نتيجه') ) {
-      toast.error('ليس لديك صلاحية لتحقيق النتائج');
+    if (!can("تحقيق نتيجه")) {
+      toast.error("ليس لديك صلاحية لتحقيق النتائج");
       return;
     }
     toggleAuthenticationMutation.mutate(patientId);
   }, [patientId, toggleAuthenticationMutation]);
 
   // Use passed patient data if available, otherwise fetch it
-  const {
-    data: fetchedPatient,
-    isLoading: isLoadingPatient,
-  } = useQuery<Patient, Error>({
+  const { data: fetchedPatient, isLoading: isLoadingPatient } = useQuery<
+    Patient,
+    Error
+  >({
     queryKey: ["patientDetails", patientId],
     queryFn: () =>
       patientId
@@ -114,42 +127,44 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
 
   // Use updated queue item if available, otherwise use the original
   const currentQueueItem = updatedQueueItem || patientLabQueueItem;
-  
-  // console.log(patientLabQueueItem,'patientLabQueueItem')
-  const patientStatuses = useMemo(() => ({
-    payment: { done: currentQueueItem?.all_requests_paid, by: currentQueueItem?.all_requests_paid ? 'paid' : null },
-    collected: { done:selectedQueueItem?.sample_collection_time !== null, by: undefined },
-    print: { done: currentQueueItem?.is_printed, by: null },
-    authentication: { done: currentQueueItem?.result_auth ?? false },
-  }), [currentQueueItem?.result_auth, currentQueueItem?.is_printed, currentQueueItem?.all_requests_paid]);
 
-  const getAgeString = useCallback(  
-    (p?: Patient | null): string => {
-      if (!p) return "غير متوفر";
-      const parts = [];
-      if (p.age_year !== null && p.age_year !== undefined && p.age_year >= 0)
-        parts.push(`${p.age_year}س`);
-      if (p.age_month !== null && p.age_month !== undefined && p.age_month >= 0)
-        parts.push(`${p.age_month}ش`);
-      if (p.age_day !== null && p.age_day !== undefined && p.age_day >= 0)
-        parts.push(`${p.age_day}ي`);
-      if (
-        parts.length === 0 &&
-        (p.age_year === 0 || p.age_month === 0 || p.age_day === 0)
-      )
-        return `0ي`;
-      return parts.length > 0
-        ? parts.join(" ")
-        : "غير متوفر";
-    },
-    []
+  // console.log(patientLabQueueItem,'patientLabQueueItem')
+  const patientStatuses = useMemo(
+    () => ({
+      payment: {
+        done: currentQueueItem?.all_requests_paid,
+        by: currentQueueItem?.all_requests_paid ? "paid" : null,
+      },
+      collected: {
+        done: selectedQueueItem?.sample_collection_time !== null,
+        by: undefined,
+      },
+      print: { done: currentQueueItem?.is_printed, by: null },
+      authentication: { done: currentQueueItem?.result_auth ?? false },
+    }),
+    [
+      currentQueueItem?.result_auth,
+      currentQueueItem?.is_printed,
+      currentQueueItem?.all_requests_paid,
+    ]
   );
 
-
- 
-
- 
-
+  const getAgeString = useCallback((p?: Patient | null): string => {
+    if (!p) return "غير متوفر";
+    const parts = [];
+    if (p.age_year !== null && p.age_year !== undefined && p.age_year >= 0)
+      parts.push(`${p.age_year}س`);
+    if (p.age_month !== null && p.age_month !== undefined && p.age_month >= 0)
+      parts.push(`${p.age_month}ش`);
+    if (p.age_day !== null && p.age_day !== undefined && p.age_day >= 0)
+      parts.push(`${p.age_day}ي`);
+    if (
+      parts.length === 0 &&
+      (p.age_year === 0 || p.age_month === 0 || p.age_day === 0)
+    )
+      return `0ي`;
+    return parts.length > 0 ? parts.join(" ") : "غير متوفر";
+  }, []);
 
   if (!patientId) {
     return (
@@ -163,7 +178,10 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
   // console.log(currentPatient,'currentPatient in StatusAndInfoPanel',patientLabQueueItem,'patientLabQueueItem in StatusAndInfoPanel')
 
   return (
-    <div dir="rtl" className="h-full bg-slate-50 dark:bg-slate-800/30 overflow-y-auto">
+    <div
+      dir="rtl"
+      className="h-full bg-slate-50 dark:bg-slate-800/30 overflow-y-auto"
+    >
       <div className="p-1 sm:p-1 space-y-1 sm:space-y-3">
         {patient ? (
           <PatientDetailsLabEntry
@@ -171,16 +189,22 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
             visitId={visitId}
             patient={patient}
             patientName={patient.name}
-            doctorName={(currentQueueItem as unknown as { doctor_name?: string })?.doctor_name ?? null}
+            doctorName={
+              (currentQueueItem as unknown as { doctor_name?: string })
+                ?.doctor_name ?? null
+            }
             date={patient.created_at as unknown as string}
             phone={patient.phone ?? null}
             paymentMethod={null}
-            registeredBy={(currentQueueItem as unknown as { registered_by?: string })?.registered_by ?? null}
+            registeredBy={
+              (currentQueueItem as unknown as { registered_by?: string })
+                ?.registered_by ?? null
+            }
             age={getAgeString(patient)}
             statuses={patientStatuses}
             className="mb-1"
             onAuthenticationToggle={handleAuthenticationToggle}
-            canAuth ={can('تحقيق نتيجه')}
+            canAuth={!!can("تحقيق نتيجه")}
             isAuthenticating={toggleAuthenticationMutation.isPending}
           />
         ) : isLoadingPatient ? (
@@ -226,13 +250,14 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
             بيانات المريض غير متوفرة
           </p>
         )}
-        
+
         <ActionsButtonsPanel
           visitId={visitId}
           patient={patient || null}
           patientLabQueueItem={currentQueueItem}
           resultsLocked={resultsLocked}
           onPatientUpdate={handlePatientUpdate}
+          settings={settings}
         />
       </div>
     </div>
@@ -240,4 +265,3 @@ const StatusAndInfoPanel: React.FC<StatusAndInfoPanelProps> = ({
 };
 
 export default StatusAndInfoPanel;
-

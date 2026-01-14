@@ -1,4 +1,4 @@
-import apiClient from './api';
+import apiClient from "./api";
 
 export interface SmsMessage {
   to: string;
@@ -33,7 +33,11 @@ class SmsService {
   /**
    * Send a single SMS message
    */
-  async sendSms(to: string, message: string, sender?: string): Promise<SmsResponse> {
+  async sendSms(
+    to: string,
+    message: string,
+    sender?: string
+  ): Promise<SmsResponse> {
     try {
       const request: SmsRequest = {
         sender,
@@ -41,15 +45,15 @@ class SmsService {
           {
             to,
             message,
-            is_otp: false
-          }
-        ]
+            is_otp: false,
+          },
+        ],
       };
 
-      const response = await apiClient.post('/sms/send', request);
+      const response = await apiClient.post("/sms/send", request);
       return response.data;
     } catch (error: any) {
-      console.error('SMS sending failed:', error);
+      console.error("SMS sending failed:", error);
       throw error;
     }
   }
@@ -57,17 +61,20 @@ class SmsService {
   /**
    * Send multiple SMS messages
    */
-  async sendBulkSms(messages: SmsMessage[], sender?: string): Promise<SmsBulkResponse> {
+  async sendBulkSms(
+    messages: SmsMessage[],
+    sender?: string
+  ): Promise<SmsBulkResponse> {
     try {
       const request: SmsRequest = {
         sender,
-        messages
+        messages,
       };
 
-      const response = await apiClient.post('/sms/send', request);
+      const response = await apiClient.post("/sms/send", request);
       return response.data;
     } catch (error: any) {
-      console.error('Bulk SMS sending failed:', error);
+      console.error("Bulk SMS sending failed:", error);
       throw error;
     }
   }
@@ -76,8 +83,9 @@ class SmsService {
    * Send lab approval notification SMS
    */
   async sendLabApprovalSms(phoneNumber: string): Promise<SmsResponse> {
-    const message = "تمّ تفعيل حسابكم بنجاح، ويمكنكم الآن استخدامه لطلب التحاليل المخبرية.\nمع خالص التحية،\nمختبر الرومي الطبي";
-    
+    const message =
+      "تمّ تفعيل حسابكم بنجاح، ويمكنكم الآن استخدامه لطلب التحاليل المخبرية.\nمع خالص التحية،\nمختبر الرومي الطبي";
+
     return this.sendSms(phoneNumber, message, "Jawda");
   }
 }

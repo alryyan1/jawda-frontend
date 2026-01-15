@@ -1,4 +1,4 @@
-import { io, Socket } from 'socket.io-client';
+import { io, Socket } from "socket.io-client";
 
 interface SocketServiceConfig {
   url: string;
@@ -24,29 +24,28 @@ class SocketService {
     return new Promise((resolve, reject) => {
       try {
         this.socket = io(this.config.url, {
-          transports: ['websocket', 'polling'],
+          transports: ["websocket", "polling"],
           timeout: 10000,
-          ...this.config.options
+          ...this.config.options,
         });
 
-        this.socket.on('connect', () => {
-          console.log('Socket connected:', this.socket?.id);
+        this.socket.on("connect", () => {
+          console.log("Socket connected:", this.socket?.id);
           resolve();
         });
 
-        this.socket.on('connect_error', (error) => {
-          console.error('Socket connection error:', error);
+        this.socket.on("connect_error", (error) => {
+          console.error("Socket connection error:", error);
           reject(error);
         });
 
-        this.socket.on('disconnect', (reason) => {
-          console.log('Socket disconnected:', reason);
+        this.socket.on("disconnect", (reason) => {
+          console.log("Socket disconnected:", reason);
         });
 
-        this.socket.on('error', (error) => {
-          console.error('Socket error:', error);
+        this.socket.on("error", (error) => {
+          console.error("Socket error:", error);
         });
-
       } catch (error) {
         reject(error);
       }
@@ -66,34 +65,34 @@ class SocketService {
 
   // Send HL7 message for testing
   async sendHL7Message(message: string): Promise<HL7TestResult> {
-    alert('Sending HL7 message from frontend');
-    console.log(this.socket,'socket',this.socket?.connected,'connected');
+    alert("Sending HL7 message from frontend");
+    console.log(this.socket, "socket", this.socket?.connected, "connected");
     return new Promise((resolve) => {
       if (!this.socket || !this.socket.connected) {
         resolve({
           success: false,
-          error: 'Socket not connected'
+          error: "Socket not connected",
         });
         return;
       }
 
       // Set up a one-time listener for the response
       const responseHandler = (result: HL7TestResult) => {
-        this.socket?.off('hl7-test-response', responseHandler);
+        this.socket?.off("hl7-test-response", responseHandler);
         resolve(result);
       };
 
-      this.socket.on('hl7-test-response', responseHandler);
+      this.socket.on("hl7-test-response", responseHandler);
 
       // Send the HL7 message
-      this.socket.emit('hl7-test-message', { message });
+      this.socket.emit("hl7-test-message", { message });
 
       // Set a timeout for the response
       setTimeout(() => {
-        this.socket?.off('hl7-test-response', responseHandler);
+        this.socket?.off("hl7-test-response", responseHandler);
         resolve({
           success: false,
-          error: 'Timeout waiting for response'
+          error: "Timeout waiting for response",
         });
       }, 10000); // 10 second timeout
     });
@@ -102,38 +101,52 @@ class SocketService {
   // Listen for HL7 messages from the server
   onHL7Message(callback: (message: string) => void): void {
     if (this.socket) {
-      this.socket.on('hl7-message', callback);
+      this.socket.on("hl7-message", callback);
     }
   }
 
   // Remove HL7 message listener
   offHL7Message(callback: (message: string) => void): void {
     if (this.socket) {
-      this.socket.off('hl7-message', callback);
+      this.socket.off("hl7-message", callback);
     }
   }
 
   // Join a room for specific HL7 device testing
   joinRoom(room: string): void {
     if (this.socket) {
-      this.socket.emit('join', room);
+      this.socket.emit("join", room);
     }
   }
 
   // Leave a room
   leaveRoom(room: string): void {
     if (this.socket) {
-      this.socket.emit('leave', room);
+      this.socket.emit("leave", room);
+    }
+  }
+
+  // Generic event listener
+  on(event: string, callback: (...args: any[]) => void): void {
+    if (this.socket) {
+      this.socket.on(event, callback);
+    }
+  }
+
+  // Generic event remover
+  off(event: string, callback: (...args: any[]) => void): void {
+    if (this.socket) {
+      this.socket.off(event, callback);
     }
   }
 }
 
 // Create a singleton instance
 const socketService = new SocketService({
-  url: import.meta.env.VITE_REALTIME_SERVER_URL || 'http://192.168.100.12:4001',
+  url: import.meta.env.VITE_REALTIME_SERVER_URL || "http://192.168.100.12:4001",
   options: {
-    autoConnect: true
-  }
+    autoConnect: true,
+  },
 });
 
 export default socketService;

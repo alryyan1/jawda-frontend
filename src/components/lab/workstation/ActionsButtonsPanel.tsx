@@ -1,7 +1,18 @@
-// src/components/lab/workstation/ActionsButtonsPanel.tsx
-import React, { useState, useCallback } from "react";
-import { Button as MuiButton } from "@mui/material";
-import { FileText, ShieldCheck } from "lucide-react";
+import React, { useState, useCallback, useEffect } from "react";
+import {
+  Button as MuiButton,
+  CircularProgress,
+  Box,
+  IconButton,
+} from "@mui/material";
+import {
+  FileText,
+  ShieldCheck,
+  MessageCircle,
+  CheckCircle2,
+  AlertCircle,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import type { Patient } from "@/types/patients";
 import type {
@@ -15,6 +26,7 @@ import apiClient from "@/services/api";
 import { hasPatientResultUrl } from "@/services/firebaseStorageService";
 import { useAuthorization } from "@/hooks/useAuthorization";
 import { smsService } from "@/services/smsService";
+import echo from "@/services/echoService";
 interface ActionsButtonsPanelProps {
   visitId: number | null;
   patient: Patient | null;
@@ -40,6 +52,69 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
   const [pdfPreviewTitle, setPdfPreviewTitle] = useState("");
   const [pdfFileName, setPdfFileName] = useState("document.pdf");
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [waStatus, setWaStatus] = useState<{
+    type: "loading" | "success" | "error" | null;
+    message?: string;
+    description?: string;
+    messageId?: string;
+  }>({ type: null });
+
+  // Listen for real-time WhatsApp status updates
+  useEffect(() => {
+    if (!waStatus.messageId) return;
+
+    const handleStatusUpdate = (payload: {
+      message_id: string;
+      status: string;
+      error?: any;
+    }) => {
+      console.log(
+        "Pusher WhatsApp Update:",
+        payload.status,
+        payload.message_id
+      );
+      // Only care about failures and if it matches the current tracked message
+      if (
+        payload.status === "failed" &&
+        waStatus.messageId === payload.message_id
+      ) {
+        console.log("Matched failure ID, showing error box");
+        setWaStatus((prev) => ({
+          ...prev,
+          type: "error",
+          message: "فشل توصيل الرسالة (WhatsApp)",
+          description:
+            payload.error?.message ||
+            payload.error?.error_data?.details ||
+            payload.error?.title ||
+            "Meta ecosystem restriction",
+        }));
+      } else if (
+        payload.status === "delivered" &&
+        waStatus.messageId === payload.message_id
+      ) {
+        // Optionally update success message if specifically delivered
+        setWaStatus((prev) => ({
+          ...prev,
+          type: "success",
+          message: "تم تسليم الرسالة بنجاح",
+          description: `ID: ${payload.message_id}`,
+        }));
+        // Auto-hide after 5 seconds of definite success
+        setTimeout(
+          () => setWaStatus((prev) => ({ ...prev, type: null })),
+          5000
+        );
+      }
+    };
+
+    const channel = echo.channel("whatsapp-updates");
+    channel.listen(".whatsapp.status.updated", handleStatusUpdate);
+
+    return () => {
+      channel.stopListening(".whatsapp.status.updated", handleStatusUpdate);
+    };
+  }, [waStatus.messageId]);
   const { can } = useAuthorization();
   // Helpers to evaluate results
   const isValueEmpty = useCallback((value: unknown): boolean => {
@@ -224,6 +299,55 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
         }
       }
 
+      // Send WhatsApp from frontend if enabled (temporarily moved from backend job)
+      if (settings?.send_whatsapp_after_auth && patient?.phone) {
+        setWaStatus({ type: "loading", message: "جاري الإرسال واتساب..." });
+        try {
+          const waResponse = await apiClient.post(
+            "/whatsapp-cloud/send-template",
+            {
+              to: patient.phone,
+              template_name: "complete_ar",
+              language_code: "ar",
+              // components are handled by backend if needed, but job had them commented out
+            }
+          );
+
+          if (waResponse.data?.success) {
+            const msgId =
+              waResponse.data.message_id ||
+              waResponse.data.data?.messages?.[0]?.id;
+            setWaStatus({
+              type: "success",
+              message: "تم إرسال رسالة واتساب بنجاح",
+              description: `ID: ${msgId || "N/A"}`,
+              messageId: msgId,
+            });
+            // Auto-hide success box after 7 seconds, but KEEP messageId so listener stays active
+            setTimeout(
+              () => setWaStatus((prev) => ({ ...prev, type: null })),
+              7000
+            );
+          } else {
+            setWaStatus((prev) => ({
+              ...prev,
+              type: "error",
+              message: "فشل إرسال رسالة واتساب",
+              description: waResponse.data?.error || "حدث خطأ ما",
+            }));
+          }
+        } catch (waError: any) {
+          console.error("Failed to send frontend WhatsApp:", waError);
+          const errorMsg = waError.response?.data?.error || waError.message;
+          setWaStatus((prev) => ({
+            ...prev,
+            type: "error",
+            message: "حدث خطأ أثناء الإرسال",
+            description: errorMsg,
+          }));
+        }
+      }
+
       toast.success(
         "تم اعتماد النتائج بنجاح. تم إضافة رفع الملف إلى قائمة الانتظار."
       );
@@ -393,6 +517,89 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
         title={pdfPreviewTitle}
         fileName={pdfFileName}
       />
+      {/* WhatsApp Status/Indicator Box */}
+      {waStatus.type && (
+        <Box
+          sx={{
+            position: "fixed",
+            bottom: 24,
+            right: 24,
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            gap: 2,
+            backgroundColor: "white",
+            padding: "12px 16px",
+            borderRadius: "12px",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
+            border: `1px solid ${
+              waStatus.type === "success"
+                ? "#4caf50"
+                : waStatus.type === "error"
+                ? "#f44336"
+                : "#e0e0e0"
+            }`,
+            animation: "fadeInUp 0.3s ease-out",
+            maxWidth: "300px",
+          }}
+        >
+          {waStatus.type === "loading" && (
+            <CircularProgress size={20} thickness={5} color="success" />
+          )}
+          {waStatus.type === "success" && (
+            <CheckCircle2 className="h-5 w-5 text-green-600" />
+          )}
+          {waStatus.type === "error" && (
+            <AlertCircle className="h-5 w-5 text-red-600" />
+          )}
+
+          <div className="flex flex-col flex-1 min-w-0">
+            <span
+              className={`text-sm font-bold truncate ${
+                waStatus.type === "success"
+                  ? "text-green-700"
+                  : waStatus.type === "error"
+                  ? "text-red-700"
+                  : "text-gray-900"
+              }`}
+            >
+              {waStatus.message}
+            </span>
+            {waStatus.description && (
+              <span className="text-[10px] text-gray-500 mt-0.5 truncate">
+                {waStatus.description}
+              </span>
+            )}
+          </div>
+
+          {waStatus.type !== "loading" ? (
+            <IconButton
+              size="small"
+              onClick={() => setWaStatus({ type: null })}
+              sx={{ padding: 0.5 }}
+            >
+              <X className="h-3.5 w-3.5" />
+            </IconButton>
+          ) : (
+            <MessageCircle className="h-5 w-5 text-green-600 animate-pulse" />
+          )}
+        </Box>
+      )}
+
+      <style>
+        {`
+          @keyframes fadeInUp {
+            from {
+              opacity: 0;
+              transform: translateY(20px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+        `}
+      </style>
     </>
   );
 };

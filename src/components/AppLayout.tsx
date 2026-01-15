@@ -8,10 +8,7 @@ import {
 } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import { Sheet, SheetTrigger } from "@/components/ui/sheet";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -65,6 +62,8 @@ import {
   RefreshCw,
   Star,
   Hospital,
+  Cloud,
+  CloudOff,
 } from "lucide-react";
 import { Toaster } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -75,21 +74,34 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { getSidebarCollapsedState, setSidebarCollapsedState } from '../lib/sidebar-store';
-import { PdfPreviewVisibilityProvider, usePdfPreviewVisibility } from '../contexts/PdfPreviewVisibilityContext';
+import {
+  getSidebarCollapsedState,
+  setSidebarCollapsedState,
+} from "../lib/sidebar-store";
+import {
+  PdfPreviewVisibilityProvider,
+  usePdfPreviewVisibility,
+} from "../contexts/PdfPreviewVisibilityContext";
 import { getCurrentOpenShift } from "@/services/shiftService";
 import realtimeService from "@/services/realtimeService";
-import { ClinicSelectionProvider, useClinicSelection } from "@/contexts/ClinicSelectionContext";
+import {
+  ClinicSelectionProvider,
+  useClinicSelection,
+} from "@/contexts/ClinicSelectionContext";
 import Autocomplete from "@mui/material/Autocomplete";
 import TextField from "@mui/material/TextField";
 import CircularProgress from "@mui/material/CircularProgress";
-import { searchRecentDoctorVisits, getPatientById } from "@/services/patientService";
+import {
+  searchRecentDoctorVisits,
+  getPatientById,
+} from "@/services/patientService";
 import { getActiveDoctorShifts } from "@/services/clinicService";
 import type { DoctorShift } from "@/types/doctors";
 import queueWorkerService from "@/services/queueWorkerService";
 import type { QueueWorkerStatus } from "@/services/queueWorkerService";
 import { toast } from "sonner";
 import { useAuthorization } from "@/hooks/useAuthorization";
+import echo from "@/services/echoService";
 import { clearAllCaches } from "@/hooks/useCachedData";
 import FavoriteServiceGroupsDialog from "@/components/clinic/FavoriteServiceGroupsDialog";
 
@@ -98,11 +110,15 @@ export interface NavItem {
   to: string;
   label: string; // Direct Arabic text
   icon: React.ElementType;
-  children?: NavItem[]; 
+  children?: NavItem[];
 }
 
 // Reusable report dropdown item
-const ReportMenuItem: React.FC<{ to: string; icon: React.ElementType; label: string }> = ({ to, icon: Icon, label }) => (
+const ReportMenuItem: React.FC<{
+  to: string;
+  icon: React.ElementType;
+  label: string;
+}> = ({ to, icon: Icon, label }) => (
   <DropdownMenuItem asChild>
     <Link to={to} className="w-full flex items-center">
       <Icon className="mr-2 h-4 w-4" />
@@ -112,7 +128,11 @@ const ReportMenuItem: React.FC<{ to: string; icon: React.ElementType; label: str
 );
 
 // Reusable settings dropdown item
-const SettingsMenuItem: React.FC<{ to: string; icon: React.ElementType; label: string }> = ({ to, icon: Icon, label }) => (
+const SettingsMenuItem: React.FC<{
+  to: string;
+  icon: React.ElementType;
+  label: string;
+}> = ({ to, icon: Icon, label }) => (
   <DropdownMenuItem asChild>
     <Link to={to} className="w-full flex items-center">
       <Icon className="mr-2 h-4 w-4" />
@@ -123,82 +143,112 @@ const SettingsMenuItem: React.FC<{ to: string; icon: React.ElementType; label: s
 
 // Main Navigation Items - All available items
 export const allMainNavItems: NavItem[] = [
-  { to: '/dashboard', label: 'لوحة التحكم', icon: Home },
-  { to: '/clinic', label: 'العيادة', icon: Pencil },
-  { to: '/lab-reception', label: 'استقبال المختبر', icon: Microscope },
-  { to: '/lab-sample-collection', label: 'جمع العينات', icon: Syringe },
-  { to: '/lab-workstation', label: 'نتائج المختبر', icon: FlaskConical },
+  { to: "/dashboard", label: "لوحة التحكم", icon: Home },
+  { to: "/clinic", label: "العيادة", icon: Pencil },
+  { to: "/lab-reception", label: "استقبال المختبر", icon: Microscope },
+  { to: "/lab-sample-collection", label: "جمع العينات", icon: Syringe },
+  { to: "/lab-workstation", label: "نتائج المختبر", icon: FlaskConical },
   // { to: '/laboratory/offers', label: 'عروض التحاليل', icon: Package },
-  { to: '/attendance/sheet', label: 'سجل الحضور', icon: ClipboardEditIcon },
-  { to: '/patients', label: 'المرضى', icon: Users },
-  { to: '/admissions', label: 'التنويم', icon: Hospital },
-  { to: '/online-booking', label: 'الحجز ', icon: CalendarCheck2 },
-  { to: '/cash-reconciliation', label: 'المصالحة المالية', icon: CreditCard },
+  { to: "/attendance/sheet", label: "سجل الحضور", icon: ClipboardEditIcon },
+  { to: "/patients", label: "المرضى", icon: Users },
+  { to: "/admissions", label: "التنويم", icon: Hospital },
+  { to: "/online-booking", label: "الحجز ", icon: CalendarCheck2 },
+  { to: "/cash-reconciliation", label: "المصالحة المالية", icon: CreditCard },
 ];
 
 // Default nav items per user_type (for fallback when nav_items is null)
 export const DEFAULT_NAV_ITEMS_BY_TYPE: Record<string, string[]> = {
-  'استقبال معمل': ['/dashboard', '/lab-reception', '/lab-sample-collection', '/cash-reconciliation', '/patients'],
-  'ادخال نتائج': ['/dashboard', '/lab-workstation', '/lab-sample-collection', '/patients'],
-  'استقبال عياده': ['/dashboard', '/clinic', '/cash-reconciliation', '/patients', '/admissions', '/online-booking'],
-  'خزنه موحده': ['/dashboard', '/clinic', '/cash-reconciliation', '/patients'],
-  'تامين': ['/dashboard', '/clinic', '/cash-reconciliation', '/lab-reception', '/lab-sample-collection', '/patients'],
+  "استقبال معمل": [
+    "/dashboard",
+    "/lab-reception",
+    "/lab-sample-collection",
+    "/cash-reconciliation",
+    "/patients",
+  ],
+  "ادخال نتائج": [
+    "/dashboard",
+    "/lab-workstation",
+    "/lab-sample-collection",
+    "/patients",
+  ],
+  "استقبال عياده": [
+    "/dashboard",
+    "/clinic",
+    "/cash-reconciliation",
+    "/patients",
+    "/admissions",
+    "/online-booking",
+  ],
+  "خزنه موحده": ["/dashboard", "/clinic", "/cash-reconciliation", "/patients"],
+  تامين: [
+    "/dashboard",
+    "/clinic",
+    "/cash-reconciliation",
+    "/lab-reception",
+    "/lab-sample-collection",
+    "/patients",
+  ],
 };
 
 // 'استقبال معمل','ادخال نتائج','استقبال عياده','خزنه موحده','تامين'
 const UserType = {
-  lab_reception: 'استقبال معمل',
-  lab_results: 'ادخال نتائج',
-  clinic_reception: 'استقبال عياده',
-  cash_reconciliation: 'خزنه موحده',
-  insurance: 'تامين',
+  lab_reception: "استقبال معمل",
+  lab_results: "ادخال نتائج",
+  clinic_reception: "استقبال عياده",
+  cash_reconciliation: "خزنه موحده",
+  insurance: "تامين",
 } as const;
 
-type UserType = typeof UserType[keyof typeof UserType];
+type UserType = (typeof UserType)[keyof typeof UserType];
 // Visual style mapping for each user type (border/text/background colors)
-const userTypeStyles: Record<UserType, { border: string; text: string; bg: string }> = {
+const userTypeStyles: Record<
+  UserType,
+  { border: string; text: string; bg: string }
+> = {
   [UserType.lab_reception]: {
-    border: 'border-blue-500',
-    text: 'text-blue-700',
-    bg: 'bg-blue-50',
+    border: "border-blue-500",
+    text: "text-blue-700",
+    bg: "bg-blue-50",
   },
   [UserType.lab_results]: {
-    border: 'border-emerald-500',
-    text: 'text-emerald-700',
-    bg: 'bg-emerald-50',
+    border: "border-emerald-500",
+    text: "text-emerald-700",
+    bg: "bg-emerald-50",
   },
   [UserType.clinic_reception]: {
-    border: 'border-amber-500',
-    text: 'text-amber-800',
-    bg: 'bg-amber-50',
+    border: "border-amber-500",
+    text: "text-amber-800",
+    bg: "bg-amber-50",
   },
   [UserType.cash_reconciliation]: {
-    border: 'border-purple-500',
-    text: 'text-purple-700',
-    bg: 'bg-purple-50',
+    border: "border-purple-500",
+    text: "text-purple-700",
+    bg: "bg-purple-50",
   },
   [UserType.insurance]: {
-    border: 'border-rose-500',
-    text: 'text-rose-700',
-    bg: 'bg-rose-50',
+    border: "border-rose-500",
+    text: "text-rose-700",
+    bg: "bg-rose-50",
   },
 };
 // Function to get navigation items based on user's nav_items or user_type defaults
-const getMainNavItems = (user?: { nav_items?: string[] | null; user_type?: string | null } | null): NavItem[] => {
+const getMainNavItems = (
+  user?: { nav_items?: string[] | null; user_type?: string | null } | null
+): NavItem[] => {
   if (!user) {
     return [];
   }
   // If user has custom nav_items, use those
   if (user?.nav_items && user.nav_items.length > 0) {
-    return allMainNavItems.filter(item => user.nav_items!.includes(item.to));
+    return allMainNavItems.filter((item) => user.nav_items!.includes(item.to));
   }
-  
+
   // If no custom nav_items but user has a user_type, use defaults for that type
   if (user?.user_type && DEFAULT_NAV_ITEMS_BY_TYPE[user.user_type]) {
     const defaultRoutes = DEFAULT_NAV_ITEMS_BY_TYPE[user.user_type];
-    return allMainNavItems.filter(item => defaultRoutes.includes(item.to));
+    return allMainNavItems.filter((item) => defaultRoutes.includes(item.to));
   }
-  
+
   // Admin users (no user_type and no nav_items) - return empty array (must configure manually)
   return [];
 };
@@ -209,7 +259,7 @@ const getUtilityNavItems = (userType?: UserType): NavItem[] => {
   if (userType && Object.values(UserType).includes(userType)) {
     return [];
   }
-  
+
   // For admin users (no specific type or other types), show all utility items
   return utilityNavItems;
 };
@@ -222,14 +272,16 @@ const utilityNavItems: NavItem[] = [
 // Theme Toggle Hook (ensure this is defined, possibly in a separate utils/hooks file)
 const useTheme = () => {
   const [theme, setTheme] = useState<"light" | "dark">(() => {
-    if (typeof window === 'undefined') return 'light'; // Default for SSR or non-browser
+    if (typeof window === "undefined") return "light"; // Default for SSR or non-browser
     const storedTheme = localStorage.getItem("theme");
     if (storedTheme) return storedTheme as "light" | "dark";
-    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    return window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
   });
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === "undefined") return;
     const root = window.document.documentElement;
     root.classList.remove("light", "dark");
     root.classList.add(theme);
@@ -243,29 +295,40 @@ const useTheme = () => {
   return { theme, toggleTheme };
 };
 
-
 const AppHeaderSearch: React.FC = () => {
   const location = useLocation();
-  const isClinicRoute = useMemo(() => location.pathname.startsWith("/clinic"), [location.pathname]);
+  const isClinicRoute = useMemo(
+    () => location.pathname.startsWith("/clinic"),
+    [location.pathname]
+  );
   const { currentRequest } = useClinicSelection();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [inputValue, setInputValue] = useState("");
-  const [options, setOptions] = useState<Array<{ label: string; visit_id: number; patient_id: number; doctor_shift_id?: number | null }>>([]);
+  const [options, setOptions] = useState<
+    Array<{
+      label: string;
+      visit_id: number;
+      patient_id: number;
+      doctor_shift_id?: number | null;
+    }>
+  >([]);
   const [open, setOpen] = useState(false);
-  const [activeDoctorShifts, setActiveDoctorShifts] = useState<DoctorShift[]>([]);
+  const [activeDoctorShifts, setActiveDoctorShifts] = useState<DoctorShift[]>(
+    []
+  );
   const loading = open && inputValue.trim().length >= 2 && options.length === 0;
 
   // Fetch active doctor shifts when component mounts
   useEffect(() => {
     if (!isClinicRoute) return;
-    
+
     const fetchActiveDoctorShifts = async () => {
       try {
         const shifts = await getActiveDoctorShifts();
         setActiveDoctorShifts(shifts);
       } catch (error) {
-        console.error('Failed to fetch active doctor shifts:', error);
+        console.error("Failed to fetch active doctor shifts:", error);
       }
     };
 
@@ -286,49 +349,66 @@ const AppHeaderSearch: React.FC = () => {
   useEffect(() => {
     let active = true;
     const term = inputValue.trim();
-    
+
     // For numeric input (visit ID), search immediately
     // For text input, require minimum 2 characters
     const isNumeric = /^\d+$/.test(term);
     const shouldSearch = isNumeric ? term.length >= 1 : term.length >= 2;
-    
+
     if (!open || !shouldSearch) {
       setOptions([]);
       return;
     }
-    
-    const timer = setTimeout(async () => {
-      try {
-        const results = await searchRecentDoctorVisits(term, 15);
-        if (!active) return;
-        setOptions(results.map(r => ({ 
-          label: r.autocomplete_label || r.patient_name, 
-          visit_id: r.visit_id, 
-          patient_id: r.patient_id,
-          doctor_shift_id: r.doctor_shift_id
-        })));
-      } catch {
-        if (!active) return;
-        setOptions([]);
-      }
-    }, isNumeric ? 100 : 250); // Faster response for numeric search
+
+    const timer = setTimeout(
+      async () => {
+        try {
+          const results = await searchRecentDoctorVisits(term, 15);
+          if (!active) return;
+          setOptions(
+            results.map((r) => ({
+              label: r.autocomplete_label || r.patient_name,
+              visit_id: r.visit_id,
+              patient_id: r.patient_id,
+              doctor_shift_id: r.doctor_shift_id,
+            }))
+          );
+        } catch {
+          if (!active) return;
+          setOptions([]);
+        }
+      },
+      isNumeric ? 100 : 250
+    ); // Faster response for numeric search
     return () => {
       active = false;
       clearTimeout(timer);
     };
   }, [inputValue, open]);
 
-  const handleSelect = async (_: unknown, value: { label: string; visit_id: number; patient_id: number; doctor_shift_id?: number | null } | null) => {
+  const handleSelect = async (
+    _: unknown,
+    value: {
+      label: string;
+      visit_id: number;
+      patient_id: number;
+      doctor_shift_id?: number | null;
+    } | null
+  ) => {
     if (!value || !currentRequest) return;
     const patient = await getPatientById(value.patient_id);
-    
+
     // Check if the patient's doctor shift is currently active
-    const matchingDoctorShift = value.doctor_shift_id 
-      ? activeDoctorShifts.find(shift => shift.id === value.doctor_shift_id)
+    const matchingDoctorShift = value.doctor_shift_id
+      ? activeDoctorShifts.find((shift) => shift.id === value.doctor_shift_id)
       : null;
-    
+
     // Pass the doctor shift information along with the patient selection
-    currentRequest.onSelect(patient, value.visit_id, matchingDoctorShift || undefined);
+    currentRequest.onSelect(
+      patient,
+      value.visit_id,
+      matchingDoctorShift || undefined
+    );
     setInputValue("");
     setOptions([]);
     // Blur the input field
@@ -336,9 +416,9 @@ const AppHeaderSearch: React.FC = () => {
   };
 
   const handleKeyDown = async (event: React.KeyboardEvent) => {
-    if (event.key === 'Enter' && inputValue.trim()) {
+    if (event.key === "Enter" && inputValue.trim()) {
       event.preventDefault();
-      
+
       // If there are options available, select the first one
       if (options.length > 0) {
         await handleSelect(null, options[0]);
@@ -349,30 +429,36 @@ const AppHeaderSearch: React.FC = () => {
         inputRef.current?.blur();
         return;
       }
-      
+
       // If no options but input is numeric (visit ID), try to search directly
       const term = inputValue.trim();
       const isNumeric = /^\d+$/.test(term);
-      
+
       if (isNumeric && currentRequest) {
         try {
           const results = await searchRecentDoctorVisits(term, 1);
           if (results.length > 0) {
             const result = results[0];
             const patient = await getPatientById(result.patient_id);
-            
+
             // Check if the patient's doctor shift is currently active
-            const matchingDoctorShift = result.doctor_shift_id 
-              ? activeDoctorShifts.find(shift => shift.id === result.doctor_shift_id)
+            const matchingDoctorShift = result.doctor_shift_id
+              ? activeDoctorShifts.find(
+                  (shift) => shift.id === result.doctor_shift_id
+                )
               : null;
-            
-            currentRequest.onSelect(patient, result.visit_id, matchingDoctorShift || undefined);
+
+            currentRequest.onSelect(
+              patient,
+              result.visit_id,
+              matchingDoctorShift || undefined
+            );
           }
         } catch (error) {
-          console.error('Error searching by ID:', error);
+          console.error("Error searching by ID:", error);
         }
       }
-      
+
       // Always clear the input after pressing Enter
       setInputValue("");
       setOptions([]);
@@ -409,14 +495,16 @@ const AppHeaderSearch: React.FC = () => {
               ...params.InputProps,
               endAdornment: (
                 <>
-                  {loading ? <CircularProgress color="inherit" size={16} /> : null}
+                  {loading ? (
+                    <CircularProgress color="inherit" size={16} />
+                  ) : null}
                   {params.InputProps.endAdornment}
                 </>
               ),
             }}
           />
         )}
-        sx={{ width: '100%' }}
+        sx={{ width: "100%" }}
       />
     </div>
   );
@@ -427,29 +515,35 @@ const AppLayout: React.FC = () => {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
 
-  const [isDesktopSidebarCollapsed, setIsDesktopSidebarCollapsed] = useState<boolean>(getSidebarCollapsedState());
+  const [isDesktopSidebarCollapsed, setIsDesktopSidebarCollapsed] =
+    useState<boolean>(getSidebarCollapsedState());
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
-  const [queueWorkerStatus, setQueueWorkerStatus] = useState<QueueWorkerStatus>({
-    is_running: false,
-    status: 'stopped'
-  });
+  const [isPusherConnected, setIsPusherConnected] = useState(false);
+  const [queueWorkerStatus, setQueueWorkerStatus] = useState<QueueWorkerStatus>(
+    {
+      is_running: false,
+      status: "stopped",
+    }
+  );
   const [isQueueWorkerLoading, setIsQueueWorkerLoading] = useState(false);
 
   // Current general shift status for app-wide indicator
   const { data: currentOpenShift } = useQuery({
-    queryKey: ['currentOpenShift'],
+    queryKey: ["currentOpenShift"],
     queryFn: getCurrentOpenShift,
     // Removed refetchInterval - fetch only once
   });
- // console.log(currentOpenShift,'currentOpenShift')
+  // console.log(currentOpenShift,'currentOpenShift')
 
   // Queue worker status query with polling
-  const { data: queueWorkerData, refetch: refetchQueueWorkerStatus } = useQuery({
-    queryKey: ['queueWorkerStatus'],
-    queryFn: () => queueWorkerService.getStatus(),
-    refetchInterval: 500000, // Poll every 5 seconds
-  });
+  const { data: queueWorkerData, refetch: refetchQueueWorkerStatus } = useQuery(
+    {
+      queryKey: ["queueWorkerStatus"],
+      queryFn: () => queueWorkerService.getStatus(),
+      refetchInterval: 500000, // Poll every 5 seconds
+    }
+  );
 
   // Update queue worker status when data changes
   useEffect(() => {
@@ -467,19 +561,23 @@ const AppLayout: React.FC = () => {
     onSuccess: (response) => {
       if (response.success) {
         setQueueWorkerStatus(response.data);
-        toast.success(response.data.is_running ? 'تم تشغيل معالج الإشعارات بنجاح' : 'تم إيقاف معالج الإشعارات بنجاح');
+        toast.success(
+          response.data.is_running
+            ? "تم تشغيل معالج الإشعارات بنجاح"
+            : "تم إيقاف معالج الإشعارات بنجاح"
+        );
       } else {
-        toast.error(response.message || 'فشل في تشغيل/إيقاف معالج الإشعارات');
+        toast.error(response.message || "فشل في تشغيل/إيقاف معالج الإشعارات");
       }
     },
     onError: (error: Error) => {
-      toast.error('حدث خطأ أثناء تشغيل/إيقاف معالج الإشعارات');
-      console.error('Queue Worker error:', error);
+      toast.error("حدث خطأ أثناء تشغيل/إيقاف معالج الإشعارات");
+      console.error("Queue Worker error:", error);
     },
     onSettled: () => {
       setIsQueueWorkerLoading(false);
       refetchQueueWorkerStatus(); // Refresh status after toggle
-    }
+    },
   });
 
   const handleQueueWorkerToggle = () => {
@@ -501,6 +599,26 @@ const AppLayout: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Monitor Pusher (Laravel Echo) connection status
+  useEffect(() => {
+    if (!echo || !echo.connector || !echo.connector.pusher) return;
+
+    const pusher = echo.connector.pusher;
+
+    const updateStatus = () => {
+      setIsPusherConnected(pusher.connection.state === "connected");
+    };
+
+    // Set initial status
+    updateStatus();
+
+    // Listen for state changes
+    pusher.connection.bind("state_change", updateStatus);
+
+    return () => {
+      pusher.connection.unbind("state_change", updateStatus);
+    };
+  }, []);
 
   const toggleDesktopSidebar = () => {
     setIsDesktopSidebarCollapsed((prev: boolean) => {
@@ -510,14 +628,10 @@ const AppLayout: React.FC = () => {
     });
   };
 
-
   const handleLogout = async () => {
     await logout();
     navigate("/login");
   };
-
-
-  
 
   interface NavLinkItemProps {
     item: NavItem;
@@ -525,11 +639,24 @@ const AppLayout: React.FC = () => {
     onClick?: () => void;
   }
 
-  const NavLinkItem: React.FC<NavLinkItemProps> = ({ item, isCollapsed, onClick }) => {
+  const NavLinkItem: React.FC<NavLinkItemProps> = ({
+    item,
+    isCollapsed,
+    onClick,
+  }) => {
     const linkContent = (
       <>
-        <item.icon className={cn("h-5 w-5 flex-shrink-0 ", !isCollapsed && "ml-3")} />
-        {!isCollapsed && <span className="text-black! font-bold" style={{fontWeight:'bold'}}>{item.label}</span>}
+        <item.icon
+          className={cn("h-5 w-5 flex-shrink-0 ", !isCollapsed && "ml-3")}
+        />
+        {!isCollapsed && (
+          <span
+            className="text-black! font-bold"
+            style={{ fontWeight: "bold" }}
+          >
+            {item.label}
+          </span>
+        )}
       </>
     );
 
@@ -546,7 +673,7 @@ const AppLayout: React.FC = () => {
               : "text-foreground/70 "
           )
         }
-        end={item.to === '/'} // `end` prop for exact match, esp. for home '/'
+        end={item.to === "/"} // `end` prop for exact match, esp. for home '/'
       >
         {isCollapsed ? (
           <Tooltip>
@@ -566,83 +693,134 @@ const AppLayout: React.FC = () => {
     );
   };
 
-  const SidebarContent: React.FC<{isMobile?: boolean}> = ({ isMobile = false }) => {
+  const SidebarContent: React.FC<{ isMobile?: boolean }> = ({
+    isMobile = false,
+  }) => {
     // Get filtered navigation items based on user's nav_items or user_type defaults
     const filteredMainNavItems = getMainNavItems(user);
-    const filteredUtilityNavItems = getUtilityNavItems(user?.user_type as UserType);
     return (
       <div className="flex flex-col h-full">
-        <ScrollArea className="flex-1 min-h-0"> {/* Changed from flex-grow to flex-1 min-h-0 for proper flex behavior */}
-          <nav style={{direction: 'rtl'}} className="space-y-1 p-2">
+        <ScrollArea className="flex-1 min-h-0">
+          {" "}
+          {/* Changed from flex-grow to flex-1 min-h-0 for proper flex behavior */}
+          <nav style={{ direction: "rtl" }} className="space-y-1 p-2">
             {filteredMainNavItems.map((item) => (
-              <NavLinkItem key={item.to} item={item} isCollapsed={!isMobile && isDesktopSidebarCollapsed} onClick={() => isMobile && setMobileNavOpen(false)} />
+              <NavLinkItem
+                key={item.to}
+                item={item}
+                isCollapsed={!isMobile && isDesktopSidebarCollapsed}
+                onClick={() => isMobile && setMobileNavOpen(false)}
+              />
             ))}
           </nav>
         </ScrollArea>
       </div>
     );
   };
-  
+
   const CollapseIcon = ChevronsRight;
   const ExpandIcon = ChevronsLeft;
-  const {can} = useAuthorization();
-  
+  const { can } = useAuthorization();
+
   // Inner component that uses the PDF preview visibility hook
   const AppLayoutContent: React.FC = () => {
-    const { isVisible: isPdfPreviewVisible, toggle: togglePdfPreviewVisibility } = usePdfPreviewVisibility();
+    const {
+      isVisible: isPdfPreviewVisible,
+      toggle: togglePdfPreviewVisibility,
+    } = usePdfPreviewVisibility();
     const queryClient = useQueryClient();
-    const [isFavoriteServiceGroupsDialogOpen, setIsFavoriteServiceGroupsDialogOpen] = useState(false);
-    
+    const [
+      isFavoriteServiceGroupsDialogOpen,
+      setIsFavoriteServiceGroupsDialogOpen,
+    ] = useState(false);
+
     // Clear all caches handler
     const handleClearAllCaches = () => {
       clearAllCaches();
       // Invalidate all cached queries to force refetch
-      queryClient.invalidateQueries({ queryKey: ['cachedDoctorsList'] });
-      queryClient.invalidateQueries({ queryKey: ['cachedCompaniesList'] });
-      queryClient.invalidateQueries({ queryKey: ['cachedCompanyRelationsList'] });
-      queryClient.invalidateQueries({ queryKey: ['cachedMainTestsList'] });
-      toast.success('تم مسح جميع البيانات المخزنة مؤقتاً بنجاح');
+      queryClient.invalidateQueries({ queryKey: ["cachedDoctorsList"] });
+      queryClient.invalidateQueries({ queryKey: ["cachedCompaniesList"] });
+      queryClient.invalidateQueries({
+        queryKey: ["cachedCompanyRelationsList"],
+      });
+      queryClient.invalidateQueries({ queryKey: ["cachedMainTestsList"] });
+      toast.success("تم مسح جميع البيانات المخزنة مؤقتاً بنجاح");
     };
-    
+
     return (
       <TooltipProvider delayDuration={100}>
-      <div  style={{direction: 'rtl'}}  className="flex  h-screen bg-muted/30 dark:bg-background text-foreground">
-        {/* Desktop Sidebar */}
-        <aside  style={{direction: 'rtl'}}
-            className={cn(
-                "hidden md:flex flex-col fixed inset-y-0 border-border bg-card transition-all duration-300 ease-in-out z-40 h-screen", // Added h-screen for explicit height
-                isDesktopSidebarCollapsed ? "w-16" : "w-50",
-                "border-l"
-            )}
+        <div
+          style={{ direction: "rtl" }}
+          className="flex  h-screen bg-muted/30 dark:bg-background text-foreground"
         >
-          <div className={cn(
-              "flex items-center flex-shrink-0 h-16 px-4 border-b border-border",
-              isDesktopSidebarCollapsed && "justify-center px-2"
+          {/* Desktop Sidebar */}
+          <aside
+            style={{ direction: "rtl" }}
+            className={cn(
+              "hidden md:flex flex-col fixed inset-y-0 border-border bg-card transition-all duration-300 ease-in-out z-40 h-screen", // Added h-screen for explicit height
+              isDesktopSidebarCollapsed ? "w-16" : "w-50",
+              "border-l"
             )}
           >
-            <Link to="/dashboard" className={cn("flex items-center gap-2 font-bold text-primary truncate", isDesktopSidebarCollapsed ? "text-xl" : "text-lg")}>
-              <img src="/logo.png" alt="شعار النظام" className={cn("rounded-md", isDesktopSidebarCollapsed ? "h-8 w-8" : "h-7 w-7")} />
-              {!isDesktopSidebarCollapsed && <span>نظام جودة الطبي</span>}
-            </Link>
-          </div>
-          <SidebarContent />
-          <div className="p-2 border-t border-border mt-auto">
-            <Tooltip>
+            <div
+              className={cn(
+                "flex items-center flex-shrink-0 h-16 px-4 border-b border-border",
+                isDesktopSidebarCollapsed && "justify-center px-2"
+              )}
+            >
+              <Link
+                to="/dashboard"
+                className={cn(
+                  "flex items-center gap-2 font-bold text-primary truncate",
+                  isDesktopSidebarCollapsed ? "text-xl" : "text-lg"
+                )}
+              >
+                <img
+                  src="/logo.png"
+                  alt="شعار النظام"
+                  className={cn(
+                    "rounded-md",
+                    isDesktopSidebarCollapsed ? "h-8 w-8" : "h-7 w-7"
+                  )}
+                />
+                {!isDesktopSidebarCollapsed && <span>نظام جودة الطبي</span>}
+              </Link>
+            </div>
+            <SidebarContent />
+            <div className="p-2 border-t border-border mt-auto">
+              <Tooltip>
                 <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" onClick={toggleDesktopSidebar} className="w-full h-10">
-                    {isDesktopSidebarCollapsed ? <ExpandIcon className="h-5 w-5" /> : <CollapseIcon className="h-5 w-5" />}
-                    <span className="sr-only">{isDesktopSidebarCollapsed ? 'توسيع الشريط الجانبي' : 'طي الشريط الجانبي'}</span>
-                    </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={toggleDesktopSidebar}
+                    className="w-full h-10"
+                  >
+                    {isDesktopSidebarCollapsed ? (
+                      <ExpandIcon className="h-5 w-5" />
+                    ) : (
+                      <CollapseIcon className="h-5 w-5" />
+                    )}
+                    <span className="sr-only">
+                      {isDesktopSidebarCollapsed
+                        ? "توسيع الشريط الجانبي"
+                        : "طي الشريط الجانبي"}
+                    </span>
+                  </Button>
                 </TooltipTrigger>
                 <TooltipContent side="left" sideOffset={5}>
-                    <p>{isDesktopSidebarCollapsed ? 'توسيع الشريط الجانبي' : 'طي الشريط الجانبي'}</p>
+                  <p>
+                    {isDesktopSidebarCollapsed
+                      ? "توسيع الشريط الجانبي"
+                      : "طي الشريط الجانبي"}
+                  </p>
                 </TooltipContent>
-            </Tooltip>
-          </div>
-        </aside>
+              </Tooltip>
+            </div>
+          </aside>
 
-        {/* Mobile Sidebar (Sheet) */}
-        {/* <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+          {/* Mobile Sidebar (Sheet) */}
+          {/* <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
             <SheetTrigger asChild className="md:hidden ml-2">
                 <Button variant="ghost" size="icon"><Menu className="h-6 w-6" /></Button>
             </SheetTrigger>
@@ -662,296 +840,519 @@ const AppLayout: React.FC = () => {
             </SheetContent>
         </Sheet> */}
 
-        {/* Main Content Area */}
-        <div 
+          {/* Main Content Area */}
+          <div
             className={cn(
-                "flex flex-col flex-1 transition-all duration-300 ease-in-out",
-                isDesktopSidebarCollapsed ? "md:mr-16" : "md:mr-50"
+              "flex flex-col flex-1 transition-all duration-300 ease-in-out",
+              isDesktopSidebarCollapsed ? "md:mr-16" : "md:mr-50"
             )}
-        >
+          >
             {/* Header */}
-            <header className={cn(
+            <header
+              className={cn(
                 "sticky top-0 z-30 flex h-11 flex-shrink-0 items-center justify-between border-b border-border bg-card",
                 "px-1 sm:px-6 lg:px-2"
-            )}>
-                <div className="flex items-center">
-                    <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
-                        <SheetTrigger asChild className="md:hidden ml-2">
-                            <Button variant="ghost" size="icon"><Menu className="h-6 w-6" /></Button>
-                        </SheetTrigger>
-                    </Sheet>
-                    <div className="flex-1 text-lg font-semibold hidden md:block truncate px-4" />
-                    {/* Desktop sidebar toggle button in navbar */}
-                    <Tooltip>
-                      <TooltipTrigger asChild>
+              )}
+            >
+              <div className="flex items-center">
+                <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+                  <SheetTrigger asChild className="md:hidden ml-2">
+                    <Button variant="ghost" size="icon">
+                      <Menu className="h-6 w-6" />
+                    </Button>
+                  </SheetTrigger>
+                </Sheet>
+                <div className="flex-1 text-lg font-semibold hidden md:block truncate px-4" />
+                {/* Desktop sidebar toggle button in navbar */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={toggleDesktopSidebar}
+                      className="hidden md:inline-flex mr-2"
+                      aria-label={
+                        isDesktopSidebarCollapsed
+                          ? "توسيع الشريط الجانبي"
+                          : "طي الشريط الجانبي"
+                      }
+                    >
+                      {isDesktopSidebarCollapsed ? (
+                        <ExpandIcon className="h-5 w-5" />
+                      ) : (
+                        <CollapseIcon className="h-5 w-5" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" sideOffset={6}>
+                    <p>
+                      {isDesktopSidebarCollapsed
+                        ? "توسيع الشريط الجانبي"
+                        : "طي الشريط الجانبي"}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+                <AppHeaderSearch />
+              </div>
+
+              <div className="flex items-center gap-2 sm:gap-3">
+                {/* Shift Status Indicator */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div
+                      className="h-3 w-3 rounded-full"
+                      aria-label="shift-status"
+                    >
+                      <div
+                        className={cn(
+                          "h-3 w-3 rounded-full",
+                          currentOpenShift?.is_closed == false
+                            ? "bg-green-500"
+                            : "bg-red-500"
+                        )}
+                      />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>
+                      {currentOpenShift?.is_closed == false
+                        ? "الوردية مفتوحة"
+                        : "لا توجد وردية مفتوحة"}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+
+                {/* Realtime Connection Status (Node.js) */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div
+                      className="flex items-center"
+                      aria-label="realtime-status"
+                    >
+                      {isRealtimeConnected ? (
+                        <Wifi className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <WifiOff className="h-4 w-4 text-red-500" />
+                      )}
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>
+                      {isRealtimeConnected
+                        ? "التزامن (Node.js) مفعل"
+                        : "التزامن (Node.js) معطل"}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+
+                {/* Pusher Connection Status */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div
+                      className="flex items-center"
+                      aria-label="pusher-status"
+                    >
+                      {isPusherConnected ? (
+                        <Cloud className="h-4 w-4 text-orange-500" />
+                      ) : (
+                        <CloudOff className="h-4 w-4 text-gray-400" />
+                      )}
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>
+                      {isPusherConnected
+                        ? "اتصال السحاب (Pusher) نشط"
+                        : "اتصال السحاب (Pusher) غير متاح"}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+
+                {/* Queue Worker Status */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleQueueWorkerToggle}
+                      disabled={isQueueWorkerLoading}
+                      className="h-8 w-8"
+                      aria-label="queue-worker-status"
+                    >
+                      {isQueueWorkerLoading ? (
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+                      ) : queueWorkerStatus.is_running ? (
+                        <Bell className={cn("h-4 w-4", "text-green-500")} />
+                      ) : (
+                        <BellOff className={cn("h-4 w-4", "text-gray-500")} />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>
+                      {queueWorkerStatus.is_running
+                        ? `معالج الإشعارات يعمل (PID: ${queueWorkerStatus.pid})`
+                        : "معالج الإشعارات متوقف"}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+
+                {/* Clear Cache Button */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleClearAllCaches}
+                      className="h-8 w-8"
+                      aria-label="clear-cache"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>مسح البيانات المخزنة مؤقتاً</p>
+                  </TooltipContent>
+                </Tooltip>
+
+                {/* PDF Preview Visibility Toggle */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={togglePdfPreviewVisibility}
+                      aria-label="تبديل عرض معاينة PDF"
+                    >
+                      {isPdfPreviewVisible ? (
+                        <Eye className="h-5 w-5" />
+                      ) : (
+                        <EyeOff className="h-5 w-5" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>
+                      {isPdfPreviewVisible
+                        ? "إخفاء معاينة PDF"
+                        : "إظهار معاينة PDF"}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+
+                {/* Theme Toggle */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={toggleTheme}
+                      aria-label="تبديل المظهر"
+                    >
+                      {theme === "light" ? (
+                        <Moon className="h-5 w-5" />
+                      ) : (
+                        <Sun className="h-5 w-5" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>
+                      {theme === "light"
+                        ? "التبديل إلى الوضع المظلم"
+                        : "التبديل إلى الوضع المضيء"}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+
+                {/* User Menu */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    {(() => {
+                      const type = user?.user_type as UserType | undefined;
+                      const style = type ? userTypeStyles[type] : undefined;
+                      return (
                         <Button
                           variant="ghost"
-                          size="icon"
-                          onClick={toggleDesktopSidebar}
-                          className="hidden md:inline-flex mr-2"
-                          aria-label={isDesktopSidebarCollapsed ? 'توسيع الشريط الجانبي' : 'طي الشريط الجانبي'}
-                        >
-                          {isDesktopSidebarCollapsed ? (
-                            <ExpandIcon className="h-5 w-5" />
-                          ) : (
-                            <CollapseIcon className="h-5 w-5" />
+                          className={cn(
+                            "h-9 px-3 rounded-md max-w-[220px] truncate border",
+                            style?.border ?? "border-border",
+                            style?.text ?? "text-foreground"
                           )}
+                        >
+                          {user?.username || user?.name || "User"}
                         </Button>
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom" sideOffset={6}>
-                        <p>{isDesktopSidebarCollapsed ? 'توسيع الشريط الجانبي' : 'طي الشريط الجانبي'}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    <AppHeaderSearch />
-                </div>
-                
-                <div className="flex items-center gap-2 sm:gap-3">
-                  {/* Shift Status Indicator */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="h-3 w-3 rounded-full" aria-label="shift-status">
-                        <div className={cn(
-                          "h-3 w-3 rounded-full",
-                          currentOpenShift?.is_closed ==false ? "bg-green-500" : "bg-red-500"
-                        )} />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{currentOpenShift?.is_closed == false ? 'الوردية مفتوحة' : 'لا توجد وردية مفتوحة'}</p>
-                    </TooltipContent>
-                  </Tooltip>
-
-                  {/* Realtime Connection Status */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="flex items-center" aria-label="realtime-status">
-                        {isRealtimeConnected ? (
-                          <Wifi className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <WifiOff className="h-4 w-4 text-red-500" />
-                        )}
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{isRealtimeConnected ? 'التزامن مفعل' : 'التزامن معطل'}</p>
-                    </TooltipContent>
-                  </Tooltip>
-
-                  {/* Queue Worker Status */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={handleQueueWorkerToggle}
-                        disabled={isQueueWorkerLoading}
-                        className="h-8 w-8"
-                        aria-label="queue-worker-status"
-                      >
-                        {isQueueWorkerLoading ? (
-                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
-                        ) : queueWorkerStatus.is_running ? (
-                          <Bell className={cn("h-4 w-4", "text-green-500")} />
-                        ) : (
-                          <BellOff className={cn("h-4 w-4", "text-gray-500")} />
-                        )}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>
-                        {queueWorkerStatus.is_running 
-                          ? `معالج الإشعارات يعمل (PID: ${queueWorkerStatus.pid})` 
-                          : 'معالج الإشعارات متوقف'
-                        }
-                      </p>
-                    </TooltipContent>
-                  </Tooltip>
-
-                  {/* Clear Cache Button */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={handleClearAllCaches}
-                        className="h-8 w-8"
-                        aria-label="clear-cache"
-                      >
-                        <RefreshCw className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>مسح البيانات المخزنة مؤقتاً</p>
-                    </TooltipContent>
-                  </Tooltip>
-
-                  {/* PDF Preview Visibility Toggle */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={togglePdfPreviewVisibility} 
-                        aria-label="تبديل عرض معاينة PDF"
-                      >
-                        {isPdfPreviewVisible ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{isPdfPreviewVisible ? 'إخفاء معاينة PDF' : 'إظهار معاينة PDF'}</p>
-                    </TooltipContent>
-                  </Tooltip>
-
-                  {/* Theme Toggle */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="تبديل المظهر">
-                            {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent><p>{theme === 'light' ? 'التبديل إلى الوضع المظلم' : 'التبديل إلى الوضع المضيء'}</p></TooltipContent>
-                  </Tooltip>
-
-
-                  {/* User Menu */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
+                      );
+                    })()}
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel className="p-0">
                       {(() => {
-                        const type = (user?.user_type as UserType | undefined);
+                        const type = user?.user_type as UserType | undefined;
                         const style = type ? userTypeStyles[type] : undefined;
                         return (
-                          <Button
-                            variant="ghost"
+                          <div
                             className={cn(
-                              "h-9 px-3 rounded-md max-w-[220px] truncate border",
-                              style?.border ?? "border-border",
-                              style?.text ?? "text-foreground"
+                              "flex flex-col space-y-1 p-2 rounded-md border",
+                              style?.border ?? "border-gray-300",
+                              style?.bg ?? "bg-accent/30"
                             )}
                           >
-                            {user?.username || user?.name || "User"}
-                          </Button>
+                            <p className="text-sm font-medium leading-none">
+                              {user?.name}
+                            </p>
+                            <p className="text-xs leading-none text-muted-foreground">
+                              {user?.username}
+                            </p>
+                            {"user_type" in (user || {}) && (
+                              <p
+                                className={cn(
+                                  "text-xs leading-none",
+                                  style?.text ?? "text-foreground"
+                                )}
+                              >
+                                نوع المستخدم: {user?.user_type ?? "بدون"}
+                              </p>
+                            )}
+                          </div>
                         );
                       })()}
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
-                      <DropdownMenuLabel className="p-0">
-                        {(() => {
-                          const type = (user?.user_type as UserType | undefined);
-                          const style = type ? userTypeStyles[type] : undefined;
-                          return (
-                            <div
-                              className={cn(
-                                'flex flex-col space-y-1 p-2 rounded-md border',
-                                style?.border ?? 'border-gray-300',
-                                style?.bg ?? 'bg-accent/30'
-                              )}
-                            >
-                              <p className="text-sm font-medium leading-none">{user?.name}</p>
-                              <p className="text-xs leading-none text-muted-foreground">{user?.username}</p>
-                              {('user_type' in (user || {})) && (
-                                <p className={cn('text-xs leading-none', style?.text ?? 'text-foreground')}>نوع المستخدم: {user?.user_type ?? 'بدون'}</p>
-                              )}
-                            </div>
-                          );
-                        })()}
-                      </DropdownMenuLabel>
-              
-               
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <Link to="/profile" className="w-full flex items-center"><Users className="mr-2 h-4 w-4" /> الملف الشخصي</Link>
-                      </DropdownMenuItem>
-                      
-                      <DropdownMenuItem onClick={() => setIsFavoriteServiceGroupsDialogOpen(true)}>
-                        <Star className="mr-2 h-4 w-4" />
-                        <span>المجموعات المفضلة</span>
-                      </DropdownMenuItem>
-                      
-                      {/* Reports and Settings for admin users */}
-                     
-                        <>
-                          <DropdownMenuSeparator />
-                          
-                          {/* Reports Submenu */}
-                          {can('عرض التقارير') && <DropdownMenuSub>
-                            <DropdownMenuSubTrigger className="flex items-center">
-                              <FileBarChart2 className="mr-2 h-4 w-4" />
-                              التقارير
-                            </DropdownMenuSubTrigger>
-                            <DropdownMenuSubContent>
-                              <ReportMenuItem to="/reports/lab-general" icon={BarChartBig} label="المختبر" />
-                              <ReportMenuItem to="/reports/doctor-shifts" icon={FileBarChart2} label="عيادات اليوم" />
-                              <ReportMenuItem to="/reports/clinic-shift-summary" icon={FileSpreadsheet} label="التقرير العام" />
-                              <ReportMenuItem to="/reports/costs" icon={FileSpreadsheet} label="المصروفات" />
-                              <ReportMenuItem to="/reports/daily-costs" icon={FileSpreadsheet} label="المصروفات اليومية" />
-                              <ReportMenuItem to="/reports/monthly-lab-income" icon={BarChartBig} label="دخل المختبر الشهري" />
-                              <ReportMenuItem to="/reports/monthly-service-income" icon={BarChartBig} label="دخل الخدمات الشهري" />
-                              <ReportMenuItem to="/reports/service-cost-breakdown" icon={BarChartBig} label="تفصيل تكلفة الخدمات" />
-                              <ReportMenuItem to="/settings/attendance-summary" icon={BarChartBig} label="ملخص الحضور والانصراف" />
-                              <ReportMenuItem to="/reports/company-performance" icon={BarChartBig} label="أداء الشركات" />
-                              <ReportMenuItem to="/reports/doctor-company-entitlement" icon={HandCoins} label="استحقاقات الأطباء للشركات" />
-                              <ReportMenuItem to="/reports/yearly-income-comparison" icon={LineChart} label="مقارنة الدخل السنوية" />
-                              <ReportMenuItem to="/reports/yearly-patient-frequency" icon={UsersRound} label="تردد المرضى" />
-                              <ReportMenuItem to="/reports/doctor-statistics" icon={BarChartBig} label="إحصائيات الأطباء" />
-                              <ReportMenuItem to="/reports/service-statistics" icon={FileBarChart2} label="إحصائيات الخدمات" />
-                              <ReportMenuItem to="/reports/lab-test-statistics" icon={BarChartBig} label="إحصائيات تحاليل المختبر" />
-                              <ReportMenuItem to="/deleted-service-deposits" icon={BarChartBig} label="الخدمات المحذوفة" />
-                            </DropdownMenuSubContent>
-                         
-                          </DropdownMenuSub>}
-                          
-                          {/* Settings Submenu */}
-                          {can('عرض الاعدادات') && <DropdownMenuSub>
-                            <DropdownMenuSubTrigger className="flex items-center">
-                              <Settings className="mr-2 h-4 w-4" />
-                              الإعدادات
-                            </DropdownMenuSubTrigger>
-                            <DropdownMenuSubContent>
-                              <SettingsMenuItem to="/settings/general" icon={Settings} label="عام" />
-                              <SettingsMenuItem to="/settings/companies" icon={Building} label="الشركات" />
-                              <SettingsMenuItem to="/settings/laboratory" icon={FlaskConical} label="المختبر" />
-                              <SettingsMenuItem to="/settings/laboratory/binding-matching" icon={Link2} label="جداول الربط" />
-                              <SettingsMenuItem to="/settings/service-groups" icon={Layers} label="مجموعات الخدمات" />
-                              <SettingsMenuItem to="/settings/services" icon={ListOrdered} label="إعدادات الخدمات" />
-                              <SettingsMenuItem to="/settings/offers" icon={Tag} label="العروض" />
-                              <SettingsMenuItem to="/settings/doctors" icon={Stethoscope} label="الأطباء" />
-                              <SettingsMenuItem to="/settings/specialists" icon={Users} label="التخصصات الطبية" />
-                              <SettingsMenuItem to="/settings/users" icon={User} label="المستخدمين" />
-                              <SettingsMenuItem to="/settings/attendance/shift-definitions" icon={BarChartBig} label="الورديات" />
-                              <SettingsMenuItem to="/settings/roles" icon={ShieldCheck} label="الأدوار" />
-                              <SettingsMenuItem to="/settings/lab-to-lab" icon={Link2} label="المعامل المتعاقدة" />
-                              <SettingsMenuItem to="/settings/pdf" icon={FileText} label="إعدادات PDF" />
-                              <SettingsMenuItem to="/jobs-management" icon={BarChartBig} label="إدارة المهام" />
-                            </DropdownMenuSubContent>
+                    </DropdownMenuLabel>
 
-                          </DropdownMenuSub>}
-                        </>
-                    
-               
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link to="/profile" className="w-full flex items-center">
+                        <Users className="mr-2 h-4 w-4" /> الملف الشخصي
+                      </Link>
+                    </DropdownMenuItem>
+
+                    <DropdownMenuItem
+                      onClick={() => setIsFavoriteServiceGroupsDialogOpen(true)}
+                    >
+                      <Star className="mr-2 h-4 w-4" />
+                      <span>المجموعات المفضلة</span>
+                    </DropdownMenuItem>
+
+                    {/* Reports and Settings for admin users */}
+
+                    <>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive focus:bg-destructive/10">
-                        <LogOut className="mr-2 h-4 w-4" />
-                        <span>تسجيل الخروج</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
+
+                      {/* Reports Submenu */}
+                      {can("عرض التقارير") && (
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger className="flex items-center">
+                            <FileBarChart2 className="mr-2 h-4 w-4" />
+                            التقارير
+                          </DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent>
+                            <ReportMenuItem
+                              to="/reports/lab-general"
+                              icon={BarChartBig}
+                              label="المختبر"
+                            />
+                            <ReportMenuItem
+                              to="/reports/doctor-shifts"
+                              icon={FileBarChart2}
+                              label="عيادات اليوم"
+                            />
+                            <ReportMenuItem
+                              to="/reports/clinic-shift-summary"
+                              icon={FileSpreadsheet}
+                              label="التقرير العام"
+                            />
+                            <ReportMenuItem
+                              to="/reports/costs"
+                              icon={FileSpreadsheet}
+                              label="المصروفات"
+                            />
+                            <ReportMenuItem
+                              to="/reports/daily-costs"
+                              icon={FileSpreadsheet}
+                              label="المصروفات اليومية"
+                            />
+                            <ReportMenuItem
+                              to="/reports/monthly-lab-income"
+                              icon={BarChartBig}
+                              label="دخل المختبر الشهري"
+                            />
+                            <ReportMenuItem
+                              to="/reports/monthly-service-income"
+                              icon={BarChartBig}
+                              label="دخل الخدمات الشهري"
+                            />
+                            <ReportMenuItem
+                              to="/reports/service-cost-breakdown"
+                              icon={BarChartBig}
+                              label="تفصيل تكلفة الخدمات"
+                            />
+                            <ReportMenuItem
+                              to="/settings/attendance-summary"
+                              icon={BarChartBig}
+                              label="ملخص الحضور والانصراف"
+                            />
+                            <ReportMenuItem
+                              to="/reports/company-performance"
+                              icon={BarChartBig}
+                              label="أداء الشركات"
+                            />
+                            <ReportMenuItem
+                              to="/reports/doctor-company-entitlement"
+                              icon={HandCoins}
+                              label="استحقاقات الأطباء للشركات"
+                            />
+                            <ReportMenuItem
+                              to="/reports/yearly-income-comparison"
+                              icon={LineChart}
+                              label="مقارنة الدخل السنوية"
+                            />
+                            <ReportMenuItem
+                              to="/reports/yearly-patient-frequency"
+                              icon={UsersRound}
+                              label="تردد المرضى"
+                            />
+                            <ReportMenuItem
+                              to="/reports/doctor-statistics"
+                              icon={BarChartBig}
+                              label="إحصائيات الأطباء"
+                            />
+                            <ReportMenuItem
+                              to="/reports/service-statistics"
+                              icon={FileBarChart2}
+                              label="إحصائيات الخدمات"
+                            />
+                            <ReportMenuItem
+                              to="/reports/lab-test-statistics"
+                              icon={BarChartBig}
+                              label="إحصائيات تحاليل المختبر"
+                            />
+                            <ReportMenuItem
+                              to="/deleted-service-deposits"
+                              icon={BarChartBig}
+                              label="الخدمات المحذوفة"
+                            />
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+                      )}
+
+                      {/* Settings Submenu */}
+                      {can("عرض الاعدادات") && (
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger className="flex items-center">
+                            <Settings className="mr-2 h-4 w-4" />
+                            الإعدادات
+                          </DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent>
+                            <SettingsMenuItem
+                              to="/settings/general"
+                              icon={Settings}
+                              label="عام"
+                            />
+                            <SettingsMenuItem
+                              to="/settings/companies"
+                              icon={Building}
+                              label="الشركات"
+                            />
+                            <SettingsMenuItem
+                              to="/settings/laboratory"
+                              icon={FlaskConical}
+                              label="المختبر"
+                            />
+                            <SettingsMenuItem
+                              to="/settings/laboratory/binding-matching"
+                              icon={Link2}
+                              label="جداول الربط"
+                            />
+                            <SettingsMenuItem
+                              to="/settings/service-groups"
+                              icon={Layers}
+                              label="مجموعات الخدمات"
+                            />
+                            <SettingsMenuItem
+                              to="/settings/services"
+                              icon={ListOrdered}
+                              label="إعدادات الخدمات"
+                            />
+                            <SettingsMenuItem
+                              to="/settings/offers"
+                              icon={Tag}
+                              label="العروض"
+                            />
+                            <SettingsMenuItem
+                              to="/settings/doctors"
+                              icon={Stethoscope}
+                              label="الأطباء"
+                            />
+                            <SettingsMenuItem
+                              to="/settings/specialists"
+                              icon={Users}
+                              label="التخصصات الطبية"
+                            />
+                            <SettingsMenuItem
+                              to="/settings/users"
+                              icon={User}
+                              label="المستخدمين"
+                            />
+                            <SettingsMenuItem
+                              to="/settings/attendance/shift-definitions"
+                              icon={BarChartBig}
+                              label="الورديات"
+                            />
+                            <SettingsMenuItem
+                              to="/settings/roles"
+                              icon={ShieldCheck}
+                              label="الأدوار"
+                            />
+                            <SettingsMenuItem
+                              to="/settings/lab-to-lab"
+                              icon={Link2}
+                              label="المعامل المتعاقدة"
+                            />
+                            <SettingsMenuItem
+                              to="/settings/pdf"
+                              icon={FileText}
+                              label="إعدادات PDF"
+                            />
+                            <SettingsMenuItem
+                              to="/jobs-management"
+                              icon={BarChartBig}
+                              label="إدارة المهام"
+                            />
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+                      )}
+                    </>
+
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={handleLogout}
+                      className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>تسجيل الخروج</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </header>
 
-            <main style={{userSelect: 'none',overflow:'hidden'}} className="flex-1 p-1 ">
-                <Outlet />
+            <main
+              style={{ userSelect: "none", overflow: "hidden" }}
+              className="flex-1 p-1 "
+            >
+              <Outlet />
             </main>
+          </div>
+          <FavoriteServiceGroupsDialog
+            open={isFavoriteServiceGroupsDialogOpen}
+            onOpenChange={setIsFavoriteServiceGroupsDialogOpen}
+          />
+          <Toaster richColors position="top-right" />
         </div>
-        <FavoriteServiceGroupsDialog
-          open={isFavoriteServiceGroupsDialogOpen}
-          onOpenChange={setIsFavoriteServiceGroupsDialogOpen}
-        />
-        <Toaster richColors position="top-right" />
-      </div>
-    </TooltipProvider>
+      </TooltipProvider>
     );
   };
-  
+
   return (
     <ClinicSelectionProvider>
       <PdfPreviewVisibilityProvider>

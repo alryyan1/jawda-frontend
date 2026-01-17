@@ -307,9 +307,20 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
             "/whatsapp-cloud/send-template",
             {
               to: patient.phone,
-              template_name: "complete_ar",
+              template_name: "test_result_notification",
               language_code: "ar",
               // components are handled by backend if needed, but job had them commented out
+              components: [
+                {
+                  type: "body",
+                  parameters: [
+                    {
+                      type: "text",
+                      text: visitId,
+                    },
+                  ],
+                },
+              ],
             }
           );
 

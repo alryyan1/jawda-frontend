@@ -279,10 +279,31 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
       );
 
       // Update the queue item immediately after authentication using the response directly
-      // No need to make additional requests - the backend returns PatientLabQueueItemResource
-      // and emits a realtime event for other clients
       if (onPatientUpdate && updatedQueueItem) {
         onPatientUpdate(updatedQueueItem);
+      }
+
+      toast.success("تم اعتماد النتائج بنجاح");
+
+      // Upload to Firebase synchronously from frontend
+      toast.info("جاري رفع النتيجة إلى السحابة...");
+      try {
+        const uploadResponse = await apiClient.post(
+          `/patients/${patient.id}/upload-to-firebase`
+        );
+        if (uploadResponse.data?.success) {
+          toast.success("تم رفع النتيجة إلى السحابة بنجاح");
+          // If the upload returned an updated result_url, we might want to update the patient object again
+          // but usually result_auth is enough for the UI to show the ☁️ icon if it re-renders
+        } else {
+          toast.error(
+            "فشل رفع النتيجة إلى السحابة: " +
+              (uploadResponse.data?.message || "Error")
+          );
+        }
+      } catch (uploadError: any) {
+        console.error("Firebase upload failed:", uploadError);
+        toast.error("حدث خطأ أثناء رفع النتيجة إلى السحابة");
       }
 
       // Send SMS from frontend if enabled
@@ -309,7 +330,6 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
               to: patient.phone,
               template_name: "test_result_notification",
               language_code: "ar",
-              // components are handled by backend if needed, but job had them commented out
               components: [
                 {
                   type: "body",
@@ -334,7 +354,6 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
               description: `ID: ${msgId || "N/A"}`,
               messageId: msgId,
             });
-            // Auto-hide success box after 7 seconds, but KEEP messageId so listener stays active
             setTimeout(
               () => setWaStatus((prev) => ({ ...prev, type: null })),
               7000
@@ -358,10 +377,6 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
           }));
         }
       }
-
-      toast.success(
-        "تم اعتماد النتائج بنجاح. تم إضافة رفع الملف إلى قائمة الانتظار."
-      );
     } catch (error: unknown) {
       console.error("Error authenticating results:", error);
       const errorMessage =

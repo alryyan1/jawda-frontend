@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   AlertCircle,
   X,
+  CheckCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Patient } from "@/types/patients";
@@ -53,7 +54,7 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
   const [pdfFileName, setPdfFileName] = useState("document.pdf");
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [waStatus, setWaStatus] = useState<{
-    type: "loading" | "success" | "error" | null;
+    type: "loading" | "success" | "error" | "read" | null;
     message?: string;
     description?: string;
     messageId?: string;
@@ -71,7 +72,7 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
       console.log(
         "Pusher WhatsApp Update:",
         payload.status,
-        payload.message_id
+        payload.message_id,
       );
       // Only care about failures and if it matches the current tracked message
       if (
@@ -103,7 +104,22 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
         // Auto-hide after 5 seconds of definite success
         setTimeout(
           () => setWaStatus((prev) => ({ ...prev, type: null })),
-          5000
+          5000,
+        );
+      } else if (
+        payload.status === "read" &&
+        waStatus.messageId === payload.message_id
+      ) {
+        setWaStatus((prev) => ({
+          ...prev,
+          type: "read",
+          message: "تم قراءة الرسالة",
+          description: `ID: ${payload.message_id}`,
+        }));
+        // Auto-hide after 5 seconds
+        setTimeout(
+          () => setWaStatus((prev) => ({ ...prev, type: null })),
+          5000,
         );
       }
     };
@@ -157,7 +173,7 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
       }
       return false;
     },
-    [toComparableName]
+    [toComparableName],
   );
 
   const isNumericAbnormal = useCallback(
@@ -170,38 +186,38 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
         typeof value === "string"
           ? parseFloat(value)
           : typeof value === "number"
-          ? value
-          : NaN;
+            ? value
+            : NaN;
       if (!Number.isFinite(parsed)) return false;
       const low =
         typeof ct.low === "number"
           ? ct.low
           : ct.low != null
-          ? Number(ct.low)
-          : undefined;
+            ? Number(ct.low)
+            : undefined;
       const upper =
         typeof ct.upper === "number"
           ? ct.upper
           : ct.upper != null
-          ? Number(ct.upper)
-          : undefined;
+            ? Number(ct.upper)
+            : undefined;
       if (low !== undefined && upper !== undefined)
         return parsed < low || parsed > upper;
       if (low !== undefined) return parsed < low;
       if (upper !== undefined) return parsed > upper;
       return false;
     },
-    []
+    [],
   );
 
   const validateAllLabRequests = useCallback(
     async (
-      labRequestIds: number[]
+      labRequestIds: number[],
     ): Promise<{ abnormal: string[]; empty: string[] }> => {
       const abnormal: string[] = [];
       const empty: string[] = [];
       const requests = await Promise.all(
-        labRequestIds.map((id) => getLabRequestForEntry(id))
+        labRequestIds.map((id) => getLabRequestForEntry(id)),
       );
       console.log(requests, "requests");
       requests
@@ -220,14 +236,14 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
               abnormal.push(
                 `${req.main_test_name}: ${
                   ct.child_test_name
-                } (${toComparableName(value)})`
+                } (${toComparableName(value)})`,
               );
             }
           });
         });
       return { abnormal, empty };
     },
-    [isValueEmpty, isNumericAbnormal, isQualitativeAbnormal, toComparableName]
+    [isValueEmpty, isNumericAbnormal, isQualitativeAbnormal, toComparableName],
   );
 
   const handleAuthenticateResults = useCallback(async () => {
@@ -270,12 +286,12 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
       }
 
       const response = await apiClient.patch(
-        `/patients/${patient.id}/authenticate-results`
+        `/patients/${patient.id}/authenticate-results`,
       );
       const updatedQueueItem = response.data.data as PatientLabQueueItem;
       console.log(
         updatedQueueItem,
-        "updatedQueueItem from authenticate-results"
+        "updatedQueueItem from authenticate-results",
       );
 
       // Update the queue item immediately after authentication using the response directly
@@ -289,7 +305,7 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
       toast.info("جاري رفع النتيجة إلى السحابة...");
       try {
         const uploadResponse = await apiClient.post(
-          `/patients/${patient.id}/upload-to-firebase`
+          `/patients/${patient.id}/upload-to-firebase`,
         );
         if (uploadResponse.data?.success) {
           toast.success("تم رفع النتيجة إلى السحابة بنجاح");
@@ -298,7 +314,7 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
         } else {
           toast.error(
             "فشل رفع النتيجة إلى السحابة: " +
-              (uploadResponse.data?.message || "Error")
+              (uploadResponse.data?.message || "Error"),
           );
         }
       } catch (uploadError: any) {
@@ -330,18 +346,18 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
               to: patient.phone,
               template_name: "test_result_notification",
               language_code: "ar",
-              components: [
-                {
-                  type: "body",
-                  parameters: [
-                    {
-                      type: "text",
-                      text: visitId,
-                    },
-                  ],
-                },
-              ],
-            }
+              // components: [
+              //   {
+              //     type: "body",
+              //     parameters: [
+              //       {
+              //         type: "text",
+              //         text: visitId,
+              //       },
+              //     ],
+              //   },
+              // ],
+            },
           );
 
           if (waResponse.data?.success) {
@@ -356,7 +372,7 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
             });
             setTimeout(
               () => setWaStatus((prev) => ({ ...prev, type: null })),
-              7000
+              7000,
             );
           } else {
             setWaStatus((prev) => ({
@@ -400,7 +416,7 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
       title: string,
       fileNamePrefix: string,
       fetchFunction: () => Promise<Blob>,
-      shouldMarkPrinted: boolean = false
+      shouldMarkPrinted: boolean = false,
     ) => {
       setIsGeneratingPdf(true);
       setPdfUrl(null);
@@ -417,14 +433,14 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
         setPdfFileName(
           `${fileNamePrefix}_${visitId}_${patientNameSanitized}_${new Date()
             .toISOString()
-            .slice(0, 10)}.pdf`
+            .slice(0, 10)}.pdf`,
         );
 
         // Mark report as printed if requested and update queue item via realtime
         if (shouldMarkPrinted && visitId) {
           try {
             const response = await apiClient.post(
-              `/visits/${visitId}/lab-report/mark-printed`
+              `/visits/${visitId}/lab-report/mark-printed`,
             );
             const updatedQueueItem = response.data.data as PatientLabQueueItem;
             console.log(updatedQueueItem, "updatedQueueItem from mark-printed");
@@ -452,7 +468,7 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
         setIsGeneratingPdf(false);
       }
     },
-    [patient, visitId, onPatientUpdate]
+    [patient, visitId, onPatientUpdate],
   );
 
   const handleViewReportPreview = useCallback(() => {
@@ -464,7 +480,7 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
         apiClient
           .get(`/visits/${visitId}/lab-report/pdf`, { responseType: "blob" })
           .then((res) => res.data),
-      true // Mark as printed after viewing
+      true, // Mark as printed after viewing
     );
   }, [visitId, generateAndShowPdf]);
 
@@ -476,11 +492,11 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
         setPdfUrl(null);
       }
     },
-    [pdfUrl]
+    [pdfUrl],
   );
   console.log(
     patientLabQueueItem,
-    "patientLabQueueItem in ActionsButtonsPanel"
+    "patientLabQueueItem in ActionsButtonsPanel",
   );
   return (
     <>
@@ -561,9 +577,11 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
             border: `1px solid ${
               waStatus.type === "success"
                 ? "#4caf50"
-                : waStatus.type === "error"
-                ? "#f44336"
-                : "#e0e0e0"
+                : waStatus.type === "read"
+                  ? "#2196f3"
+                  : waStatus.type === "error"
+                    ? "#f44336"
+                    : "#e0e0e0"
             }`,
             animation: "fadeInUp 0.3s ease-out",
             maxWidth: "300px",
@@ -578,6 +596,9 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
           {waStatus.type === "error" && (
             <AlertCircle className="h-5 w-5 text-red-600" />
           )}
+          {waStatus.type === "read" && (
+            <CheckCheck className="h-5 w-5 text-blue-600" />
+          )}
 
           <div className="flex flex-col flex-1 min-w-0">
             <span
@@ -585,8 +606,8 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
                 waStatus.type === "success"
                   ? "text-green-700"
                   : waStatus.type === "error"
-                  ? "text-red-700"
-                  : "text-gray-900"
+                    ? "text-red-700"
+                    : "text-gray-900"
               }`}
             >
               {waStatus.message}

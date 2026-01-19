@@ -9,7 +9,11 @@ const echo = new Echo({
   key: "1cb7dbb1cbb38ad0b078",
   cluster: "ap2",
   forceTLS: true,
-  enabledTransports: ["ws", "wss"], // Ensure websocket is used
+  enabledTransports: ["ws", "wss"],
+  // Improve connection stability
+  activityTimeout: 30000, // Ping every 30 seconds (default 120s)
+  pongTimeout: 15000, // Wait 15s for pong
+  disableStats: true, // Reduce overhead
 });
 
 export default echo;

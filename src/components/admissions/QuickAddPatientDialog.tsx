@@ -112,7 +112,10 @@ export default function QuickAddPatientDialog({
       });
       queryClient.invalidateQueries({ queryKey: ["patientSearch"] });
     },
-    onError: () => {},
+    onError: (error) => {
+      console.log(error,'error');
+      toast.error(" حدث خطأ أثناء إضافة المريض " + error.message);
+    },
   });
 
   const handleQuickAddSubmit = () => {

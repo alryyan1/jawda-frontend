@@ -152,6 +152,7 @@ export const allMainNavItems: NavItem[] = [
   { to: "/attendance/sheet", label: "سجل الحضور", icon: ClipboardEditIcon },
   { to: "/patients", label: "المرضى", icon: Users },
   { to: "/admissions", label: "التنويم", icon: Hospital },
+  { to: "/operations", label: "العمليات الجراحية", icon: Stethoscope },
   { to: "/online-booking", label: "الحجز ", icon: CalendarCheck2 },
   { to: "/cash-reconciliation", label: "الفئات الماليه", icon: CreditCard },
 ];
@@ -233,7 +234,7 @@ const userTypeStyles: Record<
 };
 // Function to get navigation items based on user's nav_items or user_type defaults
 const getMainNavItems = (
-  user?: { nav_items?: string[] | null; user_type?: string | null } | null
+  user?: { nav_items?: string[] | null; user_type?: string | null } | null,
 ): NavItem[] => {
   if (!user) {
     return [];
@@ -299,7 +300,7 @@ const AppHeaderSearch: React.FC = () => {
   const location = useLocation();
   const isClinicRoute = useMemo(
     () => location.pathname.startsWith("/clinic"),
-    [location.pathname]
+    [location.pathname],
   );
   const { currentRequest } = useClinicSelection();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -315,7 +316,7 @@ const AppHeaderSearch: React.FC = () => {
   >([]);
   const [open, setOpen] = useState(false);
   const [activeDoctorShifts, setActiveDoctorShifts] = useState<DoctorShift[]>(
-    []
+    [],
   );
   const loading = open && inputValue.trim().length >= 2 && options.length === 0;
 
@@ -371,14 +372,14 @@ const AppHeaderSearch: React.FC = () => {
               visit_id: r.visit_id,
               patient_id: r.patient_id,
               doctor_shift_id: r.doctor_shift_id,
-            }))
+            })),
           );
         } catch {
           if (!active) return;
           setOptions([]);
         }
       },
-      isNumeric ? 100 : 250
+      isNumeric ? 100 : 250,
     ); // Faster response for numeric search
     return () => {
       active = false;
@@ -393,7 +394,7 @@ const AppHeaderSearch: React.FC = () => {
       visit_id: number;
       patient_id: number;
       doctor_shift_id?: number | null;
-    } | null
+    } | null,
   ) => {
     if (!value || !currentRequest) return;
     const patient = await getPatientById(value.patient_id);
@@ -407,7 +408,7 @@ const AppHeaderSearch: React.FC = () => {
     currentRequest.onSelect(
       patient,
       value.visit_id,
-      matchingDoctorShift || undefined
+      matchingDoctorShift || undefined,
     );
     setInputValue("");
     setOptions([]);
@@ -444,14 +445,14 @@ const AppHeaderSearch: React.FC = () => {
             // Check if the patient's doctor shift is currently active
             const matchingDoctorShift = result.doctor_shift_id
               ? activeDoctorShifts.find(
-                  (shift) => shift.id === result.doctor_shift_id
+                  (shift) => shift.id === result.doctor_shift_id,
                 )
               : null;
 
             currentRequest.onSelect(
               patient,
               result.visit_id,
-              matchingDoctorShift || undefined
+              matchingDoctorShift || undefined,
             );
           }
         } catch (error) {
@@ -524,7 +525,7 @@ const AppLayout: React.FC = () => {
     {
       is_running: false,
       status: "stopped",
-    }
+    },
   );
   const [isQueueWorkerLoading, setIsQueueWorkerLoading] = useState(false);
 
@@ -542,7 +543,7 @@ const AppLayout: React.FC = () => {
       queryKey: ["queueWorkerStatus"],
       queryFn: () => queueWorkerService.getStatus(),
       refetchInterval: 500000, // Poll every 5 seconds
-    }
+    },
   );
 
   // Update queue worker status when data changes
@@ -564,7 +565,7 @@ const AppLayout: React.FC = () => {
         toast.success(
           response.data.is_running
             ? "تم تشغيل معالج الإشعارات بنجاح"
-            : "تم إيقاف معالج الإشعارات بنجاح"
+            : "تم إيقاف معالج الإشعارات بنجاح",
         );
       } else {
         toast.error(response.message || "فشل في تشغيل/إيقاف معالج الإشعارات");
@@ -670,7 +671,7 @@ const AppLayout: React.FC = () => {
             isCollapsed ? "justify-center px-2" : "px-3 py-2.5",
             isActive
               ? "bg-blue-300 text-white!  shadow-sm "
-              : "text-foreground/70 "
+              : "text-foreground/70 ",
           )
         }
         end={item.to === "/"} // `end` prop for exact match, esp. for home '/'
@@ -759,20 +760,20 @@ const AppLayout: React.FC = () => {
             className={cn(
               "hidden md:flex flex-col fixed inset-y-0 border-border bg-card transition-all duration-300 ease-in-out z-40 h-screen", // Added h-screen for explicit height
               isDesktopSidebarCollapsed ? "w-16" : "w-50",
-              "border-l"
+              "border-l",
             )}
           >
             <div
               className={cn(
                 "flex items-center flex-shrink-0 h-16 px-4 border-b border-border",
-                isDesktopSidebarCollapsed && "justify-center px-2"
+                isDesktopSidebarCollapsed && "justify-center px-2",
               )}
             >
               <Link
                 to="/dashboard"
                 className={cn(
                   "flex items-center gap-2 font-bold text-primary truncate",
-                  isDesktopSidebarCollapsed ? "text-xl" : "text-lg"
+                  isDesktopSidebarCollapsed ? "text-xl" : "text-lg",
                 )}
               >
                 <img
@@ -780,7 +781,7 @@ const AppLayout: React.FC = () => {
                   alt="شعار النظام"
                   className={cn(
                     "rounded-md",
-                    isDesktopSidebarCollapsed ? "h-8 w-8" : "h-7 w-7"
+                    isDesktopSidebarCollapsed ? "h-8 w-8" : "h-7 w-7",
                   )}
                 />
                 {!isDesktopSidebarCollapsed && <span>نظام جودة الطبي</span>}
@@ -844,14 +845,14 @@ const AppLayout: React.FC = () => {
           <div
             className={cn(
               "flex flex-col flex-1 transition-all duration-300 ease-in-out",
-              isDesktopSidebarCollapsed ? "md:mr-16" : "md:mr-50"
+              isDesktopSidebarCollapsed ? "md:mr-16" : "md:mr-50",
             )}
           >
             {/* Header */}
             <header
               className={cn(
                 "sticky top-0 z-30 flex h-11 flex-shrink-0 items-center justify-between border-b border-border bg-card",
-                "px-1 sm:px-6 lg:px-2"
+                "px-1 sm:px-6 lg:px-2",
               )}
             >
               <div className="flex items-center">
@@ -908,7 +909,7 @@ const AppLayout: React.FC = () => {
                           "h-3 w-3 rounded-full",
                           currentOpenShift?.is_closed == false
                             ? "bg-green-500"
-                            : "bg-red-500"
+                            : "bg-red-500",
                         )}
                       />
                     </div>
@@ -1077,7 +1078,7 @@ const AppLayout: React.FC = () => {
                           className={cn(
                             "h-9 px-3 rounded-md max-w-[220px] truncate border",
                             style?.border ?? "border-border",
-                            style?.text ?? "text-foreground"
+                            style?.text ?? "text-foreground",
                           )}
                         >
                           {user?.username || user?.name || "User"}
@@ -1095,7 +1096,7 @@ const AppLayout: React.FC = () => {
                             className={cn(
                               "flex flex-col space-y-1 p-2 rounded-md border",
                               style?.border ?? "border-gray-300",
-                              style?.bg ?? "bg-accent/30"
+                              style?.bg ?? "bg-accent/30",
                             )}
                           >
                             <p className="text-sm font-medium leading-none">
@@ -1108,7 +1109,7 @@ const AppLayout: React.FC = () => {
                               <p
                                 className={cn(
                                   "text-xs leading-none",
-                                  style?.text ?? "text-foreground"
+                                  style?.text ?? "text-foreground",
                                 )}
                               >
                                 نوع المستخدم: {user?.user_type ?? "بدون"}

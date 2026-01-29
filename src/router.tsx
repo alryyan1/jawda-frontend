@@ -98,12 +98,18 @@ import AdmissionDetailsPage from "./pages/admissions/AdmissionDetailsPage";
 import AdmissionsDashboardPage from "./pages/admissions/AdmissionsDashboardPage";
 import RoomsVisualPage from "./pages/admissions/RoomsVisualPage";
 import WardsListPage from "./pages/settings/wards/WardsListPage";
-import WardFormPage, { WardFormMode } from "./pages/settings/wards/WardFormPage";
+import WardFormPage, {
+  WardFormMode,
+} from "./pages/settings/wards/WardFormPage";
 import PdfSettingsPage from "./pages/settings/PdfSettingsPage";
 import RoomsListPage from "./pages/settings/rooms/RoomsListPage";
-import RoomFormPage, { RoomFormMode } from "./pages/settings/rooms/RoomFormPage";
+import RoomFormPage, {
+  RoomFormMode,
+} from "./pages/settings/rooms/RoomFormPage";
 import BedsListPage from "./pages/settings/beds/BedsListPage";
 import BedFormPage, { BedFormMode } from "./pages/settings/beds/BedFormPage";
+import OperationsListPage from "./pages/operations/OperationsListPage";
+import OperationFormPage from "./pages/operations/OperationFormPage";
 
 const router = createBrowserRouter([
   // --- PUBLIC ROUTES ---
@@ -203,6 +209,26 @@ const router = createBrowserRouter([
               {
                 path: ":id",
                 element: <AdmissionDetailsPage />,
+              },
+            ],
+          },
+
+          // Operations Management (Surgical Operations)
+          {
+            path: "operations",
+            element: <Outlet />,
+            children: [
+              {
+                index: true,
+                element: <OperationsListPage />,
+              },
+              {
+                path: "new",
+                element: <OperationFormPage />,
+              },
+              {
+                path: ":id/edit",
+                element: <OperationFormPage />,
               },
             ],
           },
@@ -327,7 +353,10 @@ const router = createBrowserRouter([
                 path: "doctor-shifts/:doctorShiftId",
                 element: <DoctorShiftDetailsPage />,
               },
-              { path: "specialist-shifts", element: <SpecialistShiftsReportPage /> },
+              {
+                path: "specialist-shifts",
+                element: <SpecialistShiftsReportPage />,
+              },
               {
                 path: "service-statistics",
                 element: <ServiceStatisticsReportPage />,
@@ -463,10 +492,7 @@ const router = createBrowserRouter([
                   {
                     path: ":wardId/edit",
                     element: (
-                      <WardFormPage
-                        mode={WardFormMode.EDIT}
-                        key="wardEdit"
-                      />
+                      <WardFormPage mode={WardFormMode.EDIT} key="wardEdit" />
                     ),
                   },
                 ],
@@ -489,10 +515,7 @@ const router = createBrowserRouter([
                   {
                     path: ":roomId/edit",
                     element: (
-                      <RoomFormPage
-                        mode={RoomFormMode.EDIT}
-                        key="roomEdit"
-                      />
+                      <RoomFormPage mode={RoomFormMode.EDIT} key="roomEdit" />
                     ),
                   },
                 ],
@@ -506,19 +529,13 @@ const router = createBrowserRouter([
                   {
                     path: "new",
                     element: (
-                      <BedFormPage
-                        mode={BedFormMode.CREATE}
-                        key="bedCreate"
-                      />
+                      <BedFormPage mode={BedFormMode.CREATE} key="bedCreate" />
                     ),
                   },
                   {
                     path: ":bedId/edit",
                     element: (
-                      <BedFormPage
-                        mode={BedFormMode.EDIT}
-                        key="bedEdit"
-                      />
+                      <BedFormPage mode={BedFormMode.EDIT} key="bedEdit" />
                     ),
                   },
                 ],

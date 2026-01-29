@@ -153,7 +153,7 @@ export const allMainNavItems: NavItem[] = [
   { to: "/patients", label: "المرضى", icon: Users },
   { to: "/admissions", label: "التنويم", icon: Hospital },
   { to: "/online-booking", label: "الحجز ", icon: CalendarCheck2 },
-  { to: "/cash-reconciliation", label: "المصالحة المالية", icon: CreditCard },
+  { to: "/cash-reconciliation", label: "الفئات الماليه", icon: CreditCard },
 ];
 
 // Default nav items per user_type (for fallback when nav_items is null)

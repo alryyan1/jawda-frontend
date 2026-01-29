@@ -8,7 +8,6 @@ import type { UserStripped } from "./auth";
 // import { User } from "./index"; // Assuming User type from a general index.ts or auth types
 // import { Country } from './locations'; // If you have a Country type
 
-
 // For Patient Registration Form Data (might be a subset or include temp fields)
 export interface PatientFormData {
   name: string;
@@ -32,8 +31,13 @@ export interface PatientFormData {
   // Discount comment (patient-level)
   discount_comment?: string | null;
   // New fields
-  social_status?: 'single' | 'married' | 'widowed' | 'divorced' | null;
+  social_status?: "single" | "married" | "widowed" | "divorced" | null;
   income_source?: string | null;
+  // Enhanced Demographic Data
+  gov_id?: string | null;
+  email?: string | null;
+  nationality?: string | null;
+  dob?: Date | null;
 }
 // src/types/patients.ts
 // ... (Patient, PatientFormData) ...
@@ -41,7 +45,7 @@ export interface PatientSearchResult {
   id: number;
   name: string;
   phone?: string | null;
-  gender?: 'male' | 'female' | 'other';
+  gender?: "male" | "female" | "other";
   age_year?: number | null;
   last_visit_id?: number | null;
   last_visit_date?: string | null;
@@ -50,6 +54,7 @@ export interface PatientSearchResult {
   last_visit_file_id?: number | null;
   last_visit_company_name?: string | null;
   last_visit_company_id?: number | null;
+  patient_id?: number | null;
 }
 // --- NEW/VERIFY: PatientStripped Interface ---
 export interface PatientStripped {
@@ -87,7 +92,15 @@ export interface ActivePatientVisit {
   created_at: string;
   visit_time: string | null;
   visit_time_formatted: string | null;
-  status: "waiting" | "with_doctor" | "lab_pending" | "imaging_pending" | "payment_pending" | "completed" | "cancelled" | "no_show";
+  status:
+    | "waiting"
+    | "with_doctor"
+    | "lab_pending"
+    | "imaging_pending"
+    | "payment_pending"
+    | "completed"
+    | "cancelled"
+    | "no_show";
   visit_type: string | null;
   company: any | null;
   queue_number: number | null;
@@ -238,13 +251,13 @@ export interface Patient {
   patient_id: number;
   lab_to_lab_object_id?: string | null;
   phone: string;
-  gender: 'male' | 'female' | 'other'; // Or string if backend doesn't strictly enforce enum
+  gender: "male" | "female" | "other"; // Or string if backend doesn't strictly enforce enum
   age_year?: number | null;
   age_month?: number | null;
   sample_collected_by?: UserStripped;
   age_day?: number | null;
   address?: string | null;
-  doctor:DoctorStripped;
+  doctor: DoctorStripped;
   company_id?: number | null;
   company?: Company;
   result_is_locked: boolean;
@@ -254,24 +267,29 @@ export interface Patient {
   result_print_date?: string | null;
   auth_date?: string | null;
   doctor_visit?: DoctorVisit;
-  has_cbc: boolean; 
+  has_cbc: boolean;
   subcompany_id?: number | null;
   subcompany?: Subcompany;
-  user:UserStripped;
+  user: UserStripped;
 
   company_relation_id?: number | null;
   company_relation?: CompanyRelation;
-  
+
   insurance_no?: string | null;
   expire_date?: string | null; // YYYY-MM-DD
   guarantor?: string | null; // If you want to display this too
   // Patient-level discount comment
   discount_comment?: string | null;
   // New fields
-  social_status?: 'single' | 'married' | 'widowed' | 'divorced' | null;
+  social_status?: "single" | "married" | "widowed" | "divorced" | null;
   income_source?: string | null;
-  specialist_doctor_id?: number | null;
   specialist_doctor?: DoctorStripped;
+
+  // Enhanced Demographic Data
+  gov_id?: string | null;
+  email?: string | null;
+  nationality?: string | null;
+  dob?: string | null;
 
   // ... other existing patient fields ...
   created_at: string;
@@ -283,12 +301,12 @@ export interface Patient {
 export interface EditPatientFormData {
   name: string;
   phone: string;
-  gender: 'male' | 'female' | 'other' | undefined; // Allow undefined for select
+  gender: "male" | "female" | "other" | undefined; // Allow undefined for select
   age_year?: string | null; // Keep as string for form input
   age_month?: string | null;
   age_day?: string | null;
   address?: string | null;
-  
+
   // Insurance details (editable if company_id already exists)
   insurance_no?: string | null;
   expire_date?: string | null; // YYYY-MM-DD string from date picker
@@ -301,7 +319,7 @@ export interface EditPatientFormData {
 export interface UpdatePatientApiPayload {
   name: string;
   phone: string;
-  gender: 'male' | 'female' | 'other';
+  gender: "male" | "female" | "other";
   age_year?: number | null;
   age_month?: number | null;
   age_day?: number | null;

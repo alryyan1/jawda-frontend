@@ -1,300 +1,977 @@
-import React from 'react';
+import { useState, useEffect } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
   Card,
   CardContent,
+  CardHeader,
   Typography,
+  TextField,
+  Button,
   Box,
-  Chip,
-  Paper,
-} from '@mui/material';
-import { formatNumber } from '@/lib/utils';
-import type { Admission } from '@/types/admissions';
+  CircularProgress,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Autocomplete,
+} from "@mui/material";
+import {
+  MapPin,
+  Calendar,
+  Stethoscope,
+  Contact,
+  FileText,
+  UserRound,
+  Building2,
+  Bed,
+  DoorOpen,
+  Clock,
+  Activity,
+  Users,
+  Phone,
+} from "lucide-react";
+import type { Admission } from "@/types/admissions";
+import type { AdmissionFormData } from "@/types/admissions";
+import { updateAdmission } from "@/services/admissionService";
+import { getWardsList } from "@/services/wardService";
+import { getRooms } from "@/services/roomService";
+import { getAvailableBeds } from "@/services/bedService";
+import { getDoctorsList } from "@/services/doctorService";
 
 interface AdmissionOverviewTabProps {
   admission: Admission;
 }
 
-interface InfoItemProps {
-  label: string;
-  value: string | React.ReactNode;
-  fullWidth?: boolean;
-}
+type AdmissionFormValues = {
+  ward_id: string;
+  room_id: string;
+  bed_id: string;
+  admission_date: Date | null;
+  admission_time: string;
+  admission_type: string;
+  admission_reason: string;
+  diagnosis: string;
+  doctor_id: string;
+  specialist_doctor_id: string;
+  notes: string;
+  provisional_diagnosis: string;
+  operations: string;
+  medical_history: string;
+  current_medications: string;
+  referral_source: string;
+  expected_discharge_date: Date | null;
+  next_of_kin_name: string;
+  next_of_kin_relation: string;
+  next_of_kin_phone: string;
+};
 
-const InfoItem = ({ label, value, fullWidth = false }: InfoItemProps) => (
-  <Box sx={{ flex: fullWidth ? '1 1 100%' : '1 1 auto', minWidth: { xs: '100%', sm: '200px' }, mb: 2 }}>
-    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5, fontWeight: 500 }}>
-      {label}
-    </Typography>
-    <Typography variant="body1" sx={{ fontWeight: 500 }}>
-      {value}
-    </Typography>
-  </Box>
-);
+export default function AdmissionOverviewTab({
+  admission,
+}: AdmissionOverviewTabProps) {
+  const queryClient = useQueryClient();
+  const [selectedWardId, setSelectedWardId] = useState<number | null>(
+    admission.ward?.id || null,
+  );
+  const [selectedRoomId, setSelectedRoomId] = useState<number | null>(
+    admission.room?.id || null,
+  );
+  const [doctorSearchTerm, setDoctorSearchTerm] = useState("");
+  const [specialistDoctorSearchTerm, setSpecialistDoctorSearchTerm] =
+    useState("");
 
-export default function AdmissionOverviewTab({ admission }: AdmissionOverviewTabProps) {
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'admitted': return 'success';
-      case 'discharged': return 'default';
-      case 'transferred': return 'info';
-      default: return 'default';
+  const { data: wards } = useQuery({
+    queryKey: ["wardsList"],
+    queryFn: () => getWardsList({ status: true }),
+  });
+
+  const {
+    data: rooms,
+    refetch: refetchRooms,
+    isFetching: isFetchingRooms,
+  } = useQuery({
+    queryKey: ["rooms", selectedWardId],
+    queryFn: () =>
+      getRooms(1, { ward_id: selectedWardId!, per_page: 1000 }).then(
+        (res) => res.data,
+      ),
+    enabled: !!selectedWardId,
+  });
+
+  const {
+    data: beds,
+    refetch: refetchBeds,
+    isFetching: isFetchingBeds,
+  } = useQuery({
+    queryKey: ["availableBeds", selectedRoomId],
+    queryFn: () => getAvailableBeds({ room_id: selectedRoomId! }),
+    enabled: !!selectedRoomId,
+  });
+
+  const { data: doctors } = useQuery({
+    queryKey: ["doctorsList"],
+    queryFn: () => getDoctorsList({ active: true }),
+  });
+
+  const form = useForm<AdmissionFormValues>({
+    defaultValues: {
+      ward_id: admission.ward?.id ? String(admission.ward.id) : "",
+      room_id: admission.room?.id ? String(admission.room.id) : "",
+      bed_id: admission.bed?.id ? String(admission.bed.id) : "",
+      admission_date: admission.admission_date
+        ? new Date(admission.admission_date)
+        : null,
+      admission_time: admission.admission_time || "",
+      admission_type: admission.admission_type || "",
+      admission_reason: admission.admission_reason || "",
+      diagnosis: admission.diagnosis || "",
+      doctor_id: admission.doctor?.id ? String(admission.doctor.id) : "",
+      specialist_doctor_id: admission.specialist_doctor?.id
+        ? String(admission.specialist_doctor.id)
+        : "",
+      notes: admission.notes || "",
+      provisional_diagnosis: admission.provisional_diagnosis || "",
+      operations: admission.operations || "",
+      medical_history: admission.medical_history || "",
+      current_medications: admission.current_medications || "",
+      referral_source: admission.referral_source || "",
+      expected_discharge_date: admission.expected_discharge_date
+        ? new Date(admission.expected_discharge_date)
+        : null,
+      next_of_kin_name: admission.next_of_kin_name || "",
+      next_of_kin_relation: admission.next_of_kin_relation || "",
+      next_of_kin_phone: admission.next_of_kin_phone || "",
+    },
+  });
+
+  const { control, handleSubmit, watch, setValue, reset } = form;
+
+  const wardId = watch("ward_id");
+  const roomId = watch("room_id");
+
+  useEffect(() => {
+    if (wardId && wardId !== String(admission.ward?.id)) {
+      setSelectedWardId(Number(wardId));
+      setValue("room_id", "");
+      setValue("bed_id", "");
+      refetchRooms();
     }
+  }, [wardId, setValue, refetchRooms, admission.ward?.id]);
+
+  useEffect(() => {
+    if (roomId && roomId !== String(admission.room?.id)) {
+      setSelectedRoomId(Number(roomId));
+      setValue("bed_id", "");
+      refetchBeds();
+    }
+  }, [roomId, setValue, refetchBeds, admission.room?.id]);
+
+  const mutation = useMutation({
+    mutationFn: (data: Partial<AdmissionFormData>) =>
+      updateAdmission(admission.id, data),
+    onSuccess: () => {
+      toast.success("تم تحديث التنويم بنجاح");
+      queryClient.invalidateQueries({ queryKey: ["admission", admission.id] });
+      queryClient.invalidateQueries({ queryKey: ["admissions"] });
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.message || "فشل تحديث التنويم";
+      toast.error(errorMessage);
+    },
+  });
+
+  const onSubmit = (data: AdmissionFormValues) => {
+    if (!data.ward_id) return toast.error("يرجى اختيار القسم");
+    if (!data.room_id) return toast.error("يرجى اختيار الغرفة");
+    if (!data.bed_id) return toast.error("يرجى اختيار السرير");
+    if (!data.admission_date) return toast.error("يرجى اختيار تاريخ التنويم");
+
+    // Convert time from HH:mm to H:i:s format
+    let formattedTime: string | null = null;
+    if (data.admission_time) {
+      if (data.admission_time.length === 5) {
+        formattedTime = `${data.admission_time}:00`;
+      } else if (data.admission_time.length === 8) {
+        formattedTime = data.admission_time;
+      } else {
+        formattedTime = data.admission_time;
+      }
+    }
+
+    const submissionData: Partial<AdmissionFormData> = {
+      ward_id: data.ward_id,
+      room_id: data.room_id,
+      bed_id: data.bed_id,
+      admission_date: data.admission_date,
+      admission_time: formattedTime,
+      admission_type: data.admission_type || null,
+      admission_reason: data.admission_reason || null,
+      diagnosis: data.diagnosis || null,
+      doctor_id: data.doctor_id || undefined,
+      specialist_doctor_id: data.specialist_doctor_id || undefined,
+      notes: data.notes || null,
+      provisional_diagnosis: data.provisional_diagnosis || null,
+      operations: data.operations || null,
+      medical_history: data.medical_history || null,
+      current_medications: data.current_medications || null,
+      referral_source: data.referral_source || null,
+      expected_discharge_date: data.expected_discharge_date || undefined,
+      next_of_kin_name: data.next_of_kin_name || null,
+      next_of_kin_relation: data.next_of_kin_relation || null,
+      next_of_kin_phone: data.next_of_kin_phone || null,
+    };
+
+    mutation.mutate(submissionData);
   };
 
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'admitted': return 'مقيم';
-      case 'discharged': return 'مُخرج';
-      case 'transferred': return 'منقول';
-      default: return status;
-    }
+  const handleCancel = () => {
+    reset();
   };
-
-  const roomTypeLabel = admission.room?.room_type === 'normal' ? 'عادي' : admission.room?.room_type === 'vip' ? 'VIP' : '';
-  const roomDisplay = admission.room?.room_number 
-    ? `${admission.room.room_number}${roomTypeLabel ? ` (${roomTypeLabel})` : ''}`
-    : '-';
-  
-  const daysAdmitted = admission.days_admitted ?? 0;
-  const pricePerDay = admission.room?.price_per_day ?? 0;
-  const roomCharges = daysAdmitted * pricePerDay;
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.0 }}>
-      {/* Days Admitted Counter */}
-      {admission.status === 'admitted' && (
-        <Card elevation={1}>
-          <CardContent sx={{ p: 3 }}>
-            <Typography variant="h6" sx={{ mb: 2.5, fontWeight: 600, pb: 1.5, borderBottom: 2, borderColor: 'primary.main' }}>
-              عدد أيام الإقامة
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
-              <Typography variant="h4" sx={{ fontWeight: 700, color: 'primary.main' }}>
-                {daysAdmitted}
-              </Typography>
-              <Typography variant="body1" color="text.secondary">
-                يوم
-              </Typography>
-            </Box>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Main Info Card */}
-      <Card elevation={1}>
-        <CardContent sx={{ p: 3 }}>
-          <Typography variant="h6" sx={{ mb: 2.5, fontWeight: 600, pb: 1.5, borderBottom: 2, borderColor: 'primary.main' }}>
-            معلومات التنويم
-          </Typography>
-          
-          {/* Patient Info Row */}
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 2.5, pb: 2.5, borderBottom: 1, borderColor: 'divider' }}>
-            <InfoItem 
-              label="المريض" 
-              value={admission.patient?.name || '-'} 
-            />
-            <InfoItem 
-              label="الحالة" 
-              value={
-                <Chip
-                  label={getStatusLabel(admission.status)}
-                  color={getStatusColor(admission.status) as any}
-                  size="small"
-                />
-              } 
-            />
-          </Box>
-
-          {/* Location Info Row */}
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 2.5, pb: 2.5, borderBottom: 1, borderColor: 'divider' }}>
-            <InfoItem label="القسم" value={admission.ward?.name || '-'} />
-            <InfoItem 
-              label="الغرفة" 
-              value={
-                <Box>
-                  <Typography variant="body1" sx={{ fontWeight: 500, mb: 0.5 }}>
-                    {roomDisplay}
-                  </Typography>
-                  {pricePerDay > 0 && (
-                    <Typography variant="caption" color="text.secondary">
-                      السعر اليومي: {formatNumber(pricePerDay)}
+    <Box
+      component="form"
+      onSubmit={handleSubmit(onSubmit)}
+      sx={{ display: "flex", flexDirection: "column", gap: 3 }}
+    >
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: { xs: "column", lg: "row" },
+          gap: 3,
+        }}
+      >
+        {/* Right Column */}
+        <Box sx={{ flex: { lg: 2, xs: 1 }, minWidth: 0 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            {/* Admission Details Section */}
+            <Card variant="outlined" sx={{ borderRadius: 3 }}>
+              <CardHeader
+                title={
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                    <Box
+                      sx={{
+                        p: 1,
+                        borderRadius: 2,
+                        bgcolor: "info.lighter",
+                        color: "info.main",
+                        display: "flex",
+                      }}
+                    >
+                      <FileText size={20} />
+                    </Box>
+                    <Typography variant="subtitle1" fontWeight={600}>
+                      تفاصيل التنويم
                     </Typography>
-                  )}
+                  </Box>
+                }
+                sx={{ pb: 0 }}
+              />
+              <CardContent>
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      gap: 2,
+                      flexDirection: { xs: "column", md: "row" },
+                    }}
+                  >
+                    <Box sx={{ flex: 1 }}>
+                      <Controller
+                        name="admission_date"
+                        control={control}
+                        rules={{ required: "تاريخ التنويم مطلوب" }}
+                        render={({ field, fieldState }) => (
+                          <TextField
+                            fullWidth
+                            label="تاريخ الدخول"
+                            type="date"
+                            value={
+                              field.value
+                                ? field.value.toISOString().split("T")[0]
+                                : ""
+                            }
+                            onChange={(e) =>
+                              field.onChange(
+                                e.target.value
+                                  ? new Date(e.target.value)
+                                  : null,
+                              )
+                            }
+                            InputLabelProps={{ shrink: true }}
+                            error={!!fieldState.error}
+                            helperText={fieldState.error?.message}
+                            disabled={mutation.isPending}
+                            InputProps={{
+                              startAdornment: (
+                                <Calendar
+                                  size={18}
+                                  style={{ marginLeft: 8, opacity: 0.5 }}
+                                />
+                              ),
+                            }}
+                          />
+                        )}
+                      />
+                    </Box>
+                    <Box sx={{ flex: 1 }}>
+                      <Controller
+                        name="admission_time"
+                        control={control}
+                        render={({ field }) => (
+                          <TextField
+                            fullWidth
+                            label="وقت الدخول"
+                            type="time"
+                            {...field}
+                            InputLabelProps={{ shrink: true }}
+                            disabled={mutation.isPending}
+                            InputProps={{
+                              startAdornment: (
+                                <Clock
+                                  size={18}
+                                  style={{ marginLeft: 8, opacity: 0.5 }}
+                                />
+                              ),
+                            }}
+                          />
+                        )}
+                      />
+                    </Box>
+                    <Box sx={{ flex: 1 }}>
+                      <Controller
+                        name="admission_type"
+                        control={control}
+                        render={({ field }) => (
+                          <FormControl fullWidth>
+                            <InputLabel>نوع الإقامة</InputLabel>
+                            <Select
+                              {...field}
+                              label="نوع الإقامة"
+                              disabled={mutation.isPending}
+                            >
+                              <MenuItem value="اقامه قصيره">
+                                إقامة قصيرة (يوم واحد)
+                              </MenuItem>
+                              <MenuItem value="اقامه طويله">
+                                إقامة طويلة (مبيت)
+                              </MenuItem>
+                            </Select>
+                          </FormControl>
+                        )}
+                      />
+                    </Box>
+                  </Box>
+
+                  <Box
+                    sx={{
+                      display: "flex",
+                      gap: 2,
+                      flexDirection: { xs: "column", md: "row" },
+                    }}
+                  >
+                    <Box sx={{ flex: 1 }}>
+                      <Controller
+                        name="expected_discharge_date"
+                        control={control}
+                        render={({ field }) => (
+                          <TextField
+                            fullWidth
+                            label="تاريخ الخروج المتوقع"
+                            type="date"
+                            value={
+                              field.value
+                                ? field.value.toISOString().split("T")[0]
+                                : ""
+                            }
+                            onChange={(e) =>
+                              field.onChange(
+                                e.target.value
+                                  ? new Date(e.target.value)
+                                  : null,
+                              )
+                            }
+                            InputLabelProps={{ shrink: true }}
+                            disabled={mutation.isPending}
+                          />
+                        )}
+                      />
+                    </Box>
+                    <Box sx={{ flex: 1 }}>
+                      <Controller
+                        name="referral_source"
+                        control={control}
+                        render={({ field }) => (
+                          <FormControl fullWidth>
+                            <InputLabel>جهة الإحالة</InputLabel>
+                            <Select
+                              {...field}
+                              label="جهة الإحالة"
+                              disabled={mutation.isPending}
+                              startAdornment={
+                                <Building2
+                                  size={18}
+                                  style={{ marginLeft: 8, opacity: 0.5 }}
+                                />
+                              }
+                            >
+                              <MenuItem value="emergency">الطوارئ</MenuItem>
+                              <MenuItem value="outpatient">
+                                العيادات الخارجية
+                              </MenuItem>
+                              <MenuItem value="external">مستشفى آخر</MenuItem>
+                            </Select>
+                          </FormControl>
+                        )}
+                      />
+                    </Box>
+                  </Box>
                 </Box>
-              } 
-            />
-            <InfoItem label="السرير" value={admission.bed?.bed_number || '-'} />
-          </Box>
+              </CardContent>
+            </Card>
 
-          {/* Admission Dates Row */}
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: pricePerDay > 0 && daysAdmitted > 0 ? 2.5 : 0, pb: pricePerDay > 0 && daysAdmitted > 0 ? 2.5 : 0, borderBottom: pricePerDay > 0 && daysAdmitted > 0 ? 1 : 0, borderColor: 'divider' }}>
-            <InfoItem label="تاريخ التنويم" value={admission.admission_date || '-'} />
-            <InfoItem label="وقت التنويم" value={admission.admission_time || '-'} />
-            {admission.admission_type && (
-              <InfoItem label="نوع التنويم" value={admission.admission_type} />
-            )}
+            {/* Medical Info Section */}
+            <Card variant="outlined" sx={{ borderRadius: 3 }}>
+              <CardHeader
+                title={
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                    <Box
+                      sx={{
+                        p: 1,
+                        borderRadius: 2,
+                        bgcolor: "error.lighter",
+                        color: "error.main",
+                        display: "flex",
+                      }}
+                    >
+                      <Activity size={20} />
+                    </Box>
+                    <Typography variant="subtitle1" fontWeight={600}>
+                      بيانات طبية
+                    </Typography>
+                  </Box>
+                }
+                sx={{ pb: 0 }}
+              />
+              <CardContent>
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  <Box sx={{ width: "100%" }}>
+                    <Controller
+                      name="admission_reason"
+                      control={control}
+                      render={({ field }) => (
+                        <TextField
+                          fullWidth
+                          label="سبب التنويم"
+                          multiline
+                          rows={2}
+                          {...field}
+                          disabled={mutation.isPending}
+                          placeholder="وصف حالة المريض وسبب التنويم..."
+                        />
+                      )}
+                    />
+                  </Box>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      gap: 2,
+                      flexDirection: { xs: "column", md: "row" },
+                    }}
+                  >
+                    <Box sx={{ flex: 1 }}>
+                      <Controller
+                        name="diagnosis"
+                        control={control}
+                        render={({ field }) => (
+                          <TextField
+                            fullWidth
+                            label="التشخيص المبدئي"
+                            multiline
+                            rows={3}
+                            {...field}
+                            disabled={mutation.isPending}
+                          />
+                        )}
+                      />
+                    </Box>
+                    <Box sx={{ flex: 1 }}>
+                      <Controller
+                        name="provisional_diagnosis"
+                        control={control}
+                        render={({ field }) => (
+                          <TextField
+                            fullWidth
+                            label="التشخيص المؤقت"
+                            multiline
+                            rows={3}
+                            {...field}
+                            disabled={mutation.isPending}
+                          />
+                        )}
+                      />
+                    </Box>
+                  </Box>
+                  <Box sx={{ width: "100%" }}>
+                    <Controller
+                      name="operations"
+                      control={control}
+                      render={({ field }) => (
+                        <TextField
+                          fullWidth
+                          label="العمليات (مع التواريخ)"
+                          multiline
+                          rows={2}
+                          {...field}
+                          disabled={mutation.isPending}
+                          placeholder="اسم العملية - التاريخ"
+                        />
+                      )}
+                    />
+                  </Box>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      gap: 2,
+                      flexDirection: { xs: "column", md: "row" },
+                    }}
+                  >
+                    <Box sx={{ flex: 1 }}>
+                      <Controller
+                        name="medical_history"
+                        control={control}
+                        render={({ field }) => (
+                          <TextField
+                            fullWidth
+                            label="التاريخ الطبي"
+                            multiline
+                            rows={3}
+                            {...field}
+                            disabled={mutation.isPending}
+                            placeholder="الأمراض السابقة والحالات الطبية..."
+                          />
+                        )}
+                      />
+                    </Box>
+                    <Box sx={{ flex: 1 }}>
+                      <Controller
+                        name="current_medications"
+                        control={control}
+                        render={({ field }) => (
+                          <TextField
+                            fullWidth
+                            label="الأدوية الحالية"
+                            multiline
+                            rows={3}
+                            {...field}
+                            disabled={mutation.isPending}
+                            placeholder="قائمة الأدوية التي يتناولها المريض..."
+                          />
+                        )}
+                      />
+                    </Box>
+                  </Box>
+                </Box>
+              </CardContent>
+            </Card>
           </Box>
+        </Box>
 
-          {/* Room Charges */}
-          {pricePerDay > 0 && daysAdmitted > 0 && (
-            <Box sx={{ mt: 2.5 }}>
-              <Paper sx={{ p: 2, bgcolor: 'primary.light', color: 'primary.contrastText', borderRadius: 1 }}>
-                <Typography variant="subtitle2" sx={{ mb: 0.5, fontWeight: 600 }}>
-                  تكلفة الإقامة
-                </Typography>
-                <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5 }}>
-                  {formatNumber(roomCharges)}
-                </Typography>
-                <Typography variant="caption" sx={{ opacity: 0.9 }}>
-                  ({daysAdmitted} يوم × {formatNumber(pricePerDay)}/يوم)
-                </Typography>
-              </Paper>
-            </Box>
+        {/* Left Column */}
+        <Box sx={{ flex: { lg: 1, xs: 1 }, minWidth: 0 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            {/* Location Section */}
+            <Card variant="outlined" sx={{ borderRadius: 3 }}>
+              <CardHeader
+                title={
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                    <Box
+                      sx={{
+                        p: 1,
+                        borderRadius: 2,
+                        bgcolor: "warning.lighter",
+                        color: "warning.main",
+                        display: "flex",
+                      }}
+                    >
+                      <MapPin size={20} />
+                    </Box>
+                    <Typography variant="subtitle1" fontWeight={600}>
+                      الموقع
+                    </Typography>
+                  </Box>
+                }
+                sx={{ pb: 0 }}
+              />
+              <CardContent>
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  <Controller
+                    name="ward_id"
+                    control={control}
+                    rules={{ required: "القسم مطلوب" }}
+                    render={({ field, fieldState }) => (
+                      <FormControl fullWidth error={!!fieldState.error}>
+                        <InputLabel>القسم</InputLabel>
+                        <Select
+                          {...field}
+                          label="القسم"
+                          disabled={mutation.isPending}
+                          startAdornment={
+                            <Building2
+                              size={16}
+                              style={{ marginLeft: 8, opacity: 0.5 }}
+                            />
+                          }
+                        >
+                          {wards?.map((ward) => (
+                            <MenuItem key={ward.id} value={String(ward.id)}>
+                              {ward.name}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    )}
+                  />
+
+                  <Controller
+                    name="room_id"
+                    control={control}
+                    rules={{ required: "الغرفة مطلوبة" }}
+                    render={({ field, fieldState }) => (
+                      <FormControl
+                        fullWidth
+                        error={!!fieldState.error}
+                        disabled={!selectedWardId || mutation.isPending}
+                      >
+                        <InputLabel>الغرفة</InputLabel>
+                        <Select
+                          {...field}
+                          label="الغرفة"
+                          startAdornment={
+                            <DoorOpen
+                              size={16}
+                              style={{ marginLeft: 8, opacity: 0.5 }}
+                            />
+                          }
+                          endAdornment={
+                            isFetchingRooms ? (
+                              <CircularProgress size={20} sx={{ mr: 2 }} />
+                            ) : null
+                          }
+                        >
+                          {rooms?.map((room) => {
+                            const roomTypeLabel =
+                              room.room_type === "normal"
+                                ? "عادي"
+                                : room.room_type === "vip"
+                                  ? "VIP"
+                                  : "";
+                            const roomTypeDisplay = roomTypeLabel
+                              ? ` (${roomTypeLabel})`
+                              : "";
+                            return (
+                              <MenuItem key={room.id} value={String(room.id)}>
+                                {room.room_number}
+                                {roomTypeDisplay}
+                              </MenuItem>
+                            );
+                          })}
+                        </Select>
+                      </FormControl>
+                    )}
+                  />
+
+                  <Controller
+                    name="bed_id"
+                    control={control}
+                    rules={{ required: "السرير مطلوب" }}
+                    render={({ field, fieldState }) => (
+                      <FormControl
+                        fullWidth
+                        error={!!fieldState.error}
+                        disabled={!selectedRoomId || mutation.isPending}
+                      >
+                        <InputLabel>السرير</InputLabel>
+                        <Select
+                          {...field}
+                          label="السرير"
+                          startAdornment={
+                            <Bed
+                              size={16}
+                              style={{ marginLeft: 8, opacity: 0.5 }}
+                            />
+                          }
+                          endAdornment={
+                            isFetchingBeds ? (
+                              <CircularProgress size={20} sx={{ mr: 2 }} />
+                            ) : null
+                          }
+                        >
+                          {beds?.map((bed) => (
+                            <MenuItem key={bed.id} value={String(bed.id)}>
+                              {bed.bed_number}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    )}
+                  />
+                </Box>
+              </CardContent>
+            </Card>
+
+            {/* Doctor Section */}
+            <Card variant="outlined" sx={{ borderRadius: 3 }}>
+              <CardHeader
+                title={
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                    <Box
+                      sx={{
+                        p: 1,
+                        borderRadius: 2,
+                        bgcolor: "success.lighter",
+                        color: "success.main",
+                        display: "flex",
+                      }}
+                    >
+                      <Stethoscope size={20} />
+                    </Box>
+                    <Typography variant="subtitle1" fontWeight={600}>
+                      الأطباء
+                    </Typography>
+                  </Box>
+                }
+                sx={{ pb: 0 }}
+              />
+              <CardContent>
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  <Box>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ mb: 0.5, display: "block" }}
+                    >
+                      الطبيب المعالج
+                    </Typography>
+                    <Controller
+                      name="doctor_id"
+                      control={control}
+                      render={({ field }) => (
+                        <Autocomplete
+                          fullWidth
+                          size="small"
+                          options={doctors || []}
+                          getOptionLabel={(option) => option.name || ""}
+                          value={
+                            doctors?.find(
+                              (d) => String(d.id) === field.value,
+                            ) || null
+                          }
+                          onChange={(_, newValue) => {
+                            field.onChange(newValue ? String(newValue.id) : "");
+                          }}
+                          onInputChange={(_, value) =>
+                            setDoctorSearchTerm(value)
+                          }
+                          inputValue={doctorSearchTerm}
+                          disabled={mutation.isPending}
+                          renderInput={(params) => (
+                            <TextField {...params} placeholder="بحث..." />
+                          )}
+                          noOptionsText="لا يوجد أطباء"
+                        />
+                      )}
+                    />
+                  </Box>
+
+                  <Box>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ mb: 0.5, display: "block" }}
+                    >
+                      الطبيب الأخصائي
+                    </Typography>
+                    <Controller
+                      name="specialist_doctor_id"
+                      control={control}
+                      render={({ field }) => (
+                        <Autocomplete
+                          fullWidth
+                          size="small"
+                          options={doctors || []}
+                          getOptionLabel={(option) => option.name || ""}
+                          value={
+                            doctors?.find(
+                              (d) => String(d.id) === field.value,
+                            ) || null
+                          }
+                          onChange={(_, newValue) => {
+                            field.onChange(newValue ? String(newValue.id) : "");
+                          }}
+                          onInputChange={(_, value) =>
+                            setSpecialistDoctorSearchTerm(value)
+                          }
+                          inputValue={specialistDoctorSearchTerm}
+                          disabled={mutation.isPending}
+                          renderInput={(params) => (
+                            <TextField {...params} placeholder="بحث..." />
+                          )}
+                          noOptionsText="لا يوجد أطباء"
+                        />
+                      )}
+                    />
+                  </Box>
+
+                  <Controller
+                    name="notes"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField
+                        fullWidth
+                        label="ملاحظات إضافية"
+                        multiline
+                        rows={3}
+                        size="small"
+                        {...field}
+                        disabled={mutation.isPending}
+                      />
+                    )}
+                  />
+                </Box>
+              </CardContent>
+            </Card>
+
+            {/* Emergency Contact */}
+            <Card variant="outlined" sx={{ borderRadius: 3 }}>
+              <CardHeader
+                title={
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                    <Box
+                      sx={{
+                        p: 1,
+                        borderRadius: 2,
+                        bgcolor: "secondary.lighter",
+                        color: "secondary.main",
+                        display: "flex",
+                      }}
+                    >
+                      <Contact size={20} />
+                    </Box>
+                    <Typography variant="subtitle1" fontWeight={600}>
+                      اتصال الطوارئ
+                    </Typography>
+                  </Box>
+                }
+                sx={{ pb: 0 }}
+              />
+              <CardContent>
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  <Controller
+                    name="next_of_kin_name"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="الاسم"
+                        {...field}
+                        disabled={mutation.isPending}
+                        InputProps={{
+                          startAdornment: (
+                            <UserRound
+                              size={16}
+                              style={{ marginLeft: 8, opacity: 0.5 }}
+                            />
+                          ),
+                        }}
+                      />
+                    )}
+                  />
+                  <Controller
+                    name="next_of_kin_relation"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="القرابة"
+                        {...field}
+                        disabled={mutation.isPending}
+                        InputProps={{
+                          startAdornment: (
+                            <Users
+                              size={16}
+                              style={{ marginLeft: 8, opacity: 0.5 }}
+                            />
+                          ),
+                        }}
+                      />
+                    )}
+                  />
+                  <Controller
+                    name="next_of_kin_phone"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="رقم الهاتف"
+                        {...field}
+                        disabled={mutation.isPending}
+                        InputProps={{
+                          startAdornment: (
+                            <Phone
+                              size={16}
+                              style={{ marginLeft: 8, opacity: 0.5 }}
+                            />
+                          ),
+                        }}
+                      />
+                    )}
+                  />
+                </Box>
+              </CardContent>
+            </Card>
+          </Box>
+        </Box>
+      </Box>
+
+      {/* Footer Actions */}
+      <Box
+        sx={{
+          display: "flex",
+          gap: 2,
+          justifyContent: "flex-end",
+          pt: 2,
+          borderTop: "1px solid",
+          borderColor: "divider",
+        }}
+      >
+        <Button
+          variant="outlined"
+          color="inherit"
+          onClick={handleCancel}
+          disabled={mutation.isPending}
+          sx={{ px: 4 }}
+        >
+          إلغاء
+        </Button>
+        <Button
+          type="submit"
+          variant="contained"
+          size="large"
+          disabled={mutation.isPending}
+          sx={{ px: 6 }}
+        >
+          {mutation.isPending ? (
+            <CircularProgress size={24} color="inherit" />
+          ) : (
+            "حفظ التعديلات"
           )}
-        </CardContent>
-      </Card>
-
-      {/* Discharge Details */}
-      {admission.discharge_date && (
-        <Card elevation={1}>
-          <CardContent sx={{ p: 3 }}>
-            <Typography variant="h6" sx={{ mb: 2.5, fontWeight: 600, pb: 1.5, borderBottom: 2, borderColor: 'primary.main' }}>
-              تفاصيل الخروج
-            </Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-              <InfoItem label="تاريخ الخروج" value={admission.discharge_date} />
-              <InfoItem label="وقت الخروج" value={admission.discharge_time || '-'} />
-            </Box>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Medical Information */}
-      <Card elevation={1}>
-        <CardContent sx={{ p: 3 }}>
-          <Typography variant="h6" sx={{ mb: 2.5, fontWeight: 600, pb: 1.5, borderBottom: 2, borderColor: 'primary.main' }}>
-            المعلومات الطبية
-          </Typography>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-            {admission.doctor?.name && (
-              <InfoItem label="الطبيب" value={admission.doctor.name} fullWidth />
-            )}
-            {admission.specialist_doctor?.name && (
-              <InfoItem label="الطبيب الأخصائي" value={admission.specialist_doctor.name} fullWidth />
-            )}
-            <Box>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1, fontWeight: 500 }}>
-                سبب التنويم
-              </Typography>
-              <Paper 
-                variant="outlined" 
-                sx={{ 
-                  p: 2, 
-                  bgcolor: 'background.default',
-                  borderRadius: 1,
-                  minHeight: '60px',
-                  display: 'flex',
-                  alignItems: 'flex-start'
-                }}
-              >
-                <Typography variant="body2" sx={{ color: 'text.primary', whiteSpace: 'pre-wrap' }}>
-                  {admission.admission_reason || '-'}
-                </Typography>
-              </Paper>
-            </Box>
-            <Box>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1, fontWeight: 500 }}>
-                التشخيص الطبي
-              </Typography>
-              <Paper 
-                variant="outlined" 
-                sx={{ 
-                  p: 2, 
-                  bgcolor: 'background.default',
-                  borderRadius: 1,
-                  minHeight: '60px',
-                  display: 'flex',
-                  alignItems: 'flex-start'
-                }}
-              >
-                <Typography variant="body2" sx={{ color: 'text.primary', whiteSpace: 'pre-wrap' }}>
-                  {admission.diagnosis || '-'}
-                </Typography>
-              </Paper>
-            </Box>
-            {admission.provisional_diagnosis && (
-              <Box>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1, fontWeight: 500 }}>
-                  التشخيص المؤقت
-                </Typography>
-                <Paper 
-                  variant="outlined" 
-                  sx={{ 
-                    p: 2, 
-                    bgcolor: 'background.default',
-                    borderRadius: 1,
-                    minHeight: '60px',
-                    display: 'flex',
-                    alignItems: 'flex-start'
-                  }}
-                >
-                  <Typography variant="body2" sx={{ color: 'text.primary', whiteSpace: 'pre-wrap' }}>
-                    {admission.provisional_diagnosis}
-                  </Typography>
-                </Paper>
-              </Box>
-            )}
-            {admission.operations && (
-              <Box>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1, fontWeight: 500 }}>
-                  العمليات (مع التواريخ)
-                </Typography>
-                <Paper 
-                  variant="outlined" 
-                  sx={{ 
-                    p: 2, 
-                    bgcolor: 'background.default',
-                    borderRadius: 1,
-                    minHeight: '60px',
-                    display: 'flex',
-                    alignItems: 'flex-start'
-                  }}
-                >
-                  <Typography variant="body2" sx={{ color: 'text.primary', whiteSpace: 'pre-wrap' }}>
-                    {admission.operations}
-                  </Typography>
-                </Paper>
-              </Box>
-            )}
-          </Box>
-        </CardContent>
-      </Card>
-
-      {/* Notes Section */}
-      {admission.notes && (
-        <Card elevation={1}>
-          <CardContent sx={{ p: 3 }}>
-            <Typography variant="h6" sx={{ mb: 2.5, fontWeight: 600, pb: 1.5, borderBottom: 2, borderColor: 'primary.main' }}>
-              الملاحظات الطبية
-            </Typography>
-            <Paper 
-              variant="outlined" 
-              sx={{ 
-                p: 2.5, 
-                bgcolor: 'background.default',
-                borderRadius: 1,
-                minHeight: '80px'
-              }}
-            >
-              <Typography variant="body2" sx={{ color: 'text.primary', whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>
-                {admission.notes}
-              </Typography>
-            </Paper>
-          </CardContent>
-        </Card>
-      )}
+        </Button>
+      </Box>
     </Box>
   );
 }
-
-

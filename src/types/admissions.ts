@@ -1,7 +1,7 @@
-import type { PaginatedResponse } from './common';
-import type { PatientStripped } from './patients';
-import type { DoctorStripped } from './doctors';
-import type { UserStripped } from './auth';
+import type { PaginatedResponse } from "./common";
+import type { PatientStripped } from "./patients";
+import type { DoctorStripped } from "./doctors";
+import type { UserStripped } from "./auth";
 
 // Ward Types
 export interface Ward {
@@ -27,7 +27,7 @@ export interface Room {
   ward_id: number;
   ward?: Ward;
   room_number: string;
-  room_type?: 'normal' | 'vip' | null;
+  room_type?: "normal" | "vip" | null;
   capacity: number;
   status: boolean;
   price_per_day?: number;
@@ -42,6 +42,7 @@ export interface RoomFormData {
   room_number: string;
   room_type?: string | null;
   capacity: string;
+  price_per_day?: string;
   status: boolean;
 }
 
@@ -51,7 +52,7 @@ export interface Bed {
   room_id: number;
   room?: Room;
   bed_number: string;
-  status: 'available' | 'occupied' | 'maintenance';
+  status: "available" | "occupied" | "maintenance";
   is_available?: boolean;
   created_at: string;
   updated_at: string;
@@ -61,7 +62,7 @@ export interface Bed {
 export interface BedFormData {
   room_id: string | undefined;
   bed_number: string;
-  status: 'available' | 'occupied' | 'maintenance';
+  status: "available" | "occupied" | "maintenance";
 }
 
 // Admission Types
@@ -82,7 +83,7 @@ export interface Admission {
   admission_type?: string | null;
   admission_reason?: string | null;
   diagnosis?: string | null;
-  status: 'admitted' | 'discharged' | 'transferred';
+  status: "admitted" | "discharged" | "transferred";
   doctor_id?: number | null;
   doctor?: DoctorStripped;
   specialist_doctor_id?: number | null;
@@ -95,6 +96,16 @@ export interface Admission {
   // New fields
   provisional_diagnosis?: string | null;
   operations?: string | null;
+  // Clinical Data
+  medical_history?: string | null;
+  current_medications?: string | null;
+  // Administrative Data
+  referral_source?: string | null;
+  expected_discharge_date?: string | null;
+  // Emergency Data
+  next_of_kin_name?: string | null;
+  next_of_kin_relation?: string | null;
+  next_of_kin_phone?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -114,6 +125,16 @@ export interface AdmissionFormData {
   notes?: string | null;
   provisional_diagnosis?: string | null;
   operations?: string | null;
+  // Clinical Data
+  medical_history?: string | null;
+  current_medications?: string | null;
+  // Administrative Data
+  referral_source?: string | null;
+  expected_discharge_date?: Date | undefined;
+  // Emergency Data
+  next_of_kin_name?: string | null;
+  next_of_kin_relation?: string | null;
+  next_of_kin_phone?: string | null;
 }
 
 export interface DischargeFormData {
@@ -135,7 +156,7 @@ export interface AdmissionRequestedService {
   admission_id: number;
   admission?: Admission;
   service_id: number;
-  service?: import('./services').Service;
+  service?: import("./services").Service;
   user_id: number;
   requesting_user?: UserStripped;
   user_deposited?: number | null;
@@ -165,9 +186,9 @@ export interface AdmissionRequestedServiceCost {
   id: number;
   admission_requested_service_id: number;
   service_cost_id: number;
-  service_cost?: import('./services').ServiceCost;
+  service_cost?: import("./services").ServiceCost;
   sub_service_cost_id?: number | null;
-  sub_service_cost?: import('./services').SubServiceCost;
+  sub_service_cost?: import("./services").SubServiceCost;
   amount: number;
   created_at: string;
   updated_at: string;
@@ -268,7 +289,7 @@ export interface AdmissionBalance {
 
 export interface AdmissionLedgerEntry {
   id: string | number;
-  type: 'debit' | 'credit';
+  type: "debit" | "credit";
   description: string;
   amount: number;
   is_bank: boolean;
@@ -280,17 +301,17 @@ export interface AdmissionLedgerEntry {
   service_name?: string;
   count?: number;
   balance_after: number;
-  reference_type?: 'service' | 'deposit' | 'manual' | 'lab_test' | null;
+  reference_type?: "service" | "deposit" | "manual" | "lab_test" | null;
   reference_id?: number | null;
 }
 
 export interface AdmissionTransaction {
   id: number;
   admission_id: number;
-  type: 'debit' | 'credit';
+  type: "debit" | "credit";
   amount: number;
   description: string;
-  reference_type?: 'service' | 'deposit' | 'manual' | null;
+  reference_type?: "service" | "deposit" | "manual" | null;
   reference_id?: number | null;
   is_bank: boolean;
   notes?: string | null;
@@ -301,10 +322,10 @@ export interface AdmissionTransaction {
 }
 
 export interface AdmissionTransactionFormData {
-  type: 'debit' | 'credit';
+  type: "debit" | "credit";
   amount: number;
   description: string;
-  reference_type?: 'service' | 'deposit' | 'manual' | null;
+  reference_type?: "service" | "deposit" | "manual" | null;
   reference_id?: number | null;
   is_bank: boolean;
   notes?: string | null;
@@ -312,7 +333,7 @@ export interface AdmissionTransactionFormData {
 
 export interface AdmissionLedgerEntry {
   id: string | number;
-  type: 'debit' | 'credit';
+  type: "debit" | "credit";
   description: string;
   amount: number;
   is_bank: boolean;
@@ -353,7 +374,7 @@ export interface AdmissionRequestedLabTest {
   admission_id: number;
   admission?: Admission;
   main_test_id: number;
-  main_test?: import('./labTests').MainTestStripped;
+  main_test?: import("./labTests").MainTestStripped;
   user_id: number;
   requesting_user?: UserStripped;
   price: number; // From main_test.price
@@ -386,4 +407,3 @@ export type PaginatedWardsResponse = PaginatedResponse<Ward>;
 export type PaginatedRoomsResponse = PaginatedResponse<Room>;
 export type PaginatedBedsResponse = PaginatedResponse<Bed>;
 export type PaginatedAdmissionsResponse = PaginatedResponse<Admission>;
-

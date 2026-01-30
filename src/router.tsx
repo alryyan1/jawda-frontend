@@ -110,6 +110,7 @@ import BedsListPage from "./pages/settings/beds/BedsListPage";
 import BedFormPage, { BedFormMode } from "./pages/settings/beds/BedFormPage";
 import OperationsListPage from "./pages/operations/OperationsListPage";
 import OperationFormPage from "./pages/operations/OperationFormPage";
+import OperationsSettingsPage from "./pages/settings/OperationsSettingsPage";
 
 const router = createBrowserRouter([
   // --- PUBLIC ROUTES ---
@@ -521,6 +522,10 @@ const router = createBrowserRouter([
                 ],
               },
               // Beds Management
+              {
+                path: "operations",
+                element: <OperationsSettingsPage />,
+              },
               {
                 path: "beds",
                 element: <Outlet />,

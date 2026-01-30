@@ -205,7 +205,7 @@ export default function RoomsVisualPage() {
     >
       <Box
         sx={{
-          p: 3,
+          // p: 3,
           overflowY: "auto",
           flex: 1,
         }}
@@ -226,7 +226,7 @@ export default function RoomsVisualPage() {
                   flexDirection: "column",
                   alignItems: "center",
                   justifyContent: "center",
-                  py: 6,
+                  // py: 6,
                 }}
               >
                 <AlertCircle size={48} style={{ opacity: 0.3, marginBottom: 16 }} />

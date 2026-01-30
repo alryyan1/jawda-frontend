@@ -22,6 +22,7 @@ import AdmissionServicesTab from "@/components/admissions/tabs/AdmissionServices
 import AdmissionDocumentsTab from "@/components/admissions/tabs/AdmissionDocumentsTab";
 import AdmissionLedgerTab from "@/components/admissions/tabs/AdmissionLedgerTab";
 import AdmissionLabTestsTab from "@/components/admissions/tabs/AdmissionLabTestsTab";
+import AdmissionOperationsTab from "@/components/admissions/tabs/AdmissionOperationsTab";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -39,7 +40,7 @@ function TabPanel(props: TabPanelProps) {
       id={`admission-tabpanel-${index}`}
       aria-labelledby={`admission-tab-${index}`}
       {...other}
-      style={{ height: '100%', overflow: 'auto' }}
+      style={{ height: "100%", overflow: "auto" }}
     >
       {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
     </div>
@@ -52,9 +53,13 @@ export default function AdmissionDetailsPage() {
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [currentTab, setCurrentTab] = useState(0);
 
-  const { data: admissionData, isLoading, error } = useQuery({
-    queryKey: ['admission', id],
-    queryFn: () => getAdmissionById(Number(id)).then(res => res.data),
+  const {
+    data: admissionData,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["admission", id],
+    queryFn: () => getAdmissionById(Number(id)).then((res) => res.data),
     enabled: !!id,
   });
 
@@ -64,7 +69,14 @@ export default function AdmissionDetailsPage() {
 
   if (isLoading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "400px",
+        }}
+      >
         <CircularProgress />
       </Box>
     );
@@ -74,7 +86,9 @@ export default function AdmissionDetailsPage() {
     return (
       <Card>
         <CardContent>
-          <Typography color="error">حدث خطأ أثناء جلب بيانات التنويم</Typography>
+          <Typography color="error">
+            حدث خطأ أثناء جلب بيانات التنويم
+          </Typography>
         </CardContent>
       </Card>
     );
@@ -86,21 +100,36 @@ export default function AdmissionDetailsPage() {
         <CardHeader
           sx={{ flexShrink: 0 }}
           title={
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Button component={Link} to="/admissions" startIcon={<ArrowLeft />} variant="outlined" size="small">
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+              <Button
+                component={Link}
+                to="/admissions"
+                startIcon={<ArrowLeft />}
+                variant="outlined"
+                size="small"
+              >
                 رجوع
               </Button>
               <Box>
                 <Typography variant="h5">
-                  {admissionData.patient?.name || 'مريض'}
+                  {admissionData.patient?.name || "مريض"}
                   {admissionData.specialist_doctor?.name && (
-                    <Typography component="span" variant="h5" sx={{ color: 'text.secondary', fontWeight: 400 }}>
-                      {' '}({admissionData.specialist_doctor.name})
+                    <Typography
+                      component="span"
+                      variant="h5"
+                      sx={{ color: "text.secondary", fontWeight: 400 }}
+                    >
+                      {" "}
+                      ({admissionData.specialist_doctor.name})
                     </Typography>
                   )}
                 </Typography>
                 {admissionData.admission_date && (
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mt: 0.5 }}
+                  >
                     تاريخ التنويم: {admissionData.admission_date}
                   </Typography>
                 )}
@@ -108,13 +137,21 @@ export default function AdmissionDetailsPage() {
             </Box>
           }
           action={
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              {admissionData.status === 'admitted' && (
+            <Box sx={{ display: "flex", gap: 1 }}>
+              {admissionData.status === "admitted" && (
                 <>
-                  <Button variant="outlined" color="info" onClick={() => setTransferDialogOpen(true)}>
+                  <Button
+                    variant="outlined"
+                    color="info"
+                    onClick={() => setTransferDialogOpen(true)}
+                  >
                     نقل
                   </Button>
-                  <Button variant="contained" color="error" onClick={() => setDischargeDialogOpen(true)}>
+                  <Button
+                    variant="contained"
+                    color="error"
+                    onClick={() => setDischargeDialogOpen(true)}
+                  >
                     خروج
                   </Button>
                 </>
@@ -122,18 +159,31 @@ export default function AdmissionDetailsPage() {
             </Box>
           }
         />
-        <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', p: 0 }}>
-          <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-            <Tabs value={currentTab} onChange={handleTabChange} aria-label="admission tabs">
+        <CardContent
+          sx={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+            p: 0,
+          }}
+        >
+          <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
+            <Tabs
+              value={currentTab}
+              onChange={handleTabChange}
+              aria-label="admission tabs"
+            >
               <Tab label="نظرة عامة" />
               <Tab label="العلامات الحيوية" />
               <Tab label="الخدمات الطبية" />
               <Tab label="كشف الحساب" />
+              <Tab label="العمليات" />
               <Tab label="الوثائق" />
               <Tab label="الفحوصات المختبرية" />
             </Tabs>
           </Box>
-          <Box sx={{ flex: 1, overflow: 'hidden' }}>
+          <Box sx={{ flex: 1, overflow: "hidden" }}>
             <TabPanel value={currentTab} index={0}>
               <AdmissionOverviewTab admission={admissionData} />
             </TabPanel>
@@ -147,9 +197,12 @@ export default function AdmissionDetailsPage() {
               <AdmissionLedgerTab admissionId={admissionData.id} />
             </TabPanel>
             <TabPanel value={currentTab} index={4}>
-              <AdmissionDocumentsTab admission={admissionData} />
+              <AdmissionOperationsTab admissionId={admissionData.id} />
             </TabPanel>
             <TabPanel value={currentTab} index={5}>
+              <AdmissionDocumentsTab admission={admissionData} />
+            </TabPanel>
+            <TabPanel value={currentTab} index={6}>
               <AdmissionLabTestsTab admissionId={admissionData.id} />
             </TabPanel>
           </Box>

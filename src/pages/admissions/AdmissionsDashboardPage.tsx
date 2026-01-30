@@ -18,6 +18,7 @@ import {
   Settings,
   ArrowRight,
   ClipboardList,
+  Stethoscope,
 } from "lucide-react";
 import { getActiveAdmissions } from "@/services/admissionService";
 import { getWardsList } from "@/services/wardService";
@@ -49,10 +50,14 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   actionText = "عرض",
 }) => {
   const variantStyles = {
-    default: "border-primary/30 bg-primary/5 hover:border-primary/50 hover:bg-primary/10",
-    primary: "border-primary/30 bg-primary/5 hover:border-primary/50 hover:bg-primary/10",
-    success: "border-primary/30 bg-primary/5 hover:border-primary/50 hover:bg-primary/10",
-    warning: "border-primary/30 bg-primary/5 hover:border-primary/50 hover:bg-primary/10",
+    default:
+      "border-primary/30 bg-primary/5 hover:border-primary/50 hover:bg-primary/10",
+    primary:
+      "border-primary/30 bg-primary/5 hover:border-primary/50 hover:bg-primary/10",
+    success:
+      "border-primary/30 bg-primary/5 hover:border-primary/50 hover:bg-primary/10",
+    warning:
+      "border-primary/30 bg-primary/5 hover:border-primary/50 hover:bg-primary/10",
     info: "border-primary/30 bg-primary/5 hover:border-primary/50 hover:bg-primary/10",
   };
 
@@ -68,19 +73,23 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
     <Card
       className={cn(
         "transition-all duration-300 hover:shadow-lg cursor-pointer group",
-        variantStyles[variant]
+        variantStyles[variant],
       )}
     >
       <Link to={link} className="block h-full">
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <CardTitle className="text-lg font-semibold mb-1">{title}</CardTitle>
-              <CardDescription className="text-sm">{description}</CardDescription>
+              <CardTitle className="text-lg font-semibold mb-1">
+                {title}
+              </CardTitle>
+              <CardDescription className="text-sm">
+                {description}
+              </CardDescription>
             </div>
             <div
               className={cn(
-                "p-3 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 group-hover:scale-110 transition-transform"
+                "p-3 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 group-hover:scale-110 transition-transform",
               )}
             >
               <Icon className={cn("h-6 w-6", iconColors[variant])} />
@@ -119,27 +128,32 @@ export default function AdmissionsDashboardPage() {
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
 
   const { data: activeAdmissions, isLoading: isLoadingActive } = useQuery({
-    queryKey: ['activeAdmissions'],
+    queryKey: ["activeAdmissions"],
     queryFn: () => getActiveAdmissions(),
   });
 
   const { data: wards, isLoading: isLoadingWards } = useQuery({
-    queryKey: ['wardsList'],
+    queryKey: ["wardsList"],
     queryFn: () => getWardsList({ status: true }),
   });
 
   const { data: roomsData, isLoading: isLoadingRooms } = useQuery({
-    queryKey: ['roomsCount'],
-    queryFn: () => getRooms(1, { per_page: 1 }).then(res => ({ total: res.meta.total })),
+    queryKey: ["roomsCount"],
+    queryFn: () =>
+      getRooms(1, { per_page: 1 }).then((res) => ({ total: res.meta.total })),
   });
 
   const { data: bedsData, isLoading: isLoadingBeds } = useQuery({
-    queryKey: ['bedsCount'],
-    queryFn: () => getBeds(1, { per_page: 1 }).then(res => ({ total: res.meta.total })),
+    queryKey: ["bedsCount"],
+    queryFn: () =>
+      getBeds(1, { per_page: 1 }).then((res) => ({ total: res.meta.total })),
   });
 
   return (
-    <div style={{height:window.innerHeight - 100}} className="container mx-auto px-4 py-6 space-y-6 overflow-y-auto  ">
+    <div
+      style={{ height: window.innerHeight - 100 }}
+      className="container mx-auto px-4 py-6 space-y-6 overflow-y-auto  "
+    >
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -152,9 +166,11 @@ export default function AdmissionsDashboardPage() {
             <Settings className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">نظام إدارة التنويم</h1>
+            <h1 className="text-3xl font-bold tracking-tight">
+              نظام إدارة التنويم
+            </h1>
             <p className="text-muted-foreground mt-1">
-              لوحة التحكم الرئيسية لإدارة الأقسام والغرف والأسرّة 
+              لوحة التحكم الرئيسية لإدارة الأقسام والغرف والأسرّة
             </p>
           </div>
         </div>
@@ -173,7 +189,9 @@ export default function AdmissionsDashboardPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">قائمة التنويم</p>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    قائمة التنويم
+                  </p>
                   {isLoadingActive ? (
                     <Skeleton className="h-8 w-16 mt-2" />
                   ) : (
@@ -192,7 +210,9 @@ export default function AdmissionsDashboardPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">الأقسام</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  الأقسام
+                </p>
                 {isLoadingWards ? (
                   <Skeleton className="h-8 w-16 mt-2" />
                 ) : (
@@ -210,7 +230,9 @@ export default function AdmissionsDashboardPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">الغرف</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  الغرف
+                </p>
                 {isLoadingRooms ? (
                   <Skeleton className="h-8 w-16 mt-2" />
                 ) : (
@@ -228,7 +250,9 @@ export default function AdmissionsDashboardPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">الأسرّة</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  الأسرّة
+                </p>
                 {isLoadingBeds ? (
                   <Skeleton className="h-8 w-16 mt-2" />
                 ) : (
@@ -244,12 +268,10 @@ export default function AdmissionsDashboardPage() {
       </div>
 
       {/* Main Actions Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-   
-      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
 
       {/* Rooms Visual Page */}
-      <Box >
+      <Box>
         <RoomsVisualPage />
       </Box>
 
@@ -299,6 +321,15 @@ export default function AdmissionsDashboardPage() {
                 variant="default"
                 actionText="إدارة الأسرّة"
               />
+
+              <DashboardCard
+                title="إعدادات العمليات"
+                description="إضافة وتعديل أنواع العمليات وأسعارها"
+                icon={Stethoscope}
+                link="/settings/operations"
+                variant="success"
+                actionText="إدارة العمليات"
+              />
             </div>
           </div>
         </DialogContent>
@@ -306,4 +337,3 @@ export default function AdmissionsDashboardPage() {
     </div>
   );
 }
-

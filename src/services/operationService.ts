@@ -1,10 +1,11 @@
 import api from "./api";
-import {
+import type {
   Operation,
   CreateOperationData,
   UpdateOperationData,
   OperationFilters,
   FinancialReport,
+  OperationItem,
 } from "../types/operations";
 
 export const operationService = {
@@ -14,6 +15,18 @@ export const operationService = {
   async getOperations(filters?: OperationFilters) {
     const response = await api.get<{ data: Operation[] }>("/operations", {
       params: filters,
+    });
+    return response.data;
+  },
+
+  /**
+   * Get operation templates (admission_id = null)
+   */
+  async getOperationTemplates() {
+    // We reuse getOperations with filter or dedicated param if backend supports
+    // Backend controller checks 'is_template' param
+    const response = await api.get<{ data: Operation[] }>("/operations", {
+      params: { is_template: true },
     });
     return response.data;
   },
@@ -54,8 +67,14 @@ export const operationService = {
     // Add manual items
     if (data.manual_items && data.manual_items.length > 0) {
       data.manual_items.forEach((item, index) => {
-        formData.append(`manual_items[${index}][item_type]`, item.item_type);
-        formData.append(`manual_items[${index}][category]`, item.category);
+        formData.append(
+          `manual_items[${index}][item_type]`,
+          item.item_type || "custom",
+        );
+        formData.append(
+          `manual_items[${index}][category]`,
+          item.category || "center",
+        );
         if (item.description)
           formData.append(
             `manual_items[${index}][description]`,
@@ -110,8 +129,17 @@ export const operationService = {
     // Add manual items if provided
     if (data.manual_items && data.manual_items.length > 0) {
       data.manual_items.forEach((item, index) => {
-        formData.append(`manual_items[${index}][item_type]`, item.item_type);
-        formData.append(`manual_items[${index}][category]`, item.category);
+        if (item.operation_item_id) {
+          formData.append(
+            `manual_items[${index}][operation_item_id]`,
+            item.operation_item_id.toString(),
+          );
+        }
+        // Removed item_type and category, but we can verify if backend needs them?
+        // Backend now uses operation_item_id primarily.
+        // We still might need to support custom items with description but null ID.
+        // But backend expects 'manual_items' array.
+
         if (item.description)
           formData.append(
             `manual_items[${index}][description]`,
@@ -154,6 +182,14 @@ export const operationService = {
         params: filters,
       },
     );
+    return response.data;
+  },
+
+  /**
+   * Get list of operation items (catalogue)
+   */
+  async getItems() {
+    const response = await api.get<OperationItem[]>("/operations/items");
     return response.data;
   },
 };

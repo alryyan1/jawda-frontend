@@ -17,7 +17,7 @@ export interface PatientFormData {
   age_year?: number | null; // Input as number | null, then parse
   age_month?: number | null;
   age_day?: number | null;
-  doctor_shift_id: number; // Input as string from select
+  doctor_shift_id: number | null; // Input as string from select
   // address?: string;
 
   doctor_id: number | undefined; // Input as string from select

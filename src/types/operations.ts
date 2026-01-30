@@ -37,6 +37,7 @@ export interface Operation {
   };
 
   finance_items?: OperationFinanceItem[];
+  costs?: OperationCost[];
 
   created_at: string;
   updated_at: string;
@@ -45,8 +46,12 @@ export interface Operation {
 export interface OperationFinanceItem {
   id: number;
   operation_id: number;
-  item_type: string; // surgeon, assistant, anesthesia, center_share, consumables, equipment, radiology, accommodation
-  category: "staff" | "center";
+  operation_item_id?: number | null;
+  operation_item?: OperationItem;
+  // item_type and category are removed from DB but we might need to support legacy props or derive them
+  // Let's keep them as optional for migration safety or derive logic in component
+  item_type?: string;
+  category?: "staff" | "center";
   description: string | null;
   amount: number;
   is_auto_calculated: boolean;
@@ -66,6 +71,11 @@ export interface CreateOperationData {
   bank_receipt_image?: File | null;
   notes?: string | null;
   manual_items?: ManualFinanceItem[];
+  costs?: {
+    operation_item_id: number;
+    perc: number | null;
+    fixed: number | null;
+  }[];
 }
 
 export interface UpdateOperationData {
@@ -80,11 +90,17 @@ export interface UpdateOperationData {
   notes?: string | null;
   status?: "pending" | "completed" | "cancelled";
   manual_items?: ManualFinanceItem[];
+  costs?: {
+    operation_item_id: number;
+    perc: number | null;
+    fixed: number | null;
+  }[];
 }
 
 export interface ManualFinanceItem {
-  item_type: string;
-  category: "staff" | "center";
+  operation_item_id?: number | null;
+  item_type?: string; // Legacy/Fallback
+  category?: "staff" | "center"; // Legacy/Fallback
   description?: string | null;
   amount: number;
 }
@@ -107,3 +123,46 @@ export interface FinancialReport {
   total_balance: number;
   operations: Operation[];
 }
+
+// Medical Operation Configuration Types
+export interface MedicalOperation {
+  id: number;
+  name: string;
+  code: string | null;
+  price: number;
+  status: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateMedicalOperationData {
+  name: string;
+  code?: string | null;
+  price: number;
+  status?: boolean;
+}
+
+export interface UpdateMedicalOperationData {
+  code?: string | null;
+  price?: number;
+  status?: boolean;
+}
+
+export interface OperationItem {
+  id: number;
+  name: string;
+  type: "center" | "staff";
+  is_active: boolean;
+}
+
+export interface OperationCost {
+  id?: number;
+  operation_item_id: number;
+  perc?: number | null;
+  fixed?: number | null;
+  operation_item?: OperationItem;
+}
+
+// Reuse Operation as Template, but maybe strict subset?
+// For now, Operation matches structure.
+// Just ensuring 'costs' is compatible in Operation interface above.

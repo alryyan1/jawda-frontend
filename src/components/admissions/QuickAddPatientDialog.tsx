@@ -71,7 +71,7 @@ export default function QuickAddPatientDialog({
         age_month: data.age_month ? Number(data.age_month) : null,
         age_day: data.age_day ? Number(data.age_day) : null,
         doctor_id: firstDoctor.id,
-        doctor_shift_id: 1,
+        doctor_shift_id: null,
         income_source: data.income_source || null,
         social_status:
           (data.social_status as
@@ -85,7 +85,7 @@ export default function QuickAddPatientDialog({
       return registerNewPatient(patientData);
     },
     onSuccess: (patient) => {
-      console.log(patient,'patient');
+      console.log(patient, "patient");
       toast.success("تم إضافة المريض بنجاح");
       const patientResult: PatientSearchResult = {
         id: patient.id,
@@ -113,7 +113,7 @@ export default function QuickAddPatientDialog({
       queryClient.invalidateQueries({ queryKey: ["patientSearch"] });
     },
     onError: (error) => {
-      console.log(error,'error');
+      console.log(error, "error");
       toast.error(" حدث خطأ أثناء إضافة المريض " + error.message);
     },
   });
@@ -150,7 +150,7 @@ export default function QuickAddPatientDialog({
           | "divorced"
           | null) || null,
       doctor_id: doctors?.[0]?.id,
-      doctor_shift_id: 1,
+      doctor_shift_id: null,
     };
     quickAddPatientMutation.mutate(patientData);
   };

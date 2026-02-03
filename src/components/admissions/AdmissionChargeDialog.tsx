@@ -11,25 +11,23 @@ import {
   TextField,
   Box,
   CircularProgress,
-  FormControlLabel,
-  Switch,
 } from '@mui/material';
 import type { AdmissionTransactionFormData } from '@/types/admissions';
 import { addAdmissionTransaction } from '@/services/admissionService';
 
-interface AdmissionDiscountDialogProps {
+interface AdmissionChargeDialogProps {
   open: boolean;
   onClose: () => void;
   admissionId: number;
   balance?: number;
 }
 
-export default function AdmissionDiscountDialog({
+export default function AdmissionChargeDialog({
   open,
   onClose,
   admissionId,
   balance,
-}: AdmissionDiscountDialogProps) {
+}: AdmissionChargeDialogProps) {
   const queryClient = useQueryClient();
   const amountInputRef = useRef<HTMLInputElement>(null);
 
@@ -38,7 +36,7 @@ export default function AdmissionDiscountDialog({
       amount: 0,
       description: '',
       notes: '',
-      reference_type: 'discount',
+      reference_type: 'charge',
     },
   });
 
@@ -51,7 +49,7 @@ export default function AdmissionDiscountDialog({
         amount: 0,
         description: '',
         notes: '',
-        reference_type: 'discount',
+        reference_type: 'charge',
       });
       // Focus on amount input after a short delay
       setTimeout(() => {
@@ -66,12 +64,12 @@ export default function AdmissionDiscountDialog({
       const transactionData: AdmissionTransactionFormData = {
         ...data,
         type: 'debit',
-        is_bank: false, // Always false for discounts
+        is_bank: false, // Always false for manual charges
       };
       return addAdmissionTransaction(admissionId, transactionData);
     },
     onSuccess: () => {
-      toast.success('تم إضافة الخصم بنجاح');
+      toast.success('تم إضافة الرسوم بنجاح');
       queryClient.invalidateQueries({ queryKey: ['admissionTransactions', admissionId] });
       queryClient.invalidateQueries({ queryKey: ['admission', admissionId] });
       queryClient.invalidateQueries({ queryKey: ['admissionLedger', admissionId] });
@@ -80,7 +78,7 @@ export default function AdmissionDiscountDialog({
       onClose();
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'فشل إضافة الخصم');
+      toast.error(error.response?.data?.message || 'فشل إضافة الرسوم');
     },
   });
 
@@ -100,7 +98,7 @@ export default function AdmissionDiscountDialog({
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
       <form onSubmit={handleSubmit(onSubmit)}>
-        <DialogTitle>إضافة خصم</DialogTitle>
+        <DialogTitle>إضافة رسوم</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
             <Controller
@@ -113,7 +111,7 @@ export default function AdmissionDiscountDialog({
               render={({ field, fieldState }) => (
                 <TextField
                   fullWidth
-                  label="مبلغ الخصم"
+                  label="مبلغ الرسوم"
                   type="number"
                   inputRef={amountInputRef}
                   {...field}
@@ -133,12 +131,12 @@ export default function AdmissionDiscountDialog({
               render={({ field, fieldState }) => (
                 <TextField
                   fullWidth
-                  label="وصف الخصم"
+                  label="وصف الرسوم"
                   {...field}
                   error={!!fieldState.error}
                   helperText={fieldState.error?.message}
                   disabled={mutation.isPending}
-                  placeholder="مثال: تخفيض خاص، خصم موظف، إلخ"
+                  placeholder="مثال: رسوم علاج، رسوم فحص، رسوم استشارة، إلخ"
                 />
               )}
             />
@@ -162,8 +160,8 @@ export default function AdmissionDiscountDialog({
           <Button onClick={handleClose} disabled={mutation.isPending}>
             إلغاء
           </Button>
-          <Button type="submit" variant="contained" color="warning" disabled={mutation.isPending}>
-            {mutation.isPending ? <CircularProgress size={20} /> : 'إضافة خصم'}
+          <Button type="submit" variant="contained" color="error" disabled={mutation.isPending}>
+            {mutation.isPending ? <CircularProgress size={20} /> : 'إضافة رسوم'}
           </Button>
         </DialogActions>
       </form>

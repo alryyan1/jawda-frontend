@@ -35,6 +35,8 @@ export interface Room {
   updated_at: string;
   beds_count?: number;
   beds?: Bed[];
+  current_admission?: Admission;
+  is_fully_occupied?: boolean;
 }
 
 export interface RoomFormData {
@@ -293,31 +295,13 @@ export interface AdmissionBalance {
   total_paid_from_deposit: number;
 }
 
-export interface AdmissionLedgerEntry {
-  id: string | number;
-  type: "debit" | "credit";
-  description: string;
-  amount: number;
-  is_bank: boolean;
-  date: string;
-  time?: string;
-  user?: string;
-  notes?: string;
-  service_id?: number;
-  service_name?: string;
-  count?: number;
-  balance_after: number;
-  reference_type?: "service" | "deposit" | "manual" | "lab_test" | "room_charges" | null;
-  reference_id?: number | null;
-}
-
 export interface AdmissionTransaction {
   id: number;
   admission_id: number;
   type: "debit" | "credit";
   amount: number;
   description: string;
-  reference_type?: "service" | "deposit" | "manual" | "room_charges" | null;
+  reference_type?: "service" | "deposit" | "manual" | "room_charges" | "charge" | "discount" | null;
   reference_id?: number | null;
   is_bank: boolean;
   notes?: string | null;
@@ -331,7 +315,7 @@ export interface AdmissionTransactionFormData {
   type: "debit" | "credit";
   amount: number;
   description: string;
-  reference_type?: "service" | "deposit" | "manual" | "room_charges" | null;
+  reference_type?: "service" | "deposit" | "manual" | "room_charges" | "charge" | "discount" | null;
   reference_id?: number | null;
   is_bank: boolean;
   notes?: string | null;
@@ -347,8 +331,8 @@ export interface AdmissionLedgerEntry {
   time?: string;
   user?: string;
   notes?: string;
-  reference_type?: string;
-  reference_id?: number;
+  reference_type?: "service" | "deposit" | "manual" | "lab_test" | "room_charges" | "charge" | "discount" | null;
+  reference_id?: number | null;
   balance_after: number;
 }
 

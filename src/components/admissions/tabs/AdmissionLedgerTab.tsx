@@ -10,7 +10,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
   Chip,
   Button,
   IconButton,
@@ -44,6 +43,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import AdmissionDepositDialog from '@/components/admissions/AdmissionDepositDialog';
 import AdmissionDiscountDialog from '@/components/admissions/AdmissionDiscountDialog';
+import AdmissionChargeDialog from '@/components/admissions/AdmissionChargeDialog';
 import { formatNumber } from '@/lib/utils';
 import type { AdmissionTransactionFormData } from '@/types/admissions';
 
@@ -55,6 +55,7 @@ export default function AdmissionLedgerTab({ admissionId }: AdmissionLedgerTabPr
   const queryClient = useQueryClient();
   const [depositDialogOpen, setDepositDialogOpen] = useState(false);
   const [discountDialogOpen, setDiscountDialogOpen] = useState(false);
+  const [chargeDialogOpen, setChargeDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [daysCalculationDialogOpen, setDaysCalculationDialogOpen] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState<{ id: number | string; description: string } | null>(null);
@@ -203,8 +204,12 @@ export default function AdmissionLedgerTab({ admissionId }: AdmissionLedgerTabPr
         return { label: 'خدمات', color: 'warning' as const };
       case 'lab_test':
         return { label: 'فحوصات', color: 'secondary' as const };
-      case 'manual':
+      case 'charge':
+        return { label: 'رسوم', color: 'error' as const };
+      case 'discount':
         return { label: 'خصم', color: 'default' as const };
+      case 'manual':
+        return { label: 'رسوم', color: 'error' as const };
       default:
         return { label: 'رسوم', color: 'error' as const };
     }
@@ -236,381 +241,389 @@ export default function AdmissionLedgerTab({ admissionId }: AdmissionLedgerTabPr
   };
 
   return (
-    <>
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, height: 'calc(100vh - 200px)' }}>
-        {/* Top Row: Info + Summary Cards + Actions */}
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'stretch' }}>
-          {/* Left: Admission Info (Compact) */}
-          <Card variant="outlined" sx={{ flex: '0 0 auto', minWidth: '300px' }}>
-            <CardContent sx={{ py: 1.5, px: 2 }}>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, height: 'calc(100vh - 200px)' }}>
+      {/* Top Row: Info + Summary Cards + Actions */}
+      <Box sx={{ display: 'flex', gap: 2, alignItems: 'stretch' }}>
+        {/* Left: Admission Info (Compact) */}
+        <Card variant="outlined" sx={{ flex: '0 0 auto', minWidth: '300px' }}>
+          <CardContent sx={{ py: 1.5, px: 2 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Calendar size={14} />
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                    تاريخ الدخول
+                  </Typography>
+                  <Typography variant="body2" fontWeight={500} sx={{ fontSize: '0.85rem' }}>
+                    {admissionDate} {admissionTime && `• ${admissionTime}`}
+                  </Typography>
+                </Box>
+              </Box>
+              {dischargeDate && (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Calendar size={14} />
                   <Box sx={{ flex: 1 }}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                      تاريخ الدخول
+                      تاريخ الخروج
                     </Typography>
                     <Typography variant="body2" fontWeight={500} sx={{ fontSize: '0.85rem' }}>
-                      {admissionDate} {admissionTime && `• ${admissionTime}`}
+                      {dischargeDate} {dischargeTime && `• ${dischargeTime}`}
                     </Typography>
                   </Box>
                 </Box>
-                {dischargeDate && (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Calendar size={14} />
-                    <Box sx={{ flex: 1 }}>
-                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                        تاريخ الخروج
-                      </Typography>
-                      <Typography variant="body2" fontWeight={500} sx={{ fontSize: '0.85rem' }}>
-                        {dischargeDate} {dischargeTime && `• ${dischargeTime}`}
-                      </Typography>
-                    </Box>
-                  </Box>
-                )}
-                <Divider sx={{ my: 0.5 }} />
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                      أيام الإقامة
-                    </Typography>
-                    <Tooltip title="اضغط للاطلاع على طريقة الحساب">
-                      <IconButton
-                        size="small"
-                        onClick={() => setDaysCalculationDialogOpen(true)}
-                        sx={{ p: 0.25 }}
-                      >
-                        <HelpCircle size={12} />
-                      </IconButton>
-                    </Tooltip>
-                  </Box>
-                  <Typography variant="h6" fontWeight={600} color="primary.main" sx={{ fontSize: '1.1rem' }}>
-                    {daysAdmitted} يوم
-                  </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              )}
+              <Divider sx={{ my: 0.5 }} />
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                   <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                    سعر اليوم
+                    أيام الإقامة
                   </Typography>
-                  <Typography variant="body2" fontWeight={500} sx={{ fontSize: '0.85rem' }}>
-                    {roomPricePerDay > 0 ? formatNumber(roomPricePerDay) : 'غير محدد'}
-                  </Typography>
+                  <Tooltip title="اضغط للاطلاع على طريقة الحساب">
+                    <IconButton
+                      size="small"
+                      onClick={() => setDaysCalculationDialogOpen(true)}
+                      sx={{ p: 0.25 }}
+                    >
+                      <HelpCircle size={12} />
+                    </IconButton>
+                  </Tooltip>
                 </Box>
+                <Typography variant="h6" fontWeight={600} color="primary.main" sx={{ fontSize: '1.1rem' }}>
+                  {daysAdmitted} يوم
+                </Typography>
               </Box>
-            </CardContent>
-          </Card>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                  سعر اليوم
+                </Typography>
+                <Typography variant="body2" fontWeight={500} sx={{ fontSize: '0.85rem' }}>
+                  {roomPricePerDay > 0 ? formatNumber(roomPricePerDay) : 'غير محدد'}
+                </Typography>
+              </Box>
+            </Box>
+          </CardContent>
+        </Card>
 
-          {/* Center: Summary Cards (Compact) */}
-          <Box sx={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1.5 }}>
+        {/* Center: Summary Cards (Compact) */}
+        <Box sx={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1.5 }}>
           {/* Total Charges Card */}
           <Card 
-            elevation={2}
+            elevation={1}
             sx={{ 
               bgcolor: '#FEF2F2',
               border: '1px solid',
               borderColor: '#FCA5A5',
             }}
           >
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                <Receipt size={20} color="#DC2626" />
-                <Typography variant="subtitle2" sx={{ color: '#DC2626', fontWeight: 600 }}>
+            <CardContent sx={{ py: 1.5, px: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+                <Receipt size={16} color="#DC2626" />
+                <Typography variant="caption" sx={{ color: '#DC2626', fontWeight: 600, fontSize: '0.75rem' }}>
                   إجمالي المستحقات
                 </Typography>
               </Box>
-              <Typography variant="h4" sx={{ fontWeight: 700, color: '#DC2626' }}>
+              <Typography variant="h5" sx={{ fontWeight: 700, color: '#DC2626', fontSize: '1.5rem' }}>
                 {formatNumber(summary.total_debits)}
               </Typography>
-              <Typography variant="caption" sx={{ color: '#991B1B', mt: 0.5, display: 'block' }}>
-                جميع الرسوم والخدمات
+              <Typography variant="caption" sx={{ color: '#991B1B', fontSize: '0.65rem' }}>
+                الرسوم والخدمات
               </Typography>
             </CardContent>
           </Card>
 
           {/* Total Payments Card */}
           <Card 
-            elevation={2}
+            elevation={1}
             sx={{ 
               bgcolor: '#F0FDF4',
               border: '1px solid',
               borderColor: '#86EFAC',
             }}
           >
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                <Wallet size={20} color="#16A34A" />
-                <Typography variant="subtitle2" sx={{ color: '#16A34A', fontWeight: 600 }}>
+            <CardContent sx={{ py: 1.5, px: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+                <Wallet size={16} color="#16A34A" />
+                <Typography variant="caption" sx={{ color: '#16A34A', fontWeight: 600, fontSize: '0.75rem' }}>
                   إجمالي المدفوعات
                 </Typography>
               </Box>
-              <Typography variant="h4" sx={{ fontWeight: 700, color: '#16A34A' }}>
+              <Typography variant="h5" sx={{ fontWeight: 700, color: '#16A34A', fontSize: '1.5rem' }}>
                 {formatNumber(summary.total_credits)}
               </Typography>
-              <Typography variant="caption" sx={{ color: '#166534', mt: 0.5, display: 'block' }}>
-                جميع المبالغ المدفوعة
+              <Typography variant="caption" sx={{ color: '#166534', fontSize: '0.65rem' }}>
+                المبالغ المدفوعة
               </Typography>
             </CardContent>
           </Card>
 
-            {/* Balance Card */}
-            <Card 
-              elevation={2}
-              sx={{ 
-                bgcolor: balanceStatus === 'due' ? '#FEF2F2' : balanceStatus === 'credit' ? '#F0FDF4' : '#F9FAFB',
-                border: '2px solid',
-                borderColor: balanceStatus === 'due' ? '#DC2626' : balanceStatus === 'credit' ? '#16A34A' : '#D1D5DB',
-              }}
-            >
-              <CardContent sx={{ py: 1.5, px: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
-                  {balanceStatus === 'due' ? (
-                    <AlertCircle size={16} color="#DC2626" />
-                  ) : balanceStatus === 'credit' ? (
-                    <CheckCircle2 size={16} color="#16A34A" />
-                  ) : (
-                    <Info size={16} color="#6B7280" />
-                  )}
-                  <Typography 
-                    variant="caption" 
-                    sx={{ 
-                      color: balanceStatus === 'due' ? '#DC2626' : balanceStatus === 'credit' ? '#16A34A' : '#6B7280',
-                      fontWeight: 600,
-                      fontSize: '0.75rem'
-                    }}
-                  >
-                    الرصيد المطلوب
-                  </Typography>
-                </Box>
+          {/* Balance Card */}
+          <Card 
+            elevation={2}
+            sx={{ 
+              bgcolor: balanceStatus === 'due' ? '#FEF2F2' : balanceStatus === 'credit' ? '#F0FDF4' : '#F9FAFB',
+              border: '2px solid',
+              borderColor: balanceStatus === 'due' ? '#DC2626' : balanceStatus === 'credit' ? '#16A34A' : '#D1D5DB',
+            }}
+          >
+            <CardContent sx={{ py: 1.5, px: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+                {balanceStatus === 'due' ? (
+                  <AlertCircle size={16} color="#DC2626" />
+                ) : balanceStatus === 'credit' ? (
+                  <CheckCircle2 size={16} color="#16A34A" />
+                ) : (
+                  <Info size={16} color="#6B7280" />
+                )}
                 <Typography 
-                  variant="h5" 
+                  variant="caption" 
                   sx={{ 
-                    fontWeight: 700, 
                     color: balanceStatus === 'due' ? '#DC2626' : balanceStatus === 'credit' ? '#16A34A' : '#6B7280',
-                    fontSize: '1.5rem'
+                    fontWeight: 600,
+                    fontSize: '0.75rem'
                   }}
                 >
-                  {formatNumber(Math.abs(summary.balance))}
+                  الرصيد المطلوب
                 </Typography>
-                <Chip 
-                  label={
-                    balanceStatus === 'due' 
-                      ? 'مطلوب من المريض' 
-                      : balanceStatus === 'credit' 
-                      ? 'رصيد دائن للمريض'
-                      : 'الحساب متعادل'
-                  }
-                  size="small"
-                  sx={{ 
-                    mt: 0.5,
-                    height: 18,
-                    fontSize: '0.65rem',
-                    bgcolor: balanceStatus === 'due' ? '#DC2626' : balanceStatus === 'credit' ? '#16A34A' : '#6B7280',
-                    color: 'white',
-                    fontWeight: 500,
-                  }} 
-                />
-              </CardContent>
-            </Card>
-          </Box>
-
-          {/* Right: Action Buttons (Vertical) */}
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <Button
-              size="small"
-              variant="outlined"
-              startIcon={roomChargesMutation.isPending ? <CircularProgress size={14} /> : <Calculator size={14} />}
-              onClick={handleCalculateRoomCharges}
-              disabled={roomChargesMutation.isPending || !admissionData || !admissionData.room?.price_per_day}
-              sx={{ fontSize: '0.75rem', px: 1.5, py: 0.5, whiteSpace: 'nowrap' }}
-            >
-              حساب الرسوم
-            </Button>
-            <Button
-              size="small"
-              variant="outlined"
-              color="warning"
-              startIcon={<Minus size={14} />}
-              onClick={() => setDiscountDialogOpen(true)}
-              sx={{ fontSize: '0.75rem', px: 1.5, py: 0.5 }}
-            >
-              إضافة خصم
-            </Button>
-            <Button
-              size="small"
-              variant="contained"
-              startIcon={<Plus size={14} />}
-              onClick={() => setDepositDialogOpen(true)}
-              sx={{ fontSize: '0.75rem', px: 1.5, py: 0.5 }}
-            >
-              إضافة دفعة
-            </Button>
-          </Box>
+              </Box>
+              <Typography 
+                variant="h5" 
+                sx={{ 
+                  fontWeight: 700, 
+                  color: balanceStatus === 'due' ? '#DC2626' : balanceStatus === 'credit' ? '#16A34A' : '#6B7280',
+                  fontSize: '1.5rem'
+                }}
+              >
+                {formatNumber(Math.abs(summary.balance))}
+              </Typography>
+              <Chip 
+                label={
+                  balanceStatus === 'due' 
+                    ? 'مطلوب من المريض' 
+                    : balanceStatus === 'credit' 
+                    ? 'رصيد دائن للمريض'
+                    : 'الحساب متعادل'
+                }
+                size="small"
+                sx={{ 
+                  mt: 0.5,
+                  height: 18,
+                  fontSize: '0.65rem',
+                  bgcolor: balanceStatus === 'due' ? '#DC2626' : balanceStatus === 'credit' ? '#16A34A' : '#6B7280',
+                  color: 'white',
+                  fontWeight: 500,
+                }} 
+              />
+            </CardContent>
+          </Card>
         </Box>
 
-        {/* Legend (Collapsible) */}
-        <Alert 
-          severity="info" 
-          icon={<Info size={16} />}
-          sx={{ 
-            py: 0.5,
-            bgcolor: '#EFF6FF',
-            border: '1px solid #DBEAFE',
-            '& .MuiAlert-icon': {
-              color: '#3B82F6',
-              py: 0.5,
-            },
-            '& .MuiAlert-message': {
-              py: 0.5,
-            }
-          }}
-        >
-          <Typography variant="caption" fontWeight={600} sx={{ color: '#1E40AF', fontSize: '0.75rem' }}>
-            📌 <strong>المستحقات:</strong> الرسوم والخدمات على المريض • <strong>المدفوعات:</strong> المبالغ المدفوعة • <strong>الرصيد = المستحقات - المدفوعات</strong> (موجب = مطلوب من المريض | سالب = دائن للمريض)
-          </Typography>
-        </Alert>
+        {/* Right: Action Buttons (Vertical) */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={roomChargesMutation.isPending ? <CircularProgress size={14} /> : <Calculator size={14} />}
+            onClick={handleCalculateRoomCharges}
+            disabled={roomChargesMutation.isPending || !admissionData || !admissionData.room?.price_per_day}
+            sx={{ fontSize: '0.75rem', px: 1.5, py: 0.5, whiteSpace: 'nowrap' }}
+          >
+            حساب الرسوم
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            color="error"
+            startIcon={<Plus size={14} />}
+            onClick={() => setChargeDialogOpen(true)}
+            sx={{ fontSize: '0.75rem', px: 1.5, py: 0.5 }}
+          >
+            إضافة رسوم
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            color="warning"
+            startIcon={<Minus size={14} />}
+            onClick={() => setDiscountDialogOpen(true)}
+            sx={{ fontSize: '0.75rem', px: 1.5, py: 0.5 }}
+          >
+            إضافة خصم
+          </Button>
+          <Button
+            size="small"
+            variant="contained"
+            startIcon={<Plus size={14} />}
+            onClick={() => setDepositDialogOpen(true)}
+            sx={{ fontSize: '0.75rem', px: 1.5, py: 0.5 }}
+          >
+            إضافة دفعة
+          </Button>
+        </Box>
+      </Box>
 
-        {/* Ledger Table (Takes remaining height) */}
-        <Card variant="outlined" sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <CardContent sx={{ py: 1.5, px: 2, flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600, fontSize: '1rem' }}>
-              سجل المعاملات
-            </Typography>
-            <Divider sx={{ mb: 1 }} />
-            <TableContainer sx={{ flex: 1, overflow: 'auto' }}>
-              <Table size="small" stickyHeader>
-                <TableHead>
+      {/* Legend (Compact) */}
+      <Alert 
+        severity="info" 
+        icon={<Info size={16} />}
+        sx={{ 
+          py: 0.5,
+          bgcolor: '#EFF6FF',
+          border: '1px solid #DBEAFE',
+          '& .MuiAlert-icon': {
+            color: '#3B82F6',
+            py: 0.5,
+          },
+          '& .MuiAlert-message': {
+            py: 0.5,
+          }
+        }}
+      >
+        <Typography variant="caption" fontWeight={600} sx={{ color: '#1E40AF', fontSize: '0.75rem' }}>
+          📌 <strong>المستحقات:</strong> الرسوم والخدمات على المريض • <strong>المدفوعات:</strong> المبالغ المدفوعة • <strong>الرصيد = المستحقات - المدفوعات</strong> (موجب = مطلوب من المريض | سالب = دائن للمريض)
+        </Typography>
+      </Alert>
+
+      {/* Ledger Table (Takes remaining height) */}
+      <Card variant="outlined" sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <CardContent sx={{ py: 1.5, px: 2, flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600, fontSize: '1rem' }}>
+            سجل المعاملات
+          </Typography>
+          <Divider sx={{ mb: 1 }} />
+          <TableContainer sx={{ flex: 1, overflow: 'auto' }}>
+            <Table size="small" stickyHeader>
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: '#F9FAFB', py: 1, fontSize: '0.8rem' }}>التاريخ</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: '#F9FAFB', py: 1, fontSize: '0.8rem' }}>الوقت</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: '#F9FAFB', py: 1, fontSize: '0.8rem' }}>النوع</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: '#F9FAFB', py: 1, fontSize: '0.8rem' }}>الوصف</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, bgcolor: '#F9FAFB', py: 1, fontSize: '0.8rem', color: '#DC2626' }}>
+                    مدين
+                  </TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, bgcolor: '#F9FAFB', py: 1, fontSize: '0.8rem', color: '#16A34A' }}>
+                    دائن
+                  </TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600, bgcolor: '#F9FAFB', py: 1, fontSize: '0.8rem' }}>الرصيد</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: '#F9FAFB', py: 1, fontSize: '0.8rem' }}>المستخدم</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 600, bgcolor: '#F9FAFB', py: 1, fontSize: '0.8rem' }}>إجراءات</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {entries.length === 0 ? (
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 600, bgcolor: '#F9FAFB', py: 1, fontSize: '0.8rem' }}>التاريخ</TableCell>
-                    <TableCell sx={{ fontWeight: 600, bgcolor: '#F9FAFB', py: 1, fontSize: '0.8rem' }}>الوقت</TableCell>
-                    <TableCell sx={{ fontWeight: 600, bgcolor: '#F9FAFB', py: 1, fontSize: '0.8rem' }}>النوع</TableCell>
-                    <TableCell sx={{ fontWeight: 600, bgcolor: '#F9FAFB', py: 1, fontSize: '0.8rem' }}>الوصف</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 600, bgcolor: '#F9FAFB', py: 1, fontSize: '0.8rem', color: '#DC2626' }}>
-                      مدين
+                    <TableCell colSpan={9} align="center" sx={{ py: 3 }}>
+                      <Typography variant="caption" color="text.secondary">
+                        لا توجد معاملات مسجلة
+                      </Typography>
                     </TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 600, bgcolor: '#F9FAFB', py: 1, fontSize: '0.8rem', color: '#16A34A' }}>
-                      دائن
-                    </TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 600, bgcolor: '#F9FAFB', py: 1, fontSize: '0.8rem' }}>الرصيد</TableCell>
-                    <TableCell sx={{ fontWeight: 600, bgcolor: '#F9FAFB', py: 1, fontSize: '0.8rem' }}>المستخدم</TableCell>
-                    <TableCell align="center" sx={{ fontWeight: 600, bgcolor: '#F9FAFB', py: 1, fontSize: '0.8rem' }}>إجراءات</TableCell>
                   </TableRow>
-                </TableHead>
-                <TableBody>
-                  {entries.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={9} align="center" sx={{ py: 3 }}>
-                        <Typography variant="caption" color="text.secondary">
-                          لا توجد معاملات مسجلة
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    entries.map((entry, index) => {
-                      const typeInfo = getTransactionTypeInfo(entry);
-                      return (
-                        <TableRow 
-                          key={`${entry.id}-${index}`}
-                          sx={{
-                            '&:nth-of-type(odd)': { bgcolor: '#FAFAFA' },
-                            '&:hover': { bgcolor: '#F5F5F5' },
-                          }}
-                        >
-                          <TableCell sx={{ py: 0.75, fontSize: '0.8rem' }}>{entry.date}</TableCell>
-                          <TableCell sx={{ py: 0.75, fontSize: '0.8rem' }}>{entry.time || '-'}</TableCell>
-                          <TableCell sx={{ py: 0.75 }}>
-                            <Chip
-                              label={typeInfo.label}
-                              color={typeInfo.color}
-                              size="small"
-                              sx={{ fontWeight: 500, height: 20, fontSize: '0.7rem' }}
-                            />
-                          </TableCell>
-                          <TableCell sx={{ py: 0.75 }}>
-                            <Typography variant="caption" sx={{ fontSize: '0.8rem' }}>
-                              {entry.description}
-                            </Typography>
-                            {entry.is_bank && entry.type === 'credit' && (
-                              <Chip label="بنك" size="small" color="primary" sx={{ ml: 0.5, height: 16, fontSize: '0.65rem' }} />
-                            )}
-                          </TableCell>
-                          {/* Debit Column */}
-                          <TableCell align="right" sx={{ py: 0.75 }}>
-                            {entry.type === 'debit' ? (
-                              <Typography
-                                variant="caption"
-                                sx={{
-                                  fontWeight: 600,
-                                  color: '#DC2626',
-                                  fontSize: '0.8rem'
-                                }}
-                              >
-                                {formatNumber(Math.abs(entry.amount))}
-                              </Typography>
-                            ) : (
-                              <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.8rem' }}>
-                                -
-                              </Typography>
-                            )}
-                          </TableCell>
-                          {/* Credit Column */}
-                          <TableCell align="right" sx={{ py: 0.75 }}>
-                            {entry.type === 'credit' ? (
-                              <Typography
-                                variant="caption"
-                                sx={{
-                                  fontWeight: 600,
-                                  color: '#16A34A',
-                                  fontSize: '0.8rem'
-                                }}
-                              >
-                                {formatNumber(Math.abs(entry.amount))}
-                              </Typography>
-                            ) : (
-                              <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.8rem' }}>
-                                -
-                              </Typography>
-                            )}
-                          </TableCell>
-                          <TableCell align="right" sx={{ py: 0.75 }}>
+                ) : (
+                  entries.map((entry: any, index: number) => {
+                    const typeInfo = getTransactionTypeInfo(entry);
+                    return (
+                      <TableRow 
+                        key={`${entry.id}-${index}`}
+                        sx={{
+                          '&:nth-of-type(odd)': { bgcolor: '#FAFAFA' },
+                          '&:hover': { bgcolor: '#F5F5F5' },
+                        }}
+                      >
+                        <TableCell sx={{ py: 0.75, fontSize: '0.8rem' }}>{entry.date}</TableCell>
+                        <TableCell sx={{ py: 0.75, fontSize: '0.8rem' }}>{entry.time || '-'}</TableCell>
+                        <TableCell sx={{ py: 0.75 }}>
+                          <Chip
+                            label={typeInfo.label}
+                            color={typeInfo.color}
+                            size="small"
+                            sx={{ fontWeight: 500, height: 20, fontSize: '0.7rem' }}
+                          />
+                        </TableCell>
+                        <TableCell sx={{ py: 0.75 }}>
+                          <Typography variant="caption" sx={{ fontSize: '0.8rem' }}>
+                            {entry.description}
+                          </Typography>
+                          {entry.is_bank && entry.type === 'credit' && (
+                            <Chip label="بنك" size="small" color="primary" sx={{ ml: 0.5, height: 16, fontSize: '0.65rem' }} />
+                          )}
+                        </TableCell>
+                        {/* Debit Column */}
+                        <TableCell align="right" sx={{ py: 0.75 }}>
+                          {entry.type === 'debit' ? (
                             <Typography
                               variant="caption"
                               sx={{
                                 fontWeight: 600,
-                                color: entry.balance_after > 0 ? '#DC2626' : entry.balance_after < 0 ? '#16A34A' : '#6B7280',
+                                color: '#DC2626',
                                 fontSize: '0.8rem'
                               }}
                             >
-                              {formatNumber(Math.abs(entry.balance_after))}
+                              {formatNumber(Math.abs(entry.amount))}
                             </Typography>
-                          </TableCell>
-                          <TableCell sx={{ py: 0.75 }}>
-                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                              {entry.user || '-'}
+                          ) : (
+                            <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.8rem' }}>
+                              -
                             </Typography>
-                          </TableCell>
-                          <TableCell align="center" sx={{ py: 0.75 }}>
-                            {admissionData?.status === 'admitted' && (
-                              <IconButton
-                                size="small"
-                                color="error"
-                                onClick={() => handleDeleteClick(entry)}
-                                disabled={deleteTransactionMutation.isPending}
-                                sx={{ p: 0.5 }}
-                              >
-                                <Trash2 size={14} />
-                              </IconButton>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </CardContent>
-        </Card>
-      </Box>
+                          )}
+                        </TableCell>
+                        {/* Credit Column */}
+                        <TableCell align="right" sx={{ py: 0.75 }}>
+                          {entry.type === 'credit' ? (
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                fontWeight: 600,
+                                color: '#16A34A',
+                                fontSize: '0.8rem'
+                              }}
+                            >
+                              {formatNumber(Math.abs(entry.amount))}
+                            </Typography>
+                          ) : (
+                            <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.8rem' }}>
+                              -
+                            </Typography>
+                          )}
+                        </TableCell>
+                        <TableCell align="right" sx={{ py: 0.75 }}>
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              fontWeight: 600,
+                              color: entry.balance_after > 0 ? '#DC2626' : entry.balance_after < 0 ? '#16A34A' : '#6B7280',
+                              fontSize: '0.8rem'
+                            }}
+                          >
+                            {formatNumber(Math.abs(entry.balance_after))}
+                          </Typography>
+                        </TableCell>
+                        <TableCell sx={{ py: 0.75 }}>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                            {entry.user || '-'}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="center" sx={{ py: 0.75 }}>
+                          {admissionData?.status === 'admitted' && (
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => handleDeleteClick(entry)}
+                              disabled={deleteTransactionMutation.isPending}
+                              sx={{ p: 0.5 }}
+                            >
+                              <Trash2 size={14} />
+                            </IconButton>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </CardContent>
+      </Card>
 
       {/* Days Calculation Explanation Dialog */}
       <Dialog
@@ -766,6 +779,13 @@ export default function AdmissionLedgerTab({ admissionId }: AdmissionLedgerTabPr
         balance={ledgerData?.summary?.balance}
       />
 
+      <AdmissionChargeDialog
+        open={chargeDialogOpen}
+        onClose={() => setChargeDialogOpen(false)}
+        admissionId={admissionId}
+        balance={ledgerData?.summary?.balance}
+      />
+
       <AdmissionDiscountDialog
         open={discountDialogOpen}
         onClose={() => setDiscountDialogOpen(false)}
@@ -812,6 +832,6 @@ export default function AdmissionLedgerTab({ admissionId }: AdmissionLedgerTabPr
           </Button>
         </DialogActions>
       </Dialog>
-    </>
+    </Box>
   );
 }

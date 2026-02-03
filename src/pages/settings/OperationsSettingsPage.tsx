@@ -10,54 +10,15 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import OperationTemplateDialog from "@/components/operations/OperationTemplateDialog";
 import { operationService } from "@/services/operationService";
 
-import { Plus, Pencil, Trash2, Search, Stethoscope, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Search } from "lucide-react";
 import { toast } from "sonner";
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import apiClient from "@/services/api";
-import { OperationItem } from "@/types/operations";
-
-// New Interface for Costs
-interface OperationCost {
-  id?: number;
-  operation_item_id: number;
-  perc?: number | null;
-  fixed?: number | null;
-  operation_item?: OperationItem;
-}
-
-// New Interface based on Operation model
-interface OperationTemplate {
-  id: number;
-  operation_type: string;
-  description: string;
-  surgeon_fee: number;
-  status: string; // 'pending', 'completed', 'cancelled' -> We might use 'pending' as active for templates
-  costs?: OperationCost[];
-}
+import type { OperationTemplate, OperationItem } from "@/types/operations";
 
 // API Functions
 const getOperationTemplates = async (search?: string) => {
@@ -117,15 +78,6 @@ export default function OperationsSettingsPage() {
 
   const [catalogue, setCatalogue] = useState<OperationItem[]>([]);
 
-  // Form State
-  const [formData, setFormData] = useState<Partial<OperationTemplate>>({
-    operation_type: "",
-    description: "",
-    surgeon_fee: 0,
-    status: "pending",
-    costs: [],
-  });
-
   // Queries
   const { data: operations, isLoading } = useQuery({
     queryKey: ["operationTemplates", search],
@@ -133,24 +85,11 @@ export default function OperationsSettingsPage() {
   });
 
   // Specific Operation Query
-  const { data: operationDetail, isLoading: isLoadingDetail } = useQuery({
+  const { data: operationDetail } = useQuery({
     queryKey: ["operation", editingOperation?.id],
     queryFn: () => getOperation(editingOperation!.id),
     enabled: !!editingOperation,
   });
-
-  // Sync formData with detail
-  useEffect(() => {
-    if (editingOperation && operationDetail) {
-      setFormData({
-        operation_type: operationDetail.operation_type,
-        description: operationDetail.description || "",
-        surgeon_fee: operationDetail.surgeon_fee,
-        status: operationDetail.status,
-        costs: operationDetail.costs || [],
-      });
-    }
-  }, [operationDetail, editingOperation]);
 
   // Fetch Catalogue
   useEffect(() => {
@@ -208,27 +147,19 @@ export default function OperationsSettingsPage() {
     },
   });
 
+  const handleDelete = (id: number) => {
+    if (confirm("هل أنت متأكد من حذف هذه العملية؟")) {
+      deleteMutation.mutate(id);
+    }
+  };
+
   // Handlers
   const handleOpenDialog = (operation?: OperationTemplate) => {
     if (operation) {
       setEditingOperation(operation);
       // We set initial data immediately for best UX, but specific query will update it if fresh info comes
-      setFormData({
-        operation_type: operation.operation_type,
-        description: operation.description || "",
-        surgeon_fee: operation.surgeon_fee,
-        status: operation.status,
-        costs: operation.costs || [],
-      });
     } else {
       setEditingOperation(null);
-      setFormData({
-        operation_type: "",
-        description: "",
-        surgeon_fee: 0,
-        status: "pending",
-        costs: [],
-      });
     }
     setIsDialogOpen(true);
   };
@@ -238,50 +169,12 @@ export default function OperationsSettingsPage() {
     setEditingOperation(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSave = (data: Partial<OperationTemplate>) => {
     if (editingOperation) {
-      updateMutation.mutate(formData);
+      updateMutation.mutate(data);
     } else {
-      createMutation.mutate(formData);
+      createMutation.mutate(data);
     }
-  };
-
-  const handleDelete = (id: number) => {
-    if (confirm("هل أنت متأكد من حذف هذه العملية؟")) {
-      deleteMutation.mutate(id);
-    }
-  };
-
-  // Cost Handlers
-  const addCost = () => {
-    setFormData((prev) => ({
-      ...prev,
-      costs: [
-        ...(prev.costs || []),
-        { operation_item_id: 0, perc: null, fixed: null },
-      ],
-    }));
-  };
-
-  const removeCost = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      costs: prev.costs?.filter((_, i) => i !== index),
-    }));
-  };
-
-  const updateCost = (
-    index: number,
-    field: keyof OperationCost,
-    value: any,
-  ) => {
-    setFormData((prev) => ({
-      ...prev,
-      costs: prev.costs?.map((c, i) =>
-        i === index ? { ...c, [field]: value } : c,
-      ),
-    }));
   };
 
   return (
@@ -386,181 +279,16 @@ export default function OperationsSettingsPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {editingOperation ? "تعديل عملية" : "إضافة عملية جديدة"}
-            </DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-4">
-              <div className="grid gap-2">
-                <Label htmlFor="name">اسم العملية</Label>
-                <Input
-                  id="name"
-                  required
-                  value={formData.operation_type}
-                  onChange={(e) =>
-                    setFormData({ ...formData, operation_type: e.target.value })
-                  }
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="code">الوصف / الكود</Label>
-                <Input
-                  id="code"
-                  value={formData.description || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="price">أجر الجراح (المبلغ الأساسي)</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  required
-                  value={formData.surgeon_fee}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      surgeon_fee: parseFloat(e.target.value),
-                    })
-                  }
-                />
-              </div>
-            </div>
-
-            {/* Costs Section */}
-            <div className="space-y-4 border-t pt-4">
-              <div className="flex justify-between items-center">
-                <Label className="text-base font-semibold">
-                  توزيع التكاليف والنسب
-                </Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={addCost}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  إضافة بند
-                </Button>
-              </div>
-
-              <div className="space-y-3">
-                {formData.costs?.map((cost, index) => (
-                  <div
-                    key={index}
-                    className="flex gap-2 items-end p-3 bg-muted/30 rounded-lg border"
-                  >
-                    <div className="flex-1">
-                      <Label className="text-xs mb-1 block">البند</Label>
-                      <Select
-                        value={cost.operation_item_id.toString()}
-                        onValueChange={(val) =>
-                          updateCost(index, "operation_item_id", Number(val))
-                        }
-                      >
-                        <SelectTrigger className="h-9">
-                          <SelectValue placeholder="اختر البند" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="0" disabled>
-                            -- اختر --
-                          </SelectItem>
-                          {catalogue.map((item) => (
-                            <SelectItem
-                              key={item.id}
-                              value={item.id.toString()}
-                            >
-                              {item.name} (
-                              {item.type === "staff" ? "كادر" : "مركز"})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="w-24">
-                      <Label className="text-xs mb-1 block">نسبة %</Label>
-                      <Input
-                        type="number"
-                        placeholder="%"
-                        className="h-9"
-                        value={cost.perc ?? ""}
-                        onChange={(e) => {
-                          const val = e.target.value
-                            ? parseFloat(e.target.value)
-                            : null;
-                          updateCost(index, "perc", val);
-                          if (val) updateCost(index, "fixed", null); // Reset fixed if perc set
-                        }}
-                      />
-                    </div>
-
-                    <div className="w-32">
-                      <Label className="text-xs mb-1 block">مبلغ ثابت</Label>
-                      <Input
-                        type="number"
-                        placeholder="د.ع"
-                        className="h-9"
-                        value={cost.fixed ?? ""}
-                        onChange={(e) => {
-                          const val = e.target.value
-                            ? parseFloat(e.target.value)
-                            : null;
-                          updateCost(index, "fixed", val);
-                          if (val) updateCost(index, "perc", null); // Reset perc if fixed set
-                        }}
-                      />
-                    </div>
-
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive h-9 w-9 mb-[2px]"
-                      onClick={() => removeCost(index)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-                {(!formData.costs || formData.costs.length === 0) && (
-                  <div className="text-center text-sm text-muted-foreground py-4 border border-dashed rounded bg-muted/10">
-                    لا توجد بنود مضافة
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleCloseDialog}
-              >
-                إلغاء
-              </Button>
-              <Button
-                type="submit"
-                disabled={createMutation.isPending || updateMutation.isPending}
-              >
-                {createMutation.isPending || updateMutation.isPending
-                  ? "جاري الحفظ..."
-                  : "حفظ"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <OperationTemplateDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        editingOperation={
+          editingOperation ? operationDetail || editingOperation : null
+        }
+        catalogue={catalogue}
+        onSubmit={handleSave}
+        isSubmitting={createMutation.isPending || updateMutation.isPending}
+      />
     </div>
   );
 }

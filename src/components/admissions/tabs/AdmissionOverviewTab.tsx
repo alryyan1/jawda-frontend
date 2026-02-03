@@ -48,6 +48,7 @@ type AdmissionFormValues = {
   ward_id: string;
   room_id: string;
   bed_id: string;
+  booking_type: "bed" | "room";
   admission_date: Date | null;
   admission_time: string;
   admission_type: string;
@@ -149,6 +150,7 @@ export default function AdmissionOverviewTab({
 
   const wardId = watch("ward_id");
   const roomId = watch("room_id");
+  const bookingType = watch("booking_type");
 
   useEffect(() => {
     if (wardId && wardId !== String(admission.ward?.id)) {
@@ -184,7 +186,8 @@ export default function AdmissionOverviewTab({
   const onSubmit = (data: AdmissionFormValues) => {
     if (!data.ward_id) return toast.error("يرجى اختيار القسم");
     if (!data.room_id) return toast.error("يرجى اختيار الغرفة");
-    if (!data.bed_id) return toast.error("يرجى اختيار السرير");
+    if (data.booking_type === "bed" && !data.bed_id)
+      return toast.error("يرجى اختيار السرير");
     if (!data.admission_date) return toast.error("يرجى اختيار تاريخ التنويم");
 
     // Convert time from HH:mm to H:i:s format
@@ -202,7 +205,8 @@ export default function AdmissionOverviewTab({
     const submissionData: Partial<AdmissionFormData> = {
       ward_id: data.ward_id,
       room_id: data.room_id,
-      bed_id: data.bed_id,
+      bed_id: data.booking_type === "bed" ? data.bed_id : undefined,
+      booking_type: data.booking_type,
       admission_date: data.admission_date,
       admission_time: formattedTime,
       admission_type: data.admission_type || null,
@@ -634,89 +638,110 @@ export default function AdmissionOverviewTab({
                     )}
                   />
 
-                  <Controller
-                    name="room_id"
-                    control={control}
-                    rules={{ required: "الغرفة مطلوبة" }}
-                    render={({ field, fieldState }) => (
-                      <FormControl
-                        fullWidth
-                        error={!!fieldState.error}
-                        disabled={!selectedWardId || mutation.isPending}
-                      >
-                        <InputLabel>الغرفة</InputLabel>
-                        <Select
-                          {...field}
-                          label="الغرفة"
-                          startAdornment={
-                            <DoorOpen
-                              size={16}
-                              style={{ marginLeft: 8, opacity: 0.5 }}
-                            />
-                          }
-                          endAdornment={
-                            isFetchingRooms ? (
-                              <CircularProgress size={20} sx={{ mr: 2 }} />
-                            ) : null
-                          }
-                        >
-                          {rooms?.map((room) => {
-                            const roomTypeLabel =
-                              room.room_type === "normal"
-                                ? "عادي"
-                                : room.room_type === "vip"
-                                  ? "VIP"
-                                  : "";
-                            const roomTypeDisplay = roomTypeLabel
-                              ? ` (${roomTypeLabel})`
-                              : "";
-                            return (
-                              <MenuItem key={room.id} value={String(room.id)}>
-                                {room.room_number}
-                                {roomTypeDisplay}
-                              </MenuItem>
-                            );
-                          })}
-                        </Select>
-                      </FormControl>
-                    )}
-                  />
+                    <Controller
+                      name="booking_type"
+                      control={control}
+                      rules={{ required: "نوع الحجز مطلوب" }}
+                      render={({ field, fieldState }) => (
+                        <FormControl fullWidth error={!!fieldState.error}>
+                          <InputLabel>نوع الحجز</InputLabel>
+                          <Select
+                            {...field}
+                            label="نوع الحجز"
+                            disabled={mutation.isPending}
+                          >
+                            <MenuItem value="bed">حجز عن طريق السرير</MenuItem>
+                            <MenuItem value="room">حجز عن طريق الغرفة</MenuItem>
+                          </Select>
+                        </FormControl>
+                      )}
+                    />
 
-                  <Controller
-                    name="bed_id"
-                    control={control}
-                    rules={{ required: "السرير مطلوب" }}
-                    render={({ field, fieldState }) => (
-                      <FormControl
-                        fullWidth
-                        error={!!fieldState.error}
-                        disabled={!selectedRoomId || mutation.isPending}
-                      >
-                        <InputLabel>السرير</InputLabel>
-                        <Select
-                          {...field}
-                          label="السرير"
-                          startAdornment={
-                            <Bed
-                              size={16}
-                              style={{ marginLeft: 8, opacity: 0.5 }}
-                            />
-                          }
-                          endAdornment={
-                            isFetchingBeds ? (
-                              <CircularProgress size={20} sx={{ mr: 2 }} />
-                            ) : null
-                          }
+                    <Controller
+                      name="room_id"
+                      control={control}
+                      rules={{ required: "الغرفة مطلوبة" }}
+                      render={({ field, fieldState }) => (
+                        <FormControl
+                          fullWidth
+                          error={!!fieldState.error}
+                          disabled={!selectedWardId || mutation.isPending}
                         >
-                          {beds?.map((bed) => (
-                            <MenuItem key={bed.id} value={String(bed.id)}>
-                              {bed.bed_number}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
+                          <InputLabel>الغرفة</InputLabel>
+                          <Select
+                            {...field}
+                            label="الغرفة"
+                            startAdornment={
+                              <DoorOpen
+                                size={16}
+                                style={{ marginLeft: 8, opacity: 0.5 }}
+                              />
+                            }
+                            endAdornment={
+                              isFetchingRooms ? (
+                                <CircularProgress size={20} sx={{ mr: 2 }} />
+                              ) : null
+                            }
+                          >
+                            {rooms?.map((room) => {
+                              const roomTypeLabel =
+                                room.room_type === "normal"
+                                  ? "عادي"
+                                  : room.room_type === "vip"
+                                    ? "VIP"
+                                    : "";
+                              const roomTypeDisplay = roomTypeLabel
+                                ? ` (${roomTypeLabel})`
+                                : "";
+                              return (
+                                <MenuItem key={room.id} value={String(room.id)}>
+                                  {room.room_number}
+                                  {roomTypeDisplay}
+                                </MenuItem>
+                              );
+                            })}
+                          </Select>
+                        </FormControl>
+                      )}
+                    />
+
+                    {watch("booking_type") === "bed" && (
+                      <Controller
+                        name="bed_id"
+                        control={control}
+                        rules={{ required: "السرير مطلوب" }}
+                        render={({ field, fieldState }) => (
+                          <FormControl
+                            fullWidth
+                            error={!!fieldState.error}
+                            disabled={!selectedRoomId || mutation.isPending}
+                          >
+                            <InputLabel>السرير</InputLabel>
+                            <Select
+                              {...field}
+                              label="السرير"
+                              startAdornment={
+                                <Bed
+                                  size={16}
+                                  style={{ marginLeft: 8, opacity: 0.5 }}
+                                />
+                              }
+                              endAdornment={
+                                isFetchingBeds ? (
+                                  <CircularProgress size={20} sx={{ mr: 2 }} />
+                                ) : null
+                              }
+                            >
+                              {beds?.map((bed) => (
+                                <MenuItem key={bed.id} value={String(bed.id)}>
+                                  {bed.bed_number}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                        )}
+                      />
                     )}
-                  />
                 </Box>
               </CardContent>
             </Card>

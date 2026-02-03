@@ -97,7 +97,7 @@ export default function OperationFinanceForm({
       // Let's modify logic: fetch -> then initialize.
     }
   };
-  console.log(items,'items')
+  console.log(items, "items");
   // Re-run init when templates AND catalogue are loaded if we have no items
   useEffect(() => {
     if (
@@ -295,6 +295,7 @@ export default function OperationFinanceForm({
         category: i.category,
         description: i.description,
         amount: i.amount,
+        is_auto_calculated: i.is_auto_calculated,
       }));
 
       await operationService.updateOperation(operation.id, {
@@ -303,8 +304,7 @@ export default function OperationFinanceForm({
         bank_paid: bankPaid,
         bank_receipt_image: receiptImage,
         manual_items: manualItemsPayload,
-        // @ts-ignore
-        skip_auto_calculations: isManualOverride,
+        skip_auto_calculations: true, // Always skip backend auto-calc to prevent duplication
       });
 
       toast.success("تم حفظ البيانات المالية بنجاح");
@@ -357,7 +357,13 @@ export default function OperationFinanceForm({
           >
             <Box flex={1}>
               <Autocomplete
-                options={catalogue.filter((c) => c.type === category)}
+                options={catalogue.filter(
+                  (c) =>
+                    c.type === category &&
+                    !items.some(
+                      (i) => i.id !== item.id && i.operation_item_id === c.id,
+                    ),
+                )}
                 getOptionLabel={(option) => option.name}
                 value={
                   item.operation_item_id

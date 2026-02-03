@@ -23,6 +23,7 @@ import AdmissionDocumentsTab from "@/components/admissions/tabs/AdmissionDocumen
 import AdmissionLedgerTab from "@/components/admissions/tabs/AdmissionLedgerTab";
 import AdmissionLabTestsTab from "@/components/admissions/tabs/AdmissionLabTestsTab";
 import AdmissionOperationsTab from "@/components/admissions/tabs/AdmissionOperationsTab";
+import AdmissionPatientFileTab from "@/components/admissions/tabs/AdmissionPatientFileTab";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -181,6 +182,7 @@ export default function AdmissionDetailsPage() {
               <Tab label="العمليات" />
               <Tab label="الوثائق" />
               <Tab label="الفحوصات المختبرية" />
+              <Tab label="ملف الإقامة" />
             </Tabs>
           </Box>
           <Box sx={{ flex: 1, overflow: "hidden" }}>
@@ -204,6 +206,9 @@ export default function AdmissionDetailsPage() {
             </TabPanel>
             <TabPanel value={currentTab} index={6}>
               <AdmissionLabTestsTab admissionId={admissionData.id} />
+            </TabPanel>
+            <TabPanel value={currentTab} index={7}>
+              <AdmissionPatientFileTab admissionId={admissionData.id} />
             </TabPanel>
           </Box>
         </CardContent>

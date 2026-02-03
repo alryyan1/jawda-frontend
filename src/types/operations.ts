@@ -95,6 +95,7 @@ export interface UpdateOperationData {
     perc: number | null;
     fixed: number | null;
   }[];
+  skip_auto_calculations?: boolean;
 }
 
 export interface ManualFinanceItem {
@@ -160,7 +161,17 @@ export interface OperationCost {
   operation_item_id: number;
   perc?: number | null;
   fixed?: number | null;
+  is_surgeon?: boolean;
   operation_item?: OperationItem;
+}
+
+export interface OperationTemplate {
+  id: number;
+  operation_type: string;
+  description: string;
+  surgeon_fee: number;
+  status: string;
+  costs?: OperationCost[];
 }
 
 // Reuse Operation as Template, but maybe strict subset?

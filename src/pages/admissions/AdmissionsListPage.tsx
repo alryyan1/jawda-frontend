@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { getAdmissions } from "@/services/admissionService";
@@ -25,12 +25,7 @@ import {
   Select,
   MenuItem,
 } from "@mui/material";
-import {
-  Plus,
-  Search,
-  Eye,
-  ArrowRight,
-} from "lucide-react";
+import { Plus, Search, Eye, ArrowRight } from "lucide-react";
 
 export default function AdmissionsListPage() {
   const navigate = useNavigate();
@@ -39,8 +34,21 @@ export default function AdmissionsListPage() {
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [dateFilter, setDateFilter] = useState<string>("");
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (["INPUT", "TEXTAREA"].includes((e.target as HTMLElement).tagName))
+        return;
+      if (e.key === "+") {
+        e.preventDefault();
+        navigate("/admissions/new");
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [navigate]);
+
   const { data, isLoading, error } = useQuery({
-    queryKey: ['admissions', page, searchTerm, statusFilter, dateFilter],
+    queryKey: ["admissions", page, searchTerm, statusFilter, dateFilter],
     queryFn: () => {
       const filters: Record<string, string | number | boolean | undefined> = {
         search: searchTerm || undefined,
@@ -57,25 +65,40 @@ export default function AdmissionsListPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'admitted': return 'success';
-      case 'discharged': return 'default';
-      case 'transferred': return 'info';
-      default: return 'default';
+      case "admitted":
+        return "success";
+      case "discharged":
+        return "default";
+      case "transferred":
+        return "info";
+      default:
+        return "default";
     }
   };
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case 'admitted': return 'مقيم';
-      case 'discharged': return 'مخرج';
-      case 'transferred': return 'منقول';
-      default: return status;
+      case "admitted":
+        return "مقيم";
+      case "discharged":
+        return "مخرج";
+      case "transferred":
+        return "منقول";
+      default:
+        return status;
     }
   };
 
   if (isLoading && !data) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "400px",
+        }}
+      >
         <CircularProgress />
       </Box>
     );
@@ -84,8 +107,15 @@ export default function AdmissionsListPage() {
   return (
     <Card>
       <CardContent>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 3,
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             <Button
               component={Link}
               to="/admissions"
@@ -107,7 +137,7 @@ export default function AdmissionsListPage() {
           </Button>
         </Box>
 
-        <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+        <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
           <TextField
             fullWidth
             placeholder="بحث..."
@@ -169,21 +199,23 @@ export default function AdmissionsListPage() {
             </TableHead>
             <TableBody>
               {data?.data.map((admission) => (
-                <TableRow 
+                <TableRow
                   key={admission.id}
                   onClick={() => navigate(`/admissions/${admission.id}`)}
-                  sx={{ 
-                    cursor: 'pointer',
-                    '&:hover': { 
-                      backgroundColor: 'action.hover' 
-                    } 
+                  sx={{
+                    cursor: "pointer",
+                    "&:hover": {
+                      backgroundColor: "action.hover",
+                    },
                   }}
                 >
-                  <TableCell>{admission.patient?.name || '-'}</TableCell>
-                  <TableCell>{admission.specialist_doctor?.name || '-'}</TableCell>
-                  <TableCell>{admission.ward?.name || '-'}</TableCell>
-                  <TableCell>{admission.room?.room_number || '-'}</TableCell>
-                  <TableCell>{admission.bed?.bed_number || '-'}</TableCell>
+                  <TableCell>{admission.patient?.name || "-"}</TableCell>
+                  <TableCell>
+                    {admission.specialist_doctor?.name || "-"}
+                  </TableCell>
+                  <TableCell>{admission.ward?.name || "-"}</TableCell>
+                  <TableCell>{admission.room?.room_number || "-"}</TableCell>
+                  <TableCell>{admission.bed?.bed_number || "-"}</TableCell>
                   <TableCell>{admission.admission_date}</TableCell>
                   <TableCell>
                     <Chip
@@ -192,7 +224,10 @@ export default function AdmissionsListPage() {
                       size="small"
                     />
                   </TableCell>
-                  <TableCell align="center" onClick={(e) => e.stopPropagation()}>
+                  <TableCell
+                    align="center"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <Button
                       component={Link}
                       to={`/admissions/${admission.id}`}
@@ -209,14 +244,24 @@ export default function AdmissionsListPage() {
         </TableContainer>
 
         {data && data.meta.last_page > 1 && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mt: 2 }}>
-            <Button disabled={page === 1} onClick={() => setPage(p => p - 1)}>السابق</Button>
-            <Typography sx={{ alignSelf: 'center' }}>صفحة {page} من {data.meta.last_page}</Typography>
-            <Button disabled={page === data.meta.last_page} onClick={() => setPage(p => p + 1)}>التالي</Button>
+          <Box
+            sx={{ display: "flex", justifyContent: "center", gap: 1, mt: 2 }}
+          >
+            <Button disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
+              السابق
+            </Button>
+            <Typography sx={{ alignSelf: "center" }}>
+              صفحة {page} من {data.meta.last_page}
+            </Typography>
+            <Button
+              disabled={page === data.meta.last_page}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              التالي
+            </Button>
           </Box>
         )}
       </CardContent>
     </Card>
   );
 }
-

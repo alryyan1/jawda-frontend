@@ -74,8 +74,9 @@ export interface Admission {
   ward?: Ward;
   room_id: number;
   room?: Room;
-  bed_id: number;
+  bed_id: number | null;
   bed?: Bed;
+  booking_type?: "bed" | "room";
   admission_date: string; // YYYY-MM-DD
   admission_time?: string | null; // HH:mm:ss
   discharge_date?: string | null; // YYYY-MM-DD
@@ -106,6 +107,10 @@ export interface Admission {
   next_of_kin_name?: string | null;
   next_of_kin_relation?: string | null;
   next_of_kin_phone?: string | null;
+  // Patient File Data
+  treatments?: AdmissionTreatment[];
+  doses?: AdmissionDose[];
+  nursing_assignments?: AdmissionNursingAssignment[];
   created_at: string;
   updated_at: string;
 }
@@ -115,6 +120,7 @@ export interface AdmissionFormData {
   ward_id: string | undefined;
   room_id: string | undefined;
   bed_id: string | undefined;
+  booking_type?: "bed" | "room";
   admission_date: Date | undefined;
   admission_time?: string | null;
   admission_type?: string | null;
@@ -301,7 +307,7 @@ export interface AdmissionLedgerEntry {
   service_name?: string;
   count?: number;
   balance_after: number;
-  reference_type?: "service" | "deposit" | "manual" | "lab_test" | null;
+  reference_type?: "service" | "deposit" | "manual" | "lab_test" | "room_charges" | null;
   reference_id?: number | null;
 }
 
@@ -311,7 +317,7 @@ export interface AdmissionTransaction {
   type: "debit" | "credit";
   amount: number;
   description: string;
-  reference_type?: "service" | "deposit" | "manual" | null;
+  reference_type?: "service" | "deposit" | "manual" | "room_charges" | null;
   reference_id?: number | null;
   is_bank: boolean;
   notes?: string | null;
@@ -325,7 +331,7 @@ export interface AdmissionTransactionFormData {
   type: "debit" | "credit";
   amount: number;
   description: string;
-  reference_type?: "service" | "deposit" | "manual" | null;
+  reference_type?: "service" | "deposit" | "manual" | "room_charges" | null;
   reference_id?: number | null;
   is_bank: boolean;
   notes?: string | null;
@@ -401,6 +407,97 @@ export interface AdmissionRequestedLabTestUpdateData {
   discount?: number;
   discount_per?: number;
   doctor_id?: number | null;
+}
+
+// Admission Treatment Types
+export interface AdmissionTreatment {
+  id: number;
+  admission_id: number;
+  admission?: Admission;
+  treatment_plan?: string | null;
+  treatment_details?: string | null;
+  notes?: string | null;
+  user_id: number;
+  user?: UserStripped;
+  treatment_date?: string | null; // YYYY-MM-DD
+  treatment_time?: string | null; // HH:mm:ss
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdmissionTreatmentFormData {
+  treatment_plan?: string | null;
+  treatment_details?: string | null;
+  notes?: string | null;
+  treatment_date?: string | null;
+  treatment_time?: string | null;
+}
+
+// Admission Dose Types
+export interface AdmissionDose {
+  id: number;
+  admission_id: number;
+  admission?: Admission;
+  medication_name: string;
+  dosage?: string | null;
+  frequency?: string | null;
+  route?: string | null;
+  start_date?: string | null; // YYYY-MM-DD
+  end_date?: string | null; // YYYY-MM-DD
+  instructions?: string | null;
+  notes?: string | null;
+  doctor_id?: number | null;
+  doctor?: DoctorStripped;
+  user_id: number;
+  user?: UserStripped;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdmissionDoseFormData {
+  medication_name: string;
+  dosage?: string | null;
+  frequency?: string | null;
+  route?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  instructions?: string | null;
+  notes?: string | null;
+  doctor_id?: number | null;
+  is_active?: boolean;
+}
+
+// Admission Nursing Assignment Types
+export interface AdmissionNursingAssignment {
+  id: number;
+  admission_id: number;
+  admission?: Admission;
+  user_id: number;
+  user?: UserStripped;
+  assignment_description: string;
+  priority: "low" | "medium" | "high";
+  status: "pending" | "in_progress" | "completed" | "cancelled";
+  due_date?: string | null; // YYYY-MM-DD
+  due_time?: string | null; // HH:mm:ss
+  completed_date?: string | null; // YYYY-MM-DD
+  completed_time?: string | null; // HH:mm:ss
+  notes?: string | null;
+  completion_notes?: string | null;
+  assigned_by_user_id?: number | null;
+  assigned_by?: UserStripped;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdmissionNursingAssignmentFormData {
+  assignment_description: string;
+  priority?: "low" | "medium" | "high";
+  status?: "pending" | "in_progress" | "completed" | "cancelled";
+  due_date?: string | null;
+  due_time?: string | null;
+  notes?: string | null;
+  user_id?: number | null;
 }
 
 export type PaginatedWardsResponse = PaginatedResponse<Ward>;

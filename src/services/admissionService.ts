@@ -39,7 +39,8 @@ export const createAdmission = async (
     patient_id: parseInt(String(data.patient_id)),
     ward_id: parseInt(String(data.ward_id)),
     room_id: parseInt(String(data.room_id)),
-    bed_id: parseInt(String(data.bed_id)),
+    bed_id: data.bed_id ? parseInt(String(data.bed_id)) : null,
+    booking_type: data.booking_type || "bed",
     admission_date: data.admission_date
       ? data.admission_date instanceof Date
         ? data.admission_date.toISOString().split("T")[0]
@@ -84,7 +85,9 @@ export const updateAdmission = async (
     payload.ward_id = parseInt(String(data.ward_id));
   if (data.room_id !== undefined)
     payload.room_id = parseInt(String(data.room_id));
-  if (data.bed_id !== undefined) payload.bed_id = parseInt(String(data.bed_id));
+  if (data.bed_id !== undefined)
+    payload.bed_id = data.bed_id ? parseInt(String(data.bed_id)) : null;
+  if (data.booking_type !== undefined) payload.booking_type = data.booking_type;
   if (data.admission_date !== undefined)
     payload.admission_date =
       data.admission_date instanceof Date

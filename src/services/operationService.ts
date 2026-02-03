@@ -126,6 +126,10 @@ export const operationService = {
     if (data.notes !== undefined) formData.append("notes", data.notes || "");
     if (data.status) formData.append("status", data.status);
 
+    if (data.skip_auto_calculations) {
+      formData.append("skip_auto_calculations", "1");
+    }
+
     // Add manual items if provided
     if (data.manual_items && data.manual_items.length > 0) {
       data.manual_items.forEach((item, index) => {

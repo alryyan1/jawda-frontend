@@ -1270,6 +1270,12 @@ const AppLayout: React.FC = () => {
                               label="مجموعات الخدمات"
                             />
                             <SettingsMenuItem
+                              to="/settings/categories"
+                              icon={Layers}
+                              label="فئات الاطباء والخدمات"
+                            />
+                            
+                            <SettingsMenuItem
                               to="/settings/services"
                               icon={ListOrdered}
                               label="إعدادات الخدمات"

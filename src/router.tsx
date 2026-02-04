@@ -75,6 +75,7 @@ import HolidaysPage from "./pages/settings/attendance/HolidaysPage";
 import BindingMatchingPage from "./pages/settings/BindingMatchingPage";
 import MonthlyLabIncomeReportPage from "./pages/reports/MonthlyLabIncomeReportPage";
 import ServiceGroupsPage from "./pages/settings/ServiceGroupsPage";
+import CategoriesListPage from "./pages/settings/CategoriesListPage";
 import SampleCollectionPage from "./pages/lab/SampleCollectionPage";
 import MonthlyAttendanceSummaryPage from "./pages/attendance/MonthlyAttendanceSummaryPage";
 import LabTestStatisticsReportPage from "./pages/reports/LabTestStatisticsReportPage";
@@ -471,6 +472,10 @@ const router = createBrowserRouter([
               {
                 path: "service-groups",
                 element: <ServiceGroupsPage />,
+              },
+              {
+                path: "categories",
+                element: <CategoriesListPage />,
               },
               {
                 path: "pdf",

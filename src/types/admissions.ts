@@ -67,6 +67,26 @@ export interface BedFormData {
   status: "available" | "occupied" | "maintenance";
 }
 
+// Short Stay Bed Types
+export interface ShortStayBed {
+  id: number;
+  bed_number: string;
+  price_12h: number;
+  price_24h: number;
+  status: "active" | "inactive";
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ShortStayBedFormData {
+  bed_number: string;
+  price_12h: string;
+  price_24h: string;
+  status: "active" | "inactive";
+  notes?: string | null;
+}
+
 // Admission Types
 export interface Admission {
   id: number;
@@ -78,6 +98,9 @@ export interface Admission {
   room?: Room;
   bed_id: number | null;
   bed?: Bed;
+  short_stay_bed_id?: number | null;
+  short_stay_bed?: ShortStayBed;
+  short_stay_duration?: "12h" | "24h" | null;
   booking_type?: "bed" | "room";
   admission_date: string; // YYYY-MM-DD
   admission_time?: string | null; // HH:mm:ss
@@ -122,6 +145,8 @@ export interface AdmissionFormData {
   ward_id: string | undefined;
   room_id: string | undefined;
   bed_id: string | undefined;
+  short_stay_bed_id?: string | undefined;
+  short_stay_duration?: "12h" | "24h" | undefined;
   booking_type?: "bed" | "room";
   admission_date: Date | undefined;
   admission_time?: string | null;
@@ -301,7 +326,7 @@ export interface AdmissionTransaction {
   type: "debit" | "credit";
   amount: number;
   description: string;
-  reference_type?: "service" | "deposit" | "manual" | "room_charges" | "charge" | "discount" | null;
+  reference_type?: "service" | "deposit" | "manual" | "room_charges" | "charge" | "discount" | "short_stay" | null;
   reference_id?: number | null;
   is_bank: boolean;
   notes?: string | null;
@@ -315,7 +340,7 @@ export interface AdmissionTransactionFormData {
   type: "debit" | "credit";
   amount: number;
   description: string;
-  reference_type?: "service" | "deposit" | "manual" | "room_charges" | "charge" | "discount" | null;
+  reference_type?: "service" | "deposit" | "manual" | "room_charges" | "charge" | "discount" | "short_stay" | null;
   reference_id?: number | null;
   is_bank: boolean;
   notes?: string | null;
@@ -331,7 +356,7 @@ export interface AdmissionLedgerEntry {
   time?: string;
   user?: string;
   notes?: string;
-  reference_type?: "service" | "deposit" | "manual" | "lab_test" | "room_charges" | "charge" | "discount" | null;
+  reference_type?: "service" | "deposit" | "manual" | "lab_test" | "room_charges" | "charge" | "discount" | "short_stay" | null;
   reference_id?: number | null;
   balance_after: number;
 }
@@ -345,6 +370,7 @@ export interface AdmissionLedger {
   summary: {
     total_credits: number;
     total_debits: number;
+    total_discounts: number;
     balance: number;
   };
   entries: AdmissionLedgerEntry[];

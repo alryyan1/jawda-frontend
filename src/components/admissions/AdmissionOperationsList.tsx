@@ -133,7 +133,7 @@ export default function AdmissionOperationsList({
                   </TableCell>
                   <TableCell align="right">{op.operation_date}</TableCell>
                   <TableCell align="right" className="font-bold">
-                    {Number(op.surgeon_fee).toLocaleString()} د.ع
+                    {Number(op.surgeon_fee).toLocaleString()}
                   </TableCell>
                   <TableCell align="right">
                     {op.user?.username || "-"}

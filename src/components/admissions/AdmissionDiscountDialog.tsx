@@ -36,7 +36,7 @@ export default function AdmissionDiscountDialog({
   const form = useForm<Omit<AdmissionTransactionFormData, 'type' | 'is_bank'>>({
     defaultValues: {
       amount: 0,
-      description: '',
+      description: 'خصم',
       notes: '',
       reference_type: 'discount',
     },
@@ -49,7 +49,7 @@ export default function AdmissionDiscountDialog({
     if (open) {
       reset({
         amount: 0,
-        description: '',
+        description: 'خصم',
         notes: '',
         reference_type: 'discount',
       });
@@ -65,7 +65,7 @@ export default function AdmissionDiscountDialog({
     mutationFn: (data: Omit<AdmissionTransactionFormData, 'type' | 'is_bank'>) => {
       const transactionData: AdmissionTransactionFormData = {
         ...data,
-        type: 'debit',
+        type: 'credit', // Discount reduces the balance, so it should be credit
         is_bank: false, // Always false for discounts
       };
       return addAdmissionTransaction(admissionId, transactionData);
@@ -85,10 +85,6 @@ export default function AdmissionDiscountDialog({
   });
 
   const onSubmit = (data: Omit<AdmissionTransactionFormData, 'type' | 'is_bank'>) => {
-    if (!data.description || data.description.trim() === '') {
-      toast.error('الوصف مطلوب');
-      return;
-    }
     mutation.mutate(data);
   };
 
@@ -97,9 +93,16 @@ export default function AdmissionDiscountDialog({
     onClose();
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey && !mutation.isPending) {
+      e.preventDefault();
+      handleSubmit(onSubmit)();
+    }
+  };
+
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-      <form onSubmit={handleSubmit(onSubmit)}>
+      <form onSubmit={handleSubmit(onSubmit)} onKeyDown={handleKeyDown}>
         <DialogTitle>إضافة خصم</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
@@ -127,22 +130,6 @@ export default function AdmissionDiscountDialog({
               )}
             />
             <Controller
-              name="description"
-              control={control}
-              rules={{ required: 'الوصف مطلوب' }}
-              render={({ field, fieldState }) => (
-                <TextField
-                  fullWidth
-                  label="وصف الخصم"
-                  {...field}
-                  error={!!fieldState.error}
-                  helperText={fieldState.error?.message}
-                  disabled={mutation.isPending}
-                  placeholder="مثال: تخفيض خاص، خصم موظف، إلخ"
-                />
-              )}
-            />
-            <Controller
               name="notes"
               control={control}
               render={({ field }) => (
@@ -153,6 +140,12 @@ export default function AdmissionDiscountDialog({
                   rows={3}
                   {...field}
                   disabled={mutation.isPending}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey && !mutation.isPending) {
+                      e.preventDefault();
+                      handleSubmit(onSubmit)();
+                    }
+                  }}
                 />
               )}
             />

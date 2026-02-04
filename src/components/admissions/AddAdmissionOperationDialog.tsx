@@ -131,7 +131,7 @@ export default function AddAdmissionOperationDialog({
                 {templates?.map((t: OperationTemplate) => (
                   <SelectItem key={t.id} value={t.id.toString()}>
                     {t.operation_type} -{" "}
-                    {Number(t.surgeon_fee).toLocaleString()} د.ع
+                    {Number(t.surgeon_fee).toLocaleString()}
                   </SelectItem>
                 ))}
               </SelectContent>

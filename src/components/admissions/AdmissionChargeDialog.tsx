@@ -34,7 +34,7 @@ export default function AdmissionChargeDialog({
   const form = useForm<Omit<AdmissionTransactionFormData, 'type' | 'is_bank'>>({
     defaultValues: {
       amount: 0,
-      description: '',
+      description: 'رسوم إضافية',
       notes: '',
       reference_type: 'charge',
     },
@@ -47,7 +47,7 @@ export default function AdmissionChargeDialog({
     if (open) {
       reset({
         amount: 0,
-        description: '',
+        description: 'رسوم إضافية',
         notes: '',
         reference_type: 'charge',
       });
@@ -83,10 +83,6 @@ export default function AdmissionChargeDialog({
   });
 
   const onSubmit = (data: Omit<AdmissionTransactionFormData, 'type' | 'is_bank'>) => {
-    if (!data.description || data.description.trim() === '') {
-      toast.error('الوصف مطلوب');
-      return;
-    }
     mutation.mutate(data);
   };
 
@@ -95,9 +91,16 @@ export default function AdmissionChargeDialog({
     onClose();
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey && !mutation.isPending) {
+      e.preventDefault();
+      handleSubmit(onSubmit)();
+    }
+  };
+
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-      <form onSubmit={handleSubmit(onSubmit)}>
+      <form onSubmit={handleSubmit(onSubmit)} onKeyDown={handleKeyDown}>
         <DialogTitle>إضافة رسوم</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
@@ -125,22 +128,6 @@ export default function AdmissionChargeDialog({
               )}
             />
             <Controller
-              name="description"
-              control={control}
-              rules={{ required: 'الوصف مطلوب' }}
-              render={({ field, fieldState }) => (
-                <TextField
-                  fullWidth
-                  label="وصف الرسوم"
-                  {...field}
-                  error={!!fieldState.error}
-                  helperText={fieldState.error?.message}
-                  disabled={mutation.isPending}
-                  placeholder="مثال: رسوم علاج، رسوم فحص، رسوم استشارة، إلخ"
-                />
-              )}
-            />
-            <Controller
               name="notes"
               control={control}
               render={({ field }) => (
@@ -151,6 +138,12 @@ export default function AdmissionChargeDialog({
                   rows={3}
                   {...field}
                   disabled={mutation.isPending}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey && !mutation.isPending) {
+                      e.preventDefault();
+                      handleSubmit(onSubmit)();
+                    }
+                  }}
                 />
               )}
             />

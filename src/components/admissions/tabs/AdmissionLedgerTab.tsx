@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getAdmissionLedger, getAdmissionById, addAdmissionTransaction, deleteAdmissionTransaction } from '@/services/admissionService';
+import { getAdmissionLedger, getAdmissionById, addAdmissionTransaction, deleteAdmissionTransaction, exportAdmissionLedgerPdf } from '@/services/admissionService';
 import {
   Box,
   CircularProgress,
@@ -38,6 +38,7 @@ import {
   CheckCircle2,
   AlertCircle,
   DollarSign,
+  FileDown,
 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -59,6 +60,7 @@ export default function AdmissionLedgerTab({ admissionId }: AdmissionLedgerTabPr
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [daysCalculationDialogOpen, setDaysCalculationDialogOpen] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState<{ id: number | string; description: string } | null>(null);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   const { data: ledgerData, isLoading: isLoadingLedger } = useQuery({
     queryKey: ['admissionLedger', admissionId],
@@ -163,6 +165,34 @@ export default function AdmissionLedgerTab({ admissionId }: AdmissionLedgerTabPr
     }
   };
 
+  const handleExportPdf = async () => {
+    try {
+      setIsExportingPdf(true);
+      const blob = await exportAdmissionLedgerPdf(admissionId);
+      
+      // Create a URL for the blob
+      const url = window.URL.createObjectURL(blob);
+      
+      // Open PDF in new tab
+      const newWindow = window.open(url, '_blank');
+      
+      // Cleanup URL after a delay to ensure the PDF loads
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+      }, 100);
+      
+      if (!newWindow) {
+        toast.error('يرجى السماح بفتح النوافذ المنبثقة');
+      } else {
+        toast.success('تم فتح التقرير في نافذة جديدة');
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'فشل تصدير التقرير');
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
   if (isLoadingLedger) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
@@ -192,6 +222,11 @@ export default function AdmissionLedgerTab({ admissionId }: AdmissionLedgerTabPr
   
   // Helper function to get transaction type label and color
   const getTransactionTypeInfo = (entry: any) => {
+    // Check reference_type first for special cases
+    if (entry.reference_type === 'discount') {
+      return { label: 'خصم', color: 'default' as const };
+    }
+    
     if (entry.type === 'credit') {
       return { label: 'دفعة', color: 'success' as const };
     }
@@ -200,14 +235,14 @@ export default function AdmissionLedgerTab({ admissionId }: AdmissionLedgerTabPr
     switch (entry.reference_type) {
       case 'room_charges':
         return { label: 'رسوم إقامة', color: 'primary' as const };
+      case 'short_stay':
+        return { label: 'إقامة قصيرة', color: 'info' as const };
       case 'service':
         return { label: 'خدمات', color: 'warning' as const };
       case 'lab_test':
         return { label: 'فحوصات', color: 'secondary' as const };
       case 'charge':
         return { label: 'رسوم', color: 'error' as const };
-      case 'discount':
-        return { label: 'خصم', color: 'default' as const };
       case 'manual':
         return { label: 'رسوم', color: 'error' as const };
       default:
@@ -305,7 +340,7 @@ export default function AdmissionLedgerTab({ admissionId }: AdmissionLedgerTabPr
         </Card>
 
         {/* Center: Summary Cards (Compact) */}
-        <Box sx={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1.5 }}>
+        <Box sx={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1.5 }}>
           {/* Total Charges Card */}
           <Card 
             elevation={1}
@@ -319,7 +354,7 @@ export default function AdmissionLedgerTab({ admissionId }: AdmissionLedgerTabPr
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
                 <Receipt size={16} color="#DC2626" />
                 <Typography variant="caption" sx={{ color: '#DC2626', fontWeight: 600, fontSize: '0.75rem' }}>
-                  إجمالي المستحقات
+                   المستحقات
                 </Typography>
               </Box>
               <Typography variant="h5" sx={{ fontWeight: 700, color: '#DC2626', fontSize: '1.5rem' }}>
@@ -344,7 +379,7 @@ export default function AdmissionLedgerTab({ admissionId }: AdmissionLedgerTabPr
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
                 <Wallet size={16} color="#16A34A" />
                 <Typography variant="caption" sx={{ color: '#16A34A', fontWeight: 600, fontSize: '0.75rem' }}>
-                  إجمالي المدفوعات
+                   المدفوعات
                 </Typography>
               </Box>
               <Typography variant="h5" sx={{ fontWeight: 700, color: '#16A34A', fontSize: '1.5rem' }}>
@@ -352,6 +387,31 @@ export default function AdmissionLedgerTab({ admissionId }: AdmissionLedgerTabPr
               </Typography>
               <Typography variant="caption" sx={{ color: '#166534', fontSize: '0.65rem' }}>
                 المبالغ المدفوعة
+              </Typography>
+            </CardContent>
+          </Card>
+
+          {/* Total Discounts Card */}
+          <Card 
+            elevation={1}
+            sx={{ 
+              bgcolor: '#FEF3C7',
+              border: '1px solid',
+              borderColor: '#FCD34D',
+            }}
+          >
+            <CardContent sx={{ py: 1.5, px: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+                <Minus size={16} color="#D97706" />
+                <Typography variant="caption" sx={{ color: '#D97706', fontWeight: 600, fontSize: '0.75rem' }}>
+                   التخفيض
+                </Typography>
+              </Box>
+              <Typography variant="h5" sx={{ fontWeight: 700, color: '#D97706', fontSize: '1.5rem' }}>
+                {formatNumber(summary.total_discounts || 0)}
+              </Typography>
+              <Typography variant="caption" sx={{ color: '#92400E', fontSize: '0.65rem' }}>
+                الخصومات المطبقة
               </Typography>
             </CardContent>
           </Card>
@@ -382,7 +442,7 @@ export default function AdmissionLedgerTab({ admissionId }: AdmissionLedgerTabPr
                     fontSize: '0.75rem'
                   }}
                 >
-                  الرصيد المطلوب
+                  الرصيد 
                 </Typography>
               </Box>
               <Typography 
@@ -432,6 +492,17 @@ export default function AdmissionLedgerTab({ admissionId }: AdmissionLedgerTabPr
           <Button
             size="small"
             variant="outlined"
+            color="primary"
+            startIcon={isExportingPdf ? <CircularProgress size={14} /> : <FileDown size={14} />}
+            onClick={handleExportPdf}
+            disabled={isExportingPdf}
+            sx={{ fontSize: '0.75rem', px: 1.5, py: 0.5 }}
+          >
+            تصدير PDF
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
             color="error"
             startIcon={<Plus size={14} />}
             onClick={() => setChargeDialogOpen(true)}
@@ -461,35 +532,11 @@ export default function AdmissionLedgerTab({ admissionId }: AdmissionLedgerTabPr
         </Box>
       </Box>
 
-      {/* Legend (Compact) */}
-      <Alert 
-        severity="info" 
-        icon={<Info size={16} />}
-        sx={{ 
-          py: 0.5,
-          bgcolor: '#EFF6FF',
-          border: '1px solid #DBEAFE',
-          '& .MuiAlert-icon': {
-            color: '#3B82F6',
-            py: 0.5,
-          },
-          '& .MuiAlert-message': {
-            py: 0.5,
-          }
-        }}
-      >
-        <Typography variant="caption" fontWeight={600} sx={{ color: '#1E40AF', fontSize: '0.75rem' }}>
-          📌 <strong>المستحقات:</strong> الرسوم والخدمات على المريض • <strong>المدفوعات:</strong> المبالغ المدفوعة • <strong>الرصيد = المستحقات - المدفوعات</strong> (موجب = مطلوب من المريض | سالب = دائن للمريض)
-        </Typography>
-      </Alert>
 
       {/* Ledger Table (Takes remaining height) */}
       <Card variant="outlined" sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <CardContent sx={{ py: 1.5, px: 2, flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600, fontSize: '1rem' }}>
-            سجل المعاملات
-          </Typography>
-          <Divider sx={{ mb: 1 }} />
+        
           <TableContainer sx={{ flex: 1, overflow: 'auto' }}>
             <Table size="small" stickyHeader>
               <TableHead>
@@ -504,6 +551,7 @@ export default function AdmissionLedgerTab({ admissionId }: AdmissionLedgerTabPr
                   <TableCell align="right" sx={{ fontWeight: 600, bgcolor: '#F9FAFB', py: 1, fontSize: '0.8rem', color: '#16A34A' }}>
                     دائن
                   </TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: '#F9FAFB', py: 1, fontSize: '0.8rem' }}>طريقة الدفع</TableCell>
                   <TableCell align="right" sx={{ fontWeight: 600, bgcolor: '#F9FAFB', py: 1, fontSize: '0.8rem' }}>الرصيد</TableCell>
                   <TableCell sx={{ fontWeight: 600, bgcolor: '#F9FAFB', py: 1, fontSize: '0.8rem' }}>المستخدم</TableCell>
                   <TableCell align="center" sx={{ fontWeight: 600, bgcolor: '#F9FAFB', py: 1, fontSize: '0.8rem' }}>إجراءات</TableCell>
@@ -512,7 +560,7 @@ export default function AdmissionLedgerTab({ admissionId }: AdmissionLedgerTabPr
               <TableBody>
                 {entries.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} align="center" sx={{ py: 3 }}>
+                    <TableCell colSpan={10} align="center" sx={{ py: 3 }}>
                       <Typography variant="caption" color="text.secondary">
                         لا توجد معاملات مسجلة
                       </Typography>
@@ -543,9 +591,6 @@ export default function AdmissionLedgerTab({ admissionId }: AdmissionLedgerTabPr
                           <Typography variant="caption" sx={{ fontSize: '0.8rem' }}>
                             {entry.description}
                           </Typography>
-                          {entry.is_bank && entry.type === 'credit' && (
-                            <Chip label="بنك" size="small" color="primary" sx={{ ml: 0.5, height: 16, fontSize: '0.65rem' }} />
-                          )}
                         </TableCell>
                         {/* Debit Column */}
                         <TableCell align="right" sx={{ py: 0.75 }}>
@@ -579,6 +624,21 @@ export default function AdmissionLedgerTab({ admissionId }: AdmissionLedgerTabPr
                             >
                               {formatNumber(Math.abs(entry.amount))}
                             </Typography>
+                          ) : (
+                            <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.8rem' }}>
+                              -
+                            </Typography>
+                          )}
+                        </TableCell>
+                        {/* Payment Method Column - Only show for deposits/payments */}
+                        <TableCell sx={{ py: 0.75 }}>
+                          {entry.type === 'credit' && entry.reference_type === 'deposit' ? (
+                            <Chip 
+                              label={entry.is_bank ? 'بنك' : 'نقد'} 
+                              size="small" 
+                              color={entry.is_bank ? 'primary' : 'default'}
+                              sx={{ height: 18, fontSize: '0.65rem' }} 
+                            />
                           ) : (
                             <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.8rem' }}>
                               -

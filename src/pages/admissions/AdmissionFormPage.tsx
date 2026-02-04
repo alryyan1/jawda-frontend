@@ -17,6 +17,11 @@ import {
   Select,
   MenuItem,
   Autocomplete,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  IconButton,
 } from "@mui/material";
 import {
   ArrowRight,
@@ -44,13 +49,17 @@ import { getAvailableBeds } from "@/services/bedService";
 import { searchExistingPatients } from "@/services/patientService";
 import QuickAddPatientDialog from "@/components/admissions/QuickAddPatientDialog";
 import { getDoctorsList } from "@/services/doctorService";
+import { getShortStayBeds, createShortStayBed } from "@/services/shortStayBedService";
 import type { PatientSearchResult } from "@/types/patients";
+import type { ShortStayBedFormData } from "@/types/admissions";
 
 type AdmissionFormValues = {
   patient_id: string;
   ward_id: string;
   room_id: string;
   bed_id: string;
+  short_stay_bed_id: string;
+  short_stay_duration: "12h" | "24h" | "";
   booking_type: "bed" | "room";
   admission_date: Date | null;
   admission_time: string;
@@ -80,6 +89,14 @@ export default function AdmissionFormPage() {
   const [selectedWardId, setSelectedWardId] = useState<number | null>(null);
   const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
   const [quickAddDialogOpen, setQuickAddDialogOpen] = useState(false);
+  const [shortStayBedDialogOpen, setShortStayBedDialogOpen] = useState(false);
+  const [newShortStayBed, setNewShortStayBed] = useState<ShortStayBedFormData>({
+    bed_number: "",
+    price_12h: "",
+    price_24h: "",
+    status: "active",
+    notes: "",
+  });
 
   const { data: wards } = useQuery({
     queryKey: ["wardsList"],
@@ -135,6 +152,8 @@ export default function AdmissionFormPage() {
       admission_date: new Date(),
       admission_time: new Date().toTimeString().slice(0, 5),
       admission_type: "",
+      short_stay_bed_id: "",
+      short_stay_duration: undefined,
       admission_reason: "",
       diagnosis: "",
       doctor_id: "",
@@ -156,6 +175,39 @@ export default function AdmissionFormPage() {
   const wardId = watch("ward_id");
   const roomId = watch("room_id");
   const bookingType = watch("booking_type");
+  const admissionType = watch("admission_type");
+  const isShortStay = admissionType === "اقامه قصيره";
+
+  const { data: shortStayBedsData, refetch: refetchShortStayBeds } = useQuery({
+    queryKey: ["shortStayBeds"],
+    queryFn: () => getShortStayBeds(1, { status: "active", per_page: 1000 }),
+    enabled: isShortStay,
+  });
+
+  const createShortStayBedMutation = useMutation({
+    mutationFn: createShortStayBed,
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: ["shortStayBeds"] });
+      toast.success("تم إضافة سرير الإقامة القصيرة بنجاح");
+      setShortStayBedDialogOpen(false);
+      setNewShortStayBed({
+        bed_number: "",
+        price_12h: "",
+        price_24h: "",
+        status: "active",
+        notes: "",
+      });
+      // Set the newly created bed as selected
+      if (response.data) {
+        setValue("short_stay_bed_id", String(response.data.id));
+      }
+      refetchShortStayBeds();
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.message || "فشل إضافة السرير";
+      toast.error(errorMessage);
+    },
+  });
 
   useEffect(() => {
     if (wardId) {
@@ -180,6 +232,20 @@ export default function AdmissionFormPage() {
     }
   }, [bookingType, setValue]);
 
+  useEffect(() => {
+    if (isShortStay) {
+      // Reset regular admission fields
+      setValue("ward_id", "");
+      setValue("room_id", "");
+      setValue("bed_id", "");
+      setValue("booking_type", "bed");
+    } else {
+      // Reset short stay fields
+      setValue("short_stay_bed_id", "");
+      setValue("short_stay_duration", "");
+    }
+  }, [isShortStay, setValue]);
+
   const mutation = useMutation({
     mutationFn: (data: AdmissionFormData) => createAdmission(data),
     onSuccess: () => {
@@ -203,10 +269,19 @@ export default function AdmissionFormPage() {
 
   const onSubmit = (data: AdmissionFormValues) => {
     if (!selectedPatient) return toast.error("يرجى اختيار المريض");
-    if (!data.ward_id) return toast.error("يرجى اختيار القسم");
-    if (!data.room_id) return toast.error("يرجى اختيار الغرفة");
-    if (data.booking_type === "bed" && !data.bed_id)
-      return toast.error("يرجى اختيار السرير");
+    
+    if (isShortStay) {
+      // Validation for short stay
+      if (!data.short_stay_bed_id) return toast.error("يرجى اختيار سرير الإقامة القصيرة");
+      if (!data.short_stay_duration) return toast.error("يرجى تحديد مدة الإقامة (12 ساعة أو 24 ساعة)");
+    } else {
+      // Validation for regular admission
+      if (!data.ward_id) return toast.error("يرجى اختيار القسم");
+      if (!data.room_id) return toast.error("يرجى اختيار الغرفة");
+      if (data.booking_type === "bed" && !data.bed_id)
+        return toast.error("يرجى اختيار السرير");
+    }
+    
     if (!data.admission_date) return toast.error("يرجى اختيار تاريخ التنويم");
 
     // Convert time from HH:mm to H:i:s format
@@ -225,9 +300,11 @@ export default function AdmissionFormPage() {
 
     const submissionData: AdmissionFormData = {
       patient_id: String(selectedPatient.patient_id),
-      ward_id: data.ward_id,
-      room_id: data.room_id,
-      bed_id: data.booking_type === "bed" ? data.bed_id : undefined,
+      ward_id: isShortStay ? undefined : data.ward_id,
+      room_id: isShortStay ? undefined : data.room_id,
+      bed_id: isShortStay ? undefined : (data.booking_type === "bed" ? data.bed_id : undefined),
+      short_stay_bed_id: isShortStay ? data.short_stay_bed_id : undefined,
+      short_stay_duration: isShortStay ? (data.short_stay_duration as "12h" | "24h") : undefined,
       booking_type: data.booking_type,
       admission_date: data.admission_date,
       admission_time: formattedTime,
@@ -764,137 +841,204 @@ export default function AdmissionFormPage() {
                   <Box
                     sx={{ display: "flex", flexDirection: "column", gap: 2 }}
                   >
-                    <Controller
-                      name="ward_id"
-                      control={control}
-                      rules={{ required: "القسم مطلوب" }}
-                      render={({ field, fieldState }) => (
-                        <FormControl fullWidth error={!!fieldState.error}>
-                          <InputLabel>القسم</InputLabel>
-                          <Select
-                            {...field}
-                            label="القسم"
+                    {isShortStay ? (
+                      <>
+                        {/* Short Stay Bed Selection */}
+                        <Box sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}>
+                          <Controller
+                            name="short_stay_bed_id"
+                            control={control}
+                            rules={{ required: "سرير الإقامة القصيرة مطلوب" }}
+                            render={({ field, fieldState }) => (
+                              <FormControl fullWidth error={!!fieldState.error}>
+                                <InputLabel>سرير الإقامة القصيرة</InputLabel>
+                                <Select
+                                  {...field}
+                                  label="سرير الإقامة القصيرة"
+                                  disabled={mutation.isPending}
+                                  startAdornment={
+                                    <Bed
+                                      size={16}
+                                      style={{ marginLeft: 8, opacity: 0.5 }}
+                                    />
+                                  }
+                                >
+                                  {shortStayBedsData?.data?.map((bed: any) => (
+                                    <MenuItem key={bed.id} value={String(bed.id)}>
+                                      {bed.bed_number} - سعر 12h: {bed.price_12h} | سعر 24h: {bed.price_24h}
+                                    </MenuItem>
+                                  ))}
+                                </Select>
+                              </FormControl>
+                            )}
+                          />
+                          <IconButton
+                            onClick={() => setShortStayBedDialogOpen(true)}
+                            color="primary"
+                            sx={{ mt: 1 }}
                             disabled={mutation.isPending}
-                            startAdornment={
-                              <Building2
-                                size={16}
-                                style={{ marginLeft: 8, opacity: 0.5 }}
-                              />
-                            }
+                            title="إضافة سرير إقامة قصيرة جديد"
                           >
-                            {wards?.map((ward) => (
-                              <MenuItem key={ward.id} value={String(ward.id)}>
-                                {ward.name}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                      )}
-                    />
+                            <Plus size={20} />
+                          </IconButton>
+                        </Box>
 
-                    <Controller
-                      name="booking_type"
-                      control={control}
-                      rules={{ required: "نوع الحجز مطلوب" }}
-                      render={({ field, fieldState }) => (
-                        <FormControl fullWidth error={!!fieldState.error}>
-                          <InputLabel>نوع الحجز</InputLabel>
-                          <Select
-                            {...field}
-                            label="نوع الحجز"
-                            disabled={mutation.isPending}
-                          >
-                            <MenuItem value="bed">حجز عن طريق السرير</MenuItem>
-                            <MenuItem value="room">حجز عن طريق الغرفة</MenuItem>
-                          </Select>
-                        </FormControl>
-                      )}
-                    />
+                        {/* Short Stay Duration Selection */}
+                        <Controller
+                          name="short_stay_duration"
+                          control={control}
+                          rules={{ required: "مدة الإقامة مطلوبة" }}
+                          render={({ field, fieldState }) => (
+                            <FormControl fullWidth error={!!fieldState.error}>
+                              <InputLabel>مدة الإقامة</InputLabel>
+                              <Select
+                                {...field}
+                                label="مدة الإقامة"
+                                disabled={mutation.isPending || !watch("short_stay_bed_id")}
+                              >
+                                <MenuItem value="12h">12 ساعة</MenuItem>
+                                <MenuItem value="24h">24 ساعة</MenuItem>
+                              </Select>
+                            </FormControl>
+                          )}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        {/* Regular Admission Fields */}
+                        <Controller
+                          name="ward_id"
+                          control={control}
+                          rules={{ required: "القسم مطلوب" }}
+                          render={({ field, fieldState }) => (
+                            <FormControl fullWidth error={!!fieldState.error}>
+                              <InputLabel>القسم</InputLabel>
+                              <Select
+                                {...field}
+                                label="القسم"
+                                disabled={mutation.isPending}
+                                startAdornment={
+                                  <Building2
+                                    size={16}
+                                    style={{ marginLeft: 8, opacity: 0.5 }}
+                                  />
+                                }
+                              >
+                                {wards?.map((ward) => (
+                                  <MenuItem key={ward.id} value={String(ward.id)}>
+                                    {ward.name}
+                                  </MenuItem>
+                                ))}
+                              </Select>
+                            </FormControl>
+                          )}
+                        />
 
-                    <Controller
-                      name="room_id"
-                      control={control}
-                      rules={{ required: "الغرفة مطلوبة" }}
-                      render={({ field, fieldState }) => (
-                        <FormControl
-                          fullWidth
-                          error={!!fieldState.error}
-                          disabled={!selectedWardId || mutation.isPending}
-                        >
-                          <InputLabel>الغرفة</InputLabel>
-                          <Select
-                            {...field}
-                            label="الغرفة"
-                            startAdornment={
-                              <DoorOpen
-                                size={16}
-                                style={{ marginLeft: 8, opacity: 0.5 }}
-                              />
-                            }
-                            endAdornment={
-                              isFetchingRooms ? (
-                                <CircularProgress size={20} sx={{ mr: 2 }} />
-                              ) : null
-                            }
-                          >
-                            {rooms?.map((room) => {
-                              const roomTypeLabel =
-                                room.room_type === "normal"
-                                  ? "عادي"
-                                  : room.room_type === "vip"
-                                    ? "VIP"
-                                    : "";
-                              const roomTypeDisplay = roomTypeLabel
-                                ? ` (${roomTypeLabel})`
-                                : "";
-                              return (
-                                <MenuItem key={room.id} value={String(room.id)}>
-                                  {room.room_number}
-                                  {roomTypeDisplay}
-                                </MenuItem>
-                              );
-                            })}
-                          </Select>
-                        </FormControl>
-                      )}
-                    />
+                        <Controller
+                          name="booking_type"
+                          control={control}
+                          rules={{ required: "نوع الحجز مطلوب" }}
+                          render={({ field, fieldState }) => (
+                            <FormControl fullWidth error={!!fieldState.error}>
+                              <InputLabel>نوع الحجز</InputLabel>
+                              <Select
+                                {...field}
+                                label="نوع الحجز"
+                                disabled={mutation.isPending}
+                              >
+                                <MenuItem value="bed">حجز عن طريق السرير</MenuItem>
+                                <MenuItem value="room">حجز عن طريق الغرفة</MenuItem>
+                              </Select>
+                            </FormControl>
+                          )}
+                        />
 
-                    {watch("booking_type") === "bed" && (
-                      <Controller
-                        name="bed_id"
-                        control={control}
-                        rules={{ required: "السرير مطلوب" }}
-                        render={({ field, fieldState }) => (
-                          <FormControl
-                            fullWidth
-                            error={!!fieldState.error}
-                            disabled={!selectedRoomId || mutation.isPending}
-                          >
-                            <InputLabel>السرير</InputLabel>
-                            <Select
-                              {...field}
-                              label="السرير"
-                              startAdornment={
-                                <Bed
-                                  size={16}
-                                  style={{ marginLeft: 8, opacity: 0.5 }}
-                                />
-                              }
-                              endAdornment={
-                                isFetchingBeds ? (
-                                  <CircularProgress size={20} sx={{ mr: 2 }} />
-                                ) : null
-                              }
+                        <Controller
+                          name="room_id"
+                          control={control}
+                          rules={{ required: "الغرفة مطلوبة" }}
+                          render={({ field, fieldState }) => (
+                            <FormControl
+                              fullWidth
+                              error={!!fieldState.error}
+                              disabled={!selectedWardId || mutation.isPending}
                             >
-                              {beds?.map((bed) => (
-                                <MenuItem key={bed.id} value={String(bed.id)}>
-                                  {bed.bed_number}
-                                </MenuItem>
-                              ))}
-                            </Select>
-                          </FormControl>
+                              <InputLabel>الغرفة</InputLabel>
+                              <Select
+                                {...field}
+                                label="الغرفة"
+                                startAdornment={
+                                  <DoorOpen
+                                    size={16}
+                                    style={{ marginLeft: 8, opacity: 0.5 }}
+                                  />
+                                }
+                                endAdornment={
+                                  isFetchingRooms ? (
+                                    <CircularProgress size={20} sx={{ mr: 2 }} />
+                                  ) : null
+                                }
+                              >
+                                {rooms?.map((room) => {
+                                  const roomTypeLabel =
+                                    room.room_type === "normal"
+                                      ? "عادي"
+                                      : room.room_type === "vip"
+                                        ? "VIP"
+                                        : "";
+                                  const roomTypeDisplay = roomTypeLabel
+                                    ? ` (${roomTypeLabel})`
+                                    : "";
+                                  return (
+                                    <MenuItem key={room.id} value={String(room.id)}>
+                                      {room.room_number}
+                                      {roomTypeDisplay}
+                                    </MenuItem>
+                                  );
+                                })}
+                              </Select>
+                            </FormControl>
+                          )}
+                        />
+
+                        {watch("booking_type") === "bed" && (
+                          <Controller
+                            name="bed_id"
+                            control={control}
+                            rules={{ required: "السرير مطلوب" }}
+                            render={({ field, fieldState }) => (
+                              <FormControl
+                                fullWidth
+                                error={!!fieldState.error}
+                                disabled={!selectedRoomId || mutation.isPending}
+                              >
+                                <InputLabel>السرير</InputLabel>
+                                <Select
+                                  {...field}
+                                  label="السرير"
+                                  startAdornment={
+                                    <Bed
+                                      size={16}
+                                      style={{ marginLeft: 8, opacity: 0.5 }}
+                                    />
+                                  }
+                                  endAdornment={
+                                    isFetchingBeds ? (
+                                      <CircularProgress size={20} sx={{ mr: 2 }} />
+                                    ) : null
+                                  }
+                                >
+                                  {beds?.map((bed) => (
+                                    <MenuItem key={bed.id} value={String(bed.id)}>
+                                      {bed.bed_number}
+                                    </MenuItem>
+                                  ))}
+                                </Select>
+                              </FormControl>
+                            )}
+                          />
                         )}
-                      />
+                      </>
                     )}
                   </Box>
                 </CardContent>
@@ -1197,6 +1341,135 @@ export default function AdmissionFormPage() {
           setValue("patient_id", String(patient.id));
         }}
       />
+
+      {/* Add Short Stay Bed Dialog */}
+      <Dialog
+        open={shortStayBedDialogOpen}
+        onClose={() => setShortStayBedDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>إضافة سرير إقامة قصيرة جديد</DialogTitle>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!newShortStayBed.bed_number.trim()) {
+              toast.error("رقم السرير مطلوب");
+              return;
+            }
+            if (!newShortStayBed.price_12h || parseFloat(newShortStayBed.price_12h) < 0) {
+              toast.error("سعر 12 ساعة مطلوب ويجب أن يكون أكبر من أو يساوي 0");
+              return;
+            }
+            if (!newShortStayBed.price_24h || parseFloat(newShortStayBed.price_24h) < 0) {
+              toast.error("سعر 24 ساعة مطلوب ويجب أن يكون أكبر من أو يساوي 0");
+              return;
+            }
+            createShortStayBedMutation.mutate(newShortStayBed);
+          }}
+        >
+          <DialogContent>
+            <Box
+              sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 2 }}
+            >
+              <TextField
+                label="رقم السرير"
+                required
+                fullWidth
+                value={newShortStayBed.bed_number}
+                onChange={(e) =>
+                  setNewShortStayBed({ ...newShortStayBed, bed_number: e.target.value })
+                }
+                disabled={createShortStayBedMutation.isPending}
+              />
+
+              <TextField
+                label="سعر 12 ساعة"
+                required
+                fullWidth
+                type="number"
+                value={newShortStayBed.price_12h}
+                onChange={(e) =>
+                  setNewShortStayBed({ ...newShortStayBed, price_12h: e.target.value })
+                }
+                inputProps={{ min: 0, step: "0.01" }}
+                disabled={createShortStayBedMutation.isPending}
+              />
+
+              <TextField
+                label="سعر 24 ساعة"
+                required
+                fullWidth
+                type="number"
+                value={newShortStayBed.price_24h}
+                onChange={(e) =>
+                  setNewShortStayBed({ ...newShortStayBed, price_24h: e.target.value })
+                }
+                inputProps={{ min: 0, step: "0.01" }}
+                disabled={createShortStayBedMutation.isPending}
+              />
+
+              <FormControl fullWidth>
+                <InputLabel>الحالة</InputLabel>
+                <Select
+                  value={newShortStayBed.status}
+                  label="الحالة"
+                  onChange={(e) =>
+                    setNewShortStayBed({
+                      ...newShortStayBed,
+                      status: e.target.value as "active" | "inactive",
+                    })
+                  }
+                  disabled={createShortStayBedMutation.isPending}
+                >
+                  <MenuItem value="active">نشط</MenuItem>
+                  <MenuItem value="inactive">غير نشط</MenuItem>
+                </Select>
+              </FormControl>
+
+              <TextField
+                label="ملاحظات"
+                fullWidth
+                multiline
+                rows={3}
+                value={newShortStayBed.notes}
+                onChange={(e) =>
+                  setNewShortStayBed({ ...newShortStayBed, notes: e.target.value })
+                }
+                disabled={createShortStayBedMutation.isPending}
+              />
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={() => {
+                setShortStayBedDialogOpen(false);
+                setNewShortStayBed({
+                  bed_number: "",
+                  price_12h: "",
+                  price_24h: "",
+                  status: "active",
+                  notes: "",
+                });
+              }}
+              disabled={createShortStayBedMutation.isPending}
+            >
+              إلغاء
+            </Button>
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={createShortStayBedMutation.isPending}
+            >
+              {createShortStayBedMutation.isPending ? (
+                <CircularProgress size={20} />
+              ) : (
+                "إضافة"
+              )}
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
     </Box>
   );
 }

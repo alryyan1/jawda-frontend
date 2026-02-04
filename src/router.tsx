@@ -108,6 +108,7 @@ import RoomFormPage, {
 } from "./pages/settings/rooms/RoomFormPage";
 import BedsListPage from "./pages/settings/beds/BedsListPage";
 import BedFormPage, { BedFormMode } from "./pages/settings/beds/BedFormPage";
+import ShortStayBedsListPage from "./pages/settings/short-stay-beds/ShortStayBedsListPage";
 import OperationsListPage from "./pages/operations/OperationsListPage";
 import OperationFormPage from "./pages/operations/OperationFormPage";
 import OperationsSettingsPage from "./pages/settings/OperationsSettingsPage";
@@ -544,6 +545,11 @@ const router = createBrowserRouter([
                     ),
                   },
                 ],
+              },
+              // Short Stay Beds Management
+              {
+                path: "short-stay-beds",
+                element: <ShortStayBedsListPage />,
               },
               {
                 path: "attendance",

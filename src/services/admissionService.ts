@@ -11,7 +11,6 @@ import type {
   AdmissionTransactionFormData,
   AdmissionLedger,
 } from "../types/admissions";
-import type { PaginatedResponse } from "@/types/common";
 
 const API_URL = "/admissions";
 
@@ -37,8 +36,8 @@ export const createAdmission = async (
 ): Promise<{ data: Admission }> => {
   const payload: Record<string, any> = {
     patient_id: parseInt(String(data.patient_id)),
-    ward_id: parseInt(String(data.ward_id)),
-    room_id: parseInt(String(data.room_id)),
+    ward_id: data.ward_id ? parseInt(String(data.ward_id)) : null,
+    room_id: data.room_id ? parseInt(String(data.room_id)) : null,
     bed_id: data.bed_id ? parseInt(String(data.bed_id)) : null,
     booking_type: data.booking_type || "bed",
     admission_date: data.admission_date
@@ -65,6 +64,8 @@ export const createAdmission = async (
     next_of_kin_name: data.next_of_kin_name || null,
     next_of_kin_relation: data.next_of_kin_relation || null,
     next_of_kin_phone: data.next_of_kin_phone || null,
+    short_stay_bed_id: data.short_stay_bed_id ? parseInt(String(data.short_stay_bed_id)) : null,
+    short_stay_duration: data.short_stay_duration || null,
   };
 
   // Add specialist_doctor_id if provided
@@ -129,6 +130,10 @@ export const updateAdmission = async (
     payload.next_of_kin_relation = data.next_of_kin_relation;
   if (data.next_of_kin_phone !== undefined)
     payload.next_of_kin_phone = data.next_of_kin_phone;
+  if (data.short_stay_bed_id !== undefined)
+    payload.short_stay_bed_id = data.short_stay_bed_id ? parseInt(String(data.short_stay_bed_id)) : null;
+  if (data.short_stay_duration !== undefined)
+    payload.short_stay_duration = data.short_stay_duration;
 
   const response = await apiClient.put<{ data: Admission }>(
     `${API_URL}/${id}`,
@@ -283,5 +288,14 @@ export const getAdmissionLedger = async (
   const response = await apiClient.get<AdmissionLedger>(
     `${API_URL}/${id}/ledger`,
   );
+  return response.data;
+};
+
+export const exportAdmissionLedgerPdf = async (
+  id: number,
+): Promise<Blob> => {
+  const response = await apiClient.get(`${API_URL}/${id}/ledger/pdf`, {
+    responseType: 'blob',
+  });
   return response.data;
 };

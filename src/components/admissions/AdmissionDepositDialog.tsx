@@ -86,9 +86,16 @@ export default function AdmissionDepositDialog({
     onClose();
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey && !mutation.isPending) {
+      e.preventDefault();
+      handleSubmit(onSubmit)();
+    }
+  };
+
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-      <form onSubmit={handleSubmit(onSubmit)}>
+      <form onSubmit={handleSubmit(onSubmit)} onKeyDown={handleKeyDown}>
         <DialogTitle>إضافة دفعة</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
@@ -134,6 +141,12 @@ export default function AdmissionDepositDialog({
                   rows={3}
                   {...field}
                   disabled={mutation.isPending}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey && !mutation.isPending) {
+                      e.preventDefault();
+                      handleSubmit(onSubmit)();
+                    }
+                  }}
                 />
               )}
             />

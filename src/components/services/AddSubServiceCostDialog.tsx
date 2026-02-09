@@ -1,20 +1,21 @@
 // src/components/services/AddSubServiceCostDialog.tsx
 import React, { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useTranslation } from 'react-i18next';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
-  Dialog, DialogContent, DialogDescription, DialogFooter,
-  DialogHeader, DialogTitle,
-} from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Loader2 } from 'lucide-react';
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  TextField,
+  Box,
+  CircularProgress,
+} from '@mui/material';
 
 import { createSubServiceCost } from '@/services/subServiceCostService';
 import type { SubServiceCost } from '@/types/services';
@@ -33,18 +34,17 @@ interface ApiError {
   };
 }
 
-const getSubServiceCostSchema = (t: (key: string, options?: { field?: string }) => string) => z.object({
-  name: z.string().min(1, { message: t('common:validation.required', { field: t('services:subServiceCostType.nameLabel') }) }).max(255),
+const subServiceCostSchema = z.object({
+  name: z.string().min(1, { message: 'اسم نوع التكلفة مطلوب' }).max(255),
 });
 
-type SubServiceCostFormValues = z.infer<ReturnType<typeof getSubServiceCostSchema>>;
+type SubServiceCostFormValues = z.infer<typeof subServiceCostSchema>;
 
-const AddSubServiceCostDialog: React.FC<AddSubServiceCostDialogProps> = ({ 
-  isOpen, onOpenChange, onSubServiceCostAdded 
+const AddSubServiceCostDialog: React.FC<AddSubServiceCostDialogProps> = ({
+  isOpen,
+  onOpenChange,
+  onSubServiceCostAdded,
 }) => {
-  const { t } = useTranslation(['services', 'common']);
-
-  const subServiceCostSchema = getSubServiceCostSchema(t);
   const form = useForm<SubServiceCostFormValues>({
     resolver: zodResolver(subServiceCostSchema),
     defaultValues: { name: '' },
@@ -53,12 +53,12 @@ const AddSubServiceCostDialog: React.FC<AddSubServiceCostDialogProps> = ({
   const mutation = useMutation({
     mutationFn: createSubServiceCost,
     onSuccess: (newSubType) => {
-      toast.success(t('services:subServiceCostType.addedSuccess'));
+      toast.success('تمت إضافة نوع التكلفة بنجاح');
       onSubServiceCostAdded(newSubType);
-      form.reset();
+      form.reset({ name: '' });
     },
     onError: (error: ApiError) => {
-      toast.error(error.response?.data?.message || t('services:subServiceCostType.addError'));
+      toast.error(error.response?.data?.message || 'فشل في إضافة نوع التكلفة');
     },
   });
 
@@ -71,38 +71,43 @@ const AddSubServiceCostDialog: React.FC<AddSubServiceCostDialogProps> = ({
   }, [isOpen, form]);
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>{t('services:subServiceCostType.addDialogTitle')}</DialogTitle>
-          <DialogDescription>{t('services:subServiceCostType.addDialogDescription')}</DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('services:subServiceCostType.nameLabel')}</FormLabel>
-                  <FormControl>
-                    <Input placeholder={t('services:subServiceCostType.namePlaceholder')} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={mutation.isPending}>{t('common:cancel')}</Button>
-              <Button type="submit" disabled={mutation.isPending}>
-                {mutation.isPending && <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />}
-                {t('common:save')}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+    <Dialog open={isOpen} onClose={() => onOpenChange(false)} maxWidth="xs" fullWidth>
+      <DialogTitle>إضافة نوع تكلفة فرعي</DialogTitle>
+      <DialogContent>
+        <Box component="form" onSubmit={form.handleSubmit(onSubmit)} sx={{ pt: 1 }}>
+          <Controller
+            control={form.control}
+            name="name"
+            render={({ field, fieldState }) => (
+              <TextField
+                {...field}
+                fullWidth
+                label="الاسم"
+                placeholder="أدخل اسم نوع التكلفة"
+                error={!!fieldState.error}
+                helperText={fieldState.error?.message}
+                disabled={mutation.isPending}
+                sx={{ mb: 2 }}
+              />
+            )}
+          />
+        </Box>
       </DialogContent>
+      <DialogActions>
+        <Button onClick={() => onOpenChange(false)} disabled={mutation.isPending} variant="outlined">
+          إلغاء
+        </Button>
+        <Button
+          onClick={form.handleSubmit(onSubmit)}
+          disabled={mutation.isPending}
+          variant="contained"
+          startIcon={mutation.isPending ? <CircularProgress size={16} /> : undefined}
+        >
+          {mutation.isPending ? 'جاري الحفظ...' : 'حفظ'}
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 };
+
 export default AddSubServiceCostDialog;

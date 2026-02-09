@@ -40,6 +40,7 @@ interface RequestedServiceCost {
 
 // Form interfaces
 interface RequestedServiceCostFormItemValues {
+  id?: number; // RequestedServiceCost id when editing existing row
   sub_service_cost_id: string;
   service_cost_id: string;
   amount: string;
@@ -153,6 +154,7 @@ const ManageRequestedServiceCostsDialog: React.FC<ManageRequestedServiceCostsDia
     reset({
       costs: existingReqServiceCosts.length > 0 
         ? existingReqServiceCosts.map(cost => ({
+            id: cost.id,
             sub_service_cost_id: String(cost.sub_service_cost_id),
             service_cost_id: String(cost.service_cost_id),
             amount: String(cost.amount),
@@ -183,13 +185,14 @@ const ManageRequestedServiceCostsDialog: React.FC<ManageRequestedServiceCostsDia
     mutationFn: (data) => {
       const payload = {
           sub_service_cost_id: parseInt(data.sub_service_cost_id),
-          service_cost_id: parseInt(data.service_cost_id), // The ID of the ServiceCost definition
+          service_cost_id: parseInt(data.service_cost_id),
           amount: parseFloat(data.amount),
       };
-      return createOrUpdateRequestedServiceCost(requestedService.id, payload); // id is optional for create
+      const itemId = data.id != null ? data.id : undefined;
+      return createOrUpdateRequestedServiceCost(requestedService.id, itemId, payload);
     },
-    onSuccess: (updatedItem, variables) => { 
-      toast.success(variables.id ? "تم تحديث التكلفة بنجاح" : "تم إضافة التكلفة بنجاح");
+    onSuccess: (_updatedItem, variables) => { 
+      toast.success(variables.id != null ? "تم تحديث التكلفة بنجاح" : "تم إضافة التكلفة بنجاح");
       queryClient.invalidateQueries({ queryKey: reqServiceCostsQueryKey });
       if(onCostsUpdated) onCostsUpdated();
       // Optionally update the specific item in the useFieldArray if backend returns full item
@@ -219,6 +222,11 @@ const ManageRequestedServiceCostsDialog: React.FC<ManageRequestedServiceCostsDia
             toast.error("يرجى تصحيح الأخطاء في النموذج");
         }
     });
+  };
+
+  const getRowBackendId = (index: number): number | undefined => {
+    const row = getValues(`costs.${index}`);
+    return row?.id != null ? row.id : undefined;
   };
 
   const addNewCostField = () => {
@@ -306,7 +314,7 @@ const ManageRequestedServiceCostsDialog: React.FC<ManageRequestedServiceCostsDia
                         <Button type="button" onClick={() => handleSaveRow(index)} disabled={saveOrUpdateMutation.isPending} size="small" variant="outlined" sx={{ mr: 1 }}>
                           {saveOrUpdateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4" />}
                         </Button>
-                        <Button type="button" color="error" variant="outlined" size="small" onClick={() => fieldItem.id ? deleteReqServiceCostMutation.mutate(Number(fieldItem.id)) : remove(index)} disabled={deleteReqServiceCostMutation.isPending && deleteReqServiceCostMutation.variables === Number(fieldItem.id)}>
+                        <Button type="button" color="error" variant="outlined" size="small" onClick={() => { const backendId = getRowBackendId(index); backendId != null ? deleteReqServiceCostMutation.mutate(backendId) : remove(index); }} disabled={deleteReqServiceCostMutation.isPending && deleteReqServiceCostMutation.variables === getRowBackendId(index)}>
                           {deleteReqServiceCostMutation.isPending && deleteReqServiceCostMutation.variables === Number(fieldItem.id) ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4" />}
                         </Button>
                       </TableCell>

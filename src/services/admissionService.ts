@@ -299,3 +299,14 @@ export const exportAdmissionLedgerPdf = async (
   });
   return response.data;
 };
+
+/** Export admissions list as PDF (same filters as list page). */
+export const exportAdmissionsListPdf = async (
+  filters: Record<string, string | number | boolean> = {},
+): Promise<Blob> => {
+  const response = await apiClient.get(`${API_URL}/list/pdf`, {
+    params: filters,
+    responseType: 'blob',
+  });
+  return response.data;
+};

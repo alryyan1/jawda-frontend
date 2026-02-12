@@ -64,6 +64,7 @@ import {
   Hospital,
   Cloud,
   CloudOff,
+  BedDouble,
 } from "lucide-react";
 import { Toaster } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -1319,6 +1320,11 @@ const AppLayout: React.FC = () => {
                               to="/settings/pdf"
                               icon={FileText}
                               label="إعدادات PDF"
+                            />
+                            <SettingsMenuItem
+                              to="/settings/admission-settings"
+                              icon={BedDouble}
+                              label="إعدادات التنويم"
                             />
                             <SettingsMenuItem
                               to="/jobs-management"

@@ -97,7 +97,7 @@ export default function AdmissionDetailsPage() {
 
   return (
     <>
-      <Card className="max-w-6xl mx-auto h-full flex flex-col">
+      <Card className="max-w-7dxl mx-auto h-full flex flex-col">
         <CardHeader
           sx={{ flexShrink: 0 }}
           title={

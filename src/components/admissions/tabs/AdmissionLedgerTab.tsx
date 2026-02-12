@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getAdmissionLedger, getAdmissionById, addAdmissionTransaction, deleteAdmissionTransaction, exportAdmissionLedgerPdf } from '@/services/admissionService';
+import { getAdmissionLedger, getAdmissionById, deleteAdmissionTransaction, exportAdmissionLedgerPdf } from '@/services/admissionService';
 import {
   Box,
   CircularProgress,
@@ -22,22 +22,19 @@ import {
   CardContent,
   Divider,
   Tooltip,
-  Alert,
 } from '@mui/material';
 import { 
   Plus, 
-  Calculator, 
+  RefreshCw, 
   Trash2, 
   HelpCircle, 
   Calendar, 
-  TrendingUp, 
   Minus, 
   Receipt, 
   Wallet,
   Info,
   CheckCircle2,
   AlertCircle,
-  DollarSign,
   FileDown,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -46,7 +43,6 @@ import AdmissionDepositDialog from '@/components/admissions/AdmissionDepositDial
 import AdmissionDiscountDialog from '@/components/admissions/AdmissionDiscountDialog';
 import AdmissionChargeDialog from '@/components/admissions/AdmissionChargeDialog';
 import { formatNumber } from '@/lib/utils';
-import type { AdmissionTransactionFormData } from '@/types/admissions';
 
 interface AdmissionLedgerTabProps {
   admissionId: number;
@@ -62,7 +58,7 @@ export default function AdmissionLedgerTab({ admissionId }: AdmissionLedgerTabPr
   const [transactionToDelete, setTransactionToDelete] = useState<{ id: number | string; description: string } | null>(null);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
 
-  const { data: ledgerData, isLoading: isLoadingLedger } = useQuery({
+  const { data: ledgerData, isLoading: isLoadingLedger, refetch: refetchLedger } = useQuery({
     queryKey: ['admissionLedger', admissionId],
     queryFn: () => getAdmissionLedger(admissionId),
     enabled: !!admissionId,
@@ -74,68 +70,10 @@ export default function AdmissionLedgerTab({ admissionId }: AdmissionLedgerTabPr
     enabled: !!admissionId,
   });
 
-  const calculateRoomCharges = () => {
-    if (!admissionData) return null;
-
-    const days = admissionData.days_admitted || 0;
-    const pricePerDay = admissionData.room?.price_per_day || 0;
-
-    if (days === 0) {
-      toast.error('عدد أيام الإقامة صفر');
-      return null;
-    }
-
-    if (pricePerDay === 0) {
-      toast.error('لم يتم تحديد سعر اليوم للغرفة');
-      return null;
-    }
-
-    return days * pricePerDay;
-  };
-
-  const roomChargesMutation = useMutation({
-    mutationFn: async () => {
-      const totalAmount = calculateRoomCharges();
-      if (!totalAmount) {
-        throw new Error('لا يمكن حساب رسوم الإقامة');
-      }
-
-      const days = admissionData!.days_admitted || 0;
-      const transactionData: AdmissionTransactionFormData = {
-        type: 'debit',
-        amount: totalAmount,
-        description: `رسوم الإقامة - ${days} يوم`,
-        reference_type: 'room_charges',
-        is_bank: false,
-        notes: 'حساب تلقائي لرسوم الإقامة',
-      };
-
-      return addAdmissionTransaction(admissionId, transactionData);
-    },
-    onSuccess: () => {
-      toast.success('تم حساب وإضافة رسوم الإقامة بنجاح');
-      queryClient.invalidateQueries({ queryKey: ['admissionLedger', admissionId] });
-      queryClient.invalidateQueries({ queryKey: ['admissionTransactions', admissionId] });
-      queryClient.invalidateQueries({ queryKey: ['admission', admissionId] });
-      queryClient.invalidateQueries({ queryKey: ['admissionBalance', admissionId] });
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'فشل حساب رسوم الإقامة');
-    },
-  });
-
-  const handleCalculateRoomCharges = () => {
-    if (!admissionData) {
-      toast.error('لم يتم تحميل بيانات التنويم');
-      return;
-    }
-
-    if (admissionData.status !== 'admitted' && admissionData.status !== 'discharged') {
-      toast.error('لا يمكن حساب رسوم الإقامة للتنويم الحالي');
-      return;
-    }
-
-    roomChargesMutation.mutate();
+  const handleRefreshLedger = () => {
+    queryClient.invalidateQueries({ queryKey: ['admissionLedger', admissionId] });
+    refetchLedger();
+    toast.success('تم تحديث كشف الحساب (يتم احتساب رسوم الإقامة تلقائياً حسب الإعدادات)');
   };
 
   const deleteTransactionMutation = useMutation({
@@ -211,7 +149,9 @@ export default function AdmissionLedgerTab({ admissionId }: AdmissionLedgerTabPr
 
   const { summary, entries } = ledgerData;
   const daysAdmitted = admissionData?.days_admitted || 0;
-  const roomPricePerDay = admissionData?.room?.price_per_day || 0;
+  const roomPricePerDayBase = admissionData?.room?.price_per_day || 0;
+  const isWholeRoomBooking = admissionData?.booking_type === 'room';
+  const roomPricePerDay = isWholeRoomBooking ? roomPricePerDayBase * 2 : roomPricePerDayBase;
   const admissionDate = admissionData?.admission_date;
   const admissionTime = admissionData?.admission_time;
   const dischargeDate = admissionData?.discharge_date;
@@ -329,7 +269,7 @@ export default function AdmissionLedgerTab({ admissionId }: AdmissionLedgerTabPr
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                  سعر اليوم
+                  سعر اليوم {isWholeRoomBooking ? '(غرفة كاملة ×2)' : ''}
                 </Typography>
                 <Typography variant="body2" fontWeight={500} sx={{ fontSize: '0.85rem' }}>
                   {roomPricePerDay > 0 ? formatNumber(roomPricePerDay) : 'غير محدد'}
@@ -482,12 +422,12 @@ export default function AdmissionLedgerTab({ admissionId }: AdmissionLedgerTabPr
           <Button
             size="small"
             variant="outlined"
-            startIcon={roomChargesMutation.isPending ? <CircularProgress size={14} /> : <Calculator size={14} />}
-            onClick={handleCalculateRoomCharges}
-            disabled={roomChargesMutation.isPending || !admissionData || !admissionData.room?.price_per_day}
+            startIcon={<RefreshCw size={14} />}
+            onClick={handleRefreshLedger}
+            title="تحديث كشف الحساب واحتساب رسوم الإقامة تلقائياً حسب عدد الأيام والإعدادات"
             sx={{ fontSize: '0.75rem', px: 1.5, py: 0.5, whiteSpace: 'nowrap' }}
           >
-            حساب الرسوم
+            تحديث كشف الحساب
           </Button>
           <Button
             size="small"
@@ -809,7 +749,7 @@ export default function AdmissionLedgerTab({ admissionId }: AdmissionLedgerTabPr
                       <Typography variant="body2" fontWeight={500}>{daysAdmitted} يوم</Typography>
                     </Box>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                      <Typography variant="body2">سعر اليوم:</Typography>
+                      <Typography variant="body2">سعر اليوم{isWholeRoomBooking ? ' (غرفة كاملة ×2)' : ''}:</Typography>
                       <Typography variant="body2" fontWeight={500}>{formatNumber(roomPricePerDay)}</Typography>
                     </Box>
                     <Divider sx={{ my: 1 }} />

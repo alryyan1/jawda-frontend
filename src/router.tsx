@@ -103,6 +103,7 @@ import WardFormPage, {
   WardFormMode,
 } from "./pages/settings/wards/WardFormPage";
 import PdfSettingsPage from "./pages/settings/PdfSettingsPage";
+import AdmissionSettingsPage from "./pages/settings/AdmissionSettingsPage";
 import RoomsListPage from "./pages/settings/rooms/RoomsListPage";
 import RoomFormPage, {
   RoomFormMode,
@@ -196,7 +197,11 @@ const router = createBrowserRouter([
             path: "admissions",
             element: <Outlet />,
             children: [
-              { index: true, element: <AdmissionsDashboardPage /> },
+              { index: true, element: <AdmissionsListPage /> },
+              {
+                path: "dashboard",
+                element: <AdmissionsDashboardPage />,
+              },
               {
                 path: "list",
                 element: <AdmissionsListPage />,
@@ -480,6 +485,10 @@ const router = createBrowserRouter([
               {
                 path: "pdf",
                 element: <PdfSettingsPage />,
+              },
+              {
+                path: "admission-settings",
+                element: <AdmissionSettingsPage />,
               },
               // Wards Management
               {

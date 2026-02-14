@@ -12,6 +12,8 @@ export interface Ward {
   created_at: string;
   updated_at: string;
   rooms_count?: number;
+  beds_count?: number;
+  current_admissions_count?: number;
   rooms?: Room[];
 }
 
@@ -34,6 +36,7 @@ export interface Room {
   created_at: string;
   updated_at: string;
   beds_count?: number;
+  current_admissions_count?: number;
   beds?: Bed[];
   current_admission?: Admission;
   is_fully_occupied?: boolean;

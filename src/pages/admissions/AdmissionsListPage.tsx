@@ -452,7 +452,7 @@ export default function AdmissionsListPage() {
                       borderColor: "divider",
                     }}
                   >
-                    تاريخ التنويم
+                    تاريخ ووقت التنويم
                   </TableCell>
                   <TableCell
                     align="center"
@@ -571,6 +571,16 @@ export default function AdmissionsListPage() {
                     </TableCell>
                     <TableCell sx={{ fontSize: "0.95rem", py: 1.5 }}>
                       {admission.admission_date}
+                      {admission.admission_time ? (
+                        <Typography
+                          component="span"
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{ display: "block", mt: 0.25 }}
+                        >
+                          {String(admission.admission_time).slice(0, 5)}
+                        </Typography>
+                      ) : null}
                     </TableCell>
                     <TableCell
                       sx={{ fontSize: "0.95rem", py: 1.5, textAlign: "center" }}

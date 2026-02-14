@@ -1271,6 +1271,11 @@ const AppLayout: React.FC = () => {
                               label="مجموعات الخدمات"
                             />
                             <SettingsMenuItem
+                              to="/settings/admission-settings"
+                              icon={BedDouble}
+                              label="إعدادات التنويم"
+                            />
+                            <SettingsMenuItem
                               to="/settings/categories"
                               icon={Layers}
                               label="فئات الاطباء والخدمات"
@@ -1320,11 +1325,6 @@ const AppLayout: React.FC = () => {
                               to="/settings/pdf"
                               icon={FileText}
                               label="إعدادات PDF"
-                            />
-                            <SettingsMenuItem
-                              to="/settings/admission-settings"
-                              icon={BedDouble}
-                              label="إعدادات التنويم"
                             />
                             <SettingsMenuItem
                               to="/jobs-management"

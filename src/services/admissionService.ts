@@ -83,9 +83,9 @@ export const updateAdmission = async (
 ): Promise<{ data: Admission }> => {
   const payload: Record<string, any> = {};
   if (data.ward_id !== undefined)
-    payload.ward_id = parseInt(String(data.ward_id));
+    payload.ward_id = data.ward_id == null || data.ward_id === "" ? null : parseInt(String(data.ward_id));
   if (data.room_id !== undefined)
-    payload.room_id = parseInt(String(data.room_id));
+    payload.room_id = data.room_id == null || data.room_id === "" ? null : parseInt(String(data.room_id));
   if (data.bed_id !== undefined)
     payload.bed_id = data.bed_id ? parseInt(String(data.bed_id)) : null;
   if (data.booking_type !== undefined) payload.booking_type = data.booking_type;

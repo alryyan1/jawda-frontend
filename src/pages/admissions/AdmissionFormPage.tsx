@@ -22,6 +22,7 @@ import {
   DialogContent,
   DialogActions,
   IconButton,
+  ListItemText,
 } from "@mui/material";
 import {
   ArrowRight,
@@ -42,6 +43,7 @@ import {
   Phone,
 } from "lucide-react";
 import type { AdmissionFormData } from "@/types/admissions";
+import type { Room as RoomType } from "@/types/admissions";
 import { createAdmission } from "@/services/admissionService";
 import { getWardsList } from "@/services/wardService";
 import { getRooms } from "@/services/roomService";
@@ -812,7 +814,8 @@ export default function AdmissionFormPage() {
           {/* Left Column: Location, Doctor, Contact */}
           <Box sx={{ flex: { lg: 1, xs: 1 }, minWidth: 0 }}>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              {/* Location Section */}
+              {/* Location Section - only shown when admission type is selected */}
+              {admissionType && (
               <Card variant="outlined" sx={{ borderRadius: 3 }}>
                 <CardHeader
                   title={
@@ -979,23 +982,60 @@ export default function AdmissionFormPage() {
                                   ) : null
                                 }
                               >
-                                {rooms?.map((room) => {
-                                  const roomTypeLabel =
-                                    room.room_type === "normal"
-                                      ? "عادي"
-                                      : room.room_type === "vip"
-                                        ? "VIP"
+                                {(() => {
+                                  const roomList = rooms ?? [];
+                                  const filteredRooms: RoomType[] =
+                                    watch("booking_type") === "room"
+                                      ? roomList.filter((room: RoomType) => {
+                                          const beds = room.beds ?? [];
+                                          if (beds.length === 0) return true;
+                                          return beds.every(
+                                            (b: { status?: string; current_admission?: unknown }) =>
+                                              b.status === "available" && !b.current_admission
+                                          );
+                                        })
+                                      : roomList;
+                                  return filteredRooms.map((room: RoomType) => {
+                                    const roomTypeLabel =
+                                      room.room_type === "normal"
+                                        ? "عادي"
+                                        : room.room_type === "vip"
+                                          ? "VIP"
+                                          : "";
+                                    const roomTypeDisplay = roomTypeLabel
+                                      ? ` (${roomTypeLabel})`
+                                      : "";
+                                    const bedsCount =
+                                      room.beds_count ?? room.beds?.length ?? 0;
+                                    const priceDisplay =
+                                      room.price_per_day != null
+                                        ? ` — سعر اليوم: ${Number(room.price_per_day).toLocaleString("ar-EG")}`
                                         : "";
-                                  const roomTypeDisplay = roomTypeLabel
-                                    ? ` (${roomTypeLabel})`
-                                    : "";
-                                  return (
-                                    <MenuItem key={room.id} value={String(room.id)}>
-                                      {room.room_number}
-                                      {roomTypeDisplay}
-                                    </MenuItem>
-                                  );
-                                })}
+                                    const bedsSummary =
+                                      room.beds?.length
+                                        ? room.beds
+                                            .map(
+                                              (b: {
+                                                bed_number: string;
+                                                current_admission?: { patient?: { name?: string } } | null;
+                                              }) =>
+                                                `سرير ${b.bed_number}: ${b.current_admission?.patient?.name ?? "متاح"}`
+                                            )
+                                            .join(" • ")
+                                        : "";
+                                    return (
+                                      <MenuItem
+                                        key={room.id}
+                                        value={String(room.id)}
+                                      >
+                                        <ListItemText
+                                          primary={`${room.room_number}${roomTypeDisplay} — ${bedsCount} أسرّة${priceDisplay}`}
+                                          secondary={bedsSummary || undefined}
+                                        />
+                                      </MenuItem>
+                                    );
+                                  });
+                                })()}
                               </Select>
                             </FormControl>
                           )}
@@ -1043,8 +1083,9 @@ export default function AdmissionFormPage() {
                   </Box>
                 </CardContent>
               </Card>
+              )}
 
-              {/* Doctor Section */}
+            {/* Doctor Section */}
               <Card variant="outlined" sx={{ borderRadius: 3 }}>
                 <CardHeader
                   title={

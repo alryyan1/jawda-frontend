@@ -20,7 +20,6 @@ import {
   ClipboardList,
   Stethoscope,
   LayoutGrid,
-  Clock,
 } from "lucide-react";
 import { getActiveAdmissions } from "@/services/admissionService";
 import { getWardsList } from "@/services/wardService";
@@ -458,14 +457,6 @@ export default function AdmissionsDashboardPage() {
                   link="/settings/operations"
                   variant="success"
                   actionText="إدارة العمليات"
-                />
-                <DashboardCard
-                  title="إعدادات احتساب التنويم"
-                  description="قواعد احتساب أيام الإقامة ورسوم التنويم (24 ساعة، اليوم الكامل، الفترة الافتراضية)"
-                  icon={Clock}
-                  link="/settings/admission-settings"
-                  variant="info"
-                  actionText="إعدادات التنويم"
                 />
               </div>
             </div>

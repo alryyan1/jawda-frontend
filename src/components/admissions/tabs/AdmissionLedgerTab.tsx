@@ -73,7 +73,7 @@ export default function AdmissionLedgerTab({ admissionId }: AdmissionLedgerTabPr
   const handleRefreshLedger = () => {
     queryClient.invalidateQueries({ queryKey: ['admissionLedger', admissionId] });
     refetchLedger();
-    toast.success('تم تحديث كشف الحساب (يتم احتساب رسوم الإقامة تلقائياً حسب الإعدادات)');
+    toast.success('تم تحديث كشف الحساب');
   };
 
   const deleteTransactionMutation = useMutation({
@@ -148,6 +148,8 @@ export default function AdmissionLedgerTab({ admissionId }: AdmissionLedgerTabPr
   }
 
   const { summary, entries } = ledgerData;
+  const isShortStay = !!(admissionData?.short_stay_bed_id || admissionData?.booking_type === 'bed');
+  const shortStayDuration = admissionData?.short_stay_duration; // '12h' | '24h'
   const daysAdmitted = admissionData?.days_admitted || 0;
   const roomPricePerDayBase = admissionData?.room?.price_per_day || 0;
   const isWholeRoomBooking = admissionData?.booking_type === 'room';
@@ -234,7 +236,7 @@ export default function AdmissionLedgerTab({ admissionId }: AdmissionLedgerTabPr
                   </Typography>
                 </Box>
               </Box>
-              {dischargeDate && (
+              {dischargeDate && !isShortStay && (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Calendar size={14} />
                   <Box sx={{ flex: 1 }}>
@@ -248,33 +250,56 @@ export default function AdmissionLedgerTab({ admissionId }: AdmissionLedgerTabPr
                 </Box>
               )}
               <Divider sx={{ my: 0.5 }} />
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                    أيام الإقامة
-                  </Typography>
-                  <Tooltip title="اضغط للاطلاع على طريقة الحساب">
-                    <IconButton
-                      size="small"
-                      onClick={() => setDaysCalculationDialogOpen(true)}
-                      sx={{ p: 0.25 }}
-                    >
-                      <HelpCircle size={12} />
-                    </IconButton>
-                  </Tooltip>
-                </Box>
-                <Typography variant="h6" fontWeight={600} color="primary.main" sx={{ fontSize: '1.1rem' }}>
-                  {daysAdmitted} يوم
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                  سعر اليوم {isWholeRoomBooking ? '(غرفة كاملة ×2)' : ''}
-                </Typography>
-                <Typography variant="body2" fontWeight={500} sx={{ fontSize: '0.85rem' }}>
-                  {roomPricePerDay > 0 ? formatNumber(roomPricePerDay) : 'غير محدد'}
-                </Typography>
-              </Box>
+              {isShortStay ? (
+                <>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                      مدة الإقامة
+                    </Typography>
+                    <Typography variant="h6" fontWeight={600} color="primary.main" sx={{ fontSize: '1.1rem' }}>
+                      {shortStayDuration === '12h' ? '12 ساعة' : shortStayDuration === '24h' ? '24 ساعة' : '—'}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                      نوع الإقامة
+                    </Typography>
+                    <Typography variant="body2" fontWeight={500} sx={{ fontSize: '0.85rem' }}>
+                      إقامة قصيرة — تُحتسب عند التنويم
+                    </Typography>
+                  </Box>
+                </>
+              ) : (
+                <>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                        أيام الإقامة
+                      </Typography>
+                      <Tooltip title="اضغط للاطلاع على طريقة الحساب">
+                        <IconButton
+                          size="small"
+                          onClick={() => setDaysCalculationDialogOpen(true)}
+                          sx={{ p: 0.25 }}
+                        >
+                          <HelpCircle size={12} />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                    <Typography variant="h6" fontWeight={600} color="primary.main" sx={{ fontSize: '1.1rem' }}>
+                      {daysAdmitted} يوم
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                      سعر اليوم {isWholeRoomBooking ? '(غرفة كاملة ×2)' : ''}
+                    </Typography>
+                    <Typography variant="body2" fontWeight={500} sx={{ fontSize: '0.85rem' }}>
+                      {roomPricePerDay > 0 ? formatNumber(roomPricePerDay) : 'غير محدد'}
+                    </Typography>
+                  </Box>
+                </>
+              )}
             </Box>
           </CardContent>
         </Card>
@@ -424,7 +449,7 @@ export default function AdmissionLedgerTab({ admissionId }: AdmissionLedgerTabPr
             variant="outlined"
             startIcon={<RefreshCw size={14} />}
             onClick={handleRefreshLedger}
-            title="تحديث كشف الحساب واحتساب رسوم الإقامة تلقائياً حسب عدد الأيام والإعدادات"
+            title={isShortStay ? "تحديث كشف الحساب" : "تحديث كشف الحساب واحتساب رسوم الإقامة تلقائياً حسب عدد الأيام والإعدادات"}
             sx={{ fontSize: '0.75rem', px: 1.5, py: 0.5, whiteSpace: 'nowrap' }}
           >
             تحديث كشف الحساب

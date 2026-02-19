@@ -111,9 +111,7 @@ import RoomFormPage, {
 import BedsListPage from "./pages/settings/beds/BedsListPage";
 import BedFormPage, { BedFormMode } from "./pages/settings/beds/BedFormPage";
 import ShortStayBedsListPage from "./pages/settings/short-stay-beds/ShortStayBedsListPage";
-import OperationsListPage from "./pages/operations/OperationsListPage";
-import OperationFormPage from "./pages/operations/OperationFormPage";
-import OperationsSettingsPage from "./pages/settings/OperationsSettingsPage";
+// Operations imports removed
 
 const router = createBrowserRouter([
   // --- PUBLIC ROUTES ---
@@ -217,26 +215,6 @@ const router = createBrowserRouter([
               {
                 path: ":id",
                 element: <AdmissionDetailsPage />,
-              },
-            ],
-          },
-
-          // Operations Management (Surgical Operations)
-          {
-            path: "operations",
-            element: <Outlet />,
-            children: [
-              {
-                index: true,
-                element: <OperationsListPage />,
-              },
-              {
-                path: "new",
-                element: <OperationFormPage />,
-              },
-              {
-                path: ":id/edit",
-                element: <OperationFormPage />,
               },
             ],
           },
@@ -537,10 +515,7 @@ const router = createBrowserRouter([
                 ],
               },
               // Beds Management
-              {
-                path: "operations",
-                element: <OperationsSettingsPage />,
-              },
+
               {
                 path: "beds",
                 element: <Outlet />,

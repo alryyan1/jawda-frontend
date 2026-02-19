@@ -1,10 +1,17 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import { getAdmissions, getAdmissionBalance, exportAdmissionsListPdf } from "@/services/admissionService";
+import {
+  getAdmissions,
+  getAdmissionBalance,
+  exportAdmissionsListPdf,
+} from "@/services/admissionService";
 import { getWardsList } from "@/services/wardService";
 import { getRooms } from "@/services/roomService";
-import type { Admission, PaginatedAdmissionsResponse } from "@/types/admissions";
+import type {
+  Admission,
+  PaginatedAdmissionsResponse,
+} from "@/types/admissions";
 import {
   Button,
   Card,
@@ -24,9 +31,11 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Stack,
 } from "@mui/material";
 import { Plus, Search, Eye, LayoutDashboard, FileDown } from "lucide-react";
 import { formatNumber } from "@/lib/utils";
+import DischargeDialog from "@/components/admissions/DischargeDialog";
 
 // Small cell component to show ledger summary fields using /admissions/{id}/balance
 function AdmissionBalanceCell({
@@ -69,6 +78,10 @@ export default function AdmissionsListPage() {
   const [wardFilter, setWardFilter] = useState<string>("");
   const [roomFilter, setRoomFilter] = useState<string>("");
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [dischargeDialogOpen, setDischargeDialogOpen] = useState(false);
+  const [selectedAdmission, setSelectedAdmission] = useState<Admission | null>(
+    null,
+  );
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -202,7 +215,11 @@ export default function AdmissionsListPage() {
             >
               لوحة التحكم
             </Button>
-            <Typography variant="h5" fontWeight={700} sx={{ fontSize: "1.5rem" }}>
+            <Typography
+              variant="h5"
+              fontWeight={700}
+              sx={{ fontSize: "1.5rem" }}
+            >
               إدارة التنويم
             </Typography>
           </div>
@@ -210,7 +227,9 @@ export default function AdmissionsListPage() {
             <Button
               variant="outlined"
               size="large"
-              startIcon={pdfLoading ? <CircularProgress size={18} /> : <FileDown />}
+              startIcon={
+                pdfLoading ? <CircularProgress size={18} /> : <FileDown />
+              }
               onClick={handleExportPdf}
               disabled={pdfLoading}
               sx={{
@@ -284,7 +303,10 @@ export default function AdmissionsListPage() {
             }}
             size="small"
             InputLabelProps={{ shrink: true }}
-            sx={{ minWidth: 180, "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+            sx={{
+              minWidth: 180,
+              "& .MuiOutlinedInput-root": { borderRadius: 2 },
+            }}
           />
           <TextField
             type="date"
@@ -296,7 +318,10 @@ export default function AdmissionsListPage() {
             }}
             size="small"
             InputLabelProps={{ shrink: true }}
-            sx={{ minWidth: 180, "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+            sx={{
+              minWidth: 180,
+              "& .MuiOutlinedInput-root": { borderRadius: 2 },
+            }}
           />
           <FormControl size="small" sx={{ minWidth: 180 }}>
             <InputLabel>القسم</InputLabel>
@@ -604,7 +629,12 @@ export default function AdmissionsListPage() {
                     <TableCell sx={{ py: 1.5 }}>
                       <Chip
                         label={getStatusLabel(admission.status)}
-                        color={getStatusColor(admission.status) as "success" | "default" | "info"}
+                        color={
+                          getStatusColor(admission.status) as
+                            | "success"
+                            | "default"
+                            | "info"
+                        }
                         size="small"
                         sx={{ fontWeight: 500, fontSize: "0.8rem" }}
                       />
@@ -614,11 +644,17 @@ export default function AdmissionsListPage() {
                       sx={{ py: 1.5 }}
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <Button
-                        component={Link}
-                        to={`/admissions/${admission.id}`}
-                        size="small"
-                        variant="outlined"
+                      <Stack
+                        direction={"row"}
+                        alignItems={"center"}
+                        justifyContent={"center"}
+                        spacing={1}
+                      >
+                        <Button
+                          component={Link}
+                          to={`/admissions/${admission.id}`}
+                          size="small"
+                          variant="outlined"
                         startIcon={<Eye size={16} />}
                         sx={{
                           borderRadius: 2,
@@ -628,6 +664,27 @@ export default function AdmissionsListPage() {
                       >
                         عرض
                       </Button>
+                      {admission.status === "admitted" && (
+                        <Button
+                          variant="contained"
+                          color="error"
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedAdmission(admission);
+                            setDischargeDialogOpen(true);
+                          }}
+                          sx={{
+                            mr: 1,
+                            borderRadius: 2,
+                            textTransform: "none",
+                            fontWeight: 600,
+                          }}
+                        >
+                          خروج
+                        </Button>
+                      )}
+                      </Stack>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -658,7 +715,11 @@ export default function AdmissionsListPage() {
               >
                 السابق
               </Button>
-              <Typography variant="body2" fontWeight={600} color="text.secondary">
+              <Typography
+                variant="body2"
+                fontWeight={600}
+                color="text.secondary"
+              >
                 صفحة {page} من {data.meta.last_page}
               </Typography>
               <Button
@@ -674,6 +735,17 @@ export default function AdmissionsListPage() {
           ) : null}
         </Card>
       </div>
+
+      {selectedAdmission && (
+        <DischargeDialog
+          open={dischargeDialogOpen}
+          onClose={() => {
+            setDischargeDialogOpen(false);
+            setSelectedAdmission(null);
+          }}
+          admission={selectedAdmission}
+        />
+      )}
     </div>
   );
 }

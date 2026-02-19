@@ -60,7 +60,7 @@ type AdmissionFormValues = {
   specialist_doctor_id: string;
   notes: string;
   provisional_diagnosis: string;
-  operations: string;
+
   medical_history: string;
   current_medications: string;
   referral_source: string;
@@ -109,9 +109,14 @@ export default function AdmissionOverviewTab({
       ward_id: admission.ward?.id ? String(admission.ward.id) : "",
       room_id: admission.room?.id ? String(admission.room.id) : "",
       bed_id: admission.bed?.id ? String(admission.bed.id) : "",
-      booking_type: admission.booking_type ?? (admission.short_stay_bed_id ? "bed" : "room"),
-      short_stay_bed_id: admission.short_stay_bed_id ? String(admission.short_stay_bed_id) : "",
-      short_stay_duration: (admission.short_stay_duration as "12h" | "24h") || "",
+      booking_type:
+        admission.booking_type ??
+        (admission.short_stay_bed_id ? "bed" : "room"),
+      short_stay_bed_id: admission.short_stay_bed_id
+        ? String(admission.short_stay_bed_id)
+        : "",
+      short_stay_duration:
+        (admission.short_stay_duration as "12h" | "24h") || "",
       admission_date: admission.admission_date
         ? new Date(admission.admission_date)
         : null,
@@ -125,7 +130,7 @@ export default function AdmissionOverviewTab({
         : "",
       notes: admission.notes || "",
       provisional_diagnosis: admission.provisional_diagnosis || "",
-      operations: admission.operations || "",
+
       medical_history: admission.medical_history || "",
       current_medications: admission.current_medications || "",
       referral_source: admission.referral_source || "",
@@ -152,7 +157,10 @@ export default function AdmissionOverviewTab({
 
   const prevBookingTypeRef = useRef<"bed" | "room" | null>(null);
   useEffect(() => {
-    if (prevBookingTypeRef.current !== null && prevBookingTypeRef.current !== bookingType) {
+    if (
+      prevBookingTypeRef.current !== null &&
+      prevBookingTypeRef.current !== bookingType
+    ) {
       if (bookingType === "bed") {
         setValue("ward_id", "");
         setValue("room_id", "");
@@ -196,8 +204,10 @@ export default function AdmissionOverviewTab({
 
   const onSubmit = (data: AdmissionFormValues) => {
     if (data.booking_type === "bed") {
-      if (!data.short_stay_bed_id) return toast.error("يرجى اختيار سرير الإقامة القصيرة");
-      if (!data.short_stay_duration) return toast.error("يرجى تحديد مدة الإقامة (12 ساعة أو 24 ساعة)");
+      if (!data.short_stay_bed_id)
+        return toast.error("يرجى اختيار سرير الإقامة القصيرة");
+      if (!data.short_stay_duration)
+        return toast.error("يرجى تحديد مدة الإقامة (12 ساعة أو 24 ساعة)");
     } else {
       if (!data.ward_id) return toast.error("يرجى اختيار القسم");
       if (!data.room_id) return toast.error("يرجى اختيار الغرفة");
@@ -217,11 +227,19 @@ export default function AdmissionOverviewTab({
     }
 
     const submissionData: Partial<AdmissionFormData> = {
-      ward_id: (data.booking_type === "room" ? data.ward_id : null) as string | undefined,
-      room_id: (data.booking_type === "room" ? data.room_id : null) as string | undefined,
+      ward_id: (data.booking_type === "room" ? data.ward_id : null) as
+        | string
+        | undefined,
+      room_id: (data.booking_type === "room" ? data.room_id : null) as
+        | string
+        | undefined,
       bed_id: undefined,
-      short_stay_bed_id: data.booking_type === "bed" ? data.short_stay_bed_id : undefined,
-      short_stay_duration: data.booking_type === "bed" && data.short_stay_duration ? (data.short_stay_duration as "12h" | "24h") : undefined,
+      short_stay_bed_id:
+        data.booking_type === "bed" ? data.short_stay_bed_id : undefined,
+      short_stay_duration:
+        data.booking_type === "bed" && data.short_stay_duration
+          ? (data.short_stay_duration as "12h" | "24h")
+          : undefined,
       booking_type: data.booking_type,
       admission_date: data.admission_date,
       admission_time: formattedTime,
@@ -232,7 +250,7 @@ export default function AdmissionOverviewTab({
       specialist_doctor_id: data.specialist_doctor_id || undefined,
       notes: data.notes || null,
       provisional_diagnosis: data.provisional_diagnosis || null,
-      operations: data.operations || null,
+
       medical_history: data.medical_history || null,
       current_medications: data.current_medications || null,
       referral_source: data.referral_source || null,
@@ -535,23 +553,7 @@ export default function AdmissionOverviewTab({
                       />
                     </Box>
                   </Box>
-                  <Box sx={{ width: "100%" }}>
-                    <Controller
-                      name="operations"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          fullWidth
-                          label="العمليات (مع التواريخ)"
-                          multiline
-                          rows={2}
-                          {...field}
-                          disabled={mutation.isPending}
-                          placeholder="اسم العملية - التاريخ"
-                        />
-                      )}
-                    />
-                  </Box>
+
                   <Box
                     sx={{
                       display: "flex",
@@ -640,7 +642,9 @@ export default function AdmissionOverviewTab({
                           label="نوع الحجز"
                           disabled={mutation.isPending}
                         >
-                          <MenuItem value="bed">حجز عن طريق السرير (إقامة قصيرة)</MenuItem>
+                          <MenuItem value="bed">
+                            حجز عن طريق السرير (إقامة قصيرة)
+                          </MenuItem>
                           <MenuItem value="room">حجز عن طريق الغرفة</MenuItem>
                         </Select>
                       </FormControl>
@@ -669,7 +673,8 @@ export default function AdmissionOverviewTab({
                             >
                               {shortStayBedsData?.data?.map((bed) => (
                                 <MenuItem key={bed.id} value={String(bed.id)}>
-                                  {bed.bed_number} — 12 ساعة: {bed.price_12h} | 24 ساعة: {bed.price_24h}
+                                  {bed.bed_number} — 12 ساعة: {bed.price_12h} |
+                                  24 ساعة: {bed.price_24h}
                                 </MenuItem>
                               ))}
                             </Select>
@@ -686,7 +691,10 @@ export default function AdmissionOverviewTab({
                             <Select
                               {...field}
                               label="مدة الإقامة"
-                              disabled={mutation.isPending || !watch("short_stay_bed_id")}
+                              disabled={
+                                mutation.isPending ||
+                                !watch("short_stay_bed_id")
+                              }
                               startAdornment={
                                 <Clock
                                   size={16}
@@ -767,7 +775,10 @@ export default function AdmissionOverviewTab({
                                   ? ` (${roomTypeLabel})`
                                   : "";
                                 return (
-                                  <MenuItem key={room.id} value={String(room.id)}>
+                                  <MenuItem
+                                    key={room.id}
+                                    value={String(room.id)}
+                                  >
                                     {room.room_number}
                                     {roomTypeDisplay}
                                   </MenuItem>

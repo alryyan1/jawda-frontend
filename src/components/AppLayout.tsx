@@ -153,7 +153,7 @@ export const allMainNavItems: NavItem[] = [
   { to: "/attendance/sheet", label: "سجل الحضور", icon: ClipboardEditIcon },
   { to: "/patients", label: "المرضى", icon: Users },
   { to: "/admissions", label: "التنويم", icon: Hospital },
-  { to: "/operations", label: "العمليات الجراحية", icon: Stethoscope },
+
   { to: "/online-booking", label: "الحجز ", icon: CalendarCheck2 },
   { to: "/cash-reconciliation", label: "الفئات الماليه", icon: CreditCard },
 ];
@@ -1280,7 +1280,7 @@ const AppLayout: React.FC = () => {
                               icon={Layers}
                               label="فئات الاطباء والخدمات"
                             />
-                            
+
                             <SettingsMenuItem
                               to="/settings/services"
                               icon={ListOrdered}

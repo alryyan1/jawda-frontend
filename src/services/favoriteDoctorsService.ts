@@ -38,10 +38,13 @@ export interface AddFavoriteRequest {
  */
 export const getFavoriteDoctors = async (): Promise<FavoriteDoctor[]> => {
   try {
-    const response = await apiClient.get('/favorite-doctors');
-    return response.data.data;
+    const response = await apiClient.get("/favorite-doctors");
+    if (Array.isArray(response.data.data)) {
+      return response.data.data;
+    }
+    return Object.values(response.data.data);
   } catch (error: unknown) {
-    console.error('Error fetching favorite doctors:', error);
+    console.error("Error fetching favorite doctors:", error);
     // Error toast will be shown by the global API interceptor
     throw error;
   }
@@ -50,14 +53,16 @@ export const getFavoriteDoctors = async (): Promise<FavoriteDoctor[]> => {
 /**
  * Get all doctors with their favorite status for the current user
  */
-export const getDoctorsWithFavorites = async (search: string = ''): Promise<Doctor[]> => {
+export const getDoctorsWithFavorites = async (
+  search: string = "",
+): Promise<Doctor[]> => {
   try {
-    const response = await apiClient.get('/doctors-with-favorites', {
-      params: { search }
+    const response = await apiClient.get("/doctors-with-favorites", {
+      params: { search },
     });
     return response.data.data;
   } catch (error: unknown) {
-    console.error('Error fetching doctors with favorites:', error);
+    console.error("Error fetching doctors with favorites:", error);
     // Error toast will be shown by the global API interceptor
     throw error;
   }
@@ -66,11 +71,13 @@ export const getDoctorsWithFavorites = async (search: string = ''): Promise<Doct
 /**
  * Add a doctor to favorites
  */
-export const addFavoriteDoctor = async (data: AddFavoriteRequest): Promise<void> => {
+export const addFavoriteDoctor = async (
+  data: AddFavoriteRequest,
+): Promise<void> => {
   try {
-    await apiClient.post('/favorite-doctors', data);
+    await apiClient.post("/favorite-doctors", data);
   } catch (error: unknown) {
-    console.error('Error adding favorite doctor:', error);
+    console.error("Error adding favorite doctor:", error);
     // Error toast will be shown by the global API interceptor
     throw error;
   }
@@ -83,7 +90,7 @@ export const removeFavoriteDoctor = async (docId: number): Promise<void> => {
   try {
     await apiClient.delete(`/favorite-doctors/${docId}`);
   } catch (error: unknown) {
-    console.error('Error removing favorite doctor:', error);
+    console.error("Error removing favorite doctor:", error);
     // Error toast will be shown by the global API interceptor
     throw error;
   }
@@ -92,11 +99,13 @@ export const removeFavoriteDoctor = async (docId: number): Promise<void> => {
 /**
  * Toggle favorite status for a doctor
  */
-export const toggleFavoriteDoctor = async (data: ToggleFavoriteRequest): Promise<void> => {
+export const toggleFavoriteDoctor = async (
+  data: ToggleFavoriteRequest,
+): Promise<void> => {
   try {
-    await apiClient.post('/favorite-doctors/toggle', data);
+    await apiClient.post("/favorite-doctors/toggle", data);
   } catch (error: unknown) {
-    console.error('Error toggling favorite doctor:', error);
+    console.error("Error toggling favorite doctor:", error);
     // Error toast will be shown by the global API interceptor
     throw error;
   }
@@ -107,23 +116,23 @@ export const toggleFavoriteDoctor = async (data: ToggleFavoriteRequest): Promise
  */
 export const getFavoriteDoctorIds = async (): Promise<number[]> => {
   const favorites = await getFavoriteDoctors();
-  return favorites.map(doctor => doctor.id);
+  return favorites.map((doctor) => doctor.id);
 };
 
 /**
  * Get all services for autocomplete
  */
-export const getServices = async (search: string = ''): Promise<Service[]> => {
+export const getServices = async (search: string = ""): Promise<Service[]> => {
   try {
-    const response = await apiClient.get('/services', {
-      params: { 
+    const response = await apiClient.get("/services", {
+      params: {
         search,
-        per_page: 1000 // Limit results for autocomplete
-      }
+        per_page: 1000, // Limit results for autocomplete
+      },
     });
     return response.data.data || response.data;
   } catch (error: unknown) {
-    console.error('Error fetching services:', error);
+    console.error("Error fetching services:", error);
     // Error toast will be shown by the global API interceptor
     throw error;
   }

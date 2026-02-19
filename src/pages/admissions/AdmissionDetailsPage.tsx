@@ -22,7 +22,7 @@ import AdmissionServicesTab from "@/components/admissions/tabs/AdmissionServices
 import AdmissionDocumentsTab from "@/components/admissions/tabs/AdmissionDocumentsTab";
 import AdmissionLedgerTab from "@/components/admissions/tabs/AdmissionLedgerTab";
 import AdmissionLabTestsTab from "@/components/admissions/tabs/AdmissionLabTestsTab";
-import AdmissionOperationsTab from "@/components/admissions/tabs/AdmissionOperationsTab";
+
 import AdmissionPatientFileTab from "@/components/admissions/tabs/AdmissionPatientFileTab";
 
 interface TabPanelProps {
@@ -181,7 +181,7 @@ export default function AdmissionDetailsPage() {
               <Tab label="العلامات الحيوية" />
               <Tab label="الخدمات الطبية" />
               <Tab label="كشف الحساب" />
-              <Tab label="العمليات" />
+
               <Tab label="الوثائق" />
               <Tab label="الفحوصات المختبرية" />
               <Tab label="ملف الإقامة" />
@@ -200,16 +200,14 @@ export default function AdmissionDetailsPage() {
             <TabPanel value={currentTab} index={3}>
               <AdmissionLedgerTab admissionId={admissionData.id} />
             </TabPanel>
+
             <TabPanel value={currentTab} index={4}>
-              <AdmissionOperationsTab admissionId={admissionData.id} />
-            </TabPanel>
-            <TabPanel value={currentTab} index={5}>
               <AdmissionDocumentsTab admission={admissionData} />
             </TabPanel>
-            <TabPanel value={currentTab} index={6}>
+            <TabPanel value={currentTab} index={5}>
               <AdmissionLabTestsTab admissionId={admissionData.id} />
             </TabPanel>
-            <TabPanel value={currentTab} index={7}>
+            <TabPanel value={currentTab} index={6}>
               <AdmissionPatientFileTab admissionId={admissionData.id} />
             </TabPanel>
           </Box>

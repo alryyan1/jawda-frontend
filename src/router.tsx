@@ -111,7 +111,7 @@ import RoomFormPage, {
 import BedsListPage from "./pages/settings/beds/BedsListPage";
 import BedFormPage, { BedFormMode } from "./pages/settings/beds/BedFormPage";
 import ShortStayBedsListPage from "./pages/settings/short-stay-beds/ShortStayBedsListPage";
-// Operations imports removed
+import SurgicalOperationsPage from "./pages/settings/SurgicalOperationsPage";
 
 const router = createBrowserRouter([
   // --- PUBLIC ROUTES ---
@@ -535,10 +535,13 @@ const router = createBrowserRouter([
                   },
                 ],
               },
-              // Short Stay Beds Management
               {
                 path: "short-stay-beds",
                 element: <ShortStayBedsListPage />,
+              },
+              {
+                path: "operations",
+                element: <SurgicalOperationsPage />,
               },
               {
                 path: "attendance",

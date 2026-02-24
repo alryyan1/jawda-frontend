@@ -64,7 +64,7 @@ function ValueLoader({ api, field }: { api: string; field?: string }) {
       .then(({ data }) => {
         if (!mounted) return;
         const response = data?.data ?? data;
-        if (field && response && typeof response === 'object') {
+        if (field && response && typeof response === "object") {
           setValue(response[field] || 0);
         } else {
           setValue(response || 0);
@@ -79,7 +79,7 @@ function ValueLoader({ api, field }: { api: string; field?: string }) {
     const num = Number(value);
     return isNaN(num) ? String(value) : formatNumber(num);
   }, [value]);
-  return <TableCell className="text-xl!">{formatted}</TableCell>;
+  return <TableCell className="text-sm!">{formatted}</TableCell>;
 }
 
 function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
@@ -91,13 +91,18 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
   const [showCashReclaimDialog, setShowCashReclaimDialog] = useState(false);
   const [update, setUpdate] = useState(0);
   const [showAdditionalCosts, setShowAdditionalCosts] = useState(false);
-  const [selectedDoctorShift, setSelectedDoctorShift] = useState<DoctorShiftItem | null>(null);
-  const [shiftServiceCosts, setShiftServiceCosts] = useState<{ id: number; name: string; amount: number }[]>([]);
-  const [shiftServiceCostsLoading, setShiftServiceCostsLoading] = useState(false);
+  const [selectedDoctorShift, setSelectedDoctorShift] =
+    useState<DoctorShiftItem | null>(null);
+  const [shiftServiceCosts, setShiftServiceCosts] = useState<
+    { id: number; name: string; amount: number }[]
+  >([]);
+  const [shiftServiceCostsLoading, setShiftServiceCostsLoading] =
+    useState(false);
   /** Sub-service-cost IDs already added to costs table for the selected doctor shift (استحقاق نقدي per cost) */
   const [addedSubCostIds, setAddedSubCostIds] = useState<number[]>([]);
   /** When opening cash reclaim from a cost row, this is that cost's sub_service_cost_id */
-  const [selectedSubCostIdForReclaim, setSelectedSubCostIdForReclaim] = useState<number | null>(null);
+  const [selectedSubCostIdForReclaim, setSelectedSubCostIdForReclaim] =
+    useState<number | null>(null);
   const [isAddingCost, setIsAddingCost] = useState(false);
   // Removed fetching of last shift as it is not used currently
   const { user } = useAuth();
@@ -114,13 +119,20 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
     }
     setShiftServiceCostsLoading(true);
     Promise.all([
-      apiClient.get(`/doctor-shifts/${selectedDoctorShift.id}/shift-service-costs`),
-      apiClient.get('/costs-report-data', {
-        params: { doctor_shift_id_for_sub_cost: selectedDoctorShift.id, per_page: 100 },
+      apiClient.get(
+        `/doctor-shifts/${selectedDoctorShift.id}/shift-service-costs`,
+      ),
+      apiClient.get("/costs-report-data", {
+        params: {
+          doctor_shift_id_for_sub_cost: selectedDoctorShift.id,
+          per_page: 100,
+        },
       }),
     ])
       .then(([costsRes, addedRes]) => {
-        const list = Array.isArray(costsRes.data?.data) ? costsRes.data.data : [];
+        const list = Array.isArray(costsRes.data?.data)
+          ? costsRes.data.data
+          : [];
         setShiftServiceCosts(list);
         const addedList = addedRes.data?.data ?? addedRes.data ?? [];
         const ids = (Array.isArray(addedList) ? addedList : [])
@@ -137,17 +149,19 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
 
   useEffect(() => {
     // Get all doctor shifts
-    apiClient.get("/doctor-shifts", {
-      params: {
-        // status: '1', // Only open shiftst
-        today: true,
-        per_page: 100,
-        shift_id: currentClinicShift?.id
-      }
-    }).then(({ data }) => {
-      const list = Array.isArray(data?.data) ? data.data : data;
-      setDoctorShifts(list);
-    });
+    apiClient
+      .get("/doctor-shifts", {
+        params: {
+          // status: '1', // Only open shiftst
+          today: true,
+          per_page: 100,
+          shift_id: currentClinicShift?.id,
+        },
+      })
+      .then(({ data }) => {
+        const list = Array.isArray(data?.data) ? data.data : data;
+        setDoctorShifts(list);
+      });
   }, [update, currentClinicShift?.id]);
 
   const addCost = (
@@ -157,36 +171,40 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
     doctorName: string,
     setIsLoading: (loading: boolean) => void,
     subServiceCostId?: number,
-    onSubCostSuccess?: () => void
+    onSubCostSuccess?: () => void,
   ) => {
     setIsLoading(true);
     setIsAddingCost(true);
-    
+
     // Get current shift ID from auth context
     const currentShiftId = currentClinicShift?.id;
-    
+
     if (!currentShiftId) {
-      console.error('No current shift available');
+      console.error("No current shift available");
       setIsLoading(false);
       setIsAddingCost(false);
       return;
     }
     if ((amountCash || 0) <= 0 && (amountBank || 0) <= 0) {
-      console.error('At least one amount (cash or bank) must be greater than zero.');
+      console.error(
+        "At least one amount (cash or bank) must be greater than zero.",
+      );
       setIsLoading(false);
       setIsAddingCost(false);
       return;
     }
-    
+
     const payload: Record<string, unknown> = {
       shift_id: currentShiftId,
       doctor_shift_id: subServiceCostId != null ? undefined : doctorShiftId,
-      description: subServiceCostId != null
-        ? `خصم مصروف خدمة - استحقاق الطبيب ${doctorName}`
-        : `خصم استحقاق الطبيب ${doctorName}`,
-      comment: subServiceCostId != null
-        ? `خصم تكلفة إضافية (مصروف الخدمة) - ${doctorName}`
-        : `خصم تلقائي من استحقاق الطبيب ${doctorName}`,
+      description:
+        subServiceCostId != null
+          ? `خصم مصروف خدمة - استحقاق الطبيب ${doctorName}`
+          : `خصم استحقاق الطبيب ${doctorName}`,
+      comment:
+        subServiceCostId != null
+          ? `خصم تكلفة إضافية (مصروف الخدمة) - ${doctorName}`
+          : `خصم تلقائي من استحقاق الطبيب ${doctorName}`,
       amount_cash_input: amountCash,
       amount_bank_input: amountBank,
     };
@@ -194,21 +212,25 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
       payload.doctor_shift_id_for_sub_cost = doctorShiftId;
       payload.sub_service_cost_id = subServiceCostId;
     }
-    
+
     apiClient
-      .post('/costs', payload)
+      .post("/costs", payload)
       .then(({ data }) => {
-        console.log('Cost added successfully:', data);
+        console.log("Cost added successfully:", data);
         setUpdate((prev) => prev + 1);
         setAllMoneyUpdatedLab((prev) => prev + 1);
         if (subServiceCostId != null) {
-          setAddedSubCostIds((prev) => (prev.includes(subServiceCostId) ? prev : [...prev, subServiceCostId]));
+          setAddedSubCostIds((prev) =>
+            prev.includes(subServiceCostId)
+              ? prev
+              : [...prev, subServiceCostId],
+          );
           setSelectedSubCostIdForReclaim(null);
           onSubCostSuccess?.();
         }
       })
       .catch((error) => {
-        console.error('Error adding cost:', error);
+        console.error("Error adding cost:", error);
         // You might want to show a toast notification here
       })
       .finally(() => {
@@ -217,18 +239,23 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
       });
   };
 
-
   useEffect(() => {
     setCashAmount(0);
     setBankAmount(0);
     if (selectedDoctorShift) {
-      const api = selectedDoctorShift.doctor?.calc_insurance ? "doctor-shifts" : "doctor-shifts";
-      apiClient.get<{ data: DoctorShiftFinancialSummary }>(`${api}/${selectedDoctorShift.id}/financial-summary`).then(({ data }) => {
-        const summary: DoctorShiftFinancialSummary = data?.data ?? data;
-        const cashAmount = summary?.total_doctor_share || 0;
-        setCashAmount(cashAmount);
-        setTemp(cashAmount);
-      });
+      const api = selectedDoctorShift.doctor?.calc_insurance
+        ? "doctor-shifts"
+        : "doctor-shifts";
+      apiClient
+        .get<{
+          data: DoctorShiftFinancialSummary;
+        }>(`${api}/${selectedDoctorShift.id}/financial-summary`)
+        .then(({ data }) => {
+          const summary: DoctorShiftFinancialSummary = data?.data ?? data;
+          const cashAmount = summary?.total_doctor_share || 0;
+          setCashAmount(cashAmount);
+          setTemp(cashAmount);
+        });
     }
   }, [selectedDoctorShift]);
 
@@ -242,7 +269,7 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
     if (!selectedDoctorShift?.id) return;
 
     if ((cashAmount || 0) <= 0 && (bankAmount || 0) <= 0) {
-      alert('يجب أن يكون أحد المبلغين (الصندوق أو البنك) أكبر من صفر');
+      alert("يجب أن يكون أحد المبلغين (الصندوق أو البنك) أكبر من صفر");
       setIsLoading(false);
       return;
     }
@@ -252,40 +279,47 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
       selectedDoctorShift.id,
       cashAmount,
       bankAmount,
-      selectedDoctorShift.doctor?.name || selectedDoctorShift.doctor_name || '',
+      selectedDoctorShift.doctor?.name || selectedDoctorShift.doctor_name || "",
       setIsLoading,
       subCostId,
-      subCostId != null ? () => { setShowCashReclaimDialog(false); } : undefined
+      subCostId != null
+        ? () => {
+            setShowCashReclaimDialog(false);
+          }
+        : undefined,
     );
 
     // Only update proofing flags when this is the main cash reclaim (not per-cost)
     if (subCostId == null) {
       apiClient
         .put(`/doctor-shifts/${selectedDoctorShift.id}/update-proofing-flags`, {
-          is_cash_reclaim_prooved: true
+          is_cash_reclaim_prooved: true,
         })
         .then(({ data }) => {
           setShowCashReclaimDialog(false);
           const updated = data?.data ?? data;
-          setDoctorShifts((prev) => prev.map((item) => (item.id === selectedDoctorShift.id ? updated : item)));
+          setDoctorShifts((prev) =>
+            prev.map((item) =>
+              item.id === selectedDoctorShift.id ? updated : item,
+            ),
+          );
         })
         .catch(() => {})
         .finally(() => setIsLoading(false));
     }
   };
-  const {hasRole}= useAuthorization();
+  const { hasRole } = useAuthorization();
 
   return (
-    <Paper elevation={2} sx={{ p: 1 }}>
-      <Typography variant="h6" sx={{ mb: 1 }}>
-      </Typography>
-        <Table style={{ direction: "rtl" }} className="text-xl!" size="small">
+
+    <>   <Table style={{ direction: "rtl" }} className="text-sm!" size="small">
         <TableHead>
           <TableRow>
             <TableCell>الحالة</TableCell>
             <TableCell>الاسم</TableCell>
             <TableCell>اجمالي الاستحقاق</TableCell>
             <TableCell>عدد المرضي</TableCell>
+            <TableCell>الأجر الثابت</TableCell>
             <TableCell>استحقاق النقدي</TableCell>
             <TableCell>استحقاق التامين</TableCell>
             <TableCell>الزمن</TableCell>
@@ -296,10 +330,10 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
         <TableBody>
           {doctorShifts
             .filter((d) => {
-              if(hasRole('admin')){
+              if (hasRole("admin")) {
                 return true;
               }
-              if(user?.user_type == 'خزنه موحده'){
+              if (user?.user_type == "خزنه موحده") {
                 return true;
               }
               return d.user_id_opened === user?.id;
@@ -307,40 +341,59 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
             .map((shift) => {
               // Determine if shift is open - status can be boolean, number, or string
               const statusValue = shift.status;
-              const isOpen = statusValue === true || 
-                            (typeof statusValue === 'number' && statusValue === 1) || 
-                            (typeof statusValue === 'string' && (statusValue === "1" || statusValue === "Open"));
-              
+              const isOpen =
+                statusValue === true ||
+                (typeof statusValue === "number" && statusValue === 1) ||
+                (typeof statusValue === "string" &&
+                  (statusValue === "1" || statusValue === "Open"));
+
               return (
                 <TableRow key={shift.id}>
-                  <TableCell className="text-xl!">
+                  <TableCell className="text-sm!">
                     <Box
                       sx={{
                         width: 12,
                         height: 12,
-                        borderRadius: '50%',
-                        backgroundColor: isOpen ? '#4CAF50' : '#F44336', // Green for open, red for closed
-                        margin: '0 auto',
-                        border: '2px solid',
-                        borderColor: isOpen ? '#2E7D32' : '#C62828', // Darker border
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                        borderRadius: "50%",
+                        backgroundColor: isOpen ? "#4CAF50" : "#F44336", // Green for open, red for closed
+                        margin: "0 auto",
+                        border: "2px solid",
+                        borderColor: isOpen ? "#2E7D32" : "#C62828", // Darker border
+                        boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
                       }}
-                      title={isOpen ? 'مفتوح' : 'مغلق'}
+                      title={isOpen ? "مفتوح" : "مغلق"}
                     />
                   </TableCell>
-                  <TableCell className="text-xl!">{shift.doctor?.name || shift.doctor_name}</TableCell>
-                  <ValueLoader api={`doctor-shifts/${shift.id}/financial-summary`} field="total_doctor_share" />
-                  <TableCell className="text-xl!">{shift.doctor_visits_count}</TableCell>
-                  <ValueLoader api={`doctor-shifts/${shift.id}/financial-summary`} field="doctor_cash_share_total" />
-                  <ValueLoader api={`doctor-shifts/${shift.id}/financial-summary`} field="doctor_insurance_share_total" />
-                  <TableCell className="text-xl!">
+                  <TableCell className="text-sm!">
+                    {shift.doctor?.name || shift.doctor_name}
+                  </TableCell>
+                  <ValueLoader
+                    api={`doctor-shifts/${shift.id}/financial-summary`}
+                    field="total_doctor_share"
+                  />
+                  <TableCell className="text-sm!">
+                    {shift.doctor_visits_count}
+                  </TableCell>
+                  <ValueLoader
+                    api={`doctor-shifts/${shift.id}/financial-summary`}
+                    field="doctor_fixed_share_for_shift"
+                  />
+                  <ValueLoader
+                    api={`doctor-shifts/${shift.id}/financial-summary`}
+                    field="doctor_cash_share_total"
+                  />
+                  <ValueLoader
+                    api={`doctor-shifts/${shift.id}/financial-summary`}
+                    field="doctor_insurance_share_total"
+                  />
+                  <TableCell className="text-sm!">
                     {shift.created_at
                       ? dayjs(Date.parse(shift.created_at)).format("H:m A")
                       : "-"}
                   </TableCell>
-                  <TableCell className="text-xl!">
+                  <TableCell className="text-sm!">
                     <Button
-                      disabled={ Boolean(shift.is_cash_reclaim_prooved)}
+                      disabled={Boolean(shift.is_cash_reclaim_prooved)}
                       onClick={() => {
                         setShowCashReclaimDialog(true);
                         setSelectedDoctorShift(shift);
@@ -348,10 +401,10 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
                       variant="contained"
                       size="small"
                     >
-                      اثبات الاستحقاق النقدي
+                        اثبات الاستحقاق النقدي
                     </Button>
                   </TableCell>
-                  <TableCell className="text-xl!">
+                  <TableCell className="text-sm!">
                     <Button
                       onClick={() => {
                         setSelectedDoctorShift(shift);
@@ -366,35 +419,48 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
               );
             })}
         </TableBody>
-      </Table>
-
-      {/* Additional Costs Dialog – shift service costs (مصروف الخدمات) */}
-      <Dialog open={showAdditionalCosts} onClose={() => setShowAdditionalCosts(false)} fullWidth maxWidth="sm">
+      </Table> {/* Additional Costs Dialog – shift service costs (مصروف الخدمات) */}
+      <Dialog
+        open={showAdditionalCosts}
+        onClose={() => setShowAdditionalCosts(false)}
+        
+        maxWidth="sm"
+      >
         <DialogTitle>التكاليف الإضافية (مصروف الخدمات)</DialogTitle>
         <DialogContent>
           {selectedDoctorShift && (
             <Typography variant="body2" sx={{ mb: 2 }}>
-              الطبيب: {selectedDoctorShift.doctor?.name || selectedDoctorShift.doctor_name}
+              الطبيب:{" "}
+              {selectedDoctorShift.doctor?.name ||
+                selectedDoctorShift.doctor_name}
             </Typography>
           )}
           {shiftServiceCostsLoading ? (
             <Typography variant="body2">جاري التحميل...</Typography>
           ) : shiftServiceCosts.length === 0 ? (
-            <Typography variant="body2">لا توجد تكاليف إضافية مسجلة لهذه الوردية.</Typography>
+            <Typography variant="body2">
+              لا توجد تكاليف إضافية مسجلة لهذه الوردية.
+            </Typography>
           ) : (
             <Table size="small" sx={{ mt: 1 }}>
               <TableHead>
                 <TableRow>
                   <TableCell sx={{ fontWeight: 600 }}>مصروف الخدمة</TableCell>
-                  <TableCell align="left" sx={{ fontWeight: 600 }}>الإجمالي</TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 600 }}>إجراء</TableCell>
+                  <TableCell align="left" sx={{ fontWeight: 600 }}>
+                    الإجمالي
+                  </TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 600 }}>
+                    إجراء
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {shiftServiceCosts.map((cost) => (
                   <TableRow key={cost.id}>
                     <TableCell>{cost.name}</TableCell>
-                    <TableCell align="left">{formatNumber(cost.amount)}</TableCell>
+                    <TableCell align="left">
+                      {formatNumber(cost.amount)}
+                    </TableCell>
                     <TableCell align="center">
                       <Button
                         size="small"
@@ -428,6 +494,7 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
           setSelectedSubCostIdForReclaim(null);
         }}
         fullWidth
+        maxWidth="sm"
       >
         <DialogTitle>اثبات الاستحقاق النقدي</DialogTitle>
         <DialogContent>
@@ -452,17 +519,19 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
               }}
               label="البنك"
             />
-            <Button 
-              onClick={() => prooveCashReclaim(() => {})} 
+            <Button
+              onClick={() => prooveCashReclaim(() => {})}
               variant="contained"
               disabled={isAddingCost}
             >
-              {isAddingCost ? 'جاري المعالجة...' : 'خصم  الاستحقاق النقدي'}
+              {isAddingCost ? "جاري المعالجة..." : "خصم  الاستحقاق النقدي"}
             </Button>
           </Stack>
         </DialogContent>
-      </Dialog>
-    </Paper>
+      </Dialog></>
+   
+
+     
   );
 }
 

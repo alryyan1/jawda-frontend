@@ -156,6 +156,11 @@ export const allMainNavItems: NavItem[] = [
 
   { to: "/online-booking", label: "الحجز ", icon: CalendarCheck2 },
   { to: "/cash-reconciliation", label: "الفئات الماليه", icon: CreditCard },
+  {
+    to: "/admissions/statistics",
+    label: "إحصائيات العمليات",
+    icon: FileBarChart2,
+  },
 ];
 
 // Default nav items per user_type (for fallback when nav_items is null)

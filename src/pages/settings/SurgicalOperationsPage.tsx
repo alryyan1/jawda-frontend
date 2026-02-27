@@ -51,7 +51,6 @@ export default function SurgicalOperationsPage() {
     useState<SurgicalOperation | null>(null);
 
   const [name, setName] = useState("");
-  const [price, setPrice] = useState("");
 
   const [itemToDelete, setItemToDelete] = useState<number | null>(null);
 
@@ -73,13 +72,8 @@ export default function SurgicalOperationsPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({
-      id,
-      data,
-    }: {
-      id: number;
-      data: { name: string; price: number };
-    }) => updateSurgicalOperation(id, data),
+    mutationFn: ({ id, data }: { id: number; data: { name: string } }) =>
+      updateSurgicalOperation(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["surgicalOperations"] });
       toast.success("تم تحديث العملية بنجاح");
@@ -107,11 +101,9 @@ export default function SurgicalOperationsPage() {
     if (operation) {
       setEditingOperation(operation);
       setName(operation.name);
-      setPrice(operation.price.toString());
     } else {
       setEditingOperation(null);
       setName("");
-      setPrice("");
     }
     setIsDialogOpen(true);
   };
@@ -120,7 +112,6 @@ export default function SurgicalOperationsPage() {
     setIsDialogOpen(false);
     setEditingOperation(null);
     setName("");
-    setPrice("");
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -128,7 +119,6 @@ export default function SurgicalOperationsPage() {
 
     const data = {
       name,
-      price: parseFloat(price) || 0,
     };
 
     if (editingOperation) {
@@ -154,7 +144,6 @@ export default function SurgicalOperationsPage() {
           <TableHeader>
             <TableRow>
               <TableHead className="text-center">اسم العملية</TableHead>
-              <TableHead className="text-center">السعر</TableHead>
               <TableHead className="text-center">إجراءات</TableHead>
             </TableRow>
           </TableHeader>
@@ -180,9 +169,6 @@ export default function SurgicalOperationsPage() {
                   <TableRow key={operation.id}>
                     <TableCell className="font-medium text-center">
                       {operation.name}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {operation.price}
                     </TableCell>
                     <TableCell className="text-center">
                       <div className="flex items-center justify-center gap-2">
@@ -235,17 +221,6 @@ export default function SurgicalOperationsPage() {
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="price">السعر</Label>
-              <Input
-                id="price"
-                type="number"
-                step="any"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
                 required
               />
             </div>

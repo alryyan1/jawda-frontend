@@ -29,7 +29,9 @@ import { toast } from "sonner";
 import {
   getSurgicalOperationCharges,
   createSurgicalOperationCharge,
+  updateSurgicalOperationCharge,
   deleteSurgicalOperationCharge,
+  importStandardCharges,
 } from "@/services/surgicalOperationService";
 import type {
   SurgicalOperation,
@@ -52,6 +54,7 @@ export default function ManageSurgicalChargesDialog({
   const [name, setName] = useState("");
   const [type, setType] = useState<"fixed" | "percentage">("fixed");
   const [amount, setAmount] = useState("");
+  const [beneficiary, setBeneficiary] = useState<"center" | "staff">("center");
   const [referenceType, setReferenceType] = useState<"total" | "charge" | null>(
     null,
   );
@@ -73,8 +76,27 @@ export default function ManageSurgicalChargesDialog({
       toast.success("تمت إضافة التكلفة بنجاح");
       resetForm();
     },
-    onError: (error: any) => {
+    onError: (error: { response?: { data?: { message?: string } } }) => {
       toast.error(error?.response?.data?.message || "حدث خطأ أثناء الإضافة");
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({
+      chargeId,
+      data,
+    }: {
+      chargeId: number;
+      data: Parameters<typeof updateSurgicalOperationCharge>[2];
+    }) => updateSurgicalOperationCharge(operation!.id, chargeId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["surgicalOperationCharges", operation?.id],
+      });
+      toast.success("تم التحديث بنجاح");
+    },
+    onError: (error: { response?: { data?: { message?: string } } }) => {
+      toast.error(error?.response?.data?.message || "حدث خطأ أثناء التحديث");
     },
   });
 
@@ -87,8 +109,21 @@ export default function ManageSurgicalChargesDialog({
       });
       toast.success("تم حذف التكلفة بنجاح");
     },
-    onError: (error: any) => {
+    onError: (error: { response?: { data?: { message?: string } } }) => {
       toast.error(error?.response?.data?.message || "حدث خطأ أثناء الحذف");
+    },
+  });
+
+  const importMutation = useMutation({
+    mutationFn: () => importStandardCharges(operation!.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["surgicalOperationCharges", operation?.id],
+      });
+      toast.success("تم استيراد التكاليف الأساسية بنجاح");
+    },
+    onError: (error: { response?: { data?: { message?: string } } }) => {
+      toast.error(error?.response?.data?.message || "حدث خطأ أثناء الاستيراد");
     },
   });
 
@@ -96,6 +131,7 @@ export default function ManageSurgicalChargesDialog({
     setName("");
     setType("fixed");
     setAmount("");
+    setBeneficiary("center");
     setReferenceType(null);
     setReferenceChargeId("");
   };
@@ -130,28 +166,20 @@ export default function ManageSurgicalChargesDialog({
         type === "percentage" && referenceType === "charge"
           ? parseInt(referenceChargeId)
           : null,
+      beneficiary,
     });
-  };
-
-  const getChargeName = (id: number | null) => {
-    if (!id) return "-";
-    const charge = charges.find((c: SurgicalOperationCharge) => c.id === id);
-    return charge ? charge.name : "-";
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-[90vw] lg:max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>
-            إدارة تكاليف العملية: {operation?.name} (السعر الأساسي:{" "}
-            {operation?.price})
-          </DialogTitle>
+          <DialogTitle>إدارة تكاليف العملية: {operation?.name}</DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
           {/* Form Section */}
-          <div className="space-y-4 border-l pl-4 rtl:border-l-0 rtl:border-r rtl:pr-4">
+          <div className="md:col-span-1 space-y-4 border-l pl-4 rtl:border-l-0 rtl:border-r rtl:pr-4">
             <h3 className="font-semibold text-lg border-b pb-2">
               إضافة تكلفة جديدة
             </h3>
@@ -192,7 +220,7 @@ export default function ManageSurgicalChargesDialog({
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="amount">القيمة</Label>
+                  <Label htmlFor="amount">القيمه المبدئيه</Label>
                   <Input
                     id="amount"
                     type="number"
@@ -202,6 +230,24 @@ export default function ManageSurgicalChargesDialog({
                     required
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>الجهة المستفيدة</Label>
+                <Select
+                  value={beneficiary}
+                  onValueChange={(val: "center" | "staff") =>
+                    setBeneficiary(val)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="center">المركز</SelectItem>
+                    <SelectItem value="staff">كادر</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               {type === "percentage" && (
@@ -265,16 +311,30 @@ export default function ManageSurgicalChargesDialog({
           </div>
 
           {/* List Section */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-lg border-b pb-2">
-              التكاليف الحالية
-            </h3>
+          <div className="md:col-span-2 space-y-4">
+            <div className="flex items-center justify-between border-b pb-2">
+              <h3 className="font-semibold text-lg">التكاليف الحالية</h3>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => importMutation.mutate()}
+                disabled={importMutation.isPending}
+                className="text-blue-600 border-blue-200 hover:bg-blue-50"
+              >
+                {importMutation.isPending
+                  ? "جاري الاستيراد..."
+                  : "إستيراد التكاليف الأساسية"}
+              </Button>
+            </div>
             <div className="rounded-md border overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead className="text-center">الاسم</TableHead>
                     <TableHead className="text-center">القيمة</TableHead>
+                    <TableHead className="text-center">
+                      الجهة المستفيدة
+                    </TableHead>
                     <TableHead className="text-center">المرجع</TableHead>
                     <TableHead className="text-center"></TableHead>
                   </TableRow>
@@ -282,14 +342,14 @@ export default function ManageSurgicalChargesDialog({
                 <TableBody>
                   {isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center py-4">
+                      <TableCell colSpan={5} className="text-center py-4">
                         جاري التحميل...
                       </TableCell>
                     </TableRow>
                   ) : charges.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={4}
+                        colSpan={5}
                         className="text-center py-4 text-muted-foreground"
                       >
                         لا توجد تكاليف مضافة
@@ -299,18 +359,169 @@ export default function ManageSurgicalChargesDialog({
                     charges.map((charge: SurgicalOperationCharge) => (
                       <TableRow key={charge.id}>
                         <TableCell className="font-medium text-center">
-                          {charge.name}
+                          <Input
+                            defaultValue={charge.name}
+                            onBlur={(e) => {
+                              if (
+                                e.target.value !== charge.name &&
+                                e.target.value.trim() !== ""
+                              ) {
+                                updateMutation.mutate({
+                                  chargeId: charge.id,
+                                  data: { name: e.target.value },
+                                });
+                              }
+                            }}
+                            className="h-8 text-center min-w-[120px]"
+                          />
                         </TableCell>
                         <TableCell className="text-center">
-                          {charge.amount}{" "}
-                          {charge.type === "percentage" ? "%" : ""}
+                          <div className="flex items-center justify-center gap-2">
+                            <Input
+                              type="number"
+                              step="any"
+                              defaultValue={charge.amount}
+                              onFocus={(e) => {
+                                e.target.select();
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  const inputs = document.querySelectorAll(
+                                    ".charge-amount-input",
+                                  ) as NodeListOf<HTMLInputElement>;
+                                  const index = Array.from(inputs).indexOf(
+                                    e.target as HTMLInputElement,
+                                  );
+                                  if (index > -1 && index < inputs.length - 1) {
+                                    inputs[index + 1].focus();
+                                  }
+                                }
+                              }}
+                              onBlur={(e) => {
+                                const val = parseFloat(e.target.value);
+                                if (!isNaN(val) && val !== charge.amount) {
+                                  updateMutation.mutate({
+                                    chargeId: charge.id,
+                                    data: { amount: val },
+                                  });
+                                }
+                              }}
+                              className="h-8 text-center w-20 charge-amount-input"
+                            />
+                            <Select
+                              value={charge.type}
+                              onValueChange={(val: "fixed" | "percentage") => {
+                                if (val !== charge.type) {
+                                  updateMutation.mutate({
+                                    chargeId: charge.id,
+                                    data: {
+                                      type: val,
+                                      ...(val === "fixed"
+                                        ? {
+                                            reference_type: null,
+                                            reference_charge_id: null,
+                                          }
+                                        : { reference_type: "total" }),
+                                    },
+                                  });
+                                }
+                              }}
+                            >
+                              <SelectTrigger className="h-8 w-24">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="fixed">ثابت</SelectItem>
+                                <SelectItem value="percentage">
+                                  نسبة %
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Select
+                            value={charge.beneficiary}
+                            onValueChange={(val: "center" | "staff") => {
+                              if (val !== charge.beneficiary) {
+                                updateMutation.mutate({
+                                  chargeId: charge.id,
+                                  data: { beneficiary: val },
+                                });
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="h-8 min-w-[100px] mx-auto">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="center">المركز</SelectItem>
+                              <SelectItem value="staff">كادر</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground text-center">
-                          {charge.type === "fixed"
-                            ? "-"
-                            : charge.reference_type === "total"
-                              ? "إجمالي العملية"
-                              : `من: ${getChargeName(charge.reference_charge_id)}`}
+                          {charge.type === "percentage" ? (
+                            <Select
+                              value={
+                                charge.reference_type === "charge"
+                                  ? charge.reference_charge_id?.toString() || ""
+                                  : "total"
+                              }
+                              onValueChange={(val) => {
+                                if (val === "total") {
+                                  if (charge.reference_type !== "total") {
+                                    updateMutation.mutate({
+                                      chargeId: charge.id,
+                                      data: {
+                                        reference_type: "total",
+                                        reference_charge_id: null,
+                                      },
+                                    });
+                                  }
+                                } else {
+                                  const refId = parseInt(val);
+                                  if (
+                                    charge.reference_type !== "charge" ||
+                                    charge.reference_charge_id !== refId
+                                  ) {
+                                    updateMutation.mutate({
+                                      chargeId: charge.id,
+                                      data: {
+                                        reference_type: "charge",
+                                        reference_charge_id: refId,
+                                      },
+                                    });
+                                  }
+                                }
+                              }}
+                            >
+                              <SelectTrigger className="h-8 min-w-[140px] mx-auto">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="total">
+                                  إجمالي العملية
+                                </SelectItem>
+                                {charges
+                                  .filter(
+                                    (c: SurgicalOperationCharge) =>
+                                      c.id !== charge.id,
+                                  )
+                                  .map((c: SurgicalOperationCharge) => (
+                                    <SelectItem
+                                      key={c.id}
+                                      value={c.id.toString()}
+                                    >
+                                      من: {c.name}
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            "-"
+                          )}
                         </TableCell>
                         <TableCell className="text-center">
                           <Button

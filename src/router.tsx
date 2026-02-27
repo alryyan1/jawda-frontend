@@ -112,6 +112,7 @@ import BedsListPage from "./pages/settings/beds/BedsListPage";
 import BedFormPage, { BedFormMode } from "./pages/settings/beds/BedFormPage";
 import ShortStayBedsListPage from "./pages/settings/short-stay-beds/ShortStayBedsListPage";
 import SurgicalOperationsPage from "./pages/settings/SurgicalOperationsPage";
+import SurgeryStatisticsPage from "./pages/admissions/SurgeryStatisticsPage";
 
 const router = createBrowserRouter([
   // --- PUBLIC ROUTES ---
@@ -211,6 +212,10 @@ const router = createBrowserRouter([
               {
                 path: "visual",
                 element: <RoomsVisualPage />,
+              },
+              {
+                path: "statistics",
+                element: <SurgeryStatisticsPage />,
               },
               {
                 path: ":id",

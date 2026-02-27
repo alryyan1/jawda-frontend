@@ -3,7 +3,6 @@ import apiClient from "./api";
 export interface SurgicalOperation {
   id: number;
   name: string;
-  price: number;
   created_at?: string;
   updated_at?: string;
 }
@@ -15,7 +14,6 @@ export const getSurgicalOperations = async (): Promise<SurgicalOperation[]> => {
 
 export const createSurgicalOperation = async (data: {
   name: string;
-  price: number;
 }): Promise<SurgicalOperation> => {
   const response = await apiClient.post("/surgical-operations", data);
   return response.data;
@@ -23,7 +21,7 @@ export const createSurgicalOperation = async (data: {
 
 export const updateSurgicalOperation = async (
   id: number,
-  data: { name: string; price: number },
+  data: { name: string },
 ): Promise<SurgicalOperation> => {
   const response = await apiClient.put(`/surgical-operations/${id}`, data);
   return response.data;
@@ -41,6 +39,7 @@ export interface SurgicalOperationCharge {
   amount: number;
   reference_type: "total" | "charge" | null;
   reference_charge_id: number | null;
+  beneficiary: "center" | "staff";
   created_at?: string;
   updated_at?: string;
 }
@@ -62,6 +61,7 @@ export const createSurgicalOperationCharge = async (
     amount: number;
     reference_type?: "total" | "charge" | null;
     reference_charge_id?: number | null;
+    beneficiary: "center" | "staff";
   },
 ): Promise<SurgicalOperationCharge> => {
   const response = await apiClient.post(
@@ -80,6 +80,7 @@ export const updateSurgicalOperationCharge = async (
     amount?: number;
     reference_type?: "total" | "charge" | null;
     reference_charge_id?: number | null;
+    beneficiary?: "center" | "staff";
   },
 ): Promise<SurgicalOperationCharge> => {
   const response = await apiClient.put(
@@ -96,4 +97,21 @@ export const deleteSurgicalOperationCharge = async (
   await apiClient.delete(
     `/surgical-operations/${operationId}/charges/${chargeId}`,
   );
+};
+
+export const importStandardCharges = async (
+  operationId: number,
+): Promise<SurgicalOperationCharge[]> => {
+  const response = await apiClient.post(
+    `/surgical-operations/${operationId}/import-standard-charges`,
+  );
+  return response.data;
+};
+
+export const getSurgeryStatistics = async (params?: {
+  start_date?: string;
+  end_date?: string;
+}) => {
+  const response = await apiClient.get("/surgeries/statistics", { params });
+  return response.data;
 };

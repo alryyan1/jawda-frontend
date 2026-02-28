@@ -154,7 +154,11 @@ const MessengerChat: React.FC<MessengerChatProps> = ({
 
     // Incoming messages - Just update UI (Storage handled by Global Listener)
     channel.listen(".message.received", (payload: any) => {
-      if (payload?.message?.phone_number_id !== "982254518296345") return;
+      if (
+        payload?.message?.phone_number_id !==
+        import.meta.env.VITE_WHATSAPP_CLOUD_PHONE_NUMBER_ID
+      )
+        return;
       console.log("📩 Chat UI: Message Received Event:", payload);
       refetch();
     });

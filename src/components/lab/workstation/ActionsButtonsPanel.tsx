@@ -344,7 +344,7 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
             "/whatsapp-cloud/send-template",
             {
               to: patient.phone,
-              template_name: "test_notification",
+              template_name: "test_notification_",
               language_code: "ar",
               components: [
                 {
@@ -352,7 +352,21 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
                   parameters: [
                     {
                       type: "text",
-                      text: visitId,
+                      text: String(visitId),
+                    },
+                  ],
+                },
+                {
+                  type: "button",
+                  sub_type: "quick_reply",
+                  index: "0",
+                  parameters: [
+                    {
+                      type: "payload",
+                      payload: JSON.stringify({
+                        visitId: visitId,
+                        collection: settings?.firestore_result_collection || "one_care",
+                      }),
                     },
                   ],
                 },

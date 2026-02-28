@@ -81,7 +81,10 @@ const PatientQueuePanel: React.FC<PatientQueuePanelProps> = ({
 
     const handleMessage = (payload: any) => {
       // Filter by System Phone Number ID
-      if (payload?.message?.phone_number_id !== "982254518296345") {
+      if (
+        payload?.message?.phone_number_id !==
+        import.meta.env.VITE_WHATSAPP_CLOUD_PHONE_NUMBER_ID
+      ) {
         return;
       }
 

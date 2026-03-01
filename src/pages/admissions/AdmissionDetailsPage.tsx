@@ -26,6 +26,8 @@ import AdmissionLabTestsTab from "@/components/admissions/tabs/AdmissionLabTests
 import AdmissionPatientFileTab from "@/components/admissions/tabs/AdmissionPatientFileTab";
 import AdmissionSurgeriesTab from "@/components/admissions/tabs/AdmissionSurgeriesTab";
 
+import { useAuth } from "@/contexts/AuthContext";
+
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
@@ -54,6 +56,7 @@ export default function AdmissionDetailsPage() {
   const [dischargeDialogOpen, setDischargeDialogOpen] = useState(false);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [currentTab, setCurrentTab] = useState(0);
+  const { user } = useAuth();
 
   const {
     data: admissionData,
@@ -64,6 +67,71 @@ export default function AdmissionDetailsPage() {
     queryFn: () => getAdmissionById(Number(id)).then((res) => res.data),
     enabled: !!id,
   });
+
+  const availableTabs = [
+    {
+      id: "overview",
+      label: "نظرة عامة",
+      component: (admission: any) => (
+        <AdmissionOverviewTab admission={admission} />
+      ),
+    },
+    {
+      id: "vital-signs",
+      label: "العلامات الحيوية",
+      component: (admission: any) => (
+        <AdmissionVitalSignsTab admissionId={admission.id} />
+      ),
+    },
+    {
+      id: "services",
+      label: "الخدمات الطبية",
+      component: (admission: any) => (
+        <AdmissionServicesTab admissionId={admission.id} />
+      ),
+    },
+    {
+      id: "finance",
+      label: "كشف الحساب",
+      component: (admission: any) => (
+        <AdmissionLedgerTab admissionId={admission.id} />
+      ),
+    },
+    {
+      id: "attachments",
+      label: "الوثائق",
+      component: (admission: any) => (
+        <AdmissionDocumentsTab admission={admission} />
+      ),
+    },
+    {
+      id: "lab",
+      label: "الفحوصات المختبرية",
+      component: (admission: any) => (
+        <AdmissionLabTestsTab admissionId={admission.id} />
+      ),
+    },
+    {
+      id: "stay-days",
+      label: "ملف الإقامة",
+      component: (admission: any) => (
+        <AdmissionPatientFileTab admissionId={admission.id} />
+      ),
+    },
+    {
+      id: "operations",
+      label: "العمليات الجراحية",
+      component: (admission: any) => (
+        <AdmissionSurgeriesTab admissionId={admission.id} />
+      ),
+    },
+  ];
+
+  // Default to Overview and Operations if not set
+  const userTabsConfig = user?.admission_tabs || ["overview", "operations"];
+  const visibleTabs = availableTabs.filter((tab) =>
+    userTabsConfig.includes(tab.id),
+  );
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setCurrentTab(newValue);
@@ -177,44 +245,25 @@ export default function AdmissionDetailsPage() {
               value={currentTab}
               onChange={handleTabChange}
               aria-label="admission tabs"
+              variant="scrollable"
+              scrollButtons="auto"
             >
-              <Tab label="نظرة عامة" />
-              <Tab label="العلامات الحيوية" />
-              <Tab label="الخدمات الطبية" />
-              <Tab label="كشف الحساب" />
-
-              <Tab label="الوثائق" />
-              <Tab label="الفحوصات المختبرية" />
-              <Tab label="ملف الإقامة" />
-              <Tab label="العمليات الجراحية" />
+              {visibleTabs.map((tab, idx) => (
+                <Tab
+                  key={tab.id}
+                  label={tab.label}
+                  id={`admission-tab-${idx}`}
+                  aria-controls={`admission-tabpanel-${idx}`}
+                />
+              ))}
             </Tabs>
           </Box>
           <Box sx={{ flex: 1, overflow: "hidden" }}>
-            <TabPanel value={currentTab} index={0}>
-              <AdmissionOverviewTab admission={admissionData} />
-            </TabPanel>
-            <TabPanel value={currentTab} index={1}>
-              <AdmissionVitalSignsTab admissionId={admissionData.id} />
-            </TabPanel>
-            <TabPanel value={currentTab} index={2}>
-              <AdmissionServicesTab admissionId={admissionData.id} />
-            </TabPanel>
-            <TabPanel value={currentTab} index={3}>
-              <AdmissionLedgerTab admissionId={admissionData.id} />
-            </TabPanel>
-
-            <TabPanel value={currentTab} index={4}>
-              <AdmissionDocumentsTab admission={admissionData} />
-            </TabPanel>
-            <TabPanel value={currentTab} index={5}>
-              <AdmissionLabTestsTab admissionId={admissionData.id} />
-            </TabPanel>
-            <TabPanel value={currentTab} index={6}>
-              <AdmissionPatientFileTab admissionId={admissionData.id} />
-            </TabPanel>
-            <TabPanel value={currentTab} index={7}>
-              <AdmissionSurgeriesTab admissionId={admissionData.id} />
-            </TabPanel>
+            {visibleTabs.map((tab, idx) => (
+              <TabPanel key={tab.id} value={currentTab} index={idx}>
+                {tab.component(admissionData)}
+              </TabPanel>
+            ))}
           </Box>
         </CardContent>
       </Card>

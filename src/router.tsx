@@ -113,6 +113,7 @@ import BedFormPage, { BedFormMode } from "./pages/settings/beds/BedFormPage";
 import ShortStayBedsListPage from "./pages/settings/short-stay-beds/ShortStayBedsListPage";
 import SurgicalOperationsPage from "./pages/settings/SurgicalOperationsPage";
 import SurgeryStatisticsPage from "./pages/admissions/SurgeryStatisticsPage";
+import SurgeryMonthlyReportPage from "./pages/admissions/SurgeryMonthlyReportPage";
 
 const router = createBrowserRouter([
   // --- PUBLIC ROUTES ---
@@ -216,6 +217,10 @@ const router = createBrowserRouter([
               {
                 path: "statistics",
                 element: <SurgeryStatisticsPage />,
+              },
+              {
+                path: "daily-report",
+                element: <SurgeryMonthlyReportPage />,
               },
               {
                 path: ":id",

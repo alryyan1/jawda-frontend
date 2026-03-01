@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Box,
@@ -25,6 +25,8 @@ import {
   Paper,
   TextField,
   Autocomplete,
+  LinearProgress,
+  Alert,
 } from "@mui/material";
 import {
   Add,
@@ -36,6 +38,8 @@ import {
   Receipt,
   AccountBalanceWallet,
   WhatsApp,
+  Link,
+  Undo,
 } from "@mui/icons-material";
 import { toast } from "sonner";
 import apiClient from "@/services/api";
@@ -53,11 +57,14 @@ interface FinanceChargeItem {
   type: string;
   amount: number;
   beneficiary?: "center" | "staff";
+  reference_type?: "total" | "charge" | null;
+  reference_charge_id?: number | null;
 }
 
 interface RequestedSurgeryFinanceItem {
   id: number;
   amount: number;
+  payment_method: "cash" | "bankak";
   doctor_id?: number | null;
   finance_charge: FinanceChargeItem;
 }
@@ -118,6 +125,17 @@ const AdmissionSurgeriesTab = ({ admissionId }: AdmissionSurgeriesTabProps) => {
     queryFn: () => getRequestedSurgeries(admissionId),
   });
 
+  useEffect(() => {
+    if (financeDialogOpen && selectedSurgery) {
+      const updated = requestedSurgeries.find(
+        (s) => s.id === selectedSurgery.id,
+      );
+      if (updated && updated !== selectedSurgery) {
+        setSelectedSurgery(updated);
+      }
+    }
+  }, [requestedSurgeries, financeDialogOpen, selectedSurgery]);
+
   const { data: surgeries = [] } = useQuery({
     queryKey: ["surgicalOperations"],
     queryFn: getSurgicalOperations,
@@ -176,6 +194,19 @@ const AdmissionSurgeriesTab = ({ admissionId }: AdmissionSurgeriesTabProps) => {
     onError: () => toast.error("فشل في رفض الطلب"),
   });
 
+  const unapproveMutation = useMutation({
+    mutationFn: (surgeryId: number) =>
+      apiClient.post(
+        `/admissions/${admissionId}/requested-surgeries/${surgeryId}/unapprove`,
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey });
+      toast.success("تم التراجع عن الاعتماد بنجاح");
+    },
+    onError: (err: any) =>
+      toast.error(err.response?.data?.message || "فشل في التراجع عن الاعتماد"),
+  });
+
   const handleSendWhatsApp = async (surgery: RequestedSurgeryItem) => {
     if (!surgery.admission?.patient?.phone) {
       toast.error("رقم الهاتف غير متوفر");
@@ -221,10 +252,46 @@ const AdmissionSurgeriesTab = ({ admissionId }: AdmissionSurgeriesTabProps) => {
   const updateFinanceMutation = useMutation({
     mutationFn: ({ financeId, data }: { financeId: number; data: any }) =>
       apiClient.patch(`/requested-surgery-finances/${financeId}`, data),
-    onSuccess: () => {
+    onMutate: async ({ financeId, data }) => {
+      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+      await queryClient.cancelQueries({ queryKey });
+
+      // Snapshot the previous value
+      const previousSurgeries =
+        queryClient.getQueryData<RequestedSurgeryItem[]>(queryKey);
+
+      // Optimistically update to the new value
+      queryClient.setQueryData<RequestedSurgeryItem[]>(queryKey, (old) => {
+        if (!old) return [];
+        return old.map((surgery) => ({
+          ...surgery,
+          finances: surgery.finances.map((f) =>
+            f.id === financeId ? { ...f, ...data } : f,
+          ),
+        }));
+      });
+
+      // Return a context object with the snapshotted value
+      return { previousSurgeries };
+    },
+    onSuccess: (_, variables) => {
+      setEditAmounts((prev) => {
+        const next = { ...prev };
+        delete next[variables.financeId];
+        return next;
+      });
+    },
+    onError: (err, variables, context) => {
+      // Rollback to the previous value if mutation fails
+      if (context?.previousSurgeries) {
+        queryClient.setQueryData(queryKey, context.previousSurgeries);
+      }
+      toast.error("فشل في تحديث البيانات");
+    },
+    onSettled: () => {
+      // Always refetch after error or success to guarantee we are in sync with the server
       queryClient.invalidateQueries({ queryKey });
     },
-    onError: () => toast.error("فشل في تحديث البيانات"),
   });
 
   const handleOpenDialog = () => setIsDialogOpen(true);
@@ -259,6 +326,16 @@ const AdmissionSurgeriesTab = ({ admissionId }: AdmissionSurgeriesTabProps) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedSurgeryId) return;
+
+    // Prevent duplicates
+    const isDuplicate = requestedSurgeries.some(
+      (s) => s.surgery_id === Number(selectedSurgeryId),
+    );
+    if (isDuplicate) {
+      toast.error("هذه العملية مضافة مسبقاً لهذا المريض");
+      return;
+    }
+
     requestMutation.mutate({
       surgery_id: selectedSurgeryId,
       doctor_id: selectedDoctorId,
@@ -324,6 +401,7 @@ const AdmissionSurgeriesTab = ({ admissionId }: AdmissionSurgeriesTabProps) => {
           <Table>
             <TableHead>
               <TableRow sx={{ bgcolor: "grey.50" }}>
+                <TableCell>ID</TableCell>
                 <TableCell>تاريخ الطلب</TableCell>
                 <TableCell>اسم العملية</TableCell>
                 <TableCell>الطبيب</TableCell>
@@ -337,6 +415,7 @@ const AdmissionSurgeriesTab = ({ admissionId }: AdmissionSurgeriesTabProps) => {
               {requestedSurgeries.map((item) => (
                 <React.Fragment key={item.id}>
                   <TableRow>
+                    <TableCell>#{item.id}</TableCell>
                     <TableCell>
                       {dayjs(item.created_at).format("YYYY-MM-DD HH:mm")}
                     </TableCell>
@@ -362,7 +441,12 @@ const AdmissionSurgeriesTab = ({ admissionId }: AdmissionSurgeriesTabProps) => {
                                 onClick={() => approveMutation.mutate(item.id)}
                                 disabled={approveMutation.isPending}
                               >
-                                <CheckCircle fontSize="small" />
+                                {approveMutation.isPending &&
+                                approveMutation.variables === item.id ? (
+                                  <CircularProgress size={18} color="inherit" />
+                                ) : (
+                                  <CheckCircle fontSize="small" />
+                                )}
                               </IconButton>
                             </Tooltip>
                             <Tooltip title="رفض">
@@ -372,43 +456,43 @@ const AdmissionSurgeriesTab = ({ admissionId }: AdmissionSurgeriesTabProps) => {
                                 onClick={() => rejectMutation.mutate(item.id)}
                                 disabled={rejectMutation.isPending}
                               >
-                                <Cancel fontSize="small" />
+                                {rejectMutation.isPending &&
+                                rejectMutation.variables === item.id ? (
+                                  <CircularProgress size={18} color="inherit" />
+                                ) : (
+                                  <Cancel fontSize="small" />
+                                )}
                               </IconButton>
                             </Tooltip>
                           </>
                         )}
-                        <Tooltip title="تفاصيل التكاليف">
-                          <IconButton
-                            size="small"
-                            color="info"
-                            onClick={() => handleOpenFinanceDialog(item)}
-                          >
-                            <Payments fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="معاينة PDF">
-                          <IconButton
-                            size="small"
-                            color="primary"
-                            onClick={async () => {
-                              try {
-                                const response = await apiClient.get(
-                                  `/admissions/${admissionId}/requested-surgeries/${item.id}/print`,
-                                  { responseType: "blob" },
-                                );
-                                const blob = new Blob([response.data], {
-                                  type: "application/pdf",
-                                });
-                                const url = window.URL.createObjectURL(blob);
-                                window.open(url, "_blank");
-                              } catch {
-                                toast.error("حدث خطأ أثناء تحميل الملف");
-                              }
-                            }}
-                          >
-                            <Printer size={18} />
-                          </IconButton>
-                        </Tooltip>
+                        {item.status === "approved" && (
+                          <Tooltip title="تراجع عن الاعتماد">
+                            <IconButton
+                              size="small"
+                              color="secondary"
+                              onClick={() => unapproveMutation.mutate(item.id)}
+                              disabled={unapproveMutation.isPending}
+                            >
+                              {unapproveMutation.isPending &&
+                              unapproveMutation.variables === item.id ? (
+                                <CircularProgress size={18} color="inherit" />
+                              ) : (
+                                <Undo fontSize="small" />
+                              )}
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="info"
+                          startIcon={<Payments />}
+                          onClick={() => handleOpenFinanceDialog(item)}
+                          sx={{ textTransform: "none", fontWeight: 600 }}
+                        >
+                          توزيع النسب
+                        </Button>
                         <Tooltip title="فاتورة مريض A5">
                           <IconButton
                             size="small"
@@ -459,10 +543,21 @@ const AdmissionSurgeriesTab = ({ admissionId }: AdmissionSurgeriesTabProps) => {
                           <IconButton
                             size="small"
                             color="error"
-                            onClick={() => deleteMutation.mutate(item.id)}
+                            onClick={() => {
+                              if (
+                                window.confirm("هل أنت متأكد من حذف هذا الطلب؟")
+                              ) {
+                                deleteMutation.mutate(item.id);
+                              }
+                            }}
                             disabled={deleteMutation.isPending}
                           >
-                            <Delete fontSize="small" />
+                            {deleteMutation.isPending &&
+                            deleteMutation.variables === item.id ? (
+                              <CircularProgress size={18} color="inherit" />
+                            ) : (
+                              <Delete fontSize="small" />
+                            )}
                           </IconButton>
                         </Tooltip>
                       </Box>
@@ -539,23 +634,112 @@ const AdmissionSurgeriesTab = ({ admissionId }: AdmissionSurgeriesTabProps) => {
         maxWidth="md"
         fullWidth
       >
-        <DialogTitle>
-          تفاصيل تكاليف العملية: {selectedSurgery?.surgery?.name}
+        <DialogTitle
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 2,
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "baseline", gap: 1.5 }}>
+            <Typography variant="h6">
+              تفاصيل تكاليف العملية: {selectedSurgery?.surgery?.name}
+            </Typography>
+            {selectedSurgery && (
+              <Chip
+                label={`الإجمالي: ${selectedSurgery.finances.reduce((sum, f) => sum + Number(f.amount), 0).toLocaleString()} ج.س`}
+                color="primary"
+                size="small"
+                variant="outlined"
+              />
+            )}
+          </Box>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            {selectedSurgery && (
+              <Tooltip title="تباعة أمر التكليف">
+                <IconButton
+                  size="small"
+                  color="primary"
+                  onClick={async () => {
+                    try {
+                      const response = await apiClient.get(
+                        `/admissions/${admissionId}/requested-surgeries/${selectedSurgery.id}/print`,
+                        { responseType: "blob" },
+                      );
+                      const blob = new Blob([response.data], {
+                        type: "application/pdf",
+                      });
+                      const url = window.URL.createObjectURL(blob);
+                      window.open(url, "_blank");
+                    } catch {
+                      toast.error("حدث خطأ أثناء تحميل الملف");
+                    }
+                  }}
+                >
+                  <Printer size={20} />
+                </IconButton>
+              </Tooltip>
+            )}
+            {updateFinanceMutation.isPending && <CircularProgress size={24} />}
+          </Box>
         </DialogTitle>
-        <DialogContent dividers>
+        {updateFinanceMutation.isPending && (
+          <LinearProgress sx={{ width: "100%" }} />
+        )}
+        <DialogContent dividers sx={{ position: "relative" }}>
+          {updateFinanceMutation.isPending && (
+            <Box
+              sx={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                bgcolor: "rgba(255, 255, 255, 0.3)",
+                zIndex: 1,
+                pointerEvents: "none",
+              }}
+            />
+          )}
+
+          {selectedSurgery?.status === "approved" && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              هذه العملية معتمدة، لا يمكن تعديل التكاليف.
+            </Alert>
+          )}
+
           <Table size="small">
             <TableHead>
               <TableRow>
                 <TableCell>البند</TableCell>
                 <TableCell>النوع</TableCell>
                 <TableCell>المبلغ</TableCell>
+                <TableCell>طريقة الدفع</TableCell>
                 <TableCell>الطبيب المستحق</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {selectedSurgery?.finances.map((f) => (
                 <TableRow key={f.id}>
-                  <TableCell>{f.finance_charge.name}</TableCell>
+                  <TableCell>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      {f.finance_charge.name}
+                      {f.finance_charge.reference_type && (
+                        <Tooltip
+                          title={`هذا البند محسوب تلقائياً بناءً على ${f.finance_charge.reference_type === "total" ? "إجمالي العملية" : "بند آخر"}`}
+                        >
+                          <Link
+                            fontSize="small"
+                            sx={{
+                              color: "text.secondary",
+                              transform: "rotate(-45deg)",
+                            }}
+                          />
+                        </Tooltip>
+                      )}
+                    </Box>
+                  </TableCell>
                   <TableCell>
                     {f.finance_charge.beneficiary === "staff" ? "طبيب" : "مركز"}
                   </TableCell>
@@ -565,14 +749,64 @@ const AdmissionSurgeriesTab = ({ admissionId }: AdmissionSurgeriesTabProps) => {
                       type="number"
                       value={editAmounts[f.id] ?? f.amount}
                       onChange={(e) => handleAmountChange(f.id, e.target.value)}
+                      onFocus={(e) => e.target.select()}
                       onBlur={() =>
                         handleUpdateAmount(
                           f.id,
                           editAmounts[f.id] || f.amount.toString(),
                         )
                       }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          const currentInput = e.target as HTMLInputElement;
+                          const container = currentInput.closest("table");
+                          if (container) {
+                            const allInputs = Array.from(
+                              container.querySelectorAll(
+                                'input[type="number"]',
+                              ),
+                            ) as HTMLInputElement[];
+                            const currentIndex =
+                              allInputs.indexOf(currentInput);
+                            if (
+                              currentIndex > -1 &&
+                              currentIndex < allInputs.length - 1
+                            ) {
+                              e.preventDefault();
+                              const nextInput = allInputs[currentIndex + 1];
+                              // Move focus in next tick to avoid race conditions with onBlur/re-renders
+                              setTimeout(() => {
+                                currentInput.blur();
+                                nextInput.focus();
+                                nextInput.select();
+                              }, 0);
+                            } else if (currentIndex === allInputs.length - 1) {
+                              // If last row, just blur to save
+                              currentInput.blur();
+                            }
+                          }
+                        }
+                      }}
                       sx={{ width: 100 }}
+                      disabled={selectedSurgery?.status === "approved"}
                     />
+                  </TableCell>
+                  <TableCell>
+                    <Select
+                      size="small"
+                      value={f.payment_method || "cash"}
+                      onChange={(e) => {
+                        updateFinanceMutation.mutate({
+                          financeId: f.id,
+                          data: { payment_method: e.target.value },
+                        });
+                      }}
+                      sx={{ width: 100 }}
+                      disabled={selectedSurgery?.status === "approved"}
+                    >
+                      <MenuItem value="cash">كاش</MenuItem>
+                      <MenuItem value="bankak">بنكك</MenuItem>
+                    </Select>
                   </TableCell>
                   <TableCell>
                     {f.finance_charge.beneficiary === "staff" ? (
@@ -589,6 +823,7 @@ const AdmissionSurgeriesTab = ({ admissionId }: AdmissionSurgeriesTabProps) => {
                             data: { doctor_id: newValue?.id || null },
                           });
                         }}
+                        disabled={selectedSurgery?.status === "approved"}
                         renderInput={(params) => (
                           <TextField {...params} placeholder="اختر الطبيب" />
                         )}
@@ -650,7 +885,7 @@ const SurgeryLedgerDialog = ({
   surgeryName,
 }: SurgeryLedgerDialogProps) => {
   const [newTransaction, setNewTransaction] = useState({
-    type: "credit",
+    payment_method: "cash",
     amount: "",
     description: "دفعة من الحساب",
     notes: "",
@@ -682,13 +917,27 @@ const SurgeryLedgerDialog = ({
       toast.success("تمت إضافة المعاملة بنجاح");
       refetch();
       setNewTransaction({
-        type: "credit",
+        payment_method: "cash",
         amount: "",
         description: "دفعة من الحساب",
         notes: "",
       });
     },
     onError: () => toast.error("فشل إضافة المعاملة"),
+  });
+
+  const deleteTxMutation = useMutation({
+    mutationFn: async (txId: number) => {
+      return apiClient.delete(
+        `/requested-surgeries/${requestedSurgeryId}/transactions/${txId}`,
+      );
+    },
+    onSuccess: () => {
+      toast.success("تم حذف المعاملة بنجاح");
+      refetch();
+    },
+    onError: (err: any) =>
+      toast.error(err.response?.data?.message || "فشل حذف المعاملة"),
   });
 
   const handlePrint = async () => {
@@ -770,22 +1019,37 @@ const SurgeryLedgerDialog = ({
               <TextField
                 select
                 size="small"
-                label="النوع"
-                value={newTransaction.type}
+                label="طريقة الدفع"
+                value={newTransaction.payment_method}
                 onChange={(e) =>
-                  setNewTransaction({ ...newTransaction, type: e.target.value })
+                  setNewTransaction({
+                    ...newTransaction,
+                    payment_method: e.target.value,
+                  })
                 }
                 SelectProps={{ native: true }}
-                sx={{ width: 120 }}
+                sx={{ width: 130 }}
               >
-                <option value="credit">دائن (تحصيل)</option>
-                <option value="debit">مدين (رسوم)</option>
+                <option value="cash">نقداً (Cash)</option>
+                <option value="bankak">بنكك (Bankak)</option>
               </TextField>
               <TextField
                 size="small"
                 label="المبلغ"
                 type="number"
                 value={newTransaction.amount}
+                error={
+                  !!newTransaction.amount &&
+                  Number(newTransaction.amount) >
+                    (ledgerData?.summary?.balance || 0)
+                }
+                helperText={
+                  !!newTransaction.amount &&
+                  Number(newTransaction.amount) >
+                    (ledgerData?.summary?.balance || 0)
+                    ? "المبلغ يتجاوز الرصيد"
+                    : ""
+                }
                 onChange={(e) =>
                   setNewTransaction({
                     ...newTransaction,
@@ -809,7 +1073,13 @@ const SurgeryLedgerDialog = ({
               <Button
                 variant="contained"
                 onClick={() => addTxMutation.mutate(newTransaction)}
-                disabled={!newTransaction.amount || addTxMutation.isPending}
+                disabled={
+                  !newTransaction.amount ||
+                  addTxMutation.isPending ||
+                  (ledgerData?.summary?.balance || 0) <= 0 ||
+                  Number(newTransaction.amount) >
+                    (ledgerData?.summary?.balance || 0)
+                }
               >
                 إضافة
               </Button>
@@ -824,6 +1094,7 @@ const SurgeryLedgerDialog = ({
                     <TableCell align="center">مدين (+)</TableCell>
                     <TableCell align="center">دائن (-)</TableCell>
                     <TableCell>المستخدم</TableCell>
+                    <TableCell align="center">حذف</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -832,7 +1103,19 @@ const SurgeryLedgerDialog = ({
                       <TableCell>
                         {new Date(tx.created_at).toLocaleDateString("en-GB")}
                       </TableCell>
-                      <TableCell>{tx.description}</TableCell>
+                      <TableCell>
+                        {tx.description}
+                        {tx.payment_method && (
+                          <Chip
+                            label={
+                              tx.payment_method === "cash" ? "نقداً" : "بنكك"
+                            }
+                            size="small"
+                            variant="outlined"
+                            sx={{ ml: 1, fontSize: "0.7rem", height: 20 }}
+                          />
+                        )}
+                      </TableCell>
                       <TableCell
                         align="center"
                         sx={{
@@ -852,6 +1135,23 @@ const SurgeryLedgerDialog = ({
                         {tx.type === "credit" ? tx.amount.toLocaleString() : ""}
                       </TableCell>
                       <TableCell>{tx.user?.name}</TableCell>
+                      <TableCell align="center">
+                        {tx.type === "credit" && (
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => deleteTxMutation.mutate(tx.id)}
+                            disabled={deleteTxMutation.isPending}
+                          >
+                            {deleteTxMutation.isPending &&
+                            deleteTxMutation.variables === tx.id ? (
+                              <CircularProgress size={16} />
+                            ) : (
+                              <Delete fontSize="small" />
+                            )}
+                          </IconButton>
+                        )}
+                      </TableCell>
                     </TableRow>
                   ))}
                   {ledgerData?.transactions?.length === 0 && (

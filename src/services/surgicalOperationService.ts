@@ -115,3 +115,11 @@ export const getSurgeryStatistics = async (params?: {
   const response = await apiClient.get("/surgeries/statistics", { params });
   return response.data;
 };
+
+export const getSurgeryDailyReport = async (params?: {
+  month?: number;
+  year?: number;
+}) => {
+  const response = await apiClient.get("/surgeries/daily-report", { params });
+  return response.data;
+};

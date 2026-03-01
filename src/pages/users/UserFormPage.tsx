@@ -1,5 +1,5 @@
 // src/pages/users/UserFormPage.tsx
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -24,7 +24,7 @@ import {
   CircularProgress,
   Alert,
   Paper,
-} from '@mui/material';
+} from "@mui/material";
 import { ArrowLeft, UserPlus, UserCog } from "lucide-react";
 import { toast } from "sonner";
 
@@ -57,6 +57,7 @@ type UserFormValues = {
   is_active: boolean;
   user_type?: string;
   roles: string[];
+  admission_tabs: string[];
 };
 
 const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
@@ -67,7 +68,7 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
   const isEditMode = mode === "edit";
   const numericUserId = useMemo(
     () => (userId ? Number(userId) : null),
-    [userId]
+    [userId],
   );
 
   const form = useForm<UserFormValues>({
@@ -81,6 +82,7 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
       is_active: true,
       user_type: "",
       roles: [],
+      admission_tabs: ["overview", "operations"],
     },
   });
   const {
@@ -130,8 +132,11 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
         is_supervisor: !!userData.is_supervisor,
         is_active:
           userData.is_active === undefined ? true : !!userData.is_active,
-        user_type: (userData as unknown as { user_type?: string | null })?.user_type ?? "",
+        user_type:
+          (userData as unknown as { user_type?: string | null })?.user_type ??
+          "",
         roles: userData.roles?.map((role) => role.name) || [],
+        admission_tabs: userData.admission_tabs || ["overview", "operations"],
       });
     } else if (!isEditMode) {
       reset({
@@ -144,6 +149,7 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
         is_active: true,
         user_type: "",
         roles: [],
+        admission_tabs: ["overview", "operations"],
       });
     }
   }, [isEditMode, userData, reset]);
@@ -157,7 +163,7 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
       toast.success(
         isEditMode
           ? "تم تحديث بيانات المستخدم بنجاح!"
-          : "تم إنشاء المستخدم بنجاح!"
+          : "تم إنشاء المستخدم بنجاح!",
       );
       queryClient.invalidateQueries({ queryKey: ["users"] });
       if (isEditMode && numericUserId) {
@@ -166,15 +172,17 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
       navigate("/users");
     },
     onError: (error: Error) => {
-      const errorResponse = error as Error & { 
-        response?: { 
-          data?: { 
-            message?: string; 
+      const errorResponse = error as Error & {
+        response?: {
+          data?: {
+            message?: string;
             errors?: Record<string, string[]>;
-          } 
-        } 
+          };
+        };
       };
-      let errorMessage = isEditMode ? "فشل تحديث بيانات المستخدم." : "فشل إنشاء المستخدم.";
+      let errorMessage = isEditMode
+        ? "فشل تحديث بيانات المستخدم."
+        : "فشل إنشاء المستخدم.";
       if (errorResponse.response?.data?.errors) {
         const fieldErrors = Object.values(errorResponse.response.data.errors)
           .flat()
@@ -199,7 +207,8 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
       is_active: formData.is_active,
       user_type: formData.user_type ? formData.user_type : null,
       roles: formData.roles || [],
-      user_money_collector_type: 'all',
+      user_money_collector_type: "all",
+      admission_tabs: formData.admission_tabs || [],
     };
 
     // Only include password if it's provided (for create or if edit form allows password change)
@@ -214,7 +223,14 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
 
   if (isEditMode && isLoadingUser && !userData) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 256 }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: 256,
+        }}
+      >
         <CircularProgress sx={{ mr: 2 }} />
         <Typography>جارٍ تحميل بيانات المستخدم...</Typography>
       </Box>
@@ -223,7 +239,7 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
   if (userError) {
     return (
       <Box sx={{ p: 2 }}>
-        <Alert severity="error" sx={{ textAlign: 'center' }}>
+        <Alert severity="error" sx={{ textAlign: "center" }}>
           {`فشل تحميل بيانات المستخدم: ${userError.message}`}
         </Alert>
       </Box>
@@ -232,7 +248,7 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
 
   return (
     <>
-      <Box sx={{ maxWidth: 1200, mx: 'auto', py: 3, px: 2 }}>
+      <Box sx={{ maxWidth: 1200, mx: "auto", py: 3, px: 2 }}>
         <Button
           variant="outlined"
           size="small"
@@ -244,16 +260,16 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
         </Button>
 
         <Card>
-          <CardHeader 
-            sx={{ 
-              display: 'flex', 
-              flexDirection: 'row', 
-              alignItems: 'center', 
-              justifyContent: 'space-between',
-              pb: 1
+          <CardHeader
+            sx={{
+              display: "flex",
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              pb: 1,
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
               {isEditMode ? (
                 <UserCog size={24} color="primary" />
               ) : (
@@ -261,9 +277,7 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
               )}
               <Box>
                 <Typography variant="h6" component="h1">
-                  {isEditMode
-                    ? "تعديل بيانات المستخدم"
-                    : "إضافة مستخدم جديد"}
+                  {isEditMode ? "تعديل بيانات المستخدم" : "إضافة مستخدم جديد"}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   {isEditMode
@@ -274,9 +288,13 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
             </Box>
           </CardHeader>
           <CardContent className="h-[calc(100vh-200px)] overflow-y-auto">
-            <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ '& > *': { mb: 3 } }}>
+            <Box
+              component="form"
+              onSubmit={handleSubmit(onSubmit)}
+              sx={{ "& > *": { mb: 3 } }}
+            >
               <Grid container spacing={2}>
-                <Grid item xs={12} md={6}>
+                <Grid xs={12} md={6}>
                   <Controller
                     control={control}
                     name="name"
@@ -292,7 +310,7 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
                     )}
                   />
                 </Grid>
-                <Grid item xs={12} md={6}>
+                <Grid xs={12} md={6}>
                   <Controller
                     control={control}
                     name="username"
@@ -308,7 +326,7 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
                     )}
                   />
                 </Grid>
-                <Grid item xs={12} md={6}>
+                <Grid xs={12} md={6}>
                   <Controller
                     control={control}
                     name="user_type"
@@ -316,9 +334,9 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
                       <FormControl fullWidth error={!!error}>
                         <InputLabel>نوع المستخدم</InputLabel>
                         <Select
-                        sx={{
-                          width:'300px'
-                        }}
+                          sx={{
+                            width: "300px",
+                          }}
                           {...field}
                           value={field.value || ""}
                           disabled={dataIsLoading || mutation.isPending}
@@ -327,7 +345,9 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
                           <MenuItem value="">بدون</MenuItem>
                           <MenuItem value="استقبال معمل">استقبال معمل</MenuItem>
                           <MenuItem value="ادخال نتائج">ادخال نتائج</MenuItem>
-                          <MenuItem value="استقبال عياده">استقبال عياده</MenuItem>
+                          <MenuItem value="استقبال عياده">
+                            استقبال عياده
+                          </MenuItem>
                           <MenuItem value="خزنه موحده">خزنه موحده</MenuItem>
                           <MenuItem value="تامين">تامين</MenuItem>
                         </Select>
@@ -339,7 +359,7 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
               </Grid>
 
               <Grid container spacing={2}>
-                <Grid item xs={12} md={6}>
+                <Grid xs={12} md={6}>
                   <Controller
                     control={control}
                     name="password"
@@ -347,16 +367,25 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
                       <TextField
                         {...field}
                         type="password"
-                        label={isEditMode ? "كلمة المرور الجديدة (اختياري)" : "كلمة المرور"}
+                        label={
+                          isEditMode
+                            ? "كلمة المرور الجديدة (اختياري)"
+                            : "كلمة المرور"
+                        }
                         fullWidth
                         disabled={mutation.isPending}
                         error={!!error}
-                        helperText={error?.message || (isEditMode ? "اتركه فارغاً إذا كنت لا تريد تغيير كلمة المرور." : "يجب أن تكون كلمة المرور 8 أحرف على الأقل.")}
+                        helperText={
+                          error?.message ||
+                          (isEditMode
+                            ? "اتركه فارغاً إذا كنت لا تريد تغيير كلمة المرور."
+                            : "يجب أن تكون كلمة المرور 8 أحرف على الأقل.")
+                        }
                       />
                     )}
                   />
                 </Grid>
-                <Grid item xs={12} md={6}>
+                <Grid xs={12} md={6}>
                   <Controller
                     control={control}
                     name="password_confirmation"
@@ -364,7 +393,11 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
                       <TextField
                         {...field}
                         type="password"
-                        label={isEditMode ? "تأكيد كلمة المرور الجديدة" : "تأكيد كلمة المرور"}
+                        label={
+                          isEditMode
+                            ? "تأكيد كلمة المرور الجديدة"
+                            : "تأكيد كلمة المرور"
+                        }
                         fullWidth
                         disabled={mutation.isPending}
                         error={!!error}
@@ -411,24 +444,22 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
               />
 
               <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
+                <Grid xs={12} sm={6}>
                   <Controller
                     control={control}
                     name="is_supervisor"
                     render={({ field }) => (
-                      <Paper 
-                        elevation={1} 
-                        sx={{ 
-                          p: 2, 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          justifyContent: 'space-between',
-                          height: '100%'
+                      <Paper
+                        elevation={1}
+                        sx={{
+                          p: 2,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          height: "100%",
                         }}
                       >
-                        <Typography variant="body1">
-                          هل هو مشرف؟
-                        </Typography>
+                        <Typography variant="body1">هل هو مشرف؟</Typography>
                         <Switch
                           checked={field.value}
                           onChange={field.onChange}
@@ -438,24 +469,22 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
                     )}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid xs={12} sm={6}>
                   <Controller
                     control={control}
                     name="is_active"
                     render={({ field }) => (
-                      <Paper 
-                        elevation={1} 
-                        sx={{ 
-                          p: 2, 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          justifyContent: 'space-between',
-                          height: '100%'
+                      <Paper
+                        elevation={1}
+                        sx={{
+                          p: 2,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          height: "100%",
                         }}
                       >
-                        <Typography variant="body1">
-                          نشط
-                        </Typography>
+                        <Typography variant="body1">نشط</Typography>
                         <Switch
                           checked={field.value}
                           onChange={field.onChange}
@@ -467,29 +496,32 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
                 </Grid>
               </Grid>
 
-                
-
               <Box>
                 <Typography variant="h6" sx={{ mb: 1 }}>
                   الأدوار
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mb: 2 }}
+                >
                   اختر صلاحيات المستخدم
                 </Typography>
                 {isLoadingRoles ? (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+                  <Box sx={{ display: "flex", justifyContent: "center", p: 2 }}>
                     <CircularProgress size={24} />
                   </Box>
                 ) : (
-                  <Paper 
-                    elevation={1} 
-                    sx={{ 
-                      p: 2, 
-                      maxHeight: 240, 
-                      overflow: 'auto',
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                      gap: 1
+                  <Paper
+                    elevation={1}
+                    sx={{
+                      p: 2,
+                      maxHeight: 240,
+                      overflow: "auto",
+                      display: "grid",
+                      gridTemplateColumns:
+                        "repeat(auto-fit, minmax(200px, 1fr))",
+                      gap: 1,
                     }}
                   >
                     {rolesList.map((role) => (
@@ -501,13 +533,18 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
                           <FormControlLabel
                             control={
                               <Checkbox
-                                checked={roleArrayField.value?.includes(role.name)}
+                                checked={roleArrayField.value?.includes(
+                                  role.name,
+                                )}
                                 disabled={dataIsLoading || mutation.isPending}
                                 onChange={(e) => {
-                                  const currentRoles = roleArrayField.value || [];
+                                  const currentRoles =
+                                    roleArrayField.value || [];
                                   const newRoles = e.target.checked
                                     ? [...currentRoles, role.name]
-                                    : currentRoles.filter((name) => name !== role.name);
+                                    : currentRoles.filter(
+                                        (name) => name !== role.name,
+                                      );
                                   roleArrayField.onChange(newRoles);
                                 }}
                               />
@@ -522,7 +559,85 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
                 )}
               </Box>
 
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, pt: 2 }}>
+              <Box>
+                <Typography variant="h6" sx={{ mb: 1 }}>
+                  تبويبات التنويم
+                </Typography>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mb: 2 }}
+                >
+                  اختر التبويبات التي تظهر للمستخدم في صفحة تفاصيل التنويم
+                </Typography>
+                <Paper
+                  elevation={1}
+                  sx={{
+                    p: 2,
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                    gap: 1,
+                  }}
+                >
+                  {[
+                    { id: "overview", label: "نظرة عامة (Overview)" },
+                    {
+                      id: "operations",
+                      label: "العمليات الجراحية (Surgical Operations)",
+                    },
+                    { id: "lab", label: "المعمل (Laboratory)" },
+                    { id: "radiology", label: "الأشعة (Radiology)" },
+                    {
+                      id: "vital-signs",
+                      label: "العلامات الحيوية (Vital Signs)",
+                    },
+                    { id: "treatments", label: "العلاجات (Treatments)" },
+                    {
+                      id: "nursing-assignment",
+                      label: "التمريض (Nursing Assignment)",
+                    },
+                    { id: "stay-days", label: "أيام الإقامة (Stay Days)" },
+                    { id: "finance", label: "الحسابات (Finance)" },
+                    { id: "companion", label: "المرافقين (Companion)" },
+                    { id: "discharge", label: "الخروج (Discharge)" },
+                    { id: "attachments", label: "المرفقات (Attachments)" },
+                  ].map((tab) => (
+                    <Controller
+                      key={tab.id}
+                      control={control}
+                      name="admission_tabs"
+                      render={({ field: tabsField }) => (
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              checked={tabsField.value?.includes(tab.id)}
+                              disabled={dataIsLoading || mutation.isPending}
+                              onChange={(e) => {
+                                const currentTabs = tabsField.value || [];
+                                const newTabs = e.target.checked
+                                  ? [...currentTabs, tab.id]
+                                  : currentTabs.filter((id) => id !== tab.id);
+                                tabsField.onChange(newTabs);
+                              }}
+                            />
+                          }
+                          label={tab.label}
+                          sx={{ margin: 0 }}
+                        />
+                      )}
+                    />
+                  ))}
+                </Paper>
+              </Box>
+
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: 1,
+                  pt: 2,
+                }}
+              >
                 <Button
                   type="button"
                   variant="outlined"
@@ -539,7 +654,9 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
                     mutation.isPending ||
                     (!isDirty && isEditMode)
                   }
-                  startIcon={mutation.isPending ? <CircularProgress size={16} /> : null}
+                  startIcon={
+                    mutation.isPending ? <CircularProgress size={16} /> : null
+                  }
                 >
                   {isEditMode ? "حفظ التغييرات" : "إنشاء"}
                 </Button>
@@ -548,7 +665,6 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
           </CardContent>
         </Card>
       </Box>
-
     </>
   );
 };

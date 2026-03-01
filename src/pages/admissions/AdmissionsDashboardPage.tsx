@@ -20,6 +20,7 @@ import {
   ClipboardList,
   Stethoscope,
   LayoutGrid,
+  FileText,
 } from "lucide-react";
 import { getActiveAdmissions } from "@/services/admissionService";
 import { getWardsList } from "@/services/wardService";
@@ -39,7 +40,10 @@ interface DashboardCardProps {
   actionText?: string;
 }
 
-const statCardStyles: Record<string, { bg: string; border: string; icon: string; hover: string }> = {
+const statCardStyles: Record<
+  string,
+  { bg: string; border: string; icon: string; hover: string }
+> = {
   admissions: {
     bg: "bg-blue-50 dark:bg-blue-950/30",
     border: "border-blue-200 dark:border-blue-800",
@@ -50,7 +54,8 @@ const statCardStyles: Record<string, { bg: string; border: string; icon: string;
     bg: "bg-emerald-50 dark:bg-emerald-950/30",
     border: "border-emerald-200 dark:border-emerald-800",
     icon: "text-emerald-600 dark:text-emerald-400",
-    hover: "hover:border-emerald-300 hover:shadow-md dark:hover:border-emerald-700",
+    hover:
+      "hover:border-emerald-300 hover:shadow-md dark:hover:border-emerald-700",
   },
   rooms: {
     bg: "bg-amber-50 dark:bg-amber-950/30",
@@ -62,7 +67,8 @@ const statCardStyles: Record<string, { bg: string; border: string; icon: string;
     bg: "bg-violet-50 dark:bg-violet-950/30",
     border: "border-violet-200 dark:border-violet-800",
     icon: "text-violet-600 dark:text-violet-400",
-    hover: "hover:border-violet-300 hover:shadow-md dark:hover:border-violet-700",
+    hover:
+      "hover:border-violet-300 hover:shadow-md dark:hover:border-violet-700",
   },
 };
 
@@ -85,15 +91,16 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
       "border border-emerald-200 bg-emerald-50/50 dark:bg-emerald-950/20 hover:border-emerald-300 hover:shadow-lg dark:border-emerald-800 dark:hover:border-emerald-700",
     warning:
       "border border-amber-200 bg-amber-50/50 dark:bg-amber-950/20 hover:border-amber-300 hover:shadow-lg dark:border-amber-800 dark:hover:border-amber-700",
-    info:
-      "border border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 hover:border-blue-300 hover:shadow-lg dark:border-blue-800 dark:hover:border-blue-700",
+    info: "border border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 hover:border-blue-300 hover:shadow-lg dark:border-blue-800 dark:hover:border-blue-700",
   };
 
   const iconBg = {
     default: "bg-primary/10 text-primary",
     primary: "bg-primary/10 text-primary",
-    success: "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/50 dark:text-emerald-400",
-    warning: "bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-400",
+    success:
+      "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/50 dark:text-emerald-400",
+    warning:
+      "bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-400",
     info: "bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400",
   };
 
@@ -194,7 +201,11 @@ export default function AdmissionsDashboardPage() {
               </p>
             </div>
           </div>
-          <Button asChild size="lg" className="rounded-xl shadow-sm font-medium shrink-0">
+          <Button
+            asChild
+            size="lg"
+            className="rounded-xl shadow-sm font-medium shrink-0"
+          >
             <Link to="/admissions/new">
               <Plus className="h-5 w-5 ml-2" />
               إضافة تنويم جديد
@@ -391,6 +402,30 @@ export default function AdmissionsDashboardPage() {
                       </p>
                       <span className="inline-flex items-center gap-1.5 text-sm font-medium text-primary">
                         عرض الخريطة
+                        <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+
+            <Link to="/admissions/daily-report" className="block group">
+              <Card className="rounded-2xl border border-border bg-card shadow-sm hover:shadow-md hover:border-emerald-500/30 transition-all duration-300 h-full overflow-hidden">
+                <CardContent className="p-6">
+                  <div className="flex items-start gap-4">
+                    <div className="p-4 rounded-xl bg-emerald-500/10 text-emerald-600 shrink-0 group-hover:scale-105 transition-transform">
+                      <FileText className="h-10 w-10" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-lg mb-1">
+                        تقرير العمليات الشهري
+                      </h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        عرض إحصائيات العمليات اليومية والتحصيل
+                      </p>
+                      <span className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-600">
+                        عرض التقرير
                         <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
                       </span>
                     </div>

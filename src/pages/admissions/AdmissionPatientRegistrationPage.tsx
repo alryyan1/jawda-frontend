@@ -32,13 +32,14 @@ import type {
   PatientSearchResult,
   Patient,
 } from "@/types/patients";
-import ActivePatientCard from "@/components/clinic/ActivePatientCard";
+import AdmissionActiveCard from "@/components/admissions/AdmissionActiveCard";
 import {
   useQuickAddPatient,
   QuickAddPatientFormFields,
 } from "@/components/admissions/QuickAddPatientDialog";
+import dayjs from "dayjs";
 import AdmissionFormPage from "@/pages/admissions/AdmissionFormPage";
-import BedMap from "@/components/admissions/BedMap";
+import BedMap, { type BedSelection } from "@/components/admissions/BedMap";
 
 export default function AdmissionPatientRegistrationPage() {
   const queryClient = useQueryClient();
@@ -150,12 +151,47 @@ export default function AdmissionPatientRegistrationPage() {
         variables.isUpdate ? "تم تحديث السرير بنجاح" : "تم حفظ السرير في ملف التنويم"
       );
       queryClient.invalidateQueries({ queryKey: ["admissions"] });
+      queryClient.invalidateQueries({ queryKey: ["ward"] });
+      queryClient.invalidateQueries({ queryKey: ["wardsList"] });
       if (!variables.isUpdate && selectedPatientId) {
         setAdmittedPatientIds((prev) => new Set([...prev, selectedPatientId]));
       }
     },
     onError: (err: { response?: { data?: { message?: string } } }) => {
       toast.error(err.response?.data?.message ?? "فشل حفظ السرير");
+    },
+  });
+
+  const assignBedToPatientMutation = useMutation({
+    mutationFn: async ({
+      patientId,
+      bedId,
+    }: {
+      patientId: number;
+      bedId: number;
+    }) => {
+      const { data } = await getAdmissions(1, {
+        patient_id: patientId,
+        status: "admitted",
+      });
+      const activeAdmission = data?.length ? data[0] : null;
+      if (activeAdmission?.id) {
+        return updateAdmission(activeAdmission.id, { bed_id: String(bedId) });
+      }
+      return createAdmission({
+        patient_id: String(patientId),
+        bed_id: String(bedId),
+      });
+    },
+    onSuccess: (_, variables) => {
+      toast.success("تم تعيين السرير للمريض بنجاح");
+      queryClient.invalidateQueries({ queryKey: ["admissions"] });
+      queryClient.invalidateQueries({ queryKey: ["ward"] });
+      queryClient.invalidateQueries({ queryKey: ["wardsList"] });
+      setAdmittedPatientIds((prev) => new Set([...prev, variables.patientId]));
+    },
+    onError: (err: { response?: { data?: { message?: string } } }) => {
+      toast.error(err.response?.data?.message ?? "فشل تعيين السرير");
     },
   });
 
@@ -259,6 +295,19 @@ export default function AdmissionPatientRegistrationPage() {
               نموذج مريض جديد
             </Button>
             <Button
+              variant="outlined"
+              size="medium"
+              startIcon={<Bed />}
+              onClick={() => setBedMapOpen(true)}
+              sx={{
+                borderRadius: 2,
+                textTransform: "none",
+                fontWeight: 600,
+              }}
+            >
+              خريطة الأسرة
+            </Button>
+            <Button
               component={Link}
               to="/admissions/list"
               variant="outlined"
@@ -307,44 +356,33 @@ export default function AdmissionPatientRegistrationPage() {
             <Card
               elevation={0}
               sx={{
-                borderRadius: 3,
+                borderRadius: 2,
                 border: "1px solid",
                 borderColor: "divider",
                 overflow: "hidden",
               }}
             >
-              <CardContent sx={{ p: 2.5 }}>
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    mb: 2,
-                  }}
-                >
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                    <Box
-                      sx={{
-                        p: 1,
-                        borderRadius: 2,
-                        bgcolor: "primary.lighter",
-                        color: "primary.main",
-                        display: "flex",
-                      }}
-                    >
-                      <UserPlus size={20} />
-                    </Box>
-                    <Box>
-                      <Typography variant="subtitle1" fontWeight={600}>
-                        إضافة مريض جديد
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        تسجيل سريع لمريض جديد للتنويم أو العيادة
-                      </Typography>
-                    </Box>
+              <CardContent sx={{ p: 1.5 }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+                  <Box
+                    sx={{
+                      p: 0.75,
+                      borderRadius: 1.5,
+                      bgcolor: "primary.lighter",
+                      color: "primary.main",
+                      display: "flex",
+                    }}
+                  >
+                    <UserPlus size={18} />
+                  </Box>
+                  <Box>
+                    <Typography variant="subtitle2" fontWeight={600}>
+                      إضافة مريض جديد
+                    </Typography>
+                   
                   </Box>
                 </Box>
-                <Divider sx={{ mb: 2 }} />
+                <Divider sx={{ mb: 1 }} />
                 <QuickAddPatientFormFields
                   theme={theme}
                   quickAddFormData={quickAddFormData}
@@ -352,17 +390,10 @@ export default function AdmissionPatientRegistrationPage() {
                   quickAddPatientMutation={quickAddPatientMutation}
                   handleFormKeyDown={handleFormKeyDown}
                 />
-                <Box
-                  sx={{
-                    mt: 2.5,
-                    display: "flex",
-                    justifyContent: "flex-end",
-                    gap: 1.5,
-                  }}
-                >
+                <Box sx={{ mt: 1.5, display: "flex", justifyContent: "flex-end", gap: 1 }}>
                   <Button
                     variant="outlined"
-                    size="medium"
+                    size="small"
                     onClick={() =>
                       setQuickAddFormData({
                         name: "",
@@ -383,9 +414,9 @@ export default function AdmissionPatientRegistrationPage() {
                   </Button>
                   <Button
                     variant="contained"
-                    size="medium"
+                    size="small"
                     startIcon={
-                      !quickAddPatientMutation.isPending && <UserPlus size={18} />
+                      !quickAddPatientMutation.isPending && <UserPlus size={16} />
                     }
                     onClick={handleQuickAddSubmit}
                     disabled={
@@ -394,10 +425,10 @@ export default function AdmissionPatientRegistrationPage() {
                       !quickAddFormData.phone ||
                       !quickAddFormData.gender
                     }
-                    sx={{ textTransform: "none", px: 3 }}
+                    sx={{ textTransform: "none", px: 2 }}
                   >
                     {quickAddPatientMutation.isPending ? (
-                      <CircularProgress size={20} color="inherit" />
+                      <CircularProgress size={18} color="inherit" />
                     ) : (
                       "حفظ المريض"
                     )}
@@ -443,10 +474,10 @@ export default function AdmissionPatientRegistrationPage() {
                 </Box>
                 <Box>
                   <Typography variant="subtitle1" fontWeight={600}>
-                    مرضى اليوم (العيادة)
+                    المرضى المنتظرين للتنويم
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
-                    قائمة المرضى النشطين لهذا اليوم لاختيارهم للتنويم
+                    قائمة المرضى المنتظرين للتنويم لاختيارهم للتنويم
                   </Typography>
                 </Box>
               </Box>
@@ -503,7 +534,7 @@ export default function AdmissionPatientRegistrationPage() {
                     }}
                   >
                     {visits.map((visit) => (
-                      <ActivePatientCard
+                      <AdmissionActiveCard
                         key={visit.id}
                         visit={visit}
                         isSelected={selectedVisit?.id === visit.id}
@@ -596,12 +627,7 @@ export default function AdmissionPatientRegistrationPage() {
                       color="primary"
                       label={getVisitStatusLabel(selectedVisit.status)}
                     />
-                    {selectedVisit.queue_number && (
-                      <Chip
-                        size="small"
-                        label={`رقم الدور ${selectedVisit.queue_number}`}
-                      />
-                    )}
+                  
                   </Box>
                   <Typography variant="body2">
                     <strong>الهاتف:</strong>{" "}
@@ -616,29 +642,44 @@ export default function AdmissionPatientRegistrationPage() {
                     {selectedVisit.doctor?.name ?? selectedVisit.doctor_name}
                   </Typography>
                   <Typography variant="body2">
-                    <strong>تاريخ الزيارة:</strong>{" "}
+                    <strong>تاريخ التسجيل:</strong>{" "}
                     {selectedVisit.created_at
-                      ? new Date(selectedVisit.created_at).toLocaleString("ar-EG")
+                      ? dayjs(selectedVisit.created_at).format("DD/MM/YYYY HH:mm")
                       : "غير متوفر"}
                   </Typography>
+                  {admissionsResponse?.data?.[0] && (
+                    <>
+                      {admissionsResponse.data[0].created_at && (
+                        <Typography variant="body2">
+                          <strong>تاريخ التنويم:</strong>{" "}
+                          {dayjs(admissionsResponse.data[0].created_at).format("DD/MM/YYYY HH:mm")}
+                        </Typography>
+                      )}
+                      {(admissionsResponse.data[0].ward || admissionsResponse.data[0].room || admissionsResponse.data[0].bed) && (
+                        <Typography variant="body2">
+                          <strong>موقع التنويم:</strong>
+                          {[
+                            admissionsResponse.data[0].ward?.name,
+                            admissionsResponse.data[0].room?.room_number != null
+                              ? `غرفة ${admissionsResponse.data[0].room.room_number}`
+                              : null,
+                            admissionsResponse.data[0].bed?.bed_number != null
+                              ? `سرير ${admissionsResponse.data[0].bed.bed_number}`
+                              : null,
+                          ]
+                            .filter(Boolean)
+                            .join(" / ")}
+                        </Typography>
+                      )}
+                    </>
+                  )}
                   {selectedVisit.reason_for_visit && (
                     <Typography variant="body2">
                       <strong>سبب الزيارة:</strong>{" "}
                       {selectedVisit.reason_for_visit}
                     </Typography>
                   )}
-                  {selectedVisit.patient.company?.name && (
-                    <Typography variant="body2">
-                      <strong>الشركة:</strong>{" "}
-                      {selectedVisit.patient.company.name}
-                    </Typography>
-                  )}
-                  {selectedBedSummary && (
-                    <Typography variant="body2" sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                      <Bed size={16} style={{ flexShrink: 0 }} />
-                      <strong>السرير:</strong> {selectedBedSummary}
-                    </Typography>
-                  )}
+              
                 </Box>
               ) : !selectedQuickPatient ? (
                 <Box
@@ -777,10 +818,36 @@ export default function AdmissionPatientRegistrationPage() {
                   </Typography>
                   <Typography variant="body2">
                     <strong>تاريخ التسجيل:</strong>{" "}
-                    {new Date(
-                      quickPatientDetails.created_at,
-                    ).toLocaleString("ar-EG")}
+                    {quickPatientDetails.created_at
+                      ? dayjs(quickPatientDetails.created_at).format("DD/MM/YYYY HH:mm")
+                      : "غير متوفر"}
                   </Typography>
+                  {admissionsResponse?.data?.[0] && (
+                    <>
+                      {admissionsResponse.data[0].created_at && (
+                        <Typography variant="body2">
+                          <strong>تاريخ التنويم:</strong>{" "}
+                          {dayjs(admissionsResponse.data[0].created_at).format("DD/MM/YYYY HH:mm")}
+                        </Typography>
+                      )}
+                      {(admissionsResponse.data[0].ward || admissionsResponse.data[0].room || admissionsResponse.data[0].bed) && (
+                        <Typography variant="body2">
+                          <strong>موقع التنويم:</strong>{" "}
+                          {[
+                            admissionsResponse.data[0].ward?.name,
+                            admissionsResponse.data[0].room?.room_number != null
+                              ? `غرفة ${admissionsResponse.data[0].room.room_number}`
+                              : null,
+                            admissionsResponse.data[0].bed?.bed_number != null
+                              ? `سرير ${admissionsResponse.data[0].bed.bed_number}`
+                              : null,
+                          ]
+                            .filter(Boolean)
+                            .join(" / ")}
+                        </Typography>
+                      )}
+                    </>
+                  )}
                   {selectedBedSummary && (
                     <Typography variant="body2" sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                       <Bed size={16} style={{ flexShrink: 0 }} />
@@ -811,16 +878,18 @@ export default function AdmissionPatientRegistrationPage() {
                     >
                       {hasActiveAdmission ? "عرض ملف " : "ملف تنويم جديد"}
                     </Button>
-                    <Button
-                      variant="outlined"
-                      size="medium"
-                      startIcon={<Bed size={18} />}
-                      disabled={!selectedPatientId}
-                      onClick={() => setBedMapOpen(true)}
-                      sx={{ textTransform: "none", fontWeight: 600, flex: 1, minWidth: 140 }}
-                    >
-                      اختر السرير
-                    </Button>
+                    {hasActiveAdmission && (
+                      <Button
+                        variant="outlined"
+                        size="medium"
+                        startIcon={<Bed size={18} />}
+                        disabled={!selectedPatientId}
+                        onClick={() => setBedMapOpen(true)}
+                        sx={{ textTransform: "none", fontWeight: 600, flex: 1, minWidth: 140 }}
+                      >
+                        اختر السرير
+                      </Button>
+                    )}
                   </Box>
                 </Box>
               )}
@@ -891,14 +960,23 @@ export default function AdmissionPatientRegistrationPage() {
         <Dialog
           open={bedMapOpen}
           onClose={() => setBedMapOpen(false)}
-          maxWidth="sm"
-          fullWidth
-          PaperProps={{ sx: { borderRadius: 2 } }}
+          PaperProps={{
+            sx: {
+              borderRadius: 2,
+              width: "90%",
+              maxWidth: "90%",
+            },
+          }}
         >
           <DialogTitle>اختر السرير</DialogTitle>
           <DialogContent>
             <BedMap
               selectedBedId={selectedBedId}
+              isUpdatingBed={saveBedMutation.isPending || assignBedToPatientMutation.isPending}
+              draggablePatients={visits?.map((v) => ({
+                patientId: v.patient?.id ?? 0,
+                patientName: v.patient?.name ?? "",
+              })).filter((p) => p.patientId) ?? []}
               onSelectBed={(selection) => {
                 setSelectedBedId(selection.id);
                 const summary = [
@@ -919,6 +997,12 @@ export default function AdmissionPatientRegistrationPage() {
                     admissionId: activeAdmissionId,
                   });
                 }
+              }}
+              onDropPatient={(patientId: number, selection: BedSelection) => {
+                assignBedToPatientMutation.mutate({
+                  patientId,
+                  bedId: selection.id,
+                });
               }}
             />
           </DialogContent>

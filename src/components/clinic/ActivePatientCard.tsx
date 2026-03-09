@@ -36,7 +36,11 @@ import CopyVisitToShiftDialog from "./CopyVisitToShiftDialog";
 import SendWhatsAppDialog from "./SendWhatsAppDialog";
 import PatientVisitHistoryDialog from "./PatientVisitHistoryDialog";
 import CreateNewVisitForPatientDialog from "./CreateNewVisitForPatientDialog";
-import Badge from "@mui/material/Badge"; // MUI Badge
+import Badge from "@mui/material/Badge";
+import Box from "@mui/material/Box";
+import Tooltip from "@mui/material/Tooltip";
+import Popover from "@mui/material/Popover";
+import Typography from "@mui/material/Typography";
 // import type { DoctorVisit } from "@/types/visits";
 
 const VISIT_STATUSES_FOR_DROPDOWN = [
@@ -105,10 +109,20 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
       }),
     enabled: !!visit.patient.id,
   });
-  const hasBedAssigned =
-    (admissionsResponse?.data?.length ?? 0) > 0 &&
-    admissionsResponse!.data![0].bed_id != null;
+  const activeAdmission = (admissionsResponse?.data?.length ?? 0) > 0 ? admissionsResponse!.data![0] : null;
+  const hasBedAssigned = activeAdmission?.bed_id != null;
 
+  const bedDetailsSummary = hasBedAssigned && activeAdmission
+    ? [
+        activeAdmission.ward?.name,
+        activeAdmission.room?.room_number != null ? `غرفة ${activeAdmission.room.room_number}` : null,
+        activeAdmission.bed?.bed_number != null ? `سرير ${activeAdmission.bed.bed_number}` : null,
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    : "";
+
+  const [bedPopoverAnchor, setBedPopoverAnchor] = useState<HTMLElement | null>(null);
   const [isCopyDialogOpen, setIsCopyDialogOpen] = useState(false);
   const [isWhatsAppDialogOpen, setIsWhatsAppDialogOpen] = useState(false);
   const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
@@ -299,13 +313,38 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
               </div>
             </div>
 
-            {/* Bed icon: only when patient has an admission assigned to a bed */}
-            {hasBedAssigned && (
-              <Bed
-                className="h-4 w-4 text-muted-foreground flex-shrink-0 ltr:mr-1 rtl:ml-1"
-                title="مُعيَّن له سرير"
-                aria-hidden
-              />
+            {/* Bed icon: only when patient has an admission assigned to a bed; hover = tooltip, click = popover */}
+            {hasBedAssigned && bedDetailsSummary && (
+              <>
+                <Tooltip title={bedDetailsSummary} arrow placement="top">
+                  <button
+                    type="button"
+                    className="flex items-center justify-center flex-shrink-0 ltr:mr-1 rtl:ml-1 p-0 border-0 bg-transparent cursor-pointer text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 rounded"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setBedPopoverAnchor(e.currentTarget);
+                    }}
+                    aria-label={`تفاصيل السرير: ${bedDetailsSummary}`}
+                  >
+                    <Bed className="h-4 w-4" />
+                  </button>
+                </Tooltip>
+                <Popover
+                  open={!!bedPopoverAnchor}
+                  anchorEl={bedPopoverAnchor}
+                  onClose={() => setBedPopoverAnchor(null)}
+                  anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+                  transformOrigin={{ vertical: "top", horizontal: "center" }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Box sx={{ p: 1.5, minWidth: 160 }} onClick={(e) => e.stopPropagation()}>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>
+                      تفاصيل السرير
+                    </Typography>
+                    <Typography variant="body2">{bedDetailsSummary}</Typography>
+                  </Box>
+                </Popover>
+              </>
             )}
 
             {/* Profile button with badge */}

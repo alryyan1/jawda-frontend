@@ -495,15 +495,7 @@ export default function AdmissionFormPage(props: AdmissionFormPageProps = {}) {
                             />
                           )}
                         />
-                        <Button
-                          component={Link}
-                          to="/doctors/new"
-                          target="_blank"
-                          sx={{ minWidth: 40, px: 0 }}
-                          variant="outlined"
-                        >
-                          <Plus size={18} />
-                        </Button>
+                     
                       </Box>
                     </Box>
 
@@ -547,15 +539,7 @@ export default function AdmissionFormPage(props: AdmissionFormPageProps = {}) {
                             />
                           )}
                         />
-                        <Button
-                          component={Link}
-                          to="/doctors/new"
-                          target="_blank"
-                          sx={{ minWidth: 40, px: 0 }}
-                          variant="outlined"
-                        >
-                          <Plus size={18} />
-                        </Button>
+                    
                       </Box>
                     </Box>
 

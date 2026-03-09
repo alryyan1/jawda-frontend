@@ -114,6 +114,7 @@ import ShortStayBedsListPage from "./pages/settings/short-stay-beds/ShortStayBed
 import SurgicalOperationsPage from "./pages/settings/SurgicalOperationsPage";
 import SurgeryStatisticsPage from "./pages/admissions/SurgeryStatisticsPage";
 import SurgeryMonthlyReportPage from "./pages/admissions/SurgeryMonthlyReportPage";
+import AdmissionPatientRegistrationPage from "./pages/admissions/AdmissionPatientRegistrationPage";
 
 const router = createBrowserRouter([
   // --- PUBLIC ROUTES ---
@@ -205,6 +206,10 @@ const router = createBrowserRouter([
               {
                 path: "list",
                 element: <AdmissionsListPage />,
+              },
+              {
+                path: "patient-registration",
+                element: <AdmissionPatientRegistrationPage />,
               },
               {
                 path: "new",

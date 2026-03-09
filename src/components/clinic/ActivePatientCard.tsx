@@ -13,6 +13,7 @@ import {
   MessageSquare,
   History,
   UserPlus,
+  Bed,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -27,6 +28,7 @@ import type { ActivePatientVisit, Patient } from "@/types/patients";
 import type { DoctorShift } from "@/types/doctors";
 // Removed unused updateDoctorVisitStatus import
 import { getActiveDoctorShifts } from "@/services/clinicService";
+import { getAdmissions } from "@/services/admissionService";
 import type { Company } from "@/types/companies";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -93,6 +95,19 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
 }) => {
   const queryClient = useQueryClient();
   const { user: currentUser, currentClinicShift } = useAuth();
+
+  const { data: admissionsResponse } = useQuery({
+    queryKey: ["admissions", "active", visit.patient.id],
+    queryFn: () =>
+      getAdmissions(1, {
+        patient_id: visit.patient.id,
+        status: "admitted",
+      }),
+    enabled: !!visit.patient.id,
+  });
+  const hasBedAssigned =
+    (admissionsResponse?.data?.length ?? 0) > 0 &&
+    admissionsResponse!.data![0].bed_id != null;
 
   const [isCopyDialogOpen, setIsCopyDialogOpen] = useState(false);
   const [isWhatsAppDialogOpen, setIsWhatsAppDialogOpen] = useState(false);
@@ -283,6 +298,15 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
                 {/* Company indicator removed since it's now shown as the main badge */}
               </div>
             </div>
+
+            {/* Bed icon: only when patient has an admission assigned to a bed */}
+            {hasBedAssigned && (
+              <Bed
+                className="h-4 w-4 text-muted-foreground flex-shrink-0 ltr:mr-1 rtl:ml-1"
+                title="مُعيَّن له سرير"
+                aria-hidden
+              />
+            )}
 
             {/* Profile button with badge */}
             <Badge

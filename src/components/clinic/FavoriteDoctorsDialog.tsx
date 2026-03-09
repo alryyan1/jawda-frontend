@@ -1,7 +1,7 @@
 // src/components/clinic/FavoriteDoctorsDialog.tsx
-import React, { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import React, { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import {
   Button,
@@ -24,19 +24,18 @@ import {
   IconButton,
   Typography,
   Autocomplete,
-} from '@mui/material';
+} from "@mui/material";
+import { Search as SearchIcon } from "@mui/icons-material";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faHeart, faHeartBroken } from "@fortawesome/free-solid-svg-icons";
 import {
-  Search as SearchIcon,
-} from '@mui/icons-material';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHeart, faHeartBroken } from '@fortawesome/free-solid-svg-icons';
-import { 
-  getDoctorsWithFavorites, 
-  toggleFavoriteDoctor,
+  getDoctorsWithFavorites,
   getServices,
+  addFavoriteDoctor,
+  removeFavoriteDoctor,
   type Doctor,
-  type Service 
-} from '@/services/favoriteDoctorsService';
+  type Service,
+} from "@/services/favoriteDoctorsService";
 
 interface FavoriteDoctorsDialogProps {
   triggerButton: React.ReactNode;
@@ -44,33 +43,42 @@ interface FavoriteDoctorsDialogProps {
   onClose?: () => void;
 }
 
-const FavoriteDoctorsDialog: React.FC<FavoriteDoctorsDialogProps> = ({ 
-  triggerButton, 
+const FavoriteDoctorsDialog: React.FC<FavoriteDoctorsDialogProps> = ({
+  triggerButton,
   currentUserId,
   onClose,
 }) => {
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-  const [selectedServices, setSelectedServices] = useState<{[doctorId: number]: Service | null}>({});
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const [selectedServices, setSelectedServices] = useState<{
+    [doctorId: number]: Service | null;
+  }>({});
 
   useEffect(() => {
     const handler = setTimeout(() => setDebouncedSearchTerm(searchTerm), 300);
     return () => clearTimeout(handler);
   }, [searchTerm]);
 
-  const doctorsQueryKey = ['doctorsWithFavorites', debouncedSearchTerm];
-  const servicesQueryKey = ['services'];
+  const doctorsQueryKey = ["doctorsWithFavorites", debouncedSearchTerm];
+  const servicesQueryKey = ["services"];
 
-  const { data: doctorsList, isLoading: doctorsLoading, error: doctorsError } = useQuery<Doctor[], Error>({
+  const {
+    data: doctorsList,
+    isLoading: doctorsLoading,
+    error: doctorsError,
+  } = useQuery<Doctor[], Error>({
     queryKey: doctorsQueryKey,
     queryFn: () => getDoctorsWithFavorites(debouncedSearchTerm),
     enabled: isOpen,
     retry: 1,
   });
 
-  const { data: servicesList = [], isLoading: servicesLoading } = useQuery<Service[], Error>({
+  const { data: servicesList = [], isLoading: servicesLoading } = useQuery<
+    Service[],
+    Error
+  >({
     queryKey: servicesQueryKey,
     queryFn: () => getServices(),
     enabled: isOpen,
@@ -80,68 +88,136 @@ const FavoriteDoctorsDialog: React.FC<FavoriteDoctorsDialogProps> = ({
   // Initialize selected services when doctors and services data are available
   useEffect(() => {
     if (doctorsList && servicesList.length > 0) {
-      const initialServices: {[doctorId: number]: Service | null} = {};
-      doctorsList.forEach(doctor => {
+      const initialServices: { [doctorId: number]: Service | null } = {};
+      doctorsList.forEach((doctor) => {
         if (doctor.fav_service_id) {
-          const service = servicesList.find(s => s.id === doctor.fav_service_id);
+          const service = servicesList.find(
+            (s) => s.id === doctor.fav_service_id,
+          );
           initialServices[doctor.id] = service || null;
         }
       });
-      setSelectedServices(prev => ({ ...prev, ...initialServices }));
+      setSelectedServices((prev) => ({ ...prev, ...initialServices }));
     }
   }, [doctorsList, servicesList]);
 
   const toggleFavoriteMutation = useMutation({
-    mutationFn: ({ doctorId, favService }: { doctorId: number; favService?: number }) =>
-      toggleFavoriteDoctor({ doc_id: doctorId, fav_service: favService }),
+    mutationFn: ({
+      doctorId,
+      favService,
+      isFavorite,
+    }: {
+      doctorId: number;
+      favService?: number;
+      isFavorite: boolean;
+    }) =>
+      isFavorite
+        ? removeFavoriteDoctor(doctorId)
+        : addFavoriteDoctor({ doc_id: doctorId, fav_service: favService }),
     onSuccess: () => {
-      toast.success('تم تحديث المفضلة بنجاح');
       queryClient.invalidateQueries({ queryKey: doctorsQueryKey });
     },
     onError: (error: unknown) => {
-      // Error toast is already shown by the service, just log for debugging
-      console.error('Toggle favorite mutation error:', error);
+      console.error("Toggle favorite mutation error:", error);
+    },
+  });
+
+  const updateServiceMutation = useMutation({
+    mutationFn: ({
+      doctorId,
+      favService,
+    }: {
+      doctorId: number;
+      favService?: number;
+    }) => addFavoriteDoctor({ doc_id: doctorId, fav_service: favService }),
+    onSuccess: () => {
+      toast.success("تم تحديث الخدمة بنجاح");
+      queryClient.invalidateQueries({ queryKey: doctorsQueryKey });
+    },
+    onError: (error: unknown) => {
+      console.error("Update service mutation error:", error);
     },
   });
 
   const handleToggleFavorite = (doctorId: number) => {
     if (!currentUserId) {
-      toast.error('لم يتم تحديد المستخدم');
+      toast.error("لم يتم تحديد المستخدم");
       return;
     }
-    
+
     const selectedService = selectedServices[doctorId];
-    toggleFavoriteMutation.mutate({ 
-      doctorId, 
-      favService: selectedService?.id 
+    const currentlyFavorite = isFavorite(doctorId);
+
+    toggleFavoriteMutation.mutate({
+      doctorId,
+      favService: selectedService?.id,
+      isFavorite: currentlyFavorite,
     });
   };
 
+  const handleToggleAll = async () => {
+    if (!doctorsList || !currentUserId) return;
+
+    const allFavorites = doctorsList.every((d) => d.is_favorite);
+
+    try {
+      if (allFavorites) {
+        // Unfavorite all
+        await Promise.all(
+          doctorsList.map((doctor) => removeFavoriteDoctor(doctor.id)),
+        );
+        toast.success("تم إزالة جميع الأطباء من المفضلة");
+      } else {
+        // Favorite all (only those not already favorite or update all)
+        await Promise.all(
+          doctorsList.map((doctor) =>
+            addFavoriteDoctor({
+              doc_id: doctor.id,
+              fav_service: selectedServices[doctor.id]?.id,
+            }),
+          ),
+        );
+        toast.success("تم إضافة جميع الأطباء للمفضلة");
+      }
+      queryClient.invalidateQueries({ queryKey: doctorsQueryKey });
+    } catch (error) {
+      console.error("Toggle all error:", error);
+      toast.error("حدث خطأ أثناء تحديث الكل");
+    }
+  };
+
   const handleServiceChange = (doctorId: number, service: Service | null) => {
-    setSelectedServices(prev => ({
+    setSelectedServices((prev) => ({
       ...prev,
-      [doctorId]: service
+      [doctorId]: service,
     }));
+
+    // Auto save
+    updateServiceMutation.mutate({
+      doctorId,
+      favService: service?.id,
+    });
   };
 
   const isFavorite = (doctorId: number) => {
-    const doctor = doctorsList?.find(d => d.id === doctorId);
+    const doctor = doctorsList?.find((d) => d.id === doctorId);
     return doctor?.is_favorite || false;
   };
 
   return (
     <>
-      <Box onClick={() => setIsOpen(true)}>
-        {triggerButton}
-      </Box>
-      <Dialog 
-        open={isOpen} 
-        onClose={() => { setIsOpen(false); onClose?.(); }}
+      <Box onClick={() => setIsOpen(true)}>{triggerButton}</Box>
+      <Dialog
+        open={isOpen}
+        onClose={() => {
+          setIsOpen(false);
+          onClose?.();
+        }}
         maxWidth="lg"
         fullWidth
       >
         <DialogTitle>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <FontAwesomeIcon icon={faHeart} color="#e91e63" />
             <Typography variant="h6">أطبائي</Typography>
           </Box>
@@ -164,17 +240,20 @@ const FavoriteDoctorsDialog: React.FC<FavoriteDoctorsDialogProps> = ({
           </Box>
 
           {doctorsLoading && !doctorsList && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+            <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
               <CircularProgress />
             </Box>
           )}
 
           {doctorsError && (
-            <Box sx={{ textAlign: 'center', py: 4, color: 'error.main' }}>
+            <Box sx={{ textAlign: "center", py: 4, color: "error.main" }}>
               <Typography variant="body1" color="error">
                 فشل في تحميل البيانات
               </Typography>
-              <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
+              <Typography
+                variant="body2"
+                sx={{ mt: 1, color: "text.secondary" }}
+              >
                 تحقق من رسائل التنبيه أو حاول مرة أخرى
               </Typography>
             </Box>
@@ -190,17 +269,46 @@ const FavoriteDoctorsDialog: React.FC<FavoriteDoctorsDialogProps> = ({
                       <TableCell align="center">التخصص</TableCell>
                       <TableCell align="center">الخدمة المفضلة</TableCell>
                       <TableCell align="center">الحالة</TableCell>
-                      <TableCell align="center">الإجراءات</TableCell>
+                      <TableCell align="center">
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: 0.5,
+                          }}
+                        >
+                          الإجراءات
+                          <IconButton
+                            size="small"
+                            onClick={handleToggleAll}
+                            title={
+                              doctorsList?.every((d) => d.is_favorite)
+                                ? "إلغاء الكل"
+                                : "تفضيل الكل"
+                            }
+                            color="primary"
+                          >
+                            <FontAwesomeIcon
+                              icon={
+                                doctorsList?.every((d) => d.is_favorite)
+                                  ? faHeartBroken
+                                  : faHeart
+                              }
+                            />
+                          </IconButton>
+                        </Box>
+                      </TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {doctorsList?.map((doctor) => (
                       <TableRow key={doctor.id}>
-                        <TableCell align="center" sx={{ fontWeight: 'medium' }}>
+                        <TableCell align="center" sx={{ fontWeight: "medium" }}>
                           {doctor.name}
                         </TableCell>
                         <TableCell align="center">
-                          {doctor.specialist_name || '-'}
+                          {doctor.specialist_name || "-"}
                         </TableCell>
                         <TableCell align="center" sx={{ minWidth: 200 }}>
                           <Autocomplete
@@ -208,7 +316,9 @@ const FavoriteDoctorsDialog: React.FC<FavoriteDoctorsDialogProps> = ({
                             options={servicesList}
                             getOptionLabel={(option) => option.name}
                             value={selectedServices[doctor.id] || null}
-                            onChange={(_, newValue) => handleServiceChange(doctor.id, newValue)}
+                            onChange={(_, newValue) =>
+                              handleServiceChange(doctor.id, newValue)
+                            }
                             renderInput={(params) => (
                               <TextField
                                 {...params}
@@ -223,12 +333,17 @@ const FavoriteDoctorsDialog: React.FC<FavoriteDoctorsDialogProps> = ({
                         </TableCell>
                         <TableCell align="center">
                           <Chip
-                            label={isFavorite(doctor.id) ? 'مفضل' : 'غير مفضل'}
-                            color={isFavorite(doctor.id) ? 'error' : 'default'}
-                            variant={isFavorite(doctor.id) ? 'filled' : 'outlined'}
-                            icon={isFavorite(doctor.id) ? 
-                              <FontAwesomeIcon icon={faHeart} /> : 
-                              <FontAwesomeIcon icon={faHeartBroken} />
+                            label={isFavorite(doctor.id) ? "مفضل" : "غير مفضل"}
+                            color={isFavorite(doctor.id) ? "error" : "default"}
+                            variant={
+                              isFavorite(doctor.id) ? "filled" : "outlined"
+                            }
+                            icon={
+                              isFavorite(doctor.id) ? (
+                                <FontAwesomeIcon icon={faHeart} />
+                              ) : (
+                                <FontAwesomeIcon icon={faHeartBroken} />
+                              )
                             }
                           />
                         </TableCell>
@@ -236,11 +351,13 @@ const FavoriteDoctorsDialog: React.FC<FavoriteDoctorsDialogProps> = ({
                           <IconButton
                             onClick={() => handleToggleFavorite(doctor.id)}
                             disabled={toggleFavoriteMutation.isPending}
-                            color={isFavorite(doctor.id) ? 'error' : 'default'}
-                            sx={{ 
-                              '&:hover': { 
-                                backgroundColor: isFavorite(doctor.id) ? 'error.light' : 'action.hover' 
-                              }
+                            color={isFavorite(doctor.id) ? "error" : "default"}
+                            sx={{
+                              "&:hover": {
+                                backgroundColor: isFavorite(doctor.id)
+                                  ? "error.light"
+                                  : "action.hover",
+                              },
                             }}
                           >
                             {toggleFavoriteMutation.isPending ? (
@@ -257,15 +374,23 @@ const FavoriteDoctorsDialog: React.FC<FavoriteDoctorsDialogProps> = ({
                   </TableBody>
                 </Table>
               ) : (
-                <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
-                  {searchTerm ? 'لا توجد نتائج' : 'لا يوجد أطباء'}
+                <Box
+                  sx={{ textAlign: "center", py: 4, color: "text.secondary" }}
+                >
+                  {searchTerm ? "لا توجد نتائج" : "لا يوجد أطباء"}
                 </Box>
               )}
             </TableContainer>
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => { setIsOpen(false); onClose?.(); }} variant="outlined">
+          <Button
+            onClick={() => {
+              setIsOpen(false);
+              onClose?.();
+            }}
+            variant="outlined"
+          >
             إغلاق
           </Button>
         </DialogActions>

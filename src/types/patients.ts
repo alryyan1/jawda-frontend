@@ -120,6 +120,8 @@ export interface ActivePatientVisit {
     age_month: number | null;
     age_day: number | null;
     full_age: string;
+    social_status?: "single" | "married" | "widowed" | "divorced" | null;
+    income_source?: string | null;
     doctor: {
       id: number;
       name: string;

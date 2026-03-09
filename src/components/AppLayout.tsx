@@ -153,7 +153,11 @@ export const allMainNavItems: NavItem[] = [
   { to: "/attendance/sheet", label: "سجل الحضور", icon: ClipboardEditIcon },
   { to: "/patients", label: "المرضى", icon: Users },
   { to: "/admissions", label: "التنويم", icon: Hospital },
-
+  {
+    to: "/admissions/patient-registration",
+    label: "تسجيل مريض للتنويم",
+    icon: BedDouble,
+  },
   { to: "/online-booking", label: "الحجز ", icon: CalendarCheck2 },
   { to: "/cash-reconciliation", label: "الفئات الماليه", icon: CreditCard },
   {
@@ -184,6 +188,7 @@ export const DEFAULT_NAV_ITEMS_BY_TYPE: Record<string, string[]> = {
     "/cash-reconciliation",
     "/patients",
     "/admissions",
+    "/admissions/patient-registration",
     "/online-booking",
   ],
   "خزنه موحده": ["/dashboard", "/clinic", "/cash-reconciliation", "/patients"],
@@ -240,14 +245,37 @@ const userTypeStyles: Record<
 };
 // Function to get navigation items based on user's nav_items or user_type defaults
 const getMainNavItems = (
-  user?: { nav_items?: string[] | null; user_type?: string | null } | null,
+  user?:
+    | { nav_items?: string[] | string | null; user_type?: string | null }
+    | null,
 ): NavItem[] => {
   if (!user) {
     return [];
   }
+
+  // Normalize nav_items which may come from backend as JSON string or string[]
+  const normalizeNavItems = (
+    raw: string[] | string | null | undefined,
+  ): string[] => {
+    if (Array.isArray(raw)) {
+      return raw;
+    }
+    if (typeof raw === "string") {
+      try {
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  };
+
+  const navItems = normalizeNavItems(user.nav_items ?? null);
+
   // If user has custom nav_items, use those
-  if (user?.nav_items && user.nav_items.length > 0) {
-    return allMainNavItems.filter((item) => user.nav_items!.includes(item.to));
+  if (navItems.length > 0) {
+    return allMainNavItems.filter((item) => navItems.includes(item.to));
   }
 
   // If no custom nav_items but user has a user_type, use defaults for that type
@@ -705,6 +733,7 @@ const AppLayout: React.FC = () => {
   }) => {
     // Get filtered navigation items based on user's nav_items or user_type defaults
     const filteredMainNavItems = getMainNavItems(user);
+    console.log(filteredMainNavItems,'filteredMainNavItems')
     return (
       <div className="flex flex-col h-full">
         <ScrollArea className="flex-1 min-h-0">

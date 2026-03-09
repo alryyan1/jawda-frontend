@@ -20,52 +20,27 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions,
-  IconButton,
-  ListItemText,
 } from "@mui/material";
 import {
   ArrowRight,
   Plus,
-  User,
-  MapPin,
-  Calendar,
   Stethoscope,
   Contact,
   FileText,
-  UserRound,
-  Building2,
-  Bed,
-  DoorOpen,
-  Clock,
   Activity,
-  Users,
-  Phone,
+  Bed,
 } from "lucide-react";
-import type { AdmissionFormData } from "@/types/admissions";
-import type { Room as RoomType } from "@/types/admissions";
-import { createAdmission } from "@/services/admissionService";
-import { getWardsList } from "@/services/wardService";
-import { getRooms } from "@/services/roomService";
-import { getAvailableBeds } from "@/services/bedService";
-import { searchExistingPatients } from "@/services/patientService";
-import QuickAddPatientDialog from "@/components/admissions/QuickAddPatientDialog";
+import type { Admission, AdmissionFormData, AdmissionPurpose } from "@/types/admissions";
+import { createAdmission, getAdmissionById, updateAdmission } from "@/services/admissionService";
+import BedMap from "@/components/admissions/BedMap";
 import { getDoctorsList } from "@/services/doctorService";
-import { getShortStayBeds, createShortStayBed } from "@/services/shortStayBedService";
 import type { PatientSearchResult } from "@/types/patients";
-import type { ShortStayBedFormData } from "@/types/admissions";
 
 type AdmissionFormValues = {
   patient_id: string;
-  ward_id: string;
-  room_id: string;
   bed_id: string;
-  short_stay_bed_id: string;
-  short_stay_duration: "12h" | "24h" | "";
-  booking_type: "bed" | "room";
-  admission_date: Date | null;
-  admission_time: string;
-  admission_type: string;
+  admission_days: string;
+  admission_purpose: string;
   admission_reason: string;
   diagnosis: string;
   doctor_id: string;
@@ -75,87 +50,75 @@ type AdmissionFormValues = {
   operations: string;
   medical_history: string;
   current_medications: string;
-  referral_source: string;
-  expected_discharge_date: Date | null;
   next_of_kin_name: string;
   next_of_kin_relation: string;
   next_of_kin_phone: string;
 };
 
-export default function AdmissionFormPage() {
+export interface AdmissionFormPageProps {
+  embedded?: boolean;
+  /** When set, form loads in edit mode (fetch admission and call update on submit). */
+  admissionId?: number | null;
+  initialPatient?: PatientSearchResult | null;
+  initialBedId?: number | null;
+  initialBedSummary?: string | null;
+  onSuccess?: () => void;
+  onClose?: () => void;
+}
+
+function admissionToFormValues(a: Admission): AdmissionFormValues {
+  return {
+    patient_id: String(a.patient_id),
+    bed_id: a.bed_id != null ? String(a.bed_id) : "",
+    admission_days: a.admission_days != null ? String(a.admission_days) : "",
+    admission_purpose: a.admission_purpose ?? "",
+    admission_reason: a.admission_reason ?? "",
+    diagnosis: a.diagnosis ?? "",
+    doctor_id: a.doctor_id != null ? String(a.doctor_id) : "",
+    specialist_doctor_id: a.specialist_doctor_id != null ? String(a.specialist_doctor_id) : "",
+    notes: a.notes ?? "",
+    provisional_diagnosis: a.provisional_diagnosis ?? "",
+    operations: a.operations ?? "",
+    medical_history: a.medical_history ?? "",
+    current_medications: a.current_medications ?? "",
+    next_of_kin_name: a.next_of_kin_name ?? "",
+    next_of_kin_relation: a.next_of_kin_relation ?? "",
+    next_of_kin_phone: a.next_of_kin_phone ?? "",
+  };
+}
+
+export default function AdmissionFormPage(props: AdmissionFormPageProps = {}) {
+  const { embedded, admissionId, initialPatient, initialBedId, initialBedSummary, onSuccess, onClose } = props;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [patientSearchTerm, setPatientSearchTerm] = useState("");
-  const [selectedPatient, setSelectedPatient] =
-    useState<PatientSearchResult | null>(null);
-  const [selectedWardId, setSelectedWardId] = useState<number | null>(null);
-  const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
-  const [quickAddDialogOpen, setQuickAddDialogOpen] = useState(false);
-  const [shortStayBedDialogOpen, setShortStayBedDialogOpen] = useState(false);
-  const [newShortStayBed, setNewShortStayBed] = useState<ShortStayBedFormData>({
-    bed_number: "",
-    price_12h: "",
-    price_24h: "",
-    status: "active",
-    notes: "",
-  });
-
-  const { data: wards } = useQuery({
-    queryKey: ["wardsList"],
-    queryFn: () => getWardsList({ status: true }),
-  });
-
-  const {
-    data: rooms,
-    refetch: refetchRooms,
-    isFetching: isFetchingRooms,
-  } = useQuery({
-    queryKey: ["rooms", selectedWardId],
-    queryFn: () =>
-      getRooms(1, { ward_id: selectedWardId!, per_page: 1000 }).then(
-        (res) => res.data,
-      ),
-    enabled: !!selectedWardId,
-  });
-
-  const {
-    data: beds,
-    refetch: refetchBeds,
-    isFetching: isFetchingBeds,
-  } = useQuery({
-    queryKey: ["availableBeds", selectedRoomId],
-    queryFn: () => getAvailableBeds({ room_id: selectedRoomId! }),
-    enabled: !!selectedRoomId,
-  });
+  const [bedMapOpen, setBedMapOpen] = useState(false);
+  const [selectedBedSummary, setSelectedBedSummary] = useState<string | null>(
+    null,
+  );
 
   const [doctorSearchTerm, setDoctorSearchTerm] = useState("");
   const [specialistDoctorSearchTerm, setSpecialistDoctorSearchTerm] =
     useState("");
+
+  const isEditMode = admissionId != null && admissionId > 0;
+
+  const { data: admissionData, isLoading: isLoadingAdmission } = useQuery({
+    queryKey: ["admission", admissionId],
+    queryFn: () => getAdmissionById(admissionId!).then((r) => r.data),
+    enabled: isEditMode && !!admissionId,
+  });
 
   const { data: doctors } = useQuery({
     queryKey: ["doctorsList"],
     queryFn: () => getDoctorsList({ active: true }),
   });
 
-  const { data: patientSearchResults, isLoading: isSearchingPatients } =
-    useQuery({
-      queryKey: ["patientSearch", patientSearchTerm],
-      queryFn: () => searchExistingPatients(patientSearchTerm),
-      enabled: patientSearchTerm.length >= 2,
-    });
-
   const form = useForm<AdmissionFormValues>({
     defaultValues: {
       patient_id: "",
-      ward_id: "",
-      room_id: "",
       bed_id: "",
-      booking_type: "bed",
-      admission_date: new Date(),
-      admission_time: new Date().toTimeString().slice(0, 5),
-      admission_type: "",
-      short_stay_bed_id: "",
-      short_stay_duration: undefined,
+      admission_days: "",
+      admission_purpose: "",
       admission_reason: "",
       diagnosis: "",
       doctor_id: "",
@@ -165,8 +128,6 @@ export default function AdmissionFormPage() {
       operations: "",
       medical_history: "",
       current_medications: "",
-      referral_source: "",
-      expected_discharge_date: null,
       next_of_kin_name: "",
       next_of_kin_relation: "",
       next_of_kin_phone: "",
@@ -174,94 +135,64 @@ export default function AdmissionFormPage() {
   });
   const { control, handleSubmit, watch, setValue } = form;
 
-  const wardId = watch("ward_id");
-  const roomId = watch("room_id");
-  const bookingType = watch("booking_type");
-  const admissionType = watch("admission_type");
-  const isShortStay = admissionType === "اقامه قصيره";
-
-  const { data: shortStayBedsData, refetch: refetchShortStayBeds } = useQuery({
-    queryKey: ["shortStayBeds"],
-    queryFn: () => getShortStayBeds(1, { status: "active", per_page: 1000 }),
-    enabled: isShortStay,
-  });
-
-  const createShortStayBedMutation = useMutation({
-    mutationFn: createShortStayBed,
-    onSuccess: (response) => {
-      queryClient.invalidateQueries({ queryKey: ["shortStayBeds"] });
-      toast.success("تم إضافة سرير الإقامة القصيرة بنجاح");
-      setShortStayBedDialogOpen(false);
-      setNewShortStayBed({
-        bed_number: "",
-        price_12h: "",
-        price_24h: "",
-        status: "active",
-        notes: "",
-      });
-      // Set the newly created bed as selected
-      if (response.data) {
-        setValue("short_stay_bed_id", String(response.data.id));
-      }
-      refetchShortStayBeds();
-    },
-    onError: (error: any) => {
-      const errorMessage = error.response?.data?.message || "فشل إضافة السرير";
-      toast.error(errorMessage);
-    },
-  });
+  useEffect(() => {
+    if (embedded && initialPatient && !isEditMode) {
+      setValue("patient_id", String(initialPatient.patient_id ?? initialPatient.id));
+    }
+  }, [embedded, initialPatient, isEditMode, setValue]);
 
   useEffect(() => {
-    if (wardId) {
-      setSelectedWardId(Number(wardId));
-      setValue("room_id", "");
-      setValue("bed_id", "");
-      refetchRooms();
+    if (embedded && initialBedId != null && !isEditMode) {
+      setValue("bed_id", String(initialBedId));
+      setSelectedBedSummary(initialBedSummary ?? null);
     }
-  }, [wardId, setValue, refetchRooms]);
+  }, [embedded, initialBedId, initialBedSummary, isEditMode, setValue]);
 
+  // Populate form when editing an existing admission
   useEffect(() => {
-    if (roomId) {
-      setSelectedRoomId(Number(roomId));
-      setValue("bed_id", "");
-      refetchBeds();
+    if (!admissionData || !isEditMode) return;
+    const values = admissionToFormValues(admissionData);
+    Object.entries(values).forEach(([key, value]) => {
+      setValue(key as keyof AdmissionFormValues, value);
+    });
+    if (admissionData.bed) {
+      const parts = [
+        admissionData.ward?.name,
+        admissionData.room?.room_number != null ? `غرفة ${admissionData.room.room_number}` : null,
+        admissionData.bed?.bed_number != null ? `سرير ${admissionData.bed.bed_number}` : null,
+      ].filter(Boolean);
+      setSelectedBedSummary(parts.length > 0 ? parts.join(" - ") : null);
     }
-  }, [roomId, setValue, refetchBeds]);
-
-  useEffect(() => {
-    if (bookingType === "room") {
-      setValue("bed_id", "");
-    }
-  }, [bookingType, setValue]);
-
-  useEffect(() => {
-    if (isShortStay) {
-      // Reset regular admission fields
-      setValue("ward_id", "");
-      setValue("room_id", "");
-      setValue("bed_id", "");
-      setValue("booking_type", "bed");
-    } else {
-      // Reset short stay fields
-      setValue("short_stay_bed_id", "");
-      setValue("short_stay_duration", "");
-    }
-  }, [isShortStay, setValue]);
+  }, [admissionData, isEditMode, setValue]);
 
   const mutation = useMutation({
-    mutationFn: (data: AdmissionFormData) => createAdmission(data),
-    onSuccess: () => {
-      toast.success("تم إضافة التنويم بنجاح");
-      queryClient.invalidateQueries({ queryKey: ["admissions"] });
-      navigate("/admissions/list");
+    mutationFn: async (data: AdmissionFormData) => {
+      if (isEditMode && admissionId) {
+        return updateAdmission(admissionId, data);
+      }
+      return createAdmission(data);
     },
-    onError: (error: any) => {
-      const errorMessage = error.response?.data?.message || "فشل إضافة التنويم";
+    onSuccess: () => {
+      toast.success(isEditMode ? "تم تحديث ملف التنويم بنجاح" : "تم إضافة التنويم بنجاح");
+      queryClient.invalidateQueries({ queryKey: ["admissions"] });
+      if (admissionId) queryClient.invalidateQueries({ queryKey: ["admission", admissionId] });
+      if (embedded && onSuccess) {
+        onSuccess();
+      } else {
+        navigate("/admissions/list");
+      }
+    },
+    onError: (error: {
+      response?: {
+        data?: { message?: string; errors?: { patient_id?: string } };
+      };
+    }) => {
+      const errorMessage = error.response?.data?.message || (isEditMode ? "فشل تحديث ملف التنويم" : "فشل إضافة التنويم");
       const errorDetails = error.response?.data?.errors;
 
       if (errorDetails?.patient_id) {
         toast.error("خطأ في بيانات المريض", {
-          description: "يرجى التأكد من اختيار مريض صحيح أو إنشاء مريض جديد",
+          description: "يرجى التأكد من اختيار مريض صحيح",
         });
       } else {
         toast.error(errorMessage);
@@ -270,47 +201,13 @@ export default function AdmissionFormPage() {
   });
 
   const onSubmit = (data: AdmissionFormValues) => {
-    if (!selectedPatient) return toast.error("يرجى اختيار المريض");
-    
-    if (isShortStay) {
-      // Validation for short stay
-      if (!data.short_stay_bed_id) return toast.error("يرجى اختيار سرير الإقامة القصيرة");
-      if (!data.short_stay_duration) return toast.error("يرجى تحديد مدة الإقامة (12 ساعة أو 24 ساعة)");
-    } else {
-      // Validation for regular admission
-      if (!data.ward_id) return toast.error("يرجى اختيار القسم");
-      if (!data.room_id) return toast.error("يرجى اختيار الغرفة");
-      if (data.booking_type === "bed" && !data.bed_id)
-        return toast.error("يرجى اختيار السرير");
-    }
-    
-    if (!data.admission_date) return toast.error("يرجى اختيار تاريخ التنويم");
-
-    // Convert time from HH:mm to H:i:s format
-    let formattedTime: string | null = null;
-    if (data.admission_time) {
-      // If time is in HH:mm format, add :00 for seconds
-      if (data.admission_time.length === 5) {
-        formattedTime = `${data.admission_time}:00`;
-      } else if (data.admission_time.length === 8) {
-        // Already in H:i:s format
-        formattedTime = data.admission_time;
-      } else {
-        formattedTime = data.admission_time;
-      }
-    }
+    if (!data.patient_id) return toast.error("يرجى اختيار المريض");
 
     const submissionData: AdmissionFormData = {
-      patient_id: String(selectedPatient.patient_id),
-      ward_id: isShortStay ? undefined : data.ward_id,
-      room_id: isShortStay ? undefined : data.room_id,
-      bed_id: isShortStay ? undefined : (data.booking_type === "bed" ? data.bed_id : undefined),
-      short_stay_bed_id: isShortStay ? data.short_stay_bed_id : undefined,
-      short_stay_duration: isShortStay ? (data.short_stay_duration as "12h" | "24h") : undefined,
-      booking_type: data.booking_type,
-      admission_date: data.admission_date,
-      admission_time: formattedTime,
-      admission_type: data.admission_type || null,
+      patient_id: String(data.patient_id),
+      bed_id: data.bed_id,
+      admission_days: data.admission_days ? parseInt(data.admission_days, 10) : undefined,
+      admission_purpose: (data.admission_purpose || undefined) as AdmissionPurpose | undefined,
       admission_reason: data.admission_reason || null,
       diagnosis: data.diagnosis || null,
       doctor_id: data.doctor_id || undefined,
@@ -320,8 +217,6 @@ export default function AdmissionFormPage() {
       operations: data.operations || null,
       medical_history: data.medical_history || null,
       current_medications: data.current_medications || null,
-      referral_source: data.referral_source || null,
-      expected_discharge_date: data.expected_discharge_date || undefined,
       next_of_kin_name: data.next_of_kin_name || null,
       next_of_kin_relation: data.next_of_kin_relation || null,
       next_of_kin_phone: data.next_of_kin_phone || null,
@@ -331,479 +226,210 @@ export default function AdmissionFormPage() {
     mutation.mutate(submissionData);
   };
 
+  if (isEditMode && isLoadingAdmission) {
+    return (
+      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 120 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   return (
     <Box
       sx={{
-        maxWidth: "1200px",
-        mx: "auto",
-        p: 3,
-        height: window.innerHeight - 100,
+        maxWidth: embedded ? "100%" : "1000px",
+        mx: embedded ? 0 : "auto",
+        p: embedded ? 0 : 2,
+        height: embedded ? "auto" : window.innerHeight - 100,
         overflowY: "auto",
       }}
     >
-      {/* Header */}
-      <Box sx={{ mb: 4, display: "flex", alignItems: "center", gap: 2 }}>
-        <Button
-          onClick={() => navigate(-1)}
-          variant="outlined"
-          sx={{
-            minWidth: 40,
-            width: 40,
-            height: 40,
-            borderRadius: "50%",
-            p: 0,
-            borderColor: "divider",
-            color: "text.primary",
-            "&:hover": { borderColor: "primary.main", color: "primary.main" },
-          }}
-        >
-          <ArrowRight size={20} />
-        </Button>
-        <Box>
-          <Typography
-            variant="h5"
-            fontWeight="bold"
-            sx={{ color: "text.primary" }}
+      {/* Header - hide when embedded (dialog has its own title/close) */}
+      {!embedded && (
+        <Box sx={{ mb: 2, display: "flex", alignItems: "center", gap: 2 }}>
+          <Button
+            onClick={() => navigate(-1)}
+            variant="outlined"
+            sx={{
+              minWidth: 40,
+              width: 40,
+              height: 40,
+              borderRadius: "50%",
+              p: 0,
+              borderColor: "divider",
+              color: "text.primary",
+              "&:hover": { borderColor: "primary.main", color: "primary.main" },
+            }}
           >
-            تسجيل تنويم جديد
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            قم بملء البيانات التالية لتسجيل دخول مريض جديد
-          </Typography>
+            <ArrowRight size={20} />
+          </Button>
+          <Box>
+            <Typography variant="h5" fontWeight="bold" sx={{ color: "text.primary" }}>
+              {isEditMode ? "تعديل ملف التنويم" : "ملف تنويم جديد"}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {isEditMode ? "تعديل بيانات ملف التنويم" : "قم بملء البيانات التالية لتسجيل ملف تنويم جديد"}
+            </Typography>
+          </Box>
         </Box>
-      </Box>
+      )}
 
       <Box
         component="form"
         onSubmit={handleSubmit(onSubmit)}
-        sx={{ display: "flex", flexDirection: "column", gap: 3 }}
+        sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}
       >
         <Box
           sx={{
             display: "flex",
             flexDirection: { xs: "column", lg: "row" },
-            gap: 3,
+            gap: 1.5,
           }}
         >
           {/* Right Column: Patient & Location */}
           <Box sx={{ flex: { lg: 2, xs: 1 }, minWidth: 0 }}>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              {/* Patient Info Section */}
-              <Card variant="outlined" sx={{ borderRadius: 3 }}>
-                <CardHeader
-                  title={
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+              {/* Bed selection: only when not embedded (when embedded, bed is set from registration page) */}
+              {!embedded && (
+                <Controller
+                  name="bed_id"
+                  control={control}
+                  render={({ fieldState }) => (
                     <Box
-                      sx={{ display: "flex", alignItems: "center", gap: 1.5 }}
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 2,
+                        flexWrap: "wrap",
+                      }}
                     >
-                      <Box
-                        sx={{
-                          p: 1,
-                          borderRadius: 2,
-                          bgcolor: "primary.lighter",
-                          color: "primary.main",
-                          display: "flex",
-                        }}
+                      <Button
+                        variant="outlined"
+                        startIcon={<Bed size={20} />}
+                        onClick={() => setBedMapOpen(true)}
+                        disabled={mutation.isPending}
+                        color={fieldState.error ? "error" : "primary"}
+                        sx={{ minWidth: 140 }}
                       >
-                        <User size={20} />
-                      </Box>
-                      <Typography variant="subtitle1" fontWeight={600}>
-                        بيانات المريض
-                      </Typography>
-                    </Box>
-                  }
-                  sx={{ pb: 0 }}
-                />
-                <CardContent>
-                  <Box
-                    sx={{ display: "flex", gap: 2, alignItems: "flex-start" }}
-                  >
-                    <Box sx={{ flex: 1 }}>
-                      <Autocomplete
-                        options={patientSearchResults || []}
-                        getOptionLabel={(option) =>
-                          `${option.name} - ${option.phone || "بدون هاتف"}`
-                        }
-                        loading={isSearchingPatients}
-                        value={selectedPatient}
-                        onInputChange={(_, value) =>
-                          setPatientSearchTerm(value)
-                        }
-                        onChange={(_, value) => {
-                          console.log(value);
-                          setSelectedPatient(value);
-                          if (value)
-                            setValue("patient_id", String(value.patient_id));
-                        }}
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            fullWidth
-                            label="البحث عن مريض"
-                            placeholder="اسم المريض أو رقم الهاتف..."
-                            InputProps={{
-                              ...params.InputProps,
-                              startAdornment: (
-                                <>
-                                  <User
-                                    size={18}
-                                    style={{ marginLeft: 8, opacity: 0.5 }}
-                                  />
-                                  {params.InputProps.startAdornment}
-                                </>
-                              ),
+                        اختر السرير
+                      </Button>
+                      {selectedBedSummary && (
+                        <>
+                          <Typography variant="body2" color="text.secondary">
+                            {selectedBedSummary}
+                          </Typography>
+                          <Button
+                            size="small"
+                            onClick={() => {
+                              setValue("bed_id", "");
+                              setSelectedBedSummary(null);
                             }}
-                          />
-                        )}
-                        noOptionsText="لا يوجد نتائج"
-                      />
+                          >
+                            تغيير السرير
+                          </Button>
+                        </>
+                      )}
+                      {fieldState.error && (
+                        <Typography variant="caption" color="error">
+                          {fieldState.error.message}
+                        </Typography>
+                      )}
                     </Box>
-                    <Button
-                      variant="contained"
-                      startIcon={<Plus size={18} />}
-                      onClick={() => setQuickAddDialogOpen(true)}
-                      sx={{ height: 56, px: 3, whiteSpace: "nowrap" }}
-                      disabled={mutation.isPending}
-                    >
-                      مريض جديد
-                    </Button>
-                  </Box>
-                </CardContent>
-              </Card>
+                  )}
+                />
+              )}
 
               {/* Admission Details Section */}
-              <Card variant="outlined" sx={{ borderRadius: 3 }}>
+              <Card variant="outlined" sx={{ borderRadius: 2 }}>
                 <CardHeader
                   title={
-                    <Box
-                      sx={{ display: "flex", alignItems: "center", gap: 1.5 }}
-                    >
-                      <Box
-                        sx={{
-                          p: 1,
-                          borderRadius: 2,
-                          bgcolor: "info.lighter",
-                          color: "info.main",
-                          display: "flex",
-                        }}
-                      >
-                        <FileText size={20} />
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Box sx={{ p: 0.75, borderRadius: 1.5, bgcolor: "info.lighter", color: "info.main", display: "flex" }}>
+                        <FileText size={18} />
                       </Box>
-                      <Typography variant="subtitle1" fontWeight={600}>
-                        تفاصل التنويم
-                      </Typography>
+                      <Typography variant="subtitle2" fontWeight={600}>تفاصيل التنويم</Typography>
                     </Box>
                   }
-                  sx={{ pb: 0 }}
+                  sx={{ py: 0.75, px: 1.5, "& .MuiCardHeader-content": { minWidth: 0 } }}
                 />
-                <CardContent>
-                  <Box
-                    sx={{ display: "flex", flexDirection: "column", gap: 2 }}
-                  >
-                    <Box
-                      sx={{
-                        display: "flex",
-                        gap: 2,
-                        flexDirection: { xs: "column", md: "row" },
-                      }}
-                    >
-                      <Box sx={{ flex: 1 }}>
-                        <Controller
-                          name="admission_date"
-                          control={control}
-                          rules={{ required: "تاريخ التنويم مطلوب" }}
-                          render={({ field, fieldState }) => (
-                            <TextField
-                              fullWidth
-                              label="تاريخ الدخول"
-                              type="date"
-                              value={
-                                field.value
-                                  ? field.value.toISOString().split("T")[0]
-                                  : ""
-                              }
-                              onChange={(e) =>
-                                field.onChange(
-                                  e.target.value
-                                    ? new Date(e.target.value)
-                                    : null,
-                                )
-                              }
-                              InputLabelProps={{ shrink: true }}
-                              error={!!fieldState.error}
-                              helperText={fieldState.error?.message}
-                              disabled={mutation.isPending}
-                              InputProps={{
-                                startAdornment: (
-                                  <Calendar
-                                    size={18}
-                                    style={{ marginLeft: 8, opacity: 0.5 }}
-                                  />
-                                ),
-                              }}
-                            />
-                          )}
+                <CardContent sx={{ pt: 0, px: 1.5, pb: 1.5 }}>
+                  <Box sx={{ display: "flex", gap: 1.5, flexDirection: { xs: "column", sm: "row" } }}>
+                    <Controller
+                      name="admission_days"
+                      control={control}
+                      render={({ field, fieldState }) => (
+                        <TextField
+                          {...field}
+                          fullWidth
+                          size="small"
+                          type="number"
+                          inputProps={{ min: 1, step: 1 }}
+                          label="عدد أيام التنويم"
+                          error={!!fieldState.error}
+                          helperText={fieldState.error?.message}
+                          disabled={mutation.isPending}
                         />
-                      </Box>
-                      <Box sx={{ flex: 1 }}>
-                        <Controller
-                          name="admission_time"
-                          control={control}
-                          render={({ field }) => (
-                            <TextField
-                              fullWidth
-                              label="وقت الدخول"
-                              type="time"
-                              {...field}
-                              InputLabelProps={{ shrink: true }}
-                              disabled={mutation.isPending}
-                              InputProps={{
-                                startAdornment: (
-                                  <Clock
-                                    size={18}
-                                    style={{ marginLeft: 8, opacity: 0.5 }}
-                                  />
-                                ),
-                              }}
-                            />
-                          )}
-                        />
-                      </Box>
-                      <Box sx={{ flex: 1 }}>
-                        <Controller
-                          name="admission_type"
-                          control={control}
-                          render={({ field }) => (
-                            <FormControl fullWidth>
-                              <InputLabel>نوع الإقامة</InputLabel>
-                              <Select
-                                {...field}
-                                label="نوع الإقامة"
-                                disabled={mutation.isPending}
-                              >
-                                <MenuItem value="اقامه قصيره">
-                                  إقامة قصيرة (يوم واحد)
-                                </MenuItem>
-                                <MenuItem value="اقامه طويله">
-                                  إقامة طويلة (مبيت)
-                                </MenuItem>
-                              </Select>
-                            </FormControl>
-                          )}
-                        />
-                      </Box>
-                    </Box>
-
-                    <Box
-                      sx={{
-                        display: "flex",
-                        gap: 2,
-                        flexDirection: { xs: "column", md: "row" },
-                      }}
-                    >
-                      <Box sx={{ flex: 1 }}>
-                        <Controller
-                          name="expected_discharge_date"
-                          control={control}
-                          render={({ field }) => (
-                            <TextField
-                              fullWidth
-                              label="تاريخ الخروج المتوقع"
-                              type="date"
-                              value={
-                                field.value
-                                  ? field.value.toISOString().split("T")[0]
-                                  : ""
-                              }
-                              onChange={(e) =>
-                                field.onChange(
-                                  e.target.value
-                                    ? new Date(e.target.value)
-                                    : null,
-                                )
-                              }
-                              InputLabelProps={{ shrink: true }}
-                              disabled={mutation.isPending}
-                            />
-                          )}
-                        />
-                      </Box>
-                      <Box sx={{ flex: 1 }}>
-                        <Controller
-                          name="referral_source"
-                          control={control}
-                          render={({ field }) => (
-                            <FormControl fullWidth>
-                              <InputLabel>جهة الإحالة</InputLabel>
-                              <Select
-                                {...field}
-                                label="جهة الإحالة"
-                                disabled={mutation.isPending}
-                                startAdornment={
-                                  <Building2
-                                    size={18}
-                                    style={{ marginLeft: 8, opacity: 0.5 }}
-                                  />
-                                }
-                              >
-                                <MenuItem value="emergency">الطوارئ</MenuItem>
-                                <MenuItem value="outpatient">
-                                  العيادات الخارجية
-                                </MenuItem>
-                                <MenuItem value="external">مستشفى آخر</MenuItem>
-                              </Select>
-                            </FormControl>
-                          )}
-                        />
-                      </Box>
-                    </Box>
+                      )}
+                    />
+                    <Controller
+                      name="admission_purpose"
+                      control={control}
+                      render={({ field }) => (
+                        <FormControl fullWidth size="small">
+                          <InputLabel>الغرض من التنويم</InputLabel>
+                          <Select {...field} label="الغرض من التنويم" disabled={mutation.isPending}>
+                            <MenuItem value="surgery">عملية جراحية</MenuItem>
+                            <MenuItem value="follow_up">متابعة</MenuItem>
+                            <MenuItem value="intermediate_care">عناية وسيطة</MenuItem>
+                            <MenuItem value="intensive_care">عناية مكثفة</MenuItem>
+                          </Select>
+                        </FormControl>
+                      )}
+                    />
                   </Box>
                 </CardContent>
               </Card>
 
               {/* Medical Info Section */}
-              <Card variant="outlined" sx={{ borderRadius: 3 }}>
+              <Card variant="outlined" sx={{ borderRadius: 2 }}>
                 <CardHeader
                   title={
-                    <Box
-                      sx={{ display: "flex", alignItems: "center", gap: 1.5 }}
-                    >
-                      <Box
-                        sx={{
-                          p: 1,
-                          borderRadius: 2,
-                          bgcolor: "error.lighter",
-                          color: "error.main",
-                          display: "flex",
-                        }}
-                      >
-                        <Activity size={20} />
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Box sx={{ p: 0.75, borderRadius: 1.5, bgcolor: "error.lighter", color: "error.main", display: "flex" }}>
+                        <Activity size={18} />
                       </Box>
-                      <Typography variant="subtitle1" fontWeight={600}>
-                        بيانات طبية
-                      </Typography>
+                      <Typography variant="subtitle2" fontWeight={600}>بيانات طبية</Typography>
                     </Box>
                   }
-                  sx={{ pb: 0 }}
+                  sx={{ py: 0.75, px: 1.5, "& .MuiCardHeader-content": { minWidth: 0 } }}
                 />
-                <CardContent>
-                  <Box
-                    sx={{ display: "flex", flexDirection: "column", gap: 2 }}
-                  >
-                    <Box sx={{ width: "100%" }}>
-                      <Controller
-                        name="admission_reason"
-                        control={control}
-                        render={({ field }) => (
-                          <TextField
-                            fullWidth
-                            label="سبب التنويم"
-                            multiline
-                            rows={2}
-                            {...field}
-                            disabled={mutation.isPending}
-                            placeholder="وصف حالة المريض وسبب التنويم..."
-                          />
-                        )}
-                      />
+                <CardContent sx={{ pt: 0, px: 1.5, pb: 1.5 }}>
+                  <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                    <Controller
+                      name="admission_reason"
+                      control={control}
+                      render={({ field }) => (
+                        <TextField fullWidth size="small" label="سبب التنويم" multiline rows={1} {...field} disabled={mutation.isPending} placeholder="وصف حالة المريض وسبب التنويم..." />
+                      )}
+                    />
+                    <Box sx={{ display: "flex", gap: 1.5, flexDirection: { xs: "column", md: "row" } }}>
+                      <Controller name="diagnosis" control={control} render={({ field }) => (
+                        <TextField fullWidth size="small" label="التشخيص المبدئي" multiline rows={2} {...field} disabled={mutation.isPending} sx={{ flex: 1 }} />
+                      )} />
+                      <Controller name="provisional_diagnosis" control={control} render={({ field }) => (
+                        <TextField fullWidth size="small" label="التشخيص المؤقت" multiline rows={2} {...field} disabled={mutation.isPending} sx={{ flex: 1 }} />
+                      )} />
                     </Box>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        gap: 2,
-                        flexDirection: { xs: "column", md: "row" },
-                      }}
-                    >
-                      <Box sx={{ flex: 1 }}>
-                        <Controller
-                          name="diagnosis"
-                          control={control}
-                          render={({ field }) => (
-                            <TextField
-                              fullWidth
-                              label="التشخيص المبدئي"
-                              multiline
-                              rows={3}
-                              {...field}
-                              disabled={mutation.isPending}
-                            />
-                          )}
-                        />
-                      </Box>
-                      <Box sx={{ flex: 1 }}>
-                        <Controller
-                          name="provisional_diagnosis"
-                          control={control}
-                          render={({ field }) => (
-                            <TextField
-                              fullWidth
-                              label="التشخيص المؤقت"
-                              multiline
-                              rows={3}
-                              {...field}
-                              disabled={mutation.isPending}
-                            />
-                          )}
-                        />
-                      </Box>
-                    </Box>
-                    <Box sx={{ width: "100%" }}>
-                      <Controller
-                        name="operations"
-                        control={control}
-                        render={({ field }) => (
-                          <TextField
-                            fullWidth
-                            label="العمليات (مع التواريخ)"
-                            multiline
-                            rows={2}
-                            {...field}
-                            disabled={mutation.isPending}
-                            placeholder="اسم العملية - التاريخ"
-                          />
-                        )}
-                      />
-                    </Box>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        gap: 2,
-                        flexDirection: { xs: "column", md: "row" },
-                      }}
-                    >
-                      <Box sx={{ flex: 1 }}>
-                        <Controller
-                          name="medical_history"
-                          control={control}
-                          render={({ field }) => (
-                            <TextField
-                              fullWidth
-                              label="التاريخ الطبي"
-                              multiline
-                              rows={3}
-                              {...field}
-                              disabled={mutation.isPending}
-                              placeholder="الأمراض السابقة والحالات الطبية..."
-                            />
-                          )}
-                        />
-                      </Box>
-                      <Box sx={{ flex: 1 }}>
-                        <Controller
-                          name="current_medications"
-                          control={control}
-                          render={({ field }) => (
-                            <TextField
-                              fullWidth
-                              label="الأدوية الحالية"
-                              multiline
-                              rows={3}
-                              {...field}
-                              disabled={mutation.isPending}
-                              placeholder="قائمة الأدوية التي يتناولها المريض..."
-                            />
-                          )}
-                        />
-                      </Box>
+                    <Controller name="operations" control={control} render={({ field }) => (
+                      <TextField fullWidth size="small" label="العمليات (مع التواريخ)" multiline rows={1} {...field} disabled={mutation.isPending} placeholder="اسم العملية - التاريخ" />
+                    )} />
+                    <Box sx={{ display: "flex", gap: 1.5, flexDirection: { xs: "column", md: "row" } }}>
+                      <Controller name="medical_history" control={control} render={({ field }) => (
+                        <TextField fullWidth size="small" label="التاريخ الطبي" multiline rows={2} {...field} disabled={mutation.isPending} placeholder="الأمراض السابقة..." sx={{ flex: 1 }} />
+                      )} />
+                      <Controller name="current_medications" control={control} render={({ field }) => (
+                        <TextField fullWidth size="small" label="الأدوية الحالية" multiline rows={2} {...field} disabled={mutation.isPending} placeholder="الأدوية الحالية..." sx={{ flex: 1 }} />
+                      )} />
                     </Box>
                   </Box>
                 </CardContent>
@@ -811,309 +437,24 @@ export default function AdmissionFormPage() {
             </Box>
           </Box>
 
-          {/* Left Column: Location, Doctor, Contact */}
+          {/* Left Column: Doctor, Contact */}
           <Box sx={{ flex: { lg: 1, xs: 1 }, minWidth: 0 }}>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              {/* Location Section - only shown when admission type is selected */}
-              {admissionType && (
-              <Card variant="outlined" sx={{ borderRadius: 3 }}>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+              {/* Doctor Section */}
+              <Card variant="outlined" sx={{ borderRadius: 2 }}>
                 <CardHeader
                   title={
-                    <Box
-                      sx={{ display: "flex", alignItems: "center", gap: 1.5 }}
-                    >
-                      <Box
-                        sx={{
-                          p: 1,
-                          borderRadius: 2,
-                          bgcolor: "warning.lighter",
-                          color: "warning.main",
-                          display: "flex",
-                        }}
-                      >
-                        <MapPin size={20} />
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Box sx={{ p: 0.75, borderRadius: 1.5, bgcolor: "success.lighter", color: "success.main", display: "flex" }}>
+                        <Stethoscope size={18} />
                       </Box>
-                      <Typography variant="subtitle1" fontWeight={600}>
-                        الموقع
-                      </Typography>
+                      <Typography variant="subtitle2" fontWeight={600}>الأطباء</Typography>
                     </Box>
                   }
-                  sx={{ pb: 0 }}
+                  sx={{ py: 0.75, px: 1.5, "& .MuiCardHeader-content": { minWidth: 0 } }}
                 />
-                <CardContent>
-                  <Box
-                    sx={{ display: "flex", flexDirection: "column", gap: 2 }}
-                  >
-                    {isShortStay ? (
-                      <>
-                        {/* Short Stay Bed Selection */}
-                        <Box sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}>
-                          <Controller
-                            name="short_stay_bed_id"
-                            control={control}
-                            rules={{ required: "سرير الإقامة القصيرة مطلوب" }}
-                            render={({ field, fieldState }) => (
-                              <FormControl fullWidth error={!!fieldState.error}>
-                                <InputLabel>سرير الإقامة القصيرة</InputLabel>
-                                <Select
-                                  {...field}
-                                  label="سرير الإقامة القصيرة"
-                                  disabled={mutation.isPending}
-                                  startAdornment={
-                                    <Bed
-                                      size={16}
-                                      style={{ marginLeft: 8, opacity: 0.5 }}
-                                    />
-                                  }
-                                >
-                                  {shortStayBedsData?.data?.map((bed: any) => (
-                                    <MenuItem key={bed.id} value={String(bed.id)}>
-                                      {bed.bed_number} - سعر 12h: {bed.price_12h} | سعر 24h: {bed.price_24h}
-                                    </MenuItem>
-                                  ))}
-                                </Select>
-                              </FormControl>
-                            )}
-                          />
-                          <IconButton
-                            onClick={() => setShortStayBedDialogOpen(true)}
-                            color="primary"
-                            sx={{ mt: 1 }}
-                            disabled={mutation.isPending}
-                            title="إضافة سرير إقامة قصيرة جديد"
-                          >
-                            <Plus size={20} />
-                          </IconButton>
-                        </Box>
-
-                        {/* Short Stay Duration Selection */}
-                        <Controller
-                          name="short_stay_duration"
-                          control={control}
-                          rules={{ required: "مدة الإقامة مطلوبة" }}
-                          render={({ field, fieldState }) => (
-                            <FormControl fullWidth error={!!fieldState.error}>
-                              <InputLabel>مدة الإقامة</InputLabel>
-                              <Select
-                                {...field}
-                                label="مدة الإقامة"
-                                disabled={mutation.isPending || !watch("short_stay_bed_id")}
-                              >
-                                <MenuItem value="12h">12 ساعة</MenuItem>
-                                <MenuItem value="24h">24 ساعة</MenuItem>
-                              </Select>
-                            </FormControl>
-                          )}
-                        />
-                      </>
-                    ) : (
-                      <>
-                        {/* Regular Admission Fields */}
-                        <Controller
-                          name="ward_id"
-                          control={control}
-                          rules={{ required: "القسم مطلوب" }}
-                          render={({ field, fieldState }) => (
-                            <FormControl fullWidth error={!!fieldState.error}>
-                              <InputLabel>القسم</InputLabel>
-                              <Select
-                                {...field}
-                                label="القسم"
-                                disabled={mutation.isPending}
-                                startAdornment={
-                                  <Building2
-                                    size={16}
-                                    style={{ marginLeft: 8, opacity: 0.5 }}
-                                  />
-                                }
-                              >
-                                {wards?.map((ward) => (
-                                  <MenuItem key={ward.id} value={String(ward.id)}>
-                                    {ward.name}
-                                  </MenuItem>
-                                ))}
-                              </Select>
-                            </FormControl>
-                          )}
-                        />
-
-                        <Controller
-                          name="booking_type"
-                          control={control}
-                          rules={{ required: "نوع الحجز مطلوب" }}
-                          render={({ field, fieldState }) => (
-                            <FormControl fullWidth error={!!fieldState.error}>
-                              <InputLabel>نوع الحجز</InputLabel>
-                              <Select
-                                {...field}
-                                label="نوع الحجز"
-                                disabled={mutation.isPending}
-                              >
-                                <MenuItem value="bed">حجز عن طريق السرير</MenuItem>
-                                <MenuItem value="room">حجز عن طريق الغرفة</MenuItem>
-                              </Select>
-                            </FormControl>
-                          )}
-                        />
-
-                        <Controller
-                          name="room_id"
-                          control={control}
-                          rules={{ required: "الغرفة مطلوبة" }}
-                          render={({ field, fieldState }) => (
-                            <FormControl
-                              fullWidth
-                              error={!!fieldState.error}
-                              disabled={!selectedWardId || mutation.isPending}
-                            >
-                              <InputLabel>الغرفة</InputLabel>
-                              <Select
-                                {...field}
-                                label="الغرفة"
-                                startAdornment={
-                                  <DoorOpen
-                                    size={16}
-                                    style={{ marginLeft: 8, opacity: 0.5 }}
-                                  />
-                                }
-                                endAdornment={
-                                  isFetchingRooms ? (
-                                    <CircularProgress size={20} sx={{ mr: 2 }} />
-                                  ) : null
-                                }
-                              >
-                                {(() => {
-                                  const roomList = rooms ?? [];
-                                  const filteredRooms: RoomType[] =
-                                    watch("booking_type") === "room"
-                                      ? roomList.filter((room: RoomType) => {
-                                          const beds = room.beds ?? [];
-                                          if (beds.length === 0) return true;
-                                          return beds.every(
-                                            (b: { status?: string; current_admission?: unknown }) =>
-                                              b.status === "available" && !b.current_admission
-                                          );
-                                        })
-                                      : roomList;
-                                  return filteredRooms.map((room: RoomType) => {
-                                    const roomTypeLabel =
-                                      room.room_type === "normal"
-                                        ? "عادي"
-                                        : room.room_type === "vip"
-                                          ? "VIP"
-                                          : "";
-                                    const roomTypeDisplay = roomTypeLabel
-                                      ? ` (${roomTypeLabel})`
-                                      : "";
-                                    const bedsCount =
-                                      room.beds_count ?? room.beds?.length ?? 0;
-                                    const priceDisplay =
-                                      room.price_per_day != null
-                                        ? ` — سعر اليوم: ${Number(room.price_per_day).toLocaleString("ar-EG")}`
-                                        : "";
-                                    const bedsSummary =
-                                      room.beds?.length
-                                        ? room.beds
-                                            .map(
-                                              (b: {
-                                                bed_number: string;
-                                                current_admission?: { patient?: { name?: string } } | null;
-                                              }) =>
-                                                `سرير ${b.bed_number}: ${b.current_admission?.patient?.name ?? "متاح"}`
-                                            )
-                                            .join(" • ")
-                                        : "";
-                                    return (
-                                      <MenuItem
-                                        key={room.id}
-                                        value={String(room.id)}
-                                      >
-                                        <ListItemText
-                                          primary={`${room.room_number}${roomTypeDisplay} — ${bedsCount} أسرّة${priceDisplay}`}
-                                          secondary={bedsSummary || undefined}
-                                        />
-                                      </MenuItem>
-                                    );
-                                  });
-                                })()}
-                              </Select>
-                            </FormControl>
-                          )}
-                        />
-
-                        {watch("booking_type") === "bed" && (
-                          <Controller
-                            name="bed_id"
-                            control={control}
-                            rules={{ required: "السرير مطلوب" }}
-                            render={({ field, fieldState }) => (
-                              <FormControl
-                                fullWidth
-                                error={!!fieldState.error}
-                                disabled={!selectedRoomId || mutation.isPending}
-                              >
-                                <InputLabel>السرير</InputLabel>
-                                <Select
-                                  {...field}
-                                  label="السرير"
-                                  startAdornment={
-                                    <Bed
-                                      size={16}
-                                      style={{ marginLeft: 8, opacity: 0.5 }}
-                                    />
-                                  }
-                                  endAdornment={
-                                    isFetchingBeds ? (
-                                      <CircularProgress size={20} sx={{ mr: 2 }} />
-                                    ) : null
-                                  }
-                                >
-                                  {beds?.map((bed) => (
-                                    <MenuItem key={bed.id} value={String(bed.id)}>
-                                      {bed.bed_number}
-                                    </MenuItem>
-                                  ))}
-                                </Select>
-                              </FormControl>
-                            )}
-                          />
-                        )}
-                      </>
-                    )}
-                  </Box>
-                </CardContent>
-              </Card>
-              )}
-
-            {/* Doctor Section */}
-              <Card variant="outlined" sx={{ borderRadius: 3 }}>
-                <CardHeader
-                  title={
-                    <Box
-                      sx={{ display: "flex", alignItems: "center", gap: 1.5 }}
-                    >
-                      <Box
-                        sx={{
-                          p: 1,
-                          borderRadius: 2,
-                          bgcolor: "success.lighter",
-                          color: "success.main",
-                          display: "flex",
-                        }}
-                      >
-                        <Stethoscope size={20} />
-                      </Box>
-                      <Typography variant="subtitle1" fontWeight={600}>
-                        الأطباء
-                      </Typography>
-                    </Box>
-                  }
-                  sx={{ pb: 0 }}
-                />
-                <CardContent>
-                  <Box
-                    sx={{ display: "flex", flexDirection: "column", gap: 2 }}
-                  >
+                <CardContent sx={{ pt: 0, px: 1.5, pb: 1.5 }}>
+                  <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
                     <Box>
                       <Typography
                         variant="caption"
@@ -1218,117 +559,37 @@ export default function AdmissionFormPage() {
                       </Box>
                     </Box>
 
-                    <Controller
-                      name="notes"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          fullWidth
-                          label="ملاحظات إضافية"
-                          multiline
-                          rows={3}
-                          size="small"
-                          {...field}
-                          disabled={mutation.isPending}
-                        />
-                      )}
-                    />
+                    <Controller name="notes" control={control} render={({ field }) => (
+                      <TextField fullWidth size="small" label="ملاحظات إضافية" multiline rows={2} {...field} disabled={mutation.isPending} />
+                    )} />
                   </Box>
                 </CardContent>
               </Card>
 
               {/* Emergency Contact */}
-              <Card variant="outlined" sx={{ borderRadius: 3 }}>
+              <Card variant="outlined" sx={{ borderRadius: 2 }}>
                 <CardHeader
                   title={
-                    <Box
-                      sx={{ display: "flex", alignItems: "center", gap: 1.5 }}
-                    >
-                      <Box
-                        sx={{
-                          p: 1,
-                          borderRadius: 2,
-                          bgcolor: "secondary.lighter",
-                          color: "secondary.main",
-                          display: "flex",
-                        }}
-                      >
-                        <Contact size={20} />
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Box sx={{ p: 0.75, borderRadius: 1.5, bgcolor: "secondary.lighter", color: "secondary.main", display: "flex" }}>
+                        <Contact size={18} />
                       </Box>
-                      <Typography variant="subtitle1" fontWeight={600}>
-                        اتصال الطوارئ
-                      </Typography>
+                      <Typography variant="subtitle2" fontWeight={600}>اتصال الطوارئ</Typography>
                     </Box>
                   }
-                  sx={{ pb: 0 }}
+                  sx={{ py: 0.75, px: 1.5, "& .MuiCardHeader-content": { minWidth: 0 } }}
                 />
-                <CardContent>
-                  <Box
-                    sx={{ display: "flex", flexDirection: "column", gap: 2 }}
-                  >
-                    <Controller
-                      name="next_of_kin_name"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          fullWidth
-                          size="small"
-                          label="الاسم"
-                          {...field}
-                          disabled={mutation.isPending}
-                          InputProps={{
-                            startAdornment: (
-                              <UserRound
-                                size={16}
-                                style={{ marginLeft: 8, opacity: 0.5 }}
-                              />
-                            ),
-                          }}
-                        />
-                      )}
-                    />
-                    <Controller
-                      name="next_of_kin_relation"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          fullWidth
-                          size="small"
-                          label="القرابة"
-                          {...field}
-                          disabled={mutation.isPending}
-                          InputProps={{
-                            startAdornment: (
-                              <Users
-                                size={16}
-                                style={{ marginLeft: 8, opacity: 0.5 }}
-                              />
-                            ),
-                          }}
-                        />
-                      )}
-                    />
-                    <Controller
-                      name="next_of_kin_phone"
-                      control={control}
-                      render={({ field }) => (
-                        <TextField
-                          fullWidth
-                          size="small"
-                          label="رقم الهاتف"
-                          {...field}
-                          disabled={mutation.isPending}
-                          InputProps={{
-                            startAdornment: (
-                              <Phone
-                                size={16}
-                                style={{ marginLeft: 8, opacity: 0.5 }}
-                              />
-                            ),
-                          }}
-                        />
-                      )}
-                    />
+                <CardContent sx={{ pt: 0, px: 1.5, pb: 1.5 }}>
+                  <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                    <Controller name="next_of_kin_name" control={control} render={({ field }) => (
+                      <TextField fullWidth size="small" label="الاسم" {...field} disabled={mutation.isPending} />
+                    )} />
+                    <Controller name="next_of_kin_relation" control={control} render={({ field }) => (
+                      <TextField fullWidth size="small" label="القرابة" {...field} disabled={mutation.isPending} />
+                    )} />
+                    <Controller name="next_of_kin_phone" control={control} render={({ field }) => (
+                      <TextField fullWidth size="small" label="رقم الهاتف" {...field} disabled={mutation.isPending} />
+                    )} />
                   </Box>
                 </CardContent>
               </Card>
@@ -1337,180 +598,53 @@ export default function AdmissionFormPage() {
         </Box>
 
         {/* Footer Actions */}
-        <Box
-          sx={{
-            display: "flex",
-            gap: 2,
-            justifyContent: "flex-end",
-            mt: 2,
-            pt: 3,
-            borderTop: "1px solid",
-            borderColor: "divider",
-          }}
-        >
-          <Button
-            variant="outlined"
-            color="inherit"
-            onClick={() => navigate(-1)}
-            disabled={mutation.isPending}
-            sx={{ px: 4 }}
-          >
+        <Box sx={{ display: "flex", gap: 1.5, justifyContent: "flex-end", mt: 1.5, pt: 2, borderTop: "1px solid", borderColor: "divider" }}>
+          <Button variant="outlined" color="inherit" size="medium" onClick={() => (embedded && onClose ? onClose() : navigate(-1))} disabled={mutation.isPending} sx={{ px: 3 }}>
             إلغاء
           </Button>
-          <Button
-            type="submit"
-            variant="contained"
-            size="large"
-            disabled={mutation.isPending || !selectedPatient}
-            sx={{ px: 6 }}
-          >
+          <Button type="submit" variant="contained" size="medium" disabled={mutation.isPending || (!isEditMode && !watch("patient_id"))} sx={{ px: 4 }}>
             {mutation.isPending ? (
               <CircularProgress size={24} color="inherit" />
+            ) : isEditMode ? (
+              "تحديث ملف التنويم"
             ) : (
-              "حفظ التنويم"
+              "حفظ ملف التنويم"
             )}
           </Button>
         </Box>
       </Box>
 
-      {/* Quick Add Patient Dialog */}
-      <QuickAddPatientDialog
-        open={quickAddDialogOpen}
-        onClose={() => setQuickAddDialogOpen(false)}
-        onPatientAdded={(patient) => {
-          setSelectedPatient(patient);
-          setValue("patient_id", String(patient.id));
-        }}
-      />
-
-      {/* Add Short Stay Bed Dialog */}
-      <Dialog
-        open={shortStayBedDialogOpen}
-        onClose={() => setShortStayBedDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>إضافة سرير إقامة قصيرة جديد</DialogTitle>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!newShortStayBed.bed_number.trim()) {
-              toast.error("رقم السرير مطلوب");
-              return;
-            }
-            if (!newShortStayBed.price_12h || parseFloat(newShortStayBed.price_12h) < 0) {
-              toast.error("سعر 12 ساعة مطلوب ويجب أن يكون أكبر من أو يساوي 0");
-              return;
-            }
-            if (!newShortStayBed.price_24h || parseFloat(newShortStayBed.price_24h) < 0) {
-              toast.error("سعر 24 ساعة مطلوب ويجب أن يكون أكبر من أو يساوي 0");
-              return;
-            }
-            createShortStayBedMutation.mutate(newShortStayBed);
-          }}
+      {/* BedMap Dialog: only when not embedded */}
+      {!embedded && (
+        <Dialog
+          open={bedMapOpen}
+          onClose={() => setBedMapOpen(false)}
+          maxWidth="sm"
+          fullWidth
+          PaperProps={{ sx: { borderRadius: 2 } }}
         >
+          <DialogTitle>اختر السرير</DialogTitle>
           <DialogContent>
-            <Box
-              sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 2 }}
-            >
-              <TextField
-                label="رقم السرير"
-                required
-                fullWidth
-                value={newShortStayBed.bed_number}
-                onChange={(e) =>
-                  setNewShortStayBed({ ...newShortStayBed, bed_number: e.target.value })
-                }
-                disabled={createShortStayBedMutation.isPending}
-              />
-
-              <TextField
-                label="سعر 12 ساعة"
-                required
-                fullWidth
-                type="number"
-                value={newShortStayBed.price_12h}
-                onChange={(e) =>
-                  setNewShortStayBed({ ...newShortStayBed, price_12h: e.target.value })
-                }
-                inputProps={{ min: 0, step: "0.01" }}
-                disabled={createShortStayBedMutation.isPending}
-              />
-
-              <TextField
-                label="سعر 24 ساعة"
-                required
-                fullWidth
-                type="number"
-                value={newShortStayBed.price_24h}
-                onChange={(e) =>
-                  setNewShortStayBed({ ...newShortStayBed, price_24h: e.target.value })
-                }
-                inputProps={{ min: 0, step: "0.01" }}
-                disabled={createShortStayBedMutation.isPending}
-              />
-
-              <FormControl fullWidth>
-                <InputLabel>الحالة</InputLabel>
-                <Select
-                  value={newShortStayBed.status}
-                  label="الحالة"
-                  onChange={(e) =>
-                    setNewShortStayBed({
-                      ...newShortStayBed,
-                      status: e.target.value as "active" | "inactive",
-                    })
-                  }
-                  disabled={createShortStayBedMutation.isPending}
-                >
-                  <MenuItem value="active">نشط</MenuItem>
-                  <MenuItem value="inactive">غير نشط</MenuItem>
-                </Select>
-              </FormControl>
-
-              <TextField
-                label="ملاحظات"
-                fullWidth
-                multiline
-                rows={3}
-                value={newShortStayBed.notes}
-                onChange={(e) =>
-                  setNewShortStayBed({ ...newShortStayBed, notes: e.target.value })
-                }
-                disabled={createShortStayBedMutation.isPending}
-              />
-            </Box>
-          </DialogContent>
-          <DialogActions>
-            <Button
-              onClick={() => {
-                setShortStayBedDialogOpen(false);
-                setNewShortStayBed({
-                  bed_number: "",
-                  price_12h: "",
-                  price_24h: "",
-                  status: "active",
-                  notes: "",
-                });
+            <BedMap
+              selectedBedId={watch("bed_id") ? Number(watch("bed_id")) : null}
+              onSelectBed={(selection) => {
+                setValue("bed_id", String(selection.id));
+                const summary = [
+                  selection.wardName,
+                  selection.room?.room_number != null
+                    ? `غرفة ${selection.room.room_number}`
+                    : "",
+                  `سرير ${selection.bed_number}`,
+                ]
+                  .filter(Boolean)
+                  .join(" - ");
+                setSelectedBedSummary(summary);
+                setBedMapOpen(false);
               }}
-              disabled={createShortStayBedMutation.isPending}
-            >
-              إلغاء
-            </Button>
-            <Button
-              type="submit"
-              variant="contained"
-              disabled={createShortStayBedMutation.isPending}
-            >
-              {createShortStayBedMutation.isPending ? (
-                <CircularProgress size={20} />
-              ) : (
-                "إضافة"
-              )}
-            </Button>
-          </DialogActions>
-        </form>
-      </Dialog>
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </Box>
   );
 }

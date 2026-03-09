@@ -153,7 +153,7 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
       .get("/doctor-shifts", {
         params: {
           // status: '1', // Only open shiftst
-          today: true,
+          // today: true,
           per_page: 100,
           shift_id: currentClinicShift?.id,
         },
@@ -323,7 +323,7 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
             <TableCell>استحقاق النقدي</TableCell>
             <TableCell>استحقاق التامين</TableCell>
             <TableCell>الزمن</TableCell>
-            <TableCell> اثبات الاستحقاق النقدي</TableCell>
+            <TableCell> اثبات  </TableCell>
             <TableCell>اخري</TableCell>
           </TableRow>
         </TableHead>
@@ -401,7 +401,7 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
                       variant="contained"
                       size="small"
                     >
-                        اثبات الاستحقاق النقدي
+                        اثبات الاستحقاق 
                     </Button>
                   </TableCell>
                   <TableCell className="text-sm!">

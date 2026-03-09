@@ -1,103 +1,153 @@
 // src/components/services/AddServiceGroupDialog.tsx
-import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { useTranslation } from 'react-i18next';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
-
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import React, { useState } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
-  Dialog, DialogContent, DialogDescription, DialogFooter,
-  DialogHeader, DialogTitle, DialogTrigger, DialogClose,
-} from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Loader2, PlusCircle } from 'lucide-react';
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  TextField,
+  IconButton,
+  Tooltip,
+  Box,
+} from "@mui/material";
+import { Loader2, PlusCircle } from "lucide-react";
 
-import { createServiceGroup } from '@/services/serviceGroupService';
-import type { ServiceGroup } from '@/types/services';
+import { createServiceGroup } from "@/services/serviceGroupService";
+import type { ServiceGroup } from "@/types/services";
 
 interface AddServiceGroupDialogProps {
   onServiceGroupAdded: (newGroup: ServiceGroup) => void;
   triggerButton?: React.ReactNode;
 }
 
-const getServiceGroupSchema = (t: Function) => z.object({
-  name: z.string().min(1, { message: t('common:validation.required', { field: t('serviceGroups:form.nameLabel') }) }),
+const serviceGroupSchema = z.object({
+  name: z.string().min(1, { message: "اسم المجموعة مطلوب" }),
 });
 
-type ServiceGroupFormValues = z.infer<ReturnType<typeof getServiceGroupSchema>>;
+type ServiceGroupFormValues = z.infer<typeof serviceGroupSchema>;
 
-const AddServiceGroupDialog: React.FC<AddServiceGroupDialogProps> = ({ onServiceGroupAdded, triggerButton }) => {
-  const { t } = useTranslation(['serviceGroups', 'common']);
+const AddServiceGroupDialog: React.FC<AddServiceGroupDialogProps> = ({
+  onServiceGroupAdded,
+  triggerButton,
+}) => {
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
 
-  const serviceGroupSchema = getServiceGroupSchema(t);
-  const form = useForm<ServiceGroupFormValues>({
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<ServiceGroupFormValues>({
     resolver: zodResolver(serviceGroupSchema),
-    defaultValues: { name: '' },
+    defaultValues: { name: "" },
   });
 
   const mutation = useMutation({
     mutationFn: createServiceGroup,
     onSuccess: (newGroup) => {
-      toast.success(t('serviceGroups:addSuccess'));
-      queryClient.invalidateQueries({ queryKey: ['serviceGroupsList'] });
+      toast.success("تم إضافة مجموعة الخدمات بنجاح");
+      queryClient.invalidateQueries({ queryKey: ["serviceGroupsList"] });
       onServiceGroupAdded(newGroup);
-      form.reset();
+      reset();
       setIsOpen(false);
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || t('serviceGroups:addError'));
+    onError: (error: { response?: { data?: { message?: string } } }) => {
+      toast.error(
+        error.response?.data?.message || "حدث خطأ أثناء إضافة المجموعة",
+      );
     },
   });
 
   const onSubmit = (data: ServiceGroupFormValues) => mutation.mutate(data);
 
+  const handleOpen = () => setIsOpen(true);
+  const handleClose = () => {
+    setIsOpen(false);
+    reset();
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        {triggerButton || (
-          <Button type="button" variant="outline" size="icon" className="ltr:ml-2 rtl:mr-2 shrink-0">
+    <>
+      {triggerButton ? (
+        <Box onClick={handleOpen}>{triggerButton}</Box>
+      ) : (
+        <Tooltip title="إضافة مجموعة خدمات">
+          <IconButton
+            type="button"
+            size="small"
+            onClick={handleOpen}
+            sx={{
+              border: "1px solid",
+              borderColor: "divider",
+              borderRadius: 1,
+            }}
+          >
             <PlusCircle className="h-4 w-4" />
-            <span className="sr-only">{t('serviceGroups:addServiceGroupButton')}</span>
-          </Button>
-        )}
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>{t('serviceGroups:addDialogTitle')}</DialogTitle>
-          <DialogDescription>{t('serviceGroups:addDialogDescription')}</DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-            <FormField
-              control={form.control}
+          </IconButton>
+        </Tooltip>
+      )}
+
+      <Dialog
+        open={isOpen}
+        onClose={handleClose}
+        fullWidth
+        maxWidth="xs"
+        PaperProps={{
+          style: { direction: "rtl" },
+        }}
+      >
+        <DialogTitle>إضافة مجموعة خدمات جديدة</DialogTitle>
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <DialogContent dividers>
+            <Box mb={2}>يرجى إدخال اسم المجموعة الجديدة</Box>
+            <Controller
               name="name"
+              control={control}
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('serviceGroups:form.nameLabel')}</FormLabel>
-                  <FormControl>
-                    <Input placeholder={t('serviceGroups:form.namePlaceholder')} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+                <TextField
+                  {...field}
+                  label="اسم المجموعة"
+                  placeholder="أدخل اسم المجموعة"
+                  fullWidth
+                  size="small"
+                  error={!!errors.name}
+                  helperText={errors.name?.message as string}
+                  disabled={mutation.isPending}
+                  autoFocus
+                />
               )}
             />
-            <DialogFooter>
-              <DialogClose asChild><Button type="button" variant="outline" disabled={mutation.isPending}>{t('common:cancel')}</Button></DialogClose>
-              <Button type="submit" disabled={mutation.isPending}>
-                {mutation.isPending && <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />}
-                {t('common:save')}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={handleClose}
+              variant="outlined"
+              disabled={mutation.isPending}
+            >
+              إلغاء
+            </Button>
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={mutation.isPending}
+            >
+              {mutation.isPending && (
+                <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />
+              )}
+              حفظ
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
+    </>
   );
 };
+
 export default AddServiceGroupDialog;

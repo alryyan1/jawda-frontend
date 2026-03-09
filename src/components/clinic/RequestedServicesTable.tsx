@@ -79,6 +79,7 @@ interface RowEditData {
   discount_per: number;
   endurance?: number;
   visit?: DoctorVisit;
+  price?: number;
 }
 
 // Component to toggle deposits bank/cash state
@@ -102,20 +103,25 @@ const ToggleDepositsButton: React.FC<ToggleDepositsButtonProps> = ({
     queryFn: () => getDepositsForRequestedService(requestedServiceId),
     enabled: !!requestedServiceId,
   });
- 
+
   // Determine if all deposits are bank
-  const allAreBank = deposits.length > 0 && deposits.every((deposit) => deposit.is_bank === true);
+  const allAreBank =
+    deposits.length > 0 &&
+    deposits.every((deposit) => deposit.is_bank === true);
   const isUpdating = updatingServiceId === requestedServiceId;
 
-  const tooltipTitle = allAreBank 
-    ? "تغيير جميع الدفعات إلى كاش" 
-    : deposits.length > 0 
-    ? "تغيير جميع الدفعات إلى بنك"
-    : "لا توجد دفعات";
+  const tooltipTitle = allAreBank
+    ? "تغيير جميع الدفعات إلى كاش"
+    : deposits.length > 0
+      ? "تغيير جميع الدفعات إلى بنك"
+      : "لا توجد دفعات";
 
   const buttonColor = allAreBank ? "primary" : "default";
-console.log('user', user);
-console.log('requestedService.user_deposited_id', requestedService.user_deposited_id);
+  console.log("user", user);
+  console.log(
+    "requestedService.user_deposited_id",
+    requestedService.user_deposited_id,
+  );
   return (
     <Tooltip title={tooltipTitle}>
       <IconButton
@@ -155,9 +161,11 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
   const queryClient = useQueryClient();
   const [serviceToDelete, setServiceToDelete] = useState<number | null>(null);
   const [payingService, setPayingService] = useState<RequestedService | null>(
-    null
+    null,
   );
-  const [quickPayingServiceId, setQuickPayingServiceId] = useState<number | null>(null);
+  const [quickPayingServiceId, setQuickPayingServiceId] = useState<
+    number | null
+  >(null);
   const { user } = useAuth();
   // Removed expandable rows; using dialog instead
   // Row options dialog
@@ -169,7 +177,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
     discount_per: number;
     endurance?: number;
   }>({ count: 1, discount_per: 0 });
-  const {can} = useAuthorization();
+  const { can } = useAuthorization();
   const [isManageServiceCostsDialogOpen, setIsManageServiceCostsDialogOpen] =
     useState(false);
   const [
@@ -180,7 +188,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
     useState(false);
   const [selectedServiceForDeposits, setSelectedServiceForDeposits] =
     useState<RequestedService | null>(null);
-  
+
   // PDF Preview state
   const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -210,24 +218,25 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
     const itemPrice = Number(rs.price) || 0;
     const itemCount = Number(rs.count) || 1;
     const subTotal = itemPrice * itemCount;
-    
-    const discountFromPercentage = (subTotal * (Number(rs.discount_per) || 0)) / 100;
+
+    const discountFromPercentage =
+      (subTotal * (Number(rs.discount_per) || 0)) / 100;
     const fixedDiscount = Number(rs.discount) || 0;
     const totalDiscount = discountFromPercentage + fixedDiscount;
     const amountAfterDiscount = subTotal - totalDiscount;
-    
+
     const enduranceAmountPerItem = Number(rs.endurance) || 0;
     const totalEnduranceAmount = enduranceAmountPerItem * itemCount;
-    
+
     const alreadyPaidByPatient = Number(rs.amount_paid) || 0;
-    
+
     let paymentAmount: number;
     if (isCompanyPatient) {
       paymentAmount = totalEnduranceAmount - alreadyPaidByPatient;
     } else {
       paymentAmount = amountAfterDiscount - alreadyPaidByPatient;
     }
-    
+
     return paymentAmount < 0 ? 0 : paymentAmount;
   };
 
@@ -237,36 +246,39 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
       if (!currentClinicShiftId) {
         throw new Error("لا توجد وردية فعّالة");
       }
-      
+
       const paymentAmount = calculateQuickPaymentAmount(rs);
       if (paymentAmount <= 0) {
         throw new Error("لا يوجد مبلغ للدفع");
       }
-      
+
       return await recordServicePayment({
         requested_service_id: rs.id,
         amount: paymentAmount,
         is_bank: false, // Default to cash
-        shift_id: currentClinicShiftId
+        shift_id: currentClinicShiftId,
       });
     },
     onSuccess: async () => {
       toast.success("تم الدفع بنجاح");
-      
+
       // Send print order to printer after successful payment
       if (visitId && visit?.patient_id) {
         try {
-          const result = await realtimeService.printServicesReceipt(visitId, visit.patient_id);
+          const result = await realtimeService.printServicesReceipt(
+            visitId,
+            visit.patient_id,
+          );
           if (result.success) {
-            toast.success('تم إرسال أمر الطباعة بنجاح');
+            toast.success("تم إرسال أمر الطباعة بنجاح");
           } else {
-            console.error('Failed to print services receipt:', result.error);
+            console.error("Failed to print services receipt:", result.error);
           }
         } catch (error) {
-          console.error('Error printing services receipt:', error);
+          console.error("Error printing services receipt:", error);
         }
       }
-      
+
       // Invalidate queries
       queryClient.invalidateQueries({
         queryKey: ["requestedServicesForVisit", visitId],
@@ -274,15 +286,21 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
       queryClient.invalidateQueries({
         queryKey: ["doctorVisit", visitId],
       });
-      
+
       if (user?.id && currentClinicShiftId) {
-        const key = ["userShiftIncomeSummary", user.id, currentClinicShiftId] as const;
+        const key = [
+          "userShiftIncomeSummary",
+          user.id,
+          currentClinicShiftId,
+        ] as const;
         queryClient.invalidateQueries({ queryKey: key });
       }
-      
+
       setQuickPayingServiceId(null);
     },
-    onError: (error: Error & { response?: { data?: { message?: string } } }) => {
+    onError: (
+      error: Error & { response?: { data?: { message?: string } } },
+    ) => {
       toast.error(error.response?.data?.message || "حدث خطأ في الدفع");
       setQuickPayingServiceId(null);
     },
@@ -299,27 +317,32 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
   };
 
   // Generate PDF for a single requested service
-  const handlePrintSingleServiceReceipt = async (requestedService: RequestedService) => {
+  const handlePrintSingleServiceReceipt = async (
+    requestedService: RequestedService,
+  ) => {
     if (!visitId || !visit) return;
-    
+
     setIsGeneratingPdf(true);
     setPdfUrl(null);
-    setPdfPreviewTitle(`إيصال خدمة: ${requestedService.service?.name || 'خدمة غير معروفة'}`);
+    setPdfPreviewTitle(
+      `إيصال خدمة: ${requestedService.service?.name || "خدمة غير معروفة"}`,
+    );
     setIsPdfPreviewOpen(true);
 
     try {
       const response = await apiClient.get(
         `/visits/${visitId}/requested-services/${requestedService.id}/thermal-receipt/pdf`,
-        { responseType: 'blob' }
+        { responseType: "blob" },
       );
       const blob = response.data;
       const objectUrl = URL.createObjectURL(blob);
       setPdfUrl(objectUrl);
       setPdfFileName(`ServiceReceipt_Visit.pdf`);
     } catch (error: unknown) {
-      console.error('Error generating service receipt PDF:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      toast.error('فشل توليد ملف PDF', { description: errorMessage });
+      console.error("Error generating service receipt PDF:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error occurred";
+      toast.error("فشل توليد ملف PDF", { description: errorMessage });
       setIsPdfPreviewOpen(false);
     } finally {
       setIsGeneratingPdf(false);
@@ -332,9 +355,9 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
     mutationFn: (data: {
       rsId: number;
       payload: Partial<
-        Pick<RequestedService, "count" | "discount_per" | "endurance">
+        Pick<RequestedService, "count" | "discount_per" | "endurance" | "price">
       >;
-    }) => updateRequestedServiceDetails(visitId, data.rsId, data.payload),
+    }) => updateRequestedServiceDetails(data.rsId, data.payload),
     onSuccess: () => {
       toast.success("تم التحديث بنجاح");
       queryClient.invalidateQueries({
@@ -344,7 +367,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
     onError: (error: AxiosError) =>
       toast.error(
         (error.response?.data as { message?: string })?.message ||
-          "فشل في التحديث"
+          "فشل في التحديث",
       ),
   });
 
@@ -366,14 +389,14 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
     onError: (error: AxiosError) => {
       toast.error(
         (error.response?.data as { message?: string })?.message ||
-          "فشل في الطلب"
+          "فشل في الحذف",
       );
     },
   });
 
   // Track which service is being updated
   const [updatingServiceId, setUpdatingServiceId] = useState<number | null>(
-    null
+    null,
   );
   // Mutation to toggle all deposits is_bank
   const setAllDepositsBankMutation = useMutation({
@@ -389,30 +412,28 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
 
       // Check if all deposits are bank (is_bank = true)
       const allAreBank = deposits.every((deposit) => deposit.is_bank === true);
-      
+
       // Toggle: if all are bank, set to cash (false), otherwise set to bank (true)
       const newBankState = !allAreBank;
 
       // Update each deposit
       const updatePromises = deposits.map((deposit) =>
-        updateRequestedServiceDeposit(deposit.id, { 
+        updateRequestedServiceDeposit(deposit.id, {
           amount: String(deposit.amount),
-          is_bank: newBankState 
-        })
+          is_bank: newBankState,
+        }),
       );
 
       await Promise.all(updatePromises);
-      return { 
-        count: deposits.length, 
-        serviceId: requestedServiceId, 
-        newState: newBankState 
+      return {
+        count: deposits.length,
+        serviceId: requestedServiceId,
+        newState: newBankState,
       };
     },
     onSuccess: ({ count, newState }) => {
       if (count > 0) {
-        toast.success(
-          `تم تحديث ${count} دفعة إلى ${newState ? "بنك" : "كاش"}`
-        );
+        toast.success(`تم تحديث ${count} دفعة إلى ${newState ? "بنك" : "كاش"}`);
       }
       queryClient.invalidateQueries({
         queryKey: ["requestedServicesForVisit", visitId],
@@ -425,7 +446,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
     onError: (error: AxiosError) => {
       toast.error(
         (error.response?.data as { message?: string })?.message ||
-          "فشل في تحديث الدفعات"
+          "فشل في تحديث الدفعات",
       );
       setUpdatingServiceId(null);
     },
@@ -439,6 +460,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
       count: rs.count || 1,
       discount_per: rs.discount_per || 0,
       endurance: Number(rs.endurance) || 0,
+      price: Number(rs.price) || 0,
     });
     setIsRowOptionsDialogOpen(true);
   };
@@ -453,6 +475,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
         ...(isCompanyPatient
           ? { endurance: Number(rowOptionsData.endurance) || 0 }
           : {}),
+        price: rowOptionsData.price,
       },
     });
     setIsRowOptionsDialogOpen(false);
@@ -474,7 +497,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
 
   const calculateItemBalance = (
     rs: RequestedService,
-    editData?: RowEditData
+    editData?: RowEditData,
   ) => {
     const price = Number(rs.price) || 0;
     const count = editData ? editData.count : Number(rs.count) || 1;
@@ -508,7 +531,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
       itemEndurance,
       "itemEndurance",
       rs.endurance,
-      "rs.endurance"
+      "rs.endurance",
     );
     const netPrice = subTotal - totalItemDiscount - itemEndurance;
     const amountPaid = Number(rs.amount_paid) || 0;
@@ -550,7 +573,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                   <TableHead>
                     <TableRow>
                       <TableCell className="text-xl!" align="center">
-                        اسم 
+                        اسم
                       </TableCell>
                       <TableCell
                         className="text-xl!    "
@@ -580,7 +603,6 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                         align="center"
                         sx={{ width: 120 }}
                       >
-                        
                         المدفوع
                       </TableCell>
                       <TableCell
@@ -601,15 +623,19 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                           <TableRow
                             hover
                             onClick={() => handleOpenRowOptions(rs)}
-                            sx={{ 
+                            sx={{
                               cursor: "pointer",
-                              backgroundColor: hasPayment ? 'rgba(76, 175, 80, 0.1)' : 'transparent',
-                              '&:hover': {
-                                backgroundColor: hasPayment ? 'rgba(76, 175, 80, 0.15)' : undefined
-                              }
+                              backgroundColor: hasPayment
+                                ? "rgba(76, 175, 80, 0.1)"
+                                : "transparent",
+                              "&:hover": {
+                                backgroundColor: hasPayment
+                                  ? "rgba(76, 175, 80, 0.15)"
+                                  : undefined,
+                              },
                             }}
                           >
-                            <TableCell  className="text-xl! " align="center">
+                            <TableCell className="text-xl! " align="center">
                               {rs.service?.name || "خدمة غير معروفة"}
                             </TableCell>
                             <TableCell className="text-xl!" align="center">
@@ -649,15 +675,17 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                                 gap={0.5}
                               >
                                 {calculateItemBalance(rs) <= 0.01 ? (
-                                     <ToggleDepositsButton 
-                                     user={user}
-                                     requestedServiceId={rs.id}
-                                     requestedService={rs}
-                                     updatingServiceId={updatingServiceId}
-                                     onToggle={(serviceId) => {
-                                       setAllDepositsBankMutation.mutate(serviceId);
-                                     }}
-                                   />
+                                  <ToggleDepositsButton
+                                    user={user}
+                                    requestedServiceId={rs.id}
+                                    requestedService={rs}
+                                    updatingServiceId={updatingServiceId}
+                                    onToggle={(serviceId) => {
+                                      setAllDepositsBankMutation.mutate(
+                                        serviceId,
+                                      );
+                                    }}
+                                  />
                                 ) : (
                                   <Tooltip title="دفع سريع (نقدي)">
                                     <IconButton
@@ -666,7 +694,11 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                                         e.stopPropagation();
                                         handleQuickPayment(rs);
                                       }}
-                                      disabled={!currentClinicShiftId || quickPayingServiceId === rs.id || !can('سداد خدمه')}
+                                      disabled={
+                                        !currentClinicShiftId ||
+                                        quickPayingServiceId === rs.id ||
+                                        !can("سداد خدمه")
+                                      }
                                       color="primary"
                                     >
                                       {quickPayingServiceId === rs.id ? (
@@ -684,14 +716,27 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                                       e.stopPropagation();
                                       handlePrintSingleServiceReceipt(rs);
                                       try {
-                                        const result = await realtimeService.printSingleServiceReceipt(visitId, rs.id, visit?.patient?.id);
+                                        const result =
+                                          await realtimeService.printSingleServiceReceipt(
+                                            visitId,
+                                            rs.id,
+                                            visit?.patient?.id,
+                                          );
                                         if (result.success) {
-                                          toast.success('تم إرسال أمر الطباعة بنجاح');
+                                          toast.success(
+                                            "تم إرسال أمر الطباعة بنجاح",
+                                          );
                                         } else {
-                                          console.error('Failed to print single service receipt:', result.error);
+                                          console.error(
+                                            "Failed to print single service receipt:",
+                                            result.error,
+                                          );
                                         }
                                       } catch (error) {
-                                        console.error('Error printing single service receipt:', error);
+                                        console.error(
+                                          "Error printing single service receipt:",
+                                          error,
+                                        );
                                       }
                                     }}
                                     disabled={isGeneratingPdf}
@@ -703,7 +748,6 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                                     )}
                                   </IconButton>
                                 </Tooltip>
-                             
                               </Box>
                             </TableCell>
                           </TableRow>
@@ -806,13 +850,38 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                   <TextField
                     type="number"
                     size="small"
-                    disabled={rowOptionsService.amount_paid > 0  || user?.id != rowOptionsService.user_id}
+                    disabled={
+                      rowOptionsService.amount_paid > 0 ||
+                      user?.id != rowOptionsService.user_id
+                    }
                     inputProps={{ min: 1 }}
                     value={rowOptionsData.count ?? 1}
                     onChange={(e) =>
                       setRowOptionsData({
                         ...rowOptionsData,
                         count: parseInt(e.target.value || "1") || 1,
+                      })
+                    }
+                    fullWidth
+                    sx={{ mt: 1 }}
+                  />
+                </Box>
+                <Box>
+                  <Typography variant="caption" fontWeight={600}>
+                    السعر
+                  </Typography>
+                  <TextField
+                    type="number"
+                    size="small"
+                    disabled={
+                      !rowOptionsService?.service?.variable ||
+                      rowOptionsService.amount_paid > 0
+                    }
+                    value={rowOptionsData.price ?? 0}
+                    onChange={(e) =>
+                      setRowOptionsData({
+                        ...rowOptionsData,
+                        price: parseFloat(e.target.value || "0") || 0,
                       })
                     }
                     fullWidth
@@ -828,7 +897,10 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                       type="number"
                       size="small"
                       inputProps={{ min: 0 }}
-                      disabled={user?.id != rowOptionsService.user_id || rowOptionsService.amount_paid > 0}
+                      disabled={
+                        user?.id != rowOptionsService.user_id ||
+                        rowOptionsService.amount_paid > 0
+                      }
                       value={rowOptionsData.endurance ?? 0}
                       onChange={(e) =>
                         setRowOptionsData({
@@ -848,7 +920,11 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                     <Select
                       label="نسبة التخفيض"
                       size="small"
-                      disabled={!can('تخفيض خدمه') || user?.id != rowOptionsService.user_id || rowOptionsService.amount_paid > 0}
+                      disabled={
+                        !can("تخفيض خدمه") ||
+                        user?.id != rowOptionsService.user_id ||
+                        rowOptionsService.amount_paid > 0
+                      }
                       value={rowOptionsData.discount_per}
                       onChange={(e) =>
                         setRowOptionsData({
@@ -884,7 +960,6 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                   }}
                   startIcon={<Settings2 className="h-4 w-4" />}
                 >
-                  
                   التكاليف
                 </Button>
                 <Button
@@ -895,22 +970,22 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                   }}
                   startIcon={<PackageOpen className="h-4 w-4" />}
                 >
-                  
                   المدفوعات
                 </Button>
-                {rowOptionsService && calculateItemBalance(rowOptionsService) > 0.01 && (
-                  <Button
-                    variant="outlined"
-                    onClick={() => {
-                      setIsRowOptionsDialogOpen(false);
-                      setPayingService(rowOptionsService);
-                    }}
-                    disabled={!currentClinicShiftId || !can('سداد خدمه')}
-                    startIcon={<DollarSign className="h-4 w-4" />}
-                  >
-                    دفع
-                  </Button>
-                )}
+                {rowOptionsService &&
+                  calculateItemBalance(rowOptionsService) > 0.01 && (
+                    <Button
+                      variant="outlined"
+                      onClick={() => {
+                        setIsRowOptionsDialogOpen(false);
+                        setPayingService(rowOptionsService);
+                      }}
+                      disabled={!currentClinicShiftId || !can("سداد خدمه")}
+                      startIcon={<DollarSign className="h-4 w-4" />}
+                    >
+                      دفع
+                    </Button>
+                  )}
                 <Button
                   color="error"
                   variant="outlined"
@@ -919,7 +994,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                     setServiceToDelete(rowOptionsService.id);
                   }}
                   startIcon={<Trash2 className="h-4 w-4" />}
-                  disabled={!can('حذف خدمه مضافه') }
+                  disabled={!can("حذف خدمه مضافه")}
                 >
                   حذف
                 </Button>

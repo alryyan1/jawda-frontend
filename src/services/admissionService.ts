@@ -36,17 +36,10 @@ export const createAdmission = async (
 ): Promise<{ data: Admission }> => {
   const payload: Record<string, any> = {
     patient_id: parseInt(String(data.patient_id)),
-    ward_id: data.ward_id ? parseInt(String(data.ward_id)) : null,
-    room_id: data.room_id ? parseInt(String(data.room_id)) : null,
     bed_id: data.bed_id ? parseInt(String(data.bed_id)) : null,
-    booking_type: data.booking_type || "bed",
-    admission_date: data.admission_date
-      ? data.admission_date instanceof Date
-        ? data.admission_date.toISOString().split("T")[0]
-        : data.admission_date
-      : new Date().toISOString().split("T")[0],
-    admission_time: data.admission_time || null,
-    admission_type: data.admission_type || null,
+    admission_date: new Date().toISOString(),
+    admission_days: data.admission_days ?? null,
+    admission_purpose: data.admission_purpose ?? null,
     admission_reason: data.admission_reason || null,
     diagnosis: data.diagnosis || null,
     doctor_id: data.doctor_id ? parseInt(String(data.doctor_id)) : null,
@@ -55,17 +48,9 @@ export const createAdmission = async (
     operations: data.operations || null,
     medical_history: data.medical_history || null,
     current_medications: data.current_medications || null,
-    referral_source: data.referral_source || null,
-    expected_discharge_date: data.expected_discharge_date
-      ? data.expected_discharge_date instanceof Date
-        ? data.expected_discharge_date.toISOString().split("T")[0]
-        : data.expected_discharge_date
-      : null,
     next_of_kin_name: data.next_of_kin_name || null,
     next_of_kin_relation: data.next_of_kin_relation || null,
     next_of_kin_phone: data.next_of_kin_phone || null,
-    short_stay_bed_id: data.short_stay_bed_id ? parseInt(String(data.short_stay_bed_id)) : null,
-    short_stay_duration: data.short_stay_duration || null,
   };
 
   // Add specialist_doctor_id if provided
@@ -82,22 +67,12 @@ export const updateAdmission = async (
   data: Partial<AdmissionFormData>,
 ): Promise<{ data: Admission }> => {
   const payload: Record<string, any> = {};
-  if (data.ward_id !== undefined)
-    payload.ward_id = data.ward_id == null || data.ward_id === "" ? null : parseInt(String(data.ward_id));
-  if (data.room_id !== undefined)
-    payload.room_id = data.room_id == null || data.room_id === "" ? null : parseInt(String(data.room_id));
   if (data.bed_id !== undefined)
     payload.bed_id = data.bed_id ? parseInt(String(data.bed_id)) : null;
-  if (data.booking_type !== undefined) payload.booking_type = data.booking_type;
-  if (data.admission_date !== undefined)
-    payload.admission_date =
-      data.admission_date instanceof Date
-        ? data.admission_date.toISOString().split("T")[0]
-        : data.admission_date;
-  if (data.admission_time !== undefined)
-    payload.admission_time = data.admission_time;
-  if (data.admission_type !== undefined)
-    payload.admission_type = data.admission_type;
+  if (data.admission_days !== undefined)
+    payload.admission_days = data.admission_days;
+  if (data.admission_purpose !== undefined)
+    payload.admission_purpose = data.admission_purpose;
   if (data.admission_reason !== undefined)
     payload.admission_reason = data.admission_reason;
   if (data.diagnosis !== undefined) payload.diagnosis = data.diagnosis;
@@ -117,23 +92,12 @@ export const updateAdmission = async (
     payload.medical_history = data.medical_history;
   if (data.current_medications !== undefined)
     payload.current_medications = data.current_medications;
-  if (data.referral_source !== undefined)
-    payload.referral_source = data.referral_source;
-  if (data.expected_discharge_date !== undefined)
-    payload.expected_discharge_date =
-      data.expected_discharge_date instanceof Date
-        ? data.expected_discharge_date.toISOString().split("T")[0]
-        : data.expected_discharge_date;
   if (data.next_of_kin_name !== undefined)
     payload.next_of_kin_name = data.next_of_kin_name;
   if (data.next_of_kin_relation !== undefined)
     payload.next_of_kin_relation = data.next_of_kin_relation;
   if (data.next_of_kin_phone !== undefined)
     payload.next_of_kin_phone = data.next_of_kin_phone;
-  if (data.short_stay_bed_id !== undefined)
-    payload.short_stay_bed_id = data.short_stay_bed_id ? parseInt(String(data.short_stay_bed_id)) : null;
-  if (data.short_stay_duration !== undefined)
-    payload.short_stay_duration = data.short_stay_duration;
 
   const response = await apiClient.put<{ data: Admission }>(
     `${API_URL}/${id}`,
@@ -173,8 +137,6 @@ export const transferAdmission = async (
   data: TransferFormData,
 ): Promise<{ data: Admission }> => {
   const payload = {
-    ward_id: parseInt(String(data.ward_id)),
-    room_id: parseInt(String(data.room_id)),
     bed_id: parseInt(String(data.bed_id)),
     notes: data.notes || null,
   };
@@ -291,11 +253,9 @@ export const getAdmissionLedger = async (
   return response.data;
 };
 
-export const exportAdmissionLedgerPdf = async (
-  id: number,
-): Promise<Blob> => {
+export const exportAdmissionLedgerPdf = async (id: number): Promise<Blob> => {
   const response = await apiClient.get(`${API_URL}/${id}/ledger/pdf`, {
-    responseType: 'blob',
+    responseType: "blob",
   });
   return response.data;
 };
@@ -306,7 +266,7 @@ export const exportAdmissionsListPdf = async (
 ): Promise<Blob> => {
   const response = await apiClient.get(`${API_URL}/list/pdf`, {
     params: filters,
-    responseType: 'blob',
+    responseType: "blob",
   });
   return response.data;
 };

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
+import type { Dispatch, SetStateAction, KeyboardEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -24,25 +25,40 @@ import { User, Phone, Wallet, Heart, X, Activity, Baby } from "lucide-react";
 import { registerNewPatient } from "@/services/patientService";
 import { getDoctorsList } from "@/services/doctorService";
 import type { PatientFormData, PatientSearchResult } from "@/types/patients";
+import type { Theme } from "@mui/material/styles";
 
-interface QuickAddPatientDialogProps {
-  open: boolean;
-  onClose: () => void;
+type QuickAddFormState = {
+  name: string;
+  phone: string;
+  dob: string;
+  gender: "male" | "female" | "";
+  age_year: string;
+  age_month: string;
+  age_day: string;
+  income_source: string;
+  social_status: string;
+};
+
+interface UseQuickAddPatientOptions {
+  onClose?: () => void;
   onPatientAdded: (patient: PatientSearchResult) => void;
 }
 
-export default function QuickAddPatientDialog({
-  open,
+/**
+ * Shared hook encapsulating the quick-add patient state and mutation logic.
+ * Used by both the dialog and inline admission page form.
+ */
+export function useQuickAddPatient({
   onClose,
   onPatientAdded,
-}: QuickAddPatientDialogProps) {
+}: UseQuickAddPatientOptions) {
   const theme = useTheme();
   const queryClient = useQueryClient();
-  const [quickAddFormData, setQuickAddFormData] = useState({
+  const [quickAddFormData, setQuickAddFormData] = useState<QuickAddFormState>({
     name: "",
     phone: "",
-    dob: "",
-    gender: "" as "male" | "female" | "",
+    dob: "1970-01-01",
+    gender: "female",
     age_year: "",
     age_month: "",
     age_day: "",
@@ -84,8 +100,7 @@ export default function QuickAddPatientDialog({
 
       return registerNewPatient(patientData);
     },
-    onSuccess: (patient) => {
-      console.log(patient, "patient");
+    onSuccess: (patient: any) => {
       toast.success("تم إضافة المريض بنجاح");
       const patientResult: PatientSearchResult = {
         id: patient.id,
@@ -97,13 +112,15 @@ export default function QuickAddPatientDialog({
       };
 
       onPatientAdded(patientResult);
-      onClose();
+      if (onClose) {
+        onClose();
+      }
 
       setQuickAddFormData({
         name: "",
         phone: "",
-        dob: "",
-        gender: "",
+        dob: "1970-01-01",
+        gender: "female",
         age_year: "",
         age_month: "",
         age_day: "",
@@ -112,13 +129,15 @@ export default function QuickAddPatientDialog({
       });
       queryClient.invalidateQueries({ queryKey: ["patientSearch"] });
     },
-    onError: (error) => {
-      console.log(error, "error");
-      toast.error(" حدث خطأ أثناء إضافة المريض " + error.message);
+    onError: (error: any) => {
+      const message =
+        (error && (error.message || error?.response?.data?.message)) ||
+        " حدث خطأ أثناء إضافة المريض";
+      toast.error(message);
     },
   });
 
-  const handleQuickAddSubmit = () => {
+  const handleQuickAddSubmit = useCallback(() => {
     if (
       !quickAddFormData.name ||
       !quickAddFormData.phone ||
@@ -127,6 +146,7 @@ export default function QuickAddPatientDialog({
       toast.error("يرجى إدخال الاسم والهاتف والنوع");
       return;
     }
+
     const patientData: PatientFormData = {
       name: quickAddFormData.name,
       phone: quickAddFormData.phone,
@@ -152,8 +172,408 @@ export default function QuickAddPatientDialog({
       doctor_id: doctors?.[0]?.id,
       doctor_shift_id: null,
     };
+
     quickAddPatientMutation.mutate(patientData);
+  }, [doctors, quickAddFormData, quickAddPatientMutation]);
+
+  const handleFormKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLFormElement>) => {
+      if (e.key === "Enter" && !(e.target instanceof HTMLTextAreaElement)) {
+        e.preventDefault();
+        if (
+          !quickAddPatientMutation.isPending &&
+          quickAddFormData.name &&
+          quickAddFormData.phone &&
+          quickAddFormData.gender
+        ) {
+          handleQuickAddSubmit();
+        }
+      }
+    },
+    [
+      handleQuickAddSubmit,
+      quickAddFormData.name,
+      quickAddFormData.phone,
+      quickAddFormData.gender,
+      quickAddPatientMutation.isPending,
+    ],
+  );
+
+  return {
+    theme,
+    quickAddFormData,
+    setQuickAddFormData,
+    quickAddPatientMutation,
+    handleQuickAddSubmit,
+    handleFormKeyDown,
   };
+}
+
+interface QuickAddPatientFormFieldsProps {
+  theme: Theme;
+  quickAddFormData: QuickAddFormState;
+  setQuickAddFormData: Dispatch<SetStateAction<QuickAddFormState>>;
+  quickAddPatientMutation: any;
+  handleFormKeyDown: (e: KeyboardEvent<HTMLFormElement>) => void;
+}
+
+/**
+ * Shared form fields for quick patient creation.
+ * This is used both in the dialog and the inline admissions page column.
+ */
+export function QuickAddPatientFormFields({
+  theme,
+  quickAddFormData,
+  setQuickAddFormData,
+  quickAddPatientMutation,
+  handleFormKeyDown,
+}: QuickAddPatientFormFieldsProps) {
+  return (
+    <Box component="form" onKeyDown={handleFormKeyDown}>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+        {/* Section: Basic Info */}
+        <Box>
+          <Typography
+            variant="subtitle2"
+            color="primary"
+            sx={{
+              mb: 2,
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              fontWeight: 600,
+            }}
+          >
+            <Activity size={18} />
+            البيانات الأساسية
+          </Typography>
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: { xs: "column", md: "row" },
+              gap: 2,
+            }}
+          >
+            <Box sx={{ flex: 1 }}>
+              <TextField
+                fullWidth
+                label="اسم المريض"
+                value={quickAddFormData.name}
+                onChange={(e) =>
+                  setQuickAddFormData((prev) => ({
+                    ...prev,
+                    name: e.target.value,
+                  }))
+                }
+                required
+                disabled={quickAddPatientMutation.isPending}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <User
+                        size={18}
+                        color={theme.palette.text.secondary}
+                      />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Box>
+            <Box sx={{ flex: 1 }}>
+              <TextField
+                fullWidth
+                label="رقم الهاتف"
+                value={quickAddFormData.phone}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^0-9]/g, "");
+                  setQuickAddFormData((prev) => ({
+                    ...prev,
+                    phone: value,
+                  }));
+                }}
+                required
+                disabled={quickAddPatientMutation.isPending}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Phone
+                        size={18}
+                        color={theme.palette.text.secondary}
+                      />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Box>
+          </Box>
+        </Box>
+
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: { xs: "column", md: "row" },
+            gap: 2,
+            mt: 2,
+          }}
+        >
+          <Box sx={{ flex: 1 }}>
+            <FormControl fullWidth required>
+              <InputLabel>النوع</InputLabel>
+              <Select
+                value={quickAddFormData.gender}
+                label="النوع"
+                onChange={(e) =>
+                  setQuickAddFormData((prev) => ({
+                    ...prev,
+                    gender: e.target.value as "male" | "female",
+                  }))
+                }
+                disabled={quickAddPatientMutation.isPending}
+                startAdornment={
+                  <InputAdornment position="start" sx={{ ml: 1 }}>
+                    <User
+                      size={18}
+                      color={theme.palette.text.secondary}
+                    />
+                  </InputAdornment>
+                }
+              >
+                <MenuItem value="male">ذكر</MenuItem>
+                <MenuItem value="female">أنثى</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+          <Box sx={{ flex: 1 }}>
+            <TextField
+              fullWidth
+              label="تاريخ الميلاد"
+              type="date"
+              value={quickAddFormData.dob}
+              onChange={(e) => {
+                const dob = e.target.value;
+                let updates: Partial<QuickAddFormState> = { dob };
+
+                if (dob) {
+                  const birthDate = new Date(dob);
+                  const today = new Date();
+                  let years = today.getFullYear() - birthDate.getFullYear();
+                  let months = today.getMonth() - birthDate.getMonth();
+                  let days = today.getDate() - birthDate.getDate();
+
+                  if (days < 0) {
+                    months--;
+                    const lastMonth = new Date(
+                      today.getFullYear(),
+                      today.getMonth(),
+                      0,
+                    );
+                    days += lastMonth.getDate();
+                  }
+                  if (months < 0) {
+                    years--;
+                    months += 12;
+                  }
+
+                  if (years >= 0) {
+                    updates = {
+                      ...updates,
+                      age_year: years.toString(),
+                      age_month: months.toString(),
+                      age_day: days.toString(),
+                    };
+                  }
+                }
+
+                setQuickAddFormData((prev) => ({
+                  ...prev,
+                  ...updates,
+                }));
+              }}
+              InputLabelProps={{ shrink: true }}
+              disabled={quickAddPatientMutation.isPending}
+            />
+          </Box>
+        </Box>
+
+        {/* Section: Age */}
+        <Box>
+          <Typography
+            variant="subtitle2"
+            color="primary"
+            sx={{
+              mb: 2,
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              fontWeight: 600,
+            }}
+          >
+            <Baby size={18} />
+            العمر
+          </Typography>
+          <Box
+            sx={{
+              p: 2,
+              bgcolor: alpha(theme.palette.primary.main, 0.04),
+              borderRadius: 2,
+              border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+            }}
+          >
+            <Box sx={{ display: "flex", gap: 2 }}>
+              <Box sx={{ flex: 1 }}>
+                <TextField
+                  fullWidth
+                  label="سنوات"
+                  type="number"
+                  size="small"
+                  value={quickAddFormData.age_year}
+                  onChange={(e) =>
+                    setQuickAddFormData((prev) => ({
+                      ...prev,
+                      age_year: e.target.value,
+                    }))
+                  }
+                  disabled={quickAddPatientMutation.isPending}
+                />
+              </Box>
+              <Box sx={{ flex: 1 }}>
+                <TextField
+                  fullWidth
+                  label="أشهر"
+                  type="number"
+                  size="small"
+                  value={quickAddFormData.age_month}
+                  onChange={(e) =>
+                    setQuickAddFormData((prev) => ({
+                      ...prev,
+                      age_month: e.target.value,
+                    }))
+                  }
+                  disabled={quickAddPatientMutation.isPending}
+                />
+              </Box>
+              <Box sx={{ flex: 1 }}>
+                <TextField
+                  fullWidth
+                  label="أيام"
+                  type="number"
+                  size="small"
+                  value={quickAddFormData.age_day}
+                  onChange={(e) =>
+                    setQuickAddFormData((prev) => ({
+                      ...prev,
+                      age_day: e.target.value,
+                    }))
+                  }
+                  disabled={quickAddPatientMutation.isPending}
+                />
+              </Box>
+            </Box>
+          </Box>
+        </Box>
+
+        {/* Section: Additional Info */}
+        <Box>
+          <Typography
+            variant="subtitle2"
+            color="primary"
+            sx={{
+              mb: 2,
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              fontWeight: 600,
+            }}
+          >
+            <Wallet size={18} />
+            بيانات إضافية
+          </Typography>
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: { xs: "column", md: "row" },
+              gap: 2,
+            }}
+          >
+            <Box sx={{ flex: 1 }}>
+              <FormControl fullWidth>
+                <InputLabel>الحالة الاجتماعية</InputLabel>
+                <Select
+                  value={quickAddFormData.social_status}
+                  label="الحالة الاجتماعية"
+                  onChange={(e) =>
+                    setQuickAddFormData((prev) => ({
+                      ...prev,
+                      social_status: e.target.value,
+                    }))
+                  }
+                  disabled={quickAddPatientMutation.isPending}
+                  startAdornment={
+                    <InputAdornment position="start" sx={{ ml: 1 }}>
+                      <Heart
+                        size={18}
+                        color={theme.palette.text.secondary}
+                      />
+                    </InputAdornment>
+                  }
+                >
+                  <MenuItem value="single">أعزب</MenuItem>
+                  <MenuItem value="married">متزوج</MenuItem>
+                  <MenuItem value="widowed">أرمل</MenuItem>
+                  <MenuItem value="divorced">مطلق</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+            <Box sx={{ flex: 1 }}>
+              <TextField
+                fullWidth
+                label="مصدر الدخل"
+                value={quickAddFormData.income_source}
+                onChange={(e) =>
+                  setQuickAddFormData((prev) => ({
+                    ...prev,
+                    income_source: e.target.value,
+                  }))
+                }
+                disabled={quickAddPatientMutation.isPending}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Wallet
+                        size={18}
+                        color={theme.palette.text.secondary}
+                      />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Box>
+          </Box>
+        </Box>
+      </Box>
+    </Box>
+  );
+}
+
+interface QuickAddPatientDialogProps {
+  open: boolean;
+  onClose: () => void;
+  onPatientAdded: (patient: PatientSearchResult) => void;
+}
+
+export default function QuickAddPatientDialog({
+  open,
+  onClose,
+  onPatientAdded,
+}: QuickAddPatientDialogProps) {
+  const {
+    theme,
+    quickAddFormData,
+    setQuickAddFormData,
+    quickAddPatientMutation,
+    handleQuickAddSubmit,
+    handleFormKeyDown,
+  } = useQuickAddPatient({ onClose, onPatientAdded });
 
   return (
     <Dialog
@@ -197,343 +617,13 @@ export default function QuickAddPatientDialog({
       </DialogTitle>
 
       <DialogContent sx={{ p: 3, mt: 1 }}>
-        <Box
-          component="form"
-          onKeyDown={(e) => {
-            if (
-              e.key === "Enter" &&
-              !(e.target instanceof HTMLTextAreaElement)
-            ) {
-              e.preventDefault();
-              if (
-                !quickAddPatientMutation.isPending &&
-                quickAddFormData.name &&
-                quickAddFormData.phone &&
-                quickAddFormData.gender
-              ) {
-                handleQuickAddSubmit();
-              }
-            }
-          }}
-        >
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-            {/* Section: Basic Info */}
-            <Box>
-              <Typography
-                variant="subtitle2"
-                color="primary"
-                sx={{
-                  mb: 2,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1,
-                  fontWeight: 600,
-                }}
-              >
-                <Activity size={18} />
-                البيانات الأساسية
-              </Typography>
-              <Box
-                sx={{
-                  display: "flex",
-                  flexDirection: { xs: "column", md: "row" },
-                  gap: 2,
-                }}
-              >
-                <Box sx={{ flex: 1 }}>
-                  <TextField
-                    fullWidth
-                    label="اسم المريض"
-                    value={quickAddFormData.name}
-                    onChange={(e) =>
-                      setQuickAddFormData({
-                        ...quickAddFormData,
-                        name: e.target.value,
-                      })
-                    }
-                    required
-                    disabled={quickAddPatientMutation.isPending}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <User
-                            size={18}
-                            color={theme.palette.text.secondary}
-                          />
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                  <TextField
-                    fullWidth
-                    label="رقم الهاتف"
-                    value={quickAddFormData.phone}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/[^0-9]/g, "");
-                      setQuickAddFormData({
-                        ...quickAddFormData,
-                        phone: value,
-                      });
-                    }}
-                    required
-                    disabled={quickAddPatientMutation.isPending}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <Phone
-                            size={18}
-                            color={theme.palette.text.secondary}
-                          />
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
-                </Box>
-              </Box>
-            </Box>
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: { xs: "column", md: "row" },
-                gap: 2,
-                mt: 2,
-              }}
-            >
-              <Box sx={{ flex: 1 }}>
-                <FormControl fullWidth required>
-                  <InputLabel>النوع</InputLabel>
-                  <Select
-                    value={quickAddFormData.gender}
-                    label="النوع"
-                    onChange={(e) =>
-                      setQuickAddFormData({
-                        ...quickAddFormData,
-                        gender: e.target.value as "male" | "female",
-                      })
-                    }
-                    disabled={quickAddPatientMutation.isPending}
-                    startAdornment={
-                      <InputAdornment position="start" sx={{ ml: 1 }}>
-                        <User size={18} color={theme.palette.text.secondary} />
-                      </InputAdornment>
-                    }
-                  >
-                    <MenuItem value="male">ذكر</MenuItem>
-                    <MenuItem value="female">أنثى</MenuItem>
-                  </Select>
-                </FormControl>
-              </Box>
-              <Box sx={{ flex: 1 }}>
-                <TextField
-                  fullWidth
-                  label="تاريخ الميلاد"
-                  type="date"
-                  value={quickAddFormData.dob}
-                  onChange={(e) => {
-                    const dob = e.target.value;
-                    let updates: Partial<typeof quickAddFormData> = { dob };
-
-                    if (dob) {
-                      const birthDate = new Date(dob);
-                      const today = new Date();
-                      let years = today.getFullYear() - birthDate.getFullYear();
-                      let months = today.getMonth() - birthDate.getMonth();
-                      let days = today.getDate() - birthDate.getDate();
-
-                      if (days < 0) {
-                        months--;
-                        const lastMonth = new Date(
-                          today.getFullYear(),
-                          today.getMonth(),
-                          0,
-                        );
-                        days += lastMonth.getDate();
-                      }
-                      if (months < 0) {
-                        years--;
-                        months += 12;
-                      }
-
-                      if (years >= 0) {
-                        updates = {
-                          ...updates,
-                          age_year: years.toString(),
-                          age_month: months.toString(),
-                          age_day: days.toString(),
-                        };
-                      }
-                    }
-
-                    setQuickAddFormData({
-                      ...quickAddFormData,
-                      ...updates,
-                    });
-                  }}
-                  InputLabelProps={{ shrink: true }}
-                  disabled={quickAddPatientMutation.isPending}
-                />
-              </Box>
-            </Box>
-
-            {/* Section: Age */}
-            <Box>
-              <Typography
-                variant="subtitle2"
-                color="primary"
-                sx={{
-                  mb: 2,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1,
-                  fontWeight: 600,
-                }}
-              >
-                <Baby size={18} />
-                العمر
-              </Typography>
-              <Box
-                sx={{
-                  p: 2,
-                  bgcolor: alpha(theme.palette.primary.main, 0.04),
-                  borderRadius: 2,
-                  border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
-                }}
-              >
-                <Box sx={{ display: "flex", gap: 2 }}>
-                  <Box sx={{ flex: 1 }}>
-                    <TextField
-                      fullWidth
-                      label="سنوات"
-                      type="number"
-                      size="small"
-                      value={quickAddFormData.age_year}
-                      onChange={(e) =>
-                        setQuickAddFormData({
-                          ...quickAddFormData,
-                          age_year: e.target.value,
-                        })
-                      }
-                      disabled={quickAddPatientMutation.isPending}
-                    />
-                  </Box>
-                  <Box sx={{ flex: 1 }}>
-                    <TextField
-                      fullWidth
-                      label="أشهر"
-                      type="number"
-                      size="small"
-                      value={quickAddFormData.age_month}
-                      onChange={(e) =>
-                        setQuickAddFormData({
-                          ...quickAddFormData,
-                          age_month: e.target.value,
-                        })
-                      }
-                      disabled={quickAddPatientMutation.isPending}
-                    />
-                  </Box>
-                  <Box sx={{ flex: 1 }}>
-                    <TextField
-                      fullWidth
-                      label="أيام"
-                      type="number"
-                      size="small"
-                      value={quickAddFormData.age_day}
-                      onChange={(e) =>
-                        setQuickAddFormData({
-                          ...quickAddFormData,
-                          age_day: e.target.value,
-                        })
-                      }
-                      disabled={quickAddPatientMutation.isPending}
-                    />
-                  </Box>
-                </Box>
-              </Box>
-            </Box>
-
-            {/* Section: Additional Info */}
-            <Box>
-              <Typography
-                variant="subtitle2"
-                color="primary"
-                sx={{
-                  mb: 2,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1,
-                  fontWeight: 600,
-                }}
-              >
-                <Wallet size={18} />
-                بيانات إضافية
-              </Typography>
-              <Box
-                sx={{
-                  display: "flex",
-                  flexDirection: { xs: "column", md: "row" },
-                  gap: 2,
-                }}
-              >
-                <Box sx={{ flex: 1 }}>
-                  <FormControl fullWidth>
-                    <InputLabel>الحالة الاجتماعية</InputLabel>
-                    <Select
-                      value={quickAddFormData.social_status}
-                      label="الحالة الاجتماعية"
-                      onChange={(e) =>
-                        setQuickAddFormData({
-                          ...quickAddFormData,
-                          social_status: e.target.value,
-                        })
-                      }
-                      disabled={quickAddPatientMutation.isPending}
-                      startAdornment={
-                        <InputAdornment position="start" sx={{ ml: 1 }}>
-                          <Heart
-                            size={18}
-                            color={theme.palette.text.secondary}
-                          />
-                        </InputAdornment>
-                      }
-                    >
-                      <MenuItem value="single">أعزب</MenuItem>
-                      <MenuItem value="married">متزوج</MenuItem>
-                      <MenuItem value="widowed">أرمل</MenuItem>
-                      <MenuItem value="divorced">مطلق</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                  <TextField
-                    fullWidth
-                    label="مصدر الدخل"
-                    value={quickAddFormData.income_source}
-                    onChange={(e) =>
-                      setQuickAddFormData({
-                        ...quickAddFormData,
-                        income_source: e.target.value,
-                      })
-                    }
-                    disabled={quickAddPatientMutation.isPending}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <Wallet
-                            size={18}
-                            color={theme.palette.text.secondary}
-                          />
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
-                </Box>
-              </Box>
-            </Box>
-          </Box>
-        </Box>
+        <QuickAddPatientFormFields
+          theme={theme}
+          quickAddFormData={quickAddFormData}
+          setQuickAddFormData={setQuickAddFormData}
+          quickAddPatientMutation={quickAddPatientMutation}
+          handleFormKeyDown={handleFormKeyDown}
+        />
       </DialogContent>
       <DialogActions
         sx={{

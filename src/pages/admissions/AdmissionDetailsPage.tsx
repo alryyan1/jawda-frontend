@@ -200,7 +200,10 @@ export default function AdmissionDetailsPage() {
                     color="text.secondary"
                     sx={{ mt: 0.5 }}
                   >
-                    تاريخ التنويم: {admissionData.admission_date}
+                    تاريخ التنويم:{" "}
+                    {new Date(admissionData.admission_date).toLocaleString(
+                      "ar-EG",
+                    )}
                   </Typography>
                 )}
               </Box>
@@ -208,26 +211,24 @@ export default function AdmissionDetailsPage() {
           }
           action={
             <Box sx={{ display: "flex", gap: 1 }}>
-              {admissionData.status === "admitted" &&
-                !admissionData.short_stay_bed_id &&
-                admissionData.booking_type !== "bed" && (
-                  <>
-                    <Button
-                      variant="outlined"
-                      color="info"
-                      onClick={() => setTransferDialogOpen(true)}
-                    >
-                      نقل
-                    </Button>
-                    <Button
-                      variant="contained"
-                      color="error"
-                      onClick={() => setDischargeDialogOpen(true)}
-                    >
-                      خروج
-                    </Button>
-                  </>
-                )}
+              {admissionData.status === "admitted" && (
+                <>
+                  <Button
+                    variant="outlined"
+                    color="info"
+                    onClick={() => setTransferDialogOpen(true)}
+                  >
+                    نقل
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="error"
+                    onClick={() => setDischargeDialogOpen(true)}
+                  >
+                    خروج
+                  </Button>
+                </>
+              )}
             </Box>
           }
         />

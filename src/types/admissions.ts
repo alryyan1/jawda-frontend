@@ -90,6 +90,13 @@ export interface ShortStayBedFormData {
   notes?: string | null;
 }
 
+// Admission purpose (غرض التنويم)
+export type AdmissionPurpose =
+  | "surgery"           // عملية جراحية
+  | "follow_up"         // متابعة
+  | "intermediate_care" // عناية وسيطة
+  | "intensive_care";   // عناية مكثفة
+
 // Admission Types
 export interface Admission {
   id: number;
@@ -97,19 +104,15 @@ export interface Admission {
   patient?: PatientStripped;
   ward_id: number;
   ward?: Ward;
-  room_id: number;
+  /** From API via bed.room (no room_id column on admission). */
+  room_id?: number;
   room?: Room;
   bed_id: number | null;
   bed?: Bed;
-  short_stay_bed_id?: number | null;
-  short_stay_bed?: ShortStayBed;
-  short_stay_duration?: "12h" | "24h" | null;
-  booking_type?: "bed" | "room";
-  admission_date: string; // YYYY-MM-DD
-  admission_time?: string | null; // HH:mm:ss
-  discharge_date?: string | null; // YYYY-MM-DD
-  discharge_time?: string | null; // HH:mm:ss
-  admission_type?: string | null;
+  admission_date: string; // ISO datetime string
+  admission_days?: number | null;
+  admission_purpose?: AdmissionPurpose | null;
+  discharge_date?: string | null; // ISO datetime string
   admission_reason?: string | null;
   diagnosis?: string | null;
   status: "admitted" | "discharged" | "transferred";
@@ -145,15 +148,9 @@ export interface Admission {
 
 export interface AdmissionFormData {
   patient_id: string | undefined;
-  ward_id: string | undefined;
-  room_id: string | undefined;
   bed_id: string | undefined;
-  short_stay_bed_id?: string | undefined;
-  short_stay_duration?: "12h" | "24h" | undefined;
-  booking_type?: "bed" | "room";
-  admission_date: Date | undefined;
-  admission_time?: string | null;
-  admission_type?: string | null;
+  admission_days?: number | null;
+  admission_purpose?: AdmissionPurpose | null;
   admission_reason?: string | null;
   diagnosis?: string | null;
   doctor_id?: string | undefined;
@@ -164,9 +161,6 @@ export interface AdmissionFormData {
   // Clinical Data
   medical_history?: string | null;
   current_medications?: string | null;
-  // Administrative Data
-  referral_source?: string | null;
-  expected_discharge_date?: Date | undefined;
   // Emergency Data
   next_of_kin_name?: string | null;
   next_of_kin_relation?: string | null;
@@ -180,8 +174,6 @@ export interface DischargeFormData {
 }
 
 export interface TransferFormData {
-  ward_id: string | undefined;
-  room_id: string | undefined;
   bed_id: string | undefined;
   notes?: string | null;
 }
@@ -329,7 +321,14 @@ export interface AdmissionTransaction {
   type: "debit" | "credit";
   amount: number;
   description: string;
-  reference_type?: "service" | "deposit" | "manual" | "room_charges" | "charge" | "discount" | "short_stay" | null;
+  reference_type?:
+    | "service"
+    | "deposit"
+    | "manual"
+    | "room_charges"
+    | "charge"
+    | "discount"
+    | null;
   reference_id?: number | null;
   is_bank: boolean;
   notes?: string | null;
@@ -343,7 +342,14 @@ export interface AdmissionTransactionFormData {
   type: "debit" | "credit";
   amount: number;
   description: string;
-  reference_type?: "service" | "deposit" | "manual" | "room_charges" | "charge" | "discount" | "short_stay" | null;
+  reference_type?:
+    | "service"
+    | "deposit"
+    | "manual"
+    | "room_charges"
+    | "charge"
+    | "discount"
+    | null;
   reference_id?: number | null;
   is_bank: boolean;
   notes?: string | null;
@@ -359,7 +365,15 @@ export interface AdmissionLedgerEntry {
   time?: string;
   user?: string;
   notes?: string;
-  reference_type?: "service" | "deposit" | "manual" | "lab_test" | "room_charges" | "charge" | "discount" | "short_stay" | null;
+  reference_type?:
+    | "service"
+    | "deposit"
+    | "manual"
+    | "lab_test"
+    | "room_charges"
+    | "charge"
+    | "discount"
+    | null;
   reference_id?: number | null;
   balance_after: number;
 }

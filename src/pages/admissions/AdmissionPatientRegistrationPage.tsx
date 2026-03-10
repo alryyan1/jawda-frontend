@@ -35,7 +35,7 @@ import {
   Calculator,
   FileText,
 } from "lucide-react";
-import { getActiveClinicPatients, getAdmissionPatientsByDate } from "@/services/clinicService";
+import { getAdmissionPatientsByDate } from "@/services/clinicService";
 import { getAdmissions, getPatientActiveAdmission, createAdmission, updateAdmission, getAdmissionRequestedSurgeriesSummary } from "@/services/admissionService";
 import type {
   ActivePatientVisit,
@@ -86,22 +86,21 @@ export default function AdmissionPatientRegistrationPage() {
   } = useQuickAddPatient({
     onPatientAdded: () => {
       queryClient.invalidateQueries({
-        queryKey: ["clinicActivePatientsForAdmission"],
+        queryKey: ["admissionPatientsByDate"],
       });
     },
     fromAdmissionPage: true,
   });
+
+  const effectiveDate = admissionSearchDate ?? dayjs().format("YYYY-MM-DD");
 
   const {
     data: visits,
     isLoading: isLoadingVisits,
     isError: isVisitsError,
   } = useQuery<ActivePatientVisit[]>({
-    queryKey: ["clinicActivePatientsForAdmission", admissionSearchDate],
-    queryFn: () =>
-      admissionSearchDate
-        ? getAdmissionPatientsByDate(admissionSearchDate)
-        : getActiveClinicPatients({}),
+    queryKey: ["admissionPatientsByDate", effectiveDate],
+    queryFn: () => getAdmissionPatientsByDate(effectiveDate),
   });
 
   const handleClinicPatientSelect = (patient: Patient, visitId: number) => {
@@ -151,7 +150,7 @@ export default function AdmissionPatientRegistrationPage() {
         variables.isUpdate ? "تم تحديث السرير بنجاح" : "تم حفظ السرير في ملف التنويم"
       );
       queryClient.invalidateQueries({ queryKey: ["admissions"] });
-      queryClient.invalidateQueries({ queryKey: ["clinicActivePatientsForAdmission"] });
+      queryClient.invalidateQueries({ queryKey: ["admissionPatientsByDate"] });
       queryClient.invalidateQueries({ queryKey: ["ward"] });
       queryClient.invalidateQueries({ queryKey: ["wardsList"] });
       if (!variables.isUpdate && selectedPatientId) {
@@ -187,7 +186,7 @@ export default function AdmissionPatientRegistrationPage() {
     onSuccess: (_, variables) => {
       toast.success("تم تعيين السرير للمريض بنجاح");
       queryClient.invalidateQueries({ queryKey: ["admissions"] });
-      queryClient.invalidateQueries({ queryKey: ["clinicActivePatientsForAdmission"] });
+      queryClient.invalidateQueries({ queryKey: ["admissionPatientsByDate"] });
       queryClient.invalidateQueries({ queryKey: ["ward"] });
       queryClient.invalidateQueries({ queryKey: ["wardsList"] });
       setAdmittedPatientIds((prev) => new Set([...prev, variables.patientId]));
@@ -481,13 +480,13 @@ export default function AdmissionPatientRegistrationPage() {
                 <Box>
                   <Typography variant="subtitle1" fontWeight={600}>
                     {admissionSearchDate
-                      ? `مرضى مسجلين بتاريخ ${dayjs(admissionSearchDate).format("DD/MM/YYYY")}`
-                      : "المرضى المنتظرين للتنويم"}
+                      ? `مرضى مسجلين بتاريخ ${dayjs(admissionSearchDate).format("YYYY/MM/DD")}`
+                      : `مرضى مسجلين اليوم من صفحة التنويم (${dayjs().format("YYYY/MM/DD")})`}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
                     {admissionSearchDate
                       ? "مرضى مسجلين من صفحة التنويم في هذا التاريخ"
-                      : "قائمة المرضى المنتظرين للتنويم لاختيارهم للتنويم"}
+                      : "مرضى مسجلين من صفحة التنويم في تاريخ اليوم"}
                   </Typography>
                 </Box>
               </Box>
@@ -516,7 +515,7 @@ export default function AdmissionPatientRegistrationPage() {
               ) : isVisitsError ? (
                 <Box sx={{ p: 3, textAlign: "center" }}>
                   <Typography color="error" variant="body2">
-                    فشل في جلب قائمة مرضى اليوم
+                    فشل في جلب قائمة المرضى المسجلين من صفحة التنويم
                   </Typography>
                 </Box>
               ) : !visits || visits.length === 0 ? (
@@ -524,7 +523,7 @@ export default function AdmissionPatientRegistrationPage() {
                   <Typography variant="body2" color="text.secondary">
                     {admissionSearchDate
                       ? "لا يوجد مرضى مسجلين في هذا التاريخ من صفحة التنويم"
-                      : "لا يوجد مرضى نشطين اليوم في العيادة"}
+                      : "لا يوجد مرضى مسجلين اليوم من صفحة التنويم"}
                   </Typography>
                 </Box>
               ) : (
@@ -937,7 +936,7 @@ export default function AdmissionPatientRegistrationPage() {
                       new Set([...prev, selectedPatientId]),
                     );
                   queryClient.invalidateQueries({ queryKey: ["admissions"] });
-                  queryClient.invalidateQueries({ queryKey: ["clinicActivePatientsForAdmission"] });
+                  queryClient.invalidateQueries({ queryKey: ["admissionPatientsByDate"] });
                 }}
                 onClose={() => {
                   setAdmissionDialogOpen(false);
@@ -1077,7 +1076,7 @@ export default function AdmissionPatientRegistrationPage() {
           onPatientAdded={() => {}}
           onPatientUpdated={() => {
             queryClient.invalidateQueries({
-              queryKey: ["clinicActivePatientsForAdmission"],
+              queryKey: ["admissionPatientsByDate"],
             });
           }}
         />

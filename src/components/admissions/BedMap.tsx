@@ -271,57 +271,6 @@ export default function BedMap({
         </Box>
       )}
 
-      {/* Legend */}
-      <Box
-        sx={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: 1,
-          mb: 1.25,
-          pb: 1.25,
-          borderBottom: 1,
-          borderColor: "divider",
-        }}
-      >
-        <Chip
-          size="small"
-          label={BED_STATUS.available.label}
-          sx={{
-            bgcolor: BED_STATUS.available.bg,
-            border: `1px solid ${BED_STATUS.available.border}`,
-            color: BED_STATUS.available.color,
-            fontWeight: 600,
-          }}
-        />
-        <Chip
-          size="small"
-          label={BED_STATUS.occupied.label}
-          sx={{
-            bgcolor: BED_STATUS.occupied.bg,
-            border: `1px solid ${BED_STATUS.occupied.border}`,
-            color: BED_STATUS.occupied.color,
-            fontWeight: 600,
-          }}
-        />
-        <Chip
-          size="small"
-          label={BED_STATUS.maintenance.label}
-          sx={{
-            bgcolor: BED_STATUS.maintenance.bg,
-            border: `1px solid ${BED_STATUS.maintenance.border}`,
-            color: BED_STATUS.maintenance.color,
-            fontWeight: 600,
-          }}
-        />
-        {selectedBedId && (
-          <Chip
-            size="small"
-            label="المحدد"
-            color="primary"
-            sx={{ fontWeight: 600 }}
-          />
-        )}
-      </Box>
 
       {/* Wards → Rooms → Beds (2 wards per row) */}
       <Box

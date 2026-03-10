@@ -26,6 +26,7 @@ import { Delete, Link, WhatsApp } from "@mui/icons-material";
 import { Printer } from "lucide-react";
 import { toast } from "sonner";
 import apiClient from "@/services/api";
+import { prepareWhatsApp } from "@/services/admissionService";
 import { sendWhatsAppCloudTemplate } from "@/services/whatsappCloudApiService";
 
 interface FinanceChargeItem {
@@ -111,42 +112,35 @@ export function SurgeryFinanceDialog({
 
     onSendWhatsAppStart(selectedSurgery.id);
 
+    let prepareToastId: string | number | undefined;
     try {
+      prepareToastId = toast.loading("جاري حفظ التفاصيل ورفع التقرير...");
+
+      await prepareWhatsApp(admissionId, selectedSurgery.id);
+
+      toast.success("تم التحضير. جاري الإرسال...", { id: prepareToastId });
+
       const sanitize = (s: string) => s.replace(/[\n\r\t]+/g, " ").replace(/\s{5,}/g, "    ");
       const operationName = sanitize(selectedSurgery.surgery?.name ?? "");
-      const staffLines = selectedSurgery.finances
-        .filter((f) => f.finance_charge.beneficiary === "staff")
-        .map((f) =>
-          sanitize(`${f.finance_charge.name}: ${Number(f.amount).toLocaleString()}`)
-        );
-      const centerLines = selectedSurgery.finances
-        .filter((f) => f.finance_charge.beneficiary === "center")
-        .map((f) =>
-          sanitize(`${f.finance_charge.name}: ${Number(f.amount).toLocaleString()}`)
-        );
-      const staffText = sanitize(
-        staffLines.length > 0 ? staffLines.join(" • ") : "لا توجد حصص للطاقم الطبي"
-      );
-      const centerText = sanitize(
-        centerLines.length > 0 ? centerLines.join(" • ") : "لا توجد حصص للمركز"
-      );
-      const totalVal = selectedSurgery.total_price || 0;
       const patientName = sanitize(selectedSurgery.admission?.patient?.name ?? "");
 
       await sendWhatsAppCloudTemplate({
         to: phone,
-        template_name: "operation_shares_flexible",
+        template_name: "request_finance_approve",
         language_code: "ar",
         components: [
           {
             type: "body",
             parameters: [
               { type: "text", text: operationName },
-              { type: "text", text: staffText },
-              { type: "text", text: centerText },
-              { type: "text", text: String(totalVal) },
               { type: "text", text: patientName },
             ],
+          },
+          {
+            type: "button",
+            sub_type: "quick_reply",
+            index: 0,
+            parameters: [{ type: "payload", payload: `admission_${admissionId}` }],
           },
         ],
       });
@@ -154,6 +148,7 @@ export function SurgeryFinanceDialog({
       toast.success("تم إرسال طلب اعتماد الحصص بنجاح");
     } catch (error) {
       console.error(error);
+      if (prepareToastId != null) toast.dismiss(prepareToastId);
       toast.error("فشل إرسال طلب اعتماد الحصص");
     } finally {
       onSendWhatsAppEnd(selectedSurgery.id);
@@ -164,6 +159,22 @@ export function SurgeryFinanceDialog({
     (s, f) => s + Number(editAmounts[f.id] ?? f.amount),
     0
   ) ?? 0;
+  const staffTotal =
+    selectedSurgery?.finances
+      .filter((f) => f.finance_charge.beneficiary === "staff")
+      .reduce((s, f) => s + Number(editAmounts[f.id] ?? f.amount), 0) ?? 0;
+  const centerTotal =
+    selectedSurgery?.finances
+      .filter((f) => f.finance_charge.beneficiary === "center")
+      .reduce((s, f) => s + Number(editAmounts[f.id] ?? f.amount), 0) ?? 0;
+  const cashTotal =
+    selectedSurgery?.finances
+      .filter((f) => f.payment_method === "cash")
+      .reduce((s, f) => s + Number(editAmounts[f.id] ?? f.amount), 0) ?? 0;
+  const bankakTotal =
+    selectedSurgery?.finances
+      .filter((f) => f.payment_method === "bankak")
+      .reduce((s, f) => s + Number(editAmounts[f.id] ?? f.amount), 0) ?? 0;
   const exceedsInitialPrice =
     selectedSurgery?.initial_price != null &&
     selectedSurgery.initial_price > 0 &&
@@ -186,15 +197,33 @@ export function SurgeryFinanceDialog({
           {selectedSurgery && (
             <>
               <Chip
-                label={`السعر : ${(selectedSurgery.initial_price ?? 0).toLocaleString()} ج.س`}
+                label={`السعر: ${(selectedSurgery.initial_price ?? 0).toLocaleString()}`}
                 color="default"
                 size="small"
                 variant="outlined"
                 sx={{ fontWeight: 600 }}
               />
               <Chip
-                label={`الإجمالي: ${selectedSurgery.finances.reduce((sum, f) => sum + Number(f.amount), 0).toLocaleString()} ج.س`}
+                label={`اجمالي الكادر: ${staffTotal.toLocaleString()}`}
                 color="primary"
+                size="small"
+                variant="outlined"
+              />
+              <Chip
+                label={`اجمالي المركز: ${centerTotal.toLocaleString()}`}
+                color="secondary"
+                size="small"
+                variant="outlined"
+              />
+              <Chip
+                label={`اجمالي كاش: ${cashTotal.toLocaleString()}`}
+                color="success"
+                size="small"
+                variant="outlined"
+              />
+              <Chip
+                label={`اجمالي بنكك: ${bankakTotal.toLocaleString()}`}
+                color="info"
                 size="small"
                 variant="outlined"
               />

@@ -277,6 +277,19 @@ export const getAdmissionRequestedSurgeriesSummary = async (
   return response.data;
 };
 
+export const prepareWhatsApp = async (
+  admissionId: string | number,
+  requestedSurgeryId: number,
+): Promise<{ success: boolean; download_url: string }> => {
+  const response = await apiClient.post<{
+    success: boolean;
+    download_url: string;
+  }>(
+    `${API_URL}/${admissionId}/requested-surgeries/${requestedSurgeryId}/prepare-whatsapp`,
+  );
+  return response.data;
+};
+
 export const exportAdmissionLedgerPdf = async (id: number): Promise<Blob> => {
   const response = await apiClient.get(`${API_URL}/${id}/ledger/pdf`, {
     responseType: "blob",

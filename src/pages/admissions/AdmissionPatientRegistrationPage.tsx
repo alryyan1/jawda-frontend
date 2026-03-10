@@ -34,13 +34,12 @@ import {
   Bed,
   X,
   Calculator,
+  FileText,
 } from "lucide-react";
 import { getActiveClinicPatients } from "@/services/clinicService";
-import { getPatientById } from "@/services/patientService";
-import { getAdmissions, createAdmission, updateAdmission } from "@/services/admissionService";
+import { getAdmissions, getPatientActiveAdmission, createAdmission, updateAdmission, getAdmissionRequestedSurgeriesSummary } from "@/services/admissionService";
 import type {
   ActivePatientVisit,
-  PatientSearchResult,
   Patient,
 } from "@/types/patients";
 import AdmissionActiveCard from "@/components/admissions/AdmissionActiveCard";
@@ -60,8 +59,6 @@ export default function AdmissionPatientRegistrationPage() {
 
   const [selectedVisit, setSelectedVisit] =
     useState<ActivePatientVisit | null>(null);
-  const [selectedQuickPatient, setSelectedQuickPatient] =
-    useState<PatientSearchResult | null>(null);
   const [showQuickAddForm, setShowQuickAddForm] = useState<boolean>(true);
   const [admissionDialogOpen, setAdmissionDialogOpen] = useState(false);
   /** When set, the admission dialog opens in edit mode for this admission id. */
@@ -85,8 +82,7 @@ export default function AdmissionPatientRegistrationPage() {
     handleQuickAddSubmit,
     handleFormKeyDown,
   } = useQuickAddPatient({
-    onPatientAdded: (patient) => {
-      setSelectedQuickPatient(patient);
+    onPatientAdded: () => {
       queryClient.invalidateQueries({
         queryKey: ["clinicActivePatientsForAdmission"],
       });
@@ -111,37 +107,19 @@ export default function AdmissionPatientRegistrationPage() {
     }
   };
 
-  // Load full patient details for the patient created in column 1
-  const {
-    data: quickPatientDetails,
-    isLoading: isLoadingQuickDetails,
-    isError: isQuickDetailsError,
-  } = useQuery<Patient>({
-    queryKey: ["admissionQuickPatient", selectedQuickPatient?.id],
-    queryFn: () => getPatientById(selectedQuickPatient!.id),
-    enabled: !!selectedQuickPatient?.id,
-  });
+  const selectedPatientId = selectedVisit?.patient?.id ?? null;
 
-  const selectedPatientId = selectedVisit?.patient?.id ?? selectedQuickPatient?.id ?? null;
-
-  const { data: admissionsResponse } = useQuery({
+  const { data: activeAdmission } = useQuery({
     queryKey: ["admissions", "active", selectedPatientId],
-    queryFn: () =>
-      getAdmissions(1, {
-        patient_id: selectedPatientId!,
-        status: "admitted",
-      }),
+    queryFn: () => getPatientActiveAdmission(selectedPatientId!),
     enabled: !!selectedPatientId,
   });
 
   const hasActiveAdmission =
     !!selectedPatientId &&
-    (admittedPatientIds.has(selectedPatientId) ||
-      (admissionsResponse?.data?.length ?? 0) > 0);
+    (admittedPatientIds.has(selectedPatientId) || !!activeAdmission);
 
-  const activeAdmissionId = (admissionsResponse?.data?.length ?? 0) > 0
-    ? admissionsResponse!.data![0].id
-    : null;
+  const activeAdmissionId = activeAdmission?.id ?? null;
 
   const saveBedMutation = useMutation({
     mutationFn: async ({
@@ -167,6 +145,7 @@ export default function AdmissionPatientRegistrationPage() {
         variables.isUpdate ? "تم تحديث السرير بنجاح" : "تم حفظ السرير في ملف التنويم"
       );
       queryClient.invalidateQueries({ queryKey: ["admissions"] });
+      queryClient.invalidateQueries({ queryKey: ["clinicActivePatientsForAdmission"] });
       queryClient.invalidateQueries({ queryKey: ["ward"] });
       queryClient.invalidateQueries({ queryKey: ["wardsList"] });
       if (!variables.isUpdate && selectedPatientId) {
@@ -202,6 +181,7 @@ export default function AdmissionPatientRegistrationPage() {
     onSuccess: (_, variables) => {
       toast.success("تم تعيين السرير للمريض بنجاح");
       queryClient.invalidateQueries({ queryKey: ["admissions"] });
+      queryClient.invalidateQueries({ queryKey: ["clinicActivePatientsForAdmission"] });
       queryClient.invalidateQueries({ queryKey: ["ward"] });
       queryClient.invalidateQueries({ queryKey: ["wardsList"] });
       setAdmittedPatientIds((prev) => new Set([...prev, variables.patientId]));
@@ -214,6 +194,12 @@ export default function AdmissionPatientRegistrationPage() {
   const { data: surgeriesList = [] } = useQuery({
     queryKey: ["surgicalOperations"],
     queryFn: getSurgicalOperations,
+  });
+
+  const { data: admissionSurgeriesSummary } = useQuery({
+    queryKey: ["admissionRequestedSurgeriesSummary", activeAdmissionId],
+    queryFn: () => getAdmissionRequestedSurgeriesSummary(activeAdmissionId!),
+    enabled: !!activeAdmissionId,
   });
 
   const calculatorDate = dayjs().format("YYYY-MM-DD");
@@ -241,7 +227,7 @@ export default function AdmissionPatientRegistrationPage() {
     setAdmissionDialogOpen(true);
   };
 
-  const admissionFormInitialPatient = useMemo((): PatientSearchResult | null => {
+  const admissionFormInitialPatient = useMemo((): Patient | null => {
     if (selectedVisit?.patient) {
       const p = selectedVisit.patient;
       return {
@@ -250,46 +236,20 @@ export default function AdmissionPatientRegistrationPage() {
         phone: p.phone ?? undefined,
         gender: p.gender,
         age_year: p.age_year ?? undefined,
-        patient_id: p.id,
-      };
-    }
-    if (selectedQuickPatient) {
-      return selectedQuickPatient;
-    }
-    if (quickPatientDetails) {
-      return {
-        id: quickPatientDetails.id,
-        name: quickPatientDetails.name,
-        phone: quickPatientDetails.phone ?? undefined,
-        gender: quickPatientDetails.gender,
-        age_year: quickPatientDetails.age_year ?? undefined,
-        patient_id: quickPatientDetails.id,
-      };
+      } as Patient;
     }
     return null;
-  }, [selectedVisit?.patient, selectedQuickPatient, quickPatientDetails]);
+  }, [selectedVisit?.patient]);
 
-  const getVisitStatusLabel = (status: ActivePatientVisit["status"]) => {
-    switch (status) {
-      case "waiting":
-        return "في الانتظار";
-      case "with_doctor":
-        return "عند الطبيب";
-      case "lab_pending":
-        return "معلق بالمختبر";
-      case "imaging_pending":
-        return "معلق بالأشعة";
-      case "payment_pending":
-        return "في انتظار الدفع";
-      case "completed":
-        return "مكتملة";
-      case "cancelled":
-        return "ملغاة";
-      case "no_show":
-        return "لم يحضر";
-      default:
-        return status;
-    }
+  /** حالة التنويم: قيد الإجراء (بدون سرير) | منوم (بسرير) | مخرج */
+  const getAdmissionStatusLabel = (
+    admission: { status: string; bed_id?: number | null; bed?: { id: number } | null } | null | undefined
+  ): string => {
+    if (!admission) return "—";
+    if (admission.status === "discharged") return "مخرج";
+    if (admission.status === "transferred") return "منقول";
+    const hasBed = !!(admission.bed_id ?? admission.bed?.id);
+    return hasBed ? "منوم" : "قيد الإجراء";
   };
 
   return (
@@ -332,7 +292,6 @@ export default function AdmissionPatientRegistrationPage() {
               }}
               onClick={() => {
                 setSelectedVisit(null);
-                setSelectedQuickPatient(null);
                 setShowQuickAddForm(true);
               }}
             >
@@ -404,7 +363,7 @@ export default function AdmissionPatientRegistrationPage() {
               xs: "1fr",
               lg: selectedVisit
                 ? "minmax(400px,1.2fr) minmax(400px,1.3fr) minmax(400px,1.3fr) minmax(400px,1.3fr)"
-                : "minmax(0,1.4fr) minmax(0,1.2fr) minmax(0,1.3fr)",
+                : "minmax(0,1.4fr) minmax(0,1.3fr) minmax(0,1.3fr)",
             },
             gap: 1,
             mt: 3,
@@ -608,7 +567,7 @@ export default function AdmissionPatientRegistrationPage() {
             </Box>
           </Card>
 
-          {/* Column 3: Selected patient details */}
+          {/* Column 3: Selected patient details (resembles PatientDetailsColumnV1) */}
           <Card
             elevation={0}
             sx={{
@@ -616,347 +575,280 @@ export default function AdmissionPatientRegistrationPage() {
               border: "1px solid",
               borderColor: "divider",
               overflow: "hidden",
+              display: "flex",
+              flexDirection: "column",
             }}
           >
-            <CardContent sx={{ p: 2.5 }}>
-              <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-                 تفاصيل المريض المختار
-              </Typography>
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{ display: "block", mb: 2 }}
-              >
-                اختر مريضاً من القائمة أو قم بإضافته من العمود الأول لعرض
-                التفاصيل هنا
-              </Typography>
-              <Divider sx={{ mb: 2 }} />
-
-              {!selectedVisit && !selectedQuickPatient ? (
+            <CardContent
+              sx={{
+                p: 2,
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+              }}
+            >
+              {!selectedVisit ? (
                 <Box
                   sx={{
                     py: 6,
                     textAlign: "center",
                     color: "text.secondary",
+                    flex: 1,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                   }}
                 >
                   <Typography variant="body2">
                     لم يتم اختيار أي مريض بعد
                   </Typography>
                 </Box>
-              ) : selectedVisit && selectedVisit.patient ? (
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-                  <Typography variant="h6" fontWeight={700}>
-                    {selectedVisit.patient.name}
-                  </Typography>
-                  <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mb: 1 }}>
-                    {selectedVisit.patient.gender && (
-                      <Chip
-                        size="small"
-                        label={
-                          selectedVisit.patient.gender === "male" ? "ذكر" : "أنثى"
-                        }
-                      />
-                    )}
-                    {typeof selectedVisit.patient.age_year === "number" &&
-                      selectedVisit.patient.age_year !== null && (
-                        <Chip
-                          size="small"
-                          label={`${selectedVisit.patient.age_year} سنة`}
-                        />
-                      )}
-                    {selectedVisit.patient.social_status && (
-                      <Chip
-                        size="small"
-                        label={
-                          selectedVisit.patient.social_status === "single"
-                            ? "أعزب"
-                            : selectedVisit.patient.social_status === "married"
-                              ? "متزوج"
-                              : selectedVisit.patient.social_status === "widowed"
-                                ? "أرمل"
-                                : selectedVisit.patient.social_status === "divorced"
-                                  ? "مطلق"
-                                  : selectedVisit.patient.social_status
-                        }
-                      />
-                    )}
-                    <Chip
-                      size="small"
-                      color="primary"
-                      label={getVisitStatusLabel(selectedVisit.status)}
-                    />
-                  
-                  </Box>
-                  <Typography variant="body2">
-                    <strong>الهاتف:</strong>{" "}
-                    {selectedVisit.patient.phone || "لا يوجد"}
-                  </Typography>
-                  <Typography variant="body2">
-                    <strong>مصدر الدخل:</strong>{" "}
-                    {selectedVisit.patient.income_source || "لا يوجد"}
-                  </Typography>
-                  <Typography variant="body2">
-                    <strong>الطبيب:</strong>{" "}
-                    {selectedVisit.doctor?.name ?? selectedVisit.doctor_name}
-                  </Typography>
-                  <Typography variant="body2">
-                    <strong>تاريخ التسجيل:</strong>{" "}
-                    {selectedVisit.created_at
-                      ? dayjs(selectedVisit.created_at).format("DD/MM/YYYY HH:mm")
-                      : "غير متوفر"}
-                  </Typography>
-                  {admissionsResponse?.data?.[0] && (
-                    <>
-                      {admissionsResponse.data[0].created_at && (
-                        <Typography variant="body2">
-                          <strong>تاريخ التنويم:</strong>{" "}
-                          {dayjs(admissionsResponse.data[0].created_at).format("DD/MM/YYYY HH:mm")}
-                        </Typography>
-                      )}
-                      {(admissionsResponse.data[0].ward || admissionsResponse.data[0].room || admissionsResponse.data[0].bed) && (
-                        <Typography variant="body2">
-                          <strong>موقع التنويم:</strong>
-                          {[
-                            admissionsResponse.data[0].ward?.name,
-                            admissionsResponse.data[0].room?.room_number != null
-                              ? `غرفة ${admissionsResponse.data[0].room.room_number}`
-                              : null,
-                            admissionsResponse.data[0].bed?.bed_number != null
-                              ? `سرير ${admissionsResponse.data[0].bed.bed_number}`
-                              : null,
-                          ]
-                            .filter(Boolean)
-                            .join(" / ")}
-                        </Typography>
-                      )}
-                    </>
-                  )}
-                  {selectedVisit.reason_for_visit && (
-                    <Typography variant="body2">
-                      <strong>سبب الزيارة:</strong>{" "}
-                      {selectedVisit.reason_for_visit}
-                    </Typography>
-                  )}
-              
-                </Box>
-              ) : !selectedQuickPatient ? (
-                <Box
-                  sx={{
-                    py: 6,
-                    textAlign: "center",
-                    color: "text.secondary",
-                  }}
-                >
-                  <Typography variant="body2">
-                    لم يتم تسجيل أي مريض بعد من العمود الأول
-                  </Typography>
-                </Box>
-              ) : isLoadingQuickDetails ? (
-                <Box
-                  sx={{
-                    py: 4,
-                    textAlign: "center",
-                    color: "text.secondary",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: 1,
-                  }}
-                >
-                  <CircularProgress size={24} />
-                  <Typography variant="body2">جاري تحميل بيانات المريض...</Typography>
-                </Box>
-              ) : isQuickDetailsError || !quickPatientDetails ? (
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-                  <Typography variant="h6" fontWeight={700}>
-                    {selectedQuickPatient.name}
-                  </Typography>
-                  <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mb: 1 }}>
-                    {selectedQuickPatient.gender && (
-                      <Chip
-                        size="small"
-                        label={
-                          selectedQuickPatient.gender === "male"
-                            ? "ذكر"
-                            : "أنثى"
-                        }
-                      />
-                    )}
-                    {typeof selectedQuickPatient.age_year === "number" && (
-                      <Chip
-                        size="small"
-                        label={`${selectedQuickPatient.age_year} سنة`}
-                      />
-                    )}
-                  </Box>
-                  <Typography variant="body2">
-                    <strong>الهاتف:</strong>{" "}
-                    {selectedQuickPatient.phone || "لا يوجد"}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    تم تسجيل هذا المريض حديثاً. يمكنك استخدامه في نموذج التنويم
-                    لاحقاً.
-                  </Typography>
-                  {selectedBedSummary && (
-                    <Typography variant="body2" sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                      <Bed size={16} style={{ flexShrink: 0 }} />
-                      <strong>السرير:</strong> {selectedBedSummary}
-                    </Typography>
-                  )}
-                </Box>
-              ) : (
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-                  <Typography variant="h6" fontWeight={700}>
-                    {quickPatientDetails.name}
-                  </Typography>
-                  <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mb: 1 }}>
-                    {quickPatientDetails.gender && (
-                      <Chip
-                        size="small"
-                        label={
-                          quickPatientDetails.gender === "male" ? "ذكر" : "أنثى"
-                        }
-                      />
-                    )}
-                    {typeof quickPatientDetails.age_year === "number" &&
-                      quickPatientDetails.age_year !== null && (
-                        <Chip
-                          size="small"
-                          label={`${quickPatientDetails.age_year} سنة`}
-                        />
-                      )}
-                    {quickPatientDetails.social_status && (
-                      <Chip
-                        size="small"
-                        label={
-                          quickPatientDetails.social_status === "single"
-                            ? "أعزب"
-                            : quickPatientDetails.social_status === "married"
-                              ? "متزوج"
-                              : quickPatientDetails.social_status === "widowed"
-                                ? "أرمل"
-                                : quickPatientDetails.social_status === "divorced"
-                                  ? "مطلق"
-                                  : quickPatientDetails.social_status
-                        }
-                      />
-                    )}
-                    {quickPatientDetails.company?.name && (
-                      <Chip
-                        size="small"
-                        label={quickPatientDetails.company.name}
-                        color="secondary"
-                        variant="outlined"
-                      />
-                    )}
-                  </Box>
-                  <Typography variant="body2">
-                    <strong>الهاتف:</strong>{" "}
-                    {quickPatientDetails.phone || "لا يوجد"}
-                  </Typography>
-                  <Typography variant="body2">
-                    <strong>مصدر الدخل:</strong>{" "}
-                    {quickPatientDetails.income_source || "لا يوجد"}
-                  </Typography>
-                  <Typography variant="body2">
-                    <strong>الرقم القومي:</strong>{" "}
-                    {quickPatientDetails.gov_id || "لا يوجد"}
-                  </Typography>
-                  <Typography variant="body2">
-                    <strong>البريد الإلكتروني:</strong>{" "}
-                    {quickPatientDetails.email || "لا يوجد"}
-                  </Typography>
-                  <Typography variant="body2">
-                    <strong>الجنسية:</strong>{" "}
-                    {quickPatientDetails.nationality || "لا يوجد"}
-                  </Typography>
-                  <Typography variant="body2">
-                    <strong>العنوان:</strong>{" "}
-                    {quickPatientDetails.address || "لا يوجد"}
-                  </Typography>
-                  <Typography variant="body2">
-                    <strong>تاريخ التسجيل:</strong>{" "}
-                    {quickPatientDetails.created_at
-                      ? dayjs(quickPatientDetails.created_at).format("DD/MM/YYYY HH:mm")
-                      : "غير متوفر"}
-                  </Typography>
-                  {admissionsResponse?.data?.[0] && (
-                    <>
-                      {admissionsResponse.data[0].created_at && (
-                        <Typography variant="body2">
-                          <strong>تاريخ التنويم:</strong>{" "}
-                          {dayjs(admissionsResponse.data[0].created_at).format("DD/MM/YYYY HH:mm")}
-                        </Typography>
-                      )}
-                      {(admissionsResponse.data[0].ward || admissionsResponse.data[0].room || admissionsResponse.data[0].bed) && (
-                        <Typography variant="body2">
-                          <strong>موقع التنويم:</strong>{" "}
-                          {[
-                            admissionsResponse.data[0].ward?.name,
-                            admissionsResponse.data[0].room?.room_number != null
-                              ? `غرفة ${admissionsResponse.data[0].room.room_number}`
-                              : null,
-                            admissionsResponse.data[0].bed?.bed_number != null
-                              ? `سرير ${admissionsResponse.data[0].bed.bed_number}`
-                              : null,
-                          ]
-                            .filter(Boolean)
-                            .join(" / ")}
-                        </Typography>
-                      )}
-                    </>
-                  )}
-                  {selectedBedSummary && (
-                    <Typography variant="body2" sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                      <Bed size={16} style={{ flexShrink: 0 }} />
-                      <strong>السرير:</strong> {selectedBedSummary}
-                    </Typography>
-                  )}
-                </Box>
-              )}
-
-              {/* إجراء التنويم + اختر السرير buttons in third column */}
-              {(selectedVisit || selectedQuickPatient) && (
-                <Box sx={{ mt: 2, pt: 2, borderTop: 1, borderColor: "divider" }}>
-                  <Box
+              ) : selectedVisit?.patient ? (
+                <Box sx={{ display: "flex", flexDirection: "column", flex: 1, gap: 1.5 }}>
+                  {/* Patient name - centered, bold, border-bottom (like PatientDetailsColumnV1) */}
+                  <Typography
+                    variant="h6"
+                    fontWeight={700}
                     sx={{
-                      display: "flex",
-                      gap: 1.5,
-                      flexWrap: "wrap",
-                      alignItems: "center",
+                      textAlign: "center",
+                      borderBottom: 1,
+                      borderColor: "divider",
+                      pb: 1,
+                      mb: 1,
                     }}
                   >
+                    {selectedVisit.patient.name}
+                  </Typography>
+
+                  {/* Details table (like PatientDetailsColumnV1) */}
+                  <Table size="small" sx={{ "& .MuiTableCell-root": { border: 0, py: 0.5 } }}>
+                    <TableBody>
+                      <TableRow sx={{ borderBottom: 1, borderColor: "grey.200" }}>
+                        <TableCell align="right" sx={{ color: "text.secondary", width: "40%" }}>
+                          الجنس
+                        </TableCell>
+                        <TableCell sx={{ fontWeight: 500 }}>
+                          {selectedVisit.patient.gender === "male" ? "ذكر" : selectedVisit.patient.gender === "female" ? "أنثى" : "—"}
+                        </TableCell>
+                      </TableRow>
+                      <TableRow sx={{ borderBottom: 1, borderColor: "grey.200" }}>
+                        <TableCell align="right" sx={{ color: "text.secondary" }}>
+                          العمر
+                        </TableCell>
+                        <TableCell sx={{ fontWeight: 500 }}>
+                          {typeof selectedVisit.patient.age_year === "number"
+                            ? `${selectedVisit.patient.age_year} سنة`
+                            : "—"}
+                        </TableCell>
+                      </TableRow>
+                      <TableRow sx={{ borderBottom: 1, borderColor: "grey.200" }}>
+                        <TableCell align="right" sx={{ color: "text.secondary" }}>
+                          الهاتف
+                        </TableCell>
+                        <TableCell sx={{ fontWeight: 500 }}>
+                          {selectedVisit.patient.phone || "لا يوجد"}
+                        </TableCell>
+                      </TableRow>
+                      <TableRow sx={{ borderBottom: 1, borderColor: "grey.200" }}>
+                        <TableCell align="right" sx={{ color: "text.secondary" }}>
+                          مصدر الدخل
+                        </TableCell>
+                        <TableCell sx={{ fontWeight: 500 }}>
+                          {selectedVisit.patient.income_source || "لا يوجد"}
+                        </TableCell>
+                      </TableRow>
+                      <TableRow sx={{ borderBottom: 1, borderColor: "grey.200" }}>
+                        <TableCell align="right" sx={{ color: "text.secondary" }}>
+                          الطبيب
+                        </TableCell>
+                        <TableCell sx={{ fontWeight: 500 }}>
+                          {selectedVisit.doctor?.name ?? selectedVisit.doctor_name ?? "—"}
+                        </TableCell>
+                      </TableRow>
+                      <TableRow sx={{ borderBottom: 1, borderColor: "grey.200" }}>
+                        <TableCell align="right" sx={{ color: "text.secondary" }}>
+                          تاريخ التسجيل
+                        </TableCell>
+                        <TableCell sx={{ fontWeight: 500 }}>
+                          {selectedVisit.created_at
+                            ? dayjs(selectedVisit.created_at).format("DD/MM/YYYY HH:mm")
+                            : "—"}
+                        </TableCell>
+                      </TableRow>
+                      <TableRow sx={{ borderBottom: 1, borderColor: "grey.200" }}>
+                        <TableCell align="right" sx={{ color: "text.secondary" }}>
+                          حالة التنويم
+                        </TableCell>
+                        <TableCell sx={{ fontWeight: 500 }}>
+                          {getAdmissionStatusLabel(activeAdmission ?? undefined)}
+                        </TableCell>
+                      </TableRow>
+                      {activeAdmission && (
+                        <>
+                          <TableRow sx={{ borderBottom: 1, borderColor: "grey.200" }}>
+                            <TableCell align="right" sx={{ color: "text.secondary" }}>
+                              تاريخ التنويم
+                            </TableCell>
+                            <TableCell sx={{ fontWeight: 500 }}>
+                              {activeAdmission.created_at
+                                ? dayjs(activeAdmission.created_at).format("DD/MM/YYYY HH:mm")
+                                : "—"}
+                            </TableCell>
+                          </TableRow>
+                          {(activeAdmission.ward || activeAdmission.room || activeAdmission.bed) && (
+                            <TableRow sx={{ borderBottom: 1, borderColor: "grey.200" }}>
+                              <TableCell align="right" sx={{ color: "text.secondary" }}>
+                                موقع التنويم
+                              </TableCell>
+                              <TableCell sx={{ fontWeight: 500 }}>
+                                {[
+                                  activeAdmission.ward?.name,
+                                  activeAdmission.room?.room_number != null
+                                    ? `غرفة ${activeAdmission.room.room_number}`
+                                    : null,
+                                  activeAdmission.bed?.bed_number != null
+                                    ? `سرير ${activeAdmission.bed.bed_number}`
+                                    : null,
+                                ]
+                                  .filter(Boolean)
+                                  .join(" / ")}
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </>
+                      )}
+                      {selectedVisit.reason_for_visit && (
+                        <TableRow sx={{ borderBottom: 1, borderColor: "grey.200" }}>
+                          <TableCell align="right" sx={{ color: "text.secondary" }}>
+                            سبب الزيارة
+                          </TableCell>
+                          <TableCell sx={{ fontWeight: 500 }}>
+                            {selectedVisit.reason_for_visit}
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+
+                  {/* Financial summary - 3 columns like PatientDetailsColumnV1 */}
+                  {activeAdmissionId && (
+                    <Box
+                      sx={{
+                        bgcolor: "grey.50",
+                        borderRadius: 1,
+                        border: "1px solid",
+                        borderColor: "grey.200",
+                        display: "flex",
+                        flexDirection: "row",
+                        overflow: "hidden",
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          flex: 1,
+                          textAlign: "center",
+                          py: 1.5,
+                          px: 1,
+                          borderLeft: 1,
+                          borderColor: "grey.200",
+                          "&:first-of-type": { borderLeft: 0 },
+                        }}
+                      >
+                        <Typography variant="caption" color="text.secondary" display="block">
+                          الإجمالي
+                        </Typography>
+                        <Typography variant="subtitle1" fontWeight={700}>
+                          {(admissionSurgeriesSummary?.total_initial ?? 0).toLocaleString()}
+                        </Typography>
+                      </Box>
+                      <Box
+                        sx={{
+                          flex: 1,
+                          textAlign: "center",
+                          py: 1.5,
+                          px: 1,
+                          borderLeft: 1,
+                          borderColor: "grey.200",
+                        }}
+                      >
+                        <Typography variant="caption" color="text.secondary" display="block">
+                          المدفوع
+                        </Typography>
+                        <Typography variant="subtitle1" fontWeight={700} color="success.main">
+                          {(admissionSurgeriesSummary?.paid ?? 0).toLocaleString()}
+                        </Typography>
+                      </Box>
+                      <Box
+                        sx={{
+                          flex: 1,
+                          textAlign: "center",
+                          py: 1.5,
+                          px: 1,
+                          borderLeft: 1,
+                          borderColor: "grey.200",
+                        }}
+                      >
+                        <Typography variant="caption" color="text.secondary" display="block">
+                          المتبقي
+                        </Typography>
+                        <Typography variant="subtitle1" fontWeight={700} color="error.main">
+                          {(admissionSurgeriesSummary?.balance ?? 0).toLocaleString()}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  )}
+
+                  {/* Action buttons - full width like PatientDetailsColumnV1 */}
+                  <Box sx={{ display: "flex", flexDirection: "column", gap: 1, mt: "auto", pt: 2, borderTop: 1, borderColor: "divider" }}>
                     <Button
                       variant="contained"
                       size="medium"
-                      startIcon={<BedDouble size={18} />}
+                      fullWidth
+                      startIcon={<FileText size={18} />}
                       disabled={!selectedPatientId}
                       onClick={handleAdmissionButtonClick}
-                      sx={{ textTransform: "none", fontWeight: 600, flex: 1, minWidth: 140 }}
+                      sx={{ textTransform: "none", fontWeight: 600 }}
                     >
-                      {hasActiveAdmission ? "عرض ملف " : "ملف تنويم جديد"}
+              {hasActiveAdmission ? "عرض / تعديل ملف التنويم" : "فتح ملف تنويم"}
                     </Button>
                     {hasActiveAdmission && (
                       <Button
                         variant="outlined"
                         size="medium"
+                        fullWidth
                         startIcon={<Bed size={18} />}
                         disabled={!selectedPatientId}
                         onClick={() => setBedMapOpen(true)}
-                        sx={{ textTransform: "none", fontWeight: 600, flex: 1, minWidth: 140 }}
+                        sx={{ textTransform: "none", fontWeight: 600 }}
                       >
                         اختر السرير
                       </Button>
                     )}
                   </Box>
                 </Box>
+              ) : (
+                <Box
+                  sx={{
+                    py: 6,
+                    textAlign: "center",
+                    color: "text.secondary",
+                    flex: 1,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Typography variant="body2">
+                    لم يتم اختيار أي مريض بعد
+                  </Typography>
+                </Box>
               )}
             </CardContent>
           </Card>
 
           {/* Column 4: Surgeries (only when visit is selected) — full tab when admission exists */}
-          {selectedVisit && (
+          {selectedVisit && hasActiveAdmission && (
             <Card
               elevation={0}
               sx={{
@@ -978,21 +870,7 @@ export default function AdmissionPatientRegistrationPage() {
                       قم بإنشاء ملف تنويم أولاً لعرض وإدارة العمليات الجراحية المطلوبة
                     </Typography>
                     <Divider sx={{ mb: 1.5 }} />
-                    <Autocomplete
-                      options={surgeriesList}
-                      getOptionLabel={(opt) => opt.name ?? ""}
-                      value={selectedSurgery}
-                      onChange={(_, v) => setSelectedSurgery(v)}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          size="small"
-                          placeholder="اختر العملية الجراحية"
-                          label="العملية الجراحية"
-                        />
-                      )}
-                      sx={{ mb: 1.5 }}
-                    />
+                  
                     <Typography variant="body2" color="text.secondary">
                       إنشاء ملف تنويم من العمود الأيسر لتفعيل إضافة العمليات
                     </Typography>
@@ -1052,6 +930,7 @@ export default function AdmissionPatientRegistrationPage() {
                       new Set([...prev, selectedPatientId]),
                     );
                   queryClient.invalidateQueries({ queryKey: ["admissions"] });
+                  queryClient.invalidateQueries({ queryKey: ["clinicActivePatientsForAdmission"] });
                 }}
                 onClose={() => {
                   setAdmissionDialogOpen(false);

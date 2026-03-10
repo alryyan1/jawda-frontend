@@ -1,10 +1,8 @@
 import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Bed, UserCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getAdmissions } from "@/services/admissionService";
 import type { ActivePatientVisit, Patient } from "@/types/patients";
 import Box from "@mui/material/Box";
 import Tooltip from "@mui/material/Tooltip";
@@ -21,7 +19,7 @@ export interface AdmissionActiveCardProps {
 
 /**
  * Standalone card for the admission patient registration page.
- * Shows patient name, queue/badge, bed icon with details (hover/click), and profile action.
+ * Uses eager-loaded admission from visit.patient.admission (clinic-active-patients API).
  */
 const AdmissionActiveCard: React.FC<AdmissionActiveCardProps> = ({
   visit,
@@ -32,19 +30,12 @@ const AdmissionActiveCard: React.FC<AdmissionActiveCardProps> = ({
   const [clickAnimating, setClickAnimating] = useState(false);
   const [bedPopoverAnchor, setBedPopoverAnchor] = useState<HTMLElement | null>(null);
 
-  const { data: admissionsResponse } = useQuery({
-    queryKey: ["admissions", "active", visit.patient.id],
-    queryFn: () =>
-      getAdmissions(1, {
-        patient_id: visit.patient.id,
-        status: "admitted",
-      }),
-    enabled: !!visit.patient.id,
-  });
-
-  const activeAdmission =
-    (admissionsResponse?.data?.length ?? 0) > 0 ? admissionsResponse!.data![0] : null;
+  const activeAdmission = visit.patient?.admission ?? null;
   const hasBedAssigned = activeAdmission?.bed_id != null;
+
+  const surgeriesSummary = activeAdmission?.requested_surgeries_summary;
+  const hasUnpaidSurgeries =
+    surgeriesSummary != null && surgeriesSummary.balance > 0;
 
   const bedDetailsSummary =
     hasBedAssigned && activeAdmission
@@ -115,7 +106,7 @@ const AdmissionActiveCard: React.FC<AdmissionActiveCardProps> = ({
           <div
             className={cn(
               "flex-shrink-0 w-8 h-8 flex items-center justify-center rounded text-white text-sm font-bold shadow ltr:mr-3 rtl:ml-3",
-              ((visit as { balance_due?: number }).balance_due ?? 0) > 0 ? "bg-red-500" : "bg-green-500"
+              hasUnpaidSurgeries ? "bg-red-500" : "bg-green-500"
             )}
             title={`رقم : ${queueNumberOrVisitId}`}
           >

@@ -253,6 +253,30 @@ export const getAdmissionLedger = async (
   return response.data;
 };
 
+export const getPatientActiveAdmission = async (
+  patientId: number,
+): Promise<Admission | null> => {
+  const response = await apiClient.get<{ data: Admission | null }>(
+    `/patients/${patientId}/admission`,
+  );
+  return response.data.data;
+};
+
+export const getAdmissionRequestedSurgeriesSummary = async (
+  admissionId: number,
+): Promise<{
+  total_initial: number;
+  paid: number;
+  balance: number;
+}> => {
+  const response = await apiClient.get<{
+    total_initial: number;
+    paid: number;
+    balance: number;
+  }>(`${API_URL}/${admissionId}/requested-surgeries/summary`);
+  return response.data;
+};
+
 export const exportAdmissionLedgerPdf = async (id: number): Promise<Blob> => {
   const response = await apiClient.get(`${API_URL}/${id}/ledger/pdf`, {
     responseType: "blob",

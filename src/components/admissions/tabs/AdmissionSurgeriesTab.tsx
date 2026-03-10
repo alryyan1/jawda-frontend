@@ -118,7 +118,7 @@ export function RequestedSurgeriesPanel({ admissionId }: RequestedSurgeriesPanel
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedSurgeryId, setSelectedSurgeryId] = useState<string>("");
-  const [selectedDoctorId, setSelectedDoctorId] = useState<string>("");
+  const [initialPrice, setInitialPrice] = useState<string>("");
   const [financeDialogOpen, setFinanceDialogOpen] = useState(false);
   const [ledgerDialogOpen, setLedgerDialogOpen] = useState(false);
   const [selectedSurgery, setSelectedSurgery] =
@@ -158,7 +158,7 @@ export function RequestedSurgeriesPanel({ admissionId }: RequestedSurgeriesPanel
   });
 
   const requestMutation = useMutation({
-    mutationFn: (data: { surgery_id: string; doctor_id: string }) =>
+    mutationFn: (data: { surgery_id: string; initial_price?: number }) =>
       apiClient.post(`/admissions/${admissionId}/requested-surgeries`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
@@ -327,7 +327,7 @@ export function RequestedSurgeriesPanel({ admissionId }: RequestedSurgeriesPanel
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
     setSelectedSurgeryId("");
-    setSelectedDoctorId("");
+    setInitialPrice("");
   };
 
   const handleOpenFinanceDialog = (item: RequestedSurgeryItem) => {
@@ -365,9 +365,10 @@ export function RequestedSurgeriesPanel({ admissionId }: RequestedSurgeriesPanel
       return;
     }
 
+    const price = initialPrice.trim() ? parseFloat(initialPrice) : undefined;
     requestMutation.mutate({
       surgery_id: selectedSurgeryId,
-      doctor_id: selectedDoctorId,
+      ...(price != null && !isNaN(price) && price >= 0 ? { initial_price: price } : {}),
     });
   };
 
@@ -706,21 +707,15 @@ export function RequestedSurgeriesPanel({ admissionId }: RequestedSurgeriesPanel
               </Select>
             </FormControl>
 
-            <FormControl fullWidth>
-              <InputLabel>الطبيب الجراح</InputLabel>
-              <Select
-                value={selectedDoctorId}
-                label="الطبيب الجراح"
-                onChange={(e) => setSelectedDoctorId(e.target.value)}
-              >
-                <MenuItem value="">بدون طبيب</MenuItem>
-                {doctors.map((d) => (
-                  <MenuItem key={d.id} value={d.id}>
-                    {d.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <TextField
+              fullWidth
+              label="السعر المبدئي"
+              type="number"
+              inputProps={{ min: 0, step: "0.01" }}
+              value={initialPrice}
+              onChange={(e) => setInitialPrice(e.target.value)}
+              placeholder="اختياري"
+            />
           </DialogContent>
           <DialogActions>
             <Button onClick={handleCloseDialog}>إلغاء</Button>
@@ -1105,6 +1100,7 @@ export function RequestedSurgeriesPanel({ admissionId }: RequestedSurgeriesPanel
         onClose={handleCloseLedgerDialog}
         requestedSurgeryId={selectedSurgery?.id}
         surgeryName={selectedSurgery?.surgery?.name}
+        initialPrice={selectedSurgery?.initial_price ?? undefined}
       />
     </Box>
   );
@@ -1115,6 +1111,7 @@ interface SurgeryLedgerDialogProps {
   onClose: () => void;
   requestedSurgeryId?: number;
   surgeryName?: string;
+  initialPrice?: number | null;
 }
 
 const SurgeryLedgerDialog = ({
@@ -1122,11 +1119,12 @@ const SurgeryLedgerDialog = ({
   onClose,
   requestedSurgeryId,
   surgeryName,
+  initialPrice,
 }: SurgeryLedgerDialogProps) => {
   const [newTransaction, setNewTransaction] = useState({
     payment_method: "cash",
     amount: "",
-    description: "دفعة من الحساب",
+    description: " رقم العملية ",
     notes: "",
   });
 
@@ -1193,140 +1191,193 @@ const SurgeryLedgerDialog = ({
     }
   };
 
+  const balance = ledgerData?.summary?.balance ?? 0;
+
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 2 } }}>
       <DialogTitle
         sx={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
+          borderBottom: 1,
+          borderColor: "divider",
+          py: 2,
         }}
       >
-        <Typography variant="h6">كشف حساب العملية: {surgeryName}</Typography>
+        <Typography variant="h6" fontWeight={600}>
+          كشف حساب العملية: {surgeryName}
+        </Typography>
         <IconButton
           onClick={handlePrint}
           color="primary"
           disabled={!ledgerData}
+          size="small"
         >
           <Printer size={20} />
         </IconButton>
       </DialogTitle>
-      <DialogContent dividers>
+      <DialogContent dividers sx={{ display: "flex", flexDirection: "column", gap: 3, p: 3 }}>
         {isLoading ? (
-          <Box display="flex" justifyContent="center" p={3}>
-            <CircularProgress size={24} />
+          <Box display="flex" justifyContent="center" alignItems="center" minHeight={200}>
+            <CircularProgress size={32} />
           </Box>
         ) : (
           <>
-            <Box mb={3} display="flex" gap={2}>
+            <Box
+              display="flex"
+              flexDirection={{ xs: "column", sm: "row" }}
+              gap={2}
+              flexWrap="wrap"
+            >
               <Paper
-                sx={{ p: 2, flex: 1, textAlign: "center", bgcolor: "#f0f4f8" }}
+                elevation={0}
+                sx={{
+                  flex: "1 1 140px",
+                  minWidth: 120,
+                  p: 2,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: 1.5,
+                  border: "1px solid",
+                  borderColor: "divider",
+                  bgcolor: (theme) => alpha(theme.palette.error.main, 0.08),
+                }}
               >
-                <Typography variant="caption" color="textSecondary">
+                <Typography variant="caption" color="text.secondary" fontWeight={500}>
                   إجمالي التكاليف
                 </Typography>
-                <Typography variant="h6" color="error">
-                  {ledgerData?.summary?.total_debits?.toLocaleString()} SDG
+                <Typography variant="h6" color="error.main" fontWeight={700} sx={{ mt: 0.5 }}>
+                  {(initialPrice ?? ledgerData?.summary?.total_debits ?? 0).toLocaleString()} SDG
                 </Typography>
               </Paper>
               <Paper
-                sx={{ p: 2, flex: 1, textAlign: "center", bgcolor: "#f0f4f8" }}
+                elevation={0}
+                sx={{
+                  flex: "1 1 140px",
+                  minWidth: 120,
+                  p: 2,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: 1.5,
+                  border: "1px solid",
+                  borderColor: "divider",
+                  bgcolor: (theme) => alpha(theme.palette.success.main, 0.08),
+                }}
               >
-                <Typography variant="caption" color="textSecondary">
+                <Typography variant="caption" color="text.secondary" fontWeight={500}>
                   إجمالي المدفوعات
                 </Typography>
-                <Typography variant="h6" color="success.main">
+                <Typography variant="h6" color="success.main" fontWeight={700} sx={{ mt: 0.5 }}>
                   {ledgerData?.summary?.total_credits?.toLocaleString()} SDG
                 </Typography>
               </Paper>
               <Paper
-                sx={{ p: 2, flex: 1, textAlign: "center", bgcolor: "#e3f2fd" }}
+                elevation={0}
+                sx={{
+                  flex: "1 1 140px",
+                  minWidth: 120,
+                  p: 2,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: 1.5,
+                  border: "1px solid",
+                  borderColor: "divider",
+                  bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
+                }}
               >
-                <Typography variant="caption" color="textSecondary">
+                <Typography variant="caption" color="text.secondary" fontWeight={500}>
                   المتبقي (الرصيد)
                 </Typography>
-                <Typography variant="h6" color="primary">
+                <Typography variant="h6" color="primary.main" fontWeight={700} sx={{ mt: 0.5 }}>
                   {ledgerData?.summary?.balance?.toLocaleString()} SDG
                 </Typography>
               </Paper>
             </Box>
 
-            <Typography variant="subtitle2" gutterBottom>
-              إضافة معاملة مالية (Payment/Debit)
-            </Typography>
-            <Box display="flex" gap={1} mb={3} alignItems="flex-start">
-              <TextField
-                select
-                size="small"
-                label="طريقة الدفع"
-                value={newTransaction.payment_method}
-                onChange={(e) =>
-                  setNewTransaction({
-                    ...newTransaction,
-                    payment_method: e.target.value,
-                  })
-                }
-                SelectProps={{ native: true }}
-                sx={{ width: 130 }}
+            <Box display="flex" flexDirection="column" gap={2}>
+              <Typography variant="subtitle2" fontWeight={600} color="text.secondary">
+                إضافة معاملة مالية (Payment/Debit)
+              </Typography>
+              <Box
+                display="flex"
+                flexWrap="wrap"
+                gap={2}
+                alignItems="flex-start"
               >
-                <option value="cash">نقداً (Cash)</option>
-                <option value="bankak">بنكك (Bankak)</option>
-              </TextField>
-              <TextField
-                size="small"
-                label="المبلغ"
-                type="number"
-                value={newTransaction.amount}
-                error={
-                  !!newTransaction.amount &&
-                  Number(newTransaction.amount) >
-                    (ledgerData?.summary?.balance || 0)
-                }
-                helperText={
-                  !!newTransaction.amount &&
-                  Number(newTransaction.amount) >
-                    (ledgerData?.summary?.balance || 0)
-                    ? "المبلغ يتجاوز الرصيد"
-                    : ""
-                }
-                onChange={(e) =>
-                  setNewTransaction({
-                    ...newTransaction,
-                    amount: e.target.value,
-                  })
-                }
-                sx={{ width: 150 }}
-              />
-              <TextField
-                size="small"
-                label="البيان"
-                fullWidth
-                value={newTransaction.description}
-                onChange={(e) =>
-                  setNewTransaction({
-                    ...newTransaction,
-                    description: e.target.value,
-                  })
-                }
-              />
-              <Button
-                variant="contained"
-                onClick={() => addTxMutation.mutate(newTransaction)}
-                disabled={
-                  !newTransaction.amount ||
-                  addTxMutation.isPending ||
-                  (ledgerData?.summary?.balance || 0) <= 0 ||
-                  Number(newTransaction.amount) >
-                    (ledgerData?.summary?.balance || 0)
-                }
-              >
-                إضافة
-              </Button>
+                <TextField
+                  select
+                  size="small"
+                  label="طريقة الدفع"
+                  value={newTransaction.payment_method}
+                  onChange={(e) =>
+                    setNewTransaction({
+                      ...newTransaction,
+                      payment_method: e.target.value,
+                    })
+                  }
+                  SelectProps={{ native: true }}
+                  sx={{ minWidth: 130 }}
+                >
+                  <option value="cash">نقداً (Cash)</option>
+                  <option value="bankak">بنكك (Bankak)</option>
+                </TextField>
+                <TextField
+                  size="small"
+                  label="المبلغ"
+                  type="number"
+                  value={newTransaction.amount}
+                  error={!!newTransaction.amount && Number(newTransaction.amount) > balance}
+                  helperText={
+                    !!newTransaction.amount && Number(newTransaction.amount) > balance
+                      ? "المبلغ يتجاوز الرصيد"
+                      : ""
+                  }
+                  onChange={(e) =>
+                    setNewTransaction({
+                      ...newTransaction,
+                      amount: e.target.value,
+                    })
+                  }
+                  sx={{ minWidth: 140 }}
+                />
+                <TextField
+                  size="small"
+                  label="البيان"
+                  value={newTransaction.description}
+                  onChange={(e) =>
+                    setNewTransaction({
+                      ...newTransaction,
+                      description: e.target.value,
+                    })
+                  }
+                  sx={{ flex: "1 1 180px", minWidth: 180 }}
+                />
+                <Button
+                  variant="contained"
+                  onClick={() => addTxMutation.mutate(newTransaction)}
+                  disabled={
+                    !newTransaction.amount ||
+                    addTxMutation.isPending ||
+                    balance <= 0 ||
+                    Number(newTransaction.amount) > balance
+                  }
+                  sx={{ alignSelf: "flex-start" }}
+                >
+                  إضافة
+                </Button>
+              </Box>
             </Box>
 
-            <TableContainer component={Paper} variant="outlined">
+            <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 1.5, overflow: "hidden" }}>
               <Table size="small">
-                <TableHead sx={{ bgcolor: "#f5f5f5" }}>
+                <TableHead sx={{ bgcolor: "grey.100" }}>
                   <TableRow>
                     <TableCell>التاريخ</TableCell>
                     <TableCell>البيان</TableCell>
@@ -1395,7 +1446,7 @@ const SurgeryLedgerDialog = ({
                   ))}
                   {ledgerData?.transactions?.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={5} align="center">
+                      <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
                         لا توجد معاملات بعد
                       </TableCell>
                     </TableRow>
@@ -1406,8 +1457,10 @@ const SurgeryLedgerDialog = ({
           </>
         )}
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>إغلاق</Button>
+      <DialogActions sx={{ px: 3, py: 2, borderTop: 1, borderColor: "divider" }}>
+        <Button onClick={onClose} variant="outlined" sx={{ textTransform: "none" }}>
+          إغلاق
+        </Button>
       </DialogActions>
     </Dialog>
   );

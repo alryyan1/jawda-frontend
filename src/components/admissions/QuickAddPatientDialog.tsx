@@ -257,6 +257,7 @@ export function QuickAddPatientFormFields({
             <Box sx={{ flex: 1 }}>
               <TextField
                 fullWidth
+                sx={{width:'260px'}}
                 label="اسم المريض"
                 value={quickAddFormData.name}
                 onChange={(e) =>

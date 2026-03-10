@@ -27,7 +27,14 @@ if (typeof window !== 'undefined') {
   });
 }
 
-const queryClient = new QueryClient(); // Create a client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Reduce refetch storm when focusing the tab - data stays fresh for 1 min
+      staleTime: 60 * 1000,
+    },
+  },
+});
 
 // Create RTL emotion cache for MUI
 const rtlCache = createCache({ key: 'mui-rtl', stylisPlugins: [prefixer, rtlPlugin] });

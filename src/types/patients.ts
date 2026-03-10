@@ -164,6 +164,15 @@ export interface ActivePatientVisit {
     has_cbc: boolean;
     result_url: string | null;
     doctor_in_patient: string | null;
+    /** Eager-loaded active admission (from clinic-active-patients) */
+    admission?: {
+      id: number;
+      bed_id: number | null;
+      ward?: { id: number; name: string };
+      room?: { id: number; room_number: string };
+      bed?: { id: number; bed_number: string; room?: { room_number: string } };
+      requested_surgeries_summary?: { total_initial: number; paid: number; balance: number };
+    } | null;
   };
   patient_subcompany: any | null;
   doctor_id: number;

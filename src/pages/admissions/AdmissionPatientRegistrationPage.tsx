@@ -14,7 +14,17 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
+  DialogActions,
   IconButton,
+  Autocomplete,
+  TextField,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
 } from "@mui/material";
 import {
   LayoutDashboard,
@@ -23,6 +33,7 @@ import {
   BedDouble,
   Bed,
   X,
+  Calculator,
 } from "lucide-react";
 import { getActiveClinicPatients } from "@/services/clinicService";
 import { getPatientById } from "@/services/patientService";
@@ -40,6 +51,9 @@ import {
 import dayjs from "dayjs";
 import AdmissionFormPage from "@/pages/admissions/AdmissionFormPage";
 import BedMap, { type BedSelection } from "@/components/admissions/BedMap";
+import { RequestedSurgeriesPanel } from "@/components/admissions/RequestedSurgeriesPanel";
+import { getSurgicalOperations, type SurgicalOperation } from "@/services/surgicalOperationService";
+import apiClient from "@/services/api";
 
 export default function AdmissionPatientRegistrationPage() {
   const queryClient = useQueryClient();
@@ -53,6 +67,7 @@ export default function AdmissionPatientRegistrationPage() {
   /** When set, the admission dialog opens in edit mode for this admission id. */
   const [admissionDialogEditId, setAdmissionDialogEditId] = useState<number | null>(null);
   const [bedMapOpen, setBedMapOpen] = useState(false);
+  const [calculatorDialogOpen, setCalculatorDialogOpen] = useState(false);
   const [selectedBedId, setSelectedBedId] = useState<number | null>(null);
   const [selectedBedSummary, setSelectedBedSummary] = useState<string | null>(
     null,
@@ -60,6 +75,7 @@ export default function AdmissionPatientRegistrationPage() {
   const [admittedPatientIds, setAdmittedPatientIds] = useState<Set<number>>(
     () => new Set(),
   );
+  const [selectedSurgery, setSelectedSurgery] = useState<SurgicalOperation | null>(null);
 
   const {
     theme,
@@ -195,6 +211,30 @@ export default function AdmissionPatientRegistrationPage() {
     },
   });
 
+  const { data: surgeriesList = [] } = useQuery({
+    queryKey: ["surgicalOperations"],
+    queryFn: getSurgicalOperations,
+  });
+
+  const calculatorDate = dayjs().format("YYYY-MM-DD");
+  const { data: requestedSurgeriesByDate = [], isLoading: isLoadingCalculator } = useQuery({
+    queryKey: ["requestedSurgeriesByDate", calculatorDate],
+    queryFn: async () => {
+      const { data } = await apiClient.get<Array<{
+        id: number;
+        initial_price?: number | null;
+        surgery?: { name: string };
+        admission?: { patient?: { name: string } };
+      }>>(`/requested-surgeries`, { params: { date: calculatorDate } });
+      return data ?? [];
+    },
+    enabled: calculatorDialogOpen,
+  });
+  const totalInitialPrice = useMemo(
+    () => requestedSurgeriesByDate.reduce((sum, s) => sum + (Number(s.initial_price) || 0), 0),
+    [requestedSurgeriesByDate]
+  );
+
   const handleAdmissionButtonClick = () => {
     if (!selectedPatientId) return;
     setAdmissionDialogEditId(hasActiveAdmission && activeAdmissionId ? activeAdmissionId : null);
@@ -290,9 +330,26 @@ export default function AdmissionPatientRegistrationPage() {
                 textTransform: "none",
                 fontWeight: 600,
               }}
-              onClick={() => setShowQuickAddForm(true)}
+              onClick={() => {
+                setSelectedVisit(null);
+                setSelectedQuickPatient(null);
+                setShowQuickAddForm(true);
+              }}
             >
               نموذج مريض جديد
+            </Button>
+            <Button
+              variant="outlined"
+              size="medium"
+              startIcon={<Calculator size={18} />}
+              onClick={() => setCalculatorDialogOpen(true)}
+              sx={{
+                borderRadius: 2,
+                textTransform: "none",
+                fontWeight: 600,
+              }}
+            >
+              الحاسبه
             </Button>
             <Button
               variant="outlined"
@@ -338,14 +395,16 @@ export default function AdmissionPatientRegistrationPage() {
           </div>
         </header>
 
-        {/* Three-column layout */}
+        {/* Three- or four-column layout (fourth when visit selected) */}
         <Box
           sx={{
             display: "grid",
-            height:window.innerHeight-200,
+            height: window.innerHeight - 200,
             gridTemplateColumns: {
               xs: "1fr",
-              lg: "minmax(0,1.4fr) minmax(0,1.2fr) minmax(0,1.3fr)",
+              lg: selectedVisit
+                ? "minmax(400px,1.2fr) minmax(400px,1.3fr) minmax(400px,1.3fr) minmax(400px,1.3fr)"
+                : "minmax(0,1.4fr) minmax(0,1.2fr) minmax(0,1.3fr)",
             },
             gap: 1,
             mt: 3,
@@ -895,6 +954,53 @@ export default function AdmissionPatientRegistrationPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Column 4: Surgeries (only when visit is selected) — full tab when admission exists */}
+          {selectedVisit && (
+            <Card
+              elevation={0}
+              sx={{
+                borderRadius: 3,
+                border: "1px solid",
+                borderColor: "divider",
+                overflow: "hidden",
+              }}
+            >
+              <CardContent sx={{ p: 2, overflow: "auto", maxHeight: "calc(100vh - 12rem)" }}>
+                {activeAdmissionId ? (
+                  <RequestedSurgeriesPanel admissionId={activeAdmissionId} />
+                ) : (
+                  <>
+                    <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+                      العمليات 
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1.5 }}>
+                      قم بإنشاء ملف تنويم أولاً لعرض وإدارة العمليات الجراحية المطلوبة
+                    </Typography>
+                    <Divider sx={{ mb: 1.5 }} />
+                    <Autocomplete
+                      options={surgeriesList}
+                      getOptionLabel={(opt) => opt.name ?? ""}
+                      value={selectedSurgery}
+                      onChange={(_, v) => setSelectedSurgery(v)}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          size="small"
+                          placeholder="اختر العملية الجراحية"
+                          label="العملية الجراحية"
+                        />
+                      )}
+                      sx={{ mb: 1.5 }}
+                    />
+                    <Typography variant="body2" color="text.secondary">
+                      إنشاء ملف تنويم من العمود الأيسر لتفعيل إضافة العمليات
+                    </Typography>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </Box>
 
         <Dialog
@@ -1006,6 +1112,73 @@ export default function AdmissionPatientRegistrationPage() {
               }}
             />
           </DialogContent>
+        </Dialog>
+
+        {/* Calculator: total initial price for requested surgeries (current date) */}
+        <Dialog
+          open={calculatorDialogOpen}
+          onClose={() => setCalculatorDialogOpen(false)}
+          maxWidth="sm"
+          fullWidth
+          PaperProps={{ sx: { borderRadius: 2 } }}
+        >
+          <DialogTitle>
+            إجمالي السعر الأولي — عمليات اليوم
+            <Typography component="span" variant="body2" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
+              {dayjs(calculatorDate).format("YYYY/MM/DD")}
+            </Typography>
+          </DialogTitle>
+          <DialogContent dividers>
+            {isLoadingCalculator ? (
+              <Box display="flex" justifyContent="center" py={4}>
+                <CircularProgress />
+              </Box>
+            ) : requestedSurgeriesByDate.length === 0 ? (
+              <Typography color="text.secondary" textAlign="center" py={4}>
+                لا توجد عمليات مطلوبة لهذا التاريخ
+              </Typography>
+            ) : (
+              <>
+                <TableContainer component={Paper} variant="outlined" sx={{ mb: 2 }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow sx={{ bgcolor: "grey.50" }}>
+                        <TableCell>#</TableCell>
+                        <TableCell>المريض</TableCell>
+                        <TableCell>العملية</TableCell>
+                        <TableCell align="right">السعر الأولي</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {requestedSurgeriesByDate.map((row) => (
+                        <TableRow key={row.id}>
+                          <TableCell>{row.id}</TableCell>
+                          <TableCell>{row.admission?.patient?.name ?? "—"}</TableCell>
+                          <TableCell>{row.surgery?.name ?? "—"}</TableCell>
+                          <TableCell align="right">
+                            {(Number(row.initial_price) || 0).toLocaleString()} SDG
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+                <Box sx={{ pt: 1, pb: 0.5, display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 1 }}>
+                  <Typography fontWeight={700} variant="body1">
+                    الإجمالي:
+                  </Typography>
+                  <Typography fontWeight={700} color="primary.main" variant="h6">
+                    {totalInitialPrice.toLocaleString()} SDG
+                  </Typography>
+                </Box>
+              </>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setCalculatorDialogOpen(false)} variant="contained">
+              إغلاق
+            </Button>
+          </DialogActions>
         </Dialog>
       </div>
     </div>

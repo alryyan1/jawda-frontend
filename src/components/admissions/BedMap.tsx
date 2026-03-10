@@ -172,6 +172,25 @@ export default function BedMap({
 
   const isLoading = isLoadingList || isLoadingWards;
 
+  // Patient IDs already assigned to a bed (from current ward/room/bed data). Must be before early returns (hooks rule).
+  const assignedPatientIds = useMemo(() => {
+    const ids = new Set<number>();
+    for (const ward of wardsWithRooms) {
+      for (const room of ward.rooms ?? []) {
+        for (const bed of room.beds ?? []) {
+          const pid = bed.current_admission?.patient_id ?? (bed.current_admission?.patient as { id?: number } | undefined)?.id;
+          if (pid != null) ids.add(pid);
+        }
+      }
+    }
+    return ids;
+  }, [wardsWithRooms]);
+
+  const patientsWithoutBed = useMemo(
+    () => draggablePatients.filter((p) => !assignedPatientIds.has(p.patientId)),
+    [draggablePatients, assignedPatientIds]
+  );
+
   if (isLoading) {
     return (
       <Box
@@ -195,25 +214,6 @@ export default function BedMap({
       </Box>
     );
   }
-
-  // Patient IDs already assigned to a bed (from current ward/room/bed data)
-  const assignedPatientIds = useMemo(() => {
-    const ids = new Set<number>();
-    for (const ward of wardsWithRooms) {
-      for (const room of ward.rooms ?? []) {
-        for (const bed of room.beds ?? []) {
-          const pid = bed.current_admission?.patient_id ?? (bed.current_admission?.patient as { id?: number } | undefined)?.id;
-          if (pid != null) ids.add(pid);
-        }
-      }
-    }
-    return ids;
-  }, [wardsWithRooms]);
-
-  const patientsWithoutBed = useMemo(
-    () => draggablePatients.filter((p) => !assignedPatientIds.has(p.patientId)),
-    [draggablePatients, assignedPatientIds]
-  );
 
   return (
     <Box sx={{ position: "relative", p: 1.25, maxHeight: "70vh", overflow: "auto" }}>

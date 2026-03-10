@@ -16,18 +16,25 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Divider,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Paper,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
   TextField,
   Autocomplete,
   LinearProgress,
   Alert,
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import {
   Add,
   Delete,
@@ -42,12 +49,12 @@ import {
   Undo,
 } from "@mui/icons-material";
 import { toast } from "sonner";
+import dayjs from "dayjs";
 import apiClient from "@/services/api";
 import { getDoctorsList } from "@/services/doctorService";
 import { getSurgicalOperations } from "@/services/surgicalOperationService";
 import type { SurgicalOperation } from "@/services/surgicalOperationService";
 import type { DoctorStripped } from "@/types/doctors";
-import dayjs from "dayjs";
 import { Printer } from "lucide-react";
 import { sendWhatsAppCloudTemplate } from "@/services/whatsappCloudApiService";
 
@@ -73,10 +80,12 @@ interface RequestedSurgeryItem {
   id: number;
   admission_id: number;
   surgery_id: number;
+  initial_price?: number | null;
   doctor_id: number | null;
   status: "pending" | "approved" | "rejected";
   approved_by: number | null;
   approved_at: string | null;
+  created_at?: string;
   surgery: SurgicalOperation;
   doctor: DoctorStripped | null;
   user: { id: number; name: string };
@@ -91,7 +100,7 @@ interface RequestedSurgeryItem {
   };
 }
 
-interface AdmissionSurgeriesTabProps {
+export interface RequestedSurgeriesPanelProps {
   admissionId: string | number;
 }
 
@@ -104,7 +113,8 @@ const getRequestedSurgeries = async (
   return response.data;
 };
 
-const AdmissionSurgeriesTab = ({ admissionId }: AdmissionSurgeriesTabProps) => {
+/** Standalone panel for requested surgeries (list + dialogs). Use in tabs or registration page. */
+export function RequestedSurgeriesPanel({ admissionId }: RequestedSurgeriesPanelProps) {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedSurgeryId, setSelectedSurgeryId] = useState<string>("");
@@ -114,6 +124,7 @@ const AdmissionSurgeriesTab = ({ admissionId }: AdmissionSurgeriesTabProps) => {
   const [selectedSurgery, setSelectedSurgery] =
     useState<RequestedSurgeryItem | null>(null);
   const [editAmounts, setEditAmounts] = useState<Record<number, string>>({});
+  const [editInitialPrice, setEditInitialPrice] = useState<Record<number, string>>({});
   const [isSendingWhatsApp, setIsSendingWhatsApp] = useState<
     Record<number, boolean>
   >({});
@@ -207,6 +218,24 @@ const AdmissionSurgeriesTab = ({ admissionId }: AdmissionSurgeriesTabProps) => {
       toast.error(err.response?.data?.message || "فشل في التراجع عن الاعتماد"),
   });
 
+  const updateInitialPriceMutation = useMutation({
+    mutationFn: ({ requestedSurgeryId, initialPrice }: { requestedSurgeryId: number; initialPrice: number | null }) =>
+      apiClient.patch(
+        `/admissions/${admissionId}/requested-surgeries/${requestedSurgeryId}`,
+        { initial_price: initialPrice },
+      ),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey });
+      setEditInitialPrice((prev) => {
+        const next = { ...prev };
+        delete next[variables.requestedSurgeryId];
+        return next;
+      });
+      toast.success("تم تحديث السعر الأولي");
+    },
+    onError: () => toast.error("فشل تحديث السعر الأولي"),
+  });
+
   const handleSendWhatsApp = async (surgery: RequestedSurgeryItem) => {
     if (!surgery.admission?.patient?.phone) {
       toast.error("رقم الهاتف غير متوفر");
@@ -221,13 +250,13 @@ const AdmissionSurgeriesTab = ({ admissionId }: AdmissionSurgeriesTabProps) => {
     setIsSendingWhatsApp((prev) => ({ ...prev, [surgery.id]: true }));
 
     try {
-      const clinicName = "المركز الطبي";
-      const totalVal = surgery.total_price || 0;
+      const clinicName = "مستشفي ون كير";
+      const totalVal = surgery.initial_price || 0;
       const surgeryId = surgery.id;
 
       await sendWhatsAppCloudTemplate({
         to: phone,
-        template_name: "surgery_payment_request",
+        template_name: "payment_request_notice",
         language_code: "ar",
         components: [
           {
@@ -353,15 +382,20 @@ const AdmissionSurgeriesTab = ({ admissionId }: AdmissionSurgeriesTabProps) => {
     });
   };
 
-  const getStatusChip = (status: RequestedSurgeryItem["status"]) => {
-    const configs = {
-      pending: { label: "قيد الانتظار", color: "warning" as const },
-      approved: { label: "معتمدة", color: "success" as const },
-      rejected: { label: "مرفوضة", color: "error" as const },
-    };
-    const config = configs[status];
-    return <Chip label={config.label} color={config.color} size="small" />;
-  };
+  const deleteFinanceMutation = useMutation({
+    mutationFn: (financeId: number) =>
+      apiClient.delete(`/requested-surgery-finances/${financeId}`),
+    onSuccess: () => {
+      toast.success("تم حذف البند بنجاح");
+      queryClient.invalidateQueries({ queryKey });
+    },
+    onError: (err: any) => {
+      toast.error(
+        err.response?.data?.message ||
+          "فشل في حذف البند. تأكد من أنه غير مرتبط ببنود أخرى.",
+      );
+    },
+  });
 
   return (
     <Box>
@@ -371,13 +405,13 @@ const AdmissionSurgeriesTab = ({ admissionId }: AdmissionSurgeriesTabProps) => {
         alignItems="center"
         mb={2}
       >
-        <Typography variant="h6">العمليات الجراحية المطلوبة</Typography>
+        <Typography variant="h6">العمليات  </Typography>
         <Button
           variant="contained"
           startIcon={<Add />}
           onClick={handleOpenDialog}
         >
-          طلب عملية جديدة
+          طلب عملية 
         </Button>
       </Box>
 
@@ -397,177 +431,251 @@ const AdmissionSurgeriesTab = ({ admissionId }: AdmissionSurgeriesTabProps) => {
           <Typography color="textSecondary">لا توجد عمليات مطلوبة</Typography>
         </Box>
       ) : (
-        <TableContainer component={Paper} elevation={0} variant="outlined">
-          <Table>
-            <TableHead>
-              <TableRow sx={{ bgcolor: "grey.50" }}>
-                <TableCell>ID</TableCell>
-                <TableCell>تاريخ الطلب</TableCell>
-                <TableCell>اسم العملية</TableCell>
-                <TableCell>الطبيب</TableCell>
-                <TableCell>السعر الإجمالي</TableCell>
-                <TableCell>الحالة</TableCell>
-                <TableCell>بواسطة</TableCell>
-                <TableCell align="center">الإجراءات</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {requestedSurgeries.map((item) => (
-                <React.Fragment key={item.id}>
-                  <TableRow>
-                    <TableCell>#{item.id}</TableCell>
-                    <TableCell>
-                      {dayjs(item.created_at).format("YYYY-MM-DD HH:mm")}
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>
-                      {item.surgery?.name}
-                    </TableCell>
-                    <TableCell>{item.doctor?.name || "—"}</TableCell>
-                    <TableCell
-                      sx={{ fontWeight: "bold", color: "primary.main" }}
+        <Paper variant="outlined" sx={{ borderRadius: 1, overflow: "hidden" }}>
+        <List dense disablePadding>
+          {requestedSurgeries.map((item, index) => (
+            <React.Fragment key={item.id}>
+              {index > 0 && <Divider component="li" />}
+              <ListItem
+                alignItems="flex-start"
+                disablePadding
+                sx={{
+                  py: 0.75,
+                  px: 1.5,
+                  flexWrap: "wrap",
+                  gap: 0.5,
+                  bgcolor:
+                    item.status === "approved"
+                      ? (theme) => alpha(theme.palette.success.light, 0.18)
+                      : "transparent",
+                }}
+              >
+                <Box
+                  sx={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 0.25,
+                    minWidth: 0,
+                    flex: "1 1 auto",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ fontWeight: 600 }}
                     >
-                      {item.total_price.toLocaleString()} SDG
-                    </TableCell>
-                    <TableCell>{getStatusChip(item.status)}</TableCell>
-                    <TableCell>{item.user?.name}</TableCell>
-                    <TableCell align="center">
-                      <Box display="flex" justifyContent="center" gap={0.5}>
-                        {item.status === "pending" && (
-                          <>
-                            <Tooltip title="اعتماد">
-                              <IconButton
-                                size="small"
-                                color="success"
-                                onClick={() => approveMutation.mutate(item.id)}
-                                disabled={approveMutation.isPending}
-                              >
-                                {approveMutation.isPending &&
-                                approveMutation.variables === item.id ? (
-                                  <CircularProgress size={18} color="inherit" />
-                                ) : (
-                                  <CheckCircle fontSize="small" />
-                                )}
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="رفض">
-                              <IconButton
-                                size="small"
-                                color="warning"
-                                onClick={() => rejectMutation.mutate(item.id)}
-                                disabled={rejectMutation.isPending}
-                              >
-                                {rejectMutation.isPending &&
-                                rejectMutation.variables === item.id ? (
-                                  <CircularProgress size={18} color="inherit" />
-                                ) : (
-                                  <Cancel fontSize="small" />
-                                )}
-                              </IconButton>
-                            </Tooltip>
-                          </>
-                        )}
-                        {item.status === "approved" && (
-                          <Tooltip title="تراجع عن الاعتماد">
-                            <IconButton
-                              size="small"
-                              color="secondary"
-                              onClick={() => unapproveMutation.mutate(item.id)}
-                              disabled={unapproveMutation.isPending}
-                            >
-                              {unapproveMutation.isPending &&
-                              unapproveMutation.variables === item.id ? (
-                                <CircularProgress size={18} color="inherit" />
-                              ) : (
-                                <Undo fontSize="small" />
-                              )}
-                            </IconButton>
-                          </Tooltip>
-                        )}
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          color="info"
-                          startIcon={<Payments />}
-                          onClick={() => handleOpenFinanceDialog(item)}
-                          sx={{ textTransform: "none", fontWeight: 600 }}
+                      #{item.id}
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      fontWeight={600}
+                      sx={{ flex: "1 1 auto", minWidth: 0 }}
+                    >
+                      {item.surgery?.name ?? "—"}
+                    </Typography>
+                    <TextField
+                      size="small"
+                      type="number"
+                      inputProps={{ min: 0, step: 0.01 }}
+                      placeholder="سعر"
+                      value={
+                        editInitialPrice[item.id] ??
+                        (item.initial_price != null
+                          ? String(item.initial_price)
+                          : "")
+                      }
+                      onChange={(e) =>
+                        setEditInitialPrice((prev) => ({
+                          ...prev,
+                          [item.id]: e.target.value,
+                        }))
+                      }
+                      onBlur={() => {
+                        const raw =
+                          editInitialPrice[item.id] ??
+                          (item.initial_price != null
+                            ? String(item.initial_price)
+                            : "");
+                        const num = raw === "" ? null : parseFloat(raw);
+                        if (
+                          raw !== "" &&
+                          (isNaN(num as number) || (num as number) < 0)
+                        )
+                          return;
+                        if (num !== (item.initial_price ?? null)) {
+                          updateInitialPriceMutation.mutate({
+                            requestedSurgeryId: item.id,
+                            initialPrice: num,
+                          });
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter")
+                          (e.target as HTMLInputElement).blur();
+                      }}
+                      disabled={
+                        updateInitialPriceMutation.isPending &&
+                        updateInitialPriceMutation.variables
+                          ?.requestedSurgeryId === item.id
+                      }
+                      sx={{
+                        width: 144,
+                        "& .MuiInputBase-input": {
+                          fontSize: "1.15rem",
+                          py: 0.25,
+                        },
+                      }}
+                    />
+                  </Box>
+                  {item.status === "approved" && item.approved_at && (
+                    <Typography
+                      variant="caption"
+                      color="success.dark"
+                      sx={{ mt: 0.25 }}
+                    >
+                      تم الاعتماد:{" "}
+                      {dayjs(item.approved_at).format("DD/MM/YYYY HH:mm")}
+                    </Typography>
+                  )}
+                  <List dense disablePadding sx={{ width: "100%", mt: 0.5 }}>
+                    {item.status === "pending" && (
+                      <>
+                        <Divider />
+                        <ListItemButton
+                          dense
+                          onClick={() => approveMutation.mutate(item.id)}
+                          disabled={approveMutation.isPending}
+                          sx={{ py: 0.25, minHeight: 36 }}
                         >
-                          توزيع النسب
-                        </Button>
-                        <Tooltip title="فاتورة مريض A5">
-                          <IconButton
-                            size="small"
-                            color="secondary"
-                            onClick={async () => {
-                              try {
-                                const response = await apiClient.get(
-                                  `/admissions/${admissionId}/requested-surgeries/${item.id}/invoice`,
-                                  { responseType: "blob" },
-                                );
-                                const blob = new Blob([response.data], {
-                                  type: "application/pdf",
-                                });
-                                const url = window.URL.createObjectURL(blob);
-                                window.open(url, "_blank");
-                              } catch {
-                                toast.error("حدث خطأ أثناء تحميل الفاتورة");
-                              }
-                            }}
-                          >
-                            <Receipt fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="إرسال إشعار الواتساب">
-                          <IconButton
-                            size="small"
-                            color="success"
-                            onClick={() => handleSendWhatsApp(item)}
-                            disabled={isSendingWhatsApp[item.id]}
-                          >
-                            {isSendingWhatsApp[item.id] ? (
-                              <CircularProgress size={20} />
+                          <ListItemIcon sx={{ minWidth: 32 }}>
+                            {approveMutation.isPending && approveMutation.variables === item.id ? (
+                              <CircularProgress size={20} color="inherit" />
                             ) : (
-                              <WhatsApp fontSize="small" />
+                              <CheckCircle color="success" sx={{ fontSize: 20 }} />
                             )}
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="كشف الحساب">
-                          <IconButton
-                            size="small"
-                            color="success"
-                            onClick={() => handleOpenLedgerDialog(item)}
-                          >
-                            <AccountBalanceWallet fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="حذف">
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => {
-                              if (
-                                window.confirm("هل أنت متأكد من حذف هذا الطلب؟")
-                              ) {
-                                deleteMutation.mutate(item.id);
-                              }
-                            }}
-                            disabled={deleteMutation.isPending}
-                          >
-                            {deleteMutation.isPending &&
-                            deleteMutation.variables === item.id ? (
-                              <CircularProgress size={18} color="inherit" />
+                          </ListItemIcon>
+                          <ListItemText primary="اعتماد" primaryTypographyProps={{ variant: "body2" }} />
+                        </ListItemButton>
+                        <Divider />
+                        <ListItemButton
+                          dense
+                          onClick={() => rejectMutation.mutate(item.id)}
+                          disabled={rejectMutation.isPending}
+                          sx={{ py: 0.25, minHeight: 36 }}
+                        >
+                          <ListItemIcon sx={{ minWidth: 32 }}>
+                            {rejectMutation.isPending && rejectMutation.variables === item.id ? (
+                              <CircularProgress size={20} color="inherit" />
                             ) : (
-                              <Delete fontSize="small" />
+                              <Cancel color="warning" sx={{ fontSize: 20 }} />
                             )}
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                </React.Fragment>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                          </ListItemIcon>
+                          <ListItemText primary="رفض" primaryTypographyProps={{ variant: "body2" }} />
+                        </ListItemButton>
+                      </>
+                    )}
+                    {item.status === "approved" && (
+                      <>
+                        <Divider />
+                        <ListItemButton
+                          dense
+                          onClick={() => unapproveMutation.mutate(item.id)}
+                          disabled={unapproveMutation.isPending}
+                          sx={{ py: 0.25, minHeight: 36 }}
+                        >
+                          <ListItemIcon sx={{ minWidth: 32 }}>
+                            {unapproveMutation.isPending && unapproveMutation.variables === item.id ? (
+                              <CircularProgress size={20} color="inherit" />
+                            ) : (
+                              <Undo color="secondary" sx={{ fontSize: 20 }} />
+                            )}
+                          </ListItemIcon>
+                          <ListItemText primary="تراجع عن الاعتماد" primaryTypographyProps={{ variant: "body2" }} />
+                        </ListItemButton>
+                      </>
+                    )}
+                    <Divider />
+                    <ListItemButton dense onClick={() => handleOpenFinanceDialog(item)} sx={{ py: 0.25, minHeight: 36 }}>
+                      <ListItemIcon sx={{ minWidth: 32 }}>
+                        <Payments color="info" sx={{ fontSize: 20 }} />
+                      </ListItemIcon>
+                      <ListItemText primary="توزيع النسب" primaryTypographyProps={{ variant: "body2" }} />
+                    </ListItemButton>
+                    <Divider />
+                    <ListItemButton
+                      dense
+                      onClick={async () => {
+                        try {
+                          const response = await apiClient.get(`/admissions/${admissionId}/requested-surgeries/${item.id}/invoice`, { responseType: "blob" });
+                          const blob = new Blob([response.data], { type: "application/pdf" });
+                          window.open(URL.createObjectURL(blob), "_blank");
+                        } catch {
+                          toast.error("حدث خطأ أثناء تحميل الفاتورة");
+                        }
+                      }}
+                      sx={{ py: 0.25, minHeight: 36 }}
+                    >
+                      <ListItemIcon sx={{ minWidth: 32 }}>
+                        <Receipt color="secondary" sx={{ fontSize: 20 }} />
+                      </ListItemIcon>
+                      <ListItemText primary="فاتورة مريض A5" primaryTypographyProps={{ variant: "body2" }} />
+                    </ListItemButton>
+                    <Divider />
+                    <ListItemButton
+                      dense
+                      onClick={() => handleSendWhatsApp(item)}
+                      disabled={isSendingWhatsApp[item.id]}
+                      sx={{ py: 0.25, minHeight: 36 }}
+                    >
+                      <ListItemIcon sx={{ minWidth: 32 }}>
+                        {isSendingWhatsApp[item.id] ? (
+                          <CircularProgress size={20} />
+                        ) : (
+                          <WhatsApp sx={{ fontSize: 20 }} color="success" />
+                        )}
+                      </ListItemIcon>
+                      <ListItemText primary="إرسال إشعار الواتساب" primaryTypographyProps={{ variant: "body2" }} />
+                    </ListItemButton>
+                    <Divider />
+                    <ListItemButton dense onClick={() => handleOpenLedgerDialog(item)} sx={{ py: 0.25, minHeight: 36 }}>
+                      <ListItemIcon sx={{ minWidth: 32 }}>
+                        <AccountBalanceWallet color="success" sx={{ fontSize: 20 }} />
+                      </ListItemIcon>
+                      <ListItemText primary="كشف الحساب" primaryTypographyProps={{ variant: "body2" }} />
+                    </ListItemButton>
+                    <Divider />
+                    <ListItemButton
+                      dense
+                      onClick={() => {
+                        if (window.confirm("هل أنت متأكد من حذف هذا الطلب؟")) deleteMutation.mutate(item.id);
+                      }}
+                      disabled={deleteMutation.isPending}
+                      sx={{ py: 0.25, minHeight: 36 }}
+                    >
+                      <ListItemIcon sx={{ minWidth: 32 }}>
+                        {deleteMutation.isPending && deleteMutation.variables === item.id ? (
+                          <CircularProgress size={20} color="inherit" />
+                        ) : (
+                          <Delete color="error" sx={{ fontSize: 20 }} />
+                        )}
+                      </ListItemIcon>
+                      <ListItemText primary="حذف" primaryTypographyProps={{ variant: "body2" }} />
+                    </ListItemButton>
+                  </List>
+                </Box>
+              </ListItem>
+            </React.Fragment>
+          ))}
+        </List>
+        </Paper>
       )}
 
       {/* Request Surgery Dialog */}
@@ -657,29 +765,130 @@ const AdmissionSurgeriesTab = ({ admissionId }: AdmissionSurgeriesTabProps) => {
           </Box>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             {selectedSurgery && (
-              <Tooltip title="تباعة أمر التكليف">
-                <IconButton
-                  size="small"
-                  color="primary"
-                  onClick={async () => {
-                    try {
-                      const response = await apiClient.get(
-                        `/admissions/${admissionId}/requested-surgeries/${selectedSurgery.id}/print`,
-                        { responseType: "blob" },
-                      );
-                      const blob = new Blob([response.data], {
-                        type: "application/pdf",
-                      });
-                      const url = window.URL.createObjectURL(blob);
-                      window.open(url, "_blank");
-                    } catch {
-                      toast.error("حدث خطأ أثناء تحميل الملف");
-                    }
-                  }}
-                >
-                  <Printer size={20} />
-                </IconButton>
-              </Tooltip>
+              <>
+                <Tooltip title="إرسال طلب اعتماد الحصص عبر واتساب">
+                  <IconButton
+                    size="small"
+                    color="success"
+                    onClick={async () => {
+                      if (!selectedSurgery.admission?.patient?.phone) {
+                        toast.error("رقم الهاتف غير متوفر");
+                        return;
+                      }
+
+                      let phone = selectedSurgery.admission.patient.phone;
+                      if (!phone.startsWith("249")) {
+                        phone = `249${phone.replace(/^0/, "")}`;
+                      }
+
+                      setIsSendingWhatsApp((prev) => ({
+                        ...prev,
+                        [selectedSurgery.id]: true,
+                      }));
+
+                      try {
+                        const operationName =
+                          selectedSurgery.surgery?.name ?? "";
+
+                        const staffLines = selectedSurgery.finances
+                          .filter(
+                            (f) => f.finance_charge.beneficiary === "staff",
+                          )
+                          .map(
+                            (f) =>
+                              `${f.finance_charge.name}: ${Number(
+                                f.amount,
+                              ).toLocaleString()} SDG`,
+                          );
+
+                        const centerLines = selectedSurgery.finances
+                          .filter(
+                            (f) => f.finance_charge.beneficiary === "center",
+                          )
+                          .map(
+                            (f) =>
+                              `${f.finance_charge.name}: ${Number(
+                                f.amount,
+                              ).toLocaleString()} SDG`,
+                          );
+
+                        const staffText =
+                          staffLines.length > 0
+                            ? staffLines.join("\n")
+                            : "لا توجد حصص للطاقم الطبي";
+
+                        const centerText =
+                          centerLines.length > 0
+                            ? centerLines.join("\n")
+                            : "لا توجد حصص للمركز";
+
+                        const totalVal = selectedSurgery.total_price || 0;
+                        const patientName =
+                          selectedSurgery.admission?.patient?.name ?? "";
+
+                        await sendWhatsAppCloudTemplate({
+                          to: phone,
+                          template_name: "operation_shares_flexible",
+                          language_code: "ar",
+                          components: [
+                            {
+                              type: "body",
+                              parameters: [
+                                { type: "text", text: operationName },
+                                { type: "text", text: staffText },
+                                { type: "text", text: centerText },
+                                { type: "text", text: String(totalVal) },
+                                { type: "text", text: patientName },
+                              ],
+                            },
+                          ],
+                        });
+
+                        toast.success("تم إرسال طلب اعتماد الحصص بنجاح");
+                      } catch (error) {
+                        console.error(error);
+                        toast.error("فشل إرسال طلب اعتماد الحصص");
+                      } finally {
+                        setIsSendingWhatsApp((prev) => ({
+                          ...prev,
+                          [selectedSurgery.id]: false,
+                        }));
+                      }
+                    }}
+                    disabled={isSendingWhatsApp[selectedSurgery.id]}
+                  >
+                    {isSendingWhatsApp[selectedSurgery.id] ? (
+                      <CircularProgress size={20} />
+                    ) : (
+                      <WhatsApp sx={{ fontSize: 20 }} />
+                    )}
+                  </IconButton>
+                </Tooltip>
+
+                <Tooltip title="تباعة أمر التكليف">
+                  <IconButton
+                    size="small"
+                    color="primary"
+                    onClick={async () => {
+                      try {
+                        const response = await apiClient.get(
+                          `/admissions/${admissionId}/requested-surgeries/${selectedSurgery.id}/print`,
+                          { responseType: "blob" },
+                        );
+                        const blob = new Blob([response.data], {
+                          type: "application/pdf",
+                        });
+                        const url = window.URL.createObjectURL(blob);
+                        window.open(url, "_blank");
+                      } catch {
+                        toast.error("حدث خطأ أثناء تحميل الملف");
+                      }
+                    }}
+                  >
+                    <Printer size={20} />
+                  </IconButton>
+                </Tooltip>
+              </>
             )}
             {updateFinanceMutation.isPending && <CircularProgress size={24} />}
           </Box>
@@ -710,15 +919,16 @@ const AdmissionSurgeriesTab = ({ admissionId }: AdmissionSurgeriesTabProps) => {
           )}
 
           <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>البند</TableCell>
-                <TableCell>النوع</TableCell>
-                <TableCell>المبلغ</TableCell>
-                <TableCell>طريقة الدفع</TableCell>
-                <TableCell>الطبيب المستحق</TableCell>
-              </TableRow>
-            </TableHead>
+          <TableHead>
+            <TableRow>
+              <TableCell>البند</TableCell>
+              <TableCell>النوع</TableCell>
+              <TableCell>المبلغ</TableCell>
+              <TableCell>طريقة الدفع</TableCell>
+              <TableCell>الطبيب المستحق</TableCell>
+              <TableCell align="center">إزالة</TableCell>
+            </TableRow>
+          </TableHead>
             <TableBody>
               {selectedSurgery?.finances.map((f) => (
                 <TableRow key={f.id}>
@@ -831,6 +1041,35 @@ const AdmissionSurgeriesTab = ({ admissionId }: AdmissionSurgeriesTabProps) => {
                     ) : (
                       "—"
                     )}
+                  </TableCell>
+                  <TableCell align="center">
+                    <Tooltip title="حذف البند">
+                      <span>
+                        <IconButton
+                          size="small"
+                          color="error"
+                          disabled={
+                            selectedSurgery?.status === "approved" ||
+                            deleteFinanceMutation.isPending
+                          }
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                "هل أنت متأكد من حذف هذا البند من التكاليف؟",
+                              )
+                            ) {
+                              deleteFinanceMutation.mutate(f.id);
+                            }
+                          }}
+                        >
+                          {deleteFinanceMutation.isPending ? (
+                            <CircularProgress size={16} />
+                          ) : (
+                            <Delete fontSize="small" />
+                          )}
+                        </IconButton>
+                      </span>
+                    </Tooltip>
                   </TableCell>
                 </TableRow>
               ))}
@@ -1172,6 +1411,8 @@ const SurgeryLedgerDialog = ({
       </DialogActions>
     </Dialog>
   );
-};
+}
 
-export default AdmissionSurgeriesTab;
+export default function AdmissionSurgeriesTab({ admissionId }: RequestedSurgeriesPanelProps) {
+  return <RequestedSurgeriesPanel admissionId={admissionId} />;
+}

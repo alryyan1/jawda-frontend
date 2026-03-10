@@ -1305,9 +1305,9 @@ const AppLayout: React.FC = () => {
                               label="مجموعات الخدمات"
                             />
                             <SettingsMenuItem
-                              to="/settings/admission-settings"
-                              icon={BedDouble}
-                              label="إعدادات التنويم"
+                              to="/settings/operations"
+                              icon={Syringe}
+                              label="العمليات الجراحية"
                             />
                             <SettingsMenuItem
                               to="/settings/categories"

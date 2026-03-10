@@ -7,7 +7,6 @@ import {
   CircularProgress,
   Chip,
   IconButton,
-  Tooltip,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -30,22 +29,17 @@ import {
   TableHead,
   TableRow,
   TextField,
-  Autocomplete,
-  LinearProgress,
-  Alert,
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import {
   Add,
   Delete,
-  MedicalServices,
   CheckCircle,
   Cancel,
   Payments,
   Receipt,
   AccountBalanceWallet,
   WhatsApp,
-  Link,
   Undo,
 } from "@mui/icons-material";
 import { toast } from "sonner";
@@ -57,6 +51,7 @@ import type { SurgicalOperation } from "@/services/surgicalOperationService";
 import type { DoctorStripped } from "@/types/doctors";
 import { Printer } from "lucide-react";
 import { sendWhatsAppCloudTemplate } from "@/services/whatsappCloudApiService";
+import { SurgeryFinanceDialog } from "./SurgeryFinanceDialog";
 
 interface FinanceChargeItem {
   id: number;
@@ -310,12 +305,13 @@ export function RequestedSurgeriesPanel({ admissionId }: RequestedSurgeriesPanel
         return next;
       });
     },
-    onError: (err, variables, context) => {
+    onError: (err: { response?: { data?: { message?: string }; status?: number } }, _variables, context) => {
       // Rollback to the previous value if mutation fails
       if (context?.previousSurgeries) {
         queryClient.setQueryData(queryKey, context.previousSurgeries);
       }
-      toast.error("فشل في تحديث البيانات");
+      const msg = err.response?.data?.message;
+      toast.error(msg || "فشل في تحديث البيانات");
     },
     onSettled: () => {
       // Always refetch after error or success to guarantee we are in sync with the server
@@ -377,9 +373,27 @@ export function RequestedSurgeriesPanel({ admissionId }: RequestedSurgeriesPanel
   };
 
   const handleUpdateAmount = (financeId: number, amount: string) => {
+    const parsed = parseFloat(amount);
+    if (isNaN(parsed) || parsed < 0) return;
+
+    let finalAmount = parsed;
+    const initialPrice = selectedSurgery?.initial_price;
+    if (initialPrice != null && initialPrice > 0) {
+      const otherSum = selectedSurgery!.finances
+        .filter((f) => f.id !== financeId)
+        .reduce((s, f) => s + Number(f.amount), 0);
+      const maxForThis = Math.max(0, initialPrice - otherSum);
+      if (parsed > maxForThis) {
+        finalAmount = maxForThis;
+        toast.warning(
+          `لا يمكن تجاوز السعر المبدئي (${initialPrice.toLocaleString()} ج.س). تم تعديل المبلغ إلى ${maxForThis.toLocaleString()}`
+        );
+      }
+    }
+
     updateFinanceMutation.mutate({
       financeId,
-      data: { amount: parseFloat(amount) },
+      data: { amount: finalAmount },
     });
   };
 
@@ -485,7 +499,6 @@ export function RequestedSurgeriesPanel({ admissionId }: RequestedSurgeriesPanel
                     <TextField
                       size="small"
                       type="number"
-                      inputProps={{ min: 0, step: 0.01 }}
                       placeholder="سعر"
                       value={
                         editInitialPrice[item.id] ??
@@ -528,7 +541,7 @@ export function RequestedSurgeriesPanel({ admissionId }: RequestedSurgeriesPanel
                           ?.requestedSurgeryId === item.id
                       }
                       sx={{
-                        width: 144,
+                        width: 166,
                         "& .MuiInputBase-input": {
                           fontSize: "1.15rem",
                           py: 0.25,
@@ -549,8 +562,8 @@ export function RequestedSurgeriesPanel({ admissionId }: RequestedSurgeriesPanel
                   <List dense disablePadding sx={{ width: "100%", mt: 0.5 }}>
                     {item.status === "pending" && (
                       <>
-                        <Divider />
-                        <ListItemButton
+                        {/* <Divider /> */}
+                        {/* <ListItemButton
                           dense
                           onClick={() => approveMutation.mutate(item.id)}
                           disabled={approveMutation.isPending}
@@ -564,9 +577,9 @@ export function RequestedSurgeriesPanel({ admissionId }: RequestedSurgeriesPanel
                             )}
                           </ListItemIcon>
                           <ListItemText primary="اعتماد" primaryTypographyProps={{ variant: "body2" }} />
-                        </ListItemButton>
-                        <Divider />
-                        <ListItemButton
+                        </ListItemButton> */}
+                        {/* <Divider /> */}
+                        {/* <ListItemButton
                           dense
                           onClick={() => rejectMutation.mutate(item.id)}
                           disabled={rejectMutation.isPending}
@@ -580,7 +593,7 @@ export function RequestedSurgeriesPanel({ admissionId }: RequestedSurgeriesPanel
                             )}
                           </ListItemIcon>
                           <ListItemText primary="رفض" primaryTypographyProps={{ variant: "body2" }} />
-                        </ListItemButton>
+                        </ListItemButton> */}
                       </>
                     )}
                     {item.status === "approved" && (
@@ -730,370 +743,32 @@ export function RequestedSurgeriesPanel({ admissionId }: RequestedSurgeriesPanel
         </form>
       </Dialog>
 
-      {/* Finance Details Dialog */}
-      <Dialog
+      <SurgeryFinanceDialog
         open={financeDialogOpen}
         onClose={handleCloseFinanceDialog}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 2,
-          }}
-        >
-          <Box sx={{ display: "flex", alignItems: "baseline", gap: 1.5 }}>
-            <Typography variant="h6">
-              تفاصيل تكاليف العملية: {selectedSurgery?.surgery?.name}
-            </Typography>
-            {selectedSurgery && (
-              <Chip
-                label={`الإجمالي: ${selectedSurgery.finances.reduce((sum, f) => sum + Number(f.amount), 0).toLocaleString()} ج.س`}
-                color="primary"
-                size="small"
-                variant="outlined"
-              />
-            )}
-          </Box>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            {selectedSurgery && (
-              <>
-                <Tooltip title="إرسال طلب اعتماد الحصص عبر واتساب">
-                  <IconButton
-                    size="small"
-                    color="success"
-                    onClick={async () => {
-                      if (!selectedSurgery.admission?.patient?.phone) {
-                        toast.error("رقم الهاتف غير متوفر");
-                        return;
-                      }
-
-                      let phone = selectedSurgery.admission.patient.phone;
-                      if (!phone.startsWith("249")) {
-                        phone = `249${phone.replace(/^0/, "")}`;
-                      }
-
-                      setIsSendingWhatsApp((prev) => ({
-                        ...prev,
-                        [selectedSurgery.id]: true,
-                      }));
-
-                      try {
-                        const operationName =
-                          selectedSurgery.surgery?.name ?? "";
-
-                        const staffLines = selectedSurgery.finances
-                          .filter(
-                            (f) => f.finance_charge.beneficiary === "staff",
-                          )
-                          .map(
-                            (f) =>
-                              `${f.finance_charge.name}: ${Number(
-                                f.amount,
-                              ).toLocaleString()} SDG`,
-                          );
-
-                        const centerLines = selectedSurgery.finances
-                          .filter(
-                            (f) => f.finance_charge.beneficiary === "center",
-                          )
-                          .map(
-                            (f) =>
-                              `${f.finance_charge.name}: ${Number(
-                                f.amount,
-                              ).toLocaleString()} SDG`,
-                          );
-
-                        const staffText =
-                          staffLines.length > 0
-                            ? staffLines.join("\n")
-                            : "لا توجد حصص للطاقم الطبي";
-
-                        const centerText =
-                          centerLines.length > 0
-                            ? centerLines.join("\n")
-                            : "لا توجد حصص للمركز";
-
-                        const totalVal = selectedSurgery.total_price || 0;
-                        const patientName =
-                          selectedSurgery.admission?.patient?.name ?? "";
-
-                        await sendWhatsAppCloudTemplate({
-                          to: phone,
-                          template_name: "operation_shares_flexible",
-                          language_code: "ar",
-                          components: [
-                            {
-                              type: "body",
-                              parameters: [
-                                { type: "text", text: operationName },
-                                { type: "text", text: staffText },
-                                { type: "text", text: centerText },
-                                { type: "text", text: String(totalVal) },
-                                { type: "text", text: patientName },
-                              ],
-                            },
-                          ],
-                        });
-
-                        toast.success("تم إرسال طلب اعتماد الحصص بنجاح");
-                      } catch (error) {
-                        console.error(error);
-                        toast.error("فشل إرسال طلب اعتماد الحصص");
-                      } finally {
-                        setIsSendingWhatsApp((prev) => ({
-                          ...prev,
-                          [selectedSurgery.id]: false,
-                        }));
-                      }
-                    }}
-                    disabled={isSendingWhatsApp[selectedSurgery.id]}
-                  >
-                    {isSendingWhatsApp[selectedSurgery.id] ? (
-                      <CircularProgress size={20} />
-                    ) : (
-                      <WhatsApp sx={{ fontSize: 20 }} />
-                    )}
-                  </IconButton>
-                </Tooltip>
-
-                <Tooltip title="تباعة أمر التكليف">
-                  <IconButton
-                    size="small"
-                    color="primary"
-                    onClick={async () => {
-                      try {
-                        const response = await apiClient.get(
-                          `/admissions/${admissionId}/requested-surgeries/${selectedSurgery.id}/print`,
-                          { responseType: "blob" },
-                        );
-                        const blob = new Blob([response.data], {
-                          type: "application/pdf",
-                        });
-                        const url = window.URL.createObjectURL(blob);
-                        window.open(url, "_blank");
-                      } catch {
-                        toast.error("حدث خطأ أثناء تحميل الملف");
-                      }
-                    }}
-                  >
-                    <Printer size={20} />
-                  </IconButton>
-                </Tooltip>
-              </>
-            )}
-            {updateFinanceMutation.isPending && <CircularProgress size={24} />}
-          </Box>
-        </DialogTitle>
-        {updateFinanceMutation.isPending && (
-          <LinearProgress sx={{ width: "100%" }} />
-        )}
-        <DialogContent dividers sx={{ position: "relative" }}>
-          {updateFinanceMutation.isPending && (
-            <Box
-              sx={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                bgcolor: "rgba(255, 255, 255, 0.3)",
-                zIndex: 1,
-                pointerEvents: "none",
-              }}
-            />
-          )}
-
-          {selectedSurgery?.status === "approved" && (
-            <Alert severity="info" sx={{ mb: 2 }}>
-              هذه العملية معتمدة، لا يمكن تعديل التكاليف.
-            </Alert>
-          )}
-
-          <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>البند</TableCell>
-              <TableCell>النوع</TableCell>
-              <TableCell>المبلغ</TableCell>
-              <TableCell>طريقة الدفع</TableCell>
-              <TableCell>الطبيب المستحق</TableCell>
-              <TableCell align="center">إزالة</TableCell>
-            </TableRow>
-          </TableHead>
-            <TableBody>
-              {selectedSurgery?.finances.map((f) => (
-                <TableRow key={f.id}>
-                  <TableCell>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      {f.finance_charge.name}
-                      {f.finance_charge.reference_type && (
-                        <Tooltip
-                          title={`هذا البند محسوب تلقائياً بناءً على ${f.finance_charge.reference_type === "total" ? "إجمالي العملية" : "بند آخر"}`}
-                        >
-                          <Link
-                            fontSize="small"
-                            sx={{
-                              color: "text.secondary",
-                              transform: "rotate(-45deg)",
-                            }}
-                          />
-                        </Tooltip>
-                      )}
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    {f.finance_charge.beneficiary === "staff" ? "طبيب" : "مركز"}
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      size="small"
-                      type="number"
-                      value={editAmounts[f.id] ?? f.amount}
-                      onChange={(e) => handleAmountChange(f.id, e.target.value)}
-                      onFocus={(e) => e.target.select()}
-                      onBlur={() =>
-                        handleUpdateAmount(
-                          f.id,
-                          editAmounts[f.id] || f.amount.toString(),
-                        )
-                      }
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          const currentInput = e.target as HTMLInputElement;
-                          const container = currentInput.closest("table");
-                          if (container) {
-                            const allInputs = Array.from(
-                              container.querySelectorAll(
-                                'input[type="number"]',
-                              ),
-                            ) as HTMLInputElement[];
-                            const currentIndex =
-                              allInputs.indexOf(currentInput);
-                            if (
-                              currentIndex > -1 &&
-                              currentIndex < allInputs.length - 1
-                            ) {
-                              e.preventDefault();
-                              const nextInput = allInputs[currentIndex + 1];
-                              // Move focus in next tick to avoid race conditions with onBlur/re-renders
-                              setTimeout(() => {
-                                currentInput.blur();
-                                nextInput.focus();
-                                nextInput.select();
-                              }, 0);
-                            } else if (currentIndex === allInputs.length - 1) {
-                              // If last row, just blur to save
-                              currentInput.blur();
-                            }
-                          }
-                        }
-                      }}
-                      sx={{ width: 100 }}
-                      disabled={selectedSurgery?.status === "approved"}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Select
-                      size="small"
-                      value={f.payment_method || "cash"}
-                      onChange={(e) => {
-                        updateFinanceMutation.mutate({
-                          financeId: f.id,
-                          data: { payment_method: e.target.value },
-                        });
-                      }}
-                      sx={{ width: 100 }}
-                      disabled={selectedSurgery?.status === "approved"}
-                    >
-                      <MenuItem value="cash">كاش</MenuItem>
-                      <MenuItem value="bankak">بنكك</MenuItem>
-                    </Select>
-                  </TableCell>
-                  <TableCell>
-                    {f.finance_charge.beneficiary === "staff" ? (
-                      <Autocomplete
-                        size="small"
-                        options={doctors}
-                        getOptionLabel={(option: any) => option.name || ""}
-                        value={
-                          doctors.find((d) => d.id === f.doctor_id) || null
-                        }
-                        onChange={(_, newValue) => {
-                          updateFinanceMutation.mutate({
-                            financeId: f.id,
-                            data: { doctor_id: newValue?.id || null },
-                          });
-                        }}
-                        disabled={selectedSurgery?.status === "approved"}
-                        renderInput={(params) => (
-                          <TextField {...params} placeholder="اختر الطبيب" />
-                        )}
-                      />
-                    ) : (
-                      "—"
-                    )}
-                  </TableCell>
-                  <TableCell align="center">
-                    <Tooltip title="حذف البند">
-                      <span>
-                        <IconButton
-                          size="small"
-                          color="error"
-                          disabled={
-                            selectedSurgery?.status === "approved" ||
-                            deleteFinanceMutation.isPending
-                          }
-                          onClick={() => {
-                            if (
-                              window.confirm(
-                                "هل أنت متأكد من حذف هذا البند من التكاليف؟",
-                              )
-                            ) {
-                              deleteFinanceMutation.mutate(f.id);
-                            }
-                          }}
-                        >
-                          {deleteFinanceMutation.isPending ? (
-                            <CircularProgress size={16} />
-                          ) : (
-                            <Delete fontSize="small" />
-                          )}
-                        </IconButton>
-                      </span>
-                    </Tooltip>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          <Box
-            sx={{
-              mt: 2,
-              p: 2,
-              bgcolor: "primary.light",
-              color: "primary.contrastText",
-              borderRadius: 1,
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <Typography fontWeight={600}>إجمالي تكلفة العملية:</Typography>
-            <Typography variant="h6" fontWeight={700}>
-              {selectedSurgery?.total_price.toLocaleString()} SDG
-            </Typography>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseFinanceDialog} color="primary">
-            إغلاق
-          </Button>
-        </DialogActions>
-      </Dialog>
+        selectedSurgery={selectedSurgery}
+        admissionId={admissionId}
+        editAmounts={editAmounts}
+        onAmountChange={handleAmountChange}
+        onUpdateAmount={handleUpdateAmount}
+        onUpdateFinance={(params) =>
+          updateFinanceMutation.mutate({
+            financeId: params.financeId,
+            data: params.data,
+          })
+        }
+        onDeleteFinance={(id) => deleteFinanceMutation.mutate(id)}
+        doctors={doctors}
+        isUpdating={updateFinanceMutation.isPending}
+        isDeleting={deleteFinanceMutation.isPending}
+        isSendingWhatsApp={isSendingWhatsApp}
+        onSendWhatsAppStart={(surgeryId) =>
+          setIsSendingWhatsApp((prev) => ({ ...prev, [surgeryId]: true }))
+        }
+        onSendWhatsAppEnd={(surgeryId) =>
+          setIsSendingWhatsApp((prev) => ({ ...prev, [surgeryId]: false }))
+        }
+      />
 
       <SurgeryLedgerDialog
         open={ledgerDialogOpen}
@@ -1191,7 +866,8 @@ const SurgeryLedgerDialog = ({
     }
   };
 
-  const balance = ledgerData?.summary?.balance ?? 0;
+  const paid = ledgerData?.summary?.total_credits ?? 0;
+  const balance = (initialPrice ?? 0) - paid;
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 2 } }}>
@@ -1296,7 +972,7 @@ const SurgeryLedgerDialog = ({
                   المتبقي (الرصيد)
                 </Typography>
                 <Typography variant="h6" color="primary.main" fontWeight={700} sx={{ mt: 0.5 }}>
-                  {ledgerData?.summary?.balance?.toLocaleString()} SDG
+                  {balance.toLocaleString()} SDG
                 </Typography>
               </Paper>
             </Box>

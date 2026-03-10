@@ -38,6 +38,7 @@ export interface PatientFormData {
   email?: string | null;
   nationality?: string | null;
   dob?: Date | null;
+  from_addmission_page?: boolean;
 }
 // src/types/patients.ts
 // ... (Patient, PatientFormData) ...
@@ -116,6 +117,7 @@ export interface ActivePatientVisit {
     name: string;
     phone: string | null;
     gender: "male" | "female" | "other";
+    dob?: string | null;
     age_year: number | null;
     age_month: number | null;
     age_day: number | null;

@@ -1,6 +1,7 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { Dispatch, SetStateAction, KeyboardEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import dayjs from "dayjs";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -22,7 +23,7 @@ import {
   alpha,
 } from "@mui/material";
 import { User, Phone, Wallet, Heart, X, Activity, Baby } from "lucide-react";
-import { registerNewPatient } from "@/services/patientService";
+import { registerNewPatient, getPatientById, updatePatient } from "@/services/patientService";
 import { getDoctorsList } from "@/services/doctorService";
 import type { PatientFormData, PatientSearchResult } from "@/types/patients";
 import type { Theme } from "@mui/material/styles";
@@ -42,6 +43,8 @@ type QuickAddFormState = {
 interface UseQuickAddPatientOptions {
   onClose?: () => void;
   onPatientAdded: (patient: PatientSearchResult) => void;
+  /** When true, sets from_addmission_page on the created patient. */
+  fromAdmissionPage?: boolean;
 }
 
 /**
@@ -51,6 +54,7 @@ interface UseQuickAddPatientOptions {
 export function useQuickAddPatient({
   onClose,
   onPatientAdded,
+  fromAdmissionPage = false,
 }: UseQuickAddPatientOptions) {
   const theme = useTheme();
   const queryClient = useQueryClient();
@@ -96,6 +100,7 @@ export function useQuickAddPatient({
             | "widowed"
             | "divorced"
             | null) || null,
+        from_addmission_page: fromAdmissionPage,
       };
 
       return registerNewPatient(patientData);
@@ -294,16 +299,7 @@ export function QuickAddPatientFormFields({
                 }}
                 required
                 disabled={quickAddPatientMutation.isPending}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Phone
-                        size={18}
-                        color={theme.palette.text.secondary}
-                      />
-                    </InputAdornment>
-                  ),
-                }}
+             
               />
             </Box>
           </Box>
@@ -560,21 +556,140 @@ interface QuickAddPatientDialogProps {
   open: boolean;
   onClose: () => void;
   onPatientAdded: (patient: PatientSearchResult) => void;
+  /** When provided, dialog opens in edit mode for this patient. */
+  patientId?: number | null;
+  onPatientUpdated?: (patient: PatientSearchResult) => void;
 }
 
 export default function QuickAddPatientDialog({
   open,
   onClose,
   onPatientAdded,
+  patientId = null,
+  onPatientUpdated,
 }: QuickAddPatientDialogProps) {
-  const {
-    theme,
-    quickAddFormData,
-    setQuickAddFormData,
-    quickAddPatientMutation,
-    handleQuickAddSubmit,
-    handleFormKeyDown,
-  } = useQuickAddPatient({ onClose, onPatientAdded });
+  const theme = useTheme();
+  const queryClient = useQueryClient();
+  const isEditMode = !!patientId;
+
+  const addHook = useQuickAddPatient({ onClose, onPatientAdded });
+
+  const { data: patientToEdit, isLoading: isLoadingPatient } = useQuery({
+    queryKey: ["patient", patientId],
+    queryFn: () => getPatientById(patientId!),
+    enabled: isEditMode && !!patientId,
+  });
+
+  const [editFormData, setEditFormData] = useState<QuickAddFormState>({
+    name: "",
+    phone: "",
+    dob: "1970-01-01",
+    gender: "female",
+    age_year: "",
+    age_month: "",
+    age_day: "",
+    income_source: "",
+    social_status: "",
+  });
+
+  useEffect(() => {
+    if (isEditMode && patientToEdit) {
+      const dob = patientToEdit.dob
+        ? dayjs(patientToEdit.dob).format("YYYY-MM-DD")
+        : "1970-01-01";
+      setEditFormData({
+        name: patientToEdit.name ?? "",
+        phone: patientToEdit.phone ?? "",
+        dob,
+        gender: (patientToEdit.gender as "male" | "female") || "female",
+        age_year: String(patientToEdit.age_year ?? ""),
+        age_month: String(patientToEdit.age_month ?? ""),
+        age_day: String(patientToEdit.age_day ?? ""),
+        income_source: patientToEdit.income_source ?? "",
+        social_status: patientToEdit.social_status ?? "",
+      });
+    }
+  }, [isEditMode, patientToEdit]);
+
+  const updateMutation = useMutation({
+    mutationFn: (data: Partial<PatientFormData>) =>
+      updatePatient(patientId!, {
+        name: data.name!,
+        phone: data.phone!,
+        dob: data.dob ? new Date(data.dob) : null,
+        gender: data.gender as "male" | "female",
+        age_year: data.age_year ? Number(data.age_year) : null,
+        age_month: data.age_month ? Number(data.age_month) : null,
+        age_day: data.age_day ? Number(data.age_day) : null,
+        income_source: data.income_source || null,
+        social_status:
+          (data.social_status as "single" | "married" | "widowed" | "divorced" | null) || null,
+      }),
+    onSuccess: (patient: any) => {
+      toast.success("تم تحديث بيانات المريض بنجاح");
+      onPatientUpdated?.({
+        id: patient.id,
+        name: patient.name,
+        phone: patient.phone || null,
+        gender: patient.gender,
+        age_year: patient.age_year || null,
+        patient_id: patient.id,
+      });
+      onClose();
+      queryClient.invalidateQueries({ queryKey: ["patientSearch"] });
+      queryClient.invalidateQueries({ queryKey: ["clinicActivePatientsForAdmission"] });
+    },
+    onError: (error: any) => {
+      const message =
+        (error && (error.message || error?.response?.data?.message)) ||
+        "حدث خطأ أثناء تحديث بيانات المريض";
+      toast.error(message);
+    },
+  });
+
+  const quickAddFormData = isEditMode ? editFormData : addHook.quickAddFormData;
+  const setQuickAddFormData = isEditMode ? setEditFormData : addHook.setQuickAddFormData;
+  const quickAddPatientMutation = isEditMode ? updateMutation : addHook.quickAddPatientMutation;
+
+  const handleQuickAddSubmit = useCallback(() => {
+    if (isEditMode) {
+      if (!editFormData.name || !editFormData.phone || !editFormData.gender) {
+        toast.error("يرجى إدخال الاسم والهاتف والنوع");
+        return;
+      }
+      updateMutation.mutate({
+        name: editFormData.name,
+        phone: editFormData.phone,
+        dob: editFormData.dob ? new Date(editFormData.dob) : null,
+        gender: editFormData.gender as "male" | "female",
+        age_year: editFormData.age_year ? Number(editFormData.age_year) : null,
+        age_month: editFormData.age_month ? Number(editFormData.age_month) : null,
+        age_day: editFormData.age_day ? Number(editFormData.age_day) : null,
+        income_source: editFormData.income_source || null,
+        social_status:
+          (editFormData.social_status as "single" | "married" | "widowed" | "divorced" | null) || null,
+      });
+    } else {
+      addHook.handleQuickAddSubmit();
+    }
+  }, [isEditMode, editFormData, updateMutation, addHook]);
+
+  const handleFormKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLFormElement>) => {
+      if (e.key === "Enter" && !(e.target instanceof HTMLTextAreaElement)) {
+        e.preventDefault();
+        if (
+          !quickAddPatientMutation.isPending &&
+          quickAddFormData.name &&
+          quickAddFormData.phone &&
+          quickAddFormData.gender
+        ) {
+          handleQuickAddSubmit();
+        }
+      }
+    },
+    [handleQuickAddSubmit, quickAddFormData, quickAddPatientMutation.isPending],
+  );
 
   return (
     <Dialog
@@ -602,7 +717,7 @@ export default function QuickAddPatientDialog({
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <User size={24} />
           <Typography variant="h6" fontWeight="bold">
-            إضافة مريض جديد
+            {isEditMode ? "تعديل بيانات المريض" : "إضافة مريض جديد"}
           </Typography>
         </Box>
         <IconButton
@@ -618,6 +733,11 @@ export default function QuickAddPatientDialog({
       </DialogTitle>
 
       <DialogContent sx={{ p: 3, mt: 1 }}>
+        {isEditMode && isLoadingPatient ? (
+          <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+            <CircularProgress />
+          </Box>
+        ) : (
         <QuickAddPatientFormFields
           theme={theme}
           quickAddFormData={quickAddFormData}
@@ -625,6 +745,7 @@ export default function QuickAddPatientDialog({
           quickAddPatientMutation={quickAddPatientMutation}
           handleFormKeyDown={handleFormKeyDown}
         />
+        )}
       </DialogContent>
       <DialogActions
         sx={{
@@ -648,6 +769,7 @@ export default function QuickAddPatientDialog({
           startIcon={!quickAddPatientMutation.isPending && <User size={18} />}
           disabled={
             quickAddPatientMutation.isPending ||
+            (isEditMode && isLoadingPatient) ||
             !quickAddFormData.name ||
             !quickAddFormData.phone ||
             !quickAddFormData.gender
@@ -656,6 +778,8 @@ export default function QuickAddPatientDialog({
         >
           {quickAddPatientMutation.isPending ? (
             <CircularProgress size={24} color="inherit" />
+          ) : isEditMode ? (
+            "حفظ التعديلات"
           ) : (
             "إضافة مريض"
           )}

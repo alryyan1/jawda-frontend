@@ -30,20 +30,19 @@ import {
   LayoutDashboard,
   ClipboardList,
   UserPlus,
-  BedDouble,
   Bed,
   X,
   Calculator,
   FileText,
 } from "lucide-react";
-import { getActiveClinicPatients } from "@/services/clinicService";
+import { getActiveClinicPatients, getAdmissionPatientsByDate } from "@/services/clinicService";
 import { getAdmissions, getPatientActiveAdmission, createAdmission, updateAdmission, getAdmissionRequestedSurgeriesSummary } from "@/services/admissionService";
 import type {
   ActivePatientVisit,
   Patient,
 } from "@/types/patients";
 import AdmissionActiveCard from "@/components/admissions/AdmissionActiveCard";
-import {
+import QuickAddPatientDialog, {
   useQuickAddPatient,
   QuickAddPatientFormFields,
 } from "@/components/admissions/QuickAddPatientDialog";
@@ -73,6 +72,9 @@ export default function AdmissionPatientRegistrationPage() {
     () => new Set(),
   );
   const [selectedSurgery, setSelectedSurgery] = useState<SurgicalOperation | null>(null);
+  const [editPatientDialogOpen, setEditPatientDialogOpen] = useState(false);
+  const [editPatientId, setEditPatientId] = useState<number | null>(null);
+  const [admissionSearchDate, setAdmissionSearchDate] = useState<string | null>(null);
 
   const {
     theme,
@@ -87,6 +89,7 @@ export default function AdmissionPatientRegistrationPage() {
         queryKey: ["clinicActivePatientsForAdmission"],
       });
     },
+    fromAdmissionPage: true,
   });
 
   const {
@@ -94,8 +97,11 @@ export default function AdmissionPatientRegistrationPage() {
     isLoading: isLoadingVisits,
     isError: isVisitsError,
   } = useQuery<ActivePatientVisit[]>({
-    queryKey: ["clinicActivePatientsForAdmission"],
-    queryFn: () => getActiveClinicPatients({}),
+    queryKey: ["clinicActivePatientsForAdmission", admissionSearchDate],
+    queryFn: () =>
+      admissionSearchDate
+        ? getAdmissionPatientsByDate(admissionSearchDate)
+        : getActiveClinicPatients({}),
   });
 
   const handleClinicPatientSelect = (patient: Patient, visitId: number) => {
@@ -254,7 +260,7 @@ export default function AdmissionPatientRegistrationPage() {
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-b from-muted/30 to-background">
-      <div className="container mx-auto px-4 sm:px-6 py-6 max-w-7xl">
+      <div className="container mx-auto px-4 sm:px-6  max-w-7xl">
         {/* Header */}
         <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border/60">
           <div className="flex items-center gap-3">
@@ -281,6 +287,18 @@ export default function AdmissionPatientRegistrationPage() {
             </Typography>
           </div>
           <div className="flex items-center gap-2">
+            <TextField
+              type="date"
+              size="small"
+              label="بحث بتاريخ التسجيل"
+              value={admissionSearchDate ?? ""}
+              onChange={(e) => setAdmissionSearchDate(e.target.value || null)}
+              InputLabelProps={{ shrink: true }}
+              sx={{
+                "& .MuiInputBase-root": { minWidth: 160 },
+                "& .MuiInputLabel-shrink": { fontSize: "0.75rem" },
+              }}
+            />
             <Button
               variant={showQuickAddForm ? "outlined" : "contained"}
               size="medium"
@@ -295,7 +313,6 @@ export default function AdmissionPatientRegistrationPage() {
                 setShowQuickAddForm(true);
               }}
             >
-              نموذج مريض جديد
             </Button>
             <Button
               variant="outlined"
@@ -323,34 +340,6 @@ export default function AdmissionPatientRegistrationPage() {
             >
               خريطة الأسرة
             </Button>
-            <Button
-              component={Link}
-              to="/admissions/list"
-              variant="outlined"
-              size="medium"
-              startIcon={<ClipboardList />}
-              sx={{
-                borderRadius: 2,
-                textTransform: "none",
-                fontWeight: 600,
-              }}
-            >
-              قائمة التنويم
-            </Button>
-            <Button
-              component={Link}
-              to="/admissions/new"
-              variant="contained"
-              size="medium"
-              startIcon={<BedDouble />}
-              sx={{
-                borderRadius: 2,
-                textTransform: "none",
-                fontWeight: 600,
-              }}
-            >
-              تنويم جديد
-            </Button>
           </div>
         </header>
 
@@ -358,7 +347,7 @@ export default function AdmissionPatientRegistrationPage() {
         <Box
           sx={{
             display: "grid",
-            height: window.innerHeight - 200,
+            height: window.innerHeight - 120,
             gridTemplateColumns: {
               xs: "1fr",
               lg: selectedVisit
@@ -366,7 +355,6 @@ export default function AdmissionPatientRegistrationPage() {
                 : "minmax(0,1.4fr) minmax(0,1.3fr) minmax(0,1.3fr)",
             },
             gap: 1,
-            mt: 3,
           }}
         >
           {/* Column 1: Quick add patient (hidden when a visit is selected) */}
@@ -492,10 +480,14 @@ export default function AdmissionPatientRegistrationPage() {
                 </Box>
                 <Box>
                   <Typography variant="subtitle1" fontWeight={600}>
-                    المرضى المنتظرين للتنويم
+                    {admissionSearchDate
+                      ? `مرضى مسجلين بتاريخ ${dayjs(admissionSearchDate).format("DD/MM/YYYY")}`
+                      : "المرضى المنتظرين للتنويم"}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
-                    قائمة المرضى المنتظرين للتنويم لاختيارهم للتنويم
+                    {admissionSearchDate
+                      ? "مرضى مسجلين من صفحة التنويم في هذا التاريخ"
+                      : "قائمة المرضى المنتظرين للتنويم لاختيارهم للتنويم"}
                   </Typography>
                 </Box>
               </Box>
@@ -530,7 +522,9 @@ export default function AdmissionPatientRegistrationPage() {
               ) : !visits || visits.length === 0 ? (
                 <Box sx={{ p: 3, textAlign: "center" }}>
                   <Typography variant="body2" color="text.secondary">
-                    لا يوجد مرضى نشطين اليوم في العيادة
+                    {admissionSearchDate
+                      ? "لا يوجد مرضى مسجلين في هذا التاريخ من صفحة التنويم"
+                      : "لا يوجد مرضى نشطين اليوم في العيادة"}
                   </Typography>
                 </Box>
               ) : (
@@ -557,7 +551,10 @@ export default function AdmissionPatientRegistrationPage() {
                         visit={visit}
                         isSelected={selectedVisit?.id === visit.id}
                         onSelect={handleClinicPatientSelect}
-                        onProfileClick={() => {}}
+                        onProfileClick={(visit) => {
+                          setEditPatientId(visit.patient?.id ?? null);
+                          setEditPatientDialogOpen(true);
+                        }}
                         selectedPatientVisitIdInWorkspace={selectedVisit?.id ?? null}
                       />
                     ))}
@@ -625,15 +622,15 @@ export default function AdmissionPatientRegistrationPage() {
                   <Table size="small" sx={{ "& .MuiTableCell-root": { border: 0, py: 0.5 } }}>
                     <TableBody>
                       <TableRow sx={{ borderBottom: 1, borderColor: "grey.200" }}>
-                        <TableCell align="right" sx={{ color: "text.secondary", width: "40%" }}>
-                          الجنس
+                        <TableCell align="left" sx={{ color: "text.secondary", width: "40%" }}>
+                          رقم التنويم
                         </TableCell>
                         <TableCell sx={{ fontWeight: 500 }}>
-                          {selectedVisit.patient.gender === "male" ? "ذكر" : selectedVisit.patient.gender === "female" ? "أنثى" : "—"}
+                          {activeAdmissionId}
                         </TableCell>
                       </TableRow>
                       <TableRow sx={{ borderBottom: 1, borderColor: "grey.200" }}>
-                        <TableCell align="right" sx={{ color: "text.secondary" }}>
+                        <TableCell align="left" sx={{ color: "text.secondary" }}>
                           العمر
                         </TableCell>
                         <TableCell sx={{ fontWeight: 500 }}>
@@ -643,7 +640,7 @@ export default function AdmissionPatientRegistrationPage() {
                         </TableCell>
                       </TableRow>
                       <TableRow sx={{ borderBottom: 1, borderColor: "grey.200" }}>
-                        <TableCell align="right" sx={{ color: "text.secondary" }}>
+                        <TableCell align="left" sx={{ color: "text.secondary" }}>
                           الهاتف
                         </TableCell>
                         <TableCell sx={{ fontWeight: 500 }}>
@@ -651,7 +648,7 @@ export default function AdmissionPatientRegistrationPage() {
                         </TableCell>
                       </TableRow>
                       <TableRow sx={{ borderBottom: 1, borderColor: "grey.200" }}>
-                        <TableCell align="right" sx={{ color: "text.secondary" }}>
+                        <TableCell align="left" sx={{ color: "text.secondary" }}>
                           مصدر الدخل
                         </TableCell>
                         <TableCell sx={{ fontWeight: 500 }}>
@@ -659,7 +656,7 @@ export default function AdmissionPatientRegistrationPage() {
                         </TableCell>
                       </TableRow>
                       <TableRow sx={{ borderBottom: 1, borderColor: "grey.200" }}>
-                        <TableCell align="right" sx={{ color: "text.secondary" }}>
+                        <TableCell align="left" sx={{ color: "text.secondary" }}>
                           الطبيب
                         </TableCell>
                         <TableCell sx={{ fontWeight: 500 }}>
@@ -667,7 +664,7 @@ export default function AdmissionPatientRegistrationPage() {
                         </TableCell>
                       </TableRow>
                       <TableRow sx={{ borderBottom: 1, borderColor: "grey.200" }}>
-                        <TableCell align="right" sx={{ color: "text.secondary" }}>
+                        <TableCell align="left" sx={{ color: "text.secondary" }}>
                           تاريخ التسجيل
                         </TableCell>
                         <TableCell sx={{ fontWeight: 500 }}>
@@ -677,7 +674,17 @@ export default function AdmissionPatientRegistrationPage() {
                         </TableCell>
                       </TableRow>
                       <TableRow sx={{ borderBottom: 1, borderColor: "grey.200" }}>
-                        <TableCell align="right" sx={{ color: "text.secondary" }}>
+                        <TableCell align="left" sx={{ color: "text.secondary" }}>
+                          تاريخ الميلاد
+                        </TableCell>
+                        <TableCell sx={{ fontWeight: 500 }}>
+                          {selectedVisit.patient.dob
+                            ? dayjs(selectedVisit.patient.dob).format("DD/MM/YYYY")
+                            : "—"}
+                        </TableCell>
+                      </TableRow>
+                      <TableRow sx={{ borderBottom: 1, borderColor: "grey.200" }}>
+                        <TableCell align="left" sx={{ color: "text.secondary" }}>
                           حالة التنويم
                         </TableCell>
                         <TableCell sx={{ fontWeight: 500 }}>
@@ -687,7 +694,7 @@ export default function AdmissionPatientRegistrationPage() {
                       {activeAdmission && (
                         <>
                           <TableRow sx={{ borderBottom: 1, borderColor: "grey.200" }}>
-                            <TableCell align="right" sx={{ color: "text.secondary" }}>
+                            <TableCell align="left" sx={{ color: "text.secondary" }}>
                               تاريخ التنويم
                             </TableCell>
                             <TableCell sx={{ fontWeight: 500 }}>
@@ -1059,6 +1066,21 @@ export default function AdmissionPatientRegistrationPage() {
             </Button>
           </DialogActions>
         </Dialog>
+
+        <QuickAddPatientDialog
+          open={editPatientDialogOpen}
+          onClose={() => {
+            setEditPatientDialogOpen(false);
+            setEditPatientId(null);
+          }}
+          patientId={editPatientId}
+          onPatientAdded={() => {}}
+          onPatientUpdated={() => {
+            queryClient.invalidateQueries({
+              queryKey: ["clinicActivePatientsForAdmission"],
+            });
+          }}
+        />
       </div>
     </div>
   );

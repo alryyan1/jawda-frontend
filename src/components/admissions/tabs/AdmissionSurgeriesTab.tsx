@@ -41,6 +41,9 @@ import {
   AccountBalanceWallet,
   WhatsApp,
   Undo,
+  Link,
+  Refresh,
+  Sync,
 } from "@mui/icons-material";
 import { toast } from "sonner";
 import dayjs from "dayjs";
@@ -51,6 +54,12 @@ import type { SurgicalOperation } from "@/services/surgicalOperationService";
 import type { DoctorStripped } from "@/types/doctors";
 import { Printer } from "lucide-react";
 import { sendWhatsAppCloudTemplate } from "@/services/whatsappCloudApiService";
+import {
+  prepareWhatsApp,
+  markRequestSent,
+  syncAllFromFirestore,
+} from "@/services/admissionService";
+import { useAdmissionFirestoreListener } from "@/hooks/useAdmissionFirestoreListener";
 import { SurgeryFinanceDialog } from "./SurgeryFinanceDialog";
 
 interface FinanceChargeItem {
@@ -80,6 +89,8 @@ interface RequestedSurgeryItem {
   status: "pending" | "approved" | "rejected";
   approved_by: number | null;
   approved_at: string | null;
+  request_send_status?: boolean;
+  in_firestore?: boolean;
   created_at?: string;
   surgery: SurgicalOperation;
   doctor: DoctorStripped | null;
@@ -123,10 +134,14 @@ export function RequestedSurgeriesPanel({ admissionId }: RequestedSurgeriesPanel
   const [isSendingWhatsApp, setIsSendingWhatsApp] = useState<
     Record<number, boolean>
   >({});
+  const [isSendingFinanceApproval, setIsSendingFinanceApproval] = useState(false);
+  const [isSyncingFromFirestore, setIsSyncingFromFirestore] = useState(false);
 
   const queryKey = ["admissionRequestedSurgeries", admissionId];
 
-  const { data: requestedSurgeries = [], isLoading } = useQuery({
+  useAdmissionFirestoreListener(admissionId, queryKey);
+
+  const { data: requestedSurgeries = [], isLoading, refetch } = useQuery({
     queryKey,
     queryFn: () => getRequestedSurgeries(admissionId),
   });
@@ -270,6 +285,82 @@ export function RequestedSurgeriesPanel({ admissionId }: RequestedSurgeriesPanel
       toast.error("فشل إرسال إشعار الواتساب");
     } finally {
       setIsSendingWhatsApp((prev) => ({ ...prev, [surgery.id]: false }));
+    }
+  };
+
+  const handleSendFinanceApproval = async () => {
+    const surgery = requestedSurgeries[0];
+    if (!surgery?.admission?.patient?.phone) {
+      toast.error("رقم الهاتف غير متوفر");
+      return;
+    }
+
+    let phone = surgery.admission.patient.phone;
+    if (!phone.startsWith("249")) {
+      phone = `249${phone.replace(/^0/, "")}`;
+    }
+
+    setIsSendingFinanceApproval(true);
+
+    let prepareToastId: string | number | undefined;
+    try {
+      prepareToastId = toast.loading("جاري حفظ التفاصيل ورفع التقرير...");
+
+      await prepareWhatsApp(admissionId, surgery.id);
+
+      toast.success("تم التحضير. جاري الإرسال...", { id: prepareToastId });
+
+      const sanitize = (s: string) => s.replace(/[\n\r\t]+/g, " ").replace(/\s{5,}/g, "    ");
+      const operationName = sanitize(surgery.surgery?.name ?? "");
+      const patientName = sanitize(surgery.admission?.patient?.name ?? "");
+
+      await sendWhatsAppCloudTemplate({
+        to: phone,
+        template_name: "request_finance_approve",
+        language_code: "ar",
+        components: [
+          {
+            type: "body",
+            parameters: [
+              { type: "text", text: operationName },
+              { type: "text", text: patientName },
+            ],
+          },
+          { type: "button", sub_type: "quick_reply", index: 0, parameters: [{ type: "payload", payload: `admission_${admissionId}` }] },
+          { type: "button", sub_type: "quick_reply", index: 1, parameters: [{ type: "payload", payload: `admission_${admissionId}_surgery_${surgery.id}_approve` }] },
+          { type: "button", sub_type: "quick_reply", index: 2, parameters: [{ type: "payload", payload: `admission_${admissionId}_surgery_${surgery.id}_reject` }] },
+        ],
+      });
+
+      await markRequestSent(admissionId, surgery.id);
+      toast.success("تم إرسال طلب اعتماد الحصص بنجاح");
+      queryClient.invalidateQueries({ queryKey });
+    } catch (error) {
+      console.error(error);
+      if (prepareToastId != null) toast.dismiss(prepareToastId);
+      toast.error("فشل إرسال طلب اعتماد الحصص");
+    } finally {
+      setIsSendingFinanceApproval(false);
+    }
+  };
+
+  const handleSyncFromFirestore = async () => {
+    setIsSyncingFromFirestore(true);
+    try {
+      const res = await syncAllFromFirestore(admissionId);
+      const { synced, surgeries } = res;
+      if (synced === 0) {
+        toast.info((res as { message?: string }).message ?? "لا توجد اعتمادات جديدة في Firestore");
+        return;
+      }
+      toast.success(`تم مزامنة ${synced} عملية من Firestore`);
+      queryClient.setQueryData(queryKey, surgeries);
+    } catch (err) {
+      console.error(err);
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(msg || "فشل جلب البيانات من Firestore");
+    } finally {
+      setIsSyncingFromFirestore(false);
     }
   };
 
@@ -421,13 +512,36 @@ export function RequestedSurgeriesPanel({ admissionId }: RequestedSurgeriesPanel
         mb={2}
       >
         <Typography variant="h6">العمليات  </Typography>
-        <Button
-          variant="contained"
-          startIcon={<Add />}
-          onClick={handleOpenDialog}
-        >
-          طلب عملية 
-        </Button>
+        <Box sx={{ display: "flex", gap: 1 }}>
+          <IconButton
+            size="small"
+            onClick={() => refetch()}
+            title="تحديث من الخادم"
+            sx={{ color: "text.secondary" }}
+          >
+            <Refresh fontSize="small" />
+          </IconButton>
+          <IconButton
+            size="small"
+            onClick={handleSyncFromFirestore}
+            disabled={isSyncingFromFirestore}
+            title="جلب الاعتمادات من Firestore ومزامنتها مع قاعدة البيانات"
+            sx={{ color: "text.secondary" }}
+          >
+            {isSyncingFromFirestore ? (
+              <CircularProgress size={20} />
+            ) : (
+              <Sync fontSize="small" />
+            )}
+          </IconButton>
+          <Button
+            variant="contained"
+            startIcon={<Add />}
+            onClick={handleOpenDialog}
+          >
+            طلب عملية 
+          </Button>
+        </Box>
       </Box>
 
       {isLoading ? (
@@ -446,7 +560,7 @@ export function RequestedSurgeriesPanel({ admissionId }: RequestedSurgeriesPanel
           <Typography color="textSecondary">لا توجد عمليات مطلوبة</Typography>
         </Box>
       ) : (
-        <Paper variant="outlined" sx={{ borderRadius: 1, overflow: "hidden" }}>
+        <Paper variant="outlined" sx={{ borderRadius: 1, overflow: "hidden",p:1 }}>
         <List dense disablePadding>
           {requestedSurgeries.map((item, index) => (
             <React.Fragment key={item.id}>
@@ -496,6 +610,23 @@ export function RequestedSurgeriesPanel({ admissionId }: RequestedSurgeriesPanel
                     >
                       {item.surgery?.name ?? "—"}
                     </Typography>
+                    <Chip
+                      label={item.request_send_status ? "تم إرسال الطلب" : "لم يتم الإرسال"}
+                      size="small"
+                      color={item.request_send_status ? "success" : "default"}
+                      variant="outlined"
+                      sx={{ fontSize: "0.7rem" }}
+                    />
+                    {item.in_firestore && (
+                      <Chip
+                        label="متصل بـ Firestore"
+                        size="small"
+                        color="info"
+                        variant="outlined"
+                        sx={{ fontSize: "0.7rem" }}
+                        icon={<Link sx={{ fontSize: 14 }} />}
+                      />
+                    )}
                     <TextField
                       size="small"
                       type="number"
@@ -665,6 +796,20 @@ export function RequestedSurgeriesPanel({ admissionId }: RequestedSurgeriesPanel
                       </ListItemIcon>
                       <ListItemText primary="كشف الحساب" primaryTypographyProps={{ variant: "body2" }} />
                     </ListItemButton>
+                    {item.approved_at && (
+                      <>
+                        <Divider />
+                        <ListItem dense sx={{ py: 0.25, minHeight: 36 }}>
+                          <ListItemIcon sx={{ minWidth: 32 }}>
+                            <CheckCircle color="success" sx={{ fontSize: 20 }} />
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={`تاريخ الاعتماد: ${dayjs(item.approved_at).format("DD/MM/YYYY HH:mm")}`}
+                            primaryTypographyProps={{ variant: "body2", color: "success.dark" }}
+                          />
+                        </ListItem>
+                      </>
+                    )}
                     <Divider />
                     <ListItemButton
                       dense
@@ -686,9 +831,31 @@ export function RequestedSurgeriesPanel({ admissionId }: RequestedSurgeriesPanel
                   </List>
                 </Box>
               </ListItem>
+              <ListItem sx={{textAlign:'center',display:'flex',justifyContent:'center'}}>
+              {requestedSurgeries.length > 0 && (
+            <Button
+             
+              variant="contained"
+              color="success"
+              startIcon={
+                isSendingFinanceApproval ? (
+                  <CircularProgress size={18} color="inherit" />
+                ) : (
+                  <WhatsApp />
+                )
+              }
+              onClick={handleSendFinanceApproval}
+              disabled={isSendingFinanceApproval ||item.approved_at !== null || item.initial_price == null }
+              sx={{ textTransform: "none" }}
+            >
+              ارسال طلب اعتماد
+            </Button>
+          )}
+              </ListItem>
             </React.Fragment>
           ))}
         </List>
+       
         </Paper>
       )}
 
@@ -768,6 +935,7 @@ export function RequestedSurgeriesPanel({ admissionId }: RequestedSurgeriesPanel
         onSendWhatsAppEnd={(surgeryId) =>
           setIsSendingWhatsApp((prev) => ({ ...prev, [surgeryId]: false }))
         }
+        onRequestSentSuccess={() => queryClient.invalidateQueries({ queryKey })}
       />
 
       <SurgeryLedgerDialog

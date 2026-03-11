@@ -34,9 +34,10 @@ import {
   X,
   Calculator,
   FileText,
+  DoorOpen,
 } from "lucide-react";
 import { getAdmissionPatientsByDate } from "@/services/clinicService";
-import { getAdmissions, getPatientActiveAdmission, createAdmission, updateAdmission, getAdmissionRequestedSurgeriesSummary } from "@/services/admissionService";
+import { getAdmissions, getPatientActiveAdmission, createAdmission, updateAdmission, getAdmissionRequestedSurgeriesSummary, dischargeAdmission } from "@/services/admissionService";
 import type {
   ActivePatientVisit,
   Patient,
@@ -193,6 +194,25 @@ export default function AdmissionPatientRegistrationPage() {
     },
     onError: (err: { response?: { data?: { message?: string } } }) => {
       toast.error(err.response?.data?.message ?? "فشل تعيين السرير");
+    },
+  });
+
+  const dischargeMutation = useMutation({
+    mutationFn: (admissionId: number) => dischargeAdmission(admissionId, {}),
+    onSuccess: () => {
+      toast.success("تم إخلاء السرير بنجاح");
+      queryClient.invalidateQueries({ queryKey: ["admissions"] });
+      queryClient.invalidateQueries({ queryKey: ["admissionPatientsByDate"] });
+      queryClient.invalidateQueries({ queryKey: ["ward"] });
+      queryClient.invalidateQueries({ queryKey: ["wardsList"] });
+      setAdmittedPatientIds((prev) => {
+        const next = new Set(prev);
+        if (selectedPatientId) next.delete(selectedPatientId);
+        return next;
+      });
+    },
+    onError: (err: { response?: { data?: { message?: string } } }) => {
+      toast.error(err.response?.data?.message ?? "فشل إخلاء السرير");
     },
   });
 
@@ -702,6 +722,16 @@ export default function AdmissionPatientRegistrationPage() {
                                 : "—"}
                             </TableCell>
                           </TableRow>
+                          {activeAdmission.discharge_date && (
+                            <TableRow sx={{ borderBottom: 1, borderColor: "grey.200" }}>
+                              <TableCell align="left" sx={{ color: "text.secondary" }}>
+                                تاريخ الخروج
+                              </TableCell>
+                              <TableCell sx={{ fontWeight: 500 }}>
+                                {dayjs(activeAdmission.discharge_date).format("DD/MM/YYYY HH:mm")}
+                              </TableCell>
+                            </TableRow>
+                          )}
                           {(activeAdmission.ward || activeAdmission.room || activeAdmission.bed) && (
                             <TableRow sx={{ borderBottom: 1, borderColor: "grey.200" }}>
                               <TableCell align="right" sx={{ color: "text.secondary" }}>
@@ -818,7 +848,7 @@ export default function AdmissionPatientRegistrationPage() {
                     >
               {hasActiveAdmission ? "عرض / تعديل ملف التنويم" : "فتح ملف تنويم"}
                     </Button>
-                    {hasActiveAdmission && (
+                    {hasActiveAdmission && !activeAdmission?.bed_id && (
                       <Button
                         variant="outlined"
                         size="medium"
@@ -829,6 +859,24 @@ export default function AdmissionPatientRegistrationPage() {
                         sx={{ textTransform: "none", fontWeight: 600 }}
                       >
                         اختر السرير
+                      </Button>
+                    )}
+                    {hasActiveAdmission && activeAdmission?.bed_id && (
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        size="medium"
+                        fullWidth
+                        startIcon={<DoorOpen size={18} />}
+                        disabled={dischargeMutation.isPending}
+                        onClick={() => {
+                          if (window.confirm("هل أنت متأكد من إخلاء السرير؟")) {
+                            dischargeMutation.mutate(activeAdmission.id);
+                          }
+                        }}
+                        sx={{ textTransform: "none", fontWeight: 600 }}
+                      >
+                        {dischargeMutation.isPending ? "جاري الإخلاء..." : "إخلاء السرير"}
                       </Button>
                     )}
                   </Box>

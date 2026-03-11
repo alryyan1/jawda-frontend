@@ -26,7 +26,7 @@ import { Delete, Link, WhatsApp } from "@mui/icons-material";
 import { Printer } from "lucide-react";
 import { toast } from "sonner";
 import apiClient from "@/services/api";
-import { prepareWhatsApp } from "@/services/admissionService";
+import { prepareWhatsApp, markRequestSent } from "@/services/admissionService";
 import { sendWhatsAppCloudTemplate } from "@/services/whatsappCloudApiService";
 
 interface FinanceChargeItem {
@@ -80,6 +80,7 @@ export interface SurgeryFinanceDialogProps {
   isSendingWhatsApp: Record<number, boolean>;
   onSendWhatsAppStart: (surgeryId: number) => void;
   onSendWhatsAppEnd: (surgeryId: number) => void;
+  onRequestSentSuccess?: () => void;
 }
 
 export function SurgeryFinanceDialog({
@@ -98,6 +99,7 @@ export function SurgeryFinanceDialog({
   isSendingWhatsApp,
   onSendWhatsAppStart,
   onSendWhatsAppEnd,
+  onRequestSentSuccess,
 }: SurgeryFinanceDialogProps) {
   const handleSendWhatsApp = async () => {
     if (!selectedSurgery?.admission?.patient?.phone) {
@@ -136,16 +138,15 @@ export function SurgeryFinanceDialog({
               { type: "text", text: patientName },
             ],
           },
-          {
-            type: "button",
-            sub_type: "quick_reply",
-            index: 0,
-            parameters: [{ type: "payload", payload: `admission_${admissionId}` }],
-          },
+          { type: "button", sub_type: "quick_reply", index: 0, parameters: [{ type: "payload", payload: `admission_${admissionId}` }] },
+          { type: "button", sub_type: "quick_reply", index: 1, parameters: [{ type: "payload", payload: `admission_${admissionId}_surgery_${selectedSurgery.id}_approve` }] },
+          { type: "button", sub_type: "quick_reply", index: 2, parameters: [{ type: "payload", payload: `admission_${admissionId}_surgery_${selectedSurgery.id}_reject` }] },
         ],
       });
 
+      await markRequestSent(admissionId, selectedSurgery.id);
       toast.success("تم إرسال طلب اعتماد الحصص بنجاح");
+      onRequestSentSuccess?.();
     } catch (error) {
       console.error(error);
       if (prepareToastId != null) toast.dismiss(prepareToastId);

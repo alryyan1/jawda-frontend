@@ -5,35 +5,43 @@ import { getFirestore, Firestore } from "firebase/firestore";
 import { getAnalytics, Analytics } from "firebase/analytics";
 import { getAuth, Auth, signInAnonymously } from "firebase/auth";
 
-// Your web app's Firebase configuration
+// Firebase configuration - same project as backend (sales-9e9b8)
+// Add VITE_FIREBASE_API_KEY and VITE_FIREBASE_APP_ID to .env from Firebase Console (sales-9e9b8)
+// Fallback to hospitalapp when env not set (admissions Firestore needs sales-9e9b8)
 const firebaseConfig = {
-  apiKey: "AIzaSyAkjo7wFjRMjyDfssFPVqG-nfoNDfv_jk0",
-  authDomain: "hospitalapp-681f1.firebaseapp.com",
-  projectId: "hospitalapp-681f1",
-  storageBucket: "hospitalapp-681f1.firebasestorage.app",
-  messagingSenderId: "340060147561",
-  appId: "1:340060147561:web:f09f004b0acb873fdc77f8",
-  measurementId: "G-X6T5P6YK10"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyAkjo7wFjRMjyDfssFPVqG-nfoNDfv_jk0",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "hospitalapp-681f1.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "hospitalapp-681f1",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "hospitalapp-681f1.firebasestorage.app",
+  messagingSenderId: (import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID as string) || "340060147561",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:340060147561:web:f09f004b0acb873fdc77f8",
+  measurementId: (import.meta.env.VITE_FIREBASE_MEASUREMENT_ID as string) || "G-X6T5P6YK10",
 };
 
 // Check if Firebase is enabled (defaults to true if not set)
 const isFirebaseEnabled = (): boolean => {
   const stored = localStorage.getItem('firebase_enabled');
   if (stored === null) {
-    // Default to enabled if not set
     return true;
   }
   return stored === 'true';
 };
 
-// Initialize Firebase only if enabled
+const hasFirebaseConfig = (): boolean => {
+  return !!(firebaseConfig.apiKey && firebaseConfig.appId);
+};
+
+// Note: Admissions Firestore (pharmacies/one_care/admissions) lives in sales-9e9b8.
+// Set VITE_FIREBASE_* in .env for sales-9e9b8 to get real-time admission updates.
+
+// Initialize Firebase only if enabled and config present
 let app: FirebaseApp | null = null;
 let storage: FirebaseStorage | null = null;
 let db: Firestore | null = null;
 let analytics: Analytics | null = null;
 let auth: Auth | null = null;
 
-if (isFirebaseEnabled()) {
+if (isFirebaseEnabled() && hasFirebaseConfig()) {
   try {
     app = initializeApp(firebaseConfig);
     storage = getStorage(app);

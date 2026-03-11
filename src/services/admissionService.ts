@@ -290,6 +290,38 @@ export const prepareWhatsApp = async (
   return response.data;
 };
 
+export const markRequestSent = async (
+  admissionId: string | number,
+  requestedSurgeryId: number,
+): Promise<void> => {
+  await apiClient.post(
+    `${API_URL}/${admissionId}/requested-surgeries/${requestedSurgeryId}/mark-request-sent`,
+  );
+};
+
+export const syncApprovalFromFirestore = async (
+  admissionId: string | number,
+  requestedSurgeryId: number,
+  data: { approved_at: string | null; approved_by: number | null; status: string },
+): Promise<void> => {
+  await apiClient.post(
+    `${API_URL}/${admissionId}/requested-surgeries/${requestedSurgeryId}/sync-approval-from-firestore`,
+    data,
+  );
+};
+
+/** Sync all approved surgeries from Firestore to DB (backend fetches from same Firestore project). */
+export const syncAllFromFirestore = async (
+  admissionId: string | number,
+): Promise<{ synced: number; surgeries: unknown[]; message?: string }> => {
+  const response = await apiClient.post<{
+    synced: number;
+    surgeries: unknown[];
+    message?: string;
+  }>(`${API_URL}/${admissionId}/sync-all-from-firestore`);
+  return response.data;
+};
+
 export const exportAdmissionLedgerPdf = async (id: number): Promise<Blob> => {
   const response = await apiClient.get(`${API_URL}/${id}/ledger/pdf`, {
     responseType: "blob",

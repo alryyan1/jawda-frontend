@@ -100,6 +100,23 @@ export const unpayLabRequest = async (labRequestId: number): Promise<void> => {
   await apiClient.post(`${LABREQUEST_BASE_URL}/${labRequestId}/unpay`);
 };
 
+export interface RecordLabRefundPayload {
+  amount: number;
+  returned_payment_method: 'cash' | 'bank';
+}
+
+export const recordLabRequestRefund = async (
+  labRequestId: number,
+  payload: RecordLabRefundPayload
+): Promise<{ data: { id: number; amount: number; returned_payment_method: string; user_id: number; user?: { id: number; name: string }; created_at: string } }> => {
+  const response = await apiClient.post(
+    `${LABREQUEST_BASE_URL}/${labRequestId}/refunds`,
+    payload,
+    { headers: { "X-Suppress-Error-Toast": "1" } },
+  );
+  return response.data;
+};
+
 export const updateAllLabRequestsBankak = async (visitId: number, isBankak: boolean): Promise<DoctorVisit> => {
   const response = await apiClient.patch<{ data: DoctorVisit }>(
     `/doctor-visits/${visitId}/update-all-lab-requests-bankak`,

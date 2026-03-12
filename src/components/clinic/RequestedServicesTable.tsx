@@ -39,6 +39,7 @@ import {
   CreditCard,
   PrinterIcon,
   Zap,
+  RotateCcw,
 } from "lucide-react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -48,9 +49,11 @@ import {
   updateRequestedServiceDetails,
   removeRequestedServiceFromVisit,
   recordServicePayment,
+  recordRequestedServiceRefund,
 } from "@/services/visitService";
 import ManageRequestedServiceCostsDialog from "./ManageRequestedServiceCostsDialog";
 import ManageServiceDepositsDialog from "./ManageServiceDepositsDialog";
+import RefundDialog from "../common/RefundDialog";
 import type { AxiosError } from "axios";
 import {
   getDepositsForRequestedService,
@@ -188,6 +191,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
     useState(false);
   const [selectedServiceForDeposits, setSelectedServiceForDeposits] =
     useState<RequestedService | null>(null);
+  const [refundService, setRefundService] = useState<RequestedService | null>(null);
 
   // PDF Preview state
   const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false);
@@ -494,6 +498,17 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
     setIsManageServiceCostsDialogOpen(false);
     setSelectedRequestedServiceForCosts(null);
   };
+
+  const refundMutation = useMutation({
+    mutationFn: (params: { requestedServiceId: number; amount: number; returned_payment_method: "cash" | "bank" }) =>
+      recordRequestedServiceRefund(params.requestedServiceId, { amount: params.amount, returned_payment_method: params.returned_payment_method }),
+    onSuccess: () => {
+      toast.success("تم تسجيل الاسترداد بنجاح");
+      queryClient.invalidateQueries({ queryKey: ["requestedServicesForVisit", visitId] });
+      queryClient.invalidateQueries({ queryKey: ["doctorVisit", visitId] });
+      setRefundService(null);
+    },
+  });
 
   const calculateItemBalance = (
     rs: RequestedService,
@@ -972,6 +987,19 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                 >
                   المدفوعات
                 </Button>
+                {rowOptionsService && Number(rowOptionsService.amount_paid) > 0 && (
+                  <Button
+                    variant="outlined"
+                    color="warning"
+                    onClick={() => {
+                      setIsRowOptionsDialogOpen(false);
+                      setRefundService(rowOptionsService);
+                    }}
+                    startIcon={<RotateCcw className="h-4 w-4" />}
+                  >
+                    استرداد
+                  </Button>
+                )}
                 {rowOptionsService &&
                   calculateItemBalance(rowOptionsService) > 0.01 && (
                     <Button
@@ -1019,6 +1047,29 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
               </Button>
             </DialogActions>
           </Dialog>
+        )}
+        {refundService && (
+          <RefundDialog
+            open={!!refundService}
+            onClose={() => setRefundService(null)}
+            title={`استرداد - ${refundService.service?.name || "خدمة"}`}
+            itemLabel={refundService.service?.name || "خدمة"}
+            maxRefundable={
+              Number(refundService.amount_paid) -
+              (refundService.returned_refunds?.reduce((s, r) => s + Number(r.amount), 0) ?? 0)
+            }
+            refunds={refundService.returned_refunds ?? []}
+            onRefund={async (amount, returned_payment_method) => {
+              await refundMutation.mutateAsync({
+                requestedServiceId: refundService.id,
+                amount,
+                returned_payment_method,
+              });
+            }}
+            onSuccess={() => {
+              queryClient.invalidateQueries({ queryKey: ["requestedServicesForVisit", visitId] });
+            }}
+          />
         )}
         {isPdfPreviewVisible && (
           <PdfPreviewDialog

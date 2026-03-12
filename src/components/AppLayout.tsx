@@ -1208,6 +1208,11 @@ const AppLayout: React.FC = () => {
                               label="المصروفات اليومية"
                             />
                             <ReportMenuItem
+                              to="/reports/monthly-shifts"
+                              icon={FileBarChart2}
+                              label="تقرير الورديات الشهري"
+                            />
+                            <ReportMenuItem
                               to="/reports/monthly-lab-income"
                               icon={BarChartBig}
                               label="دخل المختبر الشهري"

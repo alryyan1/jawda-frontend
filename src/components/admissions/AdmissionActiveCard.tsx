@@ -15,6 +15,7 @@ export interface AdmissionActiveCardProps {
   onSelect: (patient: Patient, visitId: number) => void;
   onProfileClick?: (visit: ActivePatientVisit) => void;
   selectedPatientVisitIdInWorkspace: number | null;
+  index: number;
 }
 
 /**
@@ -24,6 +25,7 @@ export interface AdmissionActiveCardProps {
 const AdmissionActiveCard: React.FC<AdmissionActiveCardProps> = ({
   visit,
   isSelected,
+  index,
   onSelect,
   onProfileClick = () => {},
 }) => {
@@ -52,7 +54,7 @@ const AdmissionActiveCard: React.FC<AdmissionActiveCardProps> = ({
           .join(" · ")
       : "";
 
-  const queueNumberOrVisitId = visit.number ?? visit.id;
+  const queueNumberOrVisitId = index + 1;
 
   const handleCardClick = () => {
     setClickAnimating(true);

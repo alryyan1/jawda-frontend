@@ -33,6 +33,7 @@ import CompanyFormPage, {
 } from "./pages/companies/CompanyFormPage";
 import CompanyServiceContractsPage from "./pages/companies/CompanyServiceContractsPage";
 import TodaysPatientsPage from "./pages/patients/TodaysPatientsPage";
+import VisitDetailsPage from "./pages/patients/VisitDetailsPage";
 import DoctorSchedulesPage from "./components/schedules/DoctorSchedulesPage";
 import DoctorShiftsReportPage from "./pages/reports/DoctorShiftsReportPage";
 import DoctorShiftDetailsPage from "./pages/reports/DoctorShiftDetailsPage";
@@ -54,6 +55,7 @@ import ProfilePage from "./pages/ProfilePage";
 import ClinicShiftSummaryReportPage from "./pages/reports/ClinicShiftSummaryReportPage";
 import CostsReportPage from "./pages/CostsReportPage";
 import DailyCostsReportPage from "./pages/reports/DailyCostsReportPage";
+import MonthlyShiftsReportPage from "./pages/reports/MonthlyShiftsReportPage";
 import InsuranceAuditPage from "./pages/audit/InsuranceAuditPage";
 import AuditRecordPage from "./pages/audit/AuditRecordPage";
 import MonthlyServiceIncomeReportPage from "./pages/reports/MonthlyServiceIncomeReportPage";
@@ -399,6 +401,10 @@ const router = createBrowserRouter([
                 element: <DailyCostsReportPage />,
               },
               {
+                path: "monthly-shifts",
+                element: <MonthlyShiftsReportPage />,
+              },
+              {
                 path: "doctor-statistics",
                 element: <DoctorStatisticsReportPage />,
               },
@@ -434,6 +440,10 @@ const router = createBrowserRouter([
           {
             path: "/patients",
             element: <TodaysPatientsPage />,
+          },
+          {
+            path: "/patients/visit/:visitId",
+            element: <VisitDetailsPage />,
           },
           // === NEW: ATTENDANCE MODULE ROUTES ===
           {

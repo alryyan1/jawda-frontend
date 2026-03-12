@@ -18,6 +18,7 @@ import {
   AlertTriangle,
   PrinterIcon,
   PlusCircle,
+  FileText,
 } from "lucide-react";
 
 import ServicesRequestComponent from "./ServicesRequestComponent";
@@ -54,6 +55,7 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
   const visitQueryKey = ["doctorVisit", visitId];
   const [activeTab, setActiveTab] = useState<'services' | 'lab'>("services");
   const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false);
+  const [pdfPreviewMode, setPdfPreviewMode] = useState<'receipt' | 'clinic-invoice'>('receipt');
   const {
     data: visit,
     isLoading,
@@ -106,6 +108,7 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
     if (!visit) return;
     setIsGeneratingPdf(true);
     setPdfUrl(null); // Clear previous URL
+    setPdfPreviewMode('receipt');
     setIsPdfPreviewOpen(true); // Open dialog to show loader
 
     try {
@@ -143,6 +146,45 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
         description: (error as { response?: { data?: { message?: string } } }).response?.data?.message || (error as Error).message
       });
       setIsPdfPreviewOpen(false); // Close dialog on error
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
+  const handleViewClinicInvoice = async () => {
+    if (!visit) return;
+    setIsGeneratingPdf(true);
+    setPdfUrl(null);
+    setPdfPreviewMode('clinic-invoice');
+    setIsPdfPreviewOpen(true);
+
+    try {
+      const response = await apiClient.get(`visits/${visit.id}/clinic-invoice/pdf`, {
+        responseType: 'blob',
+        headers: { Accept: 'application/pdf' },
+      });
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const objectUrl = URL.createObjectURL(blob);
+      setPdfUrl(objectUrl);
+      const patientNameSanitized = visit.patient?.name?.replace(/[^A-Za-z0-9\-_\u0600-\u06FF]/g, '_') ?? 'Patient';
+      setPdfFileName(`clinic-invoice-visit-${visit.id}_${patientNameSanitized}.pdf`);
+    } catch (error: unknown) {
+      console.error("Error generating clinic invoice PDF:", error);
+      const err = error as { response?: { data?: Blob | { message?: string } } };
+      const data = err?.response?.data;
+      if (data instanceof Blob) {
+        data.text().then((text) => {
+          try {
+            const json = JSON.parse(text) as { message?: string };
+            toast.error(json.message || "فشل في إنشاء الفاتورة");
+          } catch {
+            toast.error("فشل في إنشاء الفاتورة");
+          }
+        }).catch(() => toast.error("فشل في إنشاء الفاتورة"));
+      } else {
+        toast.error((data as { message?: string })?.message || "فشل في إنشاء الفاتورة");
+      }
+      setIsPdfPreviewOpen(false);
     } finally {
       setIsGeneratingPdf(false);
     }
@@ -227,6 +269,12 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
               {isGeneratingPdf ? <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2"/> : <PrinterIcon className="h-4 w-4 ltr:mr-2 rtl:ml-2"/>}
               طباعة الإيصال
             </Button>
+            {activeTab === 'services' && (
+              <Button onClick={handleViewClinicInvoice} variant="outline" size="sm" disabled={isGeneratingPdf || !visit}>
+                {isGeneratingPdf ? <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2"/> : <FileText className="h-4 w-4 ltr:mr-2 rtl:ml-2"/>}
+                الفاتورة
+              </Button>
+            )}
             {!isUnifiedCashier && canAddService && (
               <Button disabled={!can('اضافه خدمه')} onClick={() => setOpenSelectionGridCommand(c => c + 1)} variant="default" size="sm">
                 قائمه الخدمات
@@ -349,7 +397,7 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
         }}
         pdfUrl={pdfUrl}
         isLoading={isGeneratingPdf && !pdfUrl} // Show loader while generating before URL is ready
-        title={`معاينة ${activeTab === 'lab' ? 'إيصال المختبر' : 'إيصال الخدمات'} - زيارة ${visit?.id}`}
+        title={pdfPreviewMode === 'clinic-invoice' ? `معاينة الفاتورة - زيارة ${visit?.id}` : `معاينة ${activeTab === 'lab' ? 'إيصال المختبر' : 'إيصال الخدمات'} - زيارة ${visit?.id}`}
         fileName={pdfFileName}
       />
     </div>

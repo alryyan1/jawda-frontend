@@ -282,7 +282,7 @@ export default function AdmissionPatientRegistrationPage() {
       <div className="container mx-auto px-4 sm:px-6  max-w-7xl">
         {/* Header */}
         <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border/60">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 mt-2">
             <Button
               component={Link}
               to="/admissions/dashboard"
@@ -500,13 +500,13 @@ export default function AdmissionPatientRegistrationPage() {
                 <Box>
                   <Typography variant="subtitle1" fontWeight={600}>
                     {admissionSearchDate
-                      ? `مرضى مسجلين بتاريخ ${dayjs(admissionSearchDate).format("YYYY/MM/DD")}`
-                      : `مرضى مسجلين اليوم من صفحة التنويم (${dayjs().format("YYYY/MM/DD")})`}
+                      ? `مرضى  بتاريخ ${dayjs(admissionSearchDate).format("YYYY/MM/DD")}`
+                      : `مرضى  اليوم  (${dayjs().format("YYYY/MM/DD")})`}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
                     {admissionSearchDate
-                      ? "مرضى مسجلين من صفحة التنويم في هذا التاريخ"
-                      : "مرضى مسجلين من صفحة التنويم في تاريخ اليوم"}
+                      ? "مرضى   في هذا التاريخ"
+                      : "مرضى   في تاريخ اليوم"}
                   </Typography>
                 </Box>
               </Box>
@@ -564,10 +564,11 @@ export default function AdmissionPatientRegistrationPage() {
                       justifyContent: "flex-start",
                     }}
                   >
-                    {visits.map((visit) => (
+                    {visits.map((visit,index) => (
                       <AdmissionActiveCard
                         key={visit.id}
                         visit={visit}
+                        index={visits.length - (index+1)}
                         isSelected={selectedVisit?.id === visit.id}
                         onSelect={handleClinicPatientSelect}
                         onProfileClick={(visit) => {
@@ -714,7 +715,7 @@ export default function AdmissionPatientRegistrationPage() {
                         <>
                           <TableRow sx={{ borderBottom: 1, borderColor: "grey.200" }}>
                             <TableCell align="left" sx={{ color: "text.secondary" }}>
-                              تاريخ التنويم
+                              تاريخ فتح الملف
                             </TableCell>
                             <TableCell sx={{ fontWeight: 500 }}>
                               {activeAdmission.created_at

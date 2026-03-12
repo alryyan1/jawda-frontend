@@ -307,6 +307,9 @@ export interface Patient {
   // ... other existing patient fields ...
   created_at: string;
   updated_at: string;
+
+  /** Active admission (when loaded via PatientResource, e.g. doctor-visits index) */
+  admission?: { id: number; bed_id?: number | null; [key: string]: unknown } | null;
 }
 
 // Form data for the new EditPatientInfoDialog

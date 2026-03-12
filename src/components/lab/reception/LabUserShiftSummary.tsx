@@ -43,6 +43,35 @@ const LabUserShiftSummary: React.FC<LabUserShiftSummaryProps> = ({ compact = fal
             </span>
           </div>
 
+          {(Number(labShiftSummary.total_cash_refund) > 0 || Number(labShiftSummary.total_bank_refund) > 0) && (
+            <>
+              <div className="border-t border-orange-200 pt-2 mt-2">
+                <span className="text-sm font-medium text-orange-700">الاستردادات</span>
+              </div>
+              {Number(labShiftSummary.total_cash_refund) > 0 && (
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-1">
+                    <Coins className="h-3 w-3 text-orange-600" />
+                    <span className="text-lg text-gray-600">استرداد كاش</span>
+                  </div>
+                  <span className="text-lg font-medium text-orange-700">
+                    {formatNumber(labShiftSummary.total_cash_refund)}
+                  </span>
+                </div>
+              )}
+              {Number(labShiftSummary.total_bank_refund) > 0 && (
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-1">
+                    <Landmark className="h-3 w-3 text-orange-600" />
+                    <span className="text-lg text-gray-600">استرداد بنك</span>
+                  </div>
+                  <span className="text-lg font-medium text-orange-700">
+                    {formatNumber(labShiftSummary.total_bank_refund)}
+                  </span>
+                </div>
+              )}
+            </>
+          )}
           <div className="border-t border-blue-200 pt-2">
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-1">
@@ -53,6 +82,23 @@ const LabUserShiftSummary: React.FC<LabUserShiftSummaryProps> = ({ compact = fal
                 {formatNumber(labShiftSummary.total_lab_income)}
               </span>
             </div>
+            {(() => {
+              const cashRefund = Number(labShiftSummary.total_cash_refund) || 0;
+              const bankRefund = Number(labShiftSummary.total_bank_refund) || 0;
+              const totalRefund = cashRefund + bankRefund;
+              const netTotal = labShiftSummary.total_lab_income - totalRefund;
+              return (
+                <div className="flex justify-between items-center mt-2 pt-2 border-t border-blue-100">
+                  <div className="flex items-center gap-1">
+                    <TrendingUp className="h-3 w-3 text-emerald-600" />
+                    <span className="text-xl font-semibold text-emerald-800">الصافي</span>
+                  </div>
+                  <span className="text-xl font-bold text-emerald-800">
+                    {formatNumber(netTotal)}
+                  </span>
+                </div>
+              );
+            })()}
           </div>
         </div>
       ) : !isLoading ? (

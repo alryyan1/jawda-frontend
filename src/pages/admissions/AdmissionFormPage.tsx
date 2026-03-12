@@ -239,14 +239,14 @@ export default function AdmissionFormPage(props: AdmissionFormPageProps = {}) {
       sx={{
         maxWidth: embedded ? "100%" : "1000px",
         mx: embedded ? 0 : "auto",
-        p: embedded ? 0 : 2,
+        p: embedded ? 0 : 1,
         height: embedded ? "auto" : window.innerHeight - 100,
         overflowY: "auto",
       }}
     >
       {/* Header - hide when embedded (dialog has its own title/close) */}
       {!embedded && (
-        <Box sx={{ mb: 2, display: "flex", alignItems: "center", gap: 2 }}>
+        <Box sx={{ mb: 1, display: "flex", alignItems: "center", gap: 1 }}>
           <Button
             onClick={() => navigate(-1)}
             variant="outlined"
@@ -582,7 +582,7 @@ export default function AdmissionFormPage(props: AdmissionFormPageProps = {}) {
         </Box>
 
         {/* Footer Actions */}
-        <Box sx={{ display: "flex", gap: 1.5, justifyContent: "flex-end", mt: 1.5, pt: 2, borderTop: "1px solid", borderColor: "divider" }}>
+        <Box sx={{ display: "flex", gap: 1.5, justifyContent: "flex-end", pt: 1, borderTop: "1px solid", borderColor: "divider" }}>
           <Button variant="outlined" color="inherit" size="medium" onClick={() => (embedded && onClose ? onClose() : navigate(-1))} disabled={mutation.isPending} sx={{ px: 3 }}>
             إلغاء
           </Button>

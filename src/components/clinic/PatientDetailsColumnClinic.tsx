@@ -7,7 +7,7 @@ import type { RequestedService } from "@/types/services";
 import PatientCompanyDetails from "../lab/reception/PatientCompanyDetails";
 import PdfPreviewDialog from "../common/PdfPreviewDialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, DollarSign, FileText } from "lucide-react";
+import { Loader2, DollarSign, FileText, Printer } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { ItemRow } from "../lab/workstation/PatientDetailsLabEntry";
@@ -18,6 +18,7 @@ import {
   Copy
 } from "lucide-react";
 import { useAuthorization } from "@/hooks/useAuthorization";
+import apiClient from "@/services/api";
 export interface PatientDetailsColumnClinicProps {
   visitId: number | null;
   onPrintReceipt?: () => void;
@@ -164,25 +165,39 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
     }
   }), [payAllMutation]);
 
-  // Generate PDF mutation
+  // Generate clinic invoice PDF mutation
   const generatePdfMutation = useMutation({
     mutationFn: async () => {
       if (!visitId) throw new Error("No visit ID provided");
-      
-      // This would typically call your PDF generation API
-      // For now, using a placeholder endpoint
-      const response = await fetch(`/api/doctor-visits/${visitId}/receipt.pdf`);
-      if (!response.ok) throw new Error("Failed to generate PDF");
-      
-      const blob = await response.blob();
+      const response = await apiClient.get(`/visits/${visitId}/clinic-invoice/pdf`, {
+        responseType: "blob",
+        headers: { "X-Suppress-Error-Toast": "1" },
+      } as { responseType: "blob"; headers?: Record<string, string> });
+      const blob = response.data as Blob;
       return URL.createObjectURL(blob);
     },
     onSuccess: (url) => {
       setPdfUrl(url);
       setIsPdfDialogOpen(true);
     },
-    onError: (error: Error) => {
-      toast.error(error.message || "فشل في إنشاء ملف PDF");
+    onError: (error: unknown) => {
+      const err = error as { response?: { data?: Blob | { message?: string } } };
+      const data = err?.response?.data;
+      if (data instanceof Blob) {
+        data.text().then((text) => {
+          try {
+            const json = JSON.parse(text) as { message?: string };
+            toast.error(json.message || "فشل في إنشاء ملف PDF");
+          } catch {
+            toast.error("فشل في إنشاء ملف PDF");
+          }
+        }).catch(() => toast.error("فشل في إنشاء ملف PDF"));
+      } else {
+        toast.error((data as { message?: string })?.message || "فشل في إنشاء ملف PDF");
+      }
+    },
+    onMutate: () => {
+      setIsGeneratingPdf(true);
     },
     onSettled: () => {
       setIsGeneratingPdf(false);
@@ -435,6 +450,23 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
             </Button>
           )}
 
+          {/* View/Print Clinic Invoice - Services Tab */}
+          {activeTab === 'services' && requestedServices.length > 0 && (
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => generatePdfMutation.mutate()}
+              disabled={generatePdfMutation.isPending}
+            >
+              {generatePdfMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Printer className="h-4 w-4 mr-2" />
+              )}
+              عرض الفاتورة
+            </Button>
+          )}
+
         </div>
         </div>
         <div>
@@ -504,8 +536,8 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
         isOpen={isPdfDialogOpen}
         onOpenChange={setIsPdfDialogOpen}
         pdfUrl={pdfUrl}
-        title="معاينة الإيصال"
-        fileName={`receipt-${visitId}.pdf`}
+        title="معاينة الفاتورة"
+        fileName={`clinic-invoice-${visitId}.pdf`}
         isLoading={isGeneratingPdf || generatePdfMutation.isPending}
       />
     </>

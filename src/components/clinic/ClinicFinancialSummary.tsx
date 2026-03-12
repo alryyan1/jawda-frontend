@@ -53,6 +53,11 @@ const ClinicFinancialSummary: React.FC<ClinicFinancialSummaryProps> = ({
   const totalCash = (servicesShiftSummary?.service_income?.cash || 0) + (labShiftSummary?.lab_income?.cash || 0);
   const totalBank = (servicesShiftSummary?.service_income?.bank || 0) + (labShiftSummary?.lab_income?.bank || 0);
 
+  const totalCashRefund = servicesShiftSummary?.total_cash_refund ?? 0;
+  const totalBankRefund = servicesShiftSummary?.total_bank_refund ?? 0;
+  const totalRefund = totalCashRefund + totalBankRefund;
+  const netTotal = servicesShiftSummary?.net_total ?? totalIncome - totalRefund;
+
   return (
     <div className="w-full max-w-6xl mx-auto p-6 space-y-6">
   
@@ -85,6 +90,32 @@ const ClinicFinancialSummary: React.FC<ClinicFinancialSummaryProps> = ({
             {formatNumber(totalBank)}
           </div>
           <div className="text-xs  mt-1"> </div>
+        </div>
+      </div>
+
+      {/* Refunds & Net */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        {totalCashRefund > 0 && (
+          <div className="rounded-xl border border-orange-200 bg-orange-50/50 text-center p-6">
+            <span className="text-sm font-medium text-orange-700">استرداد كاش</span>
+            <div className="text-2xl font-bold text-orange-700">
+              {formatNumber(totalCashRefund)}
+            </div>
+          </div>
+        )}
+        {totalBankRefund > 0 && (
+          <div className="rounded-xl border border-orange-200 bg-orange-50/50 text-center p-6">
+            <span className="text-sm font-medium text-orange-700">استرداد بنك</span>
+            <div className="text-2xl font-bold text-orange-700">
+              {formatNumber(totalBankRefund)}
+            </div>
+          </div>
+        )}
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 text-center p-6">
+          <span className="text-sm font-medium text-emerald-700">الصافي</span>
+          <div className="text-2xl font-bold text-emerald-800">
+            {formatNumber(netTotal)}
+          </div>
         </div>
       </div>
 
@@ -123,6 +154,30 @@ const ClinicFinancialSummary: React.FC<ClinicFinancialSummaryProps> = ({
                   {formatNumber(servicesShiftSummary.service_income.bank)}
                 </span>
               </div>
+
+              {(Number(servicesShiftSummary.service_income.cash_refund) > 0 || Number(servicesShiftSummary.service_income.bank_refund) > 0) && (
+                <>
+                  <div className="border-t border-orange-200 pt-2 mt-2">
+                    <span className="text-sm font-medium text-orange-700">الاستردادات</span>
+                  </div>
+                  {Number(servicesShiftSummary.service_income.cash_refund) > 0 && (
+                    <div className="flex justify-between items-center py-2">
+                      <span className="text-sm text-orange-700">استرداد كاش</span>
+                      <span className="text-lg font-medium text-orange-700">
+                        {formatNumber(servicesShiftSummary.service_income.cash_refund)}
+                      </span>
+                    </div>
+                  )}
+                  {Number(servicesShiftSummary.service_income.bank_refund) > 0 && (
+                    <div className="flex justify-between items-center py-2">
+                      <span className="text-sm text-orange-700">استرداد بنك</span>
+                      <span className="text-lg font-medium text-orange-700">
+                        {formatNumber(servicesShiftSummary.service_income.bank_refund)}
+                      </span>
+                    </div>
+                  )}
+                </>
+              )}
 
               <div className="flex justify-between items-center py-3  rounded-lg px-3">
                 <div className="flex items-center gap-2">
@@ -180,6 +235,30 @@ const ClinicFinancialSummary: React.FC<ClinicFinancialSummaryProps> = ({
                 </span>
               </div>
 
+              {(Number(labShiftSummary.lab_income.cash_refund) > 0 || Number(labShiftSummary.lab_income.bank_refund) > 0) && (
+                <>
+                  <div className="border-t border-orange-200 pt-2 mt-2">
+                    <span className="text-sm font-medium text-orange-700">الاستردادات</span>
+                  </div>
+                  {Number(labShiftSummary.lab_income.cash_refund) > 0 && (
+                    <div className="flex justify-between items-center py-2">
+                      <span className="text-sm text-orange-700">استرداد كاش</span>
+                      <span className="text-lg font-medium text-orange-700">
+                        {formatNumber(labShiftSummary.lab_income.cash_refund)}
+                      </span>
+                    </div>
+                  )}
+                  {Number(labShiftSummary.lab_income.bank_refund) > 0 && (
+                    <div className="flex justify-between items-center py-2">
+                      <span className="text-sm text-orange-700">استرداد بنك</span>
+                      <span className="text-lg font-medium text-orange-700">
+                        {formatNumber(labShiftSummary.lab_income.bank_refund)}
+                      </span>
+                    </div>
+                  )}
+                </>
+              )}
+
               <div className="flex justify-between items-center py-3  rounded-lg px-3">
                 <div className="flex items-center gap-2">
                   {/* <DollarSign className="h-4 w-4 " /> */}
@@ -219,7 +298,14 @@ const ClinicFinancialSummary: React.FC<ClinicFinancialSummaryProps> = ({
             <div className="text-3xl font-bold ">
               {formatNumber(totalIncome)}
             </div>
-            <div className="text-sm "> </div>
+            {totalRefund > 0 && (
+              <div className="mt-2 pt-2 border-t border-gray-200">
+                <span className="text-sm text-emerald-700">الصافي: </span>
+                <span className="text-xl font-bold text-emerald-800">
+                  {formatNumber(netTotal)}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>

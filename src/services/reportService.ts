@@ -62,6 +62,55 @@ export interface MonthlyLabIncomeFilters {
   month: number;
   year: number;
 }
+
+export interface MonthlyShiftSummaryRow {
+  id: number;
+  date: string;
+  created_at: string;
+  is_closed: boolean;
+  user_opened?: { id: number; name: string } | null;
+  revenue_cash: number;
+  revenue_bank: number;
+  cost_cash: number;
+  cost_bank: number;
+  refund_cash: number;
+  refund_bank: number;
+  net_cash: number;
+  net_bank: number;
+  net_total: number;
+}
+
+export interface MonthlyShiftsSummaryResponse {
+  data: MonthlyShiftSummaryRow[];
+  summary: {
+    revenue_cash: number;
+    revenue_bank: number;
+    cost_cash: number;
+    cost_bank: number;
+    refund_cash: number;
+    refund_bank: number;
+    net_cash: number;
+    net_bank: number;
+    net_total: number;
+  };
+  report_period: {
+    month: number;
+    year: number;
+    from: string;
+    to: string;
+  };
+}
+
+export const getMonthlyShiftsSummary = async (
+  month: number,
+  year: number
+): Promise<MonthlyShiftsSummaryResponse> => {
+  const response = await apiClient.get<MonthlyShiftsSummaryResponse>('/reports/monthly-shifts-summary', {
+    params: { month, year },
+  });
+  return response.data;
+};
+
 export const downloadMonthlyLabIncomePdf = async (filters: MonthlyLabIncomeFilters): Promise<Blob> => {
   const response = await apiClient.get('/reports/monthly-lab-income/pdf', {
     params: filters,

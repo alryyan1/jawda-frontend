@@ -7,6 +7,16 @@ export interface ServiceGroup {
 }
 // src/types/services.ts (or visits.ts)
 
+export interface ReturnedRequestedService {
+  id: number;
+  requested_service_id: number;
+  amount: number;
+  returned_payment_method: 'cash' | 'bank';
+  user_id: number;
+  user?: { id: number; name: string };
+  created_at: string;
+}
+
 export interface RequestedService {
   id: number; // ID of the requested_services record itself
   visit_id: number;
@@ -33,6 +43,7 @@ export interface RequestedService {
   done: boolean;
   approval: boolean;
   created_at: string;
+  returned_refunds?: ReturnedRequestedService[];
 }
 export interface Service {
   id: number;

@@ -37,6 +37,17 @@ export interface RequestedResult {
   childTest?: ChildTest;
 }
 
+// --- ReturnedLabRequest ---
+export interface ReturnedLabRequest {
+  id: number;
+  lab_request_id: number;
+  amount: number;
+  returned_payment_method: 'cash' | 'bank';
+  user_id: number;
+  user?: { id: number; name: string };
+  created_at: string;
+}
+
 // --- LabRequest ---
 export interface LabRequest {
   id: number;
@@ -86,6 +97,7 @@ export interface LabRequest {
 
   results?: RequestedResult[]; // Array of results associated with this LabRequest
   requested_organisms?: RequestedOrganism[]; // For culture tests
+  returned_refunds?: ReturnedLabRequest[];
 }
 
 // --- RequestedOrganism (for culture results) ---

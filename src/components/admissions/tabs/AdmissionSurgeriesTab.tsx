@@ -669,7 +669,7 @@ export function RequestedSurgeriesPanel({ admissionId }: RequestedSurgeriesPanel
                       disabled={
                         updateInitialPriceMutation.isPending &&
                         updateInitialPriceMutation.variables
-                          ?.requestedSurgeryId === item.id
+                          ?.requestedSurgeryId === item.id || item.approved_at !== null
                       }
                       sx={{
                         width: 166,
@@ -889,7 +889,7 @@ export function RequestedSurgeriesPanel({ admissionId }: RequestedSurgeriesPanel
 
             <TextField
               fullWidth
-              label="السعر المبدئي"
+              label="السعر "
               type="number"
               inputProps={{ min: 0, step: "0.01" }}
               value={initialPrice}

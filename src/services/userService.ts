@@ -21,6 +21,8 @@ export interface LabUserShiftIncomeSummary {
   total_lab_income: number;
   total_cash: number;
   total_bank: number;
+  total_cash_refund?: number;
+  total_bank_refund?: number;
 }
 export const getUsers = (
   page = 1,

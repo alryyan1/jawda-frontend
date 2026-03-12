@@ -559,6 +559,8 @@ interface QuickAddPatientDialogProps {
   /** When provided, dialog opens in edit mode for this patient. */
   patientId?: number | null;
   onPatientUpdated?: (patient: PatientSearchResult) => void;
+  /** When true, renders only the form content without Dialog wrapper (for embedding in pages/tabs). */
+  embedded?: boolean;
 }
 
 export default function QuickAddPatientDialog({
@@ -567,6 +569,7 @@ export default function QuickAddPatientDialog({
   onPatientAdded,
   patientId = null,
   onPatientUpdated,
+  embedded = false,
 }: QuickAddPatientDialogProps) {
   const theme = useTheme();
   const queryClient = useQueryClient();
@@ -691,77 +694,82 @@ export default function QuickAddPatientDialog({
     [handleQuickAddSubmit, quickAddFormData, quickAddPatientMutation.isPending],
   );
 
-  return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      maxWidth="md"
-      fullWidth
-      PaperProps={{
-        sx: {
-          borderRadius: 3,
-          boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
-        },
-      }}
-    >
-      <DialogTitle
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.primary.dark} 90%)`,
-          color: "white",
-          py: 2,
-        }}
-      >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <User size={24} />
-          <Typography variant="h6" fontWeight="bold">
-            {isEditMode ? "تعديل بيانات المريض" : "إضافة مريض جديد"}
-          </Typography>
-        </Box>
-        <IconButton
-          onClick={onClose}
-          size="small"
+  const formContent = (
+    <>
+      {!embedded && (
+        <DialogTitle
           sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.primary.dark} 90%)`,
             color: "white",
-            "&:hover": { bgcolor: "rgba(255,255,255,0.1)" },
+            py: 2,
           }}
         >
-          <X size={20} />
-        </IconButton>
-      </DialogTitle>
-
-      <DialogContent sx={{ p: 3, mt: 1 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <User size={24} />
+            <Typography variant="h6" fontWeight="bold">
+              {isEditMode ? "تعديل بيانات المريض" : "إضافة مريض جديد"}
+            </Typography>
+          </Box>
+          <IconButton
+            onClick={onClose}
+            size="small"
+            sx={{
+              color: "white",
+              "&:hover": { bgcolor: "rgba(255,255,255,0.1)" },
+            }}
+          >
+            <X size={20} />
+          </IconButton>
+        </DialogTitle>
+      )}
+      <Box component={embedded ? "div" : DialogContent} sx={embedded ? { p: 0 } : { p: 3, mt: 1 }}>
         {isEditMode && isLoadingPatient ? (
           <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
             <CircularProgress />
           </Box>
         ) : (
-        <QuickAddPatientFormFields
-          theme={theme}
-          quickAddFormData={quickAddFormData}
-          setQuickAddFormData={setQuickAddFormData}
-          quickAddPatientMutation={quickAddPatientMutation}
-          handleFormKeyDown={handleFormKeyDown}
-        />
+          <QuickAddPatientFormFields
+            theme={theme}
+            quickAddFormData={quickAddFormData}
+            setQuickAddFormData={setQuickAddFormData}
+            quickAddPatientMutation={quickAddPatientMutation}
+            handleFormKeyDown={handleFormKeyDown}
+          />
         )}
-      </DialogContent>
-      <DialogActions
-        sx={{
-          p: 2.5,
-          bgcolor: "background.default",
-          borderTop: "1px solid",
-          borderColor: "divider",
-        }}
+      </Box>
+      <Box
+        component={embedded ? "div" : DialogActions}
+        sx={
+          embedded
+            ? {
+                p: 2.5,
+                bgcolor: "background.default",
+                borderTop: "1px solid",
+                borderColor: "divider",
+                display: "flex",
+                gap: 1,
+                justifyContent: "flex-end",
+              }
+            : {
+                p: 2.5,
+                bgcolor: "background.default",
+                borderTop: "1px solid",
+                borderColor: "divider",
+              }
+        }
       >
-        <Button
-          onClick={onClose}
-          disabled={quickAddPatientMutation.isPending}
-          sx={{ color: "text.secondary" }}
-        >
-          إلغاء
-        </Button>
+        {!embedded && (
+          <Button
+            onClick={onClose}
+            disabled={quickAddPatientMutation.isPending}
+            sx={{ color: "text.secondary" }}
+          >
+            إلغاء
+          </Button>
+        )}
         <Button
           onClick={handleQuickAddSubmit}
           variant="contained"
@@ -784,7 +792,33 @@ export default function QuickAddPatientDialog({
             "إضافة مريض"
           )}
         </Button>
-      </DialogActions>
+      </Box>
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <Box sx={{ maxWidth: 600 }}>
+      
+        {formContent}
+      </Box>
+    );
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="md"
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 3,
+          boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
+        },
+      }}
+    >
+      {formContent}
     </Dialog>
   );
 }

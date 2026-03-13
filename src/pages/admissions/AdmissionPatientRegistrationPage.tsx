@@ -37,7 +37,7 @@ import {
   DoorOpen,
 } from "lucide-react";
 import { getAdmissionPatientsByDate } from "@/services/clinicService";
-import { getAdmissions, getPatientActiveAdmission, createAdmission, updateAdmission, getAdmissionRequestedSurgeriesSummary, dischargeAdmission } from "@/services/admissionService";
+import { getAdmissions, getPatientActiveAdmission, createAdmission, updateAdmission, getAdmissionRequestedSurgeriesSummary, dischargeAdmission, vacateBedAdmission } from "@/services/admissionService";
 import type {
   ActivePatientVisit,
   Patient,
@@ -197,10 +197,24 @@ export default function AdmissionPatientRegistrationPage() {
     },
   });
 
+  const vacateBedMutation = useMutation({
+    mutationFn: (admissionId: number) => vacateBedAdmission(admissionId),
+    onSuccess: () => {
+      toast.success("تم إخلاء السرير بنجاح");
+      queryClient.invalidateQueries({ queryKey: ["admissions"] });
+      queryClient.invalidateQueries({ queryKey: ["admissionPatientsByDate"] });
+      queryClient.invalidateQueries({ queryKey: ["ward"] });
+      queryClient.invalidateQueries({ queryKey: ["wardsList"] });
+    },
+    onError: (err: { response?: { data?: { message?: string } } }) => {
+      toast.error(err.response?.data?.message ?? "فشل إخلاء السرير");
+    },
+  });
+
   const dischargeMutation = useMutation({
     mutationFn: (admissionId: number) => dischargeAdmission(admissionId, {}),
     onSuccess: () => {
-      toast.success("تم إخلاء السرير بنجاح");
+      toast.success("تم خروج المريض بنجاح");
       queryClient.invalidateQueries({ queryKey: ["admissions"] });
       queryClient.invalidateQueries({ queryKey: ["admissionPatientsByDate"] });
       queryClient.invalidateQueries({ queryKey: ["ward"] });
@@ -212,7 +226,7 @@ export default function AdmissionPatientRegistrationPage() {
       });
     },
     onError: (err: { response?: { data?: { message?: string } } }) => {
-      toast.error(err.response?.data?.message ?? "فشل إخلاء السرير");
+      toast.error(err.response?.data?.message ?? "فشل خروج المريض");
     },
   });
 
@@ -233,7 +247,13 @@ export default function AdmissionPatientRegistrationPage() {
     initial_price?: number | null;
     surgery?: { name: string };
     admission?: { patient?: { name: string } };
-    finances?: Array<{ amount: number; payment_method?: "cash" | "bankak" }>;
+    finances?: Array<{
+      amount: number;
+      payment_method?: "cash" | "bankak";
+      finance_charge?: { beneficiary?: "center" | "staff" };
+    }>;
+    paid_cash?: number;
+    paid_bank?: number;
   };
   const { data: requestedSurgeriesByDate = [], isLoading: isLoadingCalculator } = useQuery({
     queryKey: ["requestedSurgeriesByDate", calculatorDate],
@@ -245,32 +265,53 @@ export default function AdmissionPatientRegistrationPage() {
     },
     enabled: calculatorDialogOpen,
   });
+  const { data: calculatorSummary } = useQuery({
+    queryKey: ["requestedSurgeriesSummaryByDate", calculatorDate],
+    queryFn: async () => {
+      const { data } = await apiClient.get<{
+        total_initial: number;
+        paid: number;
+        paid_cash: number;
+        paid_bank: number;
+        balance: number;
+      }>(`/requested-surgeries/summary`, { params: { date: calculatorDate } });
+      return data;
+    },
+    enabled: calculatorDialogOpen,
+  });
   const totalInitialPrice = useMemo(
     () => requestedSurgeriesByDate.reduce((sum, s) => sum + (Number(s.initial_price) || 0), 0),
     [requestedSurgeriesByDate]
   );
-  const { totalCash, totalBank } = useMemo(() => {
-    let cash = 0;
-    let bank = 0;
-    for (const s of requestedSurgeriesByDate) {
-      for (const f of s.finances ?? []) {
-        const amt = Number(f.amount) || 0;
-        if (f.payment_method === "bankak") bank += amt;
-        else cash += amt;
-      }
-    }
-    return { totalCash: cash, totalBank: bank };
-  }, [requestedSurgeriesByDate]);
+  const totalCash = calculatorSummary?.paid_cash ?? 0;
+  const totalBank = calculatorSummary?.paid_bank ?? 0;
   const getRowCashBank = (row: RequestedSurgeryRow) => {
-    let cash = 0;
-    let bank = 0;
-    for (const f of row.finances ?? []) {
-      const amt = Number(f.amount) || 0;
-      if (f.payment_method === "bankak") bank += amt;
-      else cash += amt;
-    }
+    const cash = Number(row.paid_cash) || 0;
+    const bank = Number(row.paid_bank) || 0;
     return { cash, bank };
   };
+  const getRowStaffCenter = (row: RequestedSurgeryRow) => {
+    let staff = 0;
+    let center = 0;
+    for (const f of row.finances ?? []) {
+      const amt = Number(f.amount) || 0;
+      if (f.finance_charge?.beneficiary === "staff") staff += amt;
+      else if (f.finance_charge?.beneficiary === "center") center += amt;
+    }
+    return { staff, center };
+  };
+  const { totalStaff, totalCenter } = useMemo(() => {
+    let staff = 0;
+    let center = 0;
+    for (const row of requestedSurgeriesByDate) {
+      for (const f of row.finances ?? []) {
+        const amt = Number(f.amount) || 0;
+        if (f.finance_charge?.beneficiary === "staff") staff += amt;
+        else if (f.finance_charge?.beneficiary === "center") center += amt;
+      }
+    }
+    return { totalStaff: staff, totalCenter: center };
+  }, [requestedSurgeriesByDate]);
 
   const handleAdmissionButtonClick = () => {
     if (!selectedPatientId) return;
@@ -915,15 +956,15 @@ export default function AdmissionPatientRegistrationPage() {
                         size="small"
                         fullWidth
                         startIcon={<DoorOpen size={16} />}
-                        disabled={dischargeMutation.isPending}
+                        disabled={vacateBedMutation.isPending}
                         onClick={() => {
-                          if (window.confirm("هل أنت متأكد من إخلاء السرير؟")) {
-                            dischargeMutation.mutate(activeAdmission.id);
+                          if (window.confirm("هل أنت متأكد من إخلاء السرير؟ (المريض يبقى منوماً بدون سرير)")) {
+                            vacateBedMutation.mutate(activeAdmission.id);
                           }
                         }}
                         sx={{ textTransform: "none", fontWeight: 600, py: 0.75 }}
                       >
-                        {dischargeMutation.isPending ? "جاري الإخلاء..." : "إخلاء السرير"}
+                        {vacateBedMutation.isPending ? "جاري الإخلاء..." : "إخلاء السرير"}
                       </Button>
                     )}
                   
@@ -1099,7 +1140,7 @@ export default function AdmissionPatientRegistrationPage() {
         <Dialog
           open={calculatorDialogOpen}
           onClose={() => setCalculatorDialogOpen(false)}
-          maxWidth="sm"
+          maxWidth="md"
           fullWidth
           PaperProps={{ sx: { borderRadius: 2 } }}
         >
@@ -1128,6 +1169,8 @@ export default function AdmissionPatientRegistrationPage() {
                         <TableCell>المريض</TableCell>
                         <TableCell>العملية</TableCell>
                         <TableCell align="right">السعر</TableCell>
+                        <TableCell align="right">اجمالي الكادر</TableCell>
+                        <TableCell align="right">اجمالي المركز</TableCell>
                         <TableCell align="right">كاش</TableCell>
                         <TableCell align="right">بنك</TableCell>
                       </TableRow>
@@ -1135,6 +1178,7 @@ export default function AdmissionPatientRegistrationPage() {
                     <TableBody>
                       {requestedSurgeriesByDate.map((row) => {
                         const { cash, bank } = getRowCashBank(row);
+                        const { staff, center } = getRowStaffCenter(row);
                         return (
                           <TableRow key={row.id}>
                             <TableCell>{row.id}</TableCell>
@@ -1142,6 +1186,12 @@ export default function AdmissionPatientRegistrationPage() {
                             <TableCell>{row.surgery?.name ?? "—"}</TableCell>
                             <TableCell align="right">
                               {(Number(row.initial_price) || 0).toLocaleString()} SDG
+                            </TableCell>
+                            <TableCell align="right">
+                              {staff > 0 ? `${staff.toLocaleString()} SDG` : "—"}
+                            </TableCell>
+                            <TableCell align="right">
+                              {center > 0 ? `${center.toLocaleString()} SDG` : "—"}
                             </TableCell>
                             <TableCell align="right">
                               {cash > 0 ? `${cash.toLocaleString()} SDG` : "—"}
@@ -1161,6 +1211,14 @@ export default function AdmissionPatientRegistrationPage() {
                     <Typography fontWeight={700} color="primary.main" variant="h6">
                       {totalInitialPrice.toLocaleString()} SDG
                     </Typography>
+                  </Box>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <Typography fontWeight={600} variant="body2" color="primary.main">اجمالي الكادر:</Typography>
+                    <Typography fontWeight={600} variant="body1">{totalStaff.toLocaleString()} SDG</Typography>
+                  </Box>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <Typography fontWeight={600} variant="body2" color="secondary.main">اجمالي المركز:</Typography>
+                    <Typography fontWeight={600} variant="body1">{totalCenter.toLocaleString()} SDG</Typography>
                   </Box>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                     <Typography fontWeight={600} variant="body2" color="success.main">كاش:</Typography>

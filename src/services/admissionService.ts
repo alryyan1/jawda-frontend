@@ -106,6 +106,14 @@ export const updateAdmission = async (
   return response.data;
 };
 
+export const vacateBedAdmission = async (id: number): Promise<{ data: Admission }> => {
+  const response = await apiClient.put<{ data: Admission }>(
+    `${API_URL}/${id}/vacate-bed`,
+    {},
+  );
+  return response.data;
+};
+
 export const dischargeAdmission = async (
   id: number,
   data: DischargeFormData,

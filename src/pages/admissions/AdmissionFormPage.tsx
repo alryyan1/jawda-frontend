@@ -361,6 +361,7 @@ export default function AdmissionFormPage(props: AdmissionFormPageProps = {}) {
                         <TextField
                           {...field}
                           fullWidth
+                          autoFocus={true}
                           size="small"
                           type="number"
                           inputProps={{ min: 1, step: 1 }}

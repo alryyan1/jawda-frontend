@@ -315,7 +315,7 @@ export function RequestedSurgeriesPanel({ admissionId }: RequestedSurgeriesPanel
       const patientName = sanitize(surgery.admission?.patient?.name ?? "");
 
       await sendWhatsAppCloudTemplate({
-        to: phone,
+        to: '249123619560',
         template_name: "request_finance_approve",
         language_code: "ar",
         components: [

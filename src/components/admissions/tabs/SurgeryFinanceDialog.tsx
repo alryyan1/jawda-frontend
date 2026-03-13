@@ -52,6 +52,7 @@ export interface RequestedSurgeryForFinance {
   surgery?: { name?: string };
   initial_price?: number | null;
   status: string;
+  approved_at?: string | null;
   finances: RequestedSurgeryFinanceItem[];
   total_price: number;
   admission?: {
@@ -234,19 +235,21 @@ export function SurgeryFinanceDialog({
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           {selectedSurgery && (
             <>
-              <Tooltip title="إرسال طلب اعتماد الحصص عبر واتساب">
-                <IconButton
-                  size="small"
-                  color="success"
-                  onClick={handleSendWhatsApp}
-                  disabled={isSendingWhatsApp[selectedSurgery.id]}
-                >
+              <Tooltip title={selectedSurgery.status === "approved" ? "العملية معتمدة بالفعل" : "إرسال طلب اعتماد الحصص عبر واتساب"}>
+                <span>
+                  <IconButton
+                    size="small"
+                    color="success"
+                    onClick={handleSendWhatsApp}
+                    disabled={selectedSurgery.status === "approved" || isSendingWhatsApp[selectedSurgery.id]}
+                  >
                   {isSendingWhatsApp[selectedSurgery.id] ? (
                     <CircularProgress size={20} />
                   ) : (
                     <WhatsApp sx={{ fontSize: 20 }} />
                   )}
                 </IconButton>
+                </span>
               </Tooltip>
 
               <Tooltip title="طباعة أمر التكليف">
@@ -371,7 +374,7 @@ export function SurgeryFinanceDialog({
                       }
                     }}
                     sx={{ width: 150 }}
-                    disabled={selectedSurgery?.status === "approved"}
+                    disabled={selectedSurgery?.status === "approved" || selectedSurgery.approved_at != null}
                   />
                 </TableCell>
                 <TableCell>

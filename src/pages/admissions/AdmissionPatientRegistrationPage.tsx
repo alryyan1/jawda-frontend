@@ -228,15 +228,19 @@ export default function AdmissionPatientRegistrationPage() {
   });
 
   const calculatorDate = dayjs().format("YYYY-MM-DD");
+  type RequestedSurgeryRow = {
+    id: number;
+    initial_price?: number | null;
+    surgery?: { name: string };
+    admission?: { patient?: { name: string } };
+    finances?: Array<{ amount: number; payment_method?: "cash" | "bankak" }>;
+  };
   const { data: requestedSurgeriesByDate = [], isLoading: isLoadingCalculator } = useQuery({
     queryKey: ["requestedSurgeriesByDate", calculatorDate],
     queryFn: async () => {
-      const { data } = await apiClient.get<Array<{
-        id: number;
-        initial_price?: number | null;
-        surgery?: { name: string };
-        admission?: { patient?: { name: string } };
-      }>>(`/requested-surgeries`, { params: { date: calculatorDate } });
+      const { data } = await apiClient.get<RequestedSurgeryRow[]>(`/requested-surgeries`, {
+        params: { date: calculatorDate },
+      });
       return data ?? [];
     },
     enabled: calculatorDialogOpen,
@@ -245,6 +249,28 @@ export default function AdmissionPatientRegistrationPage() {
     () => requestedSurgeriesByDate.reduce((sum, s) => sum + (Number(s.initial_price) || 0), 0),
     [requestedSurgeriesByDate]
   );
+  const { totalCash, totalBank } = useMemo(() => {
+    let cash = 0;
+    let bank = 0;
+    for (const s of requestedSurgeriesByDate) {
+      for (const f of s.finances ?? []) {
+        const amt = Number(f.amount) || 0;
+        if (f.payment_method === "bankak") bank += amt;
+        else cash += amt;
+      }
+    }
+    return { totalCash: cash, totalBank: bank };
+  }, [requestedSurgeriesByDate]);
+  const getRowCashBank = (row: RequestedSurgeryRow) => {
+    let cash = 0;
+    let bank = 0;
+    for (const f of row.finances ?? []) {
+      const amt = Number(f.amount) || 0;
+      if (f.payment_method === "bankak") bank += amt;
+      else cash += amt;
+    }
+    return { cash, bank };
+  };
 
   const handleAdmissionButtonClick = () => {
     if (!selectedPatientId) return;
@@ -837,49 +863,70 @@ export default function AdmissionPatientRegistrationPage() {
                   )}
 
                   {/* Action buttons - full width like PatientDetailsColumnV1 */}
-                  <Box sx={{ display: "flex", flexDirection: "column", gap: 1, mt: "auto", pt: 2, borderTop: 1, borderColor: "divider" }}>
+                  <Box sx={{ display: "flex", flexDirection: "column", gap: 0.1, mt: "auto", pt: 1.5, borderTop: 1, borderColor: "divider" }}>
                     <Button
                       variant="contained"
-                      size="medium"
+                      size="small"
                       fullWidth
-                      startIcon={<FileText size={18} />}
+                      startIcon={<FileText size={16} />}
                       disabled={!selectedPatientId}
                       onClick={handleAdmissionButtonClick}
-                      sx={{ textTransform: "none", fontWeight: 600 }}
+                      sx={{ textTransform: "none", fontWeight: 600, py: 0.75 }}
                     >
-              {hasActiveAdmission ? "عرض / تعديل ملف التنويم" : "فتح ملف تنويم"}
+                      {hasActiveAdmission ? "عرض / تعديل ملف التنويم" : "فتح ملف تنويم"}
                     </Button>
-                    {hasActiveAdmission && !activeAdmission?.bed_id && (
+                    <div style={{ display: "flex", flexDirection: "row", gap: 0.5 ,marginTop: "0.5rem",}}>
+                    {hasActiveAdmission && !activeAdmission?.bed_id && activeAdmission?.status !== "discharged" && (
                       <Button
                         variant="outlined"
-                        size="medium"
+                        size="small"
                         fullWidth
-                        startIcon={<Bed size={18} />}
+                        startIcon={<Bed size={16} />}
                         disabled={!selectedPatientId}
                         onClick={() => setBedMapOpen(true)}
-                        sx={{ textTransform: "none", fontWeight: 600 }}
+                        sx={{ textTransform: "none", fontWeight: 600, py: 0.75 }}
                       >
                         اختر السرير
                       </Button>
                     )}
+                      {hasActiveAdmission && !activeAdmission?.bed_id && activeAdmission?.status !== "discharged" && (
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        size="small"
+                        fullWidth
+                        startIcon={<DoorOpen size={16} />}
+                        disabled={dischargeMutation.isPending}
+                        onClick={() => {
+                          if (window.confirm("هل أنت متأكد من خروج المريض؟")) {
+                            dischargeMutation.mutate(activeAdmission!.id);
+                          }
+                        }}
+                        sx={{ textTransform: "none", fontWeight: 600, py: 0.75 }}
+                      >
+                        {dischargeMutation.isPending ? "جاري الخروج..." : "خروج المريض"}
+                      </Button>
+                    )}
+                    </div>
                     {hasActiveAdmission && activeAdmission?.bed_id && (
                       <Button
                         variant="outlined"
                         color="error"
-                        size="medium"
+                        size="small"
                         fullWidth
-                        startIcon={<DoorOpen size={18} />}
+                        startIcon={<DoorOpen size={16} />}
                         disabled={dischargeMutation.isPending}
                         onClick={() => {
                           if (window.confirm("هل أنت متأكد من إخلاء السرير؟")) {
                             dischargeMutation.mutate(activeAdmission.id);
                           }
                         }}
-                        sx={{ textTransform: "none", fontWeight: 600 }}
+                        sx={{ textTransform: "none", fontWeight: 600, py: 0.75 }}
                       >
                         {dischargeMutation.isPending ? "جاري الإخلاء..." : "إخلاء السرير"}
                       </Button>
                     )}
+                  
                   </Box>
                 </Box>
               ) : (
@@ -1057,7 +1104,7 @@ export default function AdmissionPatientRegistrationPage() {
           PaperProps={{ sx: { borderRadius: 2 } }}
         >
           <DialogTitle>
-            إجمالي السعر الأولي — عمليات اليوم
+             عمليات اليوم
             <Typography component="span" variant="body2" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
               {dayjs(calculatorDate).format("YYYY/MM/DD")}
             </Typography>
@@ -1080,30 +1127,49 @@ export default function AdmissionPatientRegistrationPage() {
                         <TableCell>#</TableCell>
                         <TableCell>المريض</TableCell>
                         <TableCell>العملية</TableCell>
-                        <TableCell align="right">السعر الأولي</TableCell>
+                        <TableCell align="right">السعر</TableCell>
+                        <TableCell align="right">كاش</TableCell>
+                        <TableCell align="right">بنك</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {requestedSurgeriesByDate.map((row) => (
-                        <TableRow key={row.id}>
-                          <TableCell>{row.id}</TableCell>
-                          <TableCell>{row.admission?.patient?.name ?? "—"}</TableCell>
-                          <TableCell>{row.surgery?.name ?? "—"}</TableCell>
-                          <TableCell align="right">
-                            {(Number(row.initial_price) || 0).toLocaleString()} SDG
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {requestedSurgeriesByDate.map((row) => {
+                        const { cash, bank } = getRowCashBank(row);
+                        return (
+                          <TableRow key={row.id}>
+                            <TableCell>{row.id}</TableCell>
+                            <TableCell>{row.admission?.patient?.name ?? "—"}</TableCell>
+                            <TableCell>{row.surgery?.name ?? "—"}</TableCell>
+                            <TableCell align="right">
+                              {(Number(row.initial_price) || 0).toLocaleString()} SDG
+                            </TableCell>
+                            <TableCell align="right">
+                              {cash > 0 ? `${cash.toLocaleString()} SDG` : "—"}
+                            </TableCell>
+                            <TableCell align="right">
+                              {bank > 0 ? `${bank.toLocaleString()} SDG` : "—"}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </TableContainer>
-                <Box sx={{ pt: 1, pb: 0.5, display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 1 }}>
-                  <Typography fontWeight={700} variant="body1">
-                    الإجمالي:
-                  </Typography>
-                  <Typography fontWeight={700} color="primary.main" variant="h6">
-                    {totalInitialPrice.toLocaleString()} SDG
-                  </Typography>
+                <Box sx={{ pt: 1, pb: 0.5, display: "flex", flexWrap: "wrap", justifyContent: "flex-end", alignItems: "center", gap: 2 }}>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <Typography fontWeight={700} variant="body1">الإجمالي:</Typography>
+                    <Typography fontWeight={700} color="primary.main" variant="h6">
+                      {totalInitialPrice.toLocaleString()} SDG
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <Typography fontWeight={600} variant="body2" color="success.main">كاش:</Typography>
+                    <Typography fontWeight={600} variant="body1">{totalCash.toLocaleString()} SDG</Typography>
+                  </Box>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <Typography fontWeight={600} variant="body2" color="info.main">بنك:</Typography>
+                    <Typography fontWeight={600} variant="body1">{totalBank.toLocaleString()} SDG</Typography>
+                  </Box>
                 </Box>
               </>
             )}

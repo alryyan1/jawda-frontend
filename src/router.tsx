@@ -96,6 +96,7 @@ import OnlineBookingPage from "./pages/onlineBooking/OnlineBookingPage";
 import DeletedServiceDepositsPage from "./pages/DeletedServiceDepositsPage";
 import JobsManagementPage from "./pages/JobsManagementPage.tsx";
 import AdmissionsListPage from "./pages/admissions/AdmissionsListPage";
+import EmployeeExpensesPage from "./pages/finance/EmployeeExpensesPage";
 import AdmissionFormPage from "./pages/admissions/AdmissionFormPage";
 import AdmissionDetailsPage from "./pages/admissions/AdmissionDetailsPage";
 import AdmissionsDashboardPage from "./pages/admissions/AdmissionsDashboardPage";
@@ -347,6 +348,10 @@ const router = createBrowserRouter([
             element: <ProfilePage />,
           },
           {
+            path: "finance/employee-expenses",
+            element: <EmployeeExpensesPage />,
+          },
+          {
             path: "reports",
             element: <ReportsLayout />, // Or <Outlet /> if reports are top-level sections
             children: [
@@ -396,6 +401,7 @@ const router = createBrowserRouter([
                 path: "costs", // Or whatever path you chose for the backend route / allclinicsReportNew
                 element: <CostsReportPage />,
               },
+           
               {
                 path: "daily-costs",
                 element: <DailyCostsReportPage />,

@@ -261,6 +261,7 @@ export function QuickAddPatientFormFields({
           >
             <Box sx={{ flex: 1 }}>
               <TextField
+              autoFocus={true}
                 fullWidth
                 sx={{width:'260px'}}
                 label="اسم المريض"

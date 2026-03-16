@@ -150,21 +150,18 @@ export const allMainNavItems: NavItem[] = [
   { to: "/lab-sample-collection", label: "جمع العينات", icon: Syringe },
   { to: "/lab-workstation", label: "نتائج المختبر", icon: FlaskConical },
   // { to: '/laboratory/offers', label: 'عروض التحاليل', icon: Package },
-  { to: "/attendance/sheet", label: "سجل الحضور", icon: ClipboardEditIcon },
+  // { to: "/attendance/sheet", label: "سجل الحضور", icon: ClipboardEditIcon },
   { to: "/patients", label: "المرضى", icon: Users },
-  { to: "/admissions", label: "التنويم", icon: Hospital },
+  // { to: "/admissions", label: "التنويم", icon: Hospital },
+  { to: "/finance/employee-expenses", label: "مصروفات الموظفين", icon: HandCoins },
   {
     to: "/admissions/patient-registration",
-    label: "تسجيل مريض للتنويم",
+    label: "التنويم  ",
     icon: BedDouble,
   },
   { to: "/online-booking", label: "الحجز ", icon: CalendarCheck2 },
-  { to: "/cash-reconciliation", label: "الفئات الماليه", icon: CreditCard },
-  {
-    to: "/admissions/statistics",
-    label: "إحصائيات العمليات",
-    icon: FileBarChart2,
-  },
+  // { to: "/cash-reconciliation", label: "الفئات الماليه", icon: CreditCard },
+ 
 ];
 
 // Default nav items per user_type (for fallback when nav_items is null)
@@ -1201,6 +1198,11 @@ const AppLayout: React.FC = () => {
                               to="/reports/costs"
                               icon={FileSpreadsheet}
                               label="المصروفات"
+                            />
+                            <ReportMenuItem
+                              to="/reports/employee-expenses"
+                              icon={Users}
+                              label="مصروفات الموظفين"
                             />
                             <ReportMenuItem
                               to="/reports/daily-costs"

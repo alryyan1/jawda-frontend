@@ -39,7 +39,7 @@ import {
 import { getSubSpecialists } from "@/services/subSpecialistService";
 import { fetchFirestoreDoctors, type FirestoreDoctor } from "@/services/firestoreDoctorService";
 import { DarkThemeAutocomplete } from "@/components/ui/mui-autocomplete";
-import AddSpecialistDialog from "./AddSpecialistDialog";
+import AddSpecialistDialog from "@/components/doctors/AddSpecialistDialog";
 import ManageDoctorServicesDialog from "@/components/doctors/ManageDoctorServicesDialog";
 
 interface DoctorFormValues {

@@ -1,7 +1,7 @@
 // src/services/labRequestService.ts
 import apiClient from "./api";
-import { MainTestStripped } from "../types/labTests"; // For available tests
-import { LabRequest, type DoctorVisit, RequestedOrganism } from "../types/visits"; // Or where LabRequest type is defined
+import type { MainTestStripped } from "../types/labTests"; // For available tests
+import type { LabRequest, DoctorVisit, RequestedOrganism } from "../types/visits"; // Or where LabRequest type is defined
 
 const VISIT_BASE_URL = "/visits"; // Assuming lab requests are nested under visits
 const LABREQUEST_BASE_URL = "/labrequests"; // For direct operations on lab requests
@@ -77,6 +77,12 @@ export const recordDirectLabRequestPayment = async (labRequestId: number, payloa
   const response = await apiClient.post<{ data: LabRequest }>(`${LABREQUEST_BASE_URL}/${labRequestId}/pay`, payload);
   return response.data.data;
 };
+
+export const updateLabRequestRefund = async (refundId: number, payload: { returned_payment_method: "cash" | "bank" }) => {
+  const response = await apiClient.put(`/returned-lab-requests/${refundId}`, payload);
+  return response.data;
+};
+
 export const clearPendingLabRequestsForVisit = async (visitId: number): Promise<{ message: string; deleted_count: number }> => {
   const response = await apiClient.delete<{ message: string; deleted_count: number }>(`${VISIT_BASE_URL}/${visitId}/lab-requests/clear-pending`);
   return response.data;
@@ -103,6 +109,7 @@ export const unpayLabRequest = async (labRequestId: number): Promise<void> => {
 export interface RecordLabRefundPayload {
   amount: number;
   returned_payment_method: 'cash' | 'bank';
+  return_reason?: string;
 }
 
 export const recordLabRequestRefund = async (
@@ -170,7 +177,7 @@ interface PopulateCbcResponse { // Define based on your backend response
     status: boolean;
     message: string;
     data?: LabRequest; // The updated LabRequest
-    cbcObj?: any; // Your debug object
+    cbcObj?: Record<string, unknown>; // Your debug object
 }
 
 export const populateCbcResults = async (
@@ -194,7 +201,7 @@ interface AddOrganismResponse {
   success: boolean;
   message: string;
   data: {
-    organism: any;
+    organism: RequestedOrganism;
     lab_request: LabRequest;
   };
 }

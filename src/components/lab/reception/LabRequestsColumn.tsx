@@ -53,6 +53,7 @@ import {
   recordDirectLabRequestPayment,
   recordLabRequestRefund,
   updateAllLabRequestsBankak,
+  updateLabRequestRefund,
 } from "@/services/labRequestService";
 import { useAuth } from "@/contexts/AuthContext";
 import apiClient from "@/services/api";
@@ -251,8 +252,12 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
 
   // Refund lab request mutation
   const refundLabRequestMutation = useMutation({
-    mutationFn: (params: { labRequestId: number; amount: number; returned_payment_method: "cash" | "bank" }) =>
-      recordLabRequestRefund(params.labRequestId, { amount: params.amount, returned_payment_method: params.returned_payment_method }),
+    mutationFn: (params: { labRequestId: number; amount: number; returned_payment_method: "cash" | "bank"; return_reason?: string }) =>
+      recordLabRequestRefund(params.labRequestId, { 
+        amount: params.amount, 
+        returned_payment_method: params.returned_payment_method,
+        return_reason: params.return_reason 
+      }),
     onSuccess: () => {
       toast.success("تم تسجيل الاسترداد بنجاح");
       queryClient.invalidateQueries({ queryKey: ["activeVisitForLabRequests", activeVisitId] });
@@ -263,6 +268,29 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
     onError: (error: Error) => {
       const apiError = error as { response?: { data?: { message?: string } } };
       toast.error(apiError.response?.data?.message || "فشل تسجيل الاسترداد");
+    },
+  });
+
+  const updateLabRequestRefundMutation = useMutation({
+    mutationFn: (params: { refundId: number; paymentMethod: "cash" | "bank" }) =>
+      updateLabRequestRefund(params.refundId, { returned_payment_method: params.paymentMethod }),
+    onSuccess: (data) => {
+      toast.success("تم تحديث الاسترداد بنجاح");
+      if (refundLabRequest && data.data) {
+        setRefundLabRequest({
+          ...refundLabRequest,
+          returned_refunds: refundLabRequest.returned_refunds?.map((r) =>
+            r.id === data.data.id ? { ...r, returned_payment_method: data.data.returned_payment_method } : r
+          ),
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ["activeVisitForLabRequests", activeVisitId] });
+      queryClient.invalidateQueries({ queryKey: ["doctorVisit", activeVisitId] });
+      queryClient.invalidateQueries({ queryKey: ["labRequestsForVisit", activeVisitId] });
+    },
+    onError: (error: Error) => {
+      const apiError = error as { response?: { data?: { message?: string } } };
+      toast.error(apiError.response?.data?.message || "فشل تحديث الاسترداد");
     },
   });
 
@@ -902,13 +930,20 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
             (refundLabRequest.returned_refunds?.reduce((s, r) => s + Number(r.amount), 0) ?? 0)
           }
           refunds={refundLabRequest.returned_refunds ?? []}
-          onRefund={async (amount, returned_payment_method) => {
-            await refundLabRequestMutation.mutateAsync({
-              labRequestId: refundLabRequest.id,
-              amount,
-              returned_payment_method,
-            });
-          }}
+            onRefund={async (amount, method, reason) => {
+              await refundLabRequestMutation.mutateAsync({
+                labRequestId: refundLabRequest.id,
+                amount,
+                returned_payment_method: method,
+                return_reason: reason,
+              });
+            }}
+            onUpdateRefund={async (refundId, method) => {
+              await updateLabRequestRefundMutation.mutateAsync({
+                refundId,
+                paymentMethod: method,
+              });
+            }}
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ["labRequestsForVisit", activeVisitId] });
             queryClient.invalidateQueries({ queryKey: ["doctorVisit", activeVisitId] });

@@ -35,8 +35,6 @@ import {
   Save,
   Settings2,
   PackageOpen,
-  CheckCircle,
-  CreditCard,
   PrinterIcon,
   Zap,
   RotateCcw,
@@ -50,6 +48,7 @@ import {
   removeRequestedServiceFromVisit,
   recordServicePayment,
   recordRequestedServiceRefund,
+  updateRequestedServiceRefund,
 } from "@/services/visitService";
 import ManageRequestedServiceCostsDialog from "./ManageRequestedServiceCostsDialog";
 import ManageServiceDepositsDialog from "./ManageServiceDepositsDialog";
@@ -65,7 +64,7 @@ import PdfPreviewDialog from "../common/PdfPreviewDialog";
 import { usePdfPreviewVisibility } from "@/contexts/PdfPreviewVisibilityContext";
 import realtimeService from "@/services/realtimeService";
 import { useAuth } from "@/contexts/AuthContext";
-import type { User } from "@/types/users";
+import type { User } from "@/types/auth";
 
 interface RequestedServicesTableProps {
   visitId: number;
@@ -175,11 +174,11 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
   const [isRowOptionsDialogOpen, setIsRowOptionsDialogOpen] = useState(false);
   const [rowOptionsService, setRowOptionsService] =
     useState<RequestedService | null>(null);
-  const [rowOptionsData, setRowOptionsData] = useState<{
-    count: number;
-    discount_per: number;
-    endurance?: number;
-  }>({ count: 1, discount_per: 0 });
+  const [rowOptionsData, setRowOptionsData] = useState<RowEditData>({
+    count: 1,
+    discount_per: 0,
+    price: 0,
+  });
   const { can } = useAuthorization();
   const [isManageServiceCostsDialogOpen, setIsManageServiceCostsDialogOpen] =
     useState(false);
@@ -500,13 +499,43 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
   };
 
   const refundMutation = useMutation({
-    mutationFn: (params: { requestedServiceId: number; amount: number; returned_payment_method: "cash" | "bank" }) =>
-      recordRequestedServiceRefund(params.requestedServiceId, { amount: params.amount, returned_payment_method: params.returned_payment_method }),
+    mutationFn: (params: { requestedServiceId: number; amount: number; returned_payment_method: "cash" | "bank"; return_reason?: string }) =>
+      recordRequestedServiceRefund(params.requestedServiceId, { 
+        amount: params.amount, 
+        returned_payment_method: params.returned_payment_method,
+        return_reason: params.return_reason
+      }),
     onSuccess: () => {
       toast.success("تم تسجيل الاسترداد بنجاح");
       queryClient.invalidateQueries({ queryKey: ["requestedServicesForVisit", visitId] });
       queryClient.invalidateQueries({ queryKey: ["doctorVisit", visitId] });
       setRefundService(null);
+    },
+    onError: (error: Error) => {
+      const apiError = error as { response?: { data?: { message?: string } } };
+      toast.error(apiError.response?.data?.message || "فشل تسجيل الاسترداد");
+    },
+  });
+
+  const updateRefundMutation = useMutation({
+    mutationFn: (params: { refundId: number; paymentMethod: "cash" | "bank" }) =>
+      updateRequestedServiceRefund(params.refundId, { returned_payment_method: params.paymentMethod }),
+    onSuccess: (data) => {
+      toast.success("تم تحديث الاسترداد بنجاح");
+      if (refundService && data.data) {
+        setRefundService({
+          ...refundService,
+          returned_refunds: refundService.returned_refunds?.map((r) =>
+            r.id === data.data.id ? { ...r, returned_payment_method: data.data.returned_payment_method } : r
+          ),
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ["requestedServicesForVisit", visitId] });
+      queryClient.invalidateQueries({ queryKey: ["doctorVisit", visitId] });
+    },
+    onError: (error: Error) => {
+      const apiError = error as { response?: { data?: { message?: string } } };
+      toast.error(apiError.response?.data?.message || "فشل تحديث الاسترداد");
     },
   });
 
@@ -1059,11 +1088,18 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
               (refundService.returned_refunds?.reduce((s, r) => s + Number(r.amount), 0) ?? 0)
             }
             refunds={refundService.returned_refunds ?? []}
-            onRefund={async (amount, returned_payment_method) => {
+            onRefund={async (amount, method, reason) => {
               await refundMutation.mutateAsync({
                 requestedServiceId: refundService.id,
                 amount,
-                returned_payment_method,
+                returned_payment_method: method,
+                return_reason: reason,
+              });
+            }}
+            onUpdateRefund={async (refundId, method) => {
+              await updateRefundMutation.mutateAsync({
+                refundId,
+                paymentMethod: method,
               });
             }}
             onSuccess={() => {

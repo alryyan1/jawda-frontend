@@ -26,6 +26,11 @@ import LabRequestsColumn from "@/components/lab/reception/LabRequestsColumn";
 import { toast } from "sonner";
 import apiClient from "@/services/api";
 import PdfPreviewDialog from "../common/PdfPreviewDialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useAuth } from "@/contexts/AuthContext";
 import Autocomplete from "@mui/material/Autocomplete";
 import TextField from "@mui/material/TextField";
@@ -92,7 +97,7 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
       queryClient.invalidateQueries({ queryKey: ["doctorVisit", visit?.id] });
       setSelectedTests([]);
     },
-    onError: (error: Error) => {
+    onError: () => {
     },
   });
 
@@ -264,35 +269,81 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
               المختبر
             </TabsTrigger>
           </TabsList>
-          <div className="flex items-center gap-2">
-            <Button onClick={handlePrintReceipt} variant="outline" size="sm" disabled={isGeneratingPdf  || !visit}>
-              {isGeneratingPdf ? <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2"/> : <PrinterIcon className="h-4 w-4 ltr:mr-2 rtl:ml-2"/>}
-              طباعة الإيصال
-            </Button>
-            {activeTab === 'services' && (
-              <Button onClick={handleViewClinicInvoice} variant="outline" size="sm" disabled={isGeneratingPdf || !visit}>
-                {isGeneratingPdf ? <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2"/> : <FileText className="h-4 w-4 ltr:mr-2 rtl:ml-2"/>}
-                الفاتورة
-              </Button>
-            )}
-            {!isUnifiedCashier && canAddService && (
-              <Button disabled={!can('اضافه خدمه')} onClick={() => setOpenSelectionGridCommand(c => c + 1)} variant="default" size="sm">
-                قائمه الخدمات
-              </Button>
-            )}
-            {hasSelectedServices && (
-              <Button
-              disabled={!can('اضافه خدمه')}
-                onClick={() => setAddSelectedCommand(c => c + 1)}
-                variant="secondary"
-                size="sm"
-                className="animate-bounce bg-blue-500"
-              >
-                <PlusCircle className="h-4 w-4 ltr:mr-2 rtl:ml-2"/>
-                {/* إضافة المحدد */}
-              </Button>
-            )}
-          </div>
+            <div className="flex items-center gap-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={handlePrintReceipt}
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    disabled={isGeneratingPdf || !visit}
+                  >
+                    {isGeneratingPdf ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <PrinterIcon className="h-4 w-4" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>الإيصال</TooltipContent>
+              </Tooltip>
+
+              {activeTab === "services" && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={handleViewClinicInvoice}
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      disabled={isGeneratingPdf || !visit}
+                    >
+                      {isGeneratingPdf ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <FileText className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>الفاتورة</TooltipContent>
+                </Tooltip>
+              )}
+
+              {!isUnifiedCashier && canAddService && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      disabled={!can("اضافه خدمه")}
+                      onClick={() => setOpenSelectionGridCommand((c) => c + 1)}
+                      variant="default"
+                      size="icon"
+                      className="h-8 w-8"
+                    >
+                      <PlusCircle className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>قائمة الخدمات</TooltipContent>
+                </Tooltip>
+              )}
+
+              {hasSelectedServices && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      disabled={!can("اضافه خدمه")}
+                      onClick={() => setAddSelectedCommand((c) => c + 1)}
+                      variant="secondary"
+                      size="icon"
+                      className="h-8 w-8 animate-bounce bg-blue-500"
+                    >
+                      <PlusCircle className="h-4 w-4 text-white" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>إضافة المحدد</TooltipContent>
+                </Tooltip>
+              )}
+            </div>
           </div>
         </ScrollArea>
 

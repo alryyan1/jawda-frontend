@@ -27,6 +27,7 @@ export interface RefundRecord {
   id: number;
   amount: number;
   returned_payment_method: string;
+  return_reason?: string;
   user_id: number;
   user?: { id: number; name: string };
   created_at: string;
@@ -39,7 +40,8 @@ interface RefundDialogProps {
   itemLabel: string;
   maxRefundable: number;
   refunds: RefundRecord[];
-  onRefund: (amount: number, returned_payment_method: "cash" | "bank") => Promise<void>;
+  onRefund: (amount: number, returned_payment_method: "cash" | "bank", reason: string) => Promise<void>;
+  onUpdateRefund?: (refundId: number, paymentMethod: "cash" | "bank") => Promise<void>;
   onSuccess?: () => void;
 }
 
@@ -51,11 +53,14 @@ const RefundDialog: React.FC<RefundDialogProps> = ({
   maxRefundable,
   refunds,
   onRefund,
+  onUpdateRefund,
   onSuccess,
 }) => {
   const [amount, setAmount] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "bank">("cash");
+  const [reason, setReason] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [updatingRefundId, setUpdatingRefundId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async () => {
@@ -69,10 +74,15 @@ const RefundDialog: React.FC<RefundDialogProps> = ({
       setError(`الحد الأقصى للاسترداد: ${formatNumber(maxRefundable)}`);
       return;
     }
+    if (!reason.trim()) {
+      setError("يرجى إدخال سبب الاسترداد");
+      return;
+    }
     setIsSubmitting(true);
     try {
-      await onRefund(numAmount, paymentMethod);
+      await onRefund(numAmount, paymentMethod, reason);
       setAmount("");
+      setReason("");
       onSuccess?.();
       onClose();
     } catch (err: unknown) {
@@ -98,8 +108,25 @@ const RefundDialog: React.FC<RefundDialogProps> = ({
 
   const handleClose = () => {
     setAmount("");
+    setReason("");
     setError(null);
+    setUpdatingRefundId(null);
     onClose();
+  };
+
+  const handleUpdatePaymentMethod = async (refundId: number, newMethod: "cash" | "bank") => {
+    if (!onUpdateRefund) return;
+    setUpdatingRefundId(refundId);
+    setError(null);
+    try {
+      await onUpdateRefund(refundId, newMethod);
+      onSuccess?.();
+    } catch (err: unknown) {
+      console.error("[RefundDialog] update error", err);
+      setError("فشل تحديث طريقة الاسترداد");
+    } finally {
+      setUpdatingRefundId(null);
+    }
   };
 
   return (
@@ -132,6 +159,17 @@ const RefundDialog: React.FC<RefundDialogProps> = ({
               <MenuItem value="bank">بنك</MenuItem>
             </Select>
           </FormControl>
+          <TextField
+            label="سبب الاسترداد"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            size="small"
+            fullWidth
+            multiline
+            rows={2}
+            required
+            error={!!error && error.includes("سبب")}
+          />
           {refunds.length > 0 && (
             <Box>
               <Typography variant="subtitle2" sx={{ mb: 1 }}>
@@ -142,6 +180,7 @@ const RefundDialog: React.FC<RefundDialogProps> = ({
                   <TableRow>
                     <TableCell align="center">المبلغ</TableCell>
                     <TableCell align="center">الطريقة</TableCell>
+                    <TableCell align="center">السبب</TableCell>
                     <TableCell align="center">بواسطة</TableCell>
                     <TableCell align="center">التاريخ</TableCell>
                   </TableRow>
@@ -150,7 +189,27 @@ const RefundDialog: React.FC<RefundDialogProps> = ({
                   {refunds.map((r) => (
                     <TableRow key={r.id}>
                       <TableCell align="center">{formatNumber(r.amount)}</TableCell>
-                      <TableCell align="center">{r.returned_payment_method === "bank" ? "بنك" : "كاش"}</TableCell>
+                      <TableCell align="center">
+                        {onUpdateRefund ? (
+                          <Select
+                            value={r.returned_payment_method}
+                            size="small"
+                            variant="standard"
+                            sx={{ fontSize: "0.875rem" }}
+                            disabled={updatingRefundId === r.id}
+                            onChange={(e) => handleUpdatePaymentMethod(r.id, e.target.value as "cash" | "bank")}
+                          >
+                            <MenuItem value="cash">كاش</MenuItem>
+                            <MenuItem value="bank">بنك</MenuItem>
+                          </Select>
+                        ) : (
+                          r.returned_payment_method === "bank" ? "بنك" : "كاش"
+                        )}
+                        {updatingRefundId === r.id && (
+                          <Loader2 className="h-3 w-3 animate-spin inline-block ms-1" />
+                        )}
+                      </TableCell>
+                      <TableCell align="center">{r.return_reason || "-"}</TableCell>
                       <TableCell align="center">{r.user?.name ?? "-"}</TableCell>
                       <TableCell align="center">{dayjs(r.created_at).format("YYYY/MM/DD HH:mm")}</TableCell>
                     </TableRow>
@@ -166,7 +225,7 @@ const RefundDialog: React.FC<RefundDialogProps> = ({
         <Button
           variant="contained"
           onClick={handleSubmit}
-          disabled={isSubmitting || !amount || parseFloat(amount) <= 0 || parseFloat(amount) > maxRefundable}
+          disabled={isSubmitting || !amount || parseFloat(amount) <= 0 || parseFloat(amount) > maxRefundable || !reason.trim()}
           startIcon={isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
         >
           {isSubmitting ? "جاري التسجيل..." : "تسجيل الاسترداد"}

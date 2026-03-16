@@ -9,9 +9,11 @@ import {
   deleteEmployeeExpense,
   createEmployee,
   deleteEmployee,
-  downloadEmployeeExpensesPdf
+  downloadEmployeeExpensesPdf,
+  getDepartments,
+  createDepartment
 } from "@/services/employeeService";
-import type { Employee } from "@/services/employeeService";
+import type { Employee, Department } from "@/services/employeeService";
 
 export const useEmployeeExpenses = () => {
   const queryClient = useQueryClient();
@@ -27,6 +29,11 @@ export const useEmployeeExpenses = () => {
   const { data: expenses = [], isLoading: isLoadingExpenses } = useQuery({
     queryKey: ["employeeExpenses", selectedDate],
     queryFn: () => getEmployeeExpenses(selectedDate),
+  });
+
+  const { data: departments = [], isLoading: isLoadingDepartments } = useQuery({
+    queryKey: ["departments"],
+    queryFn: getDepartments,
   });
 
   // Mutations
@@ -66,6 +73,15 @@ export const useEmployeeExpenses = () => {
     onError: () => toast.error("فشل في حذف الموظف"),
   });
 
+  const addDepartmentMutation = useMutation({
+    mutationFn: createDepartment,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["departments"] });
+      toast.success("تم إضافة القسم بنجاح");
+    },
+    onError: () => toast.error("فشل في إضافة القسم"),
+  });
+
   const handlePrint = async () => {
     try {
       setIsPrinting(true);
@@ -85,7 +101,7 @@ export const useEmployeeExpenses = () => {
   const groupedExpenses = useMemo(() => {
     const groups: Record<string, typeof expenses> = {};
     expenses.forEach((exp) => {
-      const dept = exp.employee?.department || "بدون قسم";
+      const dept = exp.employee?.department?.name || "بدون قسم";
       if (!groups[dept]) groups[dept] = [];
       groups[dept].push(exp);
     });
@@ -97,6 +113,8 @@ export const useEmployeeExpenses = () => {
     setSelectedDate,
     employees,
     isLoadingEmployees,
+    departments,
+    isLoadingDepartments,
     expenses,
     groupedExpenses,
     isLoadingExpenses,
@@ -111,5 +129,7 @@ export const useEmployeeExpenses = () => {
     isAddingEmployee: addEmployeeMutation.isPending,
     removeEmployee: removeEmployeeMutation.mutate,
     isRemovingEmployee: removeEmployeeMutation.isPending,
+    addDepartment: addDepartmentMutation.mutateAsync,
+    isAddingDepartment: addDepartmentMutation.isPending,
   };
 };

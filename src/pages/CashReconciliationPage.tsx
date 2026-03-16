@@ -18,6 +18,8 @@ import apiClient from '@/services/api';
 import { webUrl } from '@/pages/constants';
 import { getUsers } from '@/services/userService';
 import type { User } from '@/types/users';
+import { getEmployees } from '@/services/employeeService';
+import type { Employee } from '@/services/employeeService';
 
 // Cost interface
 interface Cost {
@@ -60,6 +62,12 @@ const CashReconciliationPage: React.FC = () => {
   const hasInitializedUser = useRef(false);
 
   const usersList = useMemo(() => usersData?.data || [], [usersData?.data]);
+  
+  // Fetch employees for cost selection
+  const { data: employeesData, isLoading: isLoadingEmployeesData } = useQuery<Employee[], Error>({
+    queryKey: ['allEmployeesForReconciliation'],
+    queryFn: getEmployees,
+  });
 
   // Set default selected user to current logged in user
   useEffect(() => {
@@ -96,7 +104,7 @@ const CashReconciliationPage: React.FC = () => {
     enabled: !!selectedShiftId,
   });
 
-  const costs = costsData?.data || [];
+  const costs = useMemo(() => costsData?.data || [], [costsData?.data]);
 
   // Calculate total costs
   const totalCosts = useMemo(() => {
@@ -416,6 +424,30 @@ const CashReconciliationPage: React.FC = () => {
               <CardHeader title="إضافة مصروف " />
               <CardContent>
                 <Stack spacing={2}>
+                  <Autocomplete
+                    options={employeesData || []}
+                    getOptionLabel={(option) => option.name}
+                    onChange={(_, newValue) => {
+                      if (newValue) {
+                        setCostForm(prev => ({
+                          ...prev,
+                          description: newValue.name,
+                          amount_cash: newValue.fixed_amount.toString()
+                        }));
+                      }
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="اختر الموظف"
+                        placeholder="ابحث عن موظف..."
+                        size="small"
+                        fullWidth
+                      />
+                    )}
+                    loading={isLoadingEmployeesData}
+                  />
+
                   <TextField
                     label="وصف المصروف"
                     value={costForm.description}

@@ -22,6 +22,7 @@ const EmployeeExpensesPage: React.FC = () => {
     setSelectedDate,
     employees,
     isLoadingEmployees,
+    departments,
     expenses,
     groupedExpenses,
     isLoadingExpenses,
@@ -35,6 +36,8 @@ const EmployeeExpensesPage: React.FC = () => {
     addEmployee,
     isAddingEmployee,
     removeEmployee,
+    addDepartment,
+    isAddingDepartment,
   } = useEmployeeExpenses();
 
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
@@ -146,8 +149,11 @@ const EmployeeExpensesPage: React.FC = () => {
         open={isManageEmployeesOpen}
         onClose={() => setIsManageEmployeesOpen(false)}
         employees={employees}
+        departments={departments}
         onAdd={addEmployee}
+        onAddDepartment={addDepartment}
         isAdding={isAddingEmployee}
+        isAddingDepartment={isAddingDepartment}
         onRemove={removeEmployee}
       />
     </Box>

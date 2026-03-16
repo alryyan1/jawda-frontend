@@ -36,6 +36,10 @@ interface IncomeSummaryData {
     bank: number;
     cash: number;
   };
+  total_cash_refund: number;
+  total_bank_refund: number;
+  total_refund: number;
+  net_total: number;
 }
 
 const UserMoneySummary: React.FC<UserMoneySummaryProps> = ({
@@ -54,6 +58,8 @@ const UserMoneySummary: React.FC<UserMoneySummaryProps> = ({
   });
 
   const incomeData = responseData?.data;
+  
+  // Show loading state
 
   // Show loading state
   if (isLoading) {
@@ -93,6 +99,11 @@ const UserMoneySummary: React.FC<UserMoneySummaryProps> = ({
       label: 'المصروف',
       cash: incomeData.total_cash_expenses,
       bank: incomeData.total_bank_expenses
+    },
+    {
+      label: 'الاسترداد',
+      cash: incomeData.total_cash_refund,
+      bank: incomeData.total_bank_refund
     },
     {
       label: 'الصافي',

@@ -15,10 +15,13 @@ import {
   TableBody,
   TableRow,
   TableCell,
-  IconButton
+  IconButton,
+  Autocomplete,
+  Divider,
+  Typography
 } from "@mui/material";
-import { Users, Trash2, UserPlus } from "lucide-react";
-import type { Employee } from "@/services/employeeService";
+import { Users, Trash2, UserPlus, Plus } from "lucide-react";
+import type { Employee, Department } from "@/services/employeeService";
 import { formatNumber } from "@/lib/utils";
 
 interface TabPanelProps {
@@ -40,34 +43,48 @@ interface ManageEmployeesDialogProps {
   open: boolean;
   onClose: () => void;
   employees: Employee[];
-  onAdd: (data: { name: string; job_title: string; department: string; fixed_amount: number }) => Promise<void>;
+  departments: Department[];
+  onAdd: (data: { name: string; job_title: string; department_id: number; fixed_amount: number }) => Promise<Employee>;
   onRemove: (id: number) => void;
+  onAddDepartment: (data: { name: string }) => Promise<Department>;
   isAdding: boolean;
+  isAddingDepartment: boolean;
 }
 
 const ManageEmployeesDialog: React.FC<ManageEmployeesDialogProps> = ({
   open,
   onClose,
   employees,
+  departments,
   onAdd,
   onRemove,
-  isAdding
+  onAddDepartment,
+  isAdding,
+  isAddingDepartment
 }) => {
   const [tabValue, setTabValue] = useState(0);
   const [newEmployee, setNewEmployee] = useState({
     name: "",
     job_title: "",
-    department: "",
+    department_id: "" as string | number,
     fixed_amount: ""
   });
+  const [newDeptName, setNewDeptName] = useState("");
 
   const handleAdd = async () => {
-    if (!newEmployee.name || !newEmployee.fixed_amount) return;
+    if (!newEmployee.name || !newEmployee.fixed_amount || !newEmployee.department_id) return;
     await onAdd({
       ...newEmployee,
+      department_id: Number(newEmployee.department_id),
       fixed_amount: parseFloat(newEmployee.fixed_amount)
     });
-    setNewEmployee({ name: "", job_title: "", department: "", fixed_amount: "" });
+    setNewEmployee({ name: "", job_title: "", department_id: "", fixed_amount: "" });
+  };
+
+  const handleAddDepartment = async () => {
+    if (!newDeptName) return;
+    await onAddDepartment({ name: newDeptName });
+    setNewDeptName("");
   };
 
   return (
@@ -100,7 +117,7 @@ const ManageEmployeesDialog: React.FC<ManageEmployeesDialogProps> = ({
                     <TableRow key={emp.id} hover>
                       <TableCell sx={{ py: 0.25 }}>{emp.name}</TableCell>
                       <TableCell sx={{ py: 0.25 }}>{emp.job_title || "-"}</TableCell>
-                      <TableCell sx={{ py: 0.25 }}>{emp.department || "-"}</TableCell>
+                      <TableCell sx={{ py: 0.25 }}>{emp.department?.name || "-"}</TableCell>
                       <TableCell align="center" sx={{ py: 0.25 }}>{formatNumber(emp.fixed_amount)}</TableCell>
                       <TableCell align="center" sx={{ py: 0.25 }}>
                         <IconButton color="error" size="small" onClick={() => onRemove(emp.id)}>
@@ -116,47 +133,82 @@ const ManageEmployeesDialog: React.FC<ManageEmployeesDialogProps> = ({
         </TabPanel>
 
         <TabPanel value={tabValue} index={1}>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, p: 2 }}>
-            <TextField 
-              size="small"
-              label="اسم الموظف" 
-              value={newEmployee.name} 
-              onChange={(e) => setNewEmployee({...newEmployee, name: e.target.value})}
-              fullWidth 
-            />
-            <Box sx={{ display: "flex", gap: 1 }}>
-              <TextField 
-                size="small"
-                label="المسمى الوظيفي" 
-                value={newEmployee.job_title} 
-                onChange={(e) => setNewEmployee({...newEmployee, job_title: e.target.value})}
-                fullWidth 
-              />
-              <TextField 
-                size="small"
-                label="القسم" 
-                value={newEmployee.department} 
-                onChange={(e) => setNewEmployee({...newEmployee, department: e.target.value})}
-                fullWidth 
-              />
+          <Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 3 }}>
+            {/* Department Section */}
+            <Box>
+              <Typography variant="overline" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                إدارة الأقسام
+              </Typography>
+              <Box sx={{ display: "flex", gap: 1 }}>
+                <TextField 
+                  size="small"
+                  label="اسم قسم جديد" 
+                  value={newDeptName} 
+                  onChange={(e) => setNewDeptName(e.target.value)}
+                  fullWidth 
+                />
+                <Button 
+                  variant="outlined" 
+                  size="small"
+                  startIcon={<Plus size={16} />}
+                  onClick={handleAddDepartment}
+                  disabled={!newDeptName || isAddingDepartment}
+                >
+                  إضافة
+                </Button>
+              </Box>
             </Box>
-            <TextField 
-              size="small"
-              label="الاستحقاق اليومي الثابت" 
-              type="number" 
-              value={newEmployee.fixed_amount} 
-              onChange={(e) => setNewEmployee({...newEmployee, fixed_amount: e.target.value})}
-              fullWidth 
-            />
-            <Button 
-              variant="contained" 
-              size="small"
-              startIcon={<UserPlus size={16} />} 
-              onClick={handleAdd}
-              disabled={!newEmployee.name || !newEmployee.fixed_amount || isAdding}
-            >
-              إضافة الموظف
-            </Button>
+
+            <Divider />
+
+            {/* Employee Section */}
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+              <Typography variant="overline" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                بيانات الموظف
+              </Typography>
+              <TextField 
+                size="small"
+                label="اسم الموظف" 
+                value={newEmployee.name} 
+                onChange={(e) => setNewEmployee({...newEmployee, name: e.target.value})}
+                fullWidth 
+              />
+              <Box sx={{ display: "flex", gap: 1 }}>
+                <TextField 
+                  size="small"
+                  label="المسمى الوظيفي" 
+                  value={newEmployee.job_title} 
+                  onChange={(e) => setNewEmployee({...newEmployee, job_title: e.target.value})}
+                  fullWidth 
+                />
+                <Autocomplete
+                  size="small"
+                  fullWidth
+                  options={departments}
+                  getOptionLabel={(option) => option.name}
+                  value={departments.find(d => d.id === newEmployee.department_id) || null}
+                  onChange={(_, v) => setNewEmployee({...newEmployee, department_id: v?.id || ""})}
+                  renderInput={(params) => <TextField {...params} label="القسم" />}
+                />
+              </Box>
+              <TextField 
+                size="small"
+                label="الاستحقاق اليومي الثابت" 
+                type="number" 
+                value={newEmployee.fixed_amount} 
+                onChange={(e) => setNewEmployee({...newEmployee, fixed_amount: e.target.value})}
+                fullWidth 
+              />
+              <Button 
+                variant="contained" 
+                size="small"
+                startIcon={<UserPlus size={16} />} 
+                onClick={handleAdd}
+                disabled={!newEmployee.name || !newEmployee.fixed_amount || !newEmployee.department_id || isAdding}
+              >
+                إضافة الموظف
+              </Button>
+            </Box>
           </Box>
         </TabPanel>
       </DialogContent>

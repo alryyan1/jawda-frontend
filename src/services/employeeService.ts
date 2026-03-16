@@ -1,10 +1,17 @@
 import apiClient from './api';
 
+export interface Department {
+  id: number;
+  name: string;
+  location?: string;
+}
+
 export interface Employee {
   id: number;
   name: string;
   job_title?: string;
-  department?: string;
+  department_id?: number;
+  department?: Department;
   fixed_amount: number;
   is_active: boolean;
 }
@@ -68,4 +75,14 @@ export const downloadEmployeeExpensesPdf = async (date: string): Promise<void> =
   const file = new Blob([response.data], { type: 'application/pdf' });
   const fileURL = URL.createObjectURL(file);
   window.open(fileURL, '_blank');
+};
+
+export const getDepartments = async (): Promise<Department[]> => {
+  const response = await apiClient.get<Department[]>('/departments');
+  return response.data;
+};
+
+export const createDepartment = async (data: { name: string }): Promise<Department> => {
+  const response = await apiClient.post<Department>('/departments', data);
+  return response.data;
 };

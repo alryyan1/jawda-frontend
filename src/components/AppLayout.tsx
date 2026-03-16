@@ -160,7 +160,7 @@ export const allMainNavItems: NavItem[] = [
     icon: BedDouble,
   },
   { to: "/online-booking", label: "الحجز ", icon: CalendarCheck2 },
-  // { to: "/cash-reconciliation", label: "الفئات الماليه", icon: CreditCard },
+  { to: "/cash-reconciliation", label: "الفئات الماليه", icon: CreditCard },
  
 ];
 

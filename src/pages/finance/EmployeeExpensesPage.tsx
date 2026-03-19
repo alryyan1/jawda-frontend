@@ -36,7 +36,6 @@ const EmployeeExpensesPage: React.FC = () => {
     addEmployee,
     isAddingEmployee,
     removeEmployee,
-    isRemovingEmployee,
     updateEmployee,
     isUpdatingEmployee,
     addDepartment,
@@ -158,7 +157,7 @@ const EmployeeExpensesPage: React.FC = () => {
         isAdding={isAddingEmployee}
         isAddingDepartment={isAddingDepartment}
         onRemove={removeEmployee}
-        onUpdate={updateEmployee}
+        onUpdate={(id, data) => updateEmployee({ id, data })}
         isUpdating={isUpdatingEmployee}
       />
     </Box>

@@ -48,7 +48,7 @@ interface ManageEmployeesDialogProps {
   departments: Department[];
   onAdd: (data: { name: string; job_title: string; department_id: number; fixed_amount: number }) => Promise<Employee>;
   onRemove: (id: number) => void;
-  onUpdate: (id: number, data: Partial<Employee>) => Promise<Employee>;
+  onUpdate: (id: number, data: Partial<Employee>) => Promise<unknown>;
   onAddDepartment: (data: { name: string }) => Promise<Department>;
   isAdding: boolean;
   isAddingDepartment: boolean;
@@ -121,7 +121,29 @@ const ManageEmployeesDialog: React.FC<ManageEmployeesDialogProps> = ({
                 <TableBody>
                   {employees.map((emp) => (
                     <TableRow key={emp.id} hover>
-                      <TableCell sx={{ py: 0.25 }}>{emp.name}</TableCell>
+                      <TableCell sx={{ py: 0.25 }}>
+                        <TextField
+                          size="small"
+                          defaultValue={emp.name}
+                          onBlur={(e) => {
+                            if (e.target.value && e.target.value !== emp.name) {
+                              onUpdate(emp.id, { name: e.target.value });
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              (e.target as HTMLInputElement).blur();
+                            }
+                          }}
+                          variant="standard"
+                          fullWidth
+                          sx={{ 
+                            '& .MuiInput-root': { fontSize: '0.875rem' },
+                            '& .MuiInput-underline:before': { borderBottom: 'none' },
+                            '& .MuiInput-underline:hover:not(.Mui-disabled):before': { borderBottom: '1px solid rgba(0, 0, 0, 0.42)' }
+                          }}
+                        />
+                      </TableCell>
                       <TableCell sx={{ py: 0.25 }}>{emp.job_title || "-"}</TableCell>
                       <TableCell sx={{ py: 0.25 }}>
                         <Select

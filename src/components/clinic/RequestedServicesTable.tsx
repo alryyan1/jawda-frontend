@@ -1003,6 +1003,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                     handleManageServiceCosts(rowOptionsService);
                   }}
                   startIcon={<Settings2 className="h-4 w-4" />}
+                  disabled={(rowOptionsService.returned_refunds?.length || 0) > 0}
                 >
                   التكاليف
                 </Button>
@@ -1013,6 +1014,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                     handleManageDeposits(rowOptionsService);
                   }}
                   startIcon={<PackageOpen className="h-4 w-4" />}
+                  disabled={(rowOptionsService.returned_refunds?.length || 0) > 0}
                 >
                   المدفوعات
                 </Button>
@@ -1037,7 +1039,11 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                         setIsRowOptionsDialogOpen(false);
                         setPayingService(rowOptionsService);
                       }}
-                      disabled={!currentClinicShiftId || !can("سداد خدمه")}
+                      disabled={
+                        (rowOptionsService.returned_refunds?.length || 0) > 0 ||
+                        !currentClinicShiftId ||
+                        !can("سداد خدمه")
+                      }
                       startIcon={<DollarSign className="h-4 w-4" />}
                     >
                       دفع
@@ -1051,7 +1057,10 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                     setServiceToDelete(rowOptionsService.id);
                   }}
                   startIcon={<Trash2 className="h-4 w-4" />}
-                  disabled={!can("حذف خدمه مضافه")}
+                  disabled={
+                    (rowOptionsService.returned_refunds?.length || 0) > 0 ||
+                    !can("حذف خدمه مضافه")
+                  }
                 >
                   حذف
                 </Button>

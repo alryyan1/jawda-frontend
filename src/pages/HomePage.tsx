@@ -37,6 +37,7 @@ import {
   Calculator,
   CalendarDays,
   Users,
+  CloudUpload,
 } from "lucide-react";
 import type { Shift } from "@/types/shifts";
 import type { DashboardSummary } from "@/types/dashboard";
@@ -233,6 +234,8 @@ interface ShiftManagementCardProps {
   onRefresh: () => void;
   isOpeningShift: boolean;
   isClosingShift: boolean;
+  isSyncing: boolean;
+  onManualSync: (shiftId: number) => void;
   userName?: string;
 }
 
@@ -248,6 +251,8 @@ const ShiftManagementCard: React.FC<ShiftManagementCardProps> = ({
   onRefresh,
   isOpeningShift,
   isClosingShift,
+  isSyncing,
+  onManualSync,
   userName,
 }) => {
   const dateLocale = arSA;
@@ -384,6 +389,22 @@ const ShiftManagementCard: React.FC<ShiftManagementCardProps> = ({
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
+              )}
+              {currentShift && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full sm:w-auto gap-2 border-primary/20 hover:bg-primary/10"
+                  onClick={() => onManualSync(currentShift.id)}
+                  disabled={isSyncing || (currentShift.is_closed ? false : false)} // Always allow if currentShift exists
+                >
+                  {isSyncing ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <CloudUpload className="h-4 w-4" />
+                  )}
+                  {"رفع التقارير و ملخص الواتساب"}
+                </Button>
               )}
             </div>
             <Card className="p-3 text-xs border-dashed bg-slate-50 dark:bg-slate-800/30">
@@ -560,11 +581,31 @@ const HomePage: React.FC = () => {
 
   const closeShiftMutation = useMutation({
     mutationFn: (shiftId: number) => closeShift(shiftId), // Only pass shiftId
-    onSuccess: () => {
+    onSuccess: async (_, shiftId: number) => {
       refetchOpenShift();
       refetchShift();
       refetchSummary();
       toast.success('تم إغلاق الوردية بنجاح');
+
+      // --- New: Upload shift reports to Firebase ---
+      toast.promise(
+        async () => {
+          const { uploadShiftReportsToFirebase, sendShiftSummaryWhatsApp } = await import('@/services/shiftFirestoreService');
+          const result = await uploadShiftReportsToFirebase(shiftId, user?.id || 0);
+          if (!result.success) throw new Error(result.error);
+          
+          // Send WhatsApp closing summary
+          await sendShiftSummaryWhatsApp(shiftId, user?.name || '');
+          
+          return result;
+        },
+        {
+          loading: 'جاري رفع تقارير الوردية إلى السحابة...',
+          success: 'تم رفع التقارير وإرسال ملخص الواتساب بنجاح',
+          error: (err) => `فشل رفع التقارير أو إرسال الملخص: ${err.message}`,
+        }
+      );
+
       // Emit realtime event: close-general-shift
       try {
         const realtimeUrl = import.meta.env.VITE_REALTIME_URL || realtimeUrlFromConstants;
@@ -577,7 +618,7 @@ const HomePage: React.FC = () => {
           body: JSON.stringify({
             user_id: user?.id,
             user_name: user?.name,
-            shift_id: currentOpenShift?.id,
+            shift_id: shiftId,
             closed_at: new Date().toISOString()
           })
         }).catch(() => {
@@ -591,6 +632,29 @@ const HomePage: React.FC = () => {
       // toast.error('فشل إغلاق الوردية');
     },
   });
+
+  const [isSyncing, setIsSyncing] = useState(false);
+  const handleManualSync = useCallback(async (shiftId: number) => {
+    setIsSyncing(true);
+    toast.promise(
+      async () => {
+        const { uploadShiftReportsToFirebase, sendShiftSummaryWhatsApp } = await import('@/services/shiftFirestoreService');
+        const result = await uploadShiftReportsToFirebase(shiftId, user?.id || 0);
+        if (!result.success) throw new Error(result.error);
+        
+        // Send WhatsApp closing summary
+        await sendShiftSummaryWhatsApp(shiftId, user?.name || '');
+        
+        return result;
+      },
+      {
+        loading: 'جاري رفع تقارير الوردية إلى السحابة...',
+        success: 'تم رفع التقارير وإرسال ملخص الواتساب بنجاح',
+        error: (err) => `فشل رفع التقارير أو إرسال الملخص: ${err.message}`,
+        finally: () => setIsSyncing(false),
+      },
+    );
+  }, [user?.name, user?.id]);
 
   const handleRefreshAllData = useCallback(() => {
     toast.info('جاري التحديث');
@@ -625,6 +689,8 @@ const HomePage: React.FC = () => {
         onRefresh={handleRefreshAllData}
         isOpeningShift={openShiftMutation.isPending}
         isClosingShift={closeShiftMutation.isPending}
+        isSyncing={isSyncing}
+        onManualSync={handleManualSync}
         userName={user?.name}
       />
 
@@ -675,7 +741,7 @@ const HomePage: React.FC = () => {
           {/* Financial Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          title="إجمالي إيرادات المختبر"
+          title="صافي إيرادات المختبر"
           value={financialSummary?.lab_revenue.total ?? 0}
           icon={DollarSign}
           description={`نقدي: ${formatNumber(financialSummary?.lab_revenue.cash ?? 0)} | بنكي: ${formatNumber(financialSummary?.lab_revenue.bank ?? 0)}`}
@@ -702,10 +768,28 @@ const HomePage: React.FC = () => {
           unit="SDG"
         />
         <StatCard
+          title="إجمالي المستردات"
+          value={financialSummary?.total_refunds ?? 0}
+          icon={TrendingDown}
+          description="إجمالي المبالغ المستردة للمرضى"
+          isLoading={isLoadingFinancialSummary || isFetchingFinancialSummary}
+          variant="warning"
+          unit="SDG"
+        />
+        <StatCard
+          title="إجمالي الخصومات"
+          value={financialSummary?.total_discounts ?? 0}
+          icon={TrendingDown}
+          description="إجمالي التخفيضات الممنوحة"
+          isLoading={isLoadingFinancialSummary || isFetchingFinancialSummary}
+          variant="info"
+          unit="SDG"
+        />
+        <StatCard
           title="صافي الربح"
           value={financialSummary?.net ?? 0}
           icon={Calculator}
-          description={`(إيرادات - تكاليف)`}
+          description={`(إيرادات - تكاليف - مستردات)`}
           isLoading={isLoadingFinancialSummary || isFetchingFinancialSummary}
           variant={financialSummary && financialSummary.net >= 0 ? "success" : "danger"}
           unit="SDG"

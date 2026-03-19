@@ -1,7 +1,5 @@
 // src/types/dashboard.ts or src/types/shifts.ts
 
-
-
 // For closing a shift, data needed by the backend
 export interface CloseShiftFormData {
   total: string; // Input as string
@@ -36,5 +34,9 @@ export interface FinancialSummary {
     total: number;
   };
   net: number;
+  net_cash?: number;
+  net_bank?: number;
+  total_refunds?: number;
+  total_discounts?: number;
   patients_count?: number;
 }

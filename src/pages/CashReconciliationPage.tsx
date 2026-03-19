@@ -29,6 +29,8 @@ interface Cost {
   amount_bankak: number; // Bank portion
   created_at: string;
   user_cost_name?: string;
+  employee_name?: string;
+  employee_id?: number;
   comment?: string;
 }
 
@@ -44,7 +46,8 @@ const CashReconciliationPage: React.FC = () => {
   const [costForm, setCostForm] = useState({
     description: '',
     amount_cash: '',
-    amount_bank: ''
+    amount_bank: '',
+    employee_id: '' as string | number
   });
 
   // Fetch all shifts for the dropdown
@@ -122,13 +125,13 @@ const CashReconciliationPage: React.FC = () => {
 
   // Cost creation mutation
   const createCostMutation = useMutation({
-    mutationFn: async (costData: { description: string; amount_cash_input: number; amount_bank_input: number; shift_id: number }) => {
+    mutationFn: async (costData: { description: string; amount_cash_input: number; amount_bank_input: number; shift_id: number; employee_id?: number }) => {
       const response = await apiClient.post('/costs', costData);
       return response.data;
     },
     onSuccess: () => {
       toast.success('تم إضافة المصروف بنجاح');
-      setCostForm({ description: '', amount_cash: '', amount_bank: '' });
+      setCostForm({ description: '', amount_cash: '', amount_bank: '', employee_id: '' });
       // Invalidate income summary and costs to refresh the data
       queryClient.invalidateQueries({ queryKey: ['userIncomeSummary', selectedShiftId] });
       queryClient.invalidateQueries({ queryKey: ['shiftCosts', selectedShiftId] });
@@ -271,7 +274,8 @@ const CashReconciliationPage: React.FC = () => {
       description: costForm.description,
       amount_cash_input: cashAmount,
       amount_bank_input: bankAmount,
-      shift_id: Number(selectedShiftId)
+      shift_id: Number(selectedShiftId),
+      employee_id: costForm.employee_id ? Number(costForm.employee_id) : undefined
     };
 
     createCostMutation.mutate(costData);
@@ -329,25 +333,66 @@ const CashReconciliationPage: React.FC = () => {
         </Box>
         
         {/* PDF Generation Button */}
+        <Stack direction="row" spacing={1}>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<PdfIcon />}
+            onClick={handleGeneratePdf}
+            disabled={!selectedShiftId || !selectedUser || isLoading}
+            sx={{ minWidth: 160 }}
+          >
+            تقرير المستخدم
+          </Button>
+
+          <Button
+            variant="contained"
+            color="secondary"
+            startIcon={<PdfIcon />}
+            onClick={async () => {
+              if (!selectedShiftId) {
+                toast.error('يرجى اختيار وردية أولاً');
+                return;
+              }
+              const pdfUrl = `${webUrl}reports/shift-patients-discount/pdf?shift_id=${selectedShiftId}`;
+              window.open(pdfUrl, '_blank');
+              toast.success('تم فتح تقرير الخصومات في تبويب جديد');
+            }}
+            disabled={!selectedShiftId || isLoading}
+            sx={{ minWidth: 160 }}
+          >
+            خصومات المرضى
+          </Button>
+
+          <Button
+            variant="contained"
+            color="error"
+            startIcon={<PdfIcon />}
+            onClick={async () => {
+              if (!selectedShiftId) {
+                toast.error('يرجى اختيار وردية أولاً');
+                return;
+              }
+              const pdfUrl = `${webUrl}reports/shift-refunds/pdf?shift_id=${selectedShiftId}`;
+              window.open(pdfUrl, '_blank');
+              toast.success('تم فتح تقرير الاستردادات في تبويب جديد');
+            }}
+            disabled={!selectedShiftId || isLoading}
+            sx={{ minWidth: 160 }}
+          >
+            تقرير الاستردادات
+          </Button>
+        </Stack>
+
         <Button
-          variant="contained"
-          color="primary"
-          startIcon={<PdfIcon />}
-          onClick={handleGeneratePdf}
-          disabled={!selectedShiftId || !selectedUser || isLoading}
-          sx={{ minWidth: 160 }}
+          variant="outlined"
+          color="warning"
+          onClick={handleClearDenominations}
+          size="small"
+          sx={{ minWidth: 120 }}
         >
-          إنشاء تقرير PDF
+          مسح الكل
         </Button>
-        <Button
-                    variant="outlined"
-                    color="warning"
-                    onClick={handleClearDenominations}
-                    size="small"
-                    sx={{ minWidth: 120 }}
-                  >
-                    مسح الكل
-                  </Button>
       </Box>
 
       {isLoading ? (
@@ -432,7 +477,8 @@ const CashReconciliationPage: React.FC = () => {
                         setCostForm(prev => ({
                           ...prev,
                           description: newValue.name,
-                          amount_cash: newValue.fixed_amount.toString()
+                          amount_cash: newValue.fixed_amount.toString(),
+                          employee_id: newValue.id
                         }));
                       }
                     }}
@@ -517,10 +563,10 @@ const CashReconciliationPage: React.FC = () => {
                         <TableHead>
                           <TableRow>
                             <TableCell>الوصف</TableCell>
+                            <TableCell align="center">الموظف</TableCell>
                             <TableCell align="center">النقدي</TableCell>
                             <TableCell align="center">البنكي</TableCell>
                             <TableCell align="center">المجموع</TableCell>
-                            {/* <TableCell align="center">التاريخ</TableCell> */}
                             <TableCell align="center">الإجراءات</TableCell>
                           </TableRow>
                         </TableHead>
@@ -530,6 +576,11 @@ const CashReconciliationPage: React.FC = () => {
                               <TableCell>
                                 <Typography variant="body2">
                                   {cost.description}
+                                </Typography>
+                              </TableCell>
+                              <TableCell align="center">
+                                <Typography variant="caption" color="text.secondary">
+                                  {cost.employee_name || '-'}
                                 </Typography>
                               </TableCell>
                               <TableCell align="center">

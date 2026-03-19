@@ -18,7 +18,9 @@ import {
   IconButton,
   Autocomplete,
   Divider,
-  Typography
+  Typography,
+  Select,
+  MenuItem
 } from "@mui/material";
 import { Users, Trash2, UserPlus, Plus } from "lucide-react";
 import type { Employee, Department } from "@/services/employeeService";
@@ -46,9 +48,11 @@ interface ManageEmployeesDialogProps {
   departments: Department[];
   onAdd: (data: { name: string; job_title: string; department_id: number; fixed_amount: number }) => Promise<Employee>;
   onRemove: (id: number) => void;
+  onUpdate: (id: number, data: Partial<Employee>) => Promise<Employee>;
   onAddDepartment: (data: { name: string }) => Promise<Department>;
   isAdding: boolean;
   isAddingDepartment: boolean;
+  isUpdating: boolean;
 }
 
 const ManageEmployeesDialog: React.FC<ManageEmployeesDialogProps> = ({
@@ -58,9 +62,11 @@ const ManageEmployeesDialog: React.FC<ManageEmployeesDialogProps> = ({
   departments,
   onAdd,
   onRemove,
+  onUpdate,
   onAddDepartment,
   isAdding,
-  isAddingDepartment
+  isAddingDepartment,
+  isUpdating
 }) => {
   const [tabValue, setTabValue] = useState(0);
   const [newEmployee, setNewEmployee] = useState({
@@ -117,7 +123,21 @@ const ManageEmployeesDialog: React.FC<ManageEmployeesDialogProps> = ({
                     <TableRow key={emp.id} hover>
                       <TableCell sx={{ py: 0.25 }}>{emp.name}</TableCell>
                       <TableCell sx={{ py: 0.25 }}>{emp.job_title || "-"}</TableCell>
-                      <TableCell sx={{ py: 0.25 }}>{emp.department?.name || "-"}</TableCell>
+                      <TableCell sx={{ py: 0.25 }}>
+                        <Select
+                          size="small"
+                          value={emp.department_id || ""}
+                          onChange={(e) => onUpdate(emp.id, { department_id: Number(e.target.value) })}
+                          disabled={isUpdating}
+                          variant="standard"
+                          sx={{ fontSize: "0.875rem" }}
+                          fullWidth
+                        >
+                          {departments.map((d) => (
+                            <MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>
+                          ))}
+                        </Select>
+                      </TableCell>
                       <TableCell align="center" sx={{ py: 0.25 }}>{formatNumber(emp.fixed_amount)}</TableCell>
                       <TableCell align="center" sx={{ py: 0.25 }}>
                         <IconButton color="error" size="small" onClick={() => onRemove(emp.id)}>

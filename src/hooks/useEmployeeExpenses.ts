@@ -8,6 +8,7 @@ import {
   createEmployeeExpense, 
   deleteEmployeeExpense,
   createEmployee,
+  updateEmployee,
   deleteEmployee,
   downloadEmployeeExpensesPdf,
   getDepartments,
@@ -62,6 +63,17 @@ export const useEmployeeExpenses = () => {
       toast.success("تم إضافة الموظف بنجاح");
     },
     onError: () => toast.error("فشل في إضافة الموظف"),
+  });
+
+  const updateEmployeeMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<Employee> }) => updateEmployee(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["employees"] });
+      // Also invalidate expenses since employee data (like department) might have changed
+      queryClient.invalidateQueries({ queryKey: ["employeeExpenses"] });
+      toast.success("تم تحديث بيانات الموظف بنجاح");
+    },
+    onError: () => toast.error("فشل في تحديث بيانات الموظف"),
   });
 
   const removeEmployeeMutation = useMutation({
@@ -129,6 +141,8 @@ export const useEmployeeExpenses = () => {
     isAddingEmployee: addEmployeeMutation.isPending,
     removeEmployee: removeEmployeeMutation.mutate,
     isRemovingEmployee: removeEmployeeMutation.isPending,
+    updateEmployee: updateEmployeeMutation.mutateAsync,
+    isUpdatingEmployee: updateEmployeeMutation.isPending,
     addDepartment: addDepartmentMutation.mutateAsync,
     isAddingDepartment: addDepartmentMutation.isPending,
   };

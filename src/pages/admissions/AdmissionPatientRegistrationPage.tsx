@@ -38,9 +38,11 @@ import {
 } from "lucide-react";
 import { getAdmissionPatientsByDate } from "@/services/clinicService";
 import { getAdmissions, getPatientActiveAdmission, createAdmission, updateAdmission, getAdmissionRequestedSurgeriesSummary, dischargeAdmission, vacateBedAdmission } from "@/services/admissionService";
+import { searchExistingPatients } from "@/services/patientService";
 import type {
   ActivePatientVisit,
   Patient,
+  PatientSearchResult,
 } from "@/types/patients";
 import AdmissionActiveCard from "@/components/admissions/AdmissionActiveCard";
 import QuickAddPatientDialog, {
@@ -76,6 +78,17 @@ export default function AdmissionPatientRegistrationPage() {
   const [editPatientDialogOpen, setEditPatientDialogOpen] = useState(false);
   const [editPatientId, setEditPatientId] = useState<number | null>(null);
   const [admissionSearchDate, setAdmissionSearchDate] = useState<string | null>(null);
+  const [patientSearchQuery, setPatientSearchQuery] = useState("");
+
+  const { data: searchResults = [], isFetching: isSearchingPatients } = useQuery({
+    queryKey: ["patientSearch", patientSearchQuery],
+    queryFn: () => searchExistingPatients(patientSearchQuery),
+    enabled: patientSearchQuery.length >= 2,
+  });
+
+  const sortedSearchResults = useMemo(() => {
+    return [...searchResults].sort((a, b) => b.id - a.id);
+  }, [searchResults]);
 
   const {
     theme,
@@ -110,6 +123,26 @@ export default function AdmissionPatientRegistrationPage() {
       // Ensure patient details on the visit are up to date with the selection (loosen typing)
       setSelectedVisit({ ...(visit as any), patient: patient as any });
       setShowQuickAddForm(false);
+    }
+  };
+
+  const handlePatientSearchSelect = (patient: PatientSearchResult | null) => {
+    if (patient) {
+      // Create a "virtual" visit to satisfy the page components that rely on selectedVisit
+      setSelectedVisit({
+        id: -(patient.id), // Use negative ID to distinguish virtual visits
+        patient: {
+          id: patient.id,
+          name: patient.name,
+          phone: patient.phone ?? undefined,
+          gender: patient.gender,
+          age_year: patient.age_year,
+        } as any,
+        created_at: new Date().toISOString(),
+      } as any);
+      setShowQuickAddForm(false);
+    } else {
+      setSelectedVisit(null);
     }
   };
 
@@ -384,6 +417,31 @@ export default function AdmissionPatientRegistrationPage() {
                 "& .MuiInputBase-root": { minWidth: 160 },
                 "& .MuiInputLabel-shrink": { fontSize: "0.75rem" },
               }}
+            />
+            <Autocomplete
+              size="small"
+              options={sortedSearchResults}
+              getOptionLabel={(option) => `${option.name} ${option.phone ? `(${option.phone})` : ""}`}
+              loading={isSearchingPatients}
+              onInputChange={(_, value) => setPatientSearchQuery(value)}
+              onChange={(_, value) => handlePatientSearchSelect(value)}
+              sx={{ width: 300 }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="بحث عن مريض بالاسم"
+                  placeholder="2 حروف على الأقل..."
+                  InputProps={{
+                    ...params.InputProps,
+                    endAdornment: (
+                      <>
+                        {isSearchingPatients ? <CircularProgress color="inherit" size={20} /> : null}
+                        {params.InputProps.endAdornment}
+                      </>
+                    ),
+                  }}
+                />
+              )}
             />
             <Button
               variant={showQuickAddForm ? "outlined" : "contained"}

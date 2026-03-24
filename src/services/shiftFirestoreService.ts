@@ -5,6 +5,7 @@ import { webUrl } from '@/pages/constants';
 import { getFinancialSummary } from './dashboardService';
 import { getSettings } from './settingService';
 import { sendWhatsAppCloudTemplate, type WhatsAppCloudTemplatePayload } from './whatsappCloudApiService';
+import { formatNumber } from '@/lib/utils';
 
 export interface ShiftUploadResult {
   success: boolean;
@@ -142,15 +143,15 @@ export const sendShiftSummaryWhatsApp = async (shiftId: number, userName: string
         {
           type: 'body',
           parameters: [
-            { type: 'text', text: String(totalRevenue) }, // {{1}} الإيرادات الإجمالية
-            { type: 'text', text: String(totalCash) },    // {{2}} نقداً (كاش)
-            { type: 'text', text: String(totalBank) },    // {{3}} تحويل (بنكك)
-            { type: 'text', text: String(summary.costs.total || 0) }, // {{4}} إجمالي المصروفات
-            { type: 'text', text: String(summary.total_refunds || 0) }, // {{5}} إجمالي المبالغ المستردة
-            { type: 'text', text: String(summary.total_discounts || 0) }, // {{6}} إجمالي التخفيضات الممنوحة
+            { type: 'text', text: formatNumber(totalRevenue, 0) }, // {{1}} الإيرادات الإجمالية
+            { type: 'text', text: formatNumber(totalCash, 0) },    // {{2}} نقداً (كاش)
+            { type: 'text', text: formatNumber(totalBank, 0) },    // {{3}} تحويل (بنكك)
+            { type: 'text', text: formatNumber(summary.costs.total || 0, 0) }, // {{4}} إجمالي المصروفات
+            { type: 'text', text: formatNumber(summary.total_refunds || 0, 0) }, // {{5}} إجمالي المبالغ المستردة
+            { type: 'text', text: formatNumber(summary.total_discounts || 0, 0) }, // {{6}} إجمالي التخفيضات الممنوحة
             { type: 'text', text: userName }, // {{7}} الموظف المسؤول
-            { type: 'text', text: String(summary.net_cash || 0) }, // {{8}} الصافي (كاش)
-            { type: 'text', text: String(summary.net_bank || 0) }, // {{9}} الصافي (بنكك)
+            { type: 'text', text: formatNumber(summary.net_cash || 0, 0) }, // {{8}} الصافي (كاش)
+            { type: 'text', text: formatNumber(summary.net_bank || 0, 0) }, // {{9}} الصافي (بنكك)
           ],
         },
       ],

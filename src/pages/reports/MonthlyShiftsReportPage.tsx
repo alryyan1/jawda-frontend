@@ -365,10 +365,10 @@ const MonthlyShiftsReportPage: React.FC = () => {
             {reportData.data.length === 0 ? (
               <Alert severity="info">لا توجد ورديات مسجلة في هذا الشهر</Alert>
             ) : (
-              <TableContainer component={Paper} elevation={0}>
-                <MUITable size="small" sx={{ "& .MuiTableCell-root": { py: 0.5, fontSize: "0.8125rem" } }}>
+              <TableContainer component={Paper} elevation={0} sx={{ maxHeight: "calc(100vh - 240px)" }}>
+                <MUITable stickyHeader size="small" sx={{ "& .MuiTableCell-root": { py: 0.5, fontSize: "0.8125rem" } }}>
                   <MUITableHead>
-                    <MUITableRow sx={{ backgroundColor: "primary.main" }}>
+                    <MUITableRow sx={{ "& th": { backgroundColor: "primary.main", zIndex: 2 } }}>
                       <MUITableCell sx={{ color: "white", fontWeight: "bold", textAlign: "center", py: 0.5, fontSize: "0.8125rem" }}>التاريخ</MUITableCell>
                       <MUITableCell sx={{ color: "white", fontWeight: "bold", textAlign: "center", py: 0.5, fontSize: "0.8125rem" }}>الوردية</MUITableCell>
                       <MUITableCell sx={{ color: "white", fontWeight: "bold", textAlign: "center", py: 0.5, fontSize: "0.8125rem" }}>إيراد كاش</MUITableCell>

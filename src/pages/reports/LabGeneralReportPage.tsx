@@ -279,7 +279,7 @@ const LabGeneralReportPage: React.FC = () => {
                 disabled={isFetching || isLoadingDropdowns || patients.length === 0}
                 startIcon={<Eye className="h-4 w-4" />}
               >
-                عرض PDF
+                 PDF
               </Button>
               
               <Button 
@@ -313,14 +313,14 @@ const LabGeneralReportPage: React.FC = () => {
             <Typography variant="h6">ايراد حسب المستخدم</Typography>
           </CardHeader>
           <CardContent>
-            <MUITable size="medium" sx={{ fontSize: '1.1rem' }}>
+            <MUITable size="small" sx={{ '& .MuiTableCell-root': { py: '6px', fontSize: '0.875rem' } }}>
               <MUITableHead>
                 <MUITableRow>
-                  <MUITableCell align="center" sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>اسم المستخدم</MUITableCell>
-                  <MUITableCell align="center" sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>إجمالي المدفوع</MUITableCell>
-                  <MUITableCell align="center" sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>إجمالي التخفيض</MUITableCell>
-                  <MUITableCell align="center" sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>إجمالي كاش</MUITableCell>
-                  <MUITableCell align="center" sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>إجمالي بنك</MUITableCell>
+                  <MUITableCell align="center" sx={{ fontWeight: 'bold' }}>اسم المستخدم</MUITableCell>
+                  <MUITableCell align="center" sx={{ fontWeight: 'bold' }}>إجمالي المدفوع</MUITableCell>
+                  <MUITableCell align="center" sx={{ fontWeight: 'bold' }}>إجمالي التخفيض</MUITableCell>
+                  <MUITableCell align="center" sx={{ fontWeight: 'bold' }}>إجمالي كاش</MUITableCell>
+                  <MUITableCell align="center" sx={{ fontWeight: 'bold' }}>إجمالي بنك</MUITableCell>
                 </MUITableRow>
               </MUITableHead>
               <MUITableBody>
@@ -337,29 +337,29 @@ const LabGeneralReportPage: React.FC = () => {
                         backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'inherit',
                       }}
                     >
-                      <MUITableCell align="center" className="font-medium" sx={{ fontSize: '1.1rem' }}>{userRevenue.user_name}</MUITableCell>
-                      <MUITableCell align="center" sx={{ fontSize: '1.1rem' }}>{formatNumber(totalPaid)}</MUITableCell>
-                      <MUITableCell align="center" sx={{ fontSize: '1.1rem' }}>{formatNumber(totalDiscount)}</MUITableCell>
-                      <MUITableCell align="center" sx={{ fontSize: '1.1rem' }}>{formatNumber(totalCash)}</MUITableCell>
-                      <MUITableCell align="center" sx={{ color: totalBank > 0 ? 'red' : 'inherit', fontSize: '1.1rem' }}>
+                      <MUITableCell align="center" className="font-medium">{userRevenue.user_name}</MUITableCell>
+                      <MUITableCell align="center">{formatNumber(totalPaid)}</MUITableCell>
+                      <MUITableCell align="center">{formatNumber(totalDiscount)}</MUITableCell>
+                      <MUITableCell align="center">{formatNumber(totalCash)}</MUITableCell>
+                      <MUITableCell align="center" sx={{ color: totalBank > 0 ? 'red' : 'inherit' }}>
                         {formatNumber(totalBank)}
                       </MUITableCell>
                     </MUITableRow>
                   );
                 })}
                 {/* Totals Row */}
-                <MUITableRow sx={{ backgroundColor: '#3498db',fontSize: '1.1rem', color: 'white' }}>
-                  <MUITableCell align="center" className="font-bold text-white!" sx={{ fontSize: '1.1rem' }}>الإجمالي</MUITableCell>
-                  <MUITableCell align="center" className="font-bold text-white! text-2xl" sx={{ fontSize: '1.1rem' }}>
+                <MUITableRow sx={{ backgroundColor: '#3498db', color: 'white' }}>
+                  <MUITableCell align="center" className="font-bold text-white!">الإجمالي</MUITableCell>
+                  <MUITableCell align="center" className="font-bold text-white! text-base">
                     {formatNumber(userRevenues.reduce((sum, u) => sum + Number(u.total_paid || 0), 0))}
                   </MUITableCell>
-                  <MUITableCell align="center" className="font-bold text-white! text-2xl" sx={{ fontSize: '1.1rem' }}>
+                  <MUITableCell align="center" className="font-bold text-white! text-base">
                     {formatNumber(userRevenues.reduce((sum, u) => sum + Number(u.total_discount || 0), 0))}
                   </MUITableCell>
-                  <MUITableCell align="center" className="font-bold text-white! text-2xl" sx={{ fontSize: '1.1rem' }}>
+                  <MUITableCell align="center" className="font-bold text-white! text-base">
                     {formatNumber(userRevenues.reduce((sum, u) => sum + Number(u.total_cash || 0), 0))}
                   </MUITableCell>
-                  <MUITableCell align="center" className="font-bold text-white! text-2xl" sx={{ fontSize: '1.1rem' }}>
+                  <MUITableCell align="center" className="font-bold text-white! text-base">
                     {formatNumber(userRevenues.reduce((sum, u) => sum + Number(u.total_bank || 0), 0))}
                   </MUITableCell>
                 </MUITableRow>

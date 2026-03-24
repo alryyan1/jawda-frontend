@@ -88,7 +88,7 @@ const PatientistorytableClinc: React.FC<PatientHistoryTableProps> = ({
   };
   return (
     <TableContainer component={Paper} sx={{ maxHeight: window.innerHeight - 200 }}>
-      <Table stickyHeader>
+      <Table stickyHeader size="small" sx={{ '& .MuiTableCell-root': { padding: '6px 16px' } }}>
         <TableHead>
           <TableRow>
             <TableCell sx={{ width: 150, fontWeight: 'bold' }}>
@@ -97,16 +97,10 @@ const PatientistorytableClinc: React.FC<PatientHistoryTableProps> = ({
             <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' }, textAlign: 'center', fontWeight: 'bold' }}>
               آخر زيارة
             </TableCell>
-            <TableCell sx={{ width: 200, textAlign: 'center', fontWeight: 'bold' }}>
+            <TableCell sx={{ width: 180, textAlign: 'center', fontWeight: 'bold' }}>
               الطبيب
             </TableCell>
-            {/* <TableCell sx={{ width: 200, textAlign: 'center', fontWeight: 'bold' }}>
-              الطبيب السابق
-            </TableCell> */}
-            {/* <TableCell sx={{ width: 200, textAlign: 'center', fontWeight: 'bold' }}>
-              الشركه السابقه
-            </TableCell> */}
-            <TableCell sx={{ width: 200, textAlign: 'center', fontWeight: 'bold' }}>
+            <TableCell sx={{ width: 180, textAlign: 'center', fontWeight: 'bold' }}>
               الشركة
             </TableCell>
             <TableCell sx={{ textAlign: 'right', fontWeight: 'bold' }}>
@@ -117,7 +111,7 @@ const PatientistorytableClinc: React.FC<PatientHistoryTableProps> = ({
         <TableBody>
           {isLoading && (
             <TableRow>
-              <TableCell colSpan={5} sx={{ height: 96, textAlign: 'center' }}>
+              <TableCell colSpan={5} sx={{ height: 60, textAlign: 'center' }}>
                 <CircularProgress size={24} />
               </TableCell>
             </TableRow>
@@ -126,7 +120,7 @@ const PatientistorytableClinc: React.FC<PatientHistoryTableProps> = ({
             <TableRow>
               <TableCell
                 colSpan={5}
-                sx={{ height: 96, textAlign: 'center', color: 'text.secondary' }}
+                sx={{ height: 60, textAlign: 'center', color: 'text.secondary' }}
               >
                 لم يتم العثور على تاريخ للمريض
               </TableCell>
@@ -140,19 +134,13 @@ const PatientistorytableClinc: React.FC<PatientHistoryTableProps> = ({
                   cursor: 'pointer',
                   '&:hover': { backgroundColor: 'action.hover' }
                 }}
-                // onClick={() => handleSelect(patient.id)}
               >
-                <TableCell sx={{ fontWeight: 'medium' }}>
-                  <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                    <Typography variant="body2" component="span">
+                <TableCell sx={{width:'250px'}}>
+                    <Typography variant="body2" component="span" sx={{ fontSize: '0.875rem' }}>
                       {patient.name}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {patient.phone}
-                    </Typography>
-                  </Box>
                 </TableCell>
-                <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' }, textAlign: 'center' }}>
+                <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' }, textAlign: 'center', fontSize: '0.875rem' }}>
                   {patient.last_visit_date
                     ? format(parseISO(patient.last_visit_date), "P", {
                         locale: dateLocale,

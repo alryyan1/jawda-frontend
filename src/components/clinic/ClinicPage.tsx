@@ -94,6 +94,7 @@ const ClinicPage: React.FC = () => {
   // Empty dependency array means this effect runs once on mount and cleans up on unmount
   const handlePatientRegistered = useCallback((patient: Patient) => {
     // Refresh active patients list
+    queryClient.invalidateQueries({ queryKey: ['activePatients'] });
     setActivePatientsRefreshKey(prev => prev + 1);
     // If backend returned the created visit on the patient, auto-select it
     const visitId = patient.doctor_visit?.id;
@@ -101,14 +102,10 @@ const ClinicPage: React.FC = () => {
       setSelectedPatientVisit({ patient, visitId });
       setShowRegistrationForm(false);
     }
-    // Backend queues a welcome SMS job; show user feedback
-    if (patient.phone) {
-      toast.success('تمت جدولة رسالة ترحيب للمريض');
-    }
     // Reset search state
     setSearchQuery('');
     setShowPatientHistory(false);
-  }, []);
+  }, [queryClient]);
 
   // Search patients function
   const searchPatients = useCallback(async (query: string) => {
@@ -289,6 +286,7 @@ const ClinicPage: React.FC = () => {
       // Check if the patient belongs to the current doctor shift
       if (activeDoctorShift && patient.doctor_visit?.doctor_shift_id === activeDoctorShift.id) {
         // Refresh the active patients list
+        queryClient.invalidateQueries({ queryKey: ['activePatients'] });
         setActivePatientsRefreshKey(prev => prev + 1);
 
         // Optionally auto-select the new patient
@@ -307,7 +305,7 @@ const ClinicPage: React.FC = () => {
     return () => {
       realtimeService.offPatientRegistered(handleRealtimePatientRegistered);
     };
-  }, [activeDoctorShift]);
+  }, [activeDoctorShift, queryClient]);
 
 
   const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<'services' | 'lab'>('services');

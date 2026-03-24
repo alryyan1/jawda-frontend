@@ -574,7 +574,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
     return (
       <div className="h-full flex flex-col p-3 sm:p-4 bg-slate-50 dark:bg-background shadow-inner">
         <div className="flex-grow flex flex-col overflow-hidden">
-          <div className="h-[calc(100vh-200px)] pr-1">
+          <div className=" pr-1">
             <div className="bg-card border border-border rounded-lg p-4">
               <div className="space-y-4">
                 {/* Header skeleton */}
@@ -650,7 +650,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
             </div> */}
             
             <CustomTabPanel value={activeTab} index={0}>
-              <ScrollArea className="h-[calc(100vh-200px)] pr-1">
+              <ScrollArea className=" pr-1">
                 {/* Group Tabs for Special Tests */}
                 {testDataForEntry.is_special_test && childGroups.length > 0 && (
                   <div className="mb-4">

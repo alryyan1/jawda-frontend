@@ -418,35 +418,51 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
       toast.error("يرجى اختيار زيارة تحتوي على رقم هاتف صحيح أولاً");
       return;
     }
+    if (!currentPatientData?.patient_id) {
+      toast.error("بيانات المريض غير مكتملة");
+      return;
+    }
 
     setIsSendingWhatsapp(true);
     try {
+      // Step 1: Upload PDF to Firebase and get download URL
+      toast.info("جاري رفع التقرير...");
+      const uploadResponse = await apiClient.post(
+        `/patients/${currentPatientData.patient_id}/upload-to-firebase`,
+      );
+
+      if (!uploadResponse.data?.success || !uploadResponse.data?.result_url) {
+        toast.error("فشل رفع التقرير: " + (uploadResponse.data?.message || "حدث خطأ ما"));
+        return;
+      }
+
+      const pdfUrl: string = uploadResponse.data.result_url;
+
+      // Step 2: Send template with document header
+      toast.info("جاري إرسال التقرير عبر واتساب...");
       const waResponse = await apiClient.post("/whatsapp-cloud/send-template", {
         to: currentPatientData.phone,
-        template_name: "test_notification_",
+        template_name: "result_direct",
         language_code: "ar",
         components: [
+          {
+            type: "header",
+            parameters: [
+              {
+                type: "document",
+                document: {
+                  link: pdfUrl,
+                  filename: `result_${selectedVisitId}.pdf`,
+                },
+              },
+            ],
+          },
           {
             type: "body",
             parameters: [
               {
                 type: "text",
-                text: String(selectedVisitId),
-              },
-            ],
-          },
-          {
-            type: "button",
-            sub_type: "quick_reply",
-            index: "0",
-            parameters: [
-              {
-                type: "payload",
-                payload: JSON.stringify({
-                  visitId: selectedVisitId,
-                  collection:
-                    appSettings?.firestore_result_collection || "one_care",
-                }),
+                text: currentPatientData.patient_name ?? String(selectedVisitId),
               },
             ],
           },
@@ -454,18 +470,14 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
       });
 
       if (waResponse.data?.success) {
-        toast.success("تم إرسال رسالة واتساب بنجاح");
+        toast.success("تم إرسال التقرير مباشرةً عبر واتساب");
       } else {
-        toast.error(
-          "فشل إرسال رسالة واتساب: " + (waResponse.data?.error || "حدث خطأ ما"),
-        );
+        toast.error("فشل إرسال واتساب: " + (waResponse.data?.error || "حدث خطأ ما"));
       }
     } catch (error: any) {
-      const errorMessage =
-        error.response?.data?.error ||
-        error.message ||
-        "حدث خطأ أثناء إرسال التقرير";
-      toast.error(errorMessage);
+      toast.error(
+        error.response?.data?.error || error.message || "حدث خطأ أثناء إرسال التقرير",
+      );
     } finally {
       setIsSendingWhatsapp(false);
     }

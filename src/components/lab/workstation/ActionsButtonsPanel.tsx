@@ -335,7 +335,8 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
           toast.error("فشل إرسال رسالة SMS من المتصفح");
         }
       }
-
+      console.log(settings.whatsapp_result_template_name, "settings.whatsapp_result_template_name");
+      console.log(settings.whatsapp_result_language_code, "settings.whatsapp_result_language_code");
       // Send WhatsApp from frontend if enabled (temporarily moved from backend job)
       if (settings?.send_whatsapp_after_auth && patient?.phone) {
         setWaStatus({ type: "loading", message: "جاري الإرسال واتساب..." });
@@ -344,8 +345,8 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
             "/whatsapp-cloud/send-template",
             {
               to: patient.phone,
-              template_name: "test_notification_",
-              language_code: "ar",
+              template_name: settings?.whatsapp_result_template_name ?? "test_notification_",
+              language_code: settings?.whatsapp_result_language_code ?? "ar",
               components: [
                 {
                   type: "body",

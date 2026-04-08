@@ -226,6 +226,8 @@ export interface RequestedServiceSummary {
   amount_paid: number;
   is_paid: boolean;
   done: boolean;
+  done_by_user_name?: string | null;
+  done_at?: string | null;
 }
 
 export interface PatientVisitSummary {

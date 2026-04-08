@@ -83,4 +83,6 @@ export const setFirebaseEnabled = (enabled: boolean): void => {
   localStorage.setItem('firebase_enabled', enabled.toString());
 };
 
+export const firebaseProjectId: string = firebaseConfig.projectId;
+
 export default app;

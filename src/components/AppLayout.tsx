@@ -104,6 +104,7 @@ import { toast } from "sonner";
 import { useAuthorization } from "@/hooks/useAuthorization";
 import echo from "@/services/echoService";
 import { clearAllCaches } from "@/hooks/useCachedData";
+import { firebaseProjectId } from "@/lib/firebase";
 import FavoriteServiceGroupsDialog from "@/components/clinic/FavoriteServiceGroupsDialog";
 
 // Define navigation items structure
@@ -998,6 +999,21 @@ const AppLayout: React.FC = () => {
                         ? "اتصال السحاب (Pusher) نشط"
                         : "اتصال السحاب (Pusher) غير متاح"}
                     </p>
+                  </TooltipContent>
+                </Tooltip>
+
+                {/* Firebase Project Badge */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-900/30 border border-orange-300 dark:border-orange-700 cursor-default">
+                      <span className="h-1.5 w-1.5 rounded-full bg-orange-500 shrink-0" />
+                      <span className="text-[10px] font-mono font-semibold text-orange-700 dark:text-orange-400 leading-none max-w-[90px] truncate">
+                        {firebaseProjectId}
+                      </span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Firebase Project: <span className="font-mono font-bold">{firebaseProjectId}</span></p>
                   </TooltipContent>
                 </Tooltip>
 

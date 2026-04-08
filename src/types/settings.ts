@@ -74,6 +74,8 @@ export interface Setting {
   storage_name?: string | null;
   prevent_backdated_entry?: boolean;
   whatsapp_number?: string | null;
+  whatsapp_result_template_name?: string | null;
+  whatsapp_result_language_code?: string | null;
   pdf_header_type?: "logo" | "full_width" | "none";
   pdf_header_logo_position?: "left" | "right";
   pdf_header_logo_width?: number;

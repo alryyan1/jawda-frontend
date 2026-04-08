@@ -219,6 +219,13 @@ export const getPatientVisitsSummary = async (
   );
   return response.data; // Assuming Laravel pagination structure
 };
+export const markRequestedServiceDone = async (
+  requestedServiceId: number,
+  done: boolean,
+): Promise<void> => {
+  await apiClient.put(`/requested-services/${requestedServiceId}`, { done });
+};
+
 export const reassignDoctorVisitToShift = async (
   visitId: number,
   targetDoctorShiftId: number,

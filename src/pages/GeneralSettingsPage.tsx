@@ -96,6 +96,8 @@ type SettingsFormData = {
   firebase_enabled?: boolean;
   prevent_backdated_entry?: boolean;
   whatsapp_number?: string;
+  whatsapp_result_template_name?: string;
+  whatsapp_result_language_code?: string;
   pdf_header_type?: "logo" | "full_width" | "none";
   pdf_header_logo_position?: "left" | "right";
   pdf_header_logo_width?: number;
@@ -139,6 +141,8 @@ const SettingsPage: React.FC = () => {
       vatin: undefined,
       cr: undefined,
       whatsapp_number: undefined,
+      whatsapp_result_template_name: undefined,
+      whatsapp_result_language_code: undefined,
 
       // Ultramsg WhatsApp Settings
       ultramsg_instance_id: undefined,
@@ -233,6 +237,8 @@ const SettingsPage: React.FC = () => {
         prevent_backdated_entry:
           (settings as any).prevent_backdated_entry ?? undefined,
         whatsapp_number: settings.whatsapp_number || undefined,
+        whatsapp_result_template_name: settings.whatsapp_result_template_name || undefined,
+        whatsapp_result_language_code: settings.whatsapp_result_language_code || undefined,
 
         // Ultramsg WhatsApp Settings
         ultramsg_instance_id: settings.ultramsg_instance_id || undefined,
@@ -1091,6 +1097,24 @@ const SettingsPage: React.FC = () => {
                 variant="outlined"
                 helperText="هذا الرقم سيظهر في رابط الواتساب المرسل للمريض في رسالة SMS"
               />
+              <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
+                <TextField
+                  {...control.register("whatsapp_result_template_name")}
+                  label="اسم قالب إرسال النتيجة"
+                  placeholder="test_notification_"
+                  fullWidth
+                  variant="outlined"
+                  helperText="اسم القالب المستخدم عند إرسال نتيجة التحليل عبر واتساب كلاود"
+                />
+                <TextField
+                  {...control.register("whatsapp_result_language_code")}
+                  label="رمز لغة القالب"
+                  placeholder="ar"
+                  fullWidth
+                  variant="outlined"
+                  helperText="مثال: ar أو en_US"
+                />
+              </Stack>
             </Stack>
           </Paper>
         )}

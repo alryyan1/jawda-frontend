@@ -1,5 +1,5 @@
 // src/pages/services/ServicesListPage.tsx
-import React, { useState, useCallback, useEffect } from "react"; // Added useEffect
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import {
   useQuery,
@@ -11,14 +11,12 @@ import {
   getServices,
   deleteService,
   activateAllServices,
+  updateService,
 } from "@/services/serviceService";
 import { getServiceGroupsList } from "@/services/serviceGroupService"; // IMPORT
 import {
   Button,
   Card,
-  CardContent,
-  CardHeader,
-  Typography,
   TextField,
   FormControl,
   InputLabel,
@@ -45,7 +43,6 @@ import {
   XCircle,
   Settings2,
   Search,
-  Filter as FilterIcon,
   SlidersHorizontal,
 } from "lucide-react"; // Added Search, FilterIcon
 import { toast } from "sonner";
@@ -263,6 +260,33 @@ export default function ServicesListPage() {
       });
     },
   });
+  // Inline price editing
+  const [localPrices, setLocalPrices] = useState<Record<number, string>>({});
+  const priceRefs = useRef<Record<number, HTMLInputElement | null>>({});
+
+  const updatePriceMutation = useMutation({
+    mutationFn: ({ id, price }: { id: number; price: number }) =>
+      updateService(id, { price: price as any }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["services"] }),
+    onError: () => toast.error("فشل تحديث السعر"),
+  });
+
+  const commitPrice = (service: { id: number; price: string | number }) => {
+    const raw = localPrices[service.id];
+    if (raw === undefined) return;
+    const parsed = parseFloat(raw);
+    if (!isNaN(parsed) && parsed !== Number(service.price)) {
+      updatePriceMutation.mutate({ id: service.id, price: parsed });
+    }
+  };
+
+  const toggleFieldMutation = useMutation({
+    mutationFn: ({ id, field, value }: { id: number; field: "activate" | "variable"; value: boolean }) =>
+      updateService(id, { [field]: value }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["services"] }),
+    onError: () => toast.error("فشل تحديث الحقل"),
+  });
+
   const openDeleteDialog = (service: Service) => {
     setServiceToDelete(service);
     setDeleteDialogOpen(true);
@@ -337,21 +361,7 @@ export default function ServicesListPage() {
           >
             <Settings2 className="rtl:ml-2 ltr:mr-2 h-4 w-4" /> إدارة التكلفة
           </MenuItem>
-          <MenuItem
-            onClick={() => {
-              setAnchorEl(null);
-              onDelete();
-            }}
-            disabled={isDeleting}
-            sx={{ color: "error.main" }}
-          >
-            {isDeleting ? (
-              <Loader2 className="rtl:ml-2 ltr:mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Trash2 className="rtl:ml-2 ltr:mr-2 h-4 w-4" />
-            )}
-            حذف
-          </MenuItem>
+       
         </Menu>
       </>
     );
@@ -385,32 +395,59 @@ export default function ServicesListPage() {
         style={{ direction: "rtl" }}
         className="container mx-auto py-1 sm:py-1 lg:py-1"
       >
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold">الخدمات</h1>
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={handleExportPdf}
-              disabled={isExportingPdf}
-              size="small"
-              variant="outlined"
-            >
-              تصدير PDF
-            </Button>
-          </div>
-          <Button
-            onClick={handleExport}
-            disabled={isExporting}
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <h1 className="text-xl font-bold shrink-0">الخدمات</h1>
+
+          {/* Filters inline */}
+          <TextField
+            id="search-service"
+            type="search"
             size="small"
-            variant="outlined"
-          >
+            label="البحث بالاسم"
+            placeholder="ابحث"
+            value={filters.search}
+            onChange={(e) => handleFilterChange("search", e.target.value)}
+            sx={{ width: 180 }}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <Search className="h-4 w-4 text-muted-foreground" />
+                ) as any,
+              },
+            }}
+          />
+          <FormControl size="small" sx={{ width: 160 }}>
+            <InputLabel id="service-group-filter-label">المجموعة</InputLabel>
+            <Select
+              labelId="service-group-filter-label"
+              value={filters.service_group_id}
+              label="المجموعة"
+              onChange={(e) =>
+                handleFilterChange("service_group_id", String(e.target.value))
+              }
+              disabled={isLoadingServiceGroups}
+            >
+              <MenuItem value="all">كل المجموعات</MenuItem>
+              {isLoadingServiceGroups && (
+                <MenuItem value="loading" disabled>جاري التحميل...</MenuItem>
+              )}
+              {serviceGroups.map((sg) => (
+                <MenuItem key={sg.id} value={String(sg.id)}>{sg.name}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* Action buttons */}
+          <Button onClick={handleExportPdf} disabled={isExportingPdf} size="small" variant="outlined">
+            تصدير PDF
+          </Button>
+          <Button onClick={handleExport} disabled={isExporting} size="small" variant="outlined">
             تصدير
           </Button>
-          <Button
-            onClick={handleExportWithCosts}
-            disabled={isExportingCosts}
-            size="small"
-            variant="outlined"
-          >
+          <Button onClick={handleExportWithCosts} disabled={isExportingCosts} size="small" variant="outlined">
             تصدير مع التكلفة
           </Button>
           <Button
@@ -420,85 +457,19 @@ export default function ServicesListPage() {
             variant="outlined"
             color="success"
           >
-            {activateAllMutation.isPending ? (
+            {activateAllMutation.isPending && (
               <Loader2 className="h-4 w-4 animate-spin rtl:ml-2 ltr:mr-2" />
-            ) : null}
+            )}
             تفعيل كل الخدمات
           </Button>
           <AddServiceDialog />
-
-          {/* --- NEW BATCH UPDATE BUTTON & DIALOG --- */}
           <BatchUpdatePricesDialog>
-            <Button variant="outlined" size="small" className="h-9">
+            <Button variant="outlined" size="small">
               <SlidersHorizontal className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
               تحديث جماعي للأسعار
             </Button>
           </BatchUpdatePricesDialog>
         </div>
-
-        {/* Filters Section */}
-        <Card className="mb-6">
-          <CardHeader className="pb-4">
-            <Typography variant="h6" className="flex items-center gap-2">
-              <FilterIcon className="h-5 w-5 text-muted-foreground" />
-              الفلاتر
-            </Typography>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-end">
-              <div>
-                <TextField
-                  id="search-service"
-                  type="search"
-                  size="small"
-                  label="البحث بالاسم"
-                  placeholder="ابحث"
-                  value={filters.search}
-                  onChange={(e) => handleFilterChange("search", e.target.value)}
-                  fullWidth
-                  InputProps={{
-                    startAdornment: (
-                      <Search className="h-4 w-4 text-muted-foreground" />
-                    ) as any,
-                  }}
-                />
-              </div>
-              <div>
-                <FormControl fullWidth size="small">
-                  <InputLabel id="service-group-filter-label">
-                    المجموعة
-                  </InputLabel>
-                  <Select
-                    labelId="service-group-filter-label"
-                    id="service-group-filter"
-                    value={filters.service_group_id}
-                    label="المجموعة"
-                    onChange={(e) =>
-                      handleFilterChange(
-                        "service_group_id",
-                        String(e.target.value),
-                      )
-                    }
-                    disabled={isLoadingServiceGroups}
-                  >
-                    <MenuItem value="all">كل المجموعات</MenuItem>
-                    {isLoadingServiceGroups && (
-                      <MenuItem value="loading" disabled>
-                        جاري التحميل...
-                      </MenuItem>
-                    )}
-                    {serviceGroups.map((sg) => (
-                      <MenuItem key={sg.id} value={String(sg.id)}>
-                        {sg.name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </div>
-              {/* Add more filters here if needed e.g. status filter */}
-            </div>
-          </CardContent>
-        </Card>
 
         {isFetching && (
           <div className="text-sm text-muted-foreground mb-2">
@@ -541,7 +512,7 @@ export default function ServicesListPage() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {services.map((service) => (
+                  {services.map((service, idx) => (
                     <TableRow
                       key={service.id}
                       className="hover:bg-muted transition-colors"
@@ -557,22 +528,70 @@ export default function ServicesListPage() {
                           service.service_group_name ||
                           "N/A"}
                       </TableCell>
-                      <TableCell className="text-center align-middle">
-                        {Number(service.price).toFixed(2)}
+                      <TableCell className="text-center align-middle" sx={{ p: 0.5 }}>
+                        <TextField
+                          size="small"
+                          type="number"
+                          onFocus={
+                            (e) => e.target.select()
+                          }
+                          value={localPrices[service.id] ?? String(Math.round(Number(service.price)))}
+                          onChange={(e) =>
+                            setLocalPrices((prev) => ({ ...prev, [service.id]: e.target.value }))
+                          }
+                          onBlur={() => commitPrice(service)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              commitPrice(service);
+                              const nextService = services[idx + 1];
+                              if (nextService) priceRefs.current[nextService.id]?.focus();
+                            } else if (e.key === "Escape") {
+                              setLocalPrices((prev) => {
+                                const next = { ...prev };
+                                delete next[service.id];
+                                return next;
+                              });
+                            }
+                          }}
+                          slotProps={{
+                            input: {
+                              inputRef: (el) => { priceRefs.current[service.id] = el; },
+                              sx: { textAlign: "center" },
+                            },
+                          }}
+                          sx={{ width: 120 }}
+                        />
                       </TableCell>
                       <TableCell className="hidden md:table-cell text-center align-middle">
-                        {service.activate ? (
-                          <CheckCircle2 className="h-5 w-5 text-green-500 " />
-                        ) : (
-                          <XCircle className="h-5 w-5 text-red-500 " />
-                        )}
+                        <Button
+                          size="small"
+                          variant="text"
+                          onClick={() => toggleFieldMutation.mutate({ id: service.id, field: "activate", value: !service.activate })}
+                          disabled={toggleFieldMutation.isPending}
+                          sx={{ minWidth: 0, p: 0.5 }}
+                        >
+                          {service.activate ? (
+                            <CheckCircle2 className="h-5 w-5 text-green-500" />
+                          ) : (
+                            <XCircle className="h-5 w-5 text-red-500" />
+                          )}
+                        </Button>
                       </TableCell>
                       <TableCell className="hidden md:table-cell text-center align-middle">
-                        {service.variable ? (
-                          <CheckCircle2 className="h-5 w-5 text-green-500 " />
-                        ) : (
-                          <XCircle className="h-5 w-5 text-red-500 " />
-                        )}
+                        <Button
+                          size="small"
+                          variant="text"
+                          onClick={() => toggleFieldMutation.mutate({ id: service.id, field: "variable", value: !service.variable })}
+                          disabled={toggleFieldMutation.isPending}
+                          sx={{ minWidth: 0, p: 0.5 }}
+                        >
+                          {service.variable ? (
+                            <CheckCircle2 className="h-5 w-5 text-green-500" />
+                          ) : (
+                            <XCircle className="h-5 w-5 text-red-500" />
+                          )}
+                        </Button>
                       </TableCell>
                       <TableCell className="text-center align-middle">
                         {/* MUI Menu for actions */}

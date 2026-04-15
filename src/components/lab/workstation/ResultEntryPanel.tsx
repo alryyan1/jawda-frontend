@@ -27,7 +27,11 @@ import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import Button from "@mui/material/Button";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
+import Tooltip from "@mui/material/Tooltip";
 import BugReportIcon from "@mui/icons-material/BugReport";
+import DeviceHubIcon from "@mui/icons-material/DeviceHub";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Form } from "@/components/ui/form";
@@ -108,6 +112,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
   const [isSavingComment, setIsSavingComment] = useState(false);
   const [organisms, setOrganisms] = useState<RequestedOrganism[]>([]);
   const [organismDialogOpen, setOrganismDialogOpen] = useState(false);
+  const [deviceMenuAnchor, setDeviceMenuAnchor] = useState<HTMLElement | null>(null);
   
   // Ref to track the first input field for auto-focus
   const firstInputRef = useRef<HTMLInputElement | null>(null);
@@ -930,17 +935,51 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
 
 {selectedChildTestIndex !== null && filteredChildTests[selectedChildTestIndex] && (
                 <div className="mt-4 p-3 bg-muted/50 rounded-lg border">
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center gap-1 mb-2">
                     <Typography
                       variant="subtitle2"
                       sx={{
                         fontWeight: 600,
                         fontSize: "0.8rem",
                         color: "var(--foreground)",
+                        flexGrow: 1,
                       }}
                     >
                       Normal Range for {filteredChildTests[selectedChildTestIndex].child_test_name}
                     </Typography>
+                    {(filteredChildTests[selectedChildTestIndex].device_normal_ranges?.length ?? 0) > 0 && (
+                      <Tooltip title="تعيين من الجهاز">
+                        <IconButton
+                          size="small"
+                          color="secondary"
+                          onClick={(e) => setDeviceMenuAnchor(e.currentTarget)}
+                        >
+                          <DeviceHubIcon sx={{ fontSize: 16 }} />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    <Menu
+                      anchorEl={deviceMenuAnchor}
+                      open={Boolean(deviceMenuAnchor)}
+                      onClose={() => setDeviceMenuAnchor(null)}
+                      anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                      transformOrigin={{ vertical: "top", horizontal: "right" }}
+                    >
+                      {filteredChildTests[selectedChildTestIndex].device_normal_ranges?.map((dnr) => (
+                        <MenuItem
+                          key={dnr.device_id}
+                          onClick={() => {
+                            setNormalRangeInput(dnr.normal_range);
+                            setDeviceMenuAnchor(null);
+                            void saveNormalRange(dnr.normal_range);
+                          }}
+                          sx={{ fontSize: "0.8rem", gap: 1 }}
+                        >
+                          <DeviceHubIcon sx={{ fontSize: 14, color: "text.secondary" }} />
+                          <span style={{ fontWeight: 600 }}>{dnr.device_name}</span>
+                        </MenuItem>
+                      ))}
+                    </Menu>
                   </div>
                   <div className="relative">
                     <Textarea

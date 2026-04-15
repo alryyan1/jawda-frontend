@@ -1,17 +1,19 @@
 import React from 'react';
-import { 
-  TableCell, 
-  TableRow, 
-  IconButton, 
-  Tooltip, 
+import {
+  TableCell,
+  TableRow,
+  IconButton,
+  Tooltip,
   CircularProgress,
-  Box 
+  Box,
+  TextField,
 } from '@mui/material';
-import { 
-  Edit as EditIcon, 
-  Delete as DeleteIcon, 
-  Settings as SettingsIcon, 
-  DragIndicator as DragIcon 
+import {
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Settings as SettingsIcon,
+  DragIndicator as DragIcon,
+  DeviceHub as DeviceHubIcon,
 } from '@mui/icons-material';
 import type { ChildTest } from '@/types/labTests';
 import { useSortable } from '@dnd-kit/sortable';
@@ -23,22 +25,24 @@ interface ChildTestDisplayRowProps {
   onEdit: (childTestId: number) => void;
   onDelete: (childTestId: number) => void;
   onManageOptions: (childTest: ChildTest) => void;
-  
+  onManageDeviceRanges?: (childTest: ChildTest) => void;
+
   // Mutation states from parent (ChildTestsTable or ChildTestsManagementPage)
   isDeletingThisRow: boolean; // True if this specific row's delete mutation is pending
-  
+
   // Permissions
   canEdit: boolean;
   canDelete: boolean;
   canManageOptions: boolean;
+  canManageDeviceRanges?: boolean;
   canReorder: boolean; // To show/hide drag handle or make it active
   isHighlighted?: boolean;
 }
 
 const ChildTestDisplayRow: React.FC<ChildTestDisplayRowProps> = ({
-  childTest, onEdit, onDelete, onManageOptions,
+  childTest, onEdit, onDelete, onManageOptions, onManageDeviceRanges,
   isDeletingThisRow,
-  canEdit, canDelete, canManageOptions, canReorder, isHighlighted
+  canEdit, canDelete, canManageOptions, canManageDeviceRanges, canReorder, isHighlighted
 }) => {
 
   const {
@@ -152,23 +156,36 @@ const ChildTestDisplayRow: React.FC<ChildTestDisplayRowProps> = ({
       >
         {childTest.child_group?.name || childTest.child_group_name || '-'}
       </TableCell>
-      <TableCell className="text-xl!"
-        sx={{ 
-          py: 1, 
+      <TableCell
+        sx={{
+          py: 0.5,
           display: { xs: 'none', lg: 'table-cell' },
-          minWidth: { xs: 120, sm: 150 }, 
-          textAlign: 'center',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap'
-        }} 
-        title={childTest.normalRange || ''}
+          minWidth: { xs: 250, sm: 250 },
+        }}
       >
-        {childTest.normalRange || 
-         ((childTest.low !== null && childTest.low !== undefined && String(childTest.low).trim() !== '') || 
-          (childTest.upper !== null && childTest.upper !== undefined && String(childTest.upper).trim() !== '') ? 
-            `${String(childTest.low || '-').trim()} - ${String(childTest.upper || '-').trim()}` 
-            : '-')}
+        <TextField
+          multiline
+          size="small"
+          variant="outlined"
+          fullWidth
+          minRows={1}
+          maxRows={4}
+          value={
+            childTest.normalRange ||
+            (((childTest.low !== null && childTest.low !== undefined && String(childTest.low).trim() !== '') ||
+              (childTest.upper !== null && childTest.upper !== undefined && String(childTest.upper).trim() !== ''))
+              ? `${String(childTest.low || '-').trim()} - ${String(childTest.upper || '-').trim()}`
+              : '')
+          }
+          slotProps={{ input: { readOnly: true } }}
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+          sx={{
+            '& .MuiInputBase-root': { fontSize: '0.75rem', cursor: 'default' },
+            '& .MuiOutlinedInput-notchedOutline': { borderColor: 'transparent' },
+            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'divider' },
+          }}
+        />
       </TableCell>
       <TableCell className="text-xl!" sx={{ py: 1, textAlign: 'center', width: 70 }}>
         {displayOrder || '-'}
@@ -177,6 +194,13 @@ const ChildTestDisplayRow: React.FC<ChildTestDisplayRowProps> = ({
       {/* Actions Cell */}
       <TableCell className="text-xl!" sx={{ py: 1, textAlign: 'right', width: { xs: 130, sm: 150 }, display: { print: 'none' } }}>
         <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end', alignItems: 'center' }}>
+            {canManageDeviceRanges && onManageDeviceRanges && (
+              <Tooltip title="المدى الطبيعي حسب الجهاز">
+                <IconButton size="small" color="secondary" onClick={(e) => { e.stopPropagation(); onManageDeviceRanges(childTest); }} onPointerDown={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                  <DeviceHubIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
             <Tooltip title="إدارة الخيارات">
               <IconButton size="small" onClick={(e) => { e.stopPropagation(); onManageOptions(childTest); }} onPointerDown={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
                 <List />

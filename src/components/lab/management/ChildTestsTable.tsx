@@ -59,12 +59,14 @@ interface ChildTestsTableProps {
   onDeleteChildTest: (id: number) => Promise<void>;
   onOrderChange: (orderedIds: number[]) => Promise<void>;
   onManageOptions: (childTest: ChildTest) => void;
+  onManageDeviceRanges?: (childTest: ChildTest) => void;
   onUnitQuickAdd: (newUnit: Unit) => void;
   onChildGroupQuickAdd: (newGroup: ChildGroup) => void;
   canAdd: boolean;
   canEdit: boolean;
   canDelete: boolean;
   canManageOptions: boolean;
+  canManageDeviceRanges?: boolean;
   canReorder: boolean;
   onStartAddNew?: () => void;
   onStartEdit?: (ct: ChildTest) => void;
@@ -84,10 +86,12 @@ const ChildTestsTable: React.FC<ChildTestsTableProps> = ({
   onDeleteChildTest,
   onOrderChange,
   onManageOptions,
+  onManageDeviceRanges,
   canAdd,
   canEdit,
   canDelete,
   canManageOptions,
+  canManageDeviceRanges,
   canReorder,
   onUnitQuickAdd,
   onChildGroupQuickAdd,
@@ -331,7 +335,7 @@ const ChildTestsTable: React.FC<ChildTestsTableProps> = ({
               )}
               strategy={verticalListSortingStrategy}
             >
-              <TableContainer>
+              <TableContainer style={{direction:'ltr'}}>
                 <Table className="text-xl!">
                   <TableHead>
                     <TableRow>
@@ -368,10 +372,12 @@ const ChildTestsTable: React.FC<ChildTestsTableProps> = ({
                           }
                         }}
                         onManageOptions={(child) => onManageOptions(child)}
+                        onManageDeviceRanges={onManageDeviceRanges}
                         isDeletingThisRow={isDeletingId === ct.id}
                         canEdit={canEdit}
                         canDelete={canDelete}
                         canManageOptions={canManageOptions}
+                        canManageDeviceRanges={canManageDeviceRanges}
                         canReorder={canReorder}
                       />
                     ))}

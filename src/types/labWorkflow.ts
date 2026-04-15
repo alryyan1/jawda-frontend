@@ -116,7 +116,14 @@ export interface ChildTestWithResult { // Was part of MainTestWithChildrenResult
   child_group_name?: string;
   child_group?: ChildGroup;
   options?: ChildTestOption[]; // Array of predefined options
-  
+  device_normal_ranges?: Array<{
+    id: number;
+    device_id: number;
+    device_name?: string | null;
+    normal_range: string;
+    is_default?: boolean;
+  }>;
+
   result_id?: number; // ID of the RequestedResult record
   result_value?: string | null; 
   result_flags?: string | null;

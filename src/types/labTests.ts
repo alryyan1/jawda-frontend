@@ -1,3 +1,20 @@
+export interface Device {
+  id: number;
+  name: string;
+}
+
+export interface DeviceNormalRange {
+  id: number;
+  child_test_id: number;
+  device_id: number;
+  device_name?: string;
+  normal_range: string;
+  is_default: boolean;
+  user_id?: number | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
 // src/types/labTests.ts
 export interface Container {
     id: number;

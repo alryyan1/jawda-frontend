@@ -10,14 +10,16 @@ import { Loader2, ArrowLeft } from 'lucide-react';
 
 import type { MainTest, ChildTest, Unit, ChildGroup, ChildTestFormData as ChildTestFormDataType } from '@/types/labTests';
 import { getMainTestById } from '@/services/mainTestService';
-import { 
-    getChildTestsForMainTest, createChildTest, updateChildTest, deleteChildTest, batchUpdateChildTestOrder 
+import {
+    getChildTestsForMainTest, createChildTest, updateChildTest, deleteChildTest, batchUpdateChildTestOrder
 } from '@/services/childTestService';
 import { getUnits } from '@/services/unitService';
 import { getChildGroups } from '@/services/childGroupService';
 
 import ChildTestsTable from '@/components/lab/management/ChildTestsTable';
 import ManageChildTestOptionsDialog from '@/components/lab/ManageChildTestOptionsDialog';
+import ManageDevicesDialog from '@/components/lab/ManageDevicesDialog';
+import ManageDeviceNormalRangesDialog from '@/components/lab/ManageDeviceNormalRangesDialog';
 import ChildTestEditableRow from '@/components/lab/management/ChildTestEditableRow';
 
 // import { useAuthorization } from '@/hooks/useAuthorization';
@@ -30,6 +32,8 @@ const ChildTestsManagementPage: React.FC = () => {
   // const { can } = useAuthorization(); // For permissions
 
   const [managingOptionsFor, setManagingOptionsFor] = useState<ChildTest | null>(null);
+  const [devicesDialogOpen, setDevicesDialogOpen] = useState(false);
+  const [managingDeviceRangesFor, setManagingDeviceRangesFor] = useState<ChildTest | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingChildTest, setEditingChildTest] = useState<ChildTest | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
@@ -201,17 +205,20 @@ const ChildTestsManagementPage: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center gap-2 mb-4">
+    <div className="container mx-auto py-1 space-y-1">
+      <div className="flex items-center gap-2 mb-1">
         <Button variant="outline" size="icon" onClick={() => navigate(`../${mainTestId}/edit`)} className="h-8 w-8">
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <div>
+        <div className="flex-1">
           <h1 className="text-2xl font-bold">إدارة الفحوصات الفرعية</h1>
           <p className="text-sm text-muted-foreground">
             للفحص الرئيسي: {mainTest?.main_test_name || 'جاري التحميل...'}
           </p>
         </div>
+        <Button variant="outline" size="sm" onClick={() => setDevicesDialogOpen(true)}>
+          إدارة الأجهزة
+        </Button>
       </div>
 
       <ChildTestsTable
@@ -227,12 +234,14 @@ const ChildTestsManagementPage: React.FC = () => {
         onDeleteChildTest={handleDeleteChildTest}
         onOrderChange={handleOrderChange}
         onManageOptions={handleManageOptions}
+        onManageDeviceRanges={(ct) => setManagingDeviceRangesFor(ct)}
         onUnitQuickAdd={() => {}} // Placeholder - implement if needed
         onChildGroupQuickAdd={() => {}} // Placeholder - implement if needed
         canAdd={canAddChild}
         canEdit={canEditChild}
         canDelete={canDeleteChild}
         canManageOptions={canManageChildOptions}
+        canManageDeviceRanges={true}
         canReorder={canReorderChild}
         onStartAddNew={openAddDialog}
         onStartEdit={openEditDialog}
@@ -246,6 +255,17 @@ const ChildTestsManagementPage: React.FC = () => {
           childTest={managingOptionsFor}
         />
       )}
+
+      <ManageDevicesDialog
+        isOpen={devicesDialogOpen}
+        onOpenChange={setDevicesDialogOpen}
+      />
+
+      <ManageDeviceNormalRangesDialog
+        isOpen={!!managingDeviceRangesFor}
+        onOpenChange={(open) => { if (!open) setManagingDeviceRangesFor(null); }}
+        childTest={managingDeviceRangesFor}
+      />
 
       <Dialog open={editDialogOpen} onClose={closeEditDialog} fullWidth maxWidth="md">
         <DialogTitle>{isAddingNew ? 'إضافة فحص فرعي' : 'تعديل فحص فرعي'}</DialogTitle>

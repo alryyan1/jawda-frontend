@@ -32,6 +32,7 @@ import MenuItem from "@mui/material/MenuItem";
 import Tooltip from "@mui/material/Tooltip";
 import BugReportIcon from "@mui/icons-material/BugReport";
 import DeviceHubIcon from "@mui/icons-material/DeviceHub";
+import StarIcon from "@mui/icons-material/Star";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Form } from "@/components/ui/form";
@@ -977,6 +978,9 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                         >
                           <DeviceHubIcon sx={{ fontSize: 14, color: "text.secondary" }} />
                           <span style={{ fontWeight: 600 }}>{dnr.device_name}</span>
+                          {dnr.is_default && (
+                            <StarIcon sx={{ fontSize: 13, color: "warning.main", ml: "auto" }} />
+                          )}
                         </MenuItem>
                       ))}
                     </Menu>

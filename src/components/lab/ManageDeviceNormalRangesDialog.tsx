@@ -124,7 +124,7 @@ const ManageDeviceNormalRangesDialog: React.FC<ManageDeviceNormalRangesDialogPro
             لا توجد أجهزة مسجلة. أضف أجهزة أولاً من زر "إدارة الأجهزة".
           </Typography>
         ) : (
-          <Table size="small" sx={{ mt: 1 }}>
+          <Table size="small" sx={{ mt: 1 ,direction:'rtl'}}>
             <TableHead>
               <TableRow>
                 <TableCell>الجهاز</TableCell>

@@ -147,6 +147,7 @@ const SettingsMenuItem: React.FC<{
 export const allMainNavItems: NavItem[] = [
   { to: "/dashboard", label: "لوحة التحكم", icon: Home },
   { to: "/clinic", label: "العيادة", icon: Pencil },
+  { to: "/doctor-portal", label: "بوابة الطبيب", icon: Stethoscope },
   { to: "/lab-reception", label: "استقبال المختبر", icon: Microscope },
   { to: "/lab-sample-collection", label: "جمع العينات", icon: Syringe },
   { to: "/lab-workstation", label: "نتائج المختبر", icon: FlaskConical },

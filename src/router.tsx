@@ -18,6 +18,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import ClinicPage from "./components/clinic/ClinicPage";
 import DoctorFormPage from "./pages/doctors/DoctorFormPage";
 import DoctorsListPage from "./pages/doctors/DoctorsListPage";
+import DoctorPortalPage from "./pages/doctors/DoctorPortalPage";
 import { DoctorFormMode } from "./services/doctorService";
 import ServiceFormPage from "./components/services/ServiceFormPage";
 import ServicesListPage from "./components/services/ServicesListPage";
@@ -151,6 +152,10 @@ const router = createBrowserRouter([
           {
             index: true, // After login, redirect based on user_type
             element: <RedirectByUserType />,
+          },
+          {
+            path: "doctor-portal",
+            element: <DoctorPortalPage />,
           },
           {
             path: "lab-sample-collection",

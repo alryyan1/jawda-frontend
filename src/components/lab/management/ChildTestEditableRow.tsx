@@ -102,7 +102,7 @@ const ChildTestEditableRow: React.FC<ChildTestEditableRowProps> = ({
       child_test_name: data.child_test_name,
       low: data.low?.trim() ? data.low : undefined,
       upper: data.upper?.trim() ? data.upper : undefined,
-      defval: data.defval?.trim() || undefined,
+      defval: data.defval?.trim() ?? "",
       unit_id: data.unit_id || undefined,
       normalRange: data.normalRange?.trim() || undefined,
       max: data.max?.trim() ? data.max : undefined,

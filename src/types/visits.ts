@@ -69,6 +69,7 @@ export interface LabRequest {
   discount_per: number; // Percentage
   is_bankak: boolean; // Payment method for this request
   comment?: string | null; // Overall comment for this lab request
+  image_url?: string | null;
 
   user_requested?: number | null; // User ID
   requesting_user_name?: string;

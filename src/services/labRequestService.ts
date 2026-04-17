@@ -243,3 +243,21 @@ export const updateOrganism = async (
 export const deleteOrganism = async (organismId: number): Promise<void> => {
   await apiClient.delete(`/requested-organisms/${organismId}`);
 };
+
+export const uploadLabRequestImage = async (
+  labRequestId: number,
+  file: File
+): Promise<{ image_url: string }> => {
+  const form = new FormData();
+  form.append('image', file);
+  const response = await apiClient.post<{ image_url: string }>(
+    `${LABREQUEST_BASE_URL}/${labRequestId}/upload-image`,
+    form,
+    { headers: { 'Content-Type': 'multipart/form-data' } }
+  );
+  return response.data;
+};
+
+export const removeLabRequestImage = async (labRequestId: number): Promise<void> => {
+  await apiClient.delete(`${LABREQUEST_BASE_URL}/${labRequestId}/remove-image`);
+};

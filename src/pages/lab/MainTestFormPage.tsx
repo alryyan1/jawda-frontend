@@ -50,7 +50,9 @@ const mainTestFormSchema = z.object({
   is_special_test: z.boolean(),
   conditions: z.string().optional(),
   timer: z.string().optional(),
-  hide_unit: z.boolean()
+  hide_unit: z.boolean(),
+  allow_sorting: z.boolean(),
+  default_comment: z.string().optional()
 });
 
 type MainTestFormValues = z.infer<typeof mainTestFormSchema>;
@@ -67,6 +69,8 @@ interface MainTestSubmissionData {
   conditions?: string;
   timer?: number;
   hide_unit: boolean;
+  allow_sorting: boolean;
+  default_comment?: string;
 }
 
 const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
@@ -106,10 +110,12 @@ const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
       is_special_test: false,
       conditions: '',
       timer: '',
-      hide_unit: false
+      hide_unit: false,
+      allow_sorting: false,
+      default_comment: ''
     }
   });
-  
+
   const handlePackageAdded = (newPackage: Package) => {
     queryClient.invalidateQueries({ queryKey: ['packagesList'] });
     // Optionally set the new package as selected
@@ -135,7 +141,9 @@ const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
         is_special_test: false,
         conditions: '',
         timer: '',
-        hide_unit: false
+        hide_unit: false,
+        allow_sorting: false,
+        default_comment: ''
       });
       setCurrentMainTestId(null);
     }
@@ -154,7 +162,9 @@ const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
         is_special_test: Boolean((mainTestData as unknown as { is_special_test?: boolean }).is_special_test),
         conditions: (mainTestData as unknown as { conditions?: string }).conditions || '',
         timer: (mainTestData as unknown as { timer?: number }).timer ? String((mainTestData as unknown as { timer?: number }).timer) : '',
-        hide_unit: Boolean((mainTestData as unknown as { hide_unit?: boolean }).hide_unit)
+        hide_unit: Boolean((mainTestData as unknown as { hide_unit?: boolean }).hide_unit),
+        allow_sorting: Boolean((mainTestData as unknown as { allow_sorting?: boolean }).allow_sorting),
+        default_comment: (mainTestData as unknown as { default_comment?: string }).default_comment || ''
       });
     }
   }, [mainTestData, currentMainTestId, reset]);
@@ -173,6 +183,8 @@ const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
         conditions: data.conditions?.trim() || undefined,
         timer: data.timer?.trim() ? Number(data.timer) : undefined,
         hide_unit: data.hide_unit,
+        allow_sorting: data.allow_sorting,
+        default_comment: data.default_comment?.trim() || undefined,
       };
       return isEditMode && currentMainTestId 
         ? updateMainTest(currentMainTestId, submissionData) 

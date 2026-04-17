@@ -37,6 +37,8 @@ interface MainTestFormValues {
   conditions?: string;
   timer?: string;
   hide_unit: boolean;
+  allow_sorting: boolean;
+  default_comment?: string;
 }
 
 interface MainTestFormFieldsProps {
@@ -105,7 +107,7 @@ const MainTestFormFields: React.FC<MainTestFormFieldsProps> = ({
   };
 
   return (
-    <Stack spacing={3}>
+    <Stack style={{direction:'ltr'}} spacing={3}>
       <Controller
         control={control}
         name="main_test_name"
@@ -358,7 +360,42 @@ const MainTestFormFields: React.FC<MainTestFormFieldsProps> = ({
               />
             )}
           />
+
+          <Controller
+            control={control}
+            name="allow_sorting"
+            render={({ field }) => (
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={field.value}
+                    onChange={field.onChange}
+                    disabled={disabled}
+                  />
+                }
+                label="ترتيب النتائج"
+              />
+            )}
+          />
         </Stack>
+
+        <Controller
+          control={control}
+          name="default_comment"
+          render={({ field }) => (
+            <TextField
+              {...field}
+              size="small"
+              label="تعليق افتراضي"
+              placeholder="يظهر في تقرير PDF أسفل نتائج هذا الفحص"
+              multiline
+              rows={3}
+              fullWidth
+              disabled={disabled}
+              sx={{ mt: 1 }}
+            />
+          )}
+        />
       </Paper>
     </Stack>
   );

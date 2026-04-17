@@ -9,7 +9,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
-import { Loader2 } from "lucide-react";
+import { Loader2, Camera, X } from "lucide-react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faWifi,
@@ -31,7 +31,7 @@ import type { LabRequest } from "@/types/visits"; // Or types/visits
 import { toast } from "sonner";
 import { setLabRequestResultsToDefault } from "@/services/labWorkflowService";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { populateCbcResults, addOrganism } from "@/services/labRequestService";
+import { populateCbcResults, addOrganism, uploadLabRequestImage, removeLabRequestImage } from "@/services/labRequestService";
 import { togglePatientResultLock } from "@/services/patientService";
 import type { Patient } from "@/types/patients";
 import LabAppearanceSettingsDialog from "./LabAppearanceSettingsDialog";
@@ -116,6 +116,45 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
   const [isWhatsAppDialogOpen, setIsWhatsAppDialogOpen] = useState(false);
   const [isUploadingToFirebase, setIsUploadingToFirebase] = useState(false);
   const [isSendingWhatsapp, setIsSendingWhatsapp] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [imageUrl, setImageUrl] = useState<string | null>(selectedLabRequest.image_url ?? null);
+  const imageInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Sync imageUrl when the selected lab request changes
+  React.useEffect(() => {
+    setImageUrl(selectedLabRequest.image_url ?? null);
+  }, [selectedLabRequest.id, selectedLabRequest.image_url]);
+
+  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingImage(true);
+    try {
+      const result = await uploadLabRequestImage(selectedLabRequest.id, file);
+      setImageUrl(result.image_url);
+      queryClient.invalidateQueries({ queryKey: ['labRequest', selectedLabRequest.id] });
+      toast.success('تم رفع الصورة بنجاح');
+    } catch {
+      toast.error('فشل رفع الصورة');
+    } finally {
+      setIsUploadingImage(false);
+      if (imageInputRef.current) imageInputRef.current.value = '';
+    }
+  };
+
+  const handleRemoveImage = async () => {
+    setIsUploadingImage(true);
+    try {
+      await removeLabRequestImage(selectedLabRequest.id);
+      setImageUrl(null);
+      queryClient.invalidateQueries({ queryKey: ['labRequest', selectedLabRequest.id] });
+      toast.success('تم حذف الصورة');
+    } catch {
+      toast.error('فشل حذف الصورة');
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
 
   // console.log('currentpatientdata',currentPatientData)
   const handleHl7ClientOpen = () => {
@@ -910,6 +949,51 @@ const LabActionsPane: React.FC<LabActionsPaneProps> = ({
                 <p>{currentLockStatus === false ? 'إلغاء قفل النتائج' : 'قفل النتائج'}</p>
                 </TooltipContent>
             </Tooltip> */}
+        {/* Image upload */}
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleImageFileChange}
+        />
+        {imageUrl && (
+          <div className="relative w-12 h-12 mx-auto">
+            <img
+              src={imageUrl}
+              alt="lab attachment"
+              className="w-12 h-12 rounded object-cover border border-muted"
+            />
+            <button
+              onClick={handleRemoveImage}
+              disabled={isUploadingImage}
+              className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full w-4 h-4 flex items-center justify-center p-0"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        )}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="w-12 h-12"
+              onClick={() => imageInputRef.current?.click()}
+              disabled={isUploadingImage || !selectedLabRequest}
+            >
+              {isUploadingImage ? (
+                <Loader2 className="h-7! w-7! animate-spin" />
+              ) : (
+                <Camera className="h-7! w-7!" style={{ color: imageUrl ? '#3b82f6' : undefined }} />
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="right" sideOffset={5}>
+            <p>{imageUrl ? 'تغيير صورة الفحص' : 'إرفاق صورة للفحص'}</p>
+          </TooltipContent>
+        </Tooltip>
+
         {/* Spacer to push settings to bottom, or use flex-grow on a container above */}
         <div className="flex-grow"></div>
 

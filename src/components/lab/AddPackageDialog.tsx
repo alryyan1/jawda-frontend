@@ -23,7 +23,7 @@ import { Add } from '@mui/icons-material';
 import { FormProvider } from 'react-hook-form';
 
 import { createPackageQuick } from '@/services/packageService';
-import { Package, PackageQuickAddFormData, Container } from '@/types/labTests';
+import type { Package, PackageQuickAddFormData, Container } from '@/types/labTests';
 // import { getContainersList } from '@/services/containerService'; // If container is a select
 
 interface AddPackageDialogProps {

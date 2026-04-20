@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { getRoles, deleteRole } from '@/services/roleService';
-import { Role, Permission } from '@/types/auth';
+import type { Role, Permission } from '@/types/auth';
 import { toast } from 'sonner';
 import {
   Box,

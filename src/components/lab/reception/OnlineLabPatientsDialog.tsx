@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { collection, getDocs, query, orderBy, where, Timestamp, QueryConstraint } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { hospitalDb as db } from '@/lib/firebase-hospital';
 import apiClient from '@/services/api';
 import {
   Dialog,

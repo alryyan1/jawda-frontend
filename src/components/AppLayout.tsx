@@ -38,8 +38,6 @@ import {
   Wifi,
   WifiOff,
   Pencil,
-  Bell,
-  BellOff,
   Building,
   ListOrdered,
   CreditCard,
@@ -61,13 +59,10 @@ import {
   EyeOff,
   RefreshCw,
   Star,
-  Hospital,
-  Cloud,
-  CloudOff,
   BedDouble,
 } from "lucide-react";
 import { Toaster } from "sonner";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Tooltip,
   TooltipContent,
@@ -98,11 +93,8 @@ import {
 } from "@/services/patientService";
 import { getActiveDoctorShifts } from "@/services/clinicService";
 import type { DoctorShift } from "@/types/doctors";
-import queueWorkerService from "@/services/queueWorkerService";
-import type { QueueWorkerStatus } from "@/services/queueWorkerService";
 import { toast } from "sonner";
 import { useAuthorization } from "@/hooks/useAuthorization";
-import echo from "@/services/echoService";
 import { clearAllCaches } from "@/hooks/useCachedData";
 import { firebaseProjectId } from "@/lib/firebase";
 import FavoriteServiceGroupsDialog from "@/components/clinic/FavoriteServiceGroupsDialog";
@@ -553,15 +545,6 @@ const AppLayout: React.FC = () => {
     useState<boolean>(getSidebarCollapsedState());
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
-  const [isPusherConnected, setIsPusherConnected] = useState(false);
-  const [queueWorkerStatus, setQueueWorkerStatus] = useState<QueueWorkerStatus>(
-    {
-      is_running: false,
-      status: "stopped",
-    },
-  );
-  const [isQueueWorkerLoading, setIsQueueWorkerLoading] = useState(false);
-
   // Current general shift status for app-wide indicator
   const { data: currentOpenShift } = useQuery({
     queryKey: ["currentOpenShift"],
@@ -569,54 +552,6 @@ const AppLayout: React.FC = () => {
     // Removed refetchInterval - fetch only once
   });
   // console.log(currentOpenShift,'currentOpenShift')
-
-  // Queue worker status query with polling
-  const { data: queueWorkerData, refetch: refetchQueueWorkerStatus } = useQuery(
-    {
-      queryKey: ["queueWorkerStatus"],
-      queryFn: () => queueWorkerService.getStatus(),
-      refetchInterval: 500000, // Poll every 5 seconds
-    },
-  );
-
-  // Update queue worker status when data changes
-  useEffect(() => {
-    if (queueWorkerData?.success) {
-      setQueueWorkerStatus(queueWorkerData.data);
-    }
-  }, [queueWorkerData]);
-
-  // Queue worker toggle mutation
-  const queueWorkerToggleMutation = useMutation({
-    mutationFn: () => queueWorkerService.toggle(),
-    onMutate: () => {
-      setIsQueueWorkerLoading(true);
-    },
-    onSuccess: (response) => {
-      if (response.success) {
-        setQueueWorkerStatus(response.data);
-        toast.success(
-          response.data.is_running
-            ? "تم تشغيل معالج الإشعارات بنجاح"
-            : "تم إيقاف معالج الإشعارات بنجاح",
-        );
-      } else {
-        toast.error(response.message || "فشل في تشغيل/إيقاف معالج الإشعارات");
-      }
-    },
-    onError: (error: Error) => {
-      toast.error("حدث خطأ أثناء تشغيل/إيقاف معالج الإشعارات");
-      console.error("Queue Worker error:", error);
-    },
-    onSettled: () => {
-      setIsQueueWorkerLoading(false);
-      refetchQueueWorkerStatus(); // Refresh status after toggle
-    },
-  });
-
-  const handleQueueWorkerToggle = () => {
-    queueWorkerToggleMutation.mutate();
-  };
 
   // Monitor realtime connection status
   useEffect(() => {
@@ -631,27 +566,6 @@ const AppLayout: React.FC = () => {
     const interval = setInterval(checkConnection, 2000);
 
     return () => clearInterval(interval);
-  }, []);
-
-  // Monitor Pusher (Laravel Echo) connection status
-  useEffect(() => {
-    if (!echo || !echo.connector || !echo.connector.pusher) return;
-
-    const pusher = echo.connector.pusher;
-
-    const updateStatus = () => {
-      setIsPusherConnected(pusher.connection.state === "connected");
-    };
-
-    // Set initial status
-    updateStatus();
-
-    // Listen for state changes
-    pusher.connection.bind("state_change", updateStatus);
-
-    return () => {
-      pusher.connection.unbind("state_change", updateStatus);
-    };
   }, []);
 
   const toggleDesktopSidebar = () => {
@@ -980,29 +894,6 @@ const AppLayout: React.FC = () => {
                   </TooltipContent>
                 </Tooltip>
 
-                {/* Pusher Connection Status */}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div
-                      className="flex items-center"
-                      aria-label="pusher-status"
-                    >
-                      {isPusherConnected ? (
-                        <Cloud className="h-4 w-4 text-orange-500" />
-                      ) : (
-                        <CloudOff className="h-4 w-4 text-gray-400" />
-                      )}
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>
-                      {isPusherConnected
-                        ? "اتصال السحاب (Pusher) نشط"
-                        : "اتصال السحاب (Pusher) غير متاح"}
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-
                 {/* Firebase Project Badge */}
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -1015,35 +906,6 @@ const AppLayout: React.FC = () => {
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>Firebase Project: <span className="font-mono font-bold">{firebaseProjectId}</span></p>
-                  </TooltipContent>
-                </Tooltip>
-
-                {/* Queue Worker Status */}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={handleQueueWorkerToggle}
-                      disabled={isQueueWorkerLoading}
-                      className="h-8 w-8"
-                      aria-label="queue-worker-status"
-                    >
-                      {isQueueWorkerLoading ? (
-                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
-                      ) : queueWorkerStatus.is_running ? (
-                        <Bell className={cn("h-4 w-4", "text-green-500")} />
-                      ) : (
-                        <BellOff className={cn("h-4 w-4", "text-gray-500")} />
-                      )}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>
-                      {queueWorkerStatus.is_running
-                        ? `معالج الإشعارات يعمل (PID: ${queueWorkerStatus.pid})`
-                        : "معالج الإشعارات متوقف"}
-                    </p>
                   </TooltipContent>
                 </Tooltip>
 
@@ -1383,11 +1245,6 @@ const AppLayout: React.FC = () => {
                               to="/settings/pdf"
                               icon={FileText}
                               label="إعدادات PDF"
-                            />
-                            <SettingsMenuItem
-                              to="/jobs-management"
-                              icon={BarChartBig}
-                              label="إدارة المهام"
                             />
                           </DropdownMenuSubContent>
                         </DropdownMenuSub>

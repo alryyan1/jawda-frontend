@@ -9,7 +9,6 @@ import {
   TableBody,
   TableCell,
   TableHead,
-  TableHeader,
   TableRow,
   TableContainer,
   Paper,

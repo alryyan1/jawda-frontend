@@ -11,7 +11,11 @@ export default defineConfig({
     port: 5174,
     allowedHosts: ["server1", "localhost"],
   },
-  plugins: [react(), tailwindcss(), reactClickToComponent()],
+  plugins: [
+    react(),
+    tailwindcss(),
+    reactClickToComponent(),
+  ],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

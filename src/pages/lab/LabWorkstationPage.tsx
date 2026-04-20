@@ -1,5 +1,5 @@
 // src/pages/lab/LabWorkstationPage.tsx
-import React, { useState, useCallback, useEffect, useRef } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 // Replaced shadcn with MUI
 import {
@@ -12,8 +12,6 @@ import {
   FilterIcon,
   CalendarSearch,
   Clock,
-  Volume2,
-  VolumeX,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -36,7 +34,6 @@ import ResultEntryPanel from "@/components/lab/workstation/ResultEntryPanel";
 import LabActionsPane from "@/components/lab/workstation/LabActionsPane";
 import StatusAndInfoPanel from "@/components/lab/workstation/StatusAndInfoPanel";
 import MainCommentDialog from "@/components/lab/workstation/MainCommentDialog";
-import MessengerChat from "@/components/communication/MessengerChat";
 
 import type { PatientLabQueueItem } from "@/types/labWorkflow";
 import type { Shift } from "@/types/shifts";
@@ -73,10 +70,8 @@ import {
   getAppearanceSettings,
   type LabAppearanceSettings,
 } from "@/lib/appearance-settings-store";
-import realtimeService from "@/services/realtimeService";
 import type { LabRequest } from "@/types/visits";
-import type { SysmexResultEventData } from "@/types/sysmex";
-import echo from "@/services/echoService";
+import { hospitalProjectId } from "@/lib/firebase-hospital";
 
 const LabWorkstationPage: React.FC = () => {
   // Direct Arabic labels for this page
@@ -150,39 +145,6 @@ const LabWorkstationPage: React.FC = () => {
     fileName: string;
     isLoading: boolean;
   }>({ isOpen: false, url: null, title: "", fileName: "", isLoading: false });
-  // --- Global WhatsApp Incoming Message Listener ---
-  // Ensuring messages are stored even if chat drawer is closed.
-  useEffect(() => {
-    const channel = echo.channel("whatsapp-updates");
-    const handleIncomingMessage = async (payload: any) => {
-      // Filter by System Phone Number ID
-      if (
-        payload?.message?.phone_number_id !==
-        import.meta.env.VITE_WHATSAPP_CLOUD_PHONE_NUMBER_ID
-      ) {
-        return;
-      }
-      console.log("📩 Global Listener: Incoming Message", payload);
-      try {
-        await apiClient.post("/whatsapp/messages", payload.message);
-        console.log("💾 Message stored to DB via Global Listener");
-        // Invalidate queries to update chat if open
-        queryClient.invalidateQueries({ queryKey: ["whatsappMessages"] });
-      } catch (err) {
-        console.error(
-          "Failed to store incoming message via Global Listener",
-          err,
-        );
-      }
-    };
-
-    channel.listen(".message.received", handleIncomingMessage);
-
-    return () => {
-      channel.stopListening(".message.received", handleIncomingMessage);
-    };
-  }, [queryClient]);
-
   // --- Sysmex Realtime Listener ---
   const [autocompleteInputValue, setAutocompleteInputValue] = useState("");
   const [selectedVisitFromAutocomplete, setSelectedVisitFromAutocomplete] =
@@ -210,79 +172,11 @@ const LabWorkstationPage: React.FC = () => {
   const [isLoadingLabHistory, setIsLoadingLabHistory] = useState(false);
 
   // New Payment Badge State
-  const [newPaymentBadges, setNewPaymentBadges] = useState<Set<number>>(
-    new Set(),
-  );
+  const [newPaymentBadges] = useState<Set<number>>(new Set());
 
   // Updated item state for PatientQueuePanel
   const [updatedQueueItem, setUpdatedQueueItem] =
     useState<PatientLabQueueItem | null>(null);
-
-  // Sound system state
-  const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
-  const [soundEnabled, setSoundEnabled] = useState(true);
-
-  // Function to add and remove payment badge
-  const addPaymentBadge = useCallback((visitId: number) => {
-    setNewPaymentBadges((prev) => new Set(prev).add(visitId));
-
-    // Remove badge after 15 seconds
-    setTimeout(() => {
-      setNewPaymentBadges((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(visitId);
-        return newSet;
-      });
-    }, 15000);
-  }, []);
-
-  // Function to initialize audio context (call on first user interaction)
-  const initializeAudio = useCallback(() => {
-    if (!audioContext) {
-      try {
-        const ctx = new (
-          window.AudioContext ||
-          (window as unknown as { webkitAudioContext: typeof AudioContext })
-            .webkitAudioContext
-        )();
-        setAudioContext(ctx);
-        // console.log('Audio context initialized');
-      } catch (error) {
-        console.warn("Could not initialize audio context:", error);
-        setSoundEnabled(false);
-      }
-    }
-  }, [audioContext]);
-
-  // Function to play payment sound
-  const playPaymentSound = useCallback(async () => {
-    if (!soundEnabled) return;
-
-    try {
-      // Initialize audio context if needed
-      if (!audioContext) {
-        initializeAudio();
-      }
-
-      const audio = new Audio("/new-payment.mp3");
-      audio.volume = 0.7;
-      audio.preload = "auto";
-
-      // Try to play the sound
-      const playPromise = audio.play();
-      if (playPromise !== undefined) {
-        await playPromise;
-        // console.log('Payment sound played successfully');
-      }
-    } catch (error) {
-      console.warn("Could not play payment sound:", error);
-      // If autoplay is blocked, try to enable it for future plays
-      if (error instanceof Error && error.name === "NotAllowedError") {
-        // console.warn('Autoplay blocked - user interaction required to enable sound');
-        setSoundEnabled(false);
-      }
-    }
-  }, [soundEnabled, audioContext, initializeAudio]);
 
   const handleShiftSelectedFromFinder = (selectedShift: Shift) => {
     setIsManuallyNavigatingShifts(true);
@@ -296,219 +190,6 @@ const LabWorkstationPage: React.FC = () => {
     toast.info(`تم اختيار الوردية رقم ${selectedShift.id}`);
   };
   const [visitIdSearchTerm, setVisitIdSearchTerm] = useState("");
-  // Create refs for stable function references
-  const playPaymentSoundRef = useRef(playPaymentSound);
-  const addPaymentBadgeRef = useRef(addPaymentBadge);
-  const queryClientRef = useRef(queryClient);
-  const currentShiftForQueueRef = useRef(currentShiftForQueue);
-  const selectedQueueItemRef = useRef(selectedQueueItem);
-
-  // Update refs when values change
-  useEffect(() => {
-    playPaymentSoundRef.current = playPaymentSound;
-  }, [playPaymentSound]);
-
-  useEffect(() => {
-    addPaymentBadgeRef.current = addPaymentBadge;
-  }, [addPaymentBadge]);
-
-  useEffect(() => {
-    queryClientRef.current = queryClient;
-  }, [queryClient]);
-
-  useEffect(() => {
-    currentShiftForQueueRef.current = currentShiftForQueue;
-  }, [currentShiftForQueue]);
-
-  useEffect(() => {
-    selectedQueueItemRef.current = selectedQueueItem;
-  }, [selectedQueueItem]);
-
-  // Real-time event subscription for lab payments
-  useEffect(() => {
-    const handleLabPayment = async (data: {
-      visit: DoctorVisit;
-      patient: Patient;
-      labRequests: LabRequest[];
-    }) => {
-      // console.log('Lab payment event received in LabWorkstationPage:', data);
-
-      try {
-        // Convert the visit data to PatientLabQueueItem format (for reference)
-        // const queueItemLike: PatientLabQueueItem = {
-        //   visit_id: data.visit.id,
-        //   patient_id: data.patient.id,
-        //   patient_name: data.patient.name,
-        //   sample_id: data.labRequests?.find((lr) => lr.sample_id)?.sample_id || `V${data.visit.id}`,
-        //   lab_number: `L${data.visit.id}`,
-        //   lab_request_ids: data.labRequests.map((lr) => lr.id),
-        //   oldest_request_time: data.labRequests.length > 0
-        //     ? data.labRequests.reduce(
-        //         (oldest, lr) =>
-        //           new Date(lr.created_at!) < new Date(oldest)
-        //             ? lr.created_at!
-        //             : oldest,
-        //         data.labRequests[0].created_at!
-        //       )
-        //     : data.visit.created_at,
-        //   test_count: data.labRequests.length,
-        //   phone: data.patient.phone || "",
-        //   result_is_locked: data.patient.result_is_locked || false,
-        //   all_requests_paid: true, // Payment was just made
-        //   is_result_locked: data.patient.result_is_locked || false,
-        // };
-
-        // Play payment notification sound
-        await playPaymentSoundRef.current();
-
-        // Add payment badge for 15 seconds
-        addPaymentBadgeRef.current(data.visit.id);
-
-        // Show a toast notification
-        // toast.success(`تم دفع فحوصات المختبر للمريض: ${data.patient.name}`);
-
-        // Invalidate the queue to refresh with the new paid patient
-        queryClientRef.current.invalidateQueries({
-          queryKey: ["labPendingQueue", currentShiftForQueueRef.current?.id],
-        });
-      } catch (error) {
-        console.error("Error processing lab payment event:", error);
-        toast.error("فشل في تحديث قائمة المختبر");
-      }
-    };
-
-    // console.log('LabWorkstationPage: Setting up lab payment event listener');
-    // Subscribe to lab-payment events
-    realtimeService.onLabPayment(handleLabPayment);
-
-    // Cleanup subscription on component unmount
-    return () => {
-      // console.log('LabWorkstationPage: Cleaning up lab payment event listener');
-      realtimeService.offLabPayment(handleLabPayment);
-    };
-  }, []); // Empty dependency array - only run once on mount
-
-  // Real-time event subscription for sysmex results
-  useEffect(() => {
-    // Debounce map to prevent duplicate processing of the same event
-    const processedEvents = new Set<string>();
-
-    const handleSysmexResultInserted = async (data: SysmexResultEventData) => {
-      // Create a unique key for this event to prevent duplicate processing
-      const eventKey = `sysmex-${data.doctorVisit.id}-${data.patient.id}`;
-
-      // Check if we've already processed this event recently
-      if (processedEvents.has(eventKey)) {
-        console.log("Skipping duplicate sysmex result event:", eventKey);
-        return;
-      }
-
-      // Mark this event as processed
-      processedEvents.add(eventKey);
-
-      // Clean up old processed events after 5 seconds
-      setTimeout(() => {
-        processedEvents.delete(eventKey);
-      }, 5000);
-
-      console.log(
-        "Sysmex result inserted event received in LabWorkstationPage:",
-        data,
-      );
-
-      try {
-        // Play notification sound
-        await playPaymentSoundRef.current();
-
-        // Show a toast notification
-        toast.success(`تم استلام نتائج Sysmex للمريض: ${data.patient.name}`, {
-          description: `زيارة رقم ${data.doctorVisit.id} - CBC Results Available`,
-        });
-
-        // Fetch the updated queue item for this specific patient
-        try {
-          const updatedQueueItem = await getSinglePatientLabQueueItem(
-            data.doctorVisit.id,
-          );
-          console.log(
-            "Fetched updated queue item for sysmex result:",
-            updatedQueueItem,
-          );
-
-          // Update the queue item in the PatientQueuePanel
-          setUpdatedQueueItem(updatedQueueItem);
-
-          // Use refs to get current values to avoid stale closures
-          const currentSelectedQueueItem = selectedQueueItemRef.current;
-          if (
-            currentSelectedQueueItem &&
-            currentSelectedQueueItem.visit_id === data.doctorVisit.id
-          ) {
-            setSelectedQueueItem(updatedQueueItem);
-
-            // Refresh lab requests and patient details for the current patient
-            queryClientRef.current.invalidateQueries({
-              queryKey: ["labRequestsForVisit", data.doctorVisit.id],
-            });
-            queryClientRef.current.invalidateQueries({
-              queryKey: ["patientDetails", data.patient.id],
-            });
-          }
-        } catch (fetchError) {
-          console.error("Error fetching updated queue item:", fetchError);
-          // Fallback to invalidating the entire queue if single fetch fails
-          queryClientRef.current.invalidateQueries({
-            queryKey: ["labPendingQueue", currentShiftForQueueRef.current?.id],
-          });
-        }
-      } catch (error) {
-        console.error("Error processing sysmex result event:", error);
-        toast.error("فشل في تحديث بيانات المختبر");
-      }
-    };
-
-    console.log("LabWorkstationPage: Setting up sysmex result event listener");
-    // Subscribe to sysmex-result-inserted events
-    realtimeService.onSysmexResultInserted(handleSysmexResultInserted);
-
-    // Cleanup subscription on component unmount
-    return () => {
-      console.log(
-        "LabWorkstationPage: Cleaning up sysmex result event listener",
-      );
-      realtimeService.offSysmexResultInserted(handleSysmexResultInserted);
-    };
-  }, []); // Empty dependency array - only run once on mount to prevent multiple subscriptions
-
-  // Real-time event subscription for lab queue item updates
-  useEffect(() => {
-    const handleLabQueueItemUpdated = (data: {
-      queueItem: PatientLabQueueItem;
-    }) => {
-      console.log("Lab queue item updated event received:", data);
-
-      const updatedItem = data.queueItem;
-
-      // Update queueItems state
-      setQueueItems((prevItems) =>
-        prevItems.map((item) =>
-          item.visit_id === updatedItem.visit_id ? updatedItem : item,
-        ),
-      );
-
-      // If this is the currently selected item, update it
-      if (selectedQueueItemRef.current?.visit_id === updatedItem.visit_id) {
-        setSelectedQueueItem(updatedItem);
-      }
-    };
-
-    realtimeService.onLabQueueItemUpdated(handleLabQueueItemUpdated);
-
-    // Cleanup subscription on component unmount
-    return () => {
-      realtimeService.offLabQueueItemUpdated(handleLabQueueItemUpdated);
-    };
-  }, []); // Empty dependency array - only run once on mount
 
   // Fetch global current open clinic shift
   const { data: currentClinicShiftGlobal, isLoading: isLoadingGlobalShift } =
@@ -1016,7 +697,6 @@ const LabWorkstationPage: React.FC = () => {
     <div
       style={{ height: "100%" }}
       className="flex flex-col  bg-slate-100 dark:bg-slate-900 text-sm overflow-hidden"
-      onClick={initializeAudio} // Initialize audio on first click
     >
       <header className="flex-shrink-0 h-auto p-1 border-b bg-card flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4 shadow-sm dark:border-slate-800">
         <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
@@ -1163,6 +843,16 @@ const LabWorkstationPage: React.FC = () => {
         </div>
 
         <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto sm:flex-grow justify-end">
+          {/* Firebase Project Badge */}
+          <Tooltip title={`نتائج المختبر تُحفظ في: ${hospitalProjectId}`}>
+            <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700 cursor-default">
+              <span className="h-1.5 w-1.5 rounded-full bg-blue-500 shrink-0" />
+              <span className="text-[10px] font-mono font-semibold text-blue-700 dark:text-blue-400 leading-none max-w-[100px] truncate">
+                {hospitalProjectId}
+              </span>
+            </div>
+          </Tooltip>
+
           {/* Upload Status Spinner */}
           {isUploadingToFirebase && (
             <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
@@ -1319,30 +1009,6 @@ const LabWorkstationPage: React.FC = () => {
               <ListRestart className="h-5 w-5" />
             </IconButton>
           </Tooltip> */}
-          <Tooltip title={soundEnabled ? "إيقاف الصوت" : "تشغيل الصوت"}>
-            <IconButton
-              onClick={() => {
-                if (!soundEnabled) {
-                  setSoundEnabled(true);
-                  initializeAudio();
-                  toast.info("تم تفعيل الصوت");
-                } else {
-                  setSoundEnabled(false);
-                  toast.info("تم إيقاف الصوت");
-                }
-              }}
-              size="small"
-              sx={{
-                color: soundEnabled ? "success.main" : "error.main",
-              }}
-            >
-              {soundEnabled ? (
-                <Volume2 className="h-5 w-5" />
-              ) : (
-                <VolumeX className="h-5 w-5" />
-              )}
-            </IconButton>
-          </Tooltip>
         </div>
       </header>
 
@@ -1503,10 +1169,7 @@ const LabWorkstationPage: React.FC = () => {
         title={pdfPreviewData.title}
         fileName={pdfPreviewData.fileName}
       />
-      {selectedQueueItem?.phone && (
-        <MessengerChat initialPhoneNumber={selectedQueueItem?.phone} />
-      )}
-      <MainCommentDialog
+<MainCommentDialog
         isOpen={isCommentDialogOpen}
         onOpenChange={setIsCommentDialogOpen}
         currentComment={

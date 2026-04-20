@@ -1,6 +1,6 @@
 // src/services/childTestOptionService.ts
 import apiClient from './api';
-import { ChildTestOption } from '../types/labTests';
+import type { ChildTestOption } from '../types/labTests';
 
 const getBaseUrl = (childTestId: number) => `/child-tests/${childTestId}/options`;
 

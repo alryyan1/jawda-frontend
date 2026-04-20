@@ -1,9 +1,14 @@
 // Firebase configuration and initialization
-import { initializeApp, FirebaseApp } from "firebase/app";
-import { getStorage, FirebaseStorage } from "firebase/storage";
-import { getFirestore, Firestore } from "firebase/firestore";
-import { getAnalytics, Analytics } from "firebase/analytics";
-import { getAuth, Auth, signInAnonymously } from "firebase/auth";
+import { initializeApp } from "firebase/app";
+import type { FirebaseApp } from "firebase/app";
+import { getStorage } from "firebase/storage";
+import type { FirebaseStorage } from "firebase/storage";
+import { getFirestore } from "firebase/firestore";
+import type { Firestore } from "firebase/firestore";
+import { getAnalytics } from "firebase/analytics";
+import type { Analytics } from "firebase/analytics";
+import { getAuth, signInAnonymously } from "firebase/auth";
+import type { Auth } from "firebase/auth";
 
 // Firebase configuration - same project as backend (sales-9e9b8)
 // Add VITE_FIREBASE_API_KEY and VITE_FIREBASE_APP_ID to .env from Firebase Console (sales-9e9b8)

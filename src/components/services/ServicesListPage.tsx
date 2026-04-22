@@ -44,6 +44,7 @@ import {
   Settings2,
   Search,
   SlidersHorizontal,
+  History,
 } from "lucide-react"; // Added Search, FilterIcon
 import { toast } from "sonner";
 // Replaced Shadcn AlertDialog with MUI Dialog
@@ -57,6 +58,7 @@ import {
 } from "@/services/reportService";
 import BatchUpdatePricesDialog from "./BatchUpdatePricesDialog";
 import AddServiceDialog from "./AddServiceDialog";
+import ServicePriceHistoryDialog from "./ServicePriceHistoryDialog";
 
 interface ApiError {
   message?: string;
@@ -95,6 +97,11 @@ export default function ServicesListPage() {
     isOpen: false,
     service: null,
   });
+
+  const [priceHistoryState, setPriceHistoryState] = useState<{
+    isOpen: boolean;
+    service: Service | null;
+  }>({ isOpen: false, service: null });
 
   // Fetch Service Groups for Filter Dropdown
   const { data: serviceGroupsData, isLoading: isLoadingServiceGroups } =
@@ -562,6 +569,15 @@ export default function ServicesListPage() {
                           }}
                           sx={{ width: 120 }}
                         />
+                        <Button
+                          size="small"
+                          variant="text"
+                          title="سجل تغييرات السعر"
+                          onClick={() => setPriceHistoryState({ isOpen: true, service })}
+                          sx={{ minWidth: 0, p: 0.5, ml: 0.5 }}
+                        >
+                          <History className="h-4 w-4 text-slate-400" />
+                        </Button>
                       </TableCell>
                       <TableCell className="hidden md:table-cell text-center align-middle">
                         <Button
@@ -678,6 +694,17 @@ export default function ServicesListPage() {
           onOpenChange={handleManageCostsDialogClose}
           service={manageCostsState.service}
           onCostsUpdated={handleCostsUpdated}
+        />
+      )}
+
+      {/* Price History Dialog */}
+      {priceHistoryState.service && (
+        <ServicePriceHistoryDialog
+          key={`price-history-${priceHistoryState.service.id}`}
+          serviceId={priceHistoryState.service.id}
+          serviceName={priceHistoryState.service.name}
+          open={priceHistoryState.isOpen}
+          onClose={() => setPriceHistoryState({ isOpen: false, service: null })}
         />
       )}
     </>

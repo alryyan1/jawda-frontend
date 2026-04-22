@@ -256,19 +256,24 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
       if (labRequestIds.length > 0) {
         const { abnormal, empty } = await validateAllLabRequests(labRequestIds);
 
-        // Block authentication only if there are empty fields
+        // Block or warn about empty fields based on settings
         if (empty.length > 0) {
-          setIsAuthenticating(false);
-          toast.error("لا يمكن اعتماد النتائج لوجود حقول فارغة", {
-            description: [
-              `حقول فارغة: ${empty.length}`,
-              ...empty.slice(0, 5).map((t) => `• ${t}`),
-              empty.length > 5 ? `وغيرها ${empty.length - 5}...` : "",
-            ]
-              .filter(Boolean)
-              .join("\n"),
-          });
-          return; // Block authenticate
+          const shouldBlock = settings?.block_auth_on_empty_results ?? true;
+          const description = [
+            `حقول فارغة: ${empty.length}`,
+            ...empty.slice(0, 5).map((t: string) => `• ${t}`),
+            empty.length > 5 ? `وغيرها ${empty.length - 5}...` : "",
+          ]
+            .filter(Boolean)
+            .join("\n");
+
+          if (shouldBlock) {
+            setIsAuthenticating(false);
+            toast.error("لا يمكن اعتماد النتائج لوجود حقول فارغة", { description });
+            return;
+          } else {
+            toast.warning("تحذير: توجد حقول نتائج فارغة", { description });
+          }
         }
 
         // Show warning for abnormal results but don't block

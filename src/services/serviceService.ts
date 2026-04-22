@@ -70,3 +70,16 @@ export const activateAllServices = async (): Promise<{ message: string; affected
     const response = await apiClient.post('/services/activate-all');
     return response.data;
 };
+
+export interface ServicePriceHistoryEntry {
+    id: number;
+    old_price: number;
+    new_price: number;
+    user_name: string;
+    changed_at: string;
+}
+
+export const getServicePriceHistory = async (serviceId: number): Promise<ServicePriceHistoryEntry[]> => {
+    const response = await apiClient.get(`/services/${serviceId}/price-history`);
+    return response.data;
+};

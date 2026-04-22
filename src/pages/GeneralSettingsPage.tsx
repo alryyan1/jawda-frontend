@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -57,6 +57,8 @@ type SettingsFormData = {
   send_result_after_result?: boolean;
   edit_result_after_auth?: boolean;
   firestore_result_collection?: string;
+  firebase_upload_target?: string;
+  block_auth_on_empty_results?: boolean;
   disable_doctor_service_check?: boolean;
   barcode?: boolean;
   show_water_mark?: boolean;
@@ -155,6 +157,8 @@ const SettingsPage: React.FC = () => {
       send_result_after_result: undefined,
       edit_result_after_auth: undefined,
       firestore_result_collection: undefined,
+      firebase_upload_target: 'sales',
+      block_auth_on_empty_results: true,
       disable_doctor_service_check: undefined,
       barcode: undefined,
       show_water_mark: undefined,
@@ -254,6 +258,10 @@ const SettingsPage: React.FC = () => {
         edit_result_after_auth: settings.edit_result_after_auth || undefined,
         firestore_result_collection:
           (settings as any).firestore_result_collection || undefined,
+        firebase_upload_target:
+          (settings as any).firebase_upload_target || 'sales',
+        block_auth_on_empty_results:
+          (settings as any).block_auth_on_empty_results ?? true,
         disable_doctor_service_check:
           settings.disable_doctor_service_check || undefined,
         barcode: settings.barcode || undefined,
@@ -1194,6 +1202,25 @@ const SettingsPage: React.FC = () => {
               <FormControlLabel
                 control={
                   <Checkbox
+                    {...control.register("block_auth_on_empty_results")}
+                    checked={!!(watchedValues as any).block_auth_on_empty_results}
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography variant="body1">
+                      منع الاعتماد عند وجود حقول فارغة
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      عند التفعيل، لا يمكن اعتماد النتائج إذا كانت هناك حقول نتائج فارغة. عند التعطيل، يُسمح بالاعتماد مع تحذير فقط.
+                    </Typography>
+                  </Box>
+                }
+              />
+
+              <FormControlLabel
+                control={
+                  <Checkbox
                     {...control.register("prevent_backdated_entry")}
                     checked={!!watchedValues.prevent_backdated_entry}
                   />
@@ -1259,6 +1286,30 @@ const SettingsPage: React.FC = () => {
                 fullWidth
                 variant="outlined"
                 helperText="اسم المجموعة في Firestore التي سيتم حفظ نتائج المختبر فيها"
+              />
+
+              <Controller
+                name="firebase_upload_target"
+                control={control}
+                render={({ field }) => (
+                  <FormControl fullWidth variant="outlined">
+                    <InputLabel id="firebase-upload-target-label">
+                      وجهة رفع نتائج المختبر (Firebase)
+                    </InputLabel>
+                    <Select
+                      {...field}
+                      labelId="firebase-upload-target-label"
+                      label="وجهة رفع نتائج المختبر (Firebase)"
+                    >
+                      <MenuItem value="sales">Sales Project (sales-9e9b8)</MenuItem>
+                      <MenuItem value="hospital">Hospital Project (hospitalapp-681f1)</MenuItem>
+                      <MenuItem value="both">كلا المشروعين (Both)</MenuItem>
+                    </Select>
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+                      اختر مشروع Firebase الذي سيتم رفع ملفات PDF لنتائج المختبر إليه
+                    </Typography>
+                  </FormControl>
+                )}
               />
             </Stack>
           </Paper>

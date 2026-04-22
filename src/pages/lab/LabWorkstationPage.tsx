@@ -71,7 +71,7 @@ import {
   type LabAppearanceSettings,
 } from "@/lib/appearance-settings-store";
 import type { LabRequest } from "@/types/visits";
-import { hospitalProjectId } from "@/lib/firebase-hospital";
+import { firebaseProjectId } from "@/lib/firebase";
 
 const LabWorkstationPage: React.FC = () => {
   // Direct Arabic labels for this page
@@ -844,11 +844,11 @@ const LabWorkstationPage: React.FC = () => {
 
         <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto sm:flex-grow justify-end">
           {/* Firebase Project Badge */}
-          <Tooltip title={`نتائج المختبر تُحفظ في: ${hospitalProjectId}`}>
+          <Tooltip title={`نتائج المختبر تُحفظ في: ${firebaseProjectId}`}>
             <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700 cursor-default">
               <span className="h-1.5 w-1.5 rounded-full bg-blue-500 shrink-0" />
               <span className="text-[10px] font-mono font-semibold text-blue-700 dark:text-blue-400 leading-none max-w-[100px] truncate">
-                {hospitalProjectId}
+                {firebaseProjectId}
               </span>
             </div>
           </Tooltip>

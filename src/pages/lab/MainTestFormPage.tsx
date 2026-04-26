@@ -184,7 +184,7 @@ const MainTestFormPage: React.FC<MainTestFormPageProps> = ({ mode }) => {
         timer: data.timer?.trim() ? Number(data.timer) : undefined,
         hide_unit: data.hide_unit,
         allow_sorting: data.allow_sorting,
-        default_comment: data.default_comment?.trim() || undefined,
+        default_comment: data.default_comment?.trim() ?? undefined,
       };
       return isEditMode && currentMainTestId 
         ? updateMainTest(currentMainTestId, submissionData) 

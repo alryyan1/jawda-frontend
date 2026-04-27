@@ -181,12 +181,13 @@ export const sendWhatsAppCloudLocation = async (
 export const getWhatsAppCloudPhoneNumbers = async (params?: {
   waba_id?: string;
   access_token?: string;
-}): Promise<WhatsAppCloudPhoneNumbersResponse> => {
+}, silent = false): Promise<WhatsAppCloudPhoneNumbersResponse> => {
   const response = await apiClient.get<WhatsAppCloudPhoneNumbersResponse>(
     "/whatsapp-cloud/phone-numbers",
     {
       params,
-    }
+      suppressToast: silent,
+    } as any
   );
   return response.data;
 };

@@ -823,7 +823,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
         )}
         <Dialog
           open={!!serviceToDelete}
-          onClose={() => setServiceToDelete(null)}
+          onClose={() => { setServiceToDelete(null); setServiceToDeleteObj(null); }}
         >
           <DialogTitle>تأكيد الحذف</DialogTitle>
           <DialogContent>
@@ -832,7 +832,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
             </DialogContentText>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setServiceToDelete(null)}>إلغاء</Button>
+            <Button onClick={() => { setServiceToDelete(null); setServiceToDeleteObj(null); }}>إلغاء</Button>
             <Button
               color="error"
               onClick={() =>
@@ -1055,6 +1055,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                   onClick={() => {
                     setIsRowOptionsDialogOpen(false);
                     setServiceToDelete(rowOptionsService.id);
+                    setServiceToDeleteObj(rowOptionsService);
                   }}
                   startIcon={<Trash2 className="h-4 w-4" />}
                   disabled={

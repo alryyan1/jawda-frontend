@@ -9,12 +9,9 @@ import {
   FormControlLabel,
   Checkbox,
   Button,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Box,
   CircularProgress,
+  Autocomplete,
 } from "@mui/material";
 import { Loader2 } from "lucide-react";
 
@@ -135,29 +132,47 @@ const ServiceForm: React.FC<ServiceFormProps> = ({
         <Controller
           name="service_group_id"
           control={control}
-          render={({ field }) => (
-            <FormControl fullWidth size="small">
-              <InputLabel id="group-label">المجموعة</InputLabel>
-              <Select
-                labelId="group-label"
-                label="المجموعة"
-                value={field.value || ""}
-                onChange={(e) => field.onChange(String(e.target.value))}
+          render={({ field }) => {
+            const options = Array.isArray(serviceGroups) ? serviceGroups : (serviceGroups?.data || []);
+            const selectedOption = options.find(
+              (sg) => String(sg.id) === String(field.value)
+            ) || null;
+
+            return (
+              <Autocomplete
+                fullWidth
+                size="small"
+                options={options}
+                getOptionLabel={(option) => option.name}
+                isOptionEqualToValue={(option, value) => String(option.id) === String(value?.id)}
+                value={selectedOption}
+                onChange={(_, newValue) => {
+                  field.onChange(newValue ? String(newValue.id) : "");
+                }}
                 disabled={isSubmitting || isLoadingServiceGroups}
-              >
-                {isLoadingServiceGroups && (
-                  <MenuItem value="loading" disabled>
-                    جاري التحميل...
-                  </MenuItem>
+                loading={isLoadingServiceGroups}
+                loadingText="جاري التحميل..."
+                noOptionsText="لا توجد مجموعات"
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="المجموعة"
+                    error={!!errors.service_group_id}
+                    helperText={errors.service_group_id?.message as string}
+                    InputProps={{
+                      ...params.InputProps,
+                      endAdornment: (
+                        <React.Fragment>
+                          {isLoadingServiceGroups ? <CircularProgress color="inherit" size={20} /> : null}
+                          {params.InputProps.endAdornment}
+                        </React.Fragment>
+                      ),
+                    }}
+                  />
                 )}
-                {serviceGroups?.data?.map((sg) => (
-                  <MenuItem key={sg.id} value={String(sg.id)}>
-                    {sg.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          )}
+              />
+            );
+          }}
         />
         <AddServiceGroupDialog onServiceGroupAdded={handleServiceGroupAdded} />
       </div>

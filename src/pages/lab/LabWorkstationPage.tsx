@@ -12,6 +12,8 @@ import {
   FilterIcon,
   CalendarSearch,
   Clock,
+  MessageSquare,
+  MessageCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -852,6 +854,30 @@ const LabWorkstationPage: React.FC = () => {
               </span>
             </div>
           </Tooltip>
+
+          {/* SMS after auth badge */}
+          {(settings as any)?.send_sms_after_auth && (
+            <Tooltip title="إرسال SMS بعد الاعتماد مفعّل">
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700 cursor-default">
+                <MessageSquare className="h-3 w-3 text-blue-600 dark:text-blue-400 shrink-0" />
+                <span className="text-[10px] font-semibold text-blue-700 dark:text-blue-400 leading-none">
+                  SMS
+                </span>
+              </div>
+            </Tooltip>
+          )}
+
+          {/* WhatsApp after auth badge */}
+          {(settings as any)?.send_whatsapp_after_auth && (
+            <Tooltip title="إرسال واتساب بعد الاعتماد مفعّل">
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700 cursor-default">
+                <MessageCircle className="h-3 w-3 text-green-600 dark:text-green-400 shrink-0" />
+                <span className="text-[10px] font-semibold text-green-700 dark:text-green-400 leading-none">
+                  WA
+                </span>
+              </div>
+            </Tooltip>
+          )}
 
           {/* Upload Status Spinner */}
           {isUploadingToFirebase && (

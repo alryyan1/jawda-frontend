@@ -124,10 +124,10 @@ export const sendShiftSummaryWhatsApp = async (shiftId: number, userName: string
   try {
     const summary = await getFinancialSummary({ shift_id: shiftId });
     const settings = await getSettings();
-    const to = settings?.whatsapp_number;
+    const to = (settings as any)?.shift_summary_phone ?? settings?.whatsapp_number;
 
     if (!to) {
-      console.warn('No WhatsApp number configured in settings');
+      console.warn('No WhatsApp number configured in settings for shift summary');
       return { success: false, error: 'WhatsApp number not configured' };
     }
 
@@ -136,7 +136,7 @@ export const sendShiftSummaryWhatsApp = async (shiftId: number, userName: string
     const totalBank = (summary.lab_revenue.bank || 0) + (summary.services_revenue.bank || 0);
 
     const payload: WhatsAppCloudTemplatePayload = {
-      to: '249991961111',
+      to,
       template_name: 'daily_closing_summary',
       language_code: 'en',
       components: [

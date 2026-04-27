@@ -26,6 +26,8 @@ import AddCompanyRelationDialog from "@/components/clinic/AddCompanyRelationDial
 
 // Services & Types
 import { registerNewPatientFromLab } from "@/services/patientService";
+import { getSettings } from "@/services/settingService";
+import smsService from "@/services/smsService";
 import {
   getSubcompaniesList,
 } from "@/services/companyService";
@@ -181,20 +183,31 @@ const LabRegistrationForm: React.FC<LabRegistrationFormProps> = React.memo(({
       // Pass header so global interceptor does not show another toast
       return registerNewPatientFromLab(submissionData, { headers: { 'X-Suppress-Error-Toast': '1' } });
     },
-    onSuccess: (newPatientWithVisit) => {
+    onSuccess: async (newPatientWithVisit) => {
       toast.success('تم تسجيل المريض بنجاح');
-      // console.log("API Response - newPatientWithVisit:", newPatientWithVisit);
-      // console.log("API Response - doctor_visit:", newPatientWithVisit?.doctor_visit);
-      // console.log("API Response - doctorVisit:", newPatientWithVisit?.doctorVisit);
       onPatientActivated(newPatientWithVisit);
-      reset(); // Reset form for next entry
+      reset();
       phoneInputRef.current?.focus();
       setActiveVisitId(newPatientWithVisit?.doctor_visit?.id ?? 0);
       setFormVisible(false);
-      
-      // Call the onPatientSaved callback to trigger additional actions
+
       if (onPatientSaved) {
         onPatientSaved();
+      }
+
+      // Send welcome SMS if configured and patient has a phone number
+      const phone = newPatientWithVisit?.phone;
+      if (phone) {
+        try {
+          const settings = await getSettings();
+          const message = (settings as any)?.lab_welcome_sms_message?.trim();
+          if (message) {
+            const normalized = phone.startsWith('249') ? phone : `249${phone.replace(/^0/, '')}`;
+            await smsService.sendSms(normalized, message);
+          }
+        } catch (e) {
+          console.error('Failed to send welcome SMS:', e);
+        }
       }
     },
     onError: (error: AxiosError) => {

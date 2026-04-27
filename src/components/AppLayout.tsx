@@ -60,6 +60,7 @@ import {
   RefreshCw,
   Star,
   BedDouble,
+  MessageSquare,
 } from "lucide-react";
 import { Toaster } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -74,6 +75,8 @@ import {
   getSidebarCollapsedState,
   setSidebarCollapsedState,
 } from "../lib/sidebar-store";
+import { getWhatsAppCloudPhoneNumbers } from "@/services/whatsappCloudApiService";
+import { getSettings } from "@/services/settingService";
 import {
   PdfPreviewVisibilityProvider,
   usePdfPreviewVisibility,
@@ -683,6 +686,23 @@ const AppLayout: React.FC = () => {
       setIsFavoriteServiceGroupsDialogOpen,
     ] = useState(false);
 
+    const { data: waPhoneData } = useQuery({
+      queryKey: ["whatsappCloudPhoneNumbers"],
+      queryFn: () => getWhatsAppCloudPhoneNumbers(undefined, true).catch(() => null),
+      staleTime: 30 * 60 * 1000,
+      retry: false,
+      throwOnError: false,
+    });
+    const waPhoneNumber = waPhoneData?.data?.data?.[0]?.display_phone_number;
+
+    const { data: appSettings } = useQuery({
+      queryKey: ["appSettings"],
+      queryFn: getSettings,
+      staleTime: 10 * 60 * 1000,
+      retry: false,
+    });
+    const isSmsWelcomeEnabled = !!((appSettings as any)?.lab_welcome_sms_message);
+
     // Clear all caches handler
     const handleClearAllCaches = () => {
       clearAllCaches();
@@ -908,6 +928,40 @@ const AppLayout: React.FC = () => {
                     <p>Firebase Project: <span className="font-mono font-bold">{firebaseProjectId}</span></p>
                   </TooltipContent>
                 </Tooltip>
+
+                {/* WhatsApp Cloud Phone Number Badge */}
+                {waPhoneNumber && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700 cursor-default">
+                        <span className="h-1.5 w-1.5 rounded-full bg-green-500 shrink-0" />
+                        <span style={{direction:'ltr'}}  className="text-[10px]  font-mono font-semibold text-green-700 dark:text-green-400 leading-none max-w-[100px] truncate">
+                          {waPhoneNumber}
+                        </span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>WhatsApp Cloud: <span className="font-mono font-bold">{waPhoneNumber}</span></p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+
+                {/* SMS Welcome Message Badge */}
+                {isSmsWelcomeEnabled && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700 cursor-default">
+                        <MessageSquare className="h-3 w-3 text-blue-600 dark:text-blue-400 shrink-0" />
+                        <span className="text-[10px] font-semibold text-blue-700 dark:text-blue-400 leading-none">
+                          SMS
+                        </span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>رسالة SMS الترحيبية مفعّلة عند تسجيل المريض</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
 
                 {/* Clear Cache Button */}
                 <Tooltip>

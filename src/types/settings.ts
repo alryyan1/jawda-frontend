@@ -74,6 +74,10 @@ export interface Setting {
   storage_name?: string | null;
   prevent_backdated_entry?: boolean;
   whatsapp_number?: string | null;
+  payment_cancellation_phone?: string | null;
+  shift_summary_phone?: string | null;
+  lab_welcome_sms_message?: string | null;
+  discount_request_phone?: string | null;
   whatsapp_result_template_name?: string | null;
   whatsapp_result_language_code?: string | null;
   pdf_header_type?: "logo" | "full_width" | "none";

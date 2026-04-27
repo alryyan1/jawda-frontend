@@ -35,14 +35,16 @@ import type {
 } from "@/types/services";
 
 import { useAuth } from "@/contexts/AuthContext";
-import { 
-  createRequestedServiceDeposit, 
+import {
+  createRequestedServiceDeposit,
   updateRequestedServiceDeposit,
-  deleteRequestedServiceDeposit, 
-  getDepositsForRequestedService 
+  deleteRequestedServiceDeposit,
+  getDepositsForRequestedService
 } from "@/services/requestedServiceDepositService";
 import dayjs from "dayjs";
 import { useAuthorization } from "@/hooks/useAuthorization";
+import { sendWhatsAppCloudTemplate } from "@/services/whatsappCloudApiService";
+import { getSettings } from "@/services/settingService";
 
 // Form interfaces
 interface DepositItemFormValues {
@@ -166,11 +168,40 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
     }
   });
 
-  const deleteMutation = useMutation<void, ApiError, number>({
-    mutationFn: (depositId) => deleteRequestedServiceDeposit(depositId),
-    onSuccess: () => {
+  const deleteMutation = useMutation<void, ApiError, DepositItemFormValues>({
+    mutationFn: (deposit) => deleteRequestedServiceDeposit(deposit.id!),
+    onSuccess: async (_, deposit) => {
       toast.success("تم حذف الدفعة بنجاح");
       handleQueryInvalidation();
+
+      // Fire-and-forget: notify admin via WhatsApp template
+      try {
+        const settings = await getSettings();
+        const to = (settings as any)?.payment_cancellation_phone ?? settings?.whatsapp_number;
+        if (to) {
+          await sendWhatsAppCloudTemplate({
+            to,
+            template_name: "payment_cancellation_alert",
+            language_code: "ar",
+            components: [
+              {
+                type: "body",
+                parameters: [
+                  { type: "text", text: requestedService.service?.name ?? "غير محدد" },
+                  { type: "text", text: String(deposit.amount) },
+                  { type: "text", text: deposit.is_bank ? "بنك" : "كاش" },
+                  { type: "text", text: deposit.user_name ?? "غير محدد" },
+                  { type: "text", text: deposit.created_at ? new Date(deposit.created_at).toLocaleString("ar-SA") : "غير محدد" },
+                  { type: "text", text: user?.name ?? "غير محدد" },
+                  { type: "text", text: new Date().toLocaleString("ar-SA") },
+                ],
+              },
+            ],
+          });
+        }
+      } catch (e) {
+        console.error("Failed to send payment cancellation WhatsApp alert", e);
+      }
     },
     onError: (err) => toast.error(err.response?.data?.message || "فشل في الحذف"),
   });
@@ -225,7 +256,7 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
     if (!isOpen) return;
 
     if (deposit.id) {
-      deleteMutation.mutate(Number(deposit.id));
+      deleteMutation.mutate(deposit);
     }
   }, [deleteMutation, isOpen]);
 
@@ -342,11 +373,11 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
                                     onClick={() => handleDelete(deposit)}
                                     disabled={
                                       deleteMutation.isPending &&
-                                      deleteMutation.variables === Number(deposit.id) || !can('الغاء سداد خدمه') || deposit.requested_service?.user_deposited !== user?.id
+                                      deleteMutation.variables?.id === deposit.id || !can('الغاء سداد خدمه') || deposit.requested_service?.user_deposited !== user?.id
                                     }
                                   >
                                     {deleteMutation.isPending &&
-                                    deleteMutation.variables === Number(deposit.id) ? (
+                                    deleteMutation.variables?.id === deposit.id ? (
                                       <CircularProgress size={16} />
                                     ) : (
                                       <Trash2 size={16} color="red" className={!can('الغاء سداد خدمه') ? 'cursor-not-allowed' : ''} />

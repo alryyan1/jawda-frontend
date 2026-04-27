@@ -25,6 +25,8 @@ import apiClient from '@/services/api';
 import AddSubcompanyDialog from '@/components/companies/AddSubcompanyDialog';
 import AddCompanyRelationDialog from '@/components/companies/AddCompanyRelationDialog';
 import { useAuthorization } from '@/hooks/useAuthorization';
+import { getSettings } from '@/services/settingService';
+import smsService from '@/services/smsService';
 
 interface PatientRegistrationFormProps {
   onPatientRegistered: (patient: Patient) => void;
@@ -260,9 +262,23 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
       const response = await apiClient.post('/patients', submissionData);
       const newPatient = response.data.data;
 
-      // setAlert({ type: 'error', message: 'حدث خطأ' });
       onPatientRegistered(newPatient);
-      
+
+      // Send welcome SMS if configured and patient has a phone number
+      const phone = newPatient?.phone;
+      if (phone) {
+        try {
+          const settings = await getSettings();
+          const message = (settings as any)?.lab_welcome_sms_message?.trim();
+          if (message) {
+            const normalized = phone.startsWith('249') ? phone : `249${phone.replace(/^0/, '')}`;
+            await smsService.sendSms(normalized, message);
+          }
+        } catch (e) {
+          console.error('Failed to send welcome SMS:', e);
+        }
+      }
+
       // Reset form
       setFormData({
         name: '',

@@ -15,6 +15,7 @@ import { hasPatientResultUrl } from "@/services/firebaseStorageService";
 import { useAuthorization } from "@/hooks/useAuthorization";
 import EditPatientInfoDialog from "@/components/clinic/EditPatientInfoDialog";
 import { sendWhatsAppCloudTemplate } from "@/services/whatsappCloudApiService";
+import { getSettings } from "@/services/settingService";
 
 interface PatientDetailsColumnV1Props {
   activeVisitId: number | null;
@@ -81,8 +82,12 @@ const PatientDetailsColumnV1 = forwardRef<
             visit.created_by_user?.username ||
             "غير محدد";
 
+          const settings = await getSettings();
+          const to = (settings as any)?.discount_request_phone ?? settings?.whatsapp_number;
+          if (!to) throw new Error("no discount_request_phone configured");
+
           const waRes = await sendWhatsAppCloudTemplate({
-            to: "249991961111",
+            to,
             template_name: "discount_lab_request",
             language_code: "ar",
             components: [

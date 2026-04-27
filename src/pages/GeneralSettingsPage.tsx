@@ -68,7 +68,6 @@ type SettingsFormData = {
 
   // Notification Settings
   welcome_message?: string;
-  send_welcome_message?: boolean;
 
   // WhatsApp Cloud API Settings
 
@@ -98,6 +97,10 @@ type SettingsFormData = {
   firebase_enabled?: boolean;
   prevent_backdated_entry?: boolean;
   whatsapp_number?: string;
+  payment_cancellation_phone?: string;
+  shift_summary_phone?: string;
+  lab_welcome_sms_message?: string;
+  discount_request_phone?: string;
   whatsapp_result_template_name?: string;
   whatsapp_result_language_code?: string;
   pdf_header_type?: "logo" | "full_width" | "none";
@@ -143,6 +146,10 @@ const SettingsPage: React.FC = () => {
       vatin: undefined,
       cr: undefined,
       whatsapp_number: undefined,
+      payment_cancellation_phone: undefined,
+      shift_summary_phone: undefined,
+      lab_welcome_sms_message: undefined,
+      discount_request_phone: undefined,
       whatsapp_result_template_name: undefined,
       whatsapp_result_language_code: undefined,
 
@@ -168,7 +175,6 @@ const SettingsPage: React.FC = () => {
 
       // Notification Settings
       welcome_message: undefined,
-      send_welcome_message: undefined,
 
       // WhatsApp Cloud API Settings
 
@@ -241,6 +247,10 @@ const SettingsPage: React.FC = () => {
         prevent_backdated_entry:
           (settings as any).prevent_backdated_entry ?? undefined,
         whatsapp_number: settings.whatsapp_number || undefined,
+        payment_cancellation_phone: (settings as any).payment_cancellation_phone || undefined,
+        shift_summary_phone: (settings as any).shift_summary_phone || undefined,
+        lab_welcome_sms_message: (settings as any).lab_welcome_sms_message || undefined,
+        discount_request_phone: (settings as any).discount_request_phone || undefined,
         whatsapp_result_template_name: settings.whatsapp_result_template_name || undefined,
         whatsapp_result_language_code: settings.whatsapp_result_language_code || undefined,
 
@@ -273,7 +283,6 @@ const SettingsPage: React.FC = () => {
 
         // Notification Settings
         welcome_message: settings.welcome_message || undefined,
-        send_welcome_message: settings.send_welcome_message || undefined,
 
         // WhatsApp Cloud API Settings
 
@@ -1105,6 +1114,40 @@ const SettingsPage: React.FC = () => {
                 variant="outlined"
                 helperText="هذا الرقم سيظهر في رابط الواتساب المرسل للمريض في رسالة SMS"
               />
+              <TextField
+                {...control.register("payment_cancellation_phone")}
+                label="رقم إشعارات إلغاء السداد"
+                placeholder="249991234567"
+                fullWidth
+                variant="outlined"
+                helperText="الرقم الذي يتلقى إشعار واتساب عند حذف خدمة مسددة"
+              />
+              <TextField
+                {...control.register("shift_summary_phone")}
+                label="رقم إشعارات إغلاق الوردية"
+                placeholder="249991234567"
+                fullWidth
+                variant="outlined"
+                helperText="الرقم الذي يتلقى ملخص الوردية عبر واتساب عند الإغلاق أو المزامنة"
+              />
+              <TextField
+                {...control.register("lab_welcome_sms_message")}
+                label="رسالة الترحيب SMS عند تسجيل المريض"
+                placeholder="مرحباً، تم تسجيلك في عيادتنا بنجاح."
+                fullWidth
+                variant="outlined"
+                multiline
+                rows={3}
+                helperText="تُرسل تلقائياً عبر SMS عند تسجيل مريض جديد في استقبال المختبر أو العيادة. اتركها فارغة لتعطيل الإرسال."
+              />
+              <TextField
+                {...control.register("discount_request_phone")}
+                label="رقم إشعارات طلب الخصم"
+                placeholder="249991234567"
+                fullWidth
+                variant="outlined"
+                helperText="الرقم الذي يتلقى إشعار واتساب عند سداد فاتورة تحتوي على خصم في المختبر"
+              />
               <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
                 <TextField
                   {...control.register("whatsapp_result_template_name")}
@@ -1138,26 +1181,6 @@ const SettingsPage: React.FC = () => {
             </Typography>
 
             <Stack spacing={3}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    {...control.register("send_welcome_message")}
-                    checked={!!watchedValues.send_welcome_message}
-                  />
-                }
-                label={
-                  <Box>
-                    <Typography variant="body1">
-                      إرسال رسالة ترحيبية تلقائياً
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      عند تفعيل هذا الخيار سيتم إرسال رسالة ترحيبية عند تسجيل
-                      زيارة جديدة
-                    </Typography>
-                  </Box>
-                }
-              />
-
               {/* NEW: Send SMS after auth */}
               <FormControlLabel
                 control={

@@ -56,7 +56,6 @@ const RefundDialog: React.FC<RefundDialogProps> = ({
   onUpdateRefund,
   onSuccess,
 }) => {
-  const [amount, setAmount] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "bank">("cash");
   const [reason, setReason] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -64,24 +63,14 @@ const RefundDialog: React.FC<RefundDialogProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async () => {
-    const numAmount = parseFloat(amount);
     setError(null);
-    if (isNaN(numAmount) || numAmount <= 0) {
-      setError("أدخل مبلغاً صحيحاً");
-      return;
-    }
-    if (numAmount > maxRefundable) {
-      setError(`الحد الأقصى للاسترداد: ${formatNumber(maxRefundable)}`);
-      return;
-    }
     if (!reason.trim()) {
       setError("يرجى إدخال سبب الاسترداد");
       return;
     }
     setIsSubmitting(true);
     try {
-      await onRefund(numAmount, paymentMethod, reason);
-      setAmount("");
+      await onRefund(maxRefundable, paymentMethod, reason);
       setReason("");
       onSuccess?.();
       onClose();
@@ -107,7 +96,6 @@ const RefundDialog: React.FC<RefundDialogProps> = ({
   };
 
   const handleClose = () => {
-    setAmount("");
     setReason("");
     setError(null);
     setUpdatingRefundId(null);
@@ -140,9 +128,8 @@ const RefundDialog: React.FC<RefundDialogProps> = ({
           <TextField
             label="المبلغ المسترد"
             type="number"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            inputProps={{ min: 0, step: 0.01 }}
+            value={maxRefundable}
+            disabled
             size="small"
             fullWidth
             error={!!error}
@@ -225,7 +212,7 @@ const RefundDialog: React.FC<RefundDialogProps> = ({
         <Button
           variant="contained"
           onClick={handleSubmit}
-          disabled={isSubmitting || !amount || parseFloat(amount) <= 0 || parseFloat(amount) > maxRefundable || !reason.trim()}
+          disabled={isSubmitting ||  !reason.trim()}
           startIcon={isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
         >
           {isSubmitting ? "جاري التسجيل..." : "تسجيل الاسترداد"}

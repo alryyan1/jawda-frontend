@@ -4,7 +4,8 @@ import {
   useQuery,
   keepPreviousData,
 } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
+import { arSA } from "date-fns/locale";
 import { toast } from "sonner";
 
 // MUI imports for Autocomplete
@@ -15,7 +16,6 @@ import { Loader2, Download, FileSpreadsheet, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 // Import the new components
-import DoctorShiftsReportFilters from "@/components/reports/DoctorShiftsReportFilters";
 import DoctorShiftsReportTable from "@/components/reports/DoctorShiftsReportTable";
 import DoctorShiftsReportPagination from "@/components/reports/DoctorShiftsReportPagination";
 
@@ -46,6 +46,10 @@ import {
   DialogContent,
   DialogActions,
   Button,
+  Autocomplete,
+  TextField,
+  Card,
+  CardContent,
 } from "@mui/material";
 import { Button as UIButton } from "@/components/ui/button";
 
@@ -57,6 +61,11 @@ interface Filters {
   dateTo: string;
   searchDoctorName: string;
   status: "all" | "open" | "closed";
+}
+
+interface AutocompleteOption {
+  id: string;
+  name: string;
 }
 
 
@@ -104,6 +113,7 @@ const DoctorShiftsReportPage: React.FC = () => {
   }), [theme]);
 
   const canViewAllUsersShifts = can("list all_doctor_shifts");
+  const dateLocale = arSA;
 
   const defaultDateFrom = format(new Date(), "yyyy-MM-dd");
   const defaultDateTo = format(new Date(), "yyyy-MM-dd");
@@ -331,76 +341,141 @@ const DoctorShiftsReportPage: React.FC = () => {
 
   return (
     <ThemeProvider theme={muiTheme}>
-      <Box className="container mx-auto py-4 sm:py-6 lg:py-8 space-y-6 text-base">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="flex gap-2">
-            <UIButton
-              onClick={() => navigate("/reports/specialist-shifts")}
-              variant="default"
-              size="sm"
-            >
-              <Users className="h-4 w-4" />
-              <span className="ltr:ml-2 rtl:mr-2">{"عرض حسب التخصص"}</span>
-            </UIButton>
-            <UIButton
-              onClick={handleDownloadListPdf}
-              variant="outline"
-              size="sm"
-              disabled={isGeneratingListPdf || isLoading || !shifts.length}
-            >
-              {isGeneratingListPdf ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Download className="h-4 w-4" />
-              )}
-              <span className="ltr:ml-2 rtl:mr-2">{"تصدير PDF"}</span>
-            </UIButton>
-            <UIButton
-              onClick={handleDownloadExcel}
-              variant="outline"
-              size="sm"
-              disabled={isGeneratingExcel || isLoading || !shifts.length}
-            >
-              {isGeneratingExcel ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <FileSpreadsheet className="h-4 w-4" />
-              )}
-              <span className="ltr:ml-2 rtl:mr-2">{"تصدير Excel"}</span>
-            </UIButton>
-          </div>
-          
-          {/* Count Display */}
-          {!isLoading && shifts.length > 0 && (
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg px-4 py-2">
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <span className="text-blue-700 dark:text-blue-300 font-medium text-sm">
-                  عدد مناوبات الأطباء المعروضة: {shifts.length}
-                </span>
-                {meta && (
-                  <span className="text-xs text-blue-600 dark:text-blue-400">
-                    من {((currentPage - 1) * rowsPerPage) + 1} إلى {Math.min(currentPage * rowsPerPage, meta.total)}
-                    {meta.total > 0 && (
-                      <span className="mr-1">من أصل {meta.total}</span>
-                    )}
-                  </span>
-                )}
+      <Box className="container mx-auto py-1 sm:py-1 lg:py-1 space-y-1 text-base">
+            <div className="flex items-center justify-between mb-2">
+              {/* User Opened By Filter */}
+              <div className="min-w-[150px]">
+                <Autocomplete<AutocompleteOption>
+                  id="dsr-user-filter"
+                  options={[
+                    ...(canViewAllUsersShifts ? [{ id: "all", name: "كل المستخدمين" }] : []),
+                    ...usersForFilter.map((u) => ({ id: u.id.toString(), name: u.name })),
+                  ]}
+                  getOptionLabel={(option) => option.name}
+                  isOptionEqualToValue={(option, value) => option.id === value.id}
+                  value={(() => {
+                    if (!filters.userIdOpened || filters.userIdOpened === "") return null;
+                    if (filters.userIdOpened === "all") return canViewAllUsersShifts ? { id: "all", name: "كل المستخدمين" } : null;
+                    const user = usersForFilter.find((u) => u.id.toString() === filters.userIdOpened);
+                    return user ? { id: user.id.toString(), name: user.name } : null;
+                  })()}
+                  onChange={(_, newValue) => handleFilterChange("userIdOpened", newValue?.id || "")}
+                  disabled={isLoadingUIData || isFetching}
+                  renderInput={(params) => (
+                    <TextField {...params} size="small" label="المستخدم الذي فتح" placeholder="المستخدم الذي فتح" />
+                  )}
+                />
+              </div>
+
+              {/* Doctor Filter */}
+              <div className="min-w-[150px]">
+                <Autocomplete<AutocompleteOption>
+                  id="dsr-doctor-filter"
+                  options={[
+                    { id: "all", name: "كل الأطباء" },
+                    ...(doctorsForFilter?.map((doc) => ({ id: doc.id.toString(), name: doc.name })) || []),
+                  ]}
+                  getOptionLabel={(option) => option.name}
+                  isOptionEqualToValue={(option, value) => option.id === value.id}
+                  value={(() => {
+                    if (!filters.doctorId || filters.doctorId === "" || filters.doctorId === "all") return null;
+                    const doctor = doctorsForFilter?.find((doc) => doc.id.toString() === filters.doctorId);
+                    return doctor ? { id: doctor.id.toString(), name: doctor.name } : null;
+                  })()}
+                  onChange={(_, newValue) => handleFilterChange("doctorId", newValue?.id || "")}
+                  disabled={isLoadingUIData || isFetching}
+                  renderInput={(params) => (
+                    <TextField {...params} size="small" label="الطبيب" placeholder="الطبيب" />
+                  )}
+                />
+              </div>
+
+              {/* General Shift Filter */}
+              <div className="min-w-[150px]">
+                <Autocomplete<AutocompleteOption>
+                  id="dsr-gshift-filter"
+                  options={[
+                    { id: "all", name: "كل المناوبات" },
+                    ...(generalShiftsForFilter?.map((s) => ({
+                      id: s.id.toString(),
+                      name: s.name || `#${s.id} (${format(parseISO(s.created_at), "PP", { locale: dateLocale })})`,
+                    })) || []),
+                  ]}
+                  getOptionLabel={(option) => option.name}
+                  isOptionEqualToValue={(option, value) => option.id === value.id}
+                  value={(() => {
+                    if (filters.generalShiftId === "all") return { id: "all", name: "كل المناوبات" };
+                    const shift = generalShiftsForFilter?.find((s) => s.id.toString() === filters.generalShiftId);
+                    return shift
+                      ? { id: shift.id.toString(), name: shift.name || `#${shift.id} (${format(parseISO(shift.created_at), "PP", { locale: dateLocale })})` }
+                      : null;
+                  })()}
+                  onChange={(_, newValue) => handleFilterChange("generalShiftId", newValue?.id || "all")}
+                  disabled={isLoadingUIData || isFetching}
+                  renderInput={(params) => (
+                    <TextField {...params} size="small" label="المناوبة العامة" placeholder="المناوبة العامة" />
+                  )}
+                />
+              </div>
+
+              {/* Date From */}
+              <div className="min-w-[150px]">
+                <TextField
+                  id="dsr-date-from"
+                  type="date"
+                  label="من تاريخ"
+                  value={filters.dateFrom}
+                  onChange={(e) => handleFilterChange("dateFrom", e.target.value)}
+                  size="small"
+                  disabled={isFetching}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </div>
+
+              {/* Date To */}
+              <div className="min-w-[150px]">
+                <TextField
+                  id="dsr-date-to"
+                  type="date"
+                  label="إلى تاريخ"
+                  value={filters.dateTo}
+                  onChange={(e) => handleFilterChange("dateTo", e.target.value)}
+                  size="small"
+                  disabled={isFetching}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 items-end flex-wrap">
+                <UIButton
+                  onClick={() => navigate("/reports/specialist-shifts")}
+                  variant="default"
+                  size="sm"
+                >
+                  <Users className="h-4 w-4" />
+                  <span className="ltr:ml-2 rtl:mr-2">{"عرض حسب التخصص"}</span>
+                </UIButton>
+                <UIButton
+                  onClick={handleDownloadListPdf}
+                  variant="outline"
+                  size="sm"
+                  disabled={isGeneratingListPdf || isLoading || !shifts.length}
+                >
+                  {isGeneratingListPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                  <span className="ltr:ml-2 rtl:mr-2">{"تصدير PDF"}</span>
+                </UIButton>
+                <UIButton
+                  onClick={handleDownloadExcel}
+                  variant="outline"
+                  size="sm"
+                  disabled={isGeneratingExcel || isLoading || !shifts.length}
+                >
+                  {isGeneratingExcel ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />}
+                  <span className="ltr:ml-2 rtl:mr-2">{"تصدير Excel"}</span>
+                </UIButton>
               </div>
             </div>
-          )}
-        </div>
-
-        <DoctorShiftsReportFilters
-          filters={filters}
-          onFilterChange={handleFilterChange}
-          usersForFilter={usersForFilter}
-          doctorsForFilter={doctorsForFilter}
-          generalShiftsForFilter={generalShiftsForFilter}
-          isLoadingUIData={isLoadingUIData}
-          isFetching={isFetching}
-          canViewAllUsersShifts={canViewAllUsersShifts}
-        />
 
         {isFetching && !isLoading && (
           <Typography variant="body2" color="text.secondary" className="my-2 text-center py-2">

@@ -192,17 +192,6 @@
 }
 
 /* Doctor Name Styles */
-.doctor-name {
-  font-weight: 600;
-  text-align: center;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 100%;
-  margin-bottom: 4px;
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-}
 
 .doctor-name--active {
   color: white;

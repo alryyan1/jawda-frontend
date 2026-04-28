@@ -109,13 +109,16 @@ export const startDoctorShift = async (
 export const endDoctorShift = async (
   payload: EndShiftPayload,
 ): Promise<DoctorShift> => {
-  // The route was PUT /doctor-shifts/{doctorShift}/end
-  // So we pass doctor_shift_id in URL, not payload usually
   const response = await apiClient.put<{ data: DoctorShift }>(
     `/doctor-shifts/${payload.doctor_shift_id}/end`,
-    {
-      // end_time: payload.end_time // if you pass it
-    },
+    {},
+  );
+  return response.data.data;
+};
+
+export const reopenDoctorShift = async (doctorShiftId: number): Promise<DoctorShift> => {
+  const response = await apiClient.put<{ data: DoctorShift }>(
+    `/doctor-shifts/${doctorShiftId}/reopen`,
   );
   return response.data.data;
 };

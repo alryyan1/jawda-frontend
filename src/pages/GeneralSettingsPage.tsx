@@ -96,6 +96,7 @@ type SettingsFormData = {
   show_title_in_lab_result?: boolean;
   firebase_enabled?: boolean;
   prevent_backdated_entry?: boolean;
+  enforce_shift_hours?: boolean;
   whatsapp_number?: string;
   payment_cancellation_phone?: string;
   shift_summary_phone?: string;
@@ -158,6 +159,8 @@ const SettingsPage: React.FC = () => {
       ultramsg_token: undefined,
       ultramsg_base_url: undefined,
       ultramsg_default_country_code: undefined,
+
+      enforce_shift_hours: undefined,
 
       // Lab Workflow Settings
       send_result_after_auth: undefined,
@@ -246,6 +249,8 @@ const SettingsPage: React.FC = () => {
         storage_name: (settings as any).storage_name || undefined,
         prevent_backdated_entry:
           (settings as any).prevent_backdated_entry ?? undefined,
+        enforce_shift_hours:
+          (settings as any).enforce_shift_hours ?? undefined,
         whatsapp_number: settings.whatsapp_number || undefined,
         payment_cancellation_phone: (settings as any).payment_cancellation_phone || undefined,
         shift_summary_phone: (settings as any).shift_summary_phone || undefined,
@@ -1256,6 +1261,27 @@ const SettingsPage: React.FC = () => {
                     <Typography variant="body2" color="text.secondary">
                       عند التفعيل، يمنع النظام تسجيل مرضى جدد إذا لم تكن الوردية
                       بتاريخ اليوم
+                    </Typography>
+                  </Box>
+                }
+              />
+
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    {...control.register("enforce_shift_hours")}
+                    checked={!!watchedValues.enforce_shift_hours}
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography variant="body1">
+                      تطبيق الحد الأدنى لساعات الوردية (6 ساعات)
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      عند التفعيل، لا يمكن فتح وردية جديدة إلا بعد مرور 6 ساعات
+                      على إغلاق الوردية السابقة، ولا يمكن إغلاق الوردية إلا بعد
+                      مرور 6 ساعات من فتحها. المسؤول (admin) مستثنى دائماً.
                     </Typography>
                   </Box>
                 }

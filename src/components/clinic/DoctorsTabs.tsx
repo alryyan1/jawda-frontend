@@ -4,6 +4,7 @@ import {
   Box,
   CircularProgress,
   Paper,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -196,68 +197,120 @@ const DoctorsTabs: React.FC<DoctorsTabsProps> = ({ onShiftSelect, activeShiftId 
                 }
               };
 
+              const cashPct = shift.doctor_cash_percentage;
+              const companyPct = shift.doctor_company_percentage;
+              const staticWage = shift.doctor_static_wage;
+              const hasStaticWage = staticWage != null && staticWage > 0;
+
+              const tooltipTitle = [
+                shift.doctor_specialist_name,
+                hasStaticWage ? `أجر ثابت: ${staticWage}` : null,
+              ]
+                .filter(Boolean)
+                .join(' | ');
+
               return (
-                <Box
+                <Tooltip
                   key={shift.id}
-                  ref={(el) => {
-                    tabRefs.current[shift.id] = el as HTMLDivElement | null;
-                  }}
-                  onClick={() => onShiftSelect(shift)}
-                  className={getTabClassName()}
-                  sx={{ position: 'relative' }}
+                  title={tooltipTitle || ''}
+                  placement="bottom"
+                  arrow
                 >
-                  {/* Patient Count Badge - Top Left Corner */}
-                  {shift.patients_count > 0 && (
-                    <Box
-                      sx={{
-                        position: 'absolute',
-                        top: -8,
-                        left: -8,
-                        backgroundColor: '#ef4444', // red-500
-                        color: 'white',
-                        borderRadius: '50%',
-                        minWidth: '24px',
-                        height: '24px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '12px',
-                        fontWeight: 'bold',
-                        zIndex: 10,
-                        border: '2px solid white',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                        animation: shift.patients_count > 0 ? 'pulse 2s infinite' : 'none',
-                        '@keyframes pulse': {
-                          '0%': { transform: 'scale(1)' },
-                          '50%': { transform: 'scale(1.1)' },
-                          '100%': { transform: 'scale(1)' }
-                        }
-                      }}
-                    >
-                      {shift.patients_count > 99 ? '99+' : shift.patients_count}
-                    </Box>
-                  )}
-
-                  {/* Doctor Name */}
-                  <Typography
-                  style={{fontWeight:'bold'}}
-                    className={`text-black! doctor-name ${isActive ? 'doctor-name--active text-2xl font-bold text-white! ' : ''}`}
-                    title={shift.doctor_name}
+                  <Box
+                    ref={(el) => {
+                      tabRefs.current[shift.id] = el as HTMLDivElement | null;
+                    }}
+                    onClick={() => onShiftSelect(shift)}
+                    className={getTabClassName()}
+                    sx={{ position: 'relative' }}
                   >
-                    {shift.doctor_name}
-                  </Typography>
+                    {/* Patient Count Badge */}
+                    {shift.patients_count > 0 && (
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          top: -8,
+                          left: -8,
+                          backgroundColor: '#ef4444',
+                          color: 'white',
+                          borderRadius: '50%',
+                          minWidth: '24px',
+                          height: '24px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          zIndex: 10,
+                          border: '2px solid white',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                          animation: shift.patients_count > 0 ? 'pulse 2s infinite' : 'none',
+                          '@keyframes pulse': {
+                            '0%': { transform: 'scale(1)' },
+                            '50%': { transform: 'scale(1.1)' },
+                            '100%': { transform: 'scale(1)' }
+                          }
+                        }}
+                      >
+                        {shift.patients_count > 99 ? '99+' : shift.patients_count}
+                      </Box>
+                    )}
 
-                  {/* Active Tab Indicator */}
-                  {isActive && (
-                    <Box
-                      className={`active-tab-indicator ${
-                        isExamining 
-                          ? 'active-tab-indicator--examining'
-                          : 'active-tab-indicator--not-examining'
-                      }`}
-                    />
-                  )}
-                </Box>
+                    {/* Doctor Name */}
+                    <Typography
+                      style={{ fontWeight: 'bold' }}
+                      className={`text-black! doctor-name ${isActive ? 'doctor-name--active text-2xl font-bold text-white! ' : ''}`}
+                    >
+                      {shift.doctor_name}
+                    </Typography>
+
+                    {/* Percentage subtitle */}
+                    {(cashPct != null || companyPct != null) && (
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          display: 'block',
+                          opacity: 0.8,
+                          lineHeight: 1.2,
+                          fontSize: '0.65rem',
+                          color: isActive ? 'rgba(255,255,255,0.85)' : 'text.secondary',
+                        }}
+                      >
+                        {cashPct != null && `${cashPct}%`}
+                        {cashPct != null && companyPct != null && ' | '}
+                        {companyPct != null && `${companyPct}%`}
+                        {hasStaticWage && (
+                          <Box
+                            component="span"
+                            sx={{
+                              ml: 0.5,
+                              px: 0.4,
+                              py: 0.1,
+                              borderRadius: '3px',
+                              fontSize: '0.6rem',
+                              fontWeight: 'bold',
+                              backgroundColor: isActive ? 'rgba(255,255,255,0.25)' : 'warning.light',
+                              color: isActive ? 'white' : 'warning.dark',
+                            }}
+                          >
+                            ثابت
+                          </Box>
+                        )}
+                      </Typography>
+                    )}
+
+                    {/* Active Tab Indicator */}
+                    {isActive && (
+                      <Box
+                        className={`active-tab-indicator ${
+                          isExamining
+                            ? 'active-tab-indicator--examining'
+                            : 'active-tab-indicator--not-examining'
+                        }`}
+                      />
+                    )}
+                  </Box>
+                </Tooltip>
               );
             })}
       </Box>

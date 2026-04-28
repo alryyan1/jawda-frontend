@@ -49,7 +49,6 @@ const ServiceSelectionGrid: React.FC<ServiceSelectionGridProps> = ({
   externalAddSelectedCommand = 0,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedServiceIds, setSelectedServiceIds] = useState<Set<number>>(new Set());
 
   // Memoized calculation for the initial active tab
   const initialActiveTab = useMemo(() => findInitialActiveTab(serviceCatalog || []), [serviceCatalog]);
@@ -157,82 +156,17 @@ const ServiceSelectionGrid: React.FC<ServiceSelectionGridProps> = ({
     }
   }, [filteredCatalog, activeTab]);
 
-  // useCallback for stable function references if passed as props or in dependencies
-  const toggleServiceSelection = useCallback((serviceId: number) => {
-    setSelectedServiceIds(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(serviceId)) {
-        newSet.delete(serviceId);
-      } else {
-        newSet.add(serviceId);
-      }
-      return newSet;
-    });
-  }, []); // Empty dependency array as it doesn't depend on external state directly
-
-  const handleAddClick = useCallback(() => {
-    if (selectedServiceIds.size > 0) {
-      onAddServices(Array.from(selectedServiceIds));
-      setSelectedServiceIds(new Set()); // Reset selection
-    }
-  }, [onAddServices, selectedServiceIds]);
-
-  // Pressing Plus key anywhere (except in the numeric ID input which has its own handler)
-  // should trigger adding selected services if any are selected
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== '+' && e.key !== '=') return; // Support both + and = keys (same key on most keyboards)
-      const target = e.target as HTMLElement | null;
-      const isServiceIdInput = target instanceof HTMLInputElement && target.type === 'number' && target.placeholder?.includes('رقم الخدمة');
-      if (isServiceIdInput) return; // allow the ID input's own Enter handler
-      if (selectedServiceIds.size > 0) {
-        e.preventDefault();
-        handleAddClick();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedServiceIds, handleAddClick]);
-
-  // Bubble selection up
-  const lastSelectionRef = useRef<string>("[]");
-  useEffect(() => {
-    if (!onSelectedIdsChange) return;
-    const idsArr = Array.from(selectedServiceIds);
-    const key = JSON.stringify(idsArr);
-    if (key !== lastSelectionRef.current) {
-      lastSelectionRef.current = key;
-      onSelectedIdsChange(idsArr);
-    }
-  }, [selectedServiceIds, onSelectedIdsChange]);
-
-  // Respond to external add selected command (only when value changes)
-  const lastAddCommandRef = useRef(0);
-  useEffect(() => {
-    if (
-      typeof externalAddSelectedCommand === 'number' &&
-      externalAddSelectedCommand > 0 &&
-      externalAddSelectedCommand !== lastAddCommandRef.current
-    ) {
-      lastAddCommandRef.current = externalAddSelectedCommand;
-      handleAddClick();
-    }
-  }, [externalAddSelectedCommand, handleAddClick]);
 
 
   // Sub-component for rendering each service card for better readability and organization
   const ServiceCard: React.FC<{ service: DisplayService }> = React.memo(({ service }) => {
-    const isSelected = selectedServiceIds.has(service.id);
-
     return (
       <Card 
-        onClick={() => toggleServiceSelection(service.id)} 
-        role="button" 
-        aria-pressed={isSelected} 
-        aria-selected={isSelected}
+        onClick={() => onAddServices([service.id])} 
+        role="button"
         aria-label={service.name}
-        className={`transition-colors cursor-pointer ${isSelected ? 'ring-2 ring-primary' : 'hover:ring-1 hover:ring-slate-300'} `}
-        sx={{ height: '100%', ...(isSelected ? { backgroundColor: 'action.selected' } : {}) }}
+        className="transition-colors cursor-pointer hover:ring-2 hover:ring-primary active:scale-95"
+        sx={{ height: '100%' }}
       >
         <CardContent sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', height: '40px' }}>
           <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap title={service.name}>

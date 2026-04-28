@@ -662,6 +662,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                     {requestedServices.map((rs) => {
                       const price = Number(rs.price) || 0;
                       const hasPayment = Number(rs.amount_paid) > 0;
+                      const isReturned = (rs.returned_refunds?.length ?? 0) > 0;
                       return (
                         <React.Fragment key={rs.id}>
                           <TableRow
@@ -669,18 +670,26 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                             onClick={() => handleOpenRowOptions(rs)}
                             sx={{
                               cursor: "pointer",
-                              backgroundColor: hasPayment
-                                ? "rgba(76, 175, 80, 0.1)"
-                                : "transparent",
+                              backgroundColor: isReturned
+                                ? "rgba(244, 67, 54, 0.08)"
+                                : hasPayment
+                                  ? "rgba(76, 175, 80, 0.1)"
+                                  : "transparent",
                               "&:hover": {
-                                backgroundColor: hasPayment
-                                  ? "rgba(76, 175, 80, 0.15)"
-                                  : undefined,
+                                backgroundColor: isReturned
+                                  ? "rgba(244, 67, 54, 0.14)"
+                                  : hasPayment
+                                    ? "rgba(76, 175, 80, 0.15)"
+                                    : undefined,
                               },
                             }}
                           >
                             <TableCell className="text-xl! " align="center">
-                              {rs.service?.name || "خدمة غير معروفة"}
+                              <span
+                                style={isReturned ? { textDecoration: 'line-through', color: 'var(--mui-palette-error-main, #f44336)' } : undefined}
+                              >
+                                {rs.service?.name || "خدمة غير معروفة"}
+                              </span>
                             </TableCell>
                             <TableCell className="text-xl!" align="center">
                               <Box

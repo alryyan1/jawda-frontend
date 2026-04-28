@@ -129,6 +129,9 @@ export interface DoctorShift {
   user_id: number;
   doctor_name: string;
   doctor_specialist_name?: string | null;
+  doctor_cash_percentage?: number | null;
+  doctor_company_percentage?: number | null;
+  doctor_static_wage?: number | null;
   doctor_avatar_url?: string | null; // For avatar
   status: boolean; // Is this DoctorShift record active/open
   start_time?: string | null;

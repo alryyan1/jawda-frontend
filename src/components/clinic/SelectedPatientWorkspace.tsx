@@ -327,22 +327,6 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
                 </Tooltip>
               )}
 
-              {hasSelectedServices && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      disabled={!can("اضافه خدمه")}
-                      onClick={() => setAddSelectedCommand((c) => c + 1)}
-                      variant="secondary"
-                      size="icon"
-                      className="h-8 w-8 animate-bounce bg-blue-500"
-                    >
-                      <PlusCircle className="h-4 w-4 text-white" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>إضافة المحدد</TooltipContent>
-                </Tooltip>
-              )}
             </div>
           </div>
         </ScrollArea>

@@ -559,7 +559,7 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
                 )}
               </Box>
 
-              <Box>
+              <Box sx={{display:'none'}}>
                 <Typography variant="h6" sx={{ mb: 1 }}>
                   تبويبات التنويم
                 </Typography>

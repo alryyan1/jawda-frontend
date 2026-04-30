@@ -961,9 +961,7 @@ export default function CompaniesListPage() {
                     <TableCell className="text-2xl!" sx={{ display: { xs: 'none', sm: 'table-cell' }, textAlign: 'center' }}>
                       العقود
                     </TableCell>
-                    <TableCell className="text-2xl!" sx={{ textAlign: 'center' }}>
-                      الإجراءات
-                    </TableCell>
+                  
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -996,73 +994,7 @@ export default function CompaniesListPage() {
                           ? company.contracted_services_count
                           : "-"}
                       </TableCell>
-                      <TableCell sx={{ textAlign: 'center' }}>
-                        <IconButton
-                          size="small"
-                          onClick={(event) => { event.stopPropagation(); setAnchorEl(event.currentTarget); }}
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </IconButton>
-                        <Menu
-                          anchorEl={anchorEl}
-                          open={Boolean(anchorEl)}
-                          onClose={() => setAnchorEl(null)}
-                          anchorOrigin={{
-                            vertical: 'bottom',
-                            horizontal: 'right',
-                          }}
-                          transformOrigin={{
-                            vertical: 'top',
-                            horizontal: 'right',
-                          }}
-                        >
-                         
-                            <MenuItem
-                              component={Link}
-                              to={`/settings/companies/${company.id}/contracts`}
-                              onClick={() => setAnchorEl(null)}
-                              sx={{ textDecoration: 'none', color: 'inherit' }}
-                            >
-                              <FileText className="rtl:ml-2 ltr:mr-2 h-4 w-4" />
-                              إدارة عقود الخدمات
-                            </MenuItem>
-                     
-                        
-                            <MenuItem
-                              component={Link}
-                              to={`/settings/companies/${company.id}/test-contracts`}
-                              onClick={() => setAnchorEl(null)}
-                              sx={{ textDecoration: 'none', color: 'inherit' }}
-                            >
-                              <FileText className="rtl:ml-2 ltr:mr-2 h-4 w-4" />
-                              إدارة عقود التحاليل
-                            </MenuItem>
-                        
-                            <Divider />
-                            <MenuItem
-                              onClick={() => {
-                                handleOpenReclaimDialog(company);
-                                setAnchorEl(null);
-                              }}
-                              sx={{ textDecoration: 'none', color: 'inherit' }}
-                            >
-                              <Download className="rtl:ml-2 ltr:mr-2 h-4 w-4" />
-                              المطالبات
-                            </MenuItem>
-                        
-                            <MenuItem
-                              component={Link}
-                              to={`/settings/companies/${company.id}/edit`}
-                              onClick={() => setAnchorEl(null)}
-                              sx={{ textDecoration: 'none', color: 'inherit' }}
-                            >
-                              <Edit className="rtl:ml-2 ltr:mr-2 h-4 w-4" />
-                              تعديل
-                            </MenuItem>
-                        
-                     
-                        </Menu>
-                      </TableCell>
+                  
                     </TableRow>
                   ))}
                 </TableBody>

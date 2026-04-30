@@ -23,7 +23,6 @@ import type {
   DoctorShiftReportItem,
 } from "@/types/reports";
 import type { Doctor } from "@/types/doctors";
-import type { Shift as GeneralShiftType } from "@/types/shifts";
 import type { PaginatedResponse } from "@/types/common";
 import {
   getDoctorShiftsReport,
@@ -32,7 +31,7 @@ import {
 } from "@/services/reportService";
 import { getDoctorsList } from "@/services/doctorService";
 import { getUsers } from "@/services/userService";
-import { getShiftsList } from "@/services/shiftService";
+import { getAllShifts } from "@/services/shiftService";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAuthorization } from "@/hooks/useAuthorization";
 // Removed PdfPreviewDialog; using MUI Dialog instead
@@ -180,9 +179,9 @@ const DoctorShiftsReportPage: React.FC = () => {
   });
 
   const { data: generalShiftsForFilter, isLoading: isLoadingGeneralShifts } =
-    useQuery<GeneralShiftType[], Error>({
+    useQuery({
       queryKey: ["generalShiftsListForDSRFilter"],
-      queryFn: () => getShiftsList({ per_page: 100, is_closed: "" }),
+      queryFn: () => getAllShifts(),
     });
 
   const reportQueryKey = [
@@ -391,7 +390,7 @@ const DoctorShiftsReportPage: React.FC = () => {
               </div>
 
               {/* General Shift Filter */}
-              <div className="min-w-[150px]">
+              <div className="min-w-[200px]">
                 <Autocomplete<AutocompleteOption>
                   id="dsr-gshift-filter"
                   options={[

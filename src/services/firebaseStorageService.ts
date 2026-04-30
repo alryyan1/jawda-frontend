@@ -1,5 +1,5 @@
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '@/lib/firebase';
+import { storage, secondaryStorage, isBothTargetsEnabled } from '@/lib/firebase';
 import type { PatientLabQueueItem } from '@/types/labWorkflow';
 
 export interface UploadResult {
@@ -35,14 +35,27 @@ export const uploadLabResultToFirebase = async (
     const finalFileName = fileName || 'result.pdf';
     const fullPath = `${storagePath}${finalFileName}`;
     
-    // Create a reference to the file location
+    // Create a reference to the file location in primary storage
     const storageRef = ref(storage, fullPath);
     
-    // Upload the file
+    // Upload the file to primary storage
     const snapshot = await uploadBytes(storageRef, file);
     
-    // Get the download URL
+    // Get the download URL from primary storage
     const downloadURL = await getDownloadURL(snapshot.ref);
+
+    // If both targets enabled, upload to secondary too
+    if (isBothTargetsEnabled && secondaryStorage) {
+      try {
+        console.log('[Firebase] Uploading to secondary storage...');
+        const secondaryRef = ref(secondaryStorage, fullPath);
+        await uploadBytes(secondaryRef, file);
+        console.log('[Firebase] Uploaded to secondary storage successfully.');
+      } catch (secError) {
+        console.error('[Firebase] Error uploading to secondary storage:', secError);
+        // We don't fail the whole operation if secondary fails, but we log it
+      }
+    }
     
     return {
       success: true,

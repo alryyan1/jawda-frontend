@@ -13,6 +13,8 @@ import { getCurrentOpenShift as apiGetCurrentOpenShift } from "../services/shift
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { User } from "@/types/auth";
 import { clearAllCaches } from "@/hooks/useCachedData";
+import { getSettings } from "@/services/settingService";
+import { getFirebaseUploadTarget, setFirebaseUploadTarget, getLabToLabFirebaseSource, setLabToLabFirebaseSource } from "@/lib/firebase";
 
 // 1. Define the Context Type (as we did before)
 export interface AuthContextType {
@@ -146,6 +148,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       })
       .finally(() => setIsAuthLoading(false));
   }, []);
+
+  // Sync settings (Firebase target) from backend
+  useEffect(() => {
+    if (token && user) {
+      getSettings().then((settings) => {
+        if (settings && (settings as any).firebase_upload_target) {
+          const target = (settings as any).firebase_upload_target;
+          const currentTarget = getFirebaseUploadTarget();
+          if (target !== currentTarget) {
+            console.log(`[Firebase] Syncing target from backend: ${target}`);
+            setFirebaseUploadTarget(target);
+          }
+        }
+        if (settings && (settings as any).lab_to_lab_firebase_source) {
+          const labSource = (settings as any).lab_to_lab_firebase_source;
+          const currentLabSource = getLabToLabFirebaseSource();
+          if (labSource !== currentLabSource) {
+            console.log(`[Firebase] Syncing LabToLab source from backend: ${labSource}`);
+            setLabToLabFirebaseSource(labSource);
+          }
+        }
+      }).catch(err => console.error("Failed to sync settings in AuthContext", err));
+    }
+  }, [token, user]);
 
   const login = async (credentials: Record<string, any>) => {
     setIsAuthLoading(true); // Loading during login process

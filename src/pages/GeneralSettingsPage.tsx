@@ -32,7 +32,7 @@ import type { Setting } from "@/types/settings";
 import { getSettings, updateSettings } from "@/services/settingService";
 import apiClient from "@/services/api";
 import { webUrl } from "./constants";
-import { setFirebaseEnabled, checkFirebaseEnabled } from "@/lib/firebase";
+import { setFirebaseEnabled, checkFirebaseEnabled, setFirebaseUploadTarget, getFirebaseUploadTarget, setLabToLabFirebaseSource, getLabToLabFirebaseSource } from "@/lib/firebase";
 
 // Settings form data type
 type SettingsFormData = {
@@ -58,6 +58,7 @@ type SettingsFormData = {
   edit_result_after_auth?: boolean;
   firestore_result_collection?: string;
   firebase_upload_target?: string;
+  lab_to_lab_firebase_source?: string;
   block_auth_on_empty_results?: boolean;
   disable_doctor_service_check?: boolean;
   barcode?: boolean;
@@ -168,6 +169,7 @@ const SettingsPage: React.FC = () => {
       edit_result_after_auth: undefined,
       firestore_result_collection: undefined,
       firebase_upload_target: 'sales',
+      lab_to_lab_firebase_source: 'sales',
       block_auth_on_empty_results: true,
       disable_doctor_service_check: undefined,
       barcode: undefined,
@@ -275,6 +277,8 @@ const SettingsPage: React.FC = () => {
           (settings as any).firestore_result_collection || undefined,
         firebase_upload_target:
           (settings as any).firebase_upload_target || 'sales',
+        lab_to_lab_firebase_source:
+          (settings as any).lab_to_lab_firebase_source || 'sales',
         block_auth_on_empty_results:
           (settings as any).block_auth_on_empty_results ?? true,
         disable_doctor_service_check:
@@ -363,6 +367,26 @@ const SettingsPage: React.FC = () => {
     onSuccess: (updatedSettings) => {
       toast.success("تم حفظ الإعدادات بنجاح");
       queryClient.setQueryData(["settings"], updatedSettings);
+      
+      // Sync Firebase target to localStorage
+      const target = (updatedSettings as any).firebase_upload_target;
+      if (target) {
+        const currentTarget = getFirebaseUploadTarget();
+        if (target !== currentTarget) {
+          setFirebaseUploadTarget(target as any);
+          toast.info("تم تغيير مشروع Firebase العام. يرجى إعادة تحميل الصفحة لتطبيق التغييرات.");
+        }
+      }
+
+      // Sync Lab to Lab source to localStorage
+      const labSource = (updatedSettings as any).lab_to_lab_firebase_source;
+      if (labSource === 'sales' || labSource === 'hospital') {
+        const currentLabSource = getLabToLabFirebaseSource();
+        if (labSource !== currentLabSource) {
+          setLabToLabFirebaseSource(labSource);
+          toast.info("تم تحديث مشروع Lab-to-Lab. يرجى إعادة تحميل الصفحة.");
+        }
+      }
     },
     onError: (error: Error) => {
       const errorMessage =
@@ -1356,6 +1380,29 @@ const SettingsPage: React.FC = () => {
                     </Select>
                     <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
                       اختر مشروع Firebase الذي سيتم رفع ملفات PDF لنتائج المختبر إليه
+                    </Typography>
+                  </FormControl>
+                )}
+              />
+
+              <Controller
+                name="lab_to_lab_firebase_source"
+                control={control}
+                render={({ field }) => (
+                  <FormControl fullWidth variant="outlined">
+                    <InputLabel id="lab-to-lab-firebase-source-label">
+                      مصدر بيانات المعامل المتعاقدة (Lab-to-Lab)
+                    </InputLabel>
+                    <Select
+                      {...field}
+                      labelId="lab-to-lab-firebase-source-label"
+                      label="مصدر بيانات المعامل المتعاقدة (Lab-to-Lab)"
+                    >
+                      <MenuItem value="sales">Sales Project (sales-9e9b8)</MenuItem>
+                      <MenuItem value="hospital">Hospital Project (hospitalapp-681f1)</MenuItem>
+                    </Select>
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+                      اختر مشروع Firebase الذي يتم جلب وإدارة بيانات المختبرات المتعاقدة (Lab-to-Lab) منه
                     </Typography>
                   </FormControl>
                 )}

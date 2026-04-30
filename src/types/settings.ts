@@ -13,6 +13,8 @@ export interface Setting {
   lab_name?: string | null;
   hospital_name?: string | null;
   firestore_result_collection?: string | null;
+  firebase_upload_target?: string | null;
+  lab_to_lab_firebase_source?: string | null;
   inventory_notification_number?: string | null;
   disable_doctor_service_check: boolean;
   currency: string;

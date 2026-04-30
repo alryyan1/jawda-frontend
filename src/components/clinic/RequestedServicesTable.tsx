@@ -1027,7 +1027,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                 >
                   المدفوعات
                 </Button>
-                {rowOptionsService && Number(rowOptionsService.amount_paid) > 0 && (
+                {!visit?.company && rowOptionsService && Number(rowOptionsService.amount_paid) > 0 && (
                   <Button
                     variant="outlined"
                     color="warning"

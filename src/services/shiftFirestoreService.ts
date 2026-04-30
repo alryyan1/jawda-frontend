@@ -1,6 +1,6 @@
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { storage, db } from '@/lib/firebase';
+import { storage, db, secondaryStorage, secondaryDb, isBothTargetsEnabled } from '@/lib/firebase';
 import { webUrl } from '@/pages/constants';
 import { getFinancialSummary } from './dashboardService';
 import { getSettings } from './settingService';
@@ -22,12 +22,14 @@ const uploadReportToStorage = async (
   shiftId: number,
   blob: Blob,
   reportType: "discount" | "refund" | "reconciliation",
+  useSecondary = false
 ): Promise<string> => {
-  if (!storage) throw new Error('Firebase Storage is not initialized');
+  const currentStorage = useSecondary ? secondaryStorage : storage;
+  if (!currentStorage) throw new Error('Firebase Storage is not initialized');
 
   const fileName = `${reportType}_report.pdf`;
   const storagePath = `medical_shifts/${shiftId}/${fileName}`;
-  const storageRef = ref(storage, storagePath);
+  const storageRef = ref(currentStorage, storagePath);
 
   const snapshot = await uploadBytes(storageRef, blob);
   return await getDownloadURL(snapshot.ref);
@@ -73,7 +75,7 @@ export const uploadShiftReportsToFirebase = async (
     const refundBlob = await refundPdfResp.blob();
     const reconciliationBlob = await reconciliationPdfResp.blob();
 
-    // 2. Upload to Storage
+    // 2. Upload to Primary Storage
     const discountUrl = await uploadReportToStorage(
       shiftId,
       discountBlob,
@@ -86,21 +88,43 @@ export const uploadShiftReportsToFirebase = async (
       "reconciliation",
     );
 
-    // 3. Save metadata to Firestore at /pharmacies/one_care/medical_shift/{shiftId}
+    // 3. Save metadata to Primary Firestore
     const shiftDocRef = doc(db, 'pharmacies', 'one_care', 'medical_shift', shiftId.toString());
+    const docData = {
+      shift_id: shiftId,
+      discount_report_url: discountUrl,
+      refund_report_url: refundUrl,
+      reconciliation_report_url: reconciliationUrl,
+      uploaded_at: serverTimestamp(),
+      status: "closed",
+    };
     
-    await setDoc(
-      shiftDocRef,
-      {
-        shift_id: shiftId,
-        discount_report_url: discountUrl,
-        refund_report_url: refundUrl,
-        reconciliation_report_url: reconciliationUrl,
-        uploaded_at: serverTimestamp(),
-        status: "closed",
-      },
-      { merge: true },
-    );
+    await setDoc(shiftDocRef, docData, { merge: true });
+
+    // 4. Handle Secondary Project if enabled
+    if (isBothTargetsEnabled && secondaryStorage && secondaryDb) {
+      try {
+        console.log('[Firebase] Syncing shift reports to secondary project...');
+        
+        // Upload to Secondary Storage
+        const discountUrlSec = await uploadReportToStorage(shiftId, discountBlob, "discount", true);
+        const refundUrlSec = await uploadReportToStorage(shiftId, refundBlob, "refund", true);
+        const reconciliationUrlSec = await uploadReportToStorage(shiftId, reconciliationBlob, "reconciliation", true);
+
+        // Save to Secondary Firestore
+        const shiftDocRefSec = doc(secondaryDb, 'pharmacies', 'one_care', 'medical_shift', shiftId.toString());
+        await setDoc(shiftDocRefSec, {
+          ...docData,
+          discount_report_url: discountUrlSec,
+          refund_report_url: refundUrlSec,
+          reconciliation_report_url: reconciliationUrlSec,
+        }, { merge: true });
+
+        console.log('[Firebase] Shift reports synced to secondary project successfully.');
+      } catch (secError) {
+        console.error('[Firebase] Error syncing to secondary project:', secError);
+      }
+    }
 
     return {
       success: true,

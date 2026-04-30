@@ -54,6 +54,11 @@ export const getShiftFinancialSummary = async (shiftId: number): Promise<ShiftFi
   return response.data.data;
 };
 
+export const getAllShifts = async (filters: { date_from?: string; date_to?: string } = {}): Promise<Pick<Shift, 'id' | 'name' | 'created_at' | 'is_closed'>[]> => {
+  const response = await apiClient.get<Pick<Shift, 'id' | 'name' | 'created_at' | 'is_closed'>[]>('/shifts/all', { params: filters });
+  return response.data;
+};
+
 /**
  * Fetches a list of shifts, potentially filtered.
  * By default, it tries to fetch "all" by setting a high per_page or expecting

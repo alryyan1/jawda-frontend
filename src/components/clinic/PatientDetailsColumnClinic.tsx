@@ -164,7 +164,7 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
       }
     }
   }), [payAllMutation]);
-
+  
   // Generate clinic invoice PDF mutation
   const generatePdfMutation = useMutation({
     mutationFn: async () => {

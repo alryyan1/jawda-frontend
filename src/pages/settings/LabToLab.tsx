@@ -2,8 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { collection, getDocs, doc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Settings as SettingsIcon } from 'lucide-react';
-import { db } from '@/lib/firebase';
-import { storage } from '@/lib/firebase';
+import { labToLabDb as db, labToLabStorage as storage, labToLabProjectId } from '@/lib/firebase';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 interface LabDoc {
@@ -219,7 +218,12 @@ const LabToLab: React.FC = () => {
 	return (
 		<div className="space-y-4">
 			<div className="flex items-center justify-between">
-				<h1 className="text-xl font-semibold">المعامل المتعاقده</h1>
+				<div className="flex flex-col">
+					<h1 className="text-xl font-semibold">المعامل المتعاقده</h1>
+					<span className="text-xs text-muted-foreground mt-1">
+						متصل بمشروع: <span className="font-mono text-primary">{labToLabProjectId}</span>
+					</span>
+				</div>
 				<button
 					type="button"
 					onClick={openCreate}

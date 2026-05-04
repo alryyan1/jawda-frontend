@@ -93,8 +93,10 @@ const SampleCollectionPage: React.FC = () => {
   } = useAuth();
 
   // Page-specific States
-  const [globalSearchTerm, setGlobalSearchTerm] = useState("");
-  const [debouncedGlobalSearch, setDebouncedGlobalSearch] = useState("");
+  const [nameSearch, setNameSearch] = useState("");
+  const [debouncedNameSearch, setDebouncedNameSearch] = useState("");
+  const [visitIdInput, setVisitIdInput] = useState("");
+  const [debouncedVisitIdSearch, setDebouncedVisitIdSearch] = useState("");
 
   const [currentShiftForQueue, setCurrentShiftForQueue] =
     useState<Shift | null>(null);
@@ -213,18 +215,20 @@ const SampleCollectionPage: React.FC = () => {
     
     console.log('SampleCollectionPage: fetchQueueData called', {
       shiftId: currentShiftForQueue.id,
-      search: debouncedGlobalSearch
+      search: debouncedNameSearch,
+      visit_id: debouncedVisitIdSearch,
     });
-    
+
     isFetchingRef.current = true;
     setIsLoadingQueue(true);
     setQueueError(null);
-    
+
     try {
       const filters: Record<string, string | number | boolean> = {
-        search: debouncedGlobalSearch,
-        per_page: 1000, // Fetch all data without pagination
+        per_page: 1000,
       };
+      if (debouncedNameSearch) filters.search = debouncedNameSearch;
+      if (debouncedVisitIdSearch) filters.visit_id = debouncedVisitIdSearch;
       
       if (currentShiftForQueue.id) {
         filters.shift_id = currentShiftForQueue.id;
@@ -245,7 +249,7 @@ const SampleCollectionPage: React.FC = () => {
       setIsLoadingQueue(false);
       isFetchingRef.current = false;
     }
-  }, [currentShiftForQueue, debouncedGlobalSearch]);
+  }, [currentShiftForQueue, debouncedNameSearch, debouncedVisitIdSearch]);
 
   // Create refs for stable function references
   const playPaymentSoundRef = useRef(playPaymentSound);
@@ -387,11 +391,12 @@ const SampleCollectionPage: React.FC = () => {
     
     console.log('SampleCollectionPage: useEffect triggered for fetchQueueData', {
       currentShiftForQueue: currentShiftForQueue?.id,
-      debouncedGlobalSearch
+      debouncedNameSearch,
+      debouncedVisitIdSearch,
     });
     fetchQueueData();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentShiftForQueue?.id, debouncedGlobalSearch]);
+  }, [currentShiftForQueue?.id, debouncedNameSearch, debouncedVisitIdSearch]);
 
   // Distribute data based on sample_collected field
   const collectedItems = allQueueItems.filter(item => 
@@ -403,12 +408,9 @@ const SampleCollectionPage: React.FC = () => {
 
   
   useEffect(() => {
-    const handler = setTimeout(
-      () => setDebouncedGlobalSearch(globalSearchTerm),
-      500
-    );
+    const handler = setTimeout(() => setDebouncedNameSearch(nameSearch), 500);
     return () => clearTimeout(handler);
-  }, [globalSearchTerm]);
+  }, [nameSearch]);
 
   // Lab requests for selected visit
   const [labRequestsData, setLabRequestsData] = useState<LabRequest[]>([]);
@@ -447,7 +449,13 @@ const SampleCollectionPage: React.FC = () => {
     []
   );
 
-
+  // Auto-select when searching by visit ID and a result is found
+  useEffect(() => {
+    if (debouncedVisitIdSearch && allQueueItems.length > 0 && !isLoadingQueue) {
+      handlePatientSelect(allQueueItems[0]);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allQueueItems, debouncedVisitIdSearch, isLoadingQueue]);
 
   // Removed mark-all success from page; handled within dedicated modules
 
@@ -603,12 +611,12 @@ const SampleCollectionPage: React.FC = () => {
               <Clock size={22} color="#6b7280" />
               <Check size={22} color="#6b7280" />
             </Box>
-            <Box sx={{ flexGrow: 1, maxWidth: { xs: '200px', sm: '300px', md: '400px' } }}>
+            <Box sx={{ flexGrow: 1, display: 'flex', gap: 1, maxWidth: { xs: '300px', sm: '480px', md: '600px' } }}>
               <TextField
                 type="search"
-                placeholder="البحث في المرضى..."
-                value={globalSearchTerm}
-                onChange={(e) => setGlobalSearchTerm(e.target.value)}
+                placeholder="البحث بالاسم..."
+                value={nameSearch}
+                onChange={(e) => setNameSearch(e.target.value)}
                 size="small"
                 fullWidth
                 InputProps={{
@@ -617,12 +625,25 @@ const SampleCollectionPage: React.FC = () => {
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     bgcolor: 'background.paper',
-                    '&:hover': {
-                      bgcolor: 'background.paper'
-                    },
-                    '&.Mui-focused': {
-                      bgcolor: 'background.paper'
-                    }
+                    '&:hover': { bgcolor: 'background.paper' },
+                    '&.Mui-focused': { bgcolor: 'background.paper' }
+                  }
+                }}
+              />
+              <TextField
+                type="search"
+                placeholder="رقم الزيارة..."
+                value={visitIdInput}
+                onChange={(e) => setVisitIdInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') setDebouncedVisitIdSearch(visitIdInput); }}
+                size="small"
+                sx={{
+                  width: 140,
+                  flexShrink: 0,
+                  '& .MuiOutlinedInput-root': {
+                    bgcolor: 'background.paper',
+                    '&:hover': { bgcolor: 'background.paper' },
+                    '&.Mui-focused': { bgcolor: 'background.paper' }
                   }
                 }}
               />

@@ -1,5 +1,5 @@
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { hospitalDb as db } from '@/lib/firebase-hospital';
 
 export interface FirestoreLabToLab {
   id: string;

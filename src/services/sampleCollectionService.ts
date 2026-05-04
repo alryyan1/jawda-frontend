@@ -9,6 +9,7 @@ export const getSampleCollectionQueue = async (
     date_from?: string;
     date_to?: string;
     search?: string;
+    visit_id?: number | string;
     page?: number;
     per_page?: number;
   }

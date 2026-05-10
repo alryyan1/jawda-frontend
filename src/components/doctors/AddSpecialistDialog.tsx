@@ -77,7 +77,6 @@ const AddSpecialistDialog: React.FC<AddSpecialistDialogProps> = ({ onSpecialistA
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>إضافة تخصص جديد</DialogTitle>
-          <DialogDescription>أدخل اسم التخصص الجديد لإضافته إلى القائمة</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">

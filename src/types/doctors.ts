@@ -85,8 +85,6 @@ export interface DoctorFormData {
   start: string; // Input as string
   image_file?: File | null; // For new image upload
   image?: string | null; // Existing image path (for edit view)
-  finance_account_id?: string | undefined;
-  finanace_account_id_insurance: string | undefined;
   calc_insurance: boolean;
   is_default?: boolean;
   // user_id_to_link?: string | undefined; // If linking to an existing user during creation/edit

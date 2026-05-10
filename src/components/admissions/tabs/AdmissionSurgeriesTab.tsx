@@ -311,24 +311,45 @@ export function RequestedSurgeriesPanel({ admissionId }: RequestedSurgeriesPanel
       const operationName = sanitize(surgery.surgery?.name ?? "");
       const patientName = sanitize(surgery.admission?.patient?.name ?? "");
 
-      await sendWhatsAppCloudTemplate({
-        to: '249123619560',
-        template_name: "request_finance_approve",
-        language_code: "ar",
-        components: [
-          {
-            type: "body",
-            parameters: [
-              { type: "text", text: operationName },
-              { type: "text", text: patientName },
-            ],
-          },
-          { type: "button", sub_type: "quick_reply", index: 0, parameters: [{ type: "payload", payload: `admission_${admissionId}` }] },
-          { type: "button", sub_type: "quick_reply", index: 1, parameters: [{ type: "payload", payload: `admission_${admissionId}_surgery_${surgery.id}_approve` }] },
-          { type: "button", sub_type: "quick_reply", index: 2, parameters: [{ type: "payload", payload: `admission_${admissionId}_surgery_${surgery.id}_reject` }] },
-        ],
-      });
 
+      const phoneNumbers = ['249991079689', '249991961111', '249123619560'].filter(p => !!p);
+
+      await Promise.all(
+        phoneNumbers.map((phone) =>
+          sendWhatsAppCloudTemplate({
+            to: phone,
+            template_name: "request_finance_approve",
+            language_code: "ar",
+            components: [
+              {
+                type: "body",
+                parameters: [
+                  { type: "text", text: operationName },
+                  { type: "text", text: patientName },
+                ],
+              },
+              {
+                type: "button",
+                sub_type: "quick_reply",
+                index: 0,
+                parameters: [{ type: "payload", payload: `admission_${admissionId}` }]
+              },
+              {
+                type: "button",
+                sub_type: "quick_reply",
+                index: 1,
+                parameters: [{ type: "payload", payload: `admission_${admissionId}_surgery_${surgery.id}_approve` }]
+              },
+              {
+                type: "button",
+                sub_type: "quick_reply",
+                index: 2,
+                parameters: [{ type: "payload", payload: `admission_${admissionId}_surgery_${surgery.id}_reject` }]
+              },
+            ],
+          })
+        )
+      );
       await markRequestSent(admissionId, surgery.id);
       toast.success("تم إرسال طلب اعتماد الحصص بنجاح");
       queryClient.invalidateQueries({ queryKey });
@@ -495,7 +516,7 @@ export function RequestedSurgeriesPanel({ admissionId }: RequestedSurgeriesPanel
     onError: (err: any) => {
       toast.error(
         err.response?.data?.message ||
-          "فشل في حذف البند. تأكد من أنه غير مرتبط ببنود أخرى.",
+        "فشل في حذف البند. تأكد من أنه غير مرتبط ببنود أخرى.",
       );
     },
   });
@@ -536,7 +557,7 @@ export function RequestedSurgeriesPanel({ admissionId }: RequestedSurgeriesPanel
             startIcon={<Add />}
             onClick={handleOpenDialog}
           >
-            طلب عملية 
+            طلب عملية
           </Button>
         </Box>
       </Box>
@@ -557,141 +578,141 @@ export function RequestedSurgeriesPanel({ admissionId }: RequestedSurgeriesPanel
           <Typography color="textSecondary">لا توجد عمليات مطلوبة</Typography>
         </Box>
       ) : (
-        <Paper variant="outlined" sx={{ borderRadius: 1, overflow: "hidden",p:1 }}>
-        <List dense disablePadding>
-          {requestedSurgeries.map((item, index) => (
-            <React.Fragment key={item.id}>
-              {index > 0 && <Divider component="li" />}
-              <ListItem
-                alignItems="flex-start"
-                disablePadding
-                sx={{
-                  py: 0.75,
-                  px: 1.5,
-                  flexWrap: "wrap",
-                  gap: 0.5,
-                  bgcolor:
-                    item.status === "approved"
-                      ? (theme) => alpha(theme.palette.success.light, 0.18)
-                      : "transparent",
-                }}
-              >
-                <Box
+        <Paper variant="outlined" sx={{ borderRadius: 1, overflow: "hidden", p: 1 }}>
+          <List dense disablePadding>
+            {requestedSurgeries.map((item, index) => (
+              <React.Fragment key={item.id}>
+                {index > 0 && <Divider component="li" />}
+                <ListItem
+                  alignItems="flex-start"
+                  disablePadding
                   sx={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 0.25,
-                    minWidth: 0,
-                    flex: "1 1 auto",
+                    py: 0.75,
+                    px: 1.5,
+                    flexWrap: "wrap",
+                    gap: 0.5,
+                    bgcolor:
+                      item.status === "approved"
+                        ? (theme) => alpha(theme.palette.success.light, 0.18)
+                        : "transparent",
                   }}
                 >
                   <Box
                     sx={{
                       display: "flex",
-                      alignItems: "center",
-                      gap: 1,
-                      flexWrap: "wrap",
+                      flexDirection: "column",
+                      gap: 0.25,
+                      minWidth: 0,
+                      flex: "1 1 auto",
                     }}
                   >
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      sx={{ fontWeight: 600 }}
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                        flexWrap: "wrap",
+                      }}
                     >
-                      #{item.id}
-                    </Typography>
-                    <Typography
-                      variant="body2"
-                      fontWeight={600}
-                      sx={{ flex: "1 1 auto", minWidth: 0 }}
-                    >
-                      {item.surgery?.name ?? "—"}
-                    </Typography>
-                    <Chip
-                      label={item.request_send_status ? "تم إرسال الطلب" : "لم يتم الإرسال"}
-                      size="small"
-                      color={item.request_send_status ? "success" : "default"}
-                      variant="outlined"
-                      sx={{ fontSize: "0.7rem" }}
-                    />
-                    {item.in_firestore && (
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ fontWeight: 600 }}
+                      >
+                        #{item.id}
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        fontWeight={600}
+                        sx={{ flex: "1 1 auto", minWidth: 0 }}
+                      >
+                        {item.surgery?.name ?? "—"}
+                      </Typography>
                       <Chip
-                        label="متصل بـ Firestore"
+                        label={item.request_send_status ? "تم إرسال الطلب" : "لم يتم الإرسال"}
                         size="small"
-                        color="info"
+                        color={item.request_send_status ? "success" : "default"}
                         variant="outlined"
                         sx={{ fontSize: "0.7rem" }}
-                        icon={<Link sx={{ fontSize: 14 }} />}
                       />
-                    )}
-                    <TextField
-                      size="small"
-                      type="number"
-                      placeholder="سعر"
-                      value={
-                        editInitialPrice[item.id] ??
-                        (item.initial_price != null
-                          ? String(item.initial_price)
-                          : "")
-                      }
-                      onChange={(e) =>
-                        setEditInitialPrice((prev) => ({
-                          ...prev,
-                          [item.id]: e.target.value,
-                        }))
-                      }
-                      onBlur={() => {
-                        const raw =
+                      {item.in_firestore && (
+                        <Chip
+                          label="متصل بـ Firestore"
+                          size="small"
+                          color="info"
+                          variant="outlined"
+                          sx={{ fontSize: "0.7rem" }}
+                          icon={<Link sx={{ fontSize: 14 }} />}
+                        />
+                      )}
+                      <TextField
+                        size="small"
+                        type="number"
+                        placeholder="سعر"
+                        value={
                           editInitialPrice[item.id] ??
                           (item.initial_price != null
                             ? String(item.initial_price)
-                            : "");
-                        const num = raw === "" ? null : parseFloat(raw);
-                        if (
-                          raw !== "" &&
-                          (isNaN(num as number) || (num as number) < 0)
-                        )
-                          return;
-                        if (num !== (item.initial_price ?? null)) {
-                          updateInitialPriceMutation.mutate({
-                            requestedSurgeryId: item.id,
-                            initialPrice: num,
-                          });
+                            : "")
                         }
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter")
-                          (e.target as HTMLInputElement).blur();
-                      }}
-                      disabled={
-                        updateInitialPriceMutation.isPending &&
-                        updateInitialPriceMutation.variables
-                          ?.requestedSurgeryId === item.id || item.approved_at !== null
-                      }
-                      sx={{
-                        width: 166,
-                        "& .MuiInputBase-input": {
-                          fontSize: "1.15rem",
-                          py: 0.25,
-                        },
-                      }}
-                    />
-                  </Box>
-                  {item.status === "approved" && item.approved_at && (
-                    <Typography
-                      variant="caption"
-                      color="success.dark"
-                      sx={{ mt: 0.25 }}
-                    >
-                      تم الاعتماد:{" "}
-                      {dayjs(item.approved_at).format("DD/MM/YYYY HH:mm")}
-                    </Typography>
-                  )}
-                  <List dense disablePadding sx={{ width: "100%", mt: 0.5 }}>
-                    {item.status === "pending" && (
-                      <>
-                        {/* <Divider /> */}
-                        {/* <ListItemButton
+                        onChange={(e) =>
+                          setEditInitialPrice((prev) => ({
+                            ...prev,
+                            [item.id]: e.target.value,
+                          }))
+                        }
+                        onBlur={() => {
+                          const raw =
+                            editInitialPrice[item.id] ??
+                            (item.initial_price != null
+                              ? String(item.initial_price)
+                              : "");
+                          const num = raw === "" ? null : parseFloat(raw);
+                          if (
+                            raw !== "" &&
+                            (isNaN(num as number) || (num as number) < 0)
+                          )
+                            return;
+                          if (num !== (item.initial_price ?? null)) {
+                            updateInitialPriceMutation.mutate({
+                              requestedSurgeryId: item.id,
+                              initialPrice: num,
+                            });
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter")
+                            (e.target as HTMLInputElement).blur();
+                        }}
+                        disabled={
+                          updateInitialPriceMutation.isPending &&
+                          updateInitialPriceMutation.variables
+                            ?.requestedSurgeryId === item.id || item.approved_at !== null
+                        }
+                        sx={{
+                          width: 166,
+                          "& .MuiInputBase-input": {
+                            fontSize: "1.15rem",
+                            py: 0.25,
+                          },
+                        }}
+                      />
+                    </Box>
+                    {item.status === "approved" && item.approved_at && (
+                      <Typography
+                        variant="caption"
+                        color="success.dark"
+                        sx={{ mt: 0.25 }}
+                      >
+                        تم الاعتماد:{" "}
+                        {dayjs(item.approved_at).format("DD/MM/YYYY HH:mm")}
+                      </Typography>
+                    )}
+                    <List dense disablePadding sx={{ width: "100%", mt: 0.5 }}>
+                      {item.status === "pending" && (
+                        <>
+                          {/* <Divider /> */}
+                          {/* <ListItemButton
                           dense
                           onClick={() => approveMutation.mutate(item.id)}
                           disabled={approveMutation.isPending}
@@ -706,8 +727,8 @@ export function RequestedSurgeriesPanel({ admissionId }: RequestedSurgeriesPanel
                           </ListItemIcon>
                           <ListItemText primary="اعتماد" primaryTypographyProps={{ variant: "body2" }} />
                         </ListItemButton> */}
-                        {/* <Divider /> */}
-                        {/* <ListItemButton
+                          {/* <Divider /> */}
+                          {/* <ListItemButton
                           dense
                           onClick={() => rejectMutation.mutate(item.id)}
                           disabled={rejectMutation.isPending}
@@ -722,137 +743,137 @@ export function RequestedSurgeriesPanel({ admissionId }: RequestedSurgeriesPanel
                           </ListItemIcon>
                           <ListItemText primary="رفض" primaryTypographyProps={{ variant: "body2" }} />
                         </ListItemButton> */}
-                      </>
-                    )}
-                    {item.status === "approved" && (
-                      <>
-                        <Divider />
-                        <ListItemButton
-                          dense
-                          onClick={() => unapproveMutation.mutate(item.id)}
-                          disabled={unapproveMutation.isPending}
-                          sx={{ py: 0.25, minHeight: 36 }}
-                        >
-                          <ListItemIcon sx={{ minWidth: 32 }}>
-                            {unapproveMutation.isPending && unapproveMutation.variables === item.id ? (
-                              <CircularProgress size={20} color="inherit" />
-                            ) : (
-                              <Undo color="secondary" sx={{ fontSize: 20 }} />
-                            )}
-                          </ListItemIcon>
-                          <ListItemText primary="تراجع عن الاعتماد" primaryTypographyProps={{ variant: "body2" }} />
-                        </ListItemButton>
-                      </>
-                    )}
-                    <Divider />
-                    <ListItemButton dense onClick={() => handleOpenFinanceDialog(item)} sx={{ py: 0.25, minHeight: 36 }}>
-                      <ListItemIcon sx={{ minWidth: 32 }}>
-                        <Payments color="info" sx={{ fontSize: 20 }} />
-                      </ListItemIcon>
-                      <ListItemText primary="توزيع النسب" primaryTypographyProps={{ variant: "body2" }} />
-                    </ListItemButton>
-                    <Divider />
-                    <ListItemButton
-                      dense
-                      onClick={async () => {
-                        try {
-                          const response = await apiClient.get(`/admissions/${admissionId}/requested-surgeries/${item.id}/invoice`, { responseType: "blob" });
-                          const blob = new Blob([response.data], { type: "application/pdf" });
-                          window.open(URL.createObjectURL(blob), "_blank");
-                        } catch {
-                          toast.error("حدث خطأ أثناء تحميل الفاتورة");
-                        }
-                      }}
-                      sx={{ py: 0.25, minHeight: 36 }}
-                    >
-                      <ListItemIcon sx={{ minWidth: 32 }}>
-                        <Receipt color="secondary" sx={{ fontSize: 20 }} />
-                      </ListItemIcon>
-                      <ListItemText primary="فاتورة مريض A5" primaryTypographyProps={{ variant: "body2" }} />
-                    </ListItemButton>
-                    <Divider />
-                    <ListItemButton
-                      dense
-                      onClick={() => handleSendWhatsApp(item)}
-                      disabled={isSendingWhatsApp[item.id]}
-                      sx={{ py: 0.25, minHeight: 36 }}
-                    >
-                      <ListItemIcon sx={{ minWidth: 32 }}>
-                        {isSendingWhatsApp[item.id] ? (
-                          <CircularProgress size={20} />
+                        </>
+                      )}
+                      {item.status === "approved" && (
+                        <>
+                          <Divider />
+                          <ListItemButton
+                            dense
+                            onClick={() => unapproveMutation.mutate(item.id)}
+                            disabled={unapproveMutation.isPending}
+                            sx={{ py: 0.25, minHeight: 36 }}
+                          >
+                            <ListItemIcon sx={{ minWidth: 32 }}>
+                              {unapproveMutation.isPending && unapproveMutation.variables === item.id ? (
+                                <CircularProgress size={20} color="inherit" />
+                              ) : (
+                                <Undo color="secondary" sx={{ fontSize: 20 }} />
+                              )}
+                            </ListItemIcon>
+                            <ListItemText primary="تراجع عن الاعتماد" primaryTypographyProps={{ variant: "body2" }} />
+                          </ListItemButton>
+                        </>
+                      )}
+                      <Divider />
+                      <ListItemButton dense onClick={() => handleOpenFinanceDialog(item)} sx={{ py: 0.25, minHeight: 36 }}>
+                        <ListItemIcon sx={{ minWidth: 32 }}>
+                          <Payments color="info" sx={{ fontSize: 20 }} />
+                        </ListItemIcon>
+                        <ListItemText primary="توزيع النسب" primaryTypographyProps={{ variant: "body2" }} />
+                      </ListItemButton>
+                      <Divider />
+                      <ListItemButton
+                        dense
+                        onClick={async () => {
+                          try {
+                            const response = await apiClient.get(`/admissions/${admissionId}/requested-surgeries/${item.id}/invoice`, { responseType: "blob" });
+                            const blob = new Blob([response.data], { type: "application/pdf" });
+                            window.open(URL.createObjectURL(blob), "_blank");
+                          } catch {
+                            toast.error("حدث خطأ أثناء تحميل الفاتورة");
+                          }
+                        }}
+                        sx={{ py: 0.25, minHeight: 36 }}
+                      >
+                        <ListItemIcon sx={{ minWidth: 32 }}>
+                          <Receipt color="secondary" sx={{ fontSize: 20 }} />
+                        </ListItemIcon>
+                        <ListItemText primary="فاتورة مريض A5" primaryTypographyProps={{ variant: "body2" }} />
+                      </ListItemButton>
+                      <Divider />
+                      <ListItemButton
+                        dense
+                        onClick={() => handleSendWhatsApp(item)}
+                        disabled={isSendingWhatsApp[item.id]}
+                        sx={{ py: 0.25, minHeight: 36 }}
+                      >
+                        <ListItemIcon sx={{ minWidth: 32 }}>
+                          {isSendingWhatsApp[item.id] ? (
+                            <CircularProgress size={20} />
+                          ) : (
+                            <WhatsApp sx={{ fontSize: 20 }} color="success" />
+                          )}
+                        </ListItemIcon>
+                        <ListItemText primary="إرسال إشعار الواتساب" primaryTypographyProps={{ variant: "body2" }} />
+                      </ListItemButton>
+                      <Divider />
+                      <ListItemButton dense onClick={() => handleOpenLedgerDialog(item)} sx={{ py: 0.25, minHeight: 36 }}>
+                        <ListItemIcon sx={{ minWidth: 32 }}>
+                          <AccountBalanceWallet color="success" sx={{ fontSize: 20 }} />
+                        </ListItemIcon>
+                        <ListItemText primary="كشف الحساب" primaryTypographyProps={{ variant: "body2" }} />
+                      </ListItemButton>
+                      {item.approved_at && (
+                        <>
+                          <Divider />
+                          <ListItem dense sx={{ py: 0.25, minHeight: 36 }}>
+                            <ListItemIcon sx={{ minWidth: 32 }}>
+                              <CheckCircle color="success" sx={{ fontSize: 20 }} />
+                            </ListItemIcon>
+                            <ListItemText
+                              primary={`تاريخ الاعتماد: ${dayjs(item.approved_at).format("DD/MM/YYYY HH:mm")}`}
+                              primaryTypographyProps={{ variant: "body2", color: "success.dark" }}
+                            />
+                          </ListItem>
+                        </>
+                      )}
+                      <Divider />
+                      <ListItemButton
+                        dense
+                        onClick={() => {
+                          if (window.confirm("هل أنت متأكد من حذف هذا الطلب؟")) deleteMutation.mutate(item.id);
+                        }}
+                        disabled={deleteMutation.isPending}
+                        sx={{ py: 0.25, minHeight: 36 }}
+                      >
+                        <ListItemIcon sx={{ minWidth: 32 }}>
+                          {deleteMutation.isPending && deleteMutation.variables === item.id ? (
+                            <CircularProgress size={20} color="inherit" />
+                          ) : (
+                            <Delete color="error" sx={{ fontSize: 20 }} />
+                          )}
+                        </ListItemIcon>
+                        <ListItemText primary="حذف" primaryTypographyProps={{ variant: "body2" }} />
+                      </ListItemButton>
+                    </List>
+                  </Box>
+                </ListItem>
+                <ListItem sx={{ textAlign: 'center', display: 'flex', justifyContent: 'center' }}>
+                  {requestedSurgeries.length > 0 && (
+                    <Button
+
+                      variant="contained"
+                      color="success"
+                      startIcon={
+                        isSendingFinanceApproval ? (
+                          <CircularProgress size={18} color="inherit" />
                         ) : (
-                          <WhatsApp sx={{ fontSize: 20 }} color="success" />
-                        )}
-                      </ListItemIcon>
-                      <ListItemText primary="إرسال إشعار الواتساب" primaryTypographyProps={{ variant: "body2" }} />
-                    </ListItemButton>
-                    <Divider />
-                    <ListItemButton dense onClick={() => handleOpenLedgerDialog(item)} sx={{ py: 0.25, minHeight: 36 }}>
-                      <ListItemIcon sx={{ minWidth: 32 }}>
-                        <AccountBalanceWallet color="success" sx={{ fontSize: 20 }} />
-                      </ListItemIcon>
-                      <ListItemText primary="كشف الحساب" primaryTypographyProps={{ variant: "body2" }} />
-                    </ListItemButton>
-                    {item.approved_at && (
-                      <>
-                        <Divider />
-                        <ListItem dense sx={{ py: 0.25, minHeight: 36 }}>
-                          <ListItemIcon sx={{ minWidth: 32 }}>
-                            <CheckCircle color="success" sx={{ fontSize: 20 }} />
-                          </ListItemIcon>
-                          <ListItemText
-                            primary={`تاريخ الاعتماد: ${dayjs(item.approved_at).format("DD/MM/YYYY HH:mm")}`}
-                            primaryTypographyProps={{ variant: "body2", color: "success.dark" }}
-                          />
-                        </ListItem>
-                      </>
-                    )}
-                    <Divider />
-                    <ListItemButton
-                      dense
-                      onClick={() => {
-                        if (window.confirm("هل أنت متأكد من حذف هذا الطلب؟")) deleteMutation.mutate(item.id);
-                      }}
-                      disabled={deleteMutation.isPending}
-                      sx={{ py: 0.25, minHeight: 36 }}
+                          <WhatsApp />
+                        )
+                      }
+                      onClick={handleSendFinanceApproval}
+                      disabled={isSendingFinanceApproval || item.approved_at !== null || item.initial_price == null}
+                      sx={{ textTransform: "none" }}
                     >
-                      <ListItemIcon sx={{ minWidth: 32 }}>
-                        {deleteMutation.isPending && deleteMutation.variables === item.id ? (
-                          <CircularProgress size={20} color="inherit" />
-                        ) : (
-                          <Delete color="error" sx={{ fontSize: 20 }} />
-                        )}
-                      </ListItemIcon>
-                      <ListItemText primary="حذف" primaryTypographyProps={{ variant: "body2" }} />
-                    </ListItemButton>
-                  </List>
-                </Box>
-              </ListItem>
-              <ListItem sx={{textAlign:'center',display:'flex',justifyContent:'center'}}>
-              {requestedSurgeries.length > 0 && (
-            <Button
-             
-              variant="contained"
-              color="success"
-              startIcon={
-                isSendingFinanceApproval ? (
-                  <CircularProgress size={18} color="inherit" />
-                ) : (
-                  <WhatsApp />
-                )
-              }
-              onClick={handleSendFinanceApproval}
-              disabled={isSendingFinanceApproval ||item.approved_at !== null || item.initial_price == null }
-              sx={{ textTransform: "none" }}
-            >
-              ارسال طلب اعتماد
-            </Button>
-          )}
-              </ListItem>
-            </React.Fragment>
-          ))}
-        </List>
-       
+                      ارسال طلب اعتماد
+                    </Button>
+                  )}
+                </ListItem>
+              </React.Fragment>
+            ))}
+          </List>
+
         </Paper>
       )}
 
@@ -1270,7 +1291,7 @@ const SurgeryLedgerDialog = ({
                             disabled={deleteTxMutation.isPending}
                           >
                             {deleteTxMutation.isPending &&
-                            deleteTxMutation.variables === tx.id ? (
+                              deleteTxMutation.variables === tx.id ? (
                               <CircularProgress size={16} />
                             ) : (
                               <Delete fontSize="small" />

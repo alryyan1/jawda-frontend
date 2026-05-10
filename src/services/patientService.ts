@@ -100,6 +100,11 @@ export const searchExistingPatients = async (term: string): Promise<PatientSearc
   return response.data.data;
 };
 
+export const searchAdmissionPatients = async (term: string): Promise<PatientSearchResult[]> => {
+  const response = await apiClient.get<{ data: PatientSearchResult[] }>('/patients/search-admission-patients', { params: { term } });
+  return response.data.data;
+};
+
 interface StoreVisitFromHistoryPayload {
   previous_visit_id?: number | null;
   doctor_id: number; // New assigned doctor

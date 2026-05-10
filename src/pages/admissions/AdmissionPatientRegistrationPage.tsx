@@ -38,7 +38,7 @@ import {
 } from "lucide-react";
 import { getAdmissionPatientsByDate } from "@/services/clinicService";
 import { getAdmissions, getPatientActiveAdmission, createAdmission, updateAdmission, getAdmissionRequestedSurgeriesSummary, dischargeAdmission, vacateBedAdmission } from "@/services/admissionService";
-import { searchExistingPatients } from "@/services/patientService";
+import { searchAdmissionPatients } from "@/services/patientService";
 import type {
   ActivePatientVisit,
   Patient,
@@ -82,7 +82,7 @@ export default function AdmissionPatientRegistrationPage() {
 
   const { data: searchResults = [], isFetching: isSearchingPatients } = useQuery({
     queryKey: ["patientSearch", patientSearchQuery],
-    queryFn: () => searchExistingPatients(patientSearchQuery),
+    queryFn: () => searchAdmissionPatients(patientSearchQuery),
     enabled: patientSearchQuery.length >= 2,
   });
 

@@ -11,10 +11,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
+  Autocomplete,
   Divider,
   List,
   ListItem,
@@ -871,21 +868,16 @@ export function RequestedSurgeriesPanel({ admissionId }: RequestedSurgeriesPanel
           <DialogContent
             sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}
           >
-            <FormControl fullWidth>
-              <InputLabel>العملية الجراحية</InputLabel>
-              <Select
-                value={selectedSurgeryId}
-                label="العملية الجراحية"
-                onChange={(e) => setSelectedSurgeryId(e.target.value)}
-                required
-              >
-                {surgeries.map((s) => (
-                  <MenuItem key={s.id} value={s.id}>
-                    {s.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <Autocomplete
+              fullWidth
+              options={surgeries}
+              getOptionLabel={(s) => s.name}
+              value={surgeries.find((s) => String(s.id) === selectedSurgeryId) ?? null}
+              onChange={(_, newVal) => setSelectedSurgeryId(newVal ? String(newVal.id) : "")}
+              renderInput={(params) => (
+                <TextField {...params} label="العملية الجراحية" required />
+              )}
+            />
 
             <TextField
               fullWidth

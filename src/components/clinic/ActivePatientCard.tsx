@@ -13,7 +13,7 @@ import {
   MessageSquare,
   History,
   UserPlus,
-  Bed,
+  Smartphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -28,7 +28,6 @@ import type { ActivePatientVisit, Patient } from "@/types/patients";
 import type { DoctorShift } from "@/types/doctors";
 // Removed unused updateDoctorVisitStatus import
 import { getActiveDoctorShifts } from "@/services/clinicService";
-import { getAdmissions } from "@/services/admissionService";
 import type { Company } from "@/types/companies";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -37,10 +36,6 @@ import SendWhatsAppDialog from "./SendWhatsAppDialog";
 import PatientVisitHistoryDialog from "./PatientVisitHistoryDialog";
 import CreateNewVisitForPatientDialog from "./CreateNewVisitForPatientDialog";
 import Badge from "@mui/material/Badge";
-import Box from "@mui/material/Box";
-import Tooltip from "@mui/material/Tooltip";
-import Popover from "@mui/material/Popover";
-import Typography from "@mui/material/Typography";
 // import type { DoctorVisit } from "@/types/visits";
 
 const VISIT_STATUSES_FOR_DROPDOWN = [
@@ -100,29 +95,6 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
   const queryClient = useQueryClient();
   const { user: currentUser, currentClinicShift } = useAuth();
 
-  const { data: admissionsResponse } = useQuery({
-    queryKey: ["admissions", "active", visit.patient.id],
-    queryFn: () =>
-      getAdmissions(1, {
-        patient_id: visit.patient.id,
-        status: "admitted",
-      }),
-    enabled: !!visit.patient.id,
-  });
-  const activeAdmission = (admissionsResponse?.data?.length ?? 0) > 0 ? admissionsResponse!.data![0] : null;
-  const hasBedAssigned = activeAdmission?.bed_id != null;
-
-  const bedDetailsSummary = hasBedAssigned && activeAdmission
-    ? [
-        activeAdmission.ward?.name,
-        activeAdmission.room?.room_number != null ? `غرفة ${activeAdmission.room.room_number}` : null,
-        activeAdmission.bed?.bed_number != null ? `سرير ${activeAdmission.bed.bed_number}` : null,
-      ]
-        .filter(Boolean)
-        .join(" · ")
-    : "";
-
-  const [bedPopoverAnchor, setBedPopoverAnchor] = useState<HTMLElement | null>(null);
   const [isCopyDialogOpen, setIsCopyDialogOpen] = useState(false);
   const [isWhatsAppDialogOpen, setIsWhatsAppDialogOpen] = useState(false);
   const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
@@ -246,7 +218,7 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
     queryClient.invalidateQueries({ queryKey: ["activePatients"] }); // Refresh patient lists
     toast.success("تم إنشاء زيارة جديدة للمريض بنجاح");
   };
-  console.log('visit in active patient card', visit);
+  // console.log('visit in active patient card', visit);
   return (
     <>
       <ContextMenu>
@@ -302,50 +274,20 @@ const ActivePatientCard: React.FC<ActivePatientCardProps> = ({
 
             {/* Patient info and status */}
             <div className="flex-grow min-w-0 ltr:mr-2 rtl:ml-2">
-              <p
-                className="text-sm font-semibold text-slate-800 leading-tight truncate"
-                title={visit.patient.name}
-              >
-                {visit.patient.name}
-              </p>
+              <div className="flex items-center gap-1">
+                <p className="text-sm font-semibold text-slate-800 leading-tight truncate">
+                  {visit.patient.name}
+                </p>
+                {visit.is_online && (
+                  <span title="حجز إلكتروني">
+                    <Smartphone className="h-3 w-3 flex-shrink-0 text-blue-500" />
+                  </span>
+                )}
+              </div>
               <div className="flex items-center justify-between mt-1">
                 {/* Company indicator removed since it's now shown as the main badge */}
               </div>
             </div>
-
-            {/* Bed icon: only when patient has an admission assigned to a bed; hover = tooltip, click = popover */}
-            {hasBedAssigned && bedDetailsSummary && (
-              <>
-                <Tooltip title={bedDetailsSummary} arrow placement="top">
-                  <button
-                    type="button"
-                    className="flex items-center justify-center flex-shrink-0 ltr:mr-1 rtl:ml-1 p-0 border-0 bg-transparent cursor-pointer text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 rounded"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setBedPopoverAnchor(e.currentTarget);
-                    }}
-                    aria-label={`تفاصيل السرير: ${bedDetailsSummary}`}
-                  >
-                    <Bed className="h-4 w-4" />
-                  </button>
-                </Tooltip>
-                <Popover
-                  open={!!bedPopoverAnchor}
-                  anchorEl={bedPopoverAnchor}
-                  onClose={() => setBedPopoverAnchor(null)}
-                  anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-                  transformOrigin={{ vertical: "top", horizontal: "center" }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Box sx={{ p: 1.5, minWidth: 160 }} onClick={(e) => e.stopPropagation()}>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>
-                      تفاصيل السرير
-                    </Typography>
-                    <Typography variant="body2">{bedDetailsSummary}</Typography>
-                  </Box>
-                </Popover>
-              </>
-            )}
 
             {/* Profile button with badge */}
             <Badge

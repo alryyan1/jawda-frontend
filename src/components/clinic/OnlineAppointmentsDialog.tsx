@@ -27,18 +27,21 @@ import { fetchDoctorAppointments, type FacilityAppointment } from '@/services/fi
 import { registerNewPatientFromLab } from '@/services/patientService';
 import { toast } from 'sonner';
 import type { DoctorShift } from '@/types/doctors';
+import type { ActivePatientVisit } from '@/types/patients';
 import dayjs from 'dayjs';
 
 interface OnlineAppointmentsDialogProps {
   isOpen: boolean;
   onClose: () => void;
   activeDoctorShift: DoctorShift | null;
+  onVisitAdded?: (visit: ActivePatientVisit) => void;
 }
 
 const OnlineAppointmentsDialog: React.FC<OnlineAppointmentsDialogProps> = ({
   isOpen,
   onClose,
-  activeDoctorShift
+  activeDoctorShift,
+  onVisitAdded,
 }) => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedDate, setSelectedDate] = useState<string>(dayjs().format('YYYY-MM-DD'));
@@ -61,14 +64,15 @@ const OnlineAppointmentsDialog: React.FC<OnlineAppointmentsDialogProps> = ({
   } = useQuery<FacilityAppointment[]>({
     queryKey: ['doctorAppointments', doctorFirebaseId, selectedDate, searchName, refreshKey],
     queryFn: () => {
+      // alert('fetching appointments for doctorFirebaseId: ' + doctorFirebaseId + ' and date: ' + selectedDate);
       if (!doctorFirebaseId) {
         return Promise.resolve([]);
       }
       // Fetch from facility-level appointments collection, filtered by doctorId
-      return fetchDoctorAppointments('', doctorFirebaseId, selectedDate);
+      return fetchDoctorAppointments(doctorFirebaseId, selectedDate);
     },
     enabled: isOpen && !!doctorFirebaseId,
-    staleTime: 30000, // 30 seconds
+    staleTime: 3000, // 30 seconds
   });
 
   const handleRefresh = () => {
@@ -144,20 +148,30 @@ const OnlineAppointmentsDialog: React.FC<OnlineAppointmentsDialogProps> = ({
     }
     try {
       setSavingAppointmentId(appointment.id);
-      await registerNewPatientFromLab({
+      const newPatient = await registerNewPatientFromLab({
         name: appointment.patientName || 'بدون اسم',
-        phone: appointment.patientPhone || '',
+        phone: appointment.patientPhone || '0',
         gender: 'male',
         age_year: null,
         age_month: null,
         age_day: null,
         doctor_id: activeDoctorShift.doctor_id,
         doctor_shift_id: activeDoctorShift.id,
+        is_online: true
       });
       toast.success('تم حفظ المريض وإضافته للوردية');
+      if (onVisitAdded && newPatient.doctor_visit) {
+        const newActiveVisit: ActivePatientVisit = {
+          ...newPatient.doctor_visit,
+          patient: newPatient as any,
+          patient_subcompany: newPatient.subcompany ?? null,
+          requested_services_count: 0,
+        } as unknown as ActivePatientVisit;
+        onVisitAdded(newActiveVisit);
+      }
+      onClose();
     } catch (error: unknown) {
-      const message = typeof error === 'object' && error && 'message' in error ? String((error as { message?: string }).message) : null;
-      toast.error(message || 'فشل حفظ المريض');
+      toast.error('فشل في حفظ المريض');
     } finally {
       setSavingAppointmentId(null);
     }
@@ -292,7 +306,7 @@ const OnlineAppointmentsDialog: React.FC<OnlineAppointmentsDialogProps> = ({
                     
                       <TableCell>
                         <Typography variant="body2" color="text.secondary">
-                          {dayjs(appointment.createdAt).format('DD/MM/YYYY')}
+                          {dayjs(appointment.createdAt.toDate()).format('DD/MM/YYYY HH:mm')}
                         </Typography>
                       </TableCell>
                       <TableCell align="center">

@@ -13,6 +13,7 @@ export interface PatientFormData {
   name: string;
   phone: string;
   gender: "male" | "female" | "other" | undefined; // Undefined for initial select state
+  is_online?: boolean; // For new field in patient registration
 
   age_year?: number | null; // Input as number | null, then parse
   age_month?: number | null;
@@ -88,11 +89,16 @@ export interface PaginatedPatientsResponse {
     total: number;
   };
 }
+/**
+ * Lean visit shape returned by GET /clinic-active-patients (DoctorVisitListItemResource).
+ * Only fields actually consumed by the list/card UI are required.
+ * Fields from the full DoctorVisitResource (admission page, report page) are optional.
+ */
 export interface ActivePatientVisit {
+  // --- Core fields (always present from lean resource) ---
   id: number;
-  created_at: string;
-  visit_time: string | null;
-  visit_time_formatted: string | null;
+  number: number;
+  queue_number: number | null;
   status:
     | "waiting"
     | "with_doctor"
@@ -102,71 +108,27 @@ export interface ActivePatientVisit {
     | "completed"
     | "cancelled"
     | "no_show";
-  visit_type: string | null;
-  company: any | null;
-  queue_number: number | null;
-  number: number;
-  reason_for_visit: string | null;
-  visit_notes: string | null;
+  is_online: boolean;
   is_new: boolean;
   only_lab: boolean;
+  balance_due: number;
   requested_services_count: number;
-  patient_id: number;
+  doctor_id: number;
+  doctor_shift_id: number;
+  /** Slim company object for card styling; null for cash patients. */
+  company: { id: number; name: string } | null;
   patient: {
     id: number;
     name: string;
     phone: string | null;
     gender: "male" | "female" | "other";
-    dob?: string | null;
     age_year: number | null;
     age_month: number | null;
     age_day: number | null;
     full_age: string;
-    social_status?: "single" | "married" | "widowed" | "divorced" | null;
-    income_source?: string | null;
-    doctor: {
-      id: number;
-      name: string;
-      specialist_name: string | null;
-    };
-    result_is_locked: boolean;
-    address: string | null;
-    gov_id: string | null;
     company_id: number | null;
-    company: any | null;
-    subcompany_id: number | null;
-    subcompany: any | null;
-    company_relation_id: number | null;
-    company_relation: any | null;
-    insurance_no: string | null;
-    expire_date: string | null;
-    guarantor: string | null;
-    paper_fees: number;
-    is_lab_paid: boolean;
-    lab_paid: number;
-    sample_collected: boolean;
-    sample_collect_time: string | null;
-    result_print_date: string | null;
-    sample_print_date: string | null;
-    visit_number: number;
-    result_auth: boolean;
-    auth_date: string | null;
-    discount: number;
-    discount_comment: string;
-    doctor_finish: boolean;
-    doctor_lab_request_confirm: boolean;
-    doctor_lab_urgent_confirm: boolean;
-    created_at: string;
-    updated_at: string;
-    user: {
-      id: number;
-      name: string;
-      username: string;
-    };
-    has_cbc: boolean;
-    result_url: string | null;
-    doctor_in_patient: string | null;
-    /** Eager-loaded active admission (from clinic-active-patients) */
+    company: { id: number; name: string; status: boolean } | null;
+    /** Loaded only by the admission-patients-by-date endpoint (full resource). */
     admission?: {
       id: number;
       bed_id: number | null;
@@ -176,33 +138,36 @@ export interface ActivePatientVisit {
       requested_surgeries_summary?: { total_initial: number; paid: number; balance: number };
     } | null;
   };
-  patient_subcompany: any | null;
-  doctor_id: number;
-  doctor: {
-    id: number;
-    name: string;
-    specialist_name: string | null;
-  };
-  doctor_name: string;
-  user_id: number;
-  shift_id: number;
-  doctor_shift_id: number;
-  total_lab_amount: number;
-  total_paid: number;
-  total_discount: number;
-  balance_due: number;
-  total_lab_paid: number;
-  total_lab_discount: number;
-  total_lab_endurance: number;
-  total_lab_balance: number;
-  total_services_amount: number;
-  total_services_paid: number;
-  total_lab_value_will_pay: number;
-  lab_paid: number;
-  company_relation: any | null;
-  result_auth: boolean;
-  auth_date: string | null;
-  requested_services: Array<{
+
+  // --- Fields present only in the full DoctorVisitResource ---
+  patient_id?: number;
+  patient_subcompany?: any | null;
+  doctor?: { id: number; name: string; specialist_name: string | null } | null;
+  doctor_name?: string | null;
+  user_id?: number;
+  shift_id?: number;
+  visit_time?: string | null;
+  visit_time_formatted?: string | null;
+  visit_type?: string | null;
+  reason_for_visit?: string | null;
+  visit_notes?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  total_services_amount?: number;
+  total_services_paid?: number;
+  total_lab_amount?: number;
+  total_paid?: number;
+  total_discount?: number;
+  total_lab_paid?: number;
+  total_lab_discount?: number;
+  total_lab_endurance?: number;
+  total_lab_balance?: number;
+  total_lab_value_will_pay?: number;
+  lab_paid?: number;
+  result_auth?: boolean;
+  auth_date?: string | null;
+  company_relation?: any | null;
+  requested_services?: Array<{
     id: number;
     doctorvisits_id: number;
     service_id: number;
@@ -211,10 +176,7 @@ export interface ActivePatientVisit {
       name: string;
       service_group_id: number;
       service_group_name: string;
-      service_group: {
-        id: number;
-        name: string;
-      };
+      service_group: { id: number; name: string };
       price: number;
       activate: boolean;
       variable: boolean;
@@ -241,8 +203,8 @@ export interface ActivePatientVisit {
     net_payable: number | null;
     balance_due: number;
   }>;
-  lab_requests: any[];
-  requested_services_summary: Array<{
+  lab_requests?: any[];
+  requested_services_summary?: Array<{
     id: number;
     service_name: string;
     price: number;
@@ -251,7 +213,6 @@ export interface ActivePatientVisit {
     is_paid: boolean;
     done: boolean;
   }>;
-  updated_at: string;
 }
 // src/types/patients.ts
 

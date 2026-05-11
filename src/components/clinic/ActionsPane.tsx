@@ -1,5 +1,6 @@
 // src/components/clinic/ActionsPane.tsx
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Tooltip,
   Divider,
@@ -8,6 +9,7 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
+  Badge,
 } from "@mui/material";
 import {
   GridView as LayoutGrid,
@@ -32,8 +34,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import ShiftSummaryDialog from "./ShiftSummaryDialog";
 import OnlineAppointmentsDialog from "./OnlineAppointmentsDialog";
 import BankakGallery from "../gallery/BankakGallery";
-import type { DoctorShift } from "@/types/doctors";
+import type { DoctorShift, OnlineAppointment } from "@/types/doctors";
+import type { ActivePatientVisit } from "@/types/patients";
 import { webUrl } from "@/pages/constants";
+import { fetchDoctorAppointments } from "@/services/firestoreDoctorService";
 
 interface ActionsPaneProps {
   showRegistrationForm: boolean;
@@ -52,6 +56,16 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
   onOpenFinancialSummary,
 }) => {
   const { currentClinicShift, user: authUser } = useAuth();
+  const queryClient = useQueryClient();
+  const [onlineAppointments, setOnlineAppointments] = useState<OnlineAppointment[]>([]);
+
+  const handleVisitAdded = useCallback((newVisit: ActivePatientVisit) => {
+    if (!activeDoctorShift) return;
+    queryClient.setQueryData<ActivePatientVisit[]>(
+      ['activePatients', activeDoctorShift.id],
+      (old) => [newVisit, ...(old ?? [])]
+    );
+  }, [activeDoctorShift, queryClient]);
   // Placeholder permissions
   const canRegisterPatient = true;
   const canManageDoctorShifts = authUser?.user_type !== 'تامين';
@@ -63,7 +77,18 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
   const [isOnlineAppointmentsOpen, setIsOnlineAppointmentsOpen] = useState(false);
   const [isBankakGalleryOpen, setIsBankakGalleryOpen] = useState(false);
   console.log(activeDoctorShift, 'activeDoctorShift')
-
+  useEffect(() => {
+    if (activeDoctorShift && activeDoctorShift.firebase_id) {
+      fetchDoctorAppointments(activeDoctorShift.firebase_id, new Date().toISOString().split('T')[0])
+        .then(appointments => {
+          setOnlineAppointments(appointments);
+          console.log('Fetched appointments for active doctor shift:', appointments);
+        })
+        .catch(error => {
+          console.error('Error fetching appointments for active doctor shift:', error);
+        });
+    }
+  }, [activeDoctorShift]);
   return (
     <>
       <Box
@@ -171,7 +196,6 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
             </IconButton>
           </Tooltip>
         )}
-        
 
 
 
@@ -179,26 +203,20 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
 
 
 
-       {authUser?.user_type !== 'خزنه موحده' && <Tooltip title="الحجوزات الإلكترونية" placement="left">
+
+        {authUser?.user_type !== 'خزنه موحده' && <Tooltip title="الحجوزات الإلكترونية" placement="left">
           <IconButton
             onClick={() => setIsOnlineAppointmentsOpen(true)}
             disabled={!activeDoctorShift}
             sx={{ width: 44, height: 44, color: "secondary.main" }}
           >
+                      <Badge sx={{p:0,m:0}} anchorOrigin={{horizontal:'left'}} badgeContent={onlineAppointments.length} color="error" invisible={onlineAppointments.length === 0}>  
+
             <FontAwesomeIcon icon={faGlobe} />
+            </Badge>
           </IconButton>
         </Tooltip>}
 
-        {/* Bankak Gallery Button */}
-        <Tooltip title="بنك الصور" placement="left">
-          <IconButton
-            onClick={() => setIsBankakGalleryOpen(true)}
-            sx={{ width: 44, height: 44, color: "info.main" }}
-            aria-label="بنك الصور"
-          >
-            <FontAwesomeIcon icon={faImages} />
-          </IconButton>
-        </Tooltip>
 
       </Box>
 
@@ -227,26 +245,9 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
         isOpen={isOnlineAppointmentsOpen}
         onClose={() => setIsOnlineAppointmentsOpen(false)}
         activeDoctorShift={activeDoctorShift}
+        onVisitAdded={handleVisitAdded}
       />
 
-      {/* Bankak Gallery Dialog */}
-      <Dialog 
-        open={isBankakGalleryOpen} 
-        onClose={() => setIsBankakGalleryOpen(false)} 
-        fullWidth 
-        maxWidth="xl"
-        sx={{
-          '& .MuiDialog-paper': {
-            height: '90vh',
-            maxHeight: '90vh'
-          }
-        }}
-      >
-        <DialogTitle>بنك الصور</DialogTitle>
-        <DialogContent dividers sx={{ padding: 0, height: '100%' }}>
-          <BankakGallery />
-        </DialogContent>
-      </Dialog>
 
     </>
   );

@@ -37,8 +37,6 @@ import apiClient from '@/services/api';
 const ClinicPage: React.FC = () => {
   const { requestSelection } = useClinicSelection();
   const queryClient = useQueryClient();
-  // Removed React Query client; using local refresh key instead
-  const [activePatientsRefreshKey, setActivePatientsRefreshKey] = useState(0);
 
   const { currentClinicShift, user } = useAuth();
   const isUnifiedCashier = (user?.user_type || '').trim() === 'خزنه موحده';
@@ -93,16 +91,22 @@ const ClinicPage: React.FC = () => {
 
   // Empty dependency array means this effect runs once on mount and cleans up on unmount
   const handlePatientRegistered = useCallback((patient: Patient) => {
+    const visitId = patient.doctor_visit?.id;
+
+    // Seed caches with data already in the POST response — avoids 3 follow-up fetches
+    if (visitId && patient.doctor_visit) {
+      queryClient.setQueryData(['doctorVisit', visitId], patient.doctor_visit);
+    }
+    queryClient.setQueryData(['patientDetailsForServiceSelection', patient.id], patient);
+    queryClient.setQueryData(['patientDetailsForLabDisplay', patient.id], patient);
+
     // Refresh active patients list
     queryClient.invalidateQueries({ queryKey: ['activePatients'] });
-    setActivePatientsRefreshKey(prev => prev + 1);
-    // If backend returned the created visit on the patient, auto-select it
-    const visitId = patient.doctor_visit?.id;
+
     if (visitId) {
       setSelectedPatientVisit({ patient, visitId });
       setShowRegistrationForm(false);
     }
-    // Reset search state
     setSearchQuery('');
     setShowPatientHistory(false);
   }, [queryClient]);
@@ -287,7 +291,6 @@ const ClinicPage: React.FC = () => {
       if (activeDoctorShift && patient.doctor_visit?.doctor_shift_id === activeDoctorShift.id) {
         // Refresh the active patients list
         queryClient.invalidateQueries({ queryKey: ['activePatients'] });
-        setActivePatientsRefreshKey(prev => prev + 1);
 
         // Optionally auto-select the new patient
         const visitId = patient.doctor_visit?.id;
@@ -409,7 +412,6 @@ const ClinicPage: React.FC = () => {
         {/* Section 3: Active Patients List Panel */}
         <section className="clinic-panel workspace">
           <ActivePatientsList
-            key={activePatientsRefreshKey}
             onPatientSelect={handlePatientSelected}
             selectedPatientVisitId={selectedPatientVisit?.visitId || null}
             doctorShiftId={activeDoctorShift?.id || null}

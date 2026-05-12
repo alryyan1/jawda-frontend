@@ -1,5 +1,6 @@
 // src/components/clinic/PatientRegistrationForm.tsx
 import React, { useState, useEffect, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Box,
   TextField,
@@ -71,6 +72,7 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
   isVisible,
   onSearchQueryChange
 }) => {
+  const queryClient = useQueryClient();
   const nameInputRef = useRef<HTMLInputElement>(null);
   const phoneInputRef = useRef<HTMLInputElement>(null);
   
@@ -268,7 +270,11 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
       const phone = newPatient?.phone;
       if (phone) {
         try {
-          const settings = await getSettings();
+          const settings = await queryClient.fetchQuery({
+            queryKey: ['settings'],
+            queryFn: getSettings,
+            staleTime: Infinity,
+          });
           const message = (settings as any)?.lab_welcome_sms_message?.trim();
           if (message) {
             const normalized = phone.startsWith('249') ? phone : `249${phone.replace(/^0/, '')}`;

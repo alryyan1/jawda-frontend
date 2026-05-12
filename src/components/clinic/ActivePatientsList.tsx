@@ -11,8 +11,6 @@ import PatientInfoDialog from "./PatientInfoDialog";
 import type { DoctorVisit } from "@/types/visits";
 import { useAuth } from "@/contexts/AuthContext";
 import apiClient from "@/services/api";
-import type { DoctorShift } from "@/types/doctors";
-import type { PaginatedResponse } from "@/types/common";
 import { webUrl } from "@/pages/constants";
 
 interface ActivePatientsListProps {
@@ -31,85 +29,25 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
 
   const { user } = useAuth();
   const [currentDisplayedShiftId, setCurrentDisplayedShiftId] = useState<number | null>(null);
-  const [currentDoctorId, setCurrentDoctorId] = useState<number | null>(null);
-
-  // Fetch current doctor shift to get doctor_id
-  const { data: currentDoctorShift } = useQuery<DoctorShift | null, Error>({
-    queryKey: ['doctorShift', doctorShiftId],
-    queryFn: async (): Promise<DoctorShift | null> => {
-      if (!doctorShiftId) return null;
-      const response = await apiClient.get<{ data: DoctorShift }>(`/doctor-shifts/${doctorShiftId}`);
-      return response.data.data;
-    },
-    enabled: !!doctorShiftId,
-  });
-
-  // Update current doctor ID when shift changes
-  useEffect(() => {
-    if (currentDoctorShift?.doctor_id) {
-      setCurrentDoctorId(currentDoctorShift.doctor_id);
-    }
-  }, [currentDoctorShift]);
-
   // Reset displayed shift when doctorShiftId changes
   useEffect(() => {
     setCurrentDisplayedShiftId(doctorShiftId);
   }, [doctorShiftId]);
 
-  // Fetch all doctor shifts for the current doctor
-  const { data: doctorShiftsList } = useQuery<DoctorShift[], Error>({
-    queryKey: ['doctorShiftsForDoctor', currentDoctorId],
+  // Fetch adjacent shift IDs from the backend — two indexed queries instead of full pagination
+  const { data: adjacentShifts } = useQuery<{ previous_id: number | null; next_id: number | null }, Error>({
+    queryKey: ['doctorShiftAdjacent', currentDisplayedShiftId],
     queryFn: async () => {
-      if (!currentDoctorId) return [];
-      
-      // Fetch all pages to get all shifts for this doctor
-      let allShifts: DoctorShift[] = [];
-      let currentPage = 1;
-      let hasMorePages = true;
-      
-      while (hasMorePages) {
-        const response = await apiClient.get<PaginatedResponse<DoctorShift>>('/doctor-shifts', {
-          params: {
-            doctor_id: currentDoctorId,
-            per_page: 100, // Max allowed by backend
-            page: currentPage,
-            sort_by: 'id',
-            sort_direction: 'desc', // Most recent first
-          },
-        });
-        
-        const shifts = response.data.data || [];
-        allShifts = [...allShifts, ...shifts];
-        
-        // Check if there are more pages
-        const meta = response.data.meta;
-        hasMorePages = meta && currentPage < meta.last_page;
-        currentPage++;
-      }
-      
-      return allShifts;
+      const response = await apiClient.get<{ previous_id: number | null; next_id: number | null }>(
+        `/doctor-shifts/${currentDisplayedShiftId}/adjacent`
+      );
+      return response.data;
     },
-    enabled: !!currentDoctorId,
+    enabled: !!currentDisplayedShiftId,
   });
 
-  // Find previous and next shift IDs
-  const previousShiftId = React.useMemo(() => {
-    if (!currentDisplayedShiftId || !doctorShiftsList) return null;
-    // Find the shift with the highest ID that is less than current
-    const previousShifts = doctorShiftsList
-      .filter(shift => shift.id < currentDisplayedShiftId)
-      .sort((a, b) => b.id - a.id); // Sort descending to get the closest one
-    return previousShifts.length > 0 ? previousShifts[0].id : null;
-  }, [currentDisplayedShiftId, doctorShiftsList]);
-
-  const nextShiftId = React.useMemo(() => {
-    if (!currentDisplayedShiftId || !doctorShiftsList) return null;
-    // Find the shift with the lowest ID that is greater than current
-    const nextShifts = doctorShiftsList
-      .filter(shift => shift.id > currentDisplayedShiftId)
-      .sort((a, b) => a.id - b.id); // Sort ascending to get the closest one
-    return nextShifts.length > 0 ? nextShifts[0].id : null;
-  }, [currentDisplayedShiftId, doctorShiftsList]);
+  const previousShiftId = adjacentShifts?.previous_id ?? null;
+  const nextShiftId = adjacentShifts?.next_id ?? null;
 
   // Use current displayed shift ID or fallback to doctorShiftId
   const targetDoctorShiftId = currentDisplayedShiftId || doctorShiftId;

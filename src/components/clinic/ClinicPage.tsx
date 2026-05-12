@@ -135,7 +135,7 @@ const ClinicPage: React.FC = () => {
       };
       queryClient.setQueryData(
         ['activePatients', shiftId],
-        (old: ActivePatientVisit[] | undefined) => [...(old ?? []), newEntry],
+        (old: ActivePatientVisit[] | undefined) => [newEntry, ...(old ?? [])],
       );
     }
 

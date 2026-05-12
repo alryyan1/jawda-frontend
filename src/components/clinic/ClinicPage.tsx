@@ -11,7 +11,7 @@ import PatientRegistrationForm from '@/components/clinic/PatientRegistrationForm
 import ActivePatientsList from '@/components/clinic/ActivePatientsList';
 import PatientistorytableClinc from '@/components/clinic/PatientistorytableClinc';
 
-import type { Patient, PatientSearchResult } from '@/types/patients'; // Or your more specific ActivePatientListItem
+import type { Patient, PatientSearchResult, ActivePatientVisit } from '@/types/patients';
 import { useClinicSelection } from '@/contexts/ClinicSelectionContext';
 import type { DoctorShift } from '@/types/doctors'; // Assuming a DoctorShift type for Tabs
 import { useAuth } from '@/contexts/AuthContext';
@@ -91,17 +91,51 @@ const ClinicPage: React.FC = () => {
 
   // Empty dependency array means this effect runs once on mount and cleans up on unmount
   const handlePatientRegistered = useCallback((patient: Patient) => {
-    const visitId = patient.doctor_visit?.id;
+    const visit = patient.doctor_visit;
+    const visitId = visit?.id;
 
-    // Seed caches with data already in the POST response — avoids 3 follow-up fetches
-    if (visitId && patient.doctor_visit) {
-      queryClient.setQueryData(['doctorVisit', visitId], patient.doctor_visit);
+    // Seed individual query caches from the POST response — avoids 3 follow-up fetches
+    if (visitId && visit) {
+      queryClient.setQueryData(['doctorVisit', visitId], visit);
     }
     queryClient.setQueryData(['patientDetailsForServiceSelection', patient.id], patient);
     queryClient.setQueryData(['patientDetailsForLabDisplay', patient.id], patient);
 
-    // Refresh active patients list
-    queryClient.invalidateQueries({ queryKey: ['activePatients'] });
+    // Append to the active patients list instead of invalidating + re-fetching
+    if (visit?.doctor_shift_id) {
+      const newEntry: ActivePatientVisit = {
+        id: visit.id,
+        number: visit.number ?? 0,
+        queue_number: visit.queue_number ?? null,
+        status: 'waiting',
+        is_online: visit.is_online ?? false,
+        is_new: true,
+        only_lab: false,
+        balance_due: 0,
+        requested_services_count: 0,
+        doctor_id: visit.doctor_id ?? 0,
+        doctor_shift_id: visit.doctor_shift_id,
+        company: patient.company ? { id: patient.company.id, name: patient.company.name } : null,
+        patient: {
+          id: patient.id,
+          name: patient.name,
+          phone: patient.phone ?? null,
+          gender: patient.gender,
+          age_year: patient.age_year ?? null,
+          age_month: patient.age_month ?? null,
+          age_day: patient.age_day ?? null,
+          full_age: (patient as any).full_age ?? '',
+          company_id: patient.company_id ?? null,
+          company: patient.company
+            ? { id: patient.company.id, name: patient.company.name, status: true }
+            : null,
+        },
+      };
+      queryClient.setQueryData(
+        ['activePatients', visit.doctor_shift_id],
+        (old: ActivePatientVisit[] | undefined) => [...(old ?? []), newEntry],
+      );
+    }
 
     if (visitId) {
       setSelectedPatientVisit({ patient, visitId });

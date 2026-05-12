@@ -28,8 +28,9 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
 }) => {
 
   const { user } = useAuth();
-  const [currentDisplayedShiftId, setCurrentDisplayedShiftId] = useState<number | null>(null);
-  // Reset displayed shift when doctorShiftId changes
+  // Initialise from the prop so the first render already has the correct shift ID.
+  // The effect keeps it in sync when the prop changes (e.g. doctor tab switch).
+  const [currentDisplayedShiftId, setCurrentDisplayedShiftId] = useState<number | null>(doctorShiftId);
   useEffect(() => {
     setCurrentDisplayedShiftId(doctorShiftId);
   }, [doctorShiftId]);
@@ -49,8 +50,7 @@ const ActivePatientsList: React.FC<ActivePatientsListProps> = ({
   const previousShiftId = adjacentShifts?.previous_id ?? null;
   const nextShiftId = adjacentShifts?.next_id ?? null;
 
-  // Use current displayed shift ID or fallback to doctorShiftId
-  const targetDoctorShiftId = currentDisplayedShiftId || doctorShiftId;
+  const targetDoctorShiftId = currentDisplayedShiftId ?? doctorShiftId;
 
   const {
     data: visits,

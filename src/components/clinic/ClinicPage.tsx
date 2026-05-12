@@ -101,20 +101,22 @@ const ClinicPage: React.FC = () => {
     queryClient.setQueryData(['patientDetailsForServiceSelection', patient.id], patient);
     queryClient.setQueryData(['patientDetailsForLabDisplay', patient.id], patient);
 
-    // Append to the active patients list instead of invalidating + re-fetching
-    if (visit?.doctor_shift_id) {
+    // Use activeDoctorShift.id (the shift we just registered for) — more reliable
+    // than visit.doctor_shift_id which may be absent on some response shapes
+    const shiftId = activeDoctorShift?.id;
+    if (shiftId && visitId) {
       const newEntry: ActivePatientVisit = {
-        id: visit.id,
-        number: visit.number ?? 0,
-        queue_number: visit.queue_number ?? null,
+        id: visitId,
+        number: visit?.number ?? 0,
+        queue_number: visit?.queue_number ?? null,
         status: 'waiting',
-        is_online: visit.is_online ?? false,
+        is_online: (visit as any)?.is_online ?? false,
         is_new: true,
         only_lab: false,
         balance_due: 0,
         requested_services_count: 0,
-        doctor_id: visit.doctor_id ?? 0,
-        doctor_shift_id: visit.doctor_shift_id,
+        doctor_id: (visit as any)?.doctor_id ?? activeDoctorShift.doctor_id ?? 0,
+        doctor_shift_id: shiftId,
         company: patient.company ? { id: patient.company.id, name: patient.company.name } : null,
         patient: {
           id: patient.id,
@@ -132,7 +134,7 @@ const ClinicPage: React.FC = () => {
         },
       };
       queryClient.setQueryData(
-        ['activePatients', visit.doctor_shift_id],
+        ['activePatients', shiftId],
         (old: ActivePatientVisit[] | undefined) => [...(old ?? []), newEntry],
       );
     }
@@ -143,7 +145,7 @@ const ClinicPage: React.FC = () => {
     }
     setSearchQuery('');
     setShowPatientHistory(false);
-  }, [queryClient]);
+  }, [queryClient, activeDoctorShift]);
 
   // Search patients function
   const searchPatients = useCallback(async (query: string) => {

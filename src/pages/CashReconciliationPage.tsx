@@ -4,8 +4,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 // MUI
-import { Box, Card, CardContent, CardHeader, Typography, FormControl, InputLabel, Select, MenuItem, TextField, CircularProgress, Button, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, Autocomplete } from '@mui/material';
-import { PictureAsPdf as PdfIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { Box, Card, CardContent, CardHeader, Typography, FormControl, InputLabel, Select, MenuItem, TextField, CircularProgress, Button, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, Autocomplete, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+import { PictureAsPdf as PdfIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
 
 import { formatNumber } from '@/lib/utils';
 import { getDenominationsForShift, saveDenominationCounts } from '@/services/cashReconciliationService';
@@ -49,6 +49,7 @@ const CashReconciliationPage: React.FC = () => {
     amount_bank: '',
     employee_id: '' as string | number
   });
+  const [costDialogOpen, setCostDialogOpen] = useState(false);
 
   // Fetch all shifts for the dropdown
   const { data: shiftsList, isLoading: isLoadingShifts } = useQuery<Shift[], Error>({
@@ -132,6 +133,7 @@ const CashReconciliationPage: React.FC = () => {
     onSuccess: () => {
       toast.success('تم إضافة المصروف بنجاح');
       setCostForm({ description: '', amount_cash: '', amount_bank: '', employee_id: '' });
+      setCostDialogOpen(false);
       // Invalidate income summary and costs to refresh the data
       queryClient.invalidateQueries({ queryKey: ['userIncomeSummary', selectedShiftId] });
       queryClient.invalidateQueries({ queryKey: ['shiftCosts', selectedShiftId] });
@@ -361,29 +363,9 @@ const CashReconciliationPage: React.FC = () => {
             disabled={!selectedShiftId || isLoading}
             sx={{ minWidth: 160 }}
           >
-            خصومات المرضى
+            تقرير التخفيض
           </Button>
-
-          <Button
-            variant="contained"
-            color="error"
-            startIcon={<PdfIcon />}
-            onClick={async () => {
-              if (!selectedShiftId) {
-                toast.error('يرجى اختيار وردية أولاً');
-                return;
-              }
-              const pdfUrl = `${webUrl}reports/shift-refunds/pdf?shift_id=${selectedShiftId}`;
-              window.open(pdfUrl, '_blank');
-              toast.success('تم فتح تقرير الاستردادات في تبويب جديد');
-            }}
-            disabled={!selectedShiftId || isLoading}
-            sx={{ minWidth: 160 }}
-          >
-            تقرير الاستردادات
-          </Button>
-        </Stack>
-
+{/* 
         <Button
           variant="outlined"
           color="warning"
@@ -391,8 +373,19 @@ const CashReconciliationPage: React.FC = () => {
           size="small"
           sx={{ minWidth: 120 }}
         >
-          مسح الكل
-        </Button>
+          مسح الكل */}
+        {/* </Button> */}
+           <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => setCostDialogOpen(true)}
+              disabled={!selectedShiftId}
+              fullWidth
+            >
+              إضافة مصروف
+            </Button>
+        </Stack>
+
       </Box>
 
       {isLoading ? (
@@ -456,19 +449,17 @@ const CashReconciliationPage: React.FC = () => {
             </Card>
             
             {/* Financial Summary - Below the calculator */}
-            <UserMoneySummary
-              userId={user?.id}
-              shiftId={Number(selectedShiftId)}
-              totalDenominations={totalCalculated}
-            />
+        
           </Box>
 
-          {/* Right Column: Quick Cost Creation */}
+          {/* Right Column: Costs */}
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <Card>
-              <CardHeader title="إضافة مصروف " />
-              <CardContent>
-                <Stack spacing={2}>
+         
+
+            <Dialog open={costDialogOpen} onClose={() => setCostDialogOpen(false)} fullWidth maxWidth="xs">
+              <DialogTitle>إضافة مصروف</DialogTitle>
+              <DialogContent>
+                <Stack spacing={2} sx={{ mt: 1 }}>
                   <Autocomplete
                     options={employeesData || []}
                     getOptionLabel={(option) => option.name}
@@ -493,7 +484,6 @@ const CashReconciliationPage: React.FC = () => {
                     )}
                     loading={isLoadingEmployeesData}
                   />
-
                   <TextField
                     label="وصف المصروف"
                     value={costForm.description}
@@ -502,7 +492,6 @@ const CashReconciliationPage: React.FC = () => {
                     fullWidth
                     size="small"
                   />
-                  
                   <TextField
                     label="المبلغ النقدي"
                     type="number"
@@ -513,7 +502,6 @@ const CashReconciliationPage: React.FC = () => {
                     size="small"
                     inputProps={{ min: 0, step: 0.01 }}
                   />
-                  
                   <TextField
                     label="المبلغ البنكي"
                     type="number"
@@ -524,26 +512,25 @@ const CashReconciliationPage: React.FC = () => {
                     size="small"
                     inputProps={{ min: 0, step: 0.01 }}
                   />
-                  
-                  <Button
-                    variant="contained"
-                    onClick={handleCreateCost}
-                    disabled={createCostMutation.isPending || !selectedShiftId}
-                    fullWidth
-                    startIcon={createCostMutation.isPending ? <CircularProgress size={20} /> : null}
-                  >
-                    {createCostMutation.isPending ? 'جاري الإضافة...' : 'إضافة المصروف'}
-                  </Button>
-                  
-                  {!selectedShiftId && (
-                    <Typography variant="caption" color="error" textAlign="center">
-                      يرجى اختيار وردية أولاً
-                    </Typography>
-                  )}
                 </Stack>
-              </CardContent>
-            </Card>
-
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={() => setCostDialogOpen(false)}>إلغاء</Button>
+                <Button
+                  variant="contained"
+                  onClick={handleCreateCost}
+                  disabled={createCostMutation.isPending}
+                  startIcon={createCostMutation.isPending ? <CircularProgress size={18} /> : null}
+                >
+                  {createCostMutation.isPending ? 'جاري الإضافة...' : 'إضافة'}
+                </Button>
+              </DialogActions>
+            </Dialog>
+    <UserMoneySummary
+              userId={user?.id}
+              shiftId={Number(selectedShiftId)}
+              totalDenominations={totalCalculated}
+            />
             {/* Costs Table */}
             <Card>
               {/* <CardHeader title="المصروفات المسجلة" /> */}

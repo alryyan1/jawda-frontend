@@ -79,6 +79,7 @@ interface RequestedServicesTableProps {
 interface RowEditData {
   count: number;
   discount_per: number;
+  discount?: number;
   endurance?: number;
   visit?: DoctorVisit;
   price?: number;
@@ -358,7 +359,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
     mutationFn: (data: {
       rsId: number;
       payload: Partial<
-        Pick<RequestedService, "count" | "discount_per" | "endurance" | "price">
+        Pick<RequestedService, "count" | "discount_per" | "discount" | "endurance" | "price">
       >;
     }) => updateRequestedServiceDetails(data.rsId, data.payload),
     onSuccess: () => {
@@ -462,6 +463,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
     setRowOptionsData({
       count: rs.count || 1,
       discount_per: rs.discount_per || 0,
+      discount: Number(rs.discount) || 0,
       endurance: Number(rs.endurance) || 0,
       price: Number(rs.price) || 0,
     });
@@ -475,6 +477,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
       payload: {
         count: rowOptionsData.count,
         discount_per: isCompanyPatient ? 0 : rowOptionsData.discount_per,
+        discount: isCompanyPatient ? 0 : (rowOptionsData.discount ?? 0),
         ...(isCompanyPatient
           ? { endurance: Number(rowOptionsData.endurance) || 0 }
           : {}),
@@ -965,36 +968,59 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                   </Box>
                 )}
                 {!isCompanyPatient && (
-                  <Box className="flex flex-col ">
-                    <Typography variant="caption" fontWeight={600}>
-                      نسبة التخفيض
-                    </Typography>
-
-                    <Select
-                      label="نسبة التخفيض"
-                      size="small"
-                      disabled={
-                        !can("تخفيض خدمه") ||
-                        user?.id != rowOptionsService.user_id ||
-                        rowOptionsService.amount_paid > 0
-                      }
-                      value={rowOptionsData.discount_per}
-                      onChange={(e) =>
-                        setRowOptionsData({
-                          ...rowOptionsData,
-                          discount_per: Number(e.target.value),
-                        })
-                      }
-                    >
-                      {Array.from({ length: 11 }).map((_, i) => {
-                        const value = i * 10;
-                        return (
-                          <MenuItem key={value} value={value}>
-                            {value}%
-                          </MenuItem>
-                        );
-                      })}
-                    </Select>
+                  <Box className="flex flex-col gap-2">
+                    <Box className="flex flex-col">
+                      <Typography variant="caption" fontWeight={600}>
+                        نسبة التخفيض
+                      </Typography>
+                      <Select
+                        label="نسبة التخفيض"
+                        size="small"
+                        disabled={
+                          !can("تخفيض خدمه") ||
+                          user?.id != rowOptionsService.user_id ||
+                          rowOptionsService.amount_paid > 0
+                        }
+                        value={rowOptionsData.discount_per}
+                        onChange={(e) =>
+                          setRowOptionsData({
+                            ...rowOptionsData,
+                            discount_per: Number(e.target.value),
+                          })
+                        }
+                      >
+                        {Array.from({ length: 11 }).map((_, i) => {
+                          const value = i * 10;
+                          return (
+                            <MenuItem key={value} value={value}>
+                              {value}%
+                            </MenuItem>
+                          );
+                        })}
+                      </Select>
+                    </Box>
+                    <Box className="flex flex-col">
+                      <Typography variant="caption" fontWeight={600}>
+                        خصم ثابت
+                      </Typography>
+                      <TextField
+                        type="number"
+                        size="small"
+                        slotProps={{ input: { inputProps: { min: 0, step: 0.5 } } }}
+                        disabled={
+                          !can("تخفيض خدمه") ||
+                          user?.id != rowOptionsService.user_id ||
+                          rowOptionsService.amount_paid > 0
+                        }
+                        value={rowOptionsData.discount ?? 0}
+                        onChange={(e) =>
+                          setRowOptionsData({
+                            ...rowOptionsData,
+                            discount: parseFloat(e.target.value || "0") || 0,
+                          })
+                        }
+                      />
+                    </Box>
                   </Box>
                 )}
               </Box>
@@ -1027,19 +1053,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                 >
                   المدفوعات
                 </Button>
-                {!visit?.company && rowOptionsService && Number(rowOptionsService.amount_paid) > 0 && (
-                  <Button
-                    variant="outlined"
-                    color="warning"
-                    onClick={() => {
-                      setIsRowOptionsDialogOpen(false);
-                      setRefundService(rowOptionsService);
-                    }}
-                    startIcon={<RotateCcw className="h-4 w-4" />}
-                  >
-                    استرداد
-                  </Button>
-                )}
+          
                 {rowOptionsService &&
                   calculateItemBalance(rowOptionsService) > 0.01 && (
                     <Button

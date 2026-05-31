@@ -204,20 +204,22 @@ export interface GetVisitsFilters {
   company_id?: number | string | null;
   has_company?: boolean;
   search?: string;
-  status?: string | null; // e.g., 'all', 'waiting', 'completed'
+  status?: string | null;
   per_page?: number;
   date_from?: string; // YYYY-MM-DD
   date_to?: string; // YYYY-MM-DD
+  service_id?: number | null;
+  diagnosis_user_id?: number | null;
 }
 
 export const getPatientVisitsSummary = async (
   filters: GetVisitsFilters,
 ): Promise<PaginatedResponse<PatientVisitSummary>> => {
   const response = await apiClient.get<PaginatedResponse<PatientVisitSummary>>(
-    DOCTOR_VISITS_API_URL,
+    '/visits-summary',
     { params: filters },
   );
-  return response.data; // Assuming Laravel pagination structure
+  return response.data;
 };
 export const markRequestedServiceDone = async (
   requestedServiceId: number,

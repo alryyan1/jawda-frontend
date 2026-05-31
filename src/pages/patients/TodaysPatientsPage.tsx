@@ -1,23 +1,23 @@
 // src/pages/patients/TodaysPatientsPage.tsx
-import React, { useState, useRef, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
-import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import React, { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import dayjs from "dayjs";
 
 import {
   alpha,
-  Avatar,
   Box,
   Button,
   Card,
   CardContent,
   Chip,
   CircularProgress,
-  Collapse,
+  Dialog,
+  DialogContent,
+  DialogTitle,
   Divider,
-  IconButton,
   InputAdornment,
   LinearProgress,
+  Pagination,
   Stack,
   Table,
   TableBody,
@@ -26,7 +26,6 @@ import {
   TableHead,
   TableRow,
   TextField,
-  Tooltip,
   Typography,
 } from "@mui/material";
 import Autocomplete from "@mui/material/Autocomplete";
@@ -35,462 +34,227 @@ import {
   CalendarToday as CalendarTodayIcon,
   Visibility as VisibilityIcon,
   PeopleAlt as PeopleAltIcon,
-  KeyboardArrowDown as ExpandIcon,
-  KeyboardArrowUp as CollapseIcon,
 } from "@mui/icons-material";
-import { Microscope, Stethoscope, Bed } from "lucide-react";
+import { Stethoscope } from "lucide-react";
 
 import {
   getPatientVisitsSummary,
-  markRequestedServiceDone,
+  getDoctorVisitById,
+  getRequestedServicesForVisit,
   type GetVisitsFilters,
 } from "@/services/visitService";
-import type { PatientVisitSummary, RequestedServiceSummary } from "@/types/visits";
-import type { DoctorStripped } from "@/types/doctors";
+import type { PatientVisitSummary } from "@/types/visits";
+import RequestedServicesTable from "@/components/clinic/RequestedServicesTable";
+import QuickAddPatientDialog from "@/components/admissions/QuickAddPatientDialog";
+import LabRequestsColumn from "@/components/lab/reception/LabRequestsColumn";
 import type { Company } from "@/types/companies";
 import { useDebounce } from "@/hooks/useDebounce";
-import { useCachedDoctorsList, useCachedCompaniesList } from "@/hooks/useCachedData";
+import { useCachedCompaniesList } from "@/hooks/useCachedData";
+import { useAuth } from "@/contexts/AuthContext";
+import { getServicesList } from "@/services/serviceService";
+import { getUsersList } from "@/services/userService";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const todayIso = dayjs().format("YYYY-MM-DD");
 
-// Main table columns (no services column — shown in expandable row)
 const COLUMNS: { key: string; label: string; width?: number | string }[] = [
-  { key: "expand",  label: "",         width: 40  },
-  { key: "number",  label: "#",        width: 50  },
-  { key: "patient", label: "المريض",   width: 200 },
-  { key: "doctor",  label: "الطبيب",   width: 140 },
-  { key: "company", label: "الشركة",   width: 130 },
-  { key: "status",  label: "الحالة",   width: 120 },
-  { key: "balance", label: "الرصيد",   width: 90  },
-  { key: "time",    label: "الوقت",    width: 80  },
-  { key: "actions", label: "",         width: 80  },
+  { key: "number",   label: "#",              width: 50  },
+  { key: "patient",  label: "المريض",         width: 200 },
+  { key: "time",     label: "التاريخ والوقت", width: 140 },
+  { key: "total",    label: "الإجمالي",       width: 90  },
+  { key: "paid",     label: "المدفوع",        width: 90  },
+  { key: "balance",  label: "المتبقي",        width: 90  },
+  { key: "services", label: "الخدمات",        width: 90  },
+  { key: "actions",  label: "المختبر",        width: 80  },
+  { key: "info",     label: "المعلومات",      width: 110 },
 ];
 
-// ─── Status chip ─────────────────────────────────────────────────────────────
+// ─── Visit services dialog ────────────────────────────────────────────────────
 
-const STATUS_MAP = {
-  waiting:         { label: "انتظار",       color: "default"   },
-  with_doctor:     { label: "مع الطبيب",    color: "primary"   },
-  lab_pending:     { label: "انتظار مختبر", color: "info"      },
-  imaging_pending: { label: "انتظار أشعة",  color: "secondary" },
-  payment_pending: { label: "انتظار دفع",   color: "warning"   },
-  completed:       { label: "مكتملة",       color: "success"   },
-  cancelled:       { label: "ملغاة",        color: "error"     },
-  no_show:         { label: "لم يحضر",      color: "error"     },
-} as const;
-
-const VisitStatusChip: React.FC<{ status: string }> = ({ status }) => {
-  const config = STATUS_MAP[status as keyof typeof STATUS_MAP] ?? {
-    label: status,
-    color: "default" as const,
-  };
-  return (
-    <Chip
-      label={config.label}
-      color={config.color}
-      size="small"
-      sx={{ fontSize: "0.6875rem", fontWeight: 600, minWidth: 80 }}
-    />
-  );
-};
-
-// ─── Patient name cell ────────────────────────────────────────────────────────
-
-const PatientNameCell: React.FC<{ visit: PatientVisitSummary }> = React.memo(({ visit }) => {
-  const name = visit.patient?.name ?? "-";
-  const initials = name.split(" ").slice(0, 2).map((w) => w[0] ?? "").join("");
-
-  const hasLab =
-    (visit.total_lab_value_will_pay ?? 0) > 0 || (visit.lab_requests?.length ?? 0) > 0;
-  const hasServices =
-    (visit.total_services_amount ?? 0) > 0 || (visit.requested_services_count ?? 0) > 0;
-  const hasAdmission = !!visit.patient?.admission;
-
-  return (
-    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-      <Avatar
-        sx={(theme) => ({
-          width: 30,
-          height: 30,
-          fontSize: "0.7rem",
-          fontWeight: 700,
-          bgcolor: alpha(theme.palette.primary.main, 0.12),
-          color: "primary.main",
-          flexShrink: 0,
-        })}
-      >
-        {initials}
-      </Avatar>
-      <Box sx={{ minWidth: 0 }}>
-        <Typography variant="body2" fontWeight={500} noWrap>
-          {name}
-        </Typography>
-        {(hasLab || hasServices || hasAdmission) && (
-          <Box sx={{ display: "flex", gap: 0.5, mt: 0.25 }}>
-            {hasLab && (
-              <Tooltip title="طلب مختبر">
-                <Box component="span" sx={{ display: "inline-flex", color: "info.main", "& svg": { width: 12, height: 12 } }}>
-                  <Microscope />
-                </Box>
-              </Tooltip>
-            )}
-            {hasServices && (
-              <Tooltip title="خدمات طبية">
-                <Box component="span" sx={{ display: "inline-flex", color: "secondary.main", "& svg": { width: 12, height: 12 } }}>
-                  <Stethoscope />
-                </Box>
-              </Tooltip>
-            )}
-            {hasAdmission && (
-              <Tooltip title="منوم">
-                <Box component="span" sx={{ display: "inline-flex", color: "warning.main", "& svg": { width: 12, height: 12 } }}>
-                  <Bed />
-                </Box>
-              </Tooltip>
-            )}
-          </Box>
-        )}
-      </Box>
-    </Box>
-  );
-});
-
-// ─── Complete button per service row ─────────────────────────────────────────
-
-const CompleteServiceButton: React.FC<{ service: RequestedServiceSummary; visitQueryKey: readonly unknown[] }> = ({ service, visitQueryKey }) => {
-  const queryClient = useQueryClient();
-  const { mutate, isPending } = useMutation({
-    mutationFn: (done: boolean) => markRequestedServiceDone(service.id, done),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: visitQueryKey });
-    },
+const VisitServicesDialog: React.FC<{ visitId: number; open: boolean; onClose: () => void }> = ({ visitId, open, onClose }) => {
+  const { data: visit, isLoading: isLoadingVisit } = useQuery({
+    queryKey: ["doctorVisit", visitId],
+    queryFn: () => getDoctorVisitById(visitId),
+    enabled: open,
   });
 
-  if (service.done) {
-    return (
-      <Button
-        size="small"
-        variant="outlined"
-        color="inherit"
-        disabled={isPending}
-        onClick={(e) => { e.stopPropagation(); mutate(false); }}
-        sx={{ fontSize: "0.7rem", py: 0.25, px: 1, minWidth: 0, color: "text.secondary" }}
-      >
-        تراجع
-      </Button>
-    );
-  }
+  const { data: requestedServices = [], isLoading: isLoadingServices } = useQuery({
+    queryKey: ["requestedServicesForVisit", visitId],
+    queryFn: () => getRequestedServicesForVisit(visitId),
+    enabled: open,
+  });
 
   return (
-    <Button
-      size="small"
-      variant="contained"
-      color="success"
-      disableElevation
-      disabled={isPending}
-      onClick={(e) => { e.stopPropagation(); mutate(true); }}
-      sx={{ fontSize: "0.7rem", py: 0.25, px: 1, minWidth: 0 }}
-    >
-      {isPending ? <CircularProgress size={12} color="inherit" /> : "إنجاز"}
-    </Button>
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
+      <DialogTitle>
+        خدمات الزيارة — {visit?.patient?.name ?? ""}
+      </DialogTitle>
+      <DialogContent sx={{ p: 1 }}>
+        <RequestedServicesTable
+          visitId={visitId}
+          visit={visit}
+          requestedServices={requestedServices}
+          isLoading={isLoadingVisit || isLoadingServices}
+          currentClinicShiftId={null}
+          onAddMoreServices={() => {}}
+          handlePrintReceipt={() => {}}
+          showExtraColumns
+        />
+      </DialogContent>
+    </Dialog>
   );
 };
 
-// ─── Expanded services table ──────────────────────────────────────────────────
 
-const ServicesExpandedRow: React.FC<{ visit: PatientVisitSummary; open: boolean; visitQueryKey: readonly unknown[] }> = React.memo(
-  ({ visit, open, visitQueryKey }) => {
-    const services: RequestedServiceSummary[] =
-      visit.requested_services_summary?.length
-        ? visit.requested_services_summary
-        : (visit.requested_services ?? []).map((rs) => ({
-            id: rs.id,
-            service_name: rs.service?.name ?? `خدمة #${rs.service_id}`,
-            price: rs.price ?? 0,
-            count: rs.count ?? 1,
-            amount_paid: rs.amount_paid ?? 0,
-            is_paid: rs.is_paid ?? false,
-            done: rs.done ?? false,
-          }));
 
-    const labRequests = visit.lab_requests ?? [];
-    const hasContent = services.length > 0 || labRequests.length > 0;
+// ─── Lab requests dialog ─────────────────────────────────────────────────────
 
-    return (
-      <TableRow sx={{ "& > td": { py: 0, border: 0 } }}>
-        <TableCell colSpan={COLUMNS.length} sx={{ p: 0, border: 0 }}>
-          <Collapse in={open} timeout="auto" unmountOnExit>
-            <Box
-              sx={(theme) => ({
-                mx: 2,
-                my: 1,
-                borderRadius: 1.5,
-                border: `1px solid ${alpha(theme.palette.primary.main, 0.15)}`,
-                overflow: "hidden",
-                bgcolor: alpha(theme.palette.primary.main, 0.02),
-              })}
-            >
-              {!hasContent ? (
-                <Typography variant="caption" color="text.disabled" sx={{ display: "block", textAlign: "center", py: 2 }}>
-                  لا توجد خدمات أو فحوصات مسجلة
-                </Typography>
-              ) : (
-                <>
-                  {/* ── Clinical services ── */}
-                  {services.length > 0 && (
-                    <>
-                      <Box sx={{ px: 1.5, py: 0.75, display: "flex", alignItems: "center", gap: 0.75 }}>
-                        <Box component="span" sx={{ display: "inline-flex", color: "secondary.main", "& svg": { width: 14, height: 14 } }}>
-                          <Stethoscope />
-                        </Box>
-                        <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5 }}>
-                          الخدمات الطبية
-                        </Typography>
-                      </Box>
-                      <Table size="small" sx={{ "& td, & th": { fontSize: "0.8rem" } }}>
-                        <TableHead>
-                          <TableRow>
-                            {["الخدمة", "السعر", "الكمية", "المدفوع", "الحالة", ""].map((h, i) => (
-                              <TableCell
-                                key={i}
-                                align="center"
-                                sx={(theme) => ({
-                                  fontWeight: 700,
-                                  color: "text.secondary",
-                                  bgcolor: alpha(theme.palette.action.hover, 0.5),
-                                  py: 0.5,
-                                  borderBottom: `1px solid ${theme.palette.divider}`,
-                                })}
-                              >
-                                {h}
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {services.map((s) => (
-                            <TableRow key={s.id} hover sx={s.done ? { bgcolor: (theme) => alpha(theme.palette.success.main, 0.04) } : {}}>
-                              <TableCell align="center" sx={{ py: 0.75 }}>
-                                <Typography variant="body2" fontWeight={500}>{s.service_name}</Typography>
-                              </TableCell>
-                              <TableCell align="center" sx={{ py: 0.75 }}>
-                                {s.price.toLocaleString()}
-                              </TableCell>
-                              <TableCell align="center" sx={{ py: 0.75 }}>
-                                {s.count}
-                              </TableCell>
-                              <TableCell align="center" sx={{ py: 0.75 }}>
-                                {s.amount_paid > 0 ? (
-                                  <Typography variant="body2" color="success.main" fontWeight={600}>
-                                    {s.amount_paid.toLocaleString()}
-                                  </Typography>
-                                ) : (
-                                  <Typography variant="caption" color="text.disabled">0</Typography>
-                                )}
-                              </TableCell>
-                              <TableCell align="center" sx={{ py: 0.75 }}>
-                                {s.done ? (
-                                  <Chip label="منجز" color="success" size="small" sx={{ fontSize: "0.6875rem", height: 20 }} />
-                                ) : s.is_paid ? (
-                                  <Chip label="مدفوع" color="info" size="small" variant="outlined" sx={{ fontSize: "0.6875rem", height: 20 }} />
-                                ) : (
-                                  <Chip label="غير مدفوع" color="warning" size="small" variant="outlined" sx={{ fontSize: "0.6875rem", height: 20 }} />
-                                )}
-                              </TableCell>
-                              <TableCell align="center" sx={{ py: 0.75 }}>
-                                <CompleteServiceButton service={s} visitQueryKey={visitQueryKey} />
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </>
-                  )}
+const LabRequestsDialog: React.FC<{ visitId: number; open: boolean; onClose: () => void }> = ({ visitId, open, onClose }) => {
+  const { data: visit, isLoading } = useQuery({
+    queryKey: ["doctorVisit", visitId],
+    queryFn: () => getDoctorVisitById(visitId),
+    enabled: open,
+  });
 
-                  {/* ── Lab requests ── */}
-                  {labRequests.length > 0 && (
-                    <>
-                      {services.length > 0 && <Divider />}
-                      <Box sx={{ px: 1.5, py: 0.75, display: "flex", alignItems: "center", gap: 0.75 }}>
-                        <Box component="span" sx={{ display: "inline-flex", color: "info.main", "& svg": { width: 14, height: 14 } }}>
-                          <Microscope />
-                        </Box>
-                        <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5 }}>
-                          فحوصات المختبر
-                        </Typography>
-                      </Box>
-                      <Table size="small" sx={{ "& td, & th": { fontSize: "0.8rem" } }}>
-                        <TableHead>
-                          <TableRow>
-                            {["الفحص", "السعر", "المدفوع", "الحالة"].map((h) => (
-                              <TableCell
-                                key={h}
-                                align="center"
-                                sx={(theme) => ({
-                                  fontWeight: 700,
-                                  color: "text.secondary",
-                                  bgcolor: alpha(theme.palette.action.hover, 0.5),
-                                  py: 0.5,
-                                  borderBottom: `1px solid ${theme.palette.divider}`,
-                                })}
-                              >
-                                {h}
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {labRequests.map((lr) => (
-                            <TableRow key={lr.id} hover>
-                              <TableCell align="center" sx={{ py: 0.75 }}>
-                                <Typography variant="body2" fontWeight={500}>
-                                  {lr.main_test?.main_test_name ?? `فحص #${lr.main_test_id}`}
-                                </Typography>
-                              </TableCell>
-                              <TableCell align="center" sx={{ py: 0.75 }}>
-                                {(lr.price ?? 0).toLocaleString()}
-                              </TableCell>
-                              <TableCell align="center" sx={{ py: 0.75 }}>
-                                {lr.amount_paid > 0 ? (
-                                  <Typography variant="body2" color="success.main" fontWeight={600}>
-                                    {lr.amount_paid.toLocaleString()}
-                                  </Typography>
-                                ) : (
-                                  <Typography variant="caption" color="text.disabled">0</Typography>
-                                )}
-                              </TableCell>
-                              <TableCell align="center" sx={{ py: 0.75 }}>
-                                {lr.is_paid ? (
-                                  <Chip label="مدفوع" color="success" size="small" sx={{ fontSize: "0.6875rem", height: 20 }} />
-                                ) : (
-                                  <Chip label="غير مدفوع" color="warning" size="small" variant="outlined" sx={{ fontSize: "0.6875rem", height: 20 }} />
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </>
-                  )}
-                </>
-              )}
-            </Box>
-          </Collapse>
-        </TableCell>
-      </TableRow>
-    );
-  },
-);
+  return (
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
+      <DialogTitle>
+        فحوصات المختبر — {visit?.patient?.name ?? ""}
+      </DialogTitle>
+      <DialogContent sx={{ p: 1 }}>
+        <LabRequestsColumn
+          activeVisitId={visitId}
+          visit={visit}
+          isLoading={isLoading}
+          onPrintReceipt={() => {}}
+        />
+      </DialogContent>
+    </Dialog>
+  );
+};
 
-// ─── Visit row group (main row + expandable row) ──────────────────────────────
+// ─── Visit row group ─────────────────────────────────────────────────────────
 
-const VisitRowGroup: React.FC<{ visit: PatientVisitSummary; idx: number; visitQueryKey: readonly unknown[] }> = React.memo(
-  ({ visit, idx, visitQueryKey }) => {
-    const navigate = useNavigate();
-    const [open, setOpen] = useState(false);
+const VisitRowGroup: React.FC<{ visit: PatientVisitSummary; idx: number }> = React.memo(
+  ({ visit, idx }) => {
+    const [servicesOpen, setServicesOpen] = useState(false);
+    const [labOpen, setLabOpen] = useState(false);
+    const [patientDialogOpen, setPatientDialogOpen] = useState(false);
 
     const companyName = visit.patient.company?.name || visit.company?.name || "-";
-    const balance = visit.balance_due;
-    const hasDetails =
-      (visit.requested_services_summary?.length ?? 0) > 0 ||
-      (visit.requested_services?.length ?? 0) > 0 ||
-      (visit.lab_requests?.length ?? 0) > 0 ||
-      (visit.requested_services_count ?? 0) > 0;
 
     return (
       <>
-        <TableRow
-          hover
-          onClick={() => navigate(`/patients/visit/${visit.id}`)}
-          sx={(theme) => ({
-            cursor: "pointer",
-            bgcolor: idx % 2 === 0 ? "transparent" : alpha(theme.palette.action.hover, 0.4),
-            "&:hover": { bgcolor: alpha(theme.palette.primary.main, 0.06) },
-            transition: "background-color 0.15s ease",
-          })}
-        >
-          {/* Expand toggle */}
-          <TableCell align="center" sx={{ ...cellSx, p: 0.5 }} onClick={(e) => e.stopPropagation()}>
-            <IconButton
-              size="small"
-              onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
-              disabled={!hasDetails}
-              sx={{ width: 28, height: 28 }}
-            >
-              {open ? <CollapseIcon fontSize="small" /> : <ExpandIcon fontSize="small" />}
-            </IconButton>
-          </TableCell>
-
+        <VisitServicesDialog
+          visitId={visit.id}
+          open={servicesOpen}
+          onClose={() => setServicesOpen(false)}
+        />
+        <LabRequestsDialog
+          visitId={visit.id}
+          open={labOpen}
+          onClose={() => setLabOpen(false)}
+        />
+        {patientDialogOpen && (
+          <QuickAddPatientDialog
+            open
+            onClose={() => setPatientDialogOpen(false)}
+            patientId={visit.patient.id}
+            onPatientAdded={() => setPatientDialogOpen(false)}
+            onPatientUpdated={() => setPatientDialogOpen(false)}
+          />
+        )}
+        <TableRow hover>
           {/* # */}
-          <TableCell align="center" sx={cellSx}>
+          <TableCell align="center">
             <Typography variant="caption" color="text.secondary" fontWeight={600}>
-              {visit.number}
+              {visit.id}
             </Typography>
           </TableCell>
 
           {/* Patient */}
-          <TableCell sx={cellSx}>
-            <PatientNameCell visit={visit} />
+          <TableCell align="center">
+            <Typography variant="body2" noWrap>{visit.patient.name}</Typography>
           </TableCell>
 
-          {/* Doctor */}
-          <TableCell align="center" sx={cellSx}>
-            <Typography variant="body2" noWrap>
-              {visit.doctor_name || visit.doctor_shift_details?.doctor_name || "—"}
-            </Typography>
-          </TableCell>
+       
+    
 
-          {/* Company */}
-          <TableCell align="center" sx={cellSx}>
-            {companyName === "-" ? (
-              <Typography variant="caption" color="text.disabled">—</Typography>
-            ) : (
-              <Chip label={companyName} size="small" variant="outlined" sx={{ fontSize: "0.6875rem", height: 20 }} />
-            )}
-          </TableCell>
-
-          {/* Status */}
-          <TableCell align="center" sx={cellSx}>
-            <VisitStatusChip status={visit.status} />
-          </TableCell>
-
-          {/* Balance */}
-          <TableCell align="center" sx={cellSx}>
-            {!balance || balance === 0 ? (
-              <Typography variant="caption" color="success.main" fontWeight={600}>مسدد</Typography>
-            ) : (
-              <Typography variant="body2" color="error.main" fontWeight={600}>
-                {balance.toLocaleString()}
-              </Typography>
-            )}
-          </TableCell>
-
-          {/* Time */}
-          <TableCell align="center" sx={cellSx}>
+          {/* Date & Time */}
+          <TableCell align="center" >
             <Typography variant="caption" color="text.secondary" noWrap>
+              {dayjs(visit.created_at).format("YYYY-MM-DD")}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "block" }}>
               {dayjs(visit.created_at).format("hh:mm A")}
             </Typography>
           </TableCell>
 
+          {/* الإجمالي */}
+          <TableCell align="center">
+            <Typography variant="body2" fontWeight={600}>
+              {((visit.total_services_amount ?? 0) + (visit.total_lab_value_will_pay ?? 0)).toLocaleString()}
+            </Typography>
+          </TableCell>
+
+          {/* المدفوع */}
+          <TableCell align="center">
+            <Typography variant="body2" color="success.main" fontWeight={600}>
+              {((visit.total_services_paid ?? 0) + (visit.lab_paid ?? 0)).toLocaleString()}
+            </Typography>
+          </TableCell>
+
+          {/* المتبقي */}
+          <TableCell align="center">
+            {(visit.balance_due ?? 0) > 0 ? (
+              <Typography variant="body2" color="error.main" fontWeight={600}>
+                {visit.balance_due.toLocaleString()}
+              </Typography>
+            ) : (
+              <Typography variant="caption" color="success.main" fontWeight={600}>مسدد</Typography>
+            )}
+          </TableCell>
+
+          {/* Services */}
+          <TableCell align="center">
+            <Button
+              variant="outlined"
+              size="small"
+              disableElevation
+              startIcon={<Stethoscope size={13} />}
+              onClick={(e) => { e.stopPropagation(); setServicesOpen(true); }}
+              sx={{ fontSize: "0.75rem", py: 0.5, px: 1.5, minWidth: 0, whiteSpace: "nowrap" }}
+            >
+              خدمات
+            </Button>
+          </TableCell>
+
           {/* Actions */}
-          <TableCell align="center" sx={cellSx}>
+          <TableCell align="center">
             <Button
               variant="contained"
               size="small"
               disableElevation
-              startIcon={<VisibilityIcon sx={{ fontSize: "14px !important" }} />}
-              onClick={(e) => { e.stopPropagation(); navigate(`/patients/visit/${visit.id}`); }}
-              sx={{ fontSize: "0.75rem", py: 0.5, px: 1.5, minWidth: 0, whiteSpace: "nowrap" }}
+              onClick={(e) => { e.stopPropagation(); setLabOpen(true); }}
             >
-              عرض
+              المختبر
             </Button>
           </TableCell>
+             {/* Patient info button */}
+          <TableCell align="center">
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={(e) => { e.stopPropagation(); setPatientDialogOpen(true); }}
+              sx={{ fontSize: "0.7rem", py: 0.25, px: 1, minWidth: 0, whiteSpace: "nowrap" }}
+            >
+              بيانات المريض
+            </Button>
+          </TableCell>
+
         </TableRow>
 
-        {/* Expandable services row */}
-        <ServicesExpandedRow visit={visit} open={open} visitQueryKey={visitQueryKey} />
       </>
     );
   },
@@ -513,67 +277,61 @@ const TodaysPatientsPage: React.FC = () => {
   const [dateFrom, setDateFrom] = useState<string>(todayIso);
   const [dateTo, setDateTo] = useState<string>(todayIso);
 
-  const { data: doctorsList } = useCachedDoctorsList();
+  useAuth();
   const { data: companiesList } = useCachedCompaniesList();
 
-  const [selectedDoctor, setSelectedDoctor] = useState<DoctorStripped | null>(null);
+  const [page, setPage] = useState(1);
+  const [selectedDiagnosisUser, setSelectedDiagnosisUser] = useState<{ id: number; name: string } | null>(null);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const [selectedService, setSelectedService] = useState<{ id: number; name: string } | null>(null);
+
+  // Reset to page 1 whenever any filter changes
+  const resetPage = () => setPage(1);
+
+  const { data: servicesList = [], isLoading: isLoadingServices } = useQuery({
+    queryKey: ["servicesList"],
+    queryFn: getServicesList,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: usersList = [], isLoading: isLoadingUsers } = useQuery<{ id: number; name: string }[]>({
+    queryKey: ["usersList"],
+    queryFn: getUsersList,
+    staleTime: 5 * 60 * 1000,
+  });
 
   const visitsQueryKey = [
     "patientVisitsSummary",
     debouncedSearchTerm,
     dateFrom || "all",
     dateTo || "all",
-    selectedDoctor?.id || "all",
+    selectedDiagnosisUser?.id || "all",
     selectedCompany?.id || "all",
+    selectedService?.id || "all",
+    page,
   ] as const;
 
-  const {
-    data,
-    isLoading,
-    error,
-    isFetching,
-    refetch,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useInfiniteQuery({
+  const { data, isLoading, error, isFetching, refetch } = useQuery({
     queryKey: visitsQueryKey,
-    queryFn: ({ pageParam = 1 }) => {
-      const filters: GetVisitsFilters = {
-        page: pageParam,
-        per_page: 50,
+    queryFn: () =>
+      getPatientVisitsSummary({
+        page,
+        per_page: 100,
         search: debouncedSearchTerm || undefined,
         date_from: dateFrom || undefined,
         date_to: dateTo || undefined,
-        doctor_id: selectedDoctor?.id ?? undefined,
+        diagnosis_user_id: selectedDiagnosisUser?.id ?? undefined,
         company_id: selectedCompany?.id ?? undefined,
-      };
-      return getPatientVisitsSummary(filters);
-    },
-    initialPageParam: 1,
-    getNextPageParam: (lastPage) =>
-      lastPage.meta.current_page < lastPage.meta.last_page
-        ? lastPage.meta.current_page + 1
-        : undefined,
+        service_id: selectedService?.id ?? undefined,
+      } as GetVisitsFilters),
+    refetchOnMount: "always",
+    staleTime: 0,
   });
 
-  const visits = data?.pages.flatMap((p) => p.data) ?? [];
-  const totalCount = data?.pages[data.pages.length - 1]?.meta?.total;
+  const visits = data?.data ?? [];
+  const totalCount = data?.meta?.total;
+  const lastPage = data?.meta?.last_page ?? 1;
   const isToday = dateFrom === todayIso && dateTo === todayIso;
-
-  const observerRef = useRef<IntersectionObserver | null>(null);
-  const loadMoreRef = useCallback(
-    (node: HTMLDivElement | null) => {
-      if (isFetchingNextPage) return;
-      if (observerRef.current) observerRef.current.disconnect();
-      observerRef.current = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting && hasNextPage) fetchNextPage();
-      });
-      if (node) observerRef.current.observe(node);
-    },
-    [isFetchingNextPage, hasNextPage, fetchNextPage],
-  );
 
   return (
     <Box sx={{ py: 2, display: "flex", flexDirection: "column", gap: 2 }}>
@@ -585,7 +343,7 @@ const TodaysPatientsPage: React.FC = () => {
           type="search"
           placeholder="ابحث بالاسم أو الهاتف"
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) => { setSearchTerm(e.target.value); resetPage(); }}
           slotProps={{
             input: {
               startAdornment: (
@@ -599,40 +357,43 @@ const TodaysPatientsPage: React.FC = () => {
         />
         <Autocomplete
           size="small"
-          options={doctorsList || []}
+          options={usersList}
+          loading={isLoadingUsers}
           getOptionLabel={(o) => o.name}
-          value={selectedDoctor}
-          onChange={(_, v) => setSelectedDoctor(v)}
+          value={selectedDiagnosisUser}
+          onChange={(_, v) => { setSelectedDiagnosisUser(v); resetPage(); }}
           isOptionEqualToValue={(o, v) => o.id === v.id}
-          renderInput={(params) => <TextField {...params} label="الطبيب" />}
+          renderInput={(params) => <TextField {...params} label="المشخِّص" />}
           sx={{ minWidth: 190 }}
         />
         <Autocomplete
           size="small"
+          options={servicesList}
+          loading={isLoadingServices}
+          getOptionLabel={(o) => o.name}
+          value={selectedService}
+          onChange={(_, v) => { setSelectedService(v); resetPage(); }}
+          isOptionEqualToValue={(o, v) => o.id === v.id}
+          renderInput={(params) => <TextField {...params} label="الخدمة" />}
+          sx={{ minWidth: 210 }}
+        />
+        {/* <Autocomplete
+          size="small"
           options={companiesList || []}
           getOptionLabel={(o) => o.name}
           value={selectedCompany}
-          onChange={(_, v) => setSelectedCompany(v)}
+          onChange={(_, v) => { setSelectedCompany(v); resetPage(); }}
           isOptionEqualToValue={(o, v) => o.id === v.id}
           renderInput={(params) => <TextField {...params} label="الشركة" />}
           sx={{ minWidth: 190 }}
-        />
+        /> */}
         <TextField
           label="من"
           type="date"
           size="small"
           value={dateFrom}
-          onChange={(e) => setDateFrom(e.target.value)}
-          slotProps={{
-            input: {
-              startAdornment: (
-                <InputAdornment position="start">
-                  <CalendarTodayIcon sx={{ fontSize: 16 }} />
-                </InputAdornment>
-              ),
-            },
-            inputLabel: { shrink: true },
-          }}
+          onChange={(e) => { setDateFrom(e.target.value); resetPage(); }}
+       
           sx={{ width: 170 }}
         />
         <TextField
@@ -640,28 +401,11 @@ const TodaysPatientsPage: React.FC = () => {
           type="date"
           size="small"
           value={dateTo}
-          onChange={(e) => setDateTo(e.target.value)}
-          slotProps={{
-            input: {
-              startAdornment: (
-                <InputAdornment position="start">
-                  <CalendarTodayIcon sx={{ fontSize: 16 }} />
-                </InputAdornment>
-              ),
-            },
-            inputLabel: { shrink: true },
-          }}
+          onChange={(e) => { setDateTo(e.target.value); resetPage(); }}
+       
           sx={{ width: 170 }}
         />
-        {totalCount !== undefined && (
-          <Chip
-            icon={<PeopleAltIcon sx={{ fontSize: "16px !important" }} />}
-            label={`${totalCount.toLocaleString()} زيارة`}
-            color="primary"
-            variant="outlined"
-            sx={{ fontWeight: 600, mr: "auto" }}
-          />
-        )}
+    
       </Stack>
 
       {/* ── Refresh bar ─────────────────────────────────────────────────────── */}
@@ -669,7 +413,7 @@ const TodaysPatientsPage: React.FC = () => {
         sx={{
           borderRadius: 1,
           mt: -1,
-          visibility: isFetching && !isFetchingNextPage ? "visible" : "hidden",
+          visibility: isFetching ? "visible" : "hidden",
         }}
       />
 
@@ -706,7 +450,6 @@ const TodaysPatientsPage: React.FC = () => {
           </CardContent>
         </Card>
       ) : (
-        <Card variant="outlined" sx={{ borderRadius: 2, overflow: "hidden" }}>
           <TableContainer sx={{ maxHeight: "calc(100vh - 220px)" }}>
             <Table size="small" stickyHeader>
               <TableHead>
@@ -735,35 +478,31 @@ const TodaysPatientsPage: React.FC = () => {
               </TableHead>
               <TableBody>
                 {visits.map((visit, idx) => (
-                  <VisitRowGroup key={visit.id} visit={visit} idx={idx} visitQueryKey={visitsQueryKey} />
+                  <VisitRowGroup key={visit.id} visit={visit} idx={idx} />
                 ))}
 
-                {!hasNextPage && visits.length > 0 && (
-                  <TableRow>
-                    <TableCell colSpan={COLUMNS.length} align="center" sx={{ py: 2.5, borderBottom: "none" }}>
-                      <Divider>
-                        <Chip
-                          label={`نهاية القائمة — ${visits.length} زيارة`}
-                          size="small"
-                          variant="outlined"
-                          sx={{ color: "text.disabled", borderColor: "divider", fontSize: "0.75rem" }}
-                        />
-                      </Divider>
-                    </TableCell>
-                  </TableRow>
-                )}
+       
               </TableBody>
             </Table>
 
-            {/* Infinite scroll sentinel */}
-            <Box
-              ref={loadMoreRef}
-              sx={{ height: 40, display: "flex", justifyContent: "center", alignItems: "center" }}
-            >
-              {isFetchingNextPage && <CircularProgress size={22} />}
-            </Box>
           </TableContainer>
-        </Card>
+      )}
+
+      {/* ── Pagination ── */}
+      {lastPage > 1 && (
+        <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 2, pt: 1 }}>
+          <Typography variant="caption" color="text.secondary">
+            {totalCount?.toLocaleString()} زيارة — صفحة {page} من {lastPage}
+          </Typography>
+          <Pagination
+            count={lastPage}
+            page={page}
+            onChange={(_, newPage) => setPage(newPage)}
+            color="primary"
+            size="small"
+            siblingCount={1}
+          />
+        </Box>
       )}
     </Box>
   );

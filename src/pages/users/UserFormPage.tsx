@@ -24,6 +24,7 @@ import {
   CircularProgress,
   Alert,
   Paper,
+  Autocomplete,
 } from "@mui/material";
 import { ArrowLeft, UserPlus, UserCog } from "lucide-react";
 import { toast } from "sonner";
@@ -412,34 +413,36 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
                 control={control}
                 name="doctor_id"
                 render={({ field, fieldState: { error } }) => (
-                  <FormControl fullWidth error={!!error}>
-                    <InputLabel>الطبيب المرتبط (اختياري)</InputLabel>
-                    <Select
-                      {...field}
-                      value={field.value || ""}
-                      disabled={dataIsLoading || mutation.isPending}
-                      label="الطبيب المرتبط (اختياري)"
-                    >
-                      <MenuItem value="">لا يوجد</MenuItem>
-                      {isLoadingDoctors ? (
-                        <MenuItem value="loading_docs" disabled>
-                          جار التحميل...
-                        </MenuItem>
-                      ) : (
-                        doctorsList?.map((doc: DoctorStripped) => (
-                          <MenuItem key={doc.id} value={String(doc.id)}>
-                            {doc.name}{" "}
-                            {doc.specialist_name
-                              ? `(${doc.specialist_name})`
-                              : ""}
-                          </MenuItem>
-                        ))
-                      )}
-                    </Select>
-                    <FormHelperText>
-                      {error?.message || "هذا المستخدم مرتبط بطبيب معين."}
-                    </FormHelperText>
-                  </FormControl>
+                  <Autocomplete
+                    options={doctorsList}
+                    loading={isLoadingDoctors}
+                    disabled={dataIsLoading || mutation.isPending}
+                    getOptionLabel={(doc: DoctorStripped) =>
+                      doc.specialist_name
+                        ? `${doc.name} (${doc.specialist_name})`
+                        : doc.name
+                    }
+                    value={
+                      doctorsList.find(
+                        (doc) => String(doc.id) === field.value,
+                      ) ?? null
+                    }
+                    onChange={(_, newValue) =>
+                      field.onChange(
+                        newValue ? String(newValue.id) : undefined,
+                      )
+                    }
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="الطبيب المرتبط (اختياري)"
+                        error={!!error}
+                        helperText={
+                          error?.message || "هذا المستخدم مرتبط بطبيب معين."
+                        }
+                      />
+                    )}
+                  />
                 )}
               />
 

@@ -35,6 +35,7 @@ import CompanyFormPage, {
 import CompanyServiceContractsPage from "./pages/companies/CompanyServiceContractsPage";
 import TodaysPatientsPage from "./pages/patients/TodaysPatientsPage";
 import VisitDetailsPage from "./pages/patients/VisitDetailsPage";
+import DiagnosisPage from "./pages/patients/DiagnosisPage";
 import DoctorSchedulesPage from "./components/schedules/DoctorSchedulesPage";
 import DoctorShiftsReportPage from "./pages/reports/DoctorShiftsReportPage";
 import DoctorShiftDetailsPage from "./pages/reports/DoctorShiftDetailsPage";
@@ -450,6 +451,10 @@ const router = createBrowserRouter([
           {
             path: "/patients/visit/:visitId",
             element: <VisitDetailsPage />,
+          },
+          {
+            path: "/diagnosis/:requestedServiceId",
+            element: <DiagnosisPage />,
           },
           // === NEW: ATTENDANCE MODULE ROUTES ===
           {

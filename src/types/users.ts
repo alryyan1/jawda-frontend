@@ -1,6 +1,8 @@
 // src/types/users.ts (or part of src/types/index.ts)
 // Removed unused imports to satisfy linter
 
+import type { Doctor } from "./doctors";
+
 export interface UserShiftIncomeSummary {
   user_id: number;
   user_name: string;
@@ -60,6 +62,7 @@ export interface User {
   doctor_id?: number;
   is_nurse: boolean;
   is_supervisor?: boolean;
+  doctor?: Doctor; // Eager loaded doctor relationship
   is_active?: boolean;
   user_money_collector_type?: "lab" | "company" | "clinic" | "all";
   user_type?: string | null; // Arabic enum from backend; nullable when clearing

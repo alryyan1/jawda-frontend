@@ -310,7 +310,6 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
                 </Tooltip>
               )}
 
-              {!isUnifiedCashier && canAddService && (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
@@ -325,7 +324,6 @@ const SelectedPatientWorkspace: React.FC<SelectedPatientWorkspaceProps> = ({
                   </TooltipTrigger>
                   <TooltipContent>قائمة الخدمات</TooltipContent>
                 </Tooltip>
-              )}
 
             </div>
           </div>

@@ -93,7 +93,7 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
   const [isAddDepositDialogOpen, setIsAddDepositDialogOpen] = useState(false);
   const [newDepositAmount, setNewDepositAmount] = useState("");
   const [newDepositIsBank, setNewDepositIsBank] = useState(false);
-  const {can} = useAuthorization();
+  const {can, hasRole} = useAuthorization();
   // Query for deposits
   const { data: existingDeposits = [], isLoading: isLoadingDeposits } = useQuery<RequestedServiceDeposit[], Error>({
     queryKey: depositsQueryKey,
@@ -372,8 +372,7 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
                                   <IconButton
                                     onClick={() => handleDelete(deposit)}
                                     disabled={
-                                      deleteMutation.isPending &&
-                                      deleteMutation.variables?.id === deposit.id || !can('الغاء سداد خدمه') || deposit.requested_service?.user_deposited !== user?.id
+                                   !hasRole('admin') && (!can('الغاء سداد خدمه') || deposit.requested_service?.user_deposited !== user?.id)
                                     }
                                   >
                                     {deleteMutation.isPending &&

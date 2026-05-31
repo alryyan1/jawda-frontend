@@ -26,7 +26,7 @@ import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { Save as SaveIcon } from '@mui/icons-material';
 import { toast } from "sonner";
 
-import type { DoctorFormData, Specialist, FinanceAccount, DoctorStripped, Doctor, SubSpecialist } from "@/types/doctors";
+import type { DoctorFormData, Specialist, FinanceAccount, DoctorStripped, Doctor } from "@/types/doctors";
 import {
   createDoctor,
   updateDoctor,
@@ -36,12 +36,19 @@ import {
   updateDoctorFirebaseId,
   DoctorFormMode,
 } from "@/services/doctorService";
-import { getSubSpecialists } from "@/services/subSpecialistService";
-import { fetchFirestoreDoctors, type FirestoreDoctor } from "@/services/firestoreDoctorService";
 import { DarkThemeAutocomplete } from "@/components/ui/mui-autocomplete";
 import AddSpecialistDialog from "@/components/doctors/AddSpecialistDialog";
 import ManageDoctorServicesDialog from "@/components/doctors/ManageDoctorServicesDialog";
+import { getDocs, collection, writeBatch, doc } from "firebase/firestore";
+import { firestoreDb, firestoreDb as HospitalAppDb } from "@/lib/firebase_hospital";
 
+interface HospitalDoctor {
+  id: string;
+  name: string;
+  phone?: string;
+  specialization?: string;
+  [key: string]: unknown;
+}
 interface DoctorFormValues {
   name: string;
   phone: string;
@@ -64,10 +71,10 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
   const navigate = useNavigate();
   const { doctorId } = useParams<{ doctorId?: string }>();
   const queryClient = useQueryClient();
-  const [selectedFirestoreDoctor, setSelectedFirestoreDoctor] = useState<FirestoreDoctor | null>(null);
+  const [selectedHospitalDoctor, setSelectedHospitalDoctor] = useState<HospitalDoctor | null>(null);
+  console.log(selectedHospitalDoctor, 'selected hospital doctor');
   const [showManageServicesDialog, setShowManageServicesDialog] = useState(false);
   const [containerHeight, setContainerHeight] = useState<number>(window.innerHeight - 100);
-
   useEffect(() => {
     const handleResize = () => {
       setContainerHeight(window.innerHeight - 100);
@@ -93,19 +100,63 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
   // showJsonDialog(doctorData);
 
 
+  const fixMistakenyFirestoreIds = async () => {
+    console.log('start migration');
+    //1-  fetch all doctors from firestore
+    const snap = await getDocs(collection(firestoreDb, 'allDoctors'));
 
+    //2- find the maximum numeric id in the snap
+    const numericIds = snap.docs.map(doc => doc.id).filter(id => /^\d+$/.test(id)).map(id => Number(id));
+    console.log('numeric ids in firestore', numericIds);
 
+    let maxNumber = numericIds.length > 0 ? Math.max(...numericIds) : 0;
+    console.log('max numeric id in firestore', maxNumber);
 
-  // Get the specialist's firestore_id to fetch Firestore doctors
-  const specialistFirestoreId = doctorData?.specialist_firestore_id;
+    //3- loop through the snap and update documents with non-numeric ids to have new numeric ids starting from maxNumber + 1
+    const batch = writeBatch(firestoreDb);
+    let updatesCount = 0;
+    let changesStaged = false; // Track if we actually have anything to update
+    snap.docs.forEach(doctorDoc => {
+      const oldId = doctorDoc.id;
+      if (!/^\d+$/.test(doctorDoc.id)) {
+        changesStaged = true;
+        const doctorData = doctorDoc.data();
+        console.log(`Scheduling update for doc with old id ${oldId} to new id ${maxNumber + 1}`, doctorData);
+        const newId = String(++maxNumber);
+        const newDocRef = doc(firestoreDb, 'allDoctors', newId);
+        batch.set(newDocRef, doctorData)
+        const oldDocRef = doc(firestoreDb, 'allDoctors', oldId);
+        batch.delete(oldDocRef);
+        console.log(`Staged: ${oldId} ---> ${newId}`);
+      }
 
-  // Fetch Firestore doctors based on specialist's firestore_id
-  const { data: firestoreDoctors, isLoading: isLoadingFirestoreDoctors } = useQuery<FirestoreDoctor[], Error>({
-    queryKey: ['firestoreDoctors', specialistFirestoreId],
-    queryFn: () => fetchFirestoreDoctors(specialistFirestoreId!),
-    enabled: !!specialistFirestoreId && isEditMode,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    })
+    if (changesStaged) {
+      try {
+        await batch.commit();
+        console.log('Batch update committed successfully. All non-numeric IDs have been replaced with numeric IDs.');
+      } catch (error) {
+        console.error('Error committing batch update:', error);
+      }
+    } else {
+      console.log('No non-numeric IDs found. No updates needed.');
+    }
+  }
+
+  const { data: hospitalDoctors = [], isLoading: isLoadingHospitalDoctors } = useQuery<HospitalDoctor[], Error>({
+    queryKey: ['hospitalDoctors'],
+    queryFn: async () => {
+      const snap = await getDocs(collection(HospitalAppDb, 'allDoctors'));
+      const idsInFirestore = snap.docs.filter(doc => {
+        return /^\d+$/.test(doc.id); // Only consider documents with numeric IDs, assuming they represent doctor IDs from the local database
+      }).length
+      console.log(idsInFirestore, 'doctors found in Hospital Firestore');
+
+      return snap.docs.map(d => ({ id: d.id, ...d.data() } as HospitalDoctor));
+    },
+    staleTime: 5 * 60 * 1000,
   });
+  console.log(hospitalDoctors, 'hospital doctors from Firestore');
   const form = useForm<DoctorFormValues>({
     defaultValues: {
       name: "",
@@ -122,72 +173,38 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
     },
   });
   const { control, handleSubmit, reset, watch, setValue, formState } = form;
-  useEffect(()=>{
-    if(!isEditMode && specialists && specialists.length > 0){
+  useEffect(() => {
+    if (!isEditMode && specialists && specialists.length > 0) {
       //auto select the first specialist for better UX when creating a new doctor
-      setValue("specialist_id",String(specialists[0].id));
+      setValue("specialist_id", String(specialists[0].id));
     }
-  },[isEditMode, specialists, setValue])
-  // Watch specialist_id to fetch sub specialists
-  const selectedSpecialistId = watch("specialist_id");
-
-  // Fetch sub specialists based on selected specialist
-  const { data: subSpecialists, isLoading: isLoadingSubSpecialists } = useQuery<SubSpecialist[], Error>({
-    queryKey: ['subSpecialists', selectedSpecialistId],
-    queryFn: () => getSubSpecialists(Number(selectedSpecialistId)),
-    enabled: !!selectedSpecialistId && selectedSpecialistId !== '',
-  });
-
-  // Reset sub_specialist_id when specialist_id changes
+  }, [isEditMode, specialists, setValue])
   useEffect(() => {
-    if (selectedSpecialistId) {
-      // Only reset if we're not in edit mode or if the specialist actually changed
-      const currentSubSpecialistId = watch("sub_specialist_id");
-      // Check if the current sub_specialist belongs to the new specialist
-      if (currentSubSpecialistId && subSpecialists) {
-        const currentSubSpec = subSpecialists.find(s => String(s.id) === currentSubSpecialistId);
-        if (!currentSubSpec) {
-          setValue("sub_specialist_id", undefined);
-        }
-      }
-    } else {
-      setValue("sub_specialist_id", undefined);
-    }
-  }, [selectedSpecialistId, subSpecialists, setValue, watch]);
-  // console.log("Form State:", doctorData?.specialist_id); // Debugging line
-  // Populate form with doctorData when it loads in edit mode
-  useEffect(() => {
-    console.log("useEffect ran");
     if (isEditMode && doctorData) {
-      console.log(doctorData, "doctorData");
       reset({
         name: doctorData.name,
         phone: doctorData.phone,
         specialist_id: String(doctorData.specialist_id),
-        sub_specialist_id: (doctorData as Doctor & { sub_specialist_id?: number }).sub_specialist_id
-          ? String((doctorData as Doctor & { sub_specialist_id?: number }).sub_specialist_id)
-          : undefined,
         cash_percentage: String(doctorData.cash_percentage),
         company_percentage: String(doctorData.company_percentage),
         static_wage: String(doctorData.static_wage),
         lab_percentage: String(doctorData.lab_percentage),
         start: String(doctorData.start),
-
-
         calc_insurance: doctorData.calc_insurance,
         is_default: Boolean((doctorData as Doctor & { is_default?: boolean }).is_default),
       });
     }
   }, [isEditMode, doctorData, reset]);
-  console.log(doctorData, 'doctorData')
-  // Set the selected Firestore doctor when doctor data loads
+
   useEffect(() => {
-    if (isEditMode && doctorData?.firebase_id && firestoreDoctors) {
-      const linkedFirestoreDoctor = firestoreDoctors.find(fd => fd.centralDoctorId === doctorData.firebase_id);
-      console.log(linkedFirestoreDoctor, 'linked')
-      setSelectedFirestoreDoctor(linkedFirestoreDoctor || null);
+    console.log('Checking for hospital doctor match...', { isEditMode, doctorData, hospitalDoctors });
+    if (isEditMode && doctorData?.firebase_id && hospitalDoctors.length) {
+      console.log(hospitalDoctors.find(d => String(d.id) === doctorData.firebase_id) ?? null , 'Match result for firebase_id:', doctorData.firebase_id);
+      setSelectedHospitalDoctor(
+        hospitalDoctors.find(d => String(d.id) === doctorData.firebase_id) ?? null
+      );
     }
-  }, [isEditMode, doctorData, firestoreDoctors]);
+  }, [isEditMode, doctorData, hospitalDoctors]);
 
 
 
@@ -257,11 +274,12 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
     // The specialistsList query is already invalidated by the dialog, so the dropdown will update.
   };
 
-  const handleFirestoreDoctorSelect = (firestoreDoctor: FirestoreDoctor | null) => {
-    if (firestoreDoctor && doctorId) {
+  const handleFirestoreDoctorSelect = (doctor: HospitalDoctor | null) => {
+    if (doctor && doctorId) {
+      setSelectedHospitalDoctor(doctor);
       updateFirebaseIdMutation.mutate({
         doctorId: Number(doctorId),
-        firebaseId: firestoreDoctor.centralDoctorId
+        firebaseId: String(doctor.id),
       });
     }
   };
@@ -280,6 +298,7 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
   return (
     <Box sx={{ height: `${containerHeight}px`, overflow: 'auto', py: 2 }}>
       <Card sx={{ maxWidth: 960, mx: 'auto' }}>
+        {/* <Button   onClick={fixMistakenyFirestoreIds} >fix mistaken ids </Button> */}
         <CardHeader
           title={isEditMode ? 'تعديل طبيب' : 'إضافة طبيب'}
           subheader="يرجى تعبئة البيانات التالية"
@@ -319,11 +338,7 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
                       labelId="specialist-label"
                       label="التخصص"
                       value={field.value ?? ''}
-                      onChange={(e) => {
-                        field.onChange(e.target.value);
-                        // Reset sub_specialist_id when specialist changes
-                        setValue('sub_specialist_id', undefined);
-                      }}
+                      onChange={(e) => field.onChange(e.target.value)}
                       disabled={isLoadingSpecialists || formState.isSubmitting}
                     >
                       {isLoadingSpecialists ? (
@@ -342,74 +357,29 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
               </Box>
             )} />
 
-            {/* Sub Specialist Selection - Only show when a specialist is selected */}
-            {selectedSpecialistId && selectedSpecialistId !== '' && (
-              <Controller name="sub_specialist_id" control={control} render={({ field, fieldState }) => (
-                <FormControl fullWidth size="small">
-                  <InputLabel id="sub-specialist-label">الاختصاص الفرعي</InputLabel>
-                  <Select
-                    labelId="sub-specialist-label"
-                    label="الاختصاص الفرعي"
-                    value={field.value ?? ''}
-                    onChange={field.onChange}
-                    disabled={isLoadingSubSpecialists || formState.isSubmitting}
-                  >
-                    <MenuItem value="">لا يوجد</MenuItem>
-                    {isLoadingSubSpecialists ? (
-                      <MenuItem value="" disabled>جاري التحميل...</MenuItem>
-                    ) : (
-                      (subSpecialists || []).map((subSpec) => (
-                        <MenuItem key={subSpec.id} value={String(subSpec.id)}>{subSpec.name}</MenuItem>
-                      ))
-                    )}
-                  </Select>
-                  {fieldState.error && <FormHelperText error>{fieldState.error.message}</FormHelperText>}
-                </FormControl>
-              )} />
-            )}
-
-            {/* Firestore Doctor Selection - Only show in edit mode when specialist has firestore_id */}
-            {isEditMode && specialistFirestoreId && (
+            {isEditMode && (
               <Box>
-                <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                  ربط بـ Firestore
-                </Typography>
+                <Typography variant="subtitle2" sx={{ mb: 1 }}>ربط بطبيب (مع المنصه)</Typography>
                 <DarkThemeAutocomplete
-                  options={firestoreDoctors || []}
-                  getOptionLabel={(option) => option.docName}
-                  value={selectedFirestoreDoctor}
-                  onChange={(_, newValue) => handleFirestoreDoctorSelect(newValue)}
-                  loading={isLoadingFirestoreDoctors || updateFirebaseIdMutation.isPending}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="اختر طبيب من Firestore"
-                      placeholder="ابحث في الأطباء..."
-                      size="small"
-                      helperText="اختر طبيب من Firestore لربطه بالطبيب المحلي"
-                    />
-                  )}
-                  renderOption={(props, option) => (
-                    <li {...props} key={option.id}>
-                      <div className="flex flex-col">
-                        <span className="font-medium">{option.docName}</span>
-                        <span className="text-sm text-muted-foreground">
-                          الهاتف: {option.phoneNumber || 'غير محدد'} |
-                          الحد الصباحي: {option.morningPatientLimit} |
-                          الحد المسائي: {option.eveningPatientLimit}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          المعرف المركزي: {option.centralDoctorId}
-                        </span>
-                      </div>
-                    </li>
-                  )}
-                  isOptionEqualToValue={(option, value) => option.centralDoctorId === value?.centralDoctorId}
+                  options={hospitalDoctors}
+                  getOptionLabel={(option) => (option as HospitalDoctor).name ?? option.id}
+                  value={selectedHospitalDoctor}
+                  onChange={(_, newValue) => handleFirestoreDoctorSelect(newValue as HospitalDoctor | null)}
+                  loading={isLoadingHospitalDoctors || updateFirebaseIdMutation.isPending}
+                  isOptionEqualToValue={(option, value) => option.id === value?.id}
                   noOptionsText="لا توجد أطباء متاحة"
                   loadingText="جاري التحميل..."
                   disabled={updateFirebaseIdMutation.isPending}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="اختر طبيب من Hospital"
+                      placeholder="ابحث في الأطباء..."
+                      size="small"
+                      helperText="اختر طبيب لربطه بالطبيب المحلي"
+                    />
+                  )}
                 />
-
               </Box>
             )}
 

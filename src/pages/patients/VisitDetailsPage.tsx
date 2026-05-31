@@ -106,28 +106,17 @@ const VisitDetailsPage: React.FC = () => {
 
       <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
         <Tabs value={currentTab} onChange={handleTabChange} aria-label="visit tabs">
-          <Tab label="بيانات المريض" id="visit-tab-0" aria-controls="visit-tabpanel-0" />
-          <Tab label="المختبر" id="visit-tab-1" aria-controls="visit-tabpanel-1" />
-          <Tab label="الخدمات" id="visit-tab-2" aria-controls="visit-tabpanel-2" />
+          <Tab label="المختبر" id="visit-tab-0" aria-controls="visit-tabpanel-0" />
+          <Tab label="الخدمات" id="visit-tab-1" aria-controls="visit-tabpanel-1" />
           {hasAdmission && (
-            <Tab label="التنويم" id="visit-tab-3" aria-controls="visit-tabpanel-3" />
+            <Tab label="التنويم" id="visit-tab-2" aria-controls="visit-tabpanel-2" />
           )}
         </Tabs>
       </Box>
 
       <Box sx={{ minHeight: 400 }}>
+     
         <TabPanel value={currentTab} index={0}>
-          <QuickAddPatientDialog
-            open={true}
-            onClose={() => {}}
-            patientId={patient?.id ?? null}
-            onPatientAdded={() => {}}
-            onPatientUpdated={() => {}}
-            embedded
-          />
-        </TabPanel>
-
-        <TabPanel value={currentTab} index={1}>
           <LabRequestsColumn
             activeVisitId={visit.id}
             visit={visit}
@@ -136,7 +125,7 @@ const VisitDetailsPage: React.FC = () => {
           />
         </TabPanel>
 
-        <TabPanel value={currentTab} index={2}>
+        <TabPanel value={currentTab} index={1}>
           <SelectedPatientWorkspace
             selectedPatientVisit={visit}
             initialPatient={patient}
@@ -145,7 +134,7 @@ const VisitDetailsPage: React.FC = () => {
         </TabPanel>
 
         {hasAdmission && (
-          <TabPanel value={currentTab} index={3}>
+          <TabPanel value={currentTab} index={2}>
             {isLoadingAdmission ? (
               <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
                 <CircularProgress />

@@ -21,6 +21,7 @@ interface ServicesSectionProps {
 const ServicesSection: React.FC<ServicesSectionProps> = ({ visit }) => {
   const [addOpen, setAddOpen] = useState(false);
   const services = visit?.requested_services ?? [];
+  console.log('ServicesSection visit', visit);
 
   if (!visit) {
     return (

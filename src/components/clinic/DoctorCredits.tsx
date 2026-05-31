@@ -401,7 +401,7 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
                       variant="contained"
                       size="small"
                     >
-                        اثبات الاستحقاق 
+                        اثبات  
                     </Button>
                   </TableCell>
                   <TableCell className="text-sm!">

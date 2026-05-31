@@ -1,6 +1,7 @@
 import { collection, getDocs, query, orderBy, doc, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { OnlineAppointment } from '@/types/doctors';
+import { firestoreDb } from '@/lib/firebase_hospital';
 
 export interface FirestoreDoctor {
   id: string;
@@ -116,7 +117,6 @@ export interface FacilityAppointment {
 }
 
 export const fetchDoctorAppointments = async (
-  specializationId: string,
   doctorId: string,
   date?: string
 ): Promise<FacilityAppointment[]> => {
@@ -126,7 +126,7 @@ export const fetchDoctorAppointments = async (
     }
 
     // Reference to the facility-level appointments collection: medicalFacilities/{facilityId}/appointments
-    const facilityDocRef = doc(db, 'medicalFacilities', FACILITY_ID);
+    const facilityDocRef = doc(firestoreDb, 'medicalFacilities', FACILITY_ID);
     const appointmentsRef = collection(facilityDocRef, 'appointments');
     
     // Build query constraints

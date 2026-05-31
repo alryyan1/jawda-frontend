@@ -65,7 +65,7 @@ export default function UsersListPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUserType, setSelectedUserType] = useState<string>("");
   const [selectedActive, setSelectedActive] = useState<string>(""); // "" = all, "1" active, "0" inactive
-  const [perPage, setPerPage] = useState<number>(20);
+  const [perPage, setPerPage] = useState<number>(40);
   const debouncedSearch = useDebounce(searchTerm, 400);
 
   const filters = useMemo(() => ({
@@ -173,7 +173,7 @@ export default function UsersListPage() {
   const meta = paginatedData?.meta;
 
   return (
-    <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 3, lg: 4 } }} dir="rtl">
+    <Container maxWidth="lg"  dir="rtl">
       <Box sx={{ mb: 2 }}>
         <Box display="flex" flexDirection={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} gap={2}>
           <Box display="flex" alignItems="center" gap={1.5}>
@@ -189,22 +189,7 @@ export default function UsersListPage() {
               fullWidth
               sx={{ minWidth: { sm: 280 }, flex: { xs: 1, sm: 'initial' } }}
             />
-            <FormControl size="small" sx={{ minWidth: 160 }}>
-              <InputLabel id="filter-user-type-label">نوع المستخدم</InputLabel>
-              <Select
-                labelId="filter-user-type-label"
-                label="نوع المستخدم"
-                value={selectedUserType}
-                onChange={(e: SelectChangeEvent<string>) => { setCurrentPage(1); setSelectedUserType(e.target.value as string); }}
-              >
-                <MenuItem value="">الكل</MenuItem>
-                <MenuItem value="استقبال معمل">استقبال معمل</MenuItem>
-                <MenuItem value="ادخال نتائج">ادخال نتائج</MenuItem>
-                <MenuItem value="استقبال عياده">استقبال عياده</MenuItem>
-                <MenuItem value="خزنه موحده">خزنه موحده</MenuItem>
-                <MenuItem value="تامين">تامين</MenuItem>
-              </Select>
-            </FormControl>
+           
             <FormControl size="small" sx={{ minWidth: 140 }}>
               <InputLabel id="filter-active-label">الحالة</InputLabel>
               <Select
@@ -270,17 +255,17 @@ export default function UsersListPage() {
       ) : (
         <Card>
           <CardContent sx={{ p: 0 }}>
-            <TableContainer sx={{ maxHeight: 'calc(100vh - 300px)', overflowY: 'auto' }}>
+            <TableContainer sx={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
               <Table className="text-2xl!" stickyHeader>
                 <TableHead>
                   <TableRow>
-                    <TableCell className="text-xl!"  align="center" sx={{ display: { xs: 'none', sm: 'table-cell' }, width: 50 }}>م</TableCell>
-                    <TableCell className="text-xl!">الاسم</TableCell>
-                    <TableCell className="text-xl!">اسم المستخدم</TableCell> 
-                    <TableCell className="text-xl!" align="center" sx={{ display: { xs: 'none', md: 'table-cell' } }}>النوع</TableCell>
-                    <TableCell className="text-xl!" align="center">الأدوار</TableCell>
-                    <TableCell className="text-xl!" align="center" sx={{ width: 120 }}>الحالة</TableCell>
-                    <TableCell className="text-xl!" align="right" sx={{ width: 80 }}>إجراءات</TableCell>
+                    <TableCell className=""  align="center" sx={{ display: { xs: 'none', sm: 'table-cell' }, width: 50 }}>م</TableCell>
+                    <TableCell className="">الاسم</TableCell>
+                    <TableCell className="">اسم المستخدم</TableCell> 
+                    <TableCell className="" align="center" sx={{ display: { xs: 'none', md: 'table-cell' } }}>مرتبط بطبيب</TableCell>
+                    <TableCell className="" align="center">الأدوار</TableCell>
+                    <TableCell className="" align="center" sx={{ width: 120 }}>الحالة</TableCell>
+                    <TableCell className="" align="right" sx={{ width: 80 }}>إجراءات</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -291,10 +276,10 @@ export default function UsersListPage() {
                       onClick={() => navigate(`/users/${u.id}/edit`)}
                       sx={{ cursor: 'pointer' }}
                     >
-                      <TableCell className="text-xl!" align="center" sx={{ display: { xs: 'none', sm: 'table-cell' }, py: 1.25 }}>{u.id}</TableCell>
-                      <TableCell className="text-xl!" sx={{ py: 1.25 }}>
+                      <TableCell className="" align="center" sx={{ display: { xs: 'none', sm: 'table-cell' }, py: 1.25 }}>{u.id}</TableCell>
+                      <TableCell className="" sx={{ py: 1.25 }}>
                         <Box display="flex" alignItems="center" gap={1}>
-                          <Typography className="text-xl!" variant="body2">{u.name}</Typography>
+                          <Typography className="" variant="body2">{u.name}</Typography>
                           {u.is_supervisor && (
                             <Tooltip title="مشرف">
                               <span>
@@ -303,41 +288,41 @@ export default function UsersListPage() {
                             </Tooltip>
                           )}
                           {currentUser?.id === u.id && (
-                            <Chip className="text-xl!" label="أنت" size="small" variant="outlined" sx={{ fontSize: 10, height: 18 }} />
+                            <Chip className="" label="أنت" size="small" variant="outlined" sx={{ fontSize: 10, height: 18 }} />
                           )}
                         </Box>
                       </TableCell>
-                      <TableCell className="text-xl!" align="center" sx={{ display: { xs: 'none', md: 'table-cell' }, py: 1.25 }}>
+                      <TableCell className="" align="center" sx={{ display: { xs: 'none', md: 'table-cell' }, py: 1.25 }}>
                         {u.username}
                       </TableCell>
-                      <TableCell className="text-xl!" align="center" sx={{ py: 1.25 }}>
-                        {u.user_type}
+                      <TableCell  className="text-blue-400" align="center" sx={{ py: 1.25  ,color:  u.doctor?.id ? 'primary.main' : 'text.secondary', fontWeight: 'medium' }}>
+                        {u.doctor_id ? u.doctor?.name : 'غير مرتبط'}
                       </TableCell>
-                      <TableCell className="text-xl!" align="center" sx={{ py: 1.25 }}>
+                      <TableCell className="" align="center" sx={{ py: 1.25 }}>
                         <Box display="flex" flexWrap="wrap" gap={0.5} justifyContent="center">
                           {u.roles?.slice(0, 2).map((role) => (
-                            <Chip className="text-xl!" key={role.id} label={role.name} size="small" variant="outlined" sx={{ fontSize: 12 }} />
+                            <Chip className="" key={role.id} label={role.name} size="small" variant="outlined" sx={{ fontSize: 12 }} />
                           ))}
                           {u.roles && u.roles.length > 2 && (
                             <Tooltip title={u.roles.slice(2).map((r) => r.name).join(", ")}> 
-                              <Chip className="text-xl!" label={`+${u.roles.length - 2}`} size="small" variant="outlined" sx={{ fontSize: 12 }} />
+                              <Chip className="" label={`+${u.roles.length - 2}`} size="small" variant="outlined" sx={{ fontSize: 12 }} />
                             </Tooltip>
                           )}
                         </Box>
                       </TableCell>
-                      <TableCell className="text-xl!" align="center" sx={{ py: 1.25 }}>
+                      <TableCell className="" align="center" sx={{ py: 1.25 }}>
                         {u.is_active ? (
-                          <Chip className="text-xl!" color="success" label={
+                          <Chip className="" color="success" label={
                             <Box display="flex" alignItems="center" gap={0.5}><CheckCircle2 className="h-3 w-3"/> نشط</Box>
                           } size="small" sx={{ fontSize: 12 }} />
                         ) : (
-                          <Chip className="text-xl!" color="error" label={
+                          <Chip className="" color="error" label={
                             <Box display="flex" alignItems="center" gap={0.5}><XCircle className="h-3 w-3"/> غير نشط</Box>
                           } size="small" sx={{ fontSize: 12 }} />
                         )}
                       </TableCell>
                       <TableCell 
-                        className="text-xl!" 
+                        className="" 
                         align="right" 
                         sx={{ py: 1.25 }}
                         onClick={(e) => e.stopPropagation()}

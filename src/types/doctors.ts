@@ -134,7 +134,7 @@ export interface DoctorShift {
   status: boolean; // Is this DoctorShift record active/open
   start_time?: string | null;
   end_time?: string | null;
-  
+  firebase_id?: string | null; // If you link this to a Firestore document for real-time updates
   // New fields for UI
   is_examining: boolean; // Is the doctor currently with a patient in this shift
   patients_count: number; // Number of patients waiting or with this doctor in this shift

@@ -7,6 +7,9 @@ import type { PaginatedResponse } from '@/types/common';
 
 const API_URL = '/services';
 
+export const getServicesList = (): Promise<{ id: number; name: string }[]> =>
+  apiClient.get<{ data: { id: number; name: string }[] }>('/services-list').then(res => res.data.data);
+
 export const getServices = (page = 1, filters: Record<string, any> = {}): Promise<PaginatedResponse<Service>> => {
   return apiClient.get<PaginatedResponse<Service>>(API_URL, { params: { page, ...filters } }).then(res => res.data);
 };

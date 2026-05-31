@@ -24,6 +24,9 @@ export interface LabUserShiftIncomeSummary {
   total_cash_refund?: number;
   total_bank_refund?: number;
 }
+export const getUsersList = (): Promise<{ id: number; name: string }[]> =>
+  apiClient.get<{ data: { id: number; name: string }[] }>('/users-list').then(res => res.data.data);
+
 export const getUsers = (
   page = 1,
   filters: { [key: string]: unknown } = {}

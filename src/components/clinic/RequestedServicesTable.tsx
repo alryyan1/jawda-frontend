@@ -1,6 +1,7 @@
 // src/components/clinic/RequestedServicesTable.tsx
 import * as React from "react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import type { RequestedService } from "@/types/services";
 import type { DoctorVisit } from "@/types/visits";
@@ -49,6 +50,7 @@ import {
   recordServicePayment,
   recordRequestedServiceRefund,
   updateRequestedServiceRefund,
+  markRequestedServiceDone,
 } from "@/services/visitService";
 import ManageRequestedServiceCostsDialog from "./ManageRequestedServiceCostsDialog";
 import ManageServiceDepositsDialog from "./ManageServiceDepositsDialog";
@@ -74,6 +76,7 @@ interface RequestedServicesTableProps {
   currentClinicShiftId: number | null;
   onAddMoreServices: () => void;
   handlePrintReceipt: () => void;
+  showExtraColumns?: boolean;
 }
 
 interface RowEditData {
@@ -151,6 +154,26 @@ const ToggleDepositsButton: React.FC<ToggleDepositsButtonProps> = ({
   );
 };
 
+const DiagnosisButton: React.FC<{ rsId: number; done: boolean }> = ({ rsId, done }) => {
+  const navigate = useNavigate();
+  return (
+    <Tooltip title={!done ? "يجب إكمال الخدمة أولاً" : ""}>
+      <span>
+        <Button
+          size="small"
+          variant="outlined"
+          color="secondary"
+          disabled={!done}
+          onClick={() => navigate(`/diagnosis/${rsId}`)}
+          sx={{ fontSize: "0.7rem", py: 0.25, px: 1, minWidth: 0, whiteSpace: "nowrap" }}
+        >
+          تشخيص
+        </Button>
+      </span>
+    </Tooltip>
+  );
+};
+
 const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
   visit,
   visitId,
@@ -159,6 +182,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
   currentClinicShiftId,
   onAddMoreServices,
   handlePrintReceipt,
+  showExtraColumns = false,
 }) => {
   void onAddMoreServices; // silence unused prop for now
   const queryClient = useQueryClient();
@@ -180,7 +204,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
     discount_per: 0,
     price: 0,
   });
-  const { can } = useAuthorization();
+  const { can, hasRole } = useAuthorization();
   const [isManageServiceCostsDialogOpen, setIsManageServiceCostsDialogOpen] =
     useState(false);
   const [
@@ -456,6 +480,15 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
     },
   });
 
+  const toggleDoneMutation = useMutation({
+    mutationFn: ({ id, done }: { id: number; done: boolean }) =>
+      markRequestedServiceDone(id, done),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["requestedServicesForVisit", visitId] });
+    },
+    onError: () => toast.error("فشل تحديث حالة الخدمة"),
+  });
+
   // Inline edit removed (using dialog instead)
 
   const handleOpenRowOptions = (rs: RequestedService) => {
@@ -659,6 +692,16 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                       >
                         دفع
                       </TableCell>
+                      {showExtraColumns && (
+                        <TableCell className="text-xl!" align="center" sx={{ width: 90 }}>
+                          اكتمال
+                        </TableCell>
+                      )}
+                      {showExtraColumns && (
+                        <TableCell className="text-xl!" align="center" sx={{ width: 160 }}>
+                          التشخيص
+                        </TableCell>
+                      )}
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -806,6 +849,23 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                                 </Tooltip>
                               </Box>
                             </TableCell>
+                            {showExtraColumns && (
+                              <TableCell align="center" sx={{ py: 0.75 }} onClick={(e) => e.stopPropagation()}>
+                                <Checkbox
+                                  size="small"
+                                  checked={rs.done}
+                                  disabled={toggleDoneMutation.isPending}
+                                  onChange={(e) =>
+                                    toggleDoneMutation.mutate({ id: rs.id, done: e.target.checked })
+                                  }
+                                />
+                              </TableCell>
+                            )}
+                            {showExtraColumns && (
+                              <TableCell align="center" sx={{ py: 0.75 }} onClick={(e) => e.stopPropagation()}>
+                                <DiagnosisButton rsId={rs.id} done={rs.done} />
+                              </TableCell>
+                            )}
                           </TableRow>
                         </React.Fragment>
                       );
@@ -906,6 +966,12 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                   <TextField
                     type="number"
                     size="small"
+                    onFocus={(e) => e.target.select()}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleSaveRowOptions();
+                      }
+                    }}
                     disabled={
                       rowOptionsService.amount_paid > 0 ||
                       user?.id != rowOptionsService.user_id
@@ -977,9 +1043,11 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                         label="نسبة التخفيض"
                         size="small"
                         disabled={
-                          !can("تخفيض خدمه") ||
-                          user?.id != rowOptionsService.user_id ||
-                          rowOptionsService.amount_paid > 0
+                          !hasRole('admin') && (
+                            !can("تخفيض خدمه") ||
+                            user?.id != rowOptionsService.user_id ||
+                            rowOptionsService.amount_paid > 0
+                          )
                         }
                         value={rowOptionsData.discount_per}
                         onChange={(e) =>
@@ -1008,9 +1076,11 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                         size="small"
                         slotProps={{ input: { inputProps: { min: 0, step: 0.5 } } }}
                         disabled={
-                          !can("تخفيض خدمه") ||
-                          user?.id != rowOptionsService.user_id ||
-                          rowOptionsService.amount_paid > 0
+                          !hasRole('admin') && (
+                            !can("تخفيض خدمه") ||
+                            user?.id != rowOptionsService.user_id ||
+                            rowOptionsService.amount_paid > 0
+                          )
                         }
                         value={rowOptionsData.discount ?? 0}
                         onChange={(e) =>

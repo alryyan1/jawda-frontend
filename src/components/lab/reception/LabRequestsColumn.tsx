@@ -811,17 +811,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                                   <XCircle className="h-4 w-4" />
                                 )}
                               </Button>
-                              {Number(request.amount_paid) > 0 && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0 text-orange-600 hover:text-orange-800 hover:bg-orange-50"
-                                  onClick={() => setRefundLabRequest(request)}
-                                  title="استرداد"
-                                >
-                                  <RotateCcw className="h-4 w-4" />
-                                </Button>
-                              )}
+                          
                             </>
                           )}
                           

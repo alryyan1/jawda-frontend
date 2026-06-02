@@ -846,11 +846,10 @@ export default function CompaniesListPage() {
   };
 
   return (
-    <div className="container mx-auto py-4 sm:py-6 lg:py-8">
+    <div className="container mx-auto ">
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-2">
-          <Building className="h-7 w-7 text-primary" />
-          <h1 className="text-2xl sm:text-3xl font-bold">الشركات</h1>
+          <h1 className=" sm:text-3xl font-bold">الشركات</h1>
         </div>
         <div className="flex items-center gap-2">
           {canCreateCompany && (
@@ -936,29 +935,29 @@ export default function CompaniesListPage() {
           </CardContent>
         </Card>
       ) : (
-        <Card className="text-2xl!">
+        <Card className="!">
           <CardContent sx={{ p: 0 }}>
             <TableContainer component={Paper} elevation={0}>
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell className="text-2xl!" sx={{ width: 50, display: { xs: 'none', sm: 'table-cell' }, textAlign: 'center' }}>
+                    <TableCell className="!" sx={{ width: 50, display: { xs: 'none', sm: 'table-cell' }, textAlign: 'center' }}>
                       المعرف
                     </TableCell>
-                    <TableCell className="text-2xl!" sx={{ textAlign: 'center' }}>الإسم</TableCell>
+                    <TableCell className="!" sx={{ textAlign: 'center' }}>الإسم</TableCell>
                     <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }, textAlign: 'center' }}>
                       الهاتف
                     </TableCell>
-                    <TableCell className="text-2xl!" sx={{ display: { xs: 'none', lg: 'table-cell' }, textAlign: 'center' }}>
+                    <TableCell className="!" sx={{ display: { xs: 'none', lg: 'table-cell' }, textAlign: 'center' }}>
                       تحمل الخدمات
                     </TableCell>
-                    <TableCell className="text-2xl!" sx={{ display: { xs: 'none', lg: 'table-cell' }, textAlign: 'center' }}>
+                    <TableCell className="!" sx={{ display: { xs: 'none', lg: 'table-cell' }, textAlign: 'center' }}>
                       تحمل المختبر
                     </TableCell>
-                    <TableCell className="text-2xl!" sx={{ textAlign: 'center' }}>
+                    <TableCell className="!" sx={{ textAlign: 'center' }}>
                       الحالة
                     </TableCell>
-                    <TableCell className="text-2xl!" sx={{ display: { xs: 'none', sm: 'table-cell' }, textAlign: 'center' }}>
+                    <TableCell className="!" sx={{ display: { xs: 'none', sm: 'table-cell' }, textAlign: 'center' }}>
                       العقود
                     </TableCell>
                   
@@ -967,22 +966,22 @@ export default function CompaniesListPage() {
                 <TableBody>
                   {companies.map((company) => (
                     <TableRow key={company.id} hover onClick={() => handleRowClick(company)} sx={{ cursor: 'pointer' }}>
-                      <TableCell className="text-2xl!" sx={{ display: { xs: 'none', sm: 'table-cell' }, textAlign: 'center' }}>
+                      <TableCell className="!" sx={{ display: { xs: 'none', sm: 'table-cell' }, textAlign: 'center' }}>
                         {company.id}
                       </TableCell>
-                      <TableCell className="text-2xl!" sx={{ fontWeight: 'medium', textAlign: 'center' }}>{company.name}</TableCell>
+                      <TableCell className="!" sx={{ fontWeight: 'medium', textAlign: 'center' }}>{company.name}</TableCell>
                       <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }, textAlign: 'center' }}>
                         {company.phone || "-"}
                       </TableCell>
-                      <TableCell className="text-2xl!" sx={{ display: { xs: 'none', lg: 'table-cell' }, textAlign: 'center' }}>
+                      <TableCell className="!" sx={{ display: { xs: 'none', lg: 'table-cell' }, textAlign: 'center' }}>
                         {company.service_endurance || "-"}
                       </TableCell>
-                      <TableCell className="text-2xl!" sx={{ display: { xs: 'none', lg: 'table-cell' }, textAlign: 'center' }}>
+                      <TableCell className="!" sx={{ display: { xs: 'none', lg: 'table-cell' }, textAlign: 'center' }}>
                         {company.lab_endurance || "-"}
                       </TableCell>
 
 
-                      <TableCell className="text-2xl!" sx={{ textAlign: 'center' }}>
+                      <TableCell className="!" sx={{ textAlign: 'center' }}>
                         <Chip
                           label={company.status ? "نشط" : "غير نشط"}
                           color={company.status ? "success" : "error"}

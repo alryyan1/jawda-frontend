@@ -492,24 +492,25 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
                       size="small"
                     />
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <FormControl fullWidth error={!!errors.subcompany_id}>
-                        <InputLabel>الشركة الفرعية</InputLabel>
-                        <Select
-                          value={formData.subcompany_id}
-                          onChange={handleSelectChange('subcompany_id')}
-                          label="الشركة الفرعية"
-                          disabled={isLoadingSubcompanies || isSubmitting}
-                          size="small"
-                        >
-                          <MenuItem value="">لا يوجد</MenuItem>
-                          {subcompanies.map(sub => (
-                            <MenuItem key={sub.id} value={String(sub.id)}>
-                              {sub.name}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                        {errors.subcompany_id && <FormHelperText>{errors.subcompany_id}</FormHelperText>}
-                      </FormControl>
+                      <Autocomplete
+                        fullWidth
+                        options={subcompanies}
+                        getOptionLabel={(option) => option.name}
+                        value={subcompanies.find(s => String(s.id) === formData.subcompany_id) ?? null}
+                        onChange={(_e, value) =>
+                          setFormData(prev => ({ ...prev, subcompany_id: value ? String(value.id) : '' }))
+                        }
+                        disabled={isLoadingSubcompanies || isSubmitting}
+                        size="small"
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="الشركة الفرعية"
+                            error={!!errors.subcompany_id}
+                            helperText={errors.subcompany_id}
+                          />
+                        )}
+                      />
                       {/* <IconButton
                         onClick={() => setShowSubcompanyDialog(true)}
                         disabled={isSubmitting}

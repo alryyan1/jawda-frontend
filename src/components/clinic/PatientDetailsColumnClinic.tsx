@@ -7,18 +7,14 @@ import type { RequestedService } from "@/types/services";
 import PatientCompanyDetails from "../lab/reception/PatientCompanyDetails";
 import PdfPreviewDialog from "../common/PdfPreviewDialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, DollarSign, FileText, Printer } from "lucide-react";
+import { Loader2, DollarSign, FileText, Printer, Phone, CalendarDays, Copy, Stethoscope, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import { ItemRow } from "../lab/workstation/PatientDetailsLabEntry";
 import realtimeService from "@/services/realtimeService";
-import { 
-  Phone, 
-  CalendarDays, 
-  Copy
-} from "lucide-react";
 import { useAuthorization } from "@/hooks/useAuthorization";
 import apiClient from "@/services/api";
+import { Divider } from "@mui/material";
+
 export interface PatientDetailsColumnClinicProps {
   visitId: number | null;
   onPrintReceipt?: () => void;
@@ -30,7 +26,22 @@ export interface PatientDetailsColumnClinicRef {
   triggerPayAll: () => void;
 }
 
-const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, PatientDetailsColumnClinicProps>(({ 
+const InfoCell = ({ icon, label, value }: { icon: React.ReactNode; label: string; value?: string | null }) => (
+  <div className="flex items-center gap-1 min-w-0 py-0.5">
+    <span className="text-muted-foreground shrink-0">{icon}</span>
+    <span className="text-xs text-muted-foreground shrink-0">{label}:</span>
+    <span className="text-xs font-medium truncate text-foreground">{value ?? "-"}</span>
+  </div>
+);
+
+const StatCell = ({ label, value, className }: { label: string; value: number; className?: string }) => (
+  <div className="flex flex-col items-center py-2">
+    <span className="text-[10px] text-muted-foreground mb-0.5">{label}</span>
+    <span className={cn("text-sm font-bold tabular-nums", className)}>{value.toLocaleString()}</span>
+  </div>
+);
+
+const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, PatientDetailsColumnClinicProps>(({
   visitId,
   onPrintReceipt,
   currentClinicShiftId,
@@ -40,23 +51,20 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
   const { user, currentClinicShift } = useAuth();
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isPdfDialogOpen, setIsPdfDialogOpen] = useState(false);
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const { can } = useAuthorization();
-  // Fetch visit data
+
   const { data: visit, isLoading: isLoadingVisit } = useQuery({
     queryKey: ["doctorVisit", visitId],
     queryFn: () => getDoctorVisitById(visitId!),
     enabled: !!visitId,
   });
 
-  // Fetch requested services
   const { data: requestedServices = [], isLoading: isLoadingServices } = useQuery({
     queryKey: ["requestedServicesForVisit", visitId],
     queryFn: () => getRequestedServicesForVisit(visitId!),
     enabled: !!visitId,
   });
 
-  // Fetch lab requests for lab totals when needed
   const { isLoading: isLoadingLab } = useQuery({
     queryKey: ["labRequestsForVisit", visitId],
     queryFn: async () => {
@@ -66,7 +74,6 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
     enabled: !!visitId,
   });
 
-  // Pay all unpaid services/lab requests mutation
   const payAllMutation = useMutation({
     mutationFn: async () => {
       if (!visitId || !currentClinicShiftId) {
@@ -74,77 +81,44 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
       }
 
       if (activeTab === 'lab') {
-        // Handle lab requests payment
         const { default: apiClient } = await import("@/services/api");
         const response = await apiClient.post(`/doctor-visits/${visitId}/pay-all-lab-requests`);
         return response.data;
       } else {
-        // Handle services payment
-        // Find all unpaid services
-        const unpaidServices = requestedServices.filter(service => {
-          const balance = calculateItemBalance(service);
-          return balance > 0.009; // Services with remaining balance
-        });
-
-        if (unpaidServices.length === 0) {
-          throw new Error("لا توجد خدمات غير مدفوعة");
-        }
-
-        // Process payments for all unpaid services
-        const paymentPromises = unpaidServices.map(service => {
-          const balance = calculateItemBalance(service);
-          return recordServicePayment({
-            requested_service_id: service.id,
-            amount: balance,
-            is_bank: false,
-            shift_id: currentClinicShiftId
-          });
-        });
-
-        await Promise.all(paymentPromises);
+        const unpaidServices = requestedServices.filter(service => calculateItemBalance(service) > 0.009);
+        if (unpaidServices.length === 0) throw new Error("لا توجد خدمات غير مدفوعة");
+        await Promise.all(
+          unpaidServices.map(service =>
+            recordServicePayment({
+              requested_service_id: service.id,
+              amount: calculateItemBalance(service),
+              is_bank: false,
+              shift_id: currentClinicShiftId,
+            })
+          )
+        );
         return unpaidServices;
       }
     },
     onSuccess: async () => {
       toast.success("تم معالجة جميع المدفوعات بنجاح");
-      
-      // Print services receipt after successful payment (non-blocking)
+
       if (activeTab === 'services' && visitId) {
         realtimeService.printServicesReceipt(visitId, visit?.patient_id)
           .then(result => {
-            if (result.success) {
-              toast.success('تم طباعة إيصال الخدمات بنجاح');
-            } else {
-              toast.error(result.error || 'فشل في طباعة إيصال الخدمات');
-            }
+            if (result.success) toast.success('تم طباعة إيصال الخدمات بنجاح');
+            else toast.error(result.error || 'فشل في طباعة إيصال الخدمات');
           })
-          .catch(error => {
-            console.error('Error printing services receipt:', error);
-            toast.error('حدث خطأ أثناء طباعة إيصال الخدمات');
-          });
+          .catch(() => toast.error('حدث خطأ أثناء طباعة إيصال الخدمات'));
       }
-      
-      // Call the original print receipt function for lab payments
-      if (activeTab === 'lab' && onPrintReceipt) {
-        onPrintReceipt();
-      }
-      
-      // Invalidate relevant queries based on active tab
-      if (activeTab === 'lab') {
-        queryClient.invalidateQueries({
-          queryKey: ["labRequestsForVisit", visitId],
-        });
-      } else {
-        queryClient.invalidateQueries({
-          queryKey: ["requestedServicesForVisit", visitId],
-        });
-      }
-      
+
+      if (activeTab === 'lab' && onPrintReceipt) onPrintReceipt();
+
       queryClient.invalidateQueries({
-        queryKey: ["doctorVisit", visitId],
+        queryKey: activeTab === 'lab' ? ["labRequestsForVisit", visitId] : ["requestedServicesForVisit", visitId],
       });
-      
-      // Refresh Income Summary (cash/bank/total)
+      queryClient.invalidateQueries({ queryKey: ["doctorVisit", visitId] });
+
       if (user?.id && currentClinicShift?.id) {
         const key = ["userShiftIncomeSummary", user.id, currentClinicShift.id] as const;
         queryClient.invalidateQueries({ queryKey: key });
@@ -156,16 +130,10 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
     },
   });
 
-  // Expose imperative handle to parent
   useImperativeHandle(ref, () => ({
-    triggerPayAll: () => {
-      if (!payAllMutation.isPending) {
-        payAllMutation.mutate();
-      }
-    }
+    triggerPayAll: () => { if (!payAllMutation.isPending) payAllMutation.mutate(); }
   }), [payAllMutation]);
-  
-  // Generate clinic invoice PDF mutation
+
   const generatePdfMutation = useMutation({
     mutationFn: async () => {
       if (!visitId) throw new Error("No visit ID provided");
@@ -173,372 +141,198 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
         responseType: "blob",
         headers: { "X-Suppress-Error-Toast": "1" },
       } as { responseType: "blob"; headers?: Record<string, string> });
-      const blob = response.data as Blob;
-      return URL.createObjectURL(blob);
+      return URL.createObjectURL(response.data as Blob);
     },
-    onSuccess: (url) => {
-      setPdfUrl(url);
-      setIsPdfDialogOpen(true);
-    },
+    onSuccess: (url) => { setPdfUrl(url); setIsPdfDialogOpen(true); },
     onError: (error: unknown) => {
-      const err = error as { response?: { data?: Blob | { message?: string } } };
-      const data = err?.response?.data;
+      const data = (error as { response?: { data?: Blob | { message?: string } } })?.response?.data;
       if (data instanceof Blob) {
-        data.text().then((text) => {
-          try {
-            const json = JSON.parse(text) as { message?: string };
-            toast.error(json.message || "فشل في إنشاء ملف PDF");
-          } catch {
-            toast.error("فشل في إنشاء ملف PDF");
-          }
+        data.text().then(text => {
+          try { toast.error((JSON.parse(text) as { message?: string }).message || "فشل في إنشاء ملف PDF"); }
+          catch { toast.error("فشل في إنشاء ملف PDF"); }
         }).catch(() => toast.error("فشل في إنشاء ملف PDF"));
       } else {
         toast.error((data as { message?: string })?.message || "فشل في إنشاء ملف PDF");
       }
     },
-    onMutate: () => {
-      setIsGeneratingPdf(true);
-    },
-    onSettled: () => {
-      setIsGeneratingPdf(false);
-    },
   });
 
-  // Calculate item balance
   const calculateItemBalance = (rs: RequestedService) => {
     const price = Number(rs.price) || 0;
     const count = Number(rs.count) || 1;
     const itemDiscountPer = Number(rs.discount_per) || 0;
     const itemFixedDiscount = Number(rs.discount) || 0;
     const itemEndurance = Number(rs.endurance) || 0;
-
     const subTotal = price * count;
-    const discountAmountFromPercentage = (subTotal * itemDiscountPer) / 100;
-    const totalItemDiscount = discountAmountFromPercentage + itemFixedDiscount;
+    const totalItemDiscount = (subTotal * itemDiscountPer) / 100 + itemFixedDiscount;
     const isCompanyPatient = Boolean(visit?.patient?.company_id || visit?.patient?.company);
-    const netPrice = subTotal - totalItemDiscount - (isCompanyPatient ? 0 : itemEndurance);
     const amountPaid = Number(rs.amount_paid) || 0;
     if (isCompanyPatient) {
       const remaining = itemEndurance - amountPaid;
       return remaining > 0 ? remaining : 0;
     }
-    return netPrice - amountPaid;
+    return subTotal - totalItemDiscount - itemEndurance - amountPaid;
   };
-
-  // const handleViewPdf = () => {
-  //   if (pdfUrl) {
-  //     setIsPdfDialogOpen(true);
-  //   } else {
-  //     setIsGeneratingPdf(true);
-  //     generatePdfMutation.mutate();
-  //   }
-  // };
 
   if (!visitId) {
     return (
-      <div className="flex flex-col h-full w-full items-center justify-center p-4 text-muted-foreground">
-        <FileText className="h-12 w-12 mb-2" />
-        <p>اختر مريضاً لعرض التفاصيل</p>
+      <div className="flex flex-col h-full w-full items-center justify-center gap-2 p-4 text-muted-foreground">
+        <FileText className="h-10 w-10 opacity-40" />
+        <p className="text-sm">اختر مريضاً لعرض التفاصيل</p>
       </div>
     );
   }
 
   if (isLoadingVisit || isLoadingServices || isLoadingLab) {
     return (
-      <div className="flex flex-col h-full w-full items-center justify-center p-4">
-        <Loader2 className="h-8 w-8 animate-spin mb-2" />
-        <p>جاري التحميل...</p>
+      <div className="flex flex-col h-full w-full items-center justify-center gap-2 p-4">
+        <Loader2 className="h-7 w-7 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground">جاري التحميل...</p>
       </div>
     );
   }
 
   if (!visit) {
     return (
-      <div className="flex flex-col h-full w-full items-center justify-center p-4 text-muted-foreground">
-        <FileText className="h-12 w-12 mb-2" />
-        <p>الزيارة غير موجودة</p>
+      <div className="flex flex-col h-full w-full items-center justify-center gap-2 p-4 text-muted-foreground">
+        <FileText className="h-10 w-10 opacity-40" />
+        <p className="text-sm">الزيارة غير موجودة</p>
       </div>
     );
   }
 
-  // Calculate totals depending on active tab
-  let total = 0;
-  let totalPaid = 0;
-  let totalBalance = 0;
-
+  let total = 0, totalPaid = 0, totalBalance = 0;
   if (activeTab === 'lab') {
     total = visit.total_lab_amount!;
     totalPaid = visit.total_lab_paid!;
     totalBalance = visit.total_lab_balance!;
   } else {
-    total = requestedServices.reduce((sum, service) => {
-      const price = Number(service.price) || 0;
-      const count = Number(service.count) || 1;
-      return sum + (price * count);
-    }, 0);
-    totalPaid = requestedServices.reduce((sum, service) => {
-      return sum + (Number(service.amount_paid) || 0);
-    }, 0);
-    // For company patients, remaining balance is sum of (endurance - amount_paid)
     const isCompanyPatient = Boolean(visit.patient?.company_id || visit.patient?.company);
+    total = requestedServices.reduce((s, r) => s + (Number(r.price) || 0) * (Number(r.count) || 1), 0);
+    totalPaid = requestedServices.reduce((s, r) => s + (Number(r.amount_paid) || 0), 0);
     totalBalance = isCompanyPatient
-      ? requestedServices.reduce((sum, service) => {
-          const endurance = Number(service.endurance) || 0;
-          const paid = Number(service.amount_paid) || 0;
-          const remaining = endurance - paid;
-          return sum + (remaining > 0 ? remaining : 0);
+      ? requestedServices.reduce((s, r) => {
+          const rem = (Number(r.endurance) || 0) - (Number(r.amount_paid) || 0);
+          return s + (rem > 0 ? rem : 0);
         }, 0)
-      : requestedServices.reduce((sum, service) => sum + calculateItemBalance(service), 0);
+      : requestedServices.reduce((s, r) => s + calculateItemBalance(r), 0);
   }
 
   const patientName = visit.patient?.name;
-  const doctorName = visit.doctor?.name;
-  const phone = visit.patient?.phone;
-  const date = visit.created_at ? visit.created_at.slice(0, 10) : "";
   const serial = visit.id?.toString();
-  const registeredBy = visit.created_by_user?.name;
 
-  // Function to copy serial number to clipboard
   const handleCopySerial = async () => {
-    if (serial) {
-      try {
-        await navigator.clipboard.writeText(serial);
-        toast.success("تم نسخ المتسلسل");
-      } catch {
-        // Fallback for older browsers
-        const textArea = document.createElement('textarea');
-        textArea.value = serial;
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
-        toast.success("تم نسخ المتسلسل");
-      }
-    }
+    if (!serial) return;
+    await navigator.clipboard.writeText(serial).catch(() => null);
+    toast.success("تم نسخ المتسلسل");
   };
+
+  const isPaying = payAllMutation.isPending;
 
   return (
     <>
-      <div className="flex flex-col h-full w-full items-center justify-start p-1 bg-background">
-        <div className="flex flex-col h-full w-full justify-start p-1 bg-background">
-            {/* Patient Name */}
-        <div className="w-full text-center font-bold text-lg border-b border-border pb-1 mb-1 text-foreground">
-          {patientName}
-        </div>
- {/* TODO: Add icons */}
- <div className="patient-details">
-        {/* Custom Serial Row with Copy Button */}
-        <div className="flex items-center py-1 px-0.5 rounded hover:bg-muted/50 transition-colors">
-          <div className="w-6 h-6 bg-primary/20 rounded-full flex items-center justify-center mr-1.5">
-            <FileText size={12} className="text-primary" />
+      <div className="flex flex-col h-full w-full p-2 gap-2 bg-background overflow-y-auto">
+
+        {/* Patient Header */}
+        <div className="flex items-center gap-2 pb-2 border-b border-border">
+          <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
+            <User size={14} className="text-primary" />
           </div>
-          <div className="flex-1 min-w-0 flex items-center justify-between">
-            <span className="font-bold text-sm mr-2">المتسلسل</span>
-            <div className="flex items-center gap-1">
-              <span className="font-semibold text-sm text-foreground truncate max-w-[60%]" title={serial}>
-                {serial ?? "-"}
-              </span>
-              <button
-                onClick={handleCopySerial}
-                className="p-1 hover:bg-muted rounded transition-colors"
-                title="نسخ المتسلسل"
-              >
-                <Copy size={14} className="text-muted-foreground hover:text-foreground" />
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-sm leading-tight truncate text-foreground">{patientName}</p>
+            <div className="flex items-center gap-1 mt-0.5">
+              <span className="text-[11px] text-muted-foreground">#{serial}</span>
+              <button onClick={handleCopySerial} className="p-0.5 hover:bg-muted rounded transition-colors" title="نسخ المتسلسل">
+                <Copy size={11} className="text-muted-foreground" />
               </button>
             </div>
           </div>
         </div>
-        <div className="h-px bg-border my-1" />
-        
-        <ItemRow label="الطبيب" value={doctorName} />
-        <ItemRow label="الهاتف" value={phone} icon={Phone}/>
-        <ItemRow label="التاريخ" value={date} icon={CalendarDays}/>
-        <ItemRow label="بواسطة" value={registeredBy} />
-</div>
-        
-        {/* Details Table */}
-        {/* <table className="w-full text-sm mb-4 text-foreground">
-          <tbody>
-            <tr>
-              <td className="text-right text-muted-foreground py-1">الطبيب</td>
-              <td className="text-left font-medium px-2">{doctorName}</td>
-            </tr>
-            <tr>
-              <td className="text-right text-muted-foreground py-1">الهاتف</td>
-              <td className="text-left font-medium px-2">{phone}</td>
-            </tr>
-            <tr>
-              <td className="text-right text-muted-foreground py-1">التاريخ</td>
-              <td className="text-left font-medium px-2">{date}</td>
-            </tr>
-            <tr>
-              <td className="text-right text-muted-foreground py-1">المتسلسل </td>
-              <td className="text-left font-medium px-2">{serial}</td>
-            </tr>
-            <tr>
-              <td className="text-right text-muted-foreground py-1"> بواسطة</td>
-              <td className="text-left font-medium px-2">{registeredBy}</td>
-            </tr>
-          </tbody>
-        </table> */}
 
-        {/* Patient Company Details */}
-        {visit.patient && (
-          <div className="w-full mb-4">
-            <PatientCompanyDetails patient={visit.patient} />
-          </div>
-        )}
+        {/* Info Grid */}
+        <div className="grid grid-cols-1 gap-x-3 border-b border-border pb-2">
+          <InfoCell icon={<Stethoscope size={11} />} label="الطبيب" value={visit.doctor?.name} />
+          <Divider/>
+          <InfoCell icon={<Phone size={11} />} label="الهاتف" value={visit.patient?.phone} />
+          <Divider/>
 
-
-        {/* Financial Summary (switches based on activeTab) */}
-        <div className="w-full bg-muted/30 rounded-lg border border-border flex flex-col items-center mb-4">
-          <div className="flex w-full">
-            <div className="flex-1 text-center p-3 border-r border-border">
-              <div className="text-xs text-muted-foreground">{activeTab === 'lab' ? 'إجمالي ' : 'المجموع'}</div>
-              <div className="text-lg font-bold text-foreground">{total.toLocaleString()}</div>
-            </div>
-            <div className="flex-1 text-center p-3 border-r border-border">
-              <div className="text-xs text-muted-foreground">{activeTab === 'lab' ? 'المدفوع ' : 'المدفوع'}</div>
-              <div className="text-lg text-green-600 font-bold">{totalPaid.toLocaleString()}</div>
-            </div>
-            <div className="flex-1 text-center p-3">
-              <div className="text-xs text-muted-foreground">{activeTab === 'lab' ? 'المتبقي ' : 'المتبقي'}</div>
-              <div className={cn(
-                "text-lg font-bold",
-                totalBalance > 0.009 ? "text-red-600" : "text-green-600"
-              )}>
-                {totalBalance.toLocaleString()}
-              </div>
-            </div>
-          </div>
+          <InfoCell icon={<CalendarDays size={11} />} label="التاريخ" value={visit.created_at?.slice(0, 10)} />
+          <Divider/>
+          <InfoCell icon={<User size={11} />} label="بواسطة" value={visit.created_by_user?.name} />
+          <Divider/>  
+          <InfoCell icon={<CalendarDays size={11} />} label="العمر" value={[
+            visit.patient?.age_year ? `${visit.patient.age_year}س` : null,
+            visit.patient?.age_month ? `${visit.patient.age_month}ش` : null,
+            visit.patient?.age_day ? `${visit.patient.age_day}ي` : null,
+          ].filter(Boolean).join(' ') || null} />
+          
+       
         </div>
 
-     
+        {/* Company Details */}
+        {visit.patient && <PatientCompanyDetails patient={visit.patient} />}
+
+        {/* Financial Summary */}
+        <div className="grid grid-cols-3 divide-x divide-border rounded-lg border border-border overflow-hidden">
+          <StatCell label="المجموع" value={total} className="text-foreground" />
+          <StatCell label="المدفوع" value={totalPaid} className="text-green-600" />
+          <StatCell
+            label="المتبقي"
+            value={totalBalance}
+            className={totalBalance > 0.009 ? "text-red-600" : "text-green-600"}
+          />
+        </div>
 
         {/* Action Buttons */}
-        <div className="w-full space-y-2">
-          {/* Pay All Button - Services Tab */}
+        <div className="flex flex-col gap-1.5 mt-auto pt-1">
           {activeTab === 'services' && totalBalance > 0.009 && currentClinicShiftId && (
             <Button
-              className="w-full bg-green-600 hover:bg-green-700 text-white"
+              size="sm"
+              className="w-full bg-green-600 hover:bg-green-700 text-white h-8 text-xs"
               onClick={() => payAllMutation.mutate()}
-              disabled={payAllMutation.isPending || !can('سداد خدمه')}
+              disabled={isPaying || !can('سداد خدمه')}
             >
-              {payAllMutation.isPending ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <DollarSign className="h-4 w-4 mr-2" />
-              )}
+              {isPaying ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <DollarSign className="h-3.5 w-3.5 mr-1.5" />}
               دفع الكل
             </Button>
           )}
 
-          {/* Lab Payment Button - Lab Tab */}
           {activeTab === 'lab' && totalBalance > 0.009 && currentClinicShiftId && (
             <Button
-              className={`w-full bg-blue-600 text-white py-2 rounded-lg font-bold hover:bg-blue-700 transition flex items-center justify-center ${totalBalance === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
+              size="sm"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white h-8 text-xs"
               onClick={() => payAllMutation.mutate()}
-              disabled={payAllMutation.isPending || totalBalance === 0 || !can('سداد فحص')}
+              disabled={isPaying || !can('سداد فحص')}
             >
-              {payAllMutation.isPending ? (
-                <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-                </svg>
-              ) : null}
-              {"دفع الكل"}
+              {isPaying ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <DollarSign className="h-3.5 w-3.5 mr-1.5" />}
+              دفع الكل
             </Button>
           )}
 
-          {/* View/Print Clinic Invoice - Services Tab */}
           {activeTab === 'services' && requestedServices.length > 0 && (
             <Button
+              size="sm"
               variant="outline"
-              className="w-full"
+              className="w-full h-8 text-xs"
               onClick={() => generatePdfMutation.mutate()}
               disabled={generatePdfMutation.isPending}
             >
-              {generatePdfMutation.isPending ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Printer className="h-4 w-4 mr-2" />
-              )}
+              {generatePdfMutation.isPending
+                ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                : <Printer className="h-3.5 w-3.5 mr-1.5" />}
               عرض الفاتورة
             </Button>
           )}
-
         </div>
-        </div>
-        <div>
-                  {/* Services Income Summary (Total paid split into Cash / Bank)
-           {activeTab === 'services' && currentClinicShift && (
-          <div className="w-60 mt-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200 mb-4">
-            <div className="p-3">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-blue-600" />
-                  <span className="text-sm font-semibold text-blue-800">حسابات الخدمات</span>
-                </div>
-                {isLoadingServicesSummary && (
-                  <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-                )}
-              </div>
-
-              {servicesShiftSummary ? (
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-1">
-                      <Coins className="h-3 w-3 text-green-600" />
-                      <span className="text-xs text-gray-600">كاش</span>
-                    </div>
-                    <span className="text-sm font-medium text-green-700">
-                      {formatNumber(servicesShiftSummary.service_income.cash)}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-1">
-                      <Landmark className="h-3 w-3 text-purple-600" />
-                      <span className="text-xs text-gray-600">بنكك</span>
-                    </div>
-                    <span className="text-sm font-medium text-purple-700">
-                      {formatNumber(servicesShiftSummary.service_income.bank)}
-                    </span>
-                  </div>
-
-                  <div className="border-t border-blue-200 pt-2">
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-1">
-                        <DollarSign className="h-3 w-3 text-blue-600" />
-                        <span className="text-xs font-semibold text-blue-800">الإجمالي المدفوع</span>
-                      </div>
-                      <span className="text-sm font-bold text-blue-800">
-                        {formatNumber(servicesShiftSummary.service_income.total)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ) : !isLoadingServicesSummary ? (
-                <div className="text-center py-2">
-                  <span className="text-xs text-gray-500">لا توجد بيانات</span>
-                </div>
-              ) : null}
-            </div>
-          </div>
-        )} */}
-        </div>
-      
-   
       </div>
 
-      {/* PDF Preview Dialog */}
       <PdfPreviewDialog
         isOpen={isPdfDialogOpen}
         onOpenChange={setIsPdfDialogOpen}
         pdfUrl={pdfUrl}
         title="معاينة الفاتورة"
         fileName={`clinic-invoice-${visitId}.pdf`}
-        isLoading={isGeneratingPdf || generatePdfMutation.isPending}
+        isLoading={generatePdfMutation.isPending}
       />
     </>
   );

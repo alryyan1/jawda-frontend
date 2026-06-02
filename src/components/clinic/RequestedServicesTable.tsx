@@ -652,18 +652,18 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                 <Table size="small">
                   <TableHead>
                     <TableRow>
-                      <TableCell className="text-xl!" align="center">
+                      <TableCell className="" align="center">
                         اسم
                       </TableCell>
                       <TableCell
-                        className="text-xl!    "
+                        className="    "
                         align="center"
                         sx={{ width: 90 }}
                       >
                         السعر
                       </TableCell>
                       <TableCell
-                        className="text-xl!"
+                        className=""
                         align="center"
                         sx={{ width: 90 }}
                       >
@@ -671,7 +671,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                       </TableCell>
                       {isCompanyPatient && (
                         <TableCell
-                          className="text-xl!"
+                          className=""
                           align="center"
                           sx={{ width: 110 }}
                         >
@@ -679,26 +679,26 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                         </TableCell>
                       )}
                       <TableCell
-                        className="text-xl!"
+                        className=""
                         align="center"
                         sx={{ width: 120 }}
                       >
                         المدفوع
                       </TableCell>
                       <TableCell
-                        className="text-xl!"
+                        className=""
                         align="center"
                         sx={{ width: 80 }}
                       >
                         دفع
                       </TableCell>
                       {showExtraColumns && (
-                        <TableCell className="text-xl!" align="center" sx={{ width: 90 }}>
+                        <TableCell className="" align="center" sx={{ width: 90 }}>
                           اكتمال
                         </TableCell>
                       )}
                       {showExtraColumns && (
-                        <TableCell className="text-xl!" align="center" sx={{ width: 160 }}>
+                        <TableCell className="" align="center" sx={{ width: 160 }}>
                           التشخيص
                         </TableCell>
                       )}
@@ -730,14 +730,14 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                               },
                             }}
                           >
-                            <TableCell className="text-xl! " align="center">
+                            <TableCell className=" " align="center">
                               <span
                                 style={isReturned ? { textDecoration: 'line-through', color: 'var(--mui-palette-error-main, #f44336)' } : undefined}
                               >
                                 {rs.service?.name || "خدمة غير معروفة"}
                               </span>
                             </TableCell>
-                            <TableCell className="text-xl!" align="center">
+                            <TableCell className="" align="center">
                               <Box
                                 display="flex"
                                 flexDirection="column"
@@ -755,18 +755,18 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                                 )}
                               </Box>
                             </TableCell>
-                            <TableCell className="text-xl!" align="center">
+                            <TableCell className="" align="center">
                               {Number(rs.count)}
                             </TableCell>
                             {isCompanyPatient && (
-                              <TableCell className="text-xl!" align="center">
+                              <TableCell className="" align="center">
                                 {formatNumber(Number(rs.endurance) || 0)}
                               </TableCell>
                             )}
-                            <TableCell className="text-xl!" align="center">
+                            <TableCell className="" align="center">
                               {formatNumber(rs.amount_paid)}
                             </TableCell>
-                            <TableCell className="text-xl!" align="center">
+                            <TableCell className="" align="center">
                               <Box
                                 display="flex"
                                 alignItems="center"

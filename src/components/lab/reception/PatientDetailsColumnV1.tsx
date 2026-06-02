@@ -319,7 +319,7 @@ const PatientDetailsColumnV1 = forwardRef<
                 تعديل البيانات
               </Button>
             )}
-            <Button
+            {/* <Button
               variant="outline"
               size="sm"
               onClick={() => {
@@ -340,7 +340,7 @@ const PatientDetailsColumnV1 = forwardRef<
             >
               <Mail className="h-4 w-4" />
               SMS
-            </Button>
+            </Button> */}
           </div>
           {/* Details Table */}
           <table className="w-full text-base mb-1 ">

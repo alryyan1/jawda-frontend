@@ -802,7 +802,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                                 size="sm"
                                 className="h-8 w-8 p-0 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50"
                                 onClick={() => handleUnpayLabRequest(request.id)}
-                                disabled={unpayLabRequestMutation.isPending || visit?.patient?.result_print_date != null || !can('الغاء سداد فحص') || visit?.result_auth == true}
+                                disabled={unpayLabRequestMutation.isPending || visit?.patient?.result_print_date != null || !can('الغاء سداد فحص') || visit?.result_auth == true || (request.returned_refunds?.length ?? 0) > 0}
                                 title="إلغاء السداد"
                               >
                                 {unpayLabRequestMutation.isPending ? (
@@ -811,10 +811,21 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                                   <XCircle className="h-4 w-4" />
                                 )}
                               </Button>
-                          
+                              {Number(request.amount_paid) > 0 && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 text-orange-600 hover:text-orange-800 hover:bg-orange-50"
+                                  onClick={() => setRefundLabRequest(request)}
+                                  title="استرداد"
+                                  disabled={(request.returned_refunds?.length ?? 0) > 0}
+                                >
+                                  <RotateCcw className="h-4 w-4" />
+                                </Button>
+                              )}
                             </>
                           )}
-                          
+
                           {/* Bankak Toggle Checkbox */}
                           {request.amount_paid > 0 && (
                             <div className="flex items-center gap-1" title={request.is_bankak ? "إلغاء بنكك" : "تعيين بنكك"}>

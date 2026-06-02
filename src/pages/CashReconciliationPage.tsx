@@ -365,7 +365,26 @@ const CashReconciliationPage: React.FC = () => {
           >
             تقرير التخفيض
           </Button>
-{/* 
+
+          <Button
+            variant="contained"
+            color="error"
+            startIcon={<PdfIcon />}
+            onClick={async () => {
+              if (!selectedShiftId) {
+                toast.error('يرجى اختيار وردية أولاً');
+                return;
+              }
+              const pdfUrl = `${webUrl}reports/shift-refunds/pdf?shift_id=${selectedShiftId}`;
+              window.open(pdfUrl, '_blank');
+              toast.success('تم فتح تقرير الاستردادات في تبويب جديد');
+            }}
+            disabled={!selectedShiftId || isLoading}
+            sx={{ minWidth: 160 }}
+          >
+            تقرير الاستردادات
+          </Button>
+{/*
         <Button
           variant="outlined"
           color="warning"

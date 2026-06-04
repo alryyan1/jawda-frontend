@@ -337,7 +337,7 @@ const DoctorShiftDetailsPage: React.FC = () => {
                 </TableHead>
                 <TableBody>
                   {patients.map((visit) => {
-                    const totalAmount = visit.requested_services.reduce(
+                    const totalAmount = (visit.requested_services ?? []).reduce(
                       (sum, service) => sum + (service.price * service.count), 0
                     );
                     
@@ -369,7 +369,7 @@ const DoctorShiftDetailsPage: React.FC = () => {
                             className="text-blue-600 hover:text-blue-800"
                           >
                             <Eye className="h-4 w-4 mr-1" />
-                            عرض الخدمات ({visit.requested_services.length})
+                            عرض الخدمات ({visit.requested_services?.length ?? 0})
                           </UIButton>
                         </TableCell>
                       </TableRow>

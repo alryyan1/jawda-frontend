@@ -19,6 +19,7 @@ import {
 } from '@/services/financeFirebaseService'
 import { useAuth } from '@/contexts/AuthContext'
 import apiClient from '@/services/api'
+import { getUsersList } from '@/services/userService'
 import type { DoctorShiftFinancialSummary } from '@/types/reports'
 
 // ── journal preview table ─────────────────────────────────────────────────────
@@ -107,6 +108,9 @@ export default function JournalEntryDialog({
   const [loadingData, setLoadingData] = useState(false)
   const [dataError,   setDataError]   = useState<string | null>(null)
 
+  const [usersList,      setUsersList]      = useState<{ id: number; name: string }[]>([])
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null)
+
   // ── amounts ───────────────────────────────────────────────────────────────
   const [clinicCash,       setClinicCash]       = useState(clinicCashProp)
   const [clinicBank,       setClinicBank]       = useState(clinicBankProp)
@@ -149,6 +153,7 @@ export default function JournalEntryDialog({
   // ── load Firestore data on open ───────────────────────────────────────────
   useEffect(() => {
     if (!open || !user) return
+    setSelectedUserId(user.id)
     setLoadingData(true); setDataError(null)
 
     Promise.all([
@@ -157,16 +162,24 @@ export default function JournalEntryDialog({
       fetchGlobalJournalSettings(),
       fetchUserJournalAccounts(user.id),
       fetchDoctorPartyMappings(),
+      getUsersList(),
     ])
-      .then(([accs, parts, g, u, partyMap]) => {
+      .then(([accs, parts, g, u, partyMap, users]) => {
         setAccounts(accs); setParties(parts)
         setGlobal(g); setUserAccs(u)
+        setUsersList(users)
         const savedPartyId = partyMap[doctorId] ?? null
         if (savedPartyId) setDoctorParty(parts.find(p => p.id === savedPartyId) ?? null)
       })
       .catch(() => setDataError('تعذّر تحميل البيانات من Firebase. تحقق من إعداد Firestore وإعدادات الحسابات الرئيسية.'))
       .finally(() => setLoadingData(false))
   }, [open, user, doctorId])
+
+  // ── reload accounts when selected user changes ────────────────────────────
+  useEffect(() => {
+    if (!open || !selectedUserId || !user || selectedUserId === user.id) return
+    fetchUserJournalAccounts(selectedUserId).then(setUserAccs).catch(() => {})
+  }, [selectedUserId])
 
   // ── helpers ───────────────────────────────────────────────────────────────
   const findAcc = (id: string | null | undefined) => accounts.find(a => a.id === id) ?? null
@@ -316,6 +329,22 @@ export default function JournalEntryDialog({
                     لم يتم ضبط إعدادات المحاسبة بعد. يرجى الذهاب إلى <strong>الإعدادات ← المحاسبة ← الحسابات الرئيسية</strong> وتحديد حسابات الإيراد والأتعاب والصندوق والبنك أولاً.
                   </Alert>
                 )}
+
+                {/* User selector */}
+                <Autocomplete
+                  options={usersList}
+                  value={usersList.find(u => u.id === selectedUserId) ?? null}
+                  onChange={(_, v) => setSelectedUserId(v?.id ?? user?.id ?? null)}
+                  getOptionLabel={u => u.name}
+                  isOptionEqualToValue={(a, b) => a.id === b.id}
+                  size="small"
+                  renderInput={p => (
+                    <TextField {...p}
+                      label="المستخدم (حسابات الصندوق والبنك)"
+                      helperText="حسابات الصندوق والبنك المستخدمة في القيود"
+                    />
+                  )}
+                />
 
                 {/* Doctor party */}
                 <Autocomplete

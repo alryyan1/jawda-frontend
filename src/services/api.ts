@@ -39,7 +39,8 @@ apiClient.interceptors.response.use(
 
     if (
       error.response?.data?.message === "Unauthenticated." &&
-      !isAuthEndpoint
+      !isAuthEndpoint &&
+      !(error.config as any)?.skipAuthRedirect
     ) {
       // Clear auth data
       localStorage.removeItem("authToken");

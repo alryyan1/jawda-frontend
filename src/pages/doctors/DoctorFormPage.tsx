@@ -5,6 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 import {
+  Autocomplete,
   Box,
   TextField,
   Button,
@@ -20,7 +21,8 @@ import {
   CircularProgress,
   FormHelperText,
   Checkbox,
-  FormControlLabel
+  FormControlLabel,
+  createFilterOptions,
 } from '@mui/material';
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { Save as SaveIcon } from '@mui/icons-material';
@@ -36,7 +38,6 @@ import {
   updateDoctorFirebaseId,
   DoctorFormMode,
 } from "@/services/doctorService";
-import { DarkThemeAutocomplete } from "@/components/ui/mui-autocomplete";
 import AddSpecialistDialog from "@/components/doctors/AddSpecialistDialog";
 import ManageDoctorServicesDialog from "@/components/doctors/ManageDoctorServicesDialog";
 import { getDocs, collection, writeBatch, doc } from "firebase/firestore";
@@ -62,6 +63,10 @@ interface DoctorFormValues {
   calc_insurance: boolean;
   is_default?: boolean;
 }
+
+const hospitalDoctorFilter = createFilterOptions<HospitalDoctor>({
+  stringify: (option) => `${option.name ?? ''} ${option.id}`,
+});
 
 interface DoctorFormPageProps {
   mode: DoctorFormMode;
@@ -360,11 +365,12 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
             {isEditMode && (
               <Box>
                 <Typography variant="subtitle2" sx={{ mb: 1 }}>ربط بطبيب (مع المنصه)</Typography>
-                <DarkThemeAutocomplete
+                <Autocomplete
                   options={hospitalDoctors}
-                  getOptionLabel={(option) => (option as HospitalDoctor).name ?? option.id}
+                  getOptionLabel={(option) => option.name ?? option.id}
+                  filterOptions={hospitalDoctorFilter}
                   value={selectedHospitalDoctor}
-                  onChange={(_, newValue) => handleFirestoreDoctorSelect(newValue as HospitalDoctor | null)}
+                  onChange={(_, newValue) => handleFirestoreDoctorSelect(newValue)}
                   loading={isLoadingHospitalDoctors || updateFirebaseIdMutation.isPending}
                   isOptionEqualToValue={(option, value) => option.id === value?.id}
                   noOptionsText="لا توجد أطباء متاحة"
@@ -376,7 +382,7 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
                       label="اختر طبيب من Hospital"
                       placeholder="ابحث في الأطباء..."
                       size="small"
-                      helperText="اختر طبيب لربطه بالطبيب المحلي"
+                      helperText={selectedHospitalDoctor ? `Firebase ID: ${selectedHospitalDoctor.id}` : "اختر طبيب لربطه بالطبيب المحلي"}
                     />
                   )}
                 />

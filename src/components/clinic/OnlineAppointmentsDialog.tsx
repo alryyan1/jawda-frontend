@@ -55,7 +55,8 @@ const OnlineAppointmentsDialog: React.FC<OnlineAppointmentsDialogProps> = ({
     firebase_id?: string;
   };
   const doctorFirebaseId = (activeDoctorShift as ShiftWithFirestoreIds | null)?.firebase_id;
-
+  // console.log('Active Doctor Shift:', activeDoctorShift);
+  console.log('Doctor Firebase ID:', doctorFirebaseId);
   const {
     data: appointments = [],
     isLoading,

@@ -48,6 +48,10 @@ export function loadConnection(): FinanceConnection {
   catch { return { ...DEFAULT_CONN } }
 }
 
+export function saveConnection(conn: FinanceConnection): void {
+  localStorage.setItem(CONN_KEY, JSON.stringify(conn))
+}
+
 // ── types ─────────────────────────────────────────────────────────────────────
 
 export interface FinanceAccount {

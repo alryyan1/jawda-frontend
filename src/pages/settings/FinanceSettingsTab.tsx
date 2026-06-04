@@ -13,7 +13,7 @@ import {
   type FinanceAccount, type FinanceConnection, type FinanceParty,
   type FinanceGlobalAccounts, type FinanceUserAccounts,
   DEFAULT_GLOBAL,
-  loadConnection,
+  loadConnection, saveConnection,
   isGlobalComplete, isUserAccountsComplete,
   importAccountsFromFinanceApi, importPartiesFromFinanceApi, syncDoctorsAsParties,
   fetchFinanceAccounts, fetchFinanceParties,
@@ -110,6 +110,11 @@ export default function FinanceSettingsTab() {
   const [importedAccsCount,   setImportedAccsCount]   = useState<number | null>(null)
   const [importedPartiesCount, setImportedPartiesCount] = useState<number | null>(null)
   const [syncedDoctorsCount,  setSyncedDoctorsCount]  = useState<number | null>(null)
+
+  const handleSaveConnection = () => {
+    saveConnection(conn)
+    toast.success('تم حفظ بيانات الاتصال')
+  }
 
   const handleImportAccounts = async () => {
     setImportingAccs(true)
@@ -303,6 +308,15 @@ export default function FinanceSettingsTab() {
                   }}
                 />
               </Stack>
+              <Box>
+                <Button
+                  variant="contained"
+                  disabled={!conn.baseUrl.trim() || !conn.token.trim()}
+                  onClick={handleSaveConnection}
+                >
+                  حفظ بيانات الاتصال
+                </Button>
+              </Box>
               <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
                 <Button
                   variant="outlined"

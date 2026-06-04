@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import apiClient from "@/services/api";
+import JournalEntryDialog from "./JournalEntryDialog";
+import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import {
   Button,
+  CircularProgress,
   Dialog,
   DialogContent,
   DialogTitle,
@@ -21,6 +24,7 @@ import { Eye } from "lucide-react";
 import { formatNumber } from "@/lib/utils";
 import type { DoctorShift as DoctorShiftType, Doctor } from "@/types/doctors";
 import type { DoctorShiftFinancialSummary } from "@/types/reports";
+import type { UserShiftIncomeSummary } from "@/types/users";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAuthorization } from "@/hooks/useAuthorization";
 
@@ -89,6 +93,9 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
   const [bankAmount, setBankAmount] = useState<number>(0);
   const [doctorShifts, setDoctorShifts] = useState<DoctorShiftItem[]>([]);
   const [showCashReclaimDialog, setShowCashReclaimDialog] = useState(false);
+  const [showJournalDialog, setShowJournalDialog] = useState(false);
+  const [journalAmounts, setJournalAmounts] = useState({ cash: 0, bank: 0, total: 0, clinicCashTotal: 0, clinicBankTotal: 0 });
+  const [clinicTotals, setClinicTotals] = useState({ cash: 0, bank: 0 });
   const [update, setUpdate] = useState(0);
   const [showAdditionalCosts, setShowAdditionalCosts] = useState(false);
   const [selectedDoctorShift, setSelectedDoctorShift] =
@@ -104,6 +111,7 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
   const [selectedSubCostIdForReclaim, setSelectedSubCostIdForReclaim] =
     useState<number | null>(null);
   const [isAddingCost, setIsAddingCost] = useState(false);
+  const [journalLoadingId, setJournalLoadingId] = useState<number | null>(null);
   // Removed fetching of last shift as it is not used currently
   const { user } = useAuth();
   useEffect(() => {
@@ -242,22 +250,31 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
   useEffect(() => {
     setCashAmount(0);
     setBankAmount(0);
-    if (selectedDoctorShift) {
-      const api = selectedDoctorShift.doctor?.calc_insurance
-        ? "doctor-shifts"
-        : "doctor-shifts";
-      apiClient
-        .get<{
-          data: DoctorShiftFinancialSummary;
-        }>(`${api}/${selectedDoctorShift.id}/financial-summary`)
-        .then(({ data }) => {
-          const summary: DoctorShiftFinancialSummary = data?.data ?? data;
-          const cashAmount = summary?.total_doctor_share || 0;
-          setCashAmount(cashAmount);
-          setTemp(cashAmount);
-        });
-    }
-  }, [selectedDoctorShift]);
+    if (!selectedDoctorShift) return;
+
+    Promise.all([
+      apiClient.get<{ data: DoctorShiftFinancialSummary }>(
+        `doctor-shifts/${selectedDoctorShift.id}/financial-summary`,
+      ),
+      currentClinicShift?.id
+        ? apiClient.get<{ data: UserShiftIncomeSummary }>(
+            `user/current-shift-income-summary`,
+            { params: { shift_id: currentClinicShift.id } },
+          )
+        : Promise.resolve(null),
+    ]).then(([doctorRes, shiftRes]) => {
+      const doctorSummary: DoctorShiftFinancialSummary = doctorRes.data?.data ?? doctorRes.data;
+      const total = doctorSummary?.total_doctor_share || 0;
+      setCashAmount(total);
+      setTemp(total);
+
+      const shiftSummary: UserShiftIncomeSummary | null = shiftRes ? (shiftRes.data?.data ?? shiftRes.data) : null;
+      setClinicTotals({
+        cash: shiftSummary?.total_cash ?? 0,
+        bank: shiftSummary?.total_bank ?? 0,
+      });
+    });
+  }, [selectedDoctorShift, currentClinicShift?.id]);
 
   const prooveCashReclaim = (setIsLoading: (loading: boolean) => void) => {
     const r = confirm("هل انت متاكد من اثبات استحقاق الطبيب");
@@ -303,11 +320,44 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
               item.id === selectedDoctorShift.id ? updated : item,
             ),
           );
+          // Open journal entry dialog after proofing succeeds
+          setJournalAmounts({ cash: cashAmount, bank: bankAmount, total: temp, clinicCashTotal: clinicTotals.cash, clinicBankTotal: clinicTotals.bank });
+          setShowJournalDialog(true);
         })
         .catch(() => {})
         .finally(() => setIsLoading(false));
     }
   };
+  const openJournalDirectly = async (shift: DoctorShiftItem) => {
+    setJournalLoadingId(shift.id);
+    setSelectedDoctorShift(shift);
+    try {
+      const [doctorRes, shiftRes] = await Promise.all([
+        apiClient.get<{ data: DoctorShiftFinancialSummary }>(
+          `doctor-shifts/${shift.id}/financial-summary`,
+        ),
+        currentClinicShift?.id
+          ? apiClient.get<{ data: UserShiftIncomeSummary }>(
+              `user/current-shift-income-summary`,
+              { params: { shift_id: currentClinicShift.id } },
+            )
+          : Promise.resolve(null),
+      ]);
+
+      const doctorSummary: DoctorShiftFinancialSummary = doctorRes.data?.data ?? doctorRes.data;
+      const total = doctorSummary?.total_doctor_share || 0;
+
+      const shiftSummary: UserShiftIncomeSummary | null = shiftRes ? (shiftRes.data?.data ?? shiftRes.data) : null;
+      const cCash = shiftSummary?.total_cash ?? 0;
+      const cBank = shiftSummary?.total_bank ?? 0;
+
+      setJournalAmounts({ cash: total, bank: 0, total, clinicCashTotal: cCash, clinicBankTotal: cBank });
+      setShowJournalDialog(true);
+    } finally {
+      setJournalLoadingId(null);
+    }
+  };
+
   const { hasRole } = useAuthorization();
 
   return (
@@ -323,7 +373,8 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
             <TableCell>استحقاق النقدي</TableCell>
             <TableCell>استحقاق التامين</TableCell>
             <TableCell>الزمن</TableCell>
-            <TableCell> اثبات  </TableCell>
+            <TableCell>اثبات</TableCell>
+            <TableCell>قيد محاسبي</TableCell>
             <TableCell>اخري</TableCell>
           </TableRow>
         </TableHead>
@@ -402,6 +453,22 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
                       size="small"
                     >
                         اثبات  
+                    </Button>
+                  </TableCell>
+                  <TableCell className="text-sm!">
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      color="secondary"
+                      disabled={journalLoadingId === shift.id || !shift.is_cash_reclaim_prooved}
+                      onClick={() => openJournalDirectly(shift)}
+                      startIcon={
+                        journalLoadingId === shift.id
+                          ? <CircularProgress size={14} color="inherit" />
+                          : <AccountBalanceIcon fontSize="small" />
+                      }
+                    >
+                      قيد
                     </Button>
                   </TableCell>
                   <TableCell className="text-sm!">
@@ -485,6 +552,26 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Journal entry dialog — opens after cash reclaim is proved */}
+      {showJournalDialog && selectedDoctorShift && (
+        <JournalEntryDialog
+          open={showJournalDialog}
+          onClose={() => setShowJournalDialog(false)}
+          doctorName={selectedDoctorShift.doctor?.name || selectedDoctorShift.doctor_name || ''}
+          doctorId={selectedDoctorShift.doctor?.id ?? selectedDoctorShift.doctor_id ?? 0}
+          totalAmount={journalAmounts.total}
+          cashAmount={journalAmounts.cash}
+          bankAmount={journalAmounts.bank}
+          date={new Date().toISOString().slice(0, 10)}
+          reference={`DS-${selectedDoctorShift.id}`}
+          userName={user?.name ?? user?.username}
+          clinicShiftId={currentClinicShift?.id}
+          doctorShiftId={selectedDoctorShift.id}
+          clinicCashTotal={journalAmounts.clinicCashTotal}
+          clinicBankTotal={journalAmounts.clinicBankTotal}
+        />
+      )}
 
       {/* Cash reclaim dialog */}
       <Dialog

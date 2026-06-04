@@ -23,7 +23,9 @@ import {
   Divider,
   Badge,
 } from "@mui/material";
-import { LockOpen, FactCheck } from "@mui/icons-material";
+import { LockOpen, FactCheck, AccountBalance } from "@mui/icons-material";
+import { Button } from "@mui/material";
+import JournalEntryDialog from "@/components/clinic/JournalEntryDialog";
 import { formatNumber } from "@/lib/utils";
 import type { DoctorShiftReportItem } from "@/types/reports";
 import { useNavigate } from "react-router-dom";
@@ -76,6 +78,9 @@ function DoctorShiftsReportTable({
   // Popover state: anchor element + which shift id is open
   const [popoverAnchor, setPopoverAnchor] = useState<HTMLElement | null>(null);
   const [popoverShiftId, setPopoverShiftId] = useState<number | null>(null);
+
+  // Journal dialog
+  const [journalShift, setJournalShift] = useState<DoctorShiftReportItem | null>(null);
 
   const openPopover = (e: React.MouseEvent<HTMLElement>, shiftId: number) => {
     e.stopPropagation();
@@ -365,9 +370,33 @@ function DoctorShiftsReportTable({
                 </Box>
               );
             })}
+            <Divider sx={{ my: 1 }} />
+            <Button
+              fullWidth size="small" variant="outlined" color="primary"
+              startIcon={<AccountBalance fontSize="small" />}
+              onClick={() => { setJournalShift(popoverShift); closePopover(); }}
+            >
+              قيد محاسبي
+            </Button>
           </Box>
         )}
       </Popover>
+
+      {journalShift && (
+        <JournalEntryDialog
+          open={!!journalShift}
+          onClose={() => setJournalShift(null)}
+          doctorName={journalShift.doctor_name}
+          doctorId={journalShift.doctor_id}
+          totalAmount={journalShift.total_doctor_entitlement ?? 0}
+          cashAmount={journalShift.cash_entitlement ?? 0}
+          bankAmount={journalShift.insurance_entitlement ?? 0}
+          date={(journalShift.created_at ?? new Date().toISOString()).slice(0, 10)}
+          reference={`DS-${journalShift.id}`}
+          clinicShiftId={journalShift.shift_id}
+          doctorShiftId={journalShift.id}
+        />
+      )}
     </Box>
   );
 }

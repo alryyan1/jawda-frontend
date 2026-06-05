@@ -96,6 +96,7 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
   const [showJournalDialog, setShowJournalDialog] = useState(false);
   const [journalAmounts, setJournalAmounts] = useState({ cash: 0, bank: 0, total: 0, clinicCashTotal: 0, clinicBankTotal: 0 });
   const [clinicTotals, setClinicTotals] = useState({ cash: 0, bank: 0 });
+  const [clinicTotalsLoading, setClinicTotalsLoading] = useState(false);
   const [update, setUpdate] = useState(0);
   const [showAdditionalCosts, setShowAdditionalCosts] = useState(false);
   const [selectedDoctorShift, setSelectedDoctorShift] =
@@ -252,6 +253,7 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
     setBankAmount(0);
     if (!selectedDoctorShift) return;
 
+    setClinicTotalsLoading(true);
     Promise.all([
       apiClient.get<{ data: DoctorShiftFinancialSummary }>(
         `doctor-shifts/${selectedDoctorShift.id}/financial-summary`,
@@ -273,7 +275,7 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
         cash: shiftSummary?.total_cash ?? 0,
         bank: shiftSummary?.total_bank ?? 0,
       });
-    });
+    }).finally(() => setClinicTotalsLoading(false));
   }, [selectedDoctorShift, currentClinicShift?.id]);
 
   const prooveCashReclaim = (setIsLoading: (loading: boolean) => void) => {
@@ -585,31 +587,68 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
       >
         <DialogTitle>اثبات الاستحقاق النقدي</DialogTitle>
         <DialogContent>
+          <Stack
+            direction="row"
+            justifyContent="space-around"
+            sx={{ mb: 2, p: 1.5, bgcolor: "grey.100", borderRadius: 1 }}
+          >
+            <Box textAlign="center">
+              <Typography variant="caption" color="text.secondary">
+                صافي الصندوق
+              </Typography>
+              {clinicTotalsLoading ? (
+                <CircularProgress size={20} color="success" />
+              ) : (
+                <Typography variant="h6" color="success.main" fontWeight={700}>
+                  {formatNumber(clinicTotals.cash)}
+                </Typography>
+              )}
+            </Box>
+            <Box textAlign="center">
+              <Typography variant="caption" color="text.secondary">
+                صافي البنك
+              </Typography>
+              {clinicTotalsLoading ? (
+                <CircularProgress size={20} color="info" />
+              ) : (
+                <Typography variant="h6" color="info.main" fontWeight={700}>
+                  {formatNumber(clinicTotals.bank)}
+                </Typography>
+              )}
+            </Box>
+          </Stack>
           <Stack direction={"column"} gap={1} sx={{ p: 1 }}>
             <TextField
               type="number"
-              value={cashAmount}
+              value={Number(cashAmount).toFixed(0) || ""}
               onChange={(e) => {
                 const value = Number(e.target.value || 0);
                 setCashAmount(value);
                 setBankAmount(temp - value);
               }}
               label="الصندوق"
+              disabled={clinicTotalsLoading}
             />
             <TextField
               type="number"
-              value={bankAmount}
+              value={Number(bankAmount).toFixed(0) || ""}
               onChange={(e) => {
                 const value = Number(e.target.value || 0);
                 setBankAmount(value);
                 setCashAmount(temp - value);
               }}
               label="البنك"
+              disabled={clinicTotalsLoading}
             />
             <Button
               onClick={() => prooveCashReclaim(() => {})}
               variant="contained"
-              disabled={isAddingCost}
+              disabled={
+                clinicTotalsLoading ||
+                isAddingCost ||
+                cashAmount > clinicTotals.cash ||
+                bankAmount > clinicTotals.bank
+              }
             >
               {isAddingCost ? "جاري المعالجة..." : "خصم  الاستحقاق النقدي"}
             </Button>

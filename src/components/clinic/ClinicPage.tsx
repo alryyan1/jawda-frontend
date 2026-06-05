@@ -542,7 +542,7 @@ const ClinicPage: React.FC = () => {
 
       {/* Financial Summary Dialog */}
       <Dialog open={isFinancialSummaryDialogOpen} onOpenChange={setIsFinancialSummaryDialogOpen}>
-        <DialogContent className="!max-w-3xl max-h-[90vh] overflow-y-auto w-[95vw] ">
+        <DialogContent className="!max-w-4xl max-h-[90vh] overflow-y-auto w-[95vw] ">
           <DialogHeader>
 
           </DialogHeader>

@@ -63,7 +63,7 @@ const ClinicFinancialSummary: React.FC<ClinicFinancialSummaryProps> = ({
   
 
       {/* Overall Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         {/* Total Income */}
         <div className=" rounded-xl border text-center  p-6">
             <span className="text-sm font-medium ">إجمالي الإيرادات</span>
@@ -91,32 +91,18 @@ const ClinicFinancialSummary: React.FC<ClinicFinancialSummaryProps> = ({
           </div>
           <div className="text-xs  mt-1"> </div>
         </div>
-      </div>
-
-      {/* Refunds & Net */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        {totalCashRefund > 0 && (
-          <div className="rounded-xl border border-orange-200 bg-orange-50/50 text-center p-6">
-            <span className="text-sm font-medium text-orange-700">استرداد كاش</span>
-            <div className="text-2xl font-bold text-orange-700">
-              {formatNumber(totalCashRefund)}
-            </div>
-          </div>
-        )}
-        {totalBankRefund > 0 && (
-          <div className="rounded-xl border border-orange-200 bg-orange-50/50 text-center p-6">
-            <span className="text-sm font-medium text-orange-700">استرداد بنك</span>
-            <div className="text-2xl font-bold text-orange-700">
-              {formatNumber(totalBankRefund)}
-            </div>
-          </div>
-        )}
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 text-center p-6">
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 text-center p-6">
           <span className="text-sm font-medium text-emerald-700">الصافي</span>
           <div className="text-2xl font-bold text-emerald-800">
             {formatNumber(netTotal)}
           </div>
         </div>
+      </div>
+
+      {/* Refunds & Net */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      
+      
       </div>
 
       {/* Detailed Breakdown */}
@@ -155,29 +141,6 @@ const ClinicFinancialSummary: React.FC<ClinicFinancialSummaryProps> = ({
                 </span>
               </div>
 
-              {(Number(servicesShiftSummary.service_income.cash_refund) > 0 || Number(servicesShiftSummary.service_income.bank_refund) > 0) && (
-                <>
-                  <div className="border-t border-orange-200 pt-2 mt-2">
-                    <span className="text-sm font-medium text-orange-700">الاستردادات</span>
-                  </div>
-                  {Number(servicesShiftSummary.service_income.cash_refund) > 0 && (
-                    <div className="flex justify-between items-center py-2">
-                      <span className="text-sm text-orange-700">استرداد كاش</span>
-                      <span className="text-lg font-medium text-orange-700">
-                        {formatNumber(servicesShiftSummary.service_income.cash_refund)}
-                      </span>
-                    </div>
-                  )}
-                  {Number(servicesShiftSummary.service_income.bank_refund) > 0 && (
-                    <div className="flex justify-between items-center py-2">
-                      <span className="text-sm text-orange-700">استرداد بنك</span>
-                      <span className="text-lg font-medium text-orange-700">
-                        {formatNumber(servicesShiftSummary.service_income.bank_refund)}
-                      </span>
-                    </div>
-                  )}
-                </>
-              )}
 
               <div className="flex justify-between items-center py-3  rounded-lg px-3">
                 <div className="flex items-center gap-2">

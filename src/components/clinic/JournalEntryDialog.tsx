@@ -44,9 +44,9 @@ function EntryTable({ lines, title }: { lines: JLine[]; title: string }) {
         <Box component="tbody">
           {lines.map((l, i) => (
             <Box component="tr" key={i} sx={{ bgcolor: i % 2 ? '#f9f9f9' : '#fff', '& td': { p: '4px 8px', border: '1px solid #ddd', textAlign: 'center' } }}>
-              <Box component="td" sx={{ textAlign: 'right !important', fontSize: 12 }}>
+              <Box component="td" sx={{ textAlign: 'center !important', fontSize: 12 }}>
                 {l.account
-                  ? <><strong>{l.account.code} — {l.account.name}</strong>{l.party && <Box component="span" sx={{ color: 'text.secondary', fontSize: 10, mr: 0.5 }}> [{l.party.name}]</Box>}</>
+                  ? <><strong>{l.account.code} — {l.account.name}</strong>{l.party && <Box component="span" sx={{ color: 'red', fontSize: 10, mr: 0.5 }}> [{l.party.name}]</Box>}</>
                   : <Box component="em" sx={{ color: 'error.main' }}>{l.label} (غير محدد)</Box>}
               </Box>
               <Box component="td" sx={{ direction: 'ltr', color: l.debit  > 0 ? '#1565C0' : '#bbb', fontWeight: l.debit  > 0 ? 600 : 400 }}>{l.debit  > 0 ? fmt(l.debit)  : '—'}</Box>
@@ -144,6 +144,54 @@ export default function JournalEntryDialog({
       .catch(() => {})
   }, [open, doctorShiftId])
 
+  // ── users payment summary ─────────────────────────────────────────────────
+  interface UserPayment { id: number; name: string; total_cash: number; total_bank: number; total: number }
+  const [usersPayment,        setUsersPayment]        = useState<UserPayment[]>([])
+  const [usersPaymentLoading, setUsersPaymentLoading] = useState(false)
+  interface UserAccsEntry { cashBoxAccountId: string | null; bankAccountId: string | null }
+  const [userAccsMap, setUserAccsMap] = useState<Record<number, UserAccsEntry>>({})
+
+  const [payersList,        setPayersList]        = useState<UserPayment[]>([])
+  const [payersAccsMap,     setPayersAccsMap]     = useState<Record<number, UserAccsEntry>>({})
+
+  const loadAccsMap = async (list: UserPayment[]): Promise<Record<number, UserAccsEntry>> => {
+    const entries = await Promise.all(
+      list.map(u =>
+        fetchUserJournalAccounts(u.id)
+          .then(a => [u.id, { cashBoxAccountId: a.cashBoxAccountId ?? null, bankAccountId: a.bankAccountId ?? null }] as const)
+          .catch(() => [u.id, { cashBoxAccountId: null, bankAccountId: null }] as const)
+      )
+    )
+    return Object.fromEntries(entries)
+  }
+
+  useEffect(() => {
+    if (!open || !doctorShiftId) {
+      setUsersPayment([]); setUserAccsMap({})
+      setPayersList([]); setPayersAccsMap({})
+      return
+    }
+    setUsersPaymentLoading(true)
+    Promise.all([
+      apiClient.get<{ data: UserPayment[] }>(`doctor-shifts/${doctorShiftId}/users-payment-summary`),
+      apiClient.get<{ data: UserPayment[] }>(`doctor-shifts/${doctorShiftId}/users-who-payed-doctor`),
+    ])
+      .then(async ([collectedRes, payersRes]) => {
+        const collected = collectedRes.data?.data ?? []
+        const payers    = payersRes.data?.data    ?? []
+        setUsersPayment(collected)
+        setPayersList(payers)
+        const [collectedMap, payersMap] = await Promise.all([
+          loadAccsMap(collected),
+          loadAccsMap(payers),
+        ])
+        setUserAccsMap(collectedMap)
+        setPayersAccsMap(payersMap)
+      })
+      .catch(() => { setUsersPayment([]); setPayersList([]) })
+      .finally(() => setUsersPaymentLoading(false))
+  }, [open, doctorShiftId])
+
   // ── submit state ──────────────────────────────────────────────────────────
   const [submitting, setSubmitting] = useState(false)
   const [done,       setDone]       = useState<string[] | null>(null)
@@ -200,23 +248,60 @@ export default function JournalEntryDialog({
   // ── entry lines ───────────────────────────────────────────────────────────
 
   const entry0Lines: JLine[] = [
-    ...(clinicCash > 0 ? [{ label: 'صندوق الكاش', account: cashBoxAcc, debit: clinicCash, credit: 0 }] : []),
-    ...(clinicBank > 0 ? [{ label: 'بنك / شبكة',  account: bankAcc,   debit: clinicBank, credit: 0 }] : []),
-    {                    label: 'إيرادات العيادة',  account: revenueAcc, party: doctorParty, debit: 0, credit: clinicRevTotal },
+    ...usersPayment.flatMap(u => {
+      const a = userAccsMap[u.id]
+      const lines: JLine[] = []
+      const cash = Number(u.total_cash)
+      const bank = Number(u.total_bank)
+      if (cash > 0) lines.push({ label: `صندوق — ${u.name}`, account: findAcc(a?.cashBoxAccountId), debit: cash, credit: 0 })
+      if (bank > 0) lines.push({ label: `بنك — ${u.name}`,    account: findAcc(a?.bankAccountId),    debit: bank, credit: 0 })
+      return lines
+    }),
+    // fallback to current user accounts when no per-user data available
+    ...(usersPayment.length === 0 ? [
+      ...(clinicCash > 0 ? [{ label: 'صندوق الكاش', account: cashBoxAcc, debit: clinicCash, credit: 0 }] : []),
+      ...(clinicBank > 0 ? [{ label: 'بنك / شبكة',  account: bankAcc,   debit: clinicBank, credit: 0 }] : []),
+    ] : []),
+    { label: 'إيرادات العيادة', account: revenueAcc, party: doctorParty, debit: 0, credit: clinicRevTotal },
   ]
   const entry1Lines: JLine[] = [
     { label: 'مصروف أتعاب', account: feeAcc,          debit: totalAmount, credit: 0 },
     { label: 'ذمم الأطباء', account: receivablesAcc,   party: doctorParty, debit: 0, credit: totalAmount },
   ]
   const entry2Lines: JLine[] = [
-    { label: 'ذمم الأطباء', account: receivablesAcc,   party: doctorParty, debit: totalAmount, credit: 0 },
-    ...(cashAmount > 0 ? [{ label: 'صندوق الكاش', account: cashBoxAcc, debit: 0, credit: cashAmount }] : []),
-    ...(bankAmount > 0 ? [{ label: 'بنك / شبكة',  account: bankAcc,    debit: 0, credit: bankAmount  }] : []),
+    { label: 'ذمم الأطباء', account: receivablesAcc, party: doctorParty, debit: totalAmount, credit: 0 },
+    ...(payersList.length > 0
+      ? payersList.flatMap(u => {
+          const a = payersAccsMap[u.id]
+          const lines: JLine[] = []
+          const cash = Number(u.total_cash); const bank = Number(u.total_bank)
+          if (cash > 0) lines.push({ label: `صندوق — ${u.name}`, account: findAcc(a?.cashBoxAccountId), debit: 0, credit: cash })
+          if (bank > 0) lines.push({ label: `بنك — ${u.name}`,   account: findAcc(a?.bankAccountId),    debit: 0, credit: bank })
+          return lines
+        })
+      : [
+          ...(cashAmount > 0 ? [{ label: 'صندوق الكاش', account: cashBoxAcc, debit: 0, credit: cashAmount }] : []),
+          ...(bankAmount > 0 ? [{ label: 'بنك / شبكة',  account: bankAcc,    debit: 0, credit: bankAmount  }] : []),
+        ]
+    ),
   ]
 
-  const canSubmit = settingsReady && !!doctorParty &&
-    (cashAmount <= 0 || !!cashBoxAcc) && (bankAmount <= 0 || !!bankAcc) &&
-    (!hasRevEntry || (!!revenueAcc && (clinicCash <= 0 || !!cashBoxAcc) && (clinicBank <= 0 || !!bankAcc)))
+  const revUsersReady = usersPayment.length === 0
+    ? (clinicCash <= 0 || !!cashBoxAcc) && (clinicBank <= 0 || !!bankAcc)
+    : usersPayment.every(u => {
+        const a = userAccsMap[u.id]
+        return (!Number(u.total_cash) || !!a?.cashBoxAccountId) && (!Number(u.total_bank) || !!a?.bankAccountId)
+      })
+
+  const payUsersReady = payersList.length === 0
+    ? (cashAmount <= 0 || !!cashBoxAcc) && (bankAmount <= 0 || !!bankAcc)
+    : payersList.every(u => {
+        const a = payersAccsMap[u.id]
+        return (!Number(u.total_cash) || !!a?.cashBoxAccountId) && (!Number(u.total_bank) || !!a?.bankAccountId)
+      })
+
+  const canSubmit = settingsReady && !!doctorParty && payUsersReady &&
+    (!hasRevEntry || (!!revenueAcc && revUsersReady))
 
   // ── submit ────────────────────────────────────────────────────────────────
 
@@ -237,12 +322,24 @@ export default function JournalEntryDialog({
       const reqs: Promise<string>[] = []
 
       if (hasRevEntry && revenueAcc) {
+        const revDebitLines = usersPayment.length > 0
+          ? usersPayment.flatMap(u => {
+              const a = userAccsMap[u.id]
+              const ls: { account_id: string; description: string; debit: number; credit: number }[] = []
+              const cash = Number(u.total_cash); const bank = Number(u.total_bank)
+              if (cash > 0 && a?.cashBoxAccountId) ls.push({ account_id: a.cashBoxAccountId, description: `كاش — ${u.name}`,  debit: cash, credit: 0 })
+              if (bank > 0 && a?.bankAccountId)    ls.push({ account_id: a.bankAccountId,    description: `شبكة — ${u.name}`, debit: bank, credit: 0 })
+              return ls
+            })
+          : [
+              ...(clinicCash > 0 ? [{ account_id: userAccs.cashBoxAccountId!, description: 'كاش من المرضى',  debit: clinicCash,  credit: 0 }] : []),
+              ...(clinicBank > 0 ? [{ account_id: userAccs.bankAccountId!,    description: 'شبكة من المرضى', debit: clinicBank,  credit: 0 }] : []),
+            ]
         reqs.push(createJournalEntry({
           date, reference: ref,
           description: `إثبات إيراد العيادة | د. ${doctorName}${sfx}`,
           lines: [
-            ...(clinicCash > 0 ? [{ account_id: userAccs.cashBoxAccountId!, description: 'كاش من المرضى',  debit: clinicCash,  credit: 0 }] : []),
-            ...(clinicBank > 0 ? [{ account_id: userAccs.bankAccountId!,    description: 'شبكة من المرضى', debit: clinicBank,  credit: 0 }] : []),
+            ...revDebitLines,
             { account_id: global.clinicRevenueAccountId!, party_id: doctorParty!.id, description: 'إيراد العيادة', debit: 0, credit: clinicRevTotal },
           ],
         }))
@@ -256,12 +353,25 @@ export default function JournalEntryDialog({
         ],
       }))
 
+      const payDebitLines = payersList.length > 0
+        ? payersList.flatMap(u => {
+            const a = payersAccsMap[u.id]
+            const ls: { account_id: string; description: string; debit: number; credit: number }[] = []
+            const cash = Number(u.total_cash); const bank = Number(u.total_bank)
+            if (cash > 0 && a?.cashBoxAccountId) ls.push({ account_id: a.cashBoxAccountId, description: `صندوق — ${u.name}`, debit: 0, credit: cash })
+            if (bank > 0 && a?.bankAccountId)    ls.push({ account_id: a.bankAccountId,    description: `بنك — ${u.name}`,   debit: 0, credit: bank })
+            return ls
+          })
+        : [
+            ...(cashAmount > 0 ? [{ account_id: userAccs.cashBoxAccountId!, description: 'صندوق', debit: 0, credit: cashAmount }] : []),
+            ...(bankAmount > 0 ? [{ account_id: userAccs.bankAccountId!,    description: 'بنك',   debit: 0, credit: bankAmount  }] : []),
+          ]
+
       reqs.push(createJournalEntry({
         date, reference: ref, description: desc2,
         lines: [
           { account_id: global.doctorReceivablesAccountId!, party_id: doctorParty!.id, description: desc2, debit: totalAmount, credit: 0 },
-          ...(cashAmount > 0 ? [{ account_id: userAccs.cashBoxAccountId!, description: 'صندوق', debit: 0, credit: cashAmount }] : []),
-          ...(bankAmount > 0 ? [{ account_id: userAccs.bankAccountId!,    description: 'بنك',   debit: 0, credit: bankAmount  }] : []),
+          ...payDebitLines,
         ],
       }))
 
@@ -292,24 +402,19 @@ export default function JournalEntryDialog({
         <Chip label={`${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })} ج.س`} size="small" color="primary" />
       </DialogTitle>
 
-      <DialogContent sx={{ pt: 2 }}>
+      <DialogContent sx={{ pt: 1, pb: 1.5 }}>
 
-        {/* Done */}
-        {done && (
-          <Box sx={{ textAlign: 'center', py: 3 }}>
-            <CheckCircleIcon sx={{ fontSize: 56, color: 'success.main', mb: 1 }} />
+        {done ? (
+          <Box sx={{ textAlign: 'center', py: 2 }}>
+            <CheckCircleIcon sx={{ fontSize: 48, color: 'success.main', mb: 0.5 }} />
             <Typography variant="h6" color="success.main">تم إنشاء القيود بنجاح</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              {done.length} قيد محاسبي · محفوظ في Firebase
-            </Typography>
-            <Button sx={{ mt: 2 }} variant="contained" onClick={handleClose}>إغلاق</Button>
+            <Typography variant="caption" color="text.secondary">{done.length} قيد محاسبي · محفوظ في Firebase</Typography>
+            <Box sx={{ mt: 1.5 }}><Button variant="contained" size="small" onClick={handleClose}>إغلاق</Button></Box>
           </Box>
-        )}
-
-        {!done && (
-          <Stack gap={2}>
+        ) : (
+          <Stack gap={1}>
             {error && (
-              <Alert severity="error" action={
+              <Alert severity="error" sx={{ py: 0 }} action={
                 <IconButton size="small" onClick={() => { navigator.clipboard.writeText(error); setErrCopied(true); setTimeout(() => setErrCopied(false), 2000) }}>
                   <ContentCopyIcon fontSize="small" />
                 </IconButton>
@@ -317,86 +422,94 @@ export default function JournalEntryDialog({
                 {errCopied ? 'تم النسخ' : error}
               </Alert>
             )}
-            {dataError && <Alert severity="error">{dataError}</Alert>}
+            {dataError && <Alert severity="error" sx={{ py: 0 }}>{dataError}</Alert>}
 
             {loadingData ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}><CircularProgress /></Box>
             ) : (
               <>
-                {/* Settings incomplete warning */}
                 {!settingsReady && (
-                  <Alert severity="warning">
-                    لم يتم ضبط إعدادات المحاسبة بعد. يرجى الذهاب إلى <strong>الإعدادات ← المحاسبة ← الحسابات الرئيسية</strong> وتحديد حسابات الإيراد والأتعاب والصندوق والبنك أولاً.
+                  <Alert severity="warning" sx={{ py: 0, fontSize: 12 }}>
+                    يرجى ضبط <strong>الإعدادات ← المحاسبة ← الحسابات الرئيسية</strong> أولاً.
                   </Alert>
                 )}
 
-                {/* User selector */}
-                <Autocomplete
-                  options={usersList}
-                  value={usersList.find(u => u.id === selectedUserId) ?? null}
-                  onChange={(_, v) => setSelectedUserId(v?.id ?? user?.id ?? null)}
-                  getOptionLabel={u => u.name}
-                  isOptionEqualToValue={(a, b) => a.id === b.id}
-                  size="small"
-                  renderInput={p => (
-                    <TextField {...p}
-                      label="المستخدم (حسابات الصندوق والبنك)"
-                      helperText="حسابات الصندوق والبنك المستخدمة في القيود"
-                    />
-                  )}
-                />
-
-                {/* Doctor party */}
-                <Autocomplete
-                  options={parties} value={doctorParty}
-                  onChange={(_, v) => {
-                    setDoctorParty(v)
-                    if (v) saveDoctorPartyMapping(doctorId, v.id).catch(() => {})
-                  }}
-                  getOptionLabel={p => p.name}
-                  isOptionEqualToValue={(a, b) => a.id === b.id}
-                  size="small"
-                  renderInput={p => (
-                    <TextField {...p}
-                      label={`الطبيب كطرف في نظام المحاسبة * — ${doctorName}`}
-                      helperText="يُحفظ تلقائياً لهذا الطبيب في المرات القادمة"
-                    />
-                  )}
-                />
-
-                {/* Clinic revenue amounts */}
-                <Box sx={{ p: 1.5, border: '1px dashed', borderColor: 'success.light', borderRadius: 1, bgcolor: '#F8FFF8' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <Typography variant="caption" sx={{ fontWeight: 700, color: 'success.dark', flex: 1 }}>
-                      مبالغ التحصيل من المرضى — لقيد إثبات الإيراد (اتركها صفر لتخطي هذا القيد)
+                {/* Row: user selector + doctor party */}
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 1 }}>
+                  <Autocomplete
+                    options={usersList}
+                    value={usersList.find(u => u.id === selectedUserId) ?? null}
+                    onChange={(_, v) => setSelectedUserId(v?.id ?? user?.id ?? null)}
+                    getOptionLabel={u => u.name}
+                    isOptionEqualToValue={(a, b) => a.id === b.id}
+                    size="small"
+                    renderInput={p => <TextField {...p} label="المستخدم (صندوق / بنك القيد 2)" />}
+                  />
+                  <Autocomplete
+                    options={parties} value={doctorParty}
+                    onChange={(_, v) => { setDoctorParty(v); if (v) saveDoctorPartyMapping(doctorId, v.id).catch(() => {}) }}
+                    getOptionLabel={p => p.name}
+                    isOptionEqualToValue={(a, b) => a.id === b.id}
+                    size="small"
+                    renderInput={p => <TextField {...p} label={`الطبيب كطرف — ${doctorName} *`} />}
+                  />
+                       {/* Users payment table */}
+                {doctorShiftId && (
+                  <Box sx={{ border: '1px dashed', borderColor: 'info.light', borderRadius: 1, bgcolor: '#F0F7FF', overflow: 'hidden' }}>
+                    <Typography variant="caption" sx={{ fontWeight: 700, color: 'info.dark', display: 'block', px: 1, pt: 0.5 }}>
+                      متحصلين عيادة {doctorName}
                     </Typography>
-                    {amountsFromShift && (
-                      <Chip label="محسوب من وردية الطبيب" size="small" color="success" variant="outlined" sx={{ fontSize: 10 }} />
+                    {usersPaymentLoading ? (
+                      <Box sx={{ display: 'flex', justifyContent: 'center', py: 0.5 }}><CircularProgress size={16} /></Box>
+                    ) : usersPayment.length === 0 ? (
+                      <Typography variant="caption" color="text.secondary" sx={{ px: 1, pb: 0.5, display: 'block' }}>لا توجد مدفوعات</Typography>
+                    ) : (
+                      <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+                        <Box component="thead">
+                          <Box component="tr" sx={{ bgcolor: '#1565C0', '& th': { color: '#fff', fontWeight: 700, p: '3px 6px', border: '1px solid #1565C0', textAlign: 'center' } }}>
+                            <Box component="th" sx={{ textAlign: 'right !important' }}>المستخدم</Box>
+                            <Box component="th">نقدي</Box>
+                            <Box component="th">بنك</Box>
+                            <Box component="th">الإجمالي</Box>
+                            <Box component="th">📒</Box>
+                            <Box component="th">🏦</Box>
+                          </Box>
+                        </Box>
+                        <Box component="tbody">
+                          {usersPayment.map((u, i) => {
+                            const accs = userAccsMap[u.id]
+                            return (
+                              <Box component="tr" key={u.id} sx={{ bgcolor: i % 2 ? '#f0f7ff' : '#fff', '& td': { p: '2px 6px', border: '1px solid #ddd', textAlign: 'center', direction: 'ltr' } }}>
+                                <Box component="td" sx={{ textAlign: 'right !important', direction: 'rtl', fontWeight: 600 }}>{u.name}</Box>
+                                <Box component="td" sx={{ color: 'success.dark' }}>{Number(u.total_cash) > 0 ? Number(u.total_cash).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '—'}</Box>
+                                <Box component="td" sx={{ color: 'info.dark' }}>{Number(u.total_bank) > 0 ? Number(u.total_bank).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '—'}</Box>
+                                <Box component="td" sx={{ fontWeight: 700 }}>{Number(u.total).toLocaleString('en-US', { minimumFractionDigits: 2 })}</Box>
+                                <Box component="td">{accs == null ? '…' : accs.cashBoxAccountId ? '✅' : '❌'}</Box>
+                                <Box component="td">{accs == null ? '…' : accs.bankAccountId    ? '✅' : '❌'}</Box>
+                              </Box>
+                            )
+                          })}
+                        </Box>
+                      </Box>
                     )}
                   </Box>
-                  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
-                    <TextField size="small" type="number" label="نقدي من المرضى"
-                      value={clinicCash} onChange={e => setClinicCash(Math.max(0, Number(e.target.value)))}
-                      slotProps={{ htmlInput: { min: 0, step: 0.01 } }} />
-                    <TextField size="small" type="number" label="شبكة / بنك من المرضى"
-                      value={clinicBank} onChange={e => setClinicBank(Math.max(0, Number(e.target.value)))}
-                      slotProps={{ htmlInput: { min: 0, step: 0.01 } }} />
-                  </Box>
+                )}
+
                 </Box>
 
-                <Divider />
+           
 
-                {hasRevEntry && <EntryTable lines={entry0Lines} title="قيد 0 — إثبات إيراد العيادة (نقدي / شبكة من المرضى)" />}
-                <EntryTable lines={entry1Lines} title="قيد 1 — إثبات استحقاق الأتعاب وإنشاء ذمة الطبيب" />
-                <EntryTable lines={entry2Lines} title="قيد 2 — صرف الأتعاب وإغلاق ذمة الطبيب" />
+                {hasRevEntry && <EntryTable lines={entry0Lines} title="قيد 0 — إثبات إيراد العيادة" />}
+                <EntryTable lines={entry1Lines} title="قيد 1 — إثبات الأتعاب وذمة الطبيب" />
+                <EntryTable lines={entry2Lines} title="قيد 2 — صرف الأتعاب" />
 
-                <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end', alignItems: 'center' }}>
-                  <Button onClick={handleClose} disabled={submitting}>إلغاء</Button>
+                <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                  <Button size="small" onClick={handleClose} disabled={submitting}>إلغاء</Button>
                   <Button
-                    variant="contained" size="large"
+                    variant="contained" size="small"
                     disabled={!canSubmit || submitting}
                     onClick={handleSubmit}
-                    startIcon={submitting ? <CircularProgress size={16} color="inherit" /> : undefined}
+                    startIcon={submitting ? <CircularProgress size={14} color="inherit" /> : undefined}
                   >
                     {submitting ? 'جاري الإنشاء...' : `إنشاء ${hasRevEntry ? '3' : '2'} قيود`}
                   </Button>

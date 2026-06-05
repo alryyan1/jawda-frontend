@@ -159,7 +159,7 @@ export default function FinanceSettingsTab() {
   const [savingGlobal, setSavingGlobal] = useState(false)
 
   // per-user accounts: userId → FinanceUserAccounts
-  const [usersList,    setUsersList]    = useState<{ id: number; name: string }[]>([])
+  const [usersList,    setUsersList]    = useState<{ id: number; name: string; username: string }[]>([])
   const [allUserAccs,  setAllUserAccs]  = useState<Record<number, FinanceUserAccounts>>({})
   const [savingUserId, setSavingUserId] = useState<number | null>(null)
   const [usersSearch,  setUsersSearch]  = useState('')
@@ -428,7 +428,12 @@ export default function FinanceSettingsTab() {
                     const isSaving = savingUserId === u.id
                     return (
                       <Box key={u.id} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                        <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 700 }}>{u.name}</Typography>
+                        <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 700 }}>
+                          {u.name}
+                          <Box component="span" sx={{ fontWeight: 400, color: 'text.secondary', fontSize: 12, ml: 1 }}>
+                            @{u.username} · #{u.id}
+                          </Box>
+                        </Typography>
                         <Stack spacing={1.5}>
                           <AccPicker
                             label="حساب الصندوق (كاش)"

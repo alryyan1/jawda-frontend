@@ -28,10 +28,17 @@ export interface DoctorShiftReportItem {
   cash_entitlement: number;
   insurance_entitlement: number;
   static_wage_applied: number;
-  is_cash_revenue_prooved: boolean;
-  is_cash_reclaim_prooved: boolean;
-  is_company_revenue_prooved: boolean;
-  is_company_reclaim_prooved: boolean;
+  snap_patients_count?: number | null;
+  snap_total_paid?: number | null;
+  snap_total_cash_revenue?: number | null;
+  snap_total_insurance_revenue?: number | null;
+  snap_total_bank?: number | null;
+  snap_doctor_cash_percentage?: number | null;
+  snap_doctor_insurance_percentage?: number | null;
+  snap_doctor_cash_entitlement?: number | null;
+  snap_doctor_insurance_entitlement?: number | null;
+  snap_doctor_fixed_entitlement?: number | null;
+  snap_total_doctor_entitlement?: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -304,11 +311,6 @@ export interface DoctorShiftReportItem {
   insurance_entitlement?: number;
   static_wage_applied?: number; // If static wage was part of total entitlement
 
-  // Proofing flags (from DoctorShift model)
-  is_cash_revenue_prooved?: boolean;
-  is_cash_reclaim_prooved?: boolean;
-  is_company_revenue_prooved?: boolean;
-  is_company_reclaim_prooved?: boolean;
 }
 
 // Lab General Report Types

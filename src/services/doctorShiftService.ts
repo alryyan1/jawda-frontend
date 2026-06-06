@@ -22,26 +22,9 @@ interface EndShiftPayload {
   doctor_shift_id: number; // The ID of the DoctorShift record to close
   // end_time?: string; // Optional
 }
-// NEW FUNCTION TO ADD:
-/**
- * Updates the proofing/verification flags on a DoctorShift record.
- */
-export const updateDoctorShiftProofingFlags = async (
-  doctorShiftId: number,
-  flags: Partial<
-    Pick<
-      DoctorShift,
-      | "is_cash_revenue_prooved"
-      | "is_cash_reclaim_prooved"
-      | "is_company_revenue_prooved"
-      | "is_company_reclaim_prooved"
-    >
-  >,
-): Promise<DoctorShift> => {
-  // Assuming the backend returns the updated DoctorShift resource
+export const closeDoctorShift = async (doctorShiftId: number): Promise<DoctorShift> => {
   const response = await apiClient.put<{ data: DoctorShift }>(
     `/doctor-shifts/${doctorShiftId}/update-proofing-flags`,
-    flags,
   );
   return response.data.data;
 };

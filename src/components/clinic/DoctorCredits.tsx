@@ -35,10 +35,6 @@ interface UserPropShape {
 
 type DoctorShiftItem = DoctorShiftType & {
   user_id: number;
-  is_cash_revenue_prooved?: boolean;
-  is_cash_reclaim_prooved?: boolean;
-  is_company_revenue_prooved?: boolean;
-  is_company_reclaim_prooved?: boolean;
   created_at?: string;
   doctor?: Doctor;
   // Additional properties from API response
@@ -311,9 +307,7 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
     // Only update proofing flags when this is the main cash reclaim (not per-cost)
     if (subCostId == null) {
       apiClient
-        .put(`/doctor-shifts/${selectedDoctorShift.id}/update-proofing-flags`, {
-          is_cash_reclaim_prooved: true,
-        })
+        .put(`/doctor-shifts/${selectedDoctorShift.id}/update-proofing-flags`)
         .then(({ data }) => {
           setShowCashReclaimDialog(false);
           const updated = data?.data ?? data;
@@ -446,7 +440,7 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
                   </TableCell>
                   <TableCell className="text-sm!">
                     <Button
-                      disabled={Boolean(shift.is_cash_reclaim_prooved)}
+                      disabled={!isOpen}
                       onClick={() => {
                         setShowCashReclaimDialog(true);
                         setSelectedDoctorShift(shift);
@@ -462,7 +456,7 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
                       size="small"
                       variant="outlined"
                       color="secondary"
-                      disabled={journalLoadingId === shift.id || !shift.is_cash_reclaim_prooved}
+                      disabled={journalLoadingId === shift.id || isOpen}
                       onClick={() => openJournalDirectly(shift)}
                       startIcon={
                         journalLoadingId === shift.id

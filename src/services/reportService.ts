@@ -30,6 +30,13 @@ export const downloadDoctorShiftsReportExcel = async (filters: Omit<DoctorShiftR
   });
   return response.data;
 };
+export const computeDoctorShiftSnapshotBatch = async (
+  ids: number[]
+): Promise<{ processed: number; errors: { id: number; error: string }[] }> => {
+  const response = await apiClient.post('/doctor-shifts/compute-snapshot-batch', { ids });
+  return response.data;
+};
+
 export const downloadDoctorShiftFinancialSummaryPdf = async (doctorShiftId: number): Promise<Blob> => {
   const response = await apiClient.get(`/reports/doctor-shifts/${doctorShiftId}/financial-summary/pdf`, {
     responseType: 'blob',

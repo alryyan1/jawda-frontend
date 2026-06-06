@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Paper,
   Table,
@@ -15,50 +15,32 @@ import {
   MenuItem,
   Typography,
   Link,
-  Checkbox,
   Tooltip,
   IconButton,
   Popover,
-  FormControlLabel,
   Divider,
-  Badge,
+  Checkbox,
 } from "@mui/material";
-import { LockOpen, FactCheck, AccountBalance } from "@mui/icons-material";
+import { LockOpen, AccountBalance } from "@mui/icons-material";
 import { Button } from "@mui/material";
 import JournalEntryDialog from "@/components/clinic/JournalEntryDialog";
 import { formatNumber } from "@/lib/utils";
 import type { DoctorShiftReportItem } from "@/types/reports";
 import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
+import "dayjs/locale/ar";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import {
-  updateDoctorShiftProofingFlags,
-  reopenDoctorShift,
-} from "@/services/doctorShiftService";
-
-type ProofFlag =
-  | "is_cash_revenue_prooved"
-  | "is_cash_reclaim_prooved"
-  | "is_company_revenue_prooved"
-  | "is_company_reclaim_prooved";
+import { reopenDoctorShift } from "@/services/doctorShiftService";
 
 interface DoctorShiftsReportTableProps {
   shifts: DoctorShiftReportItem[];
   isLoading: boolean;
   rowsPerPage?: number;
   onRowsPerPageChange?: (rowsPerPage: number) => void;
-}
-
-const proofColumns: { flag: ProofFlag; label: string }[] = [
-  { flag: "is_cash_revenue_prooved",    label: " اثبات إيراد نقدي " },
-  { flag: "is_cash_reclaim_prooved",    label: "اثبات الاستحقاق نقدي" },
-  { flag: "is_company_revenue_prooved", label: "اثبات ايراد شركة" },
-  { flag: "is_company_reclaim_prooved", label: "اثبات استحقاق شركة" },
-];
-
-function countProofed(shift: DoctorShiftReportItem): number {
-  return proofColumns.filter((c) => shift[c.flag]).length;
+  selectable?: boolean;
+  selectedIds?: Set<number>;
+  onSelectionChange?: (ids: Set<number>) => void;
 }
 
 function DoctorShiftsReportTable({
@@ -66,6 +48,9 @@ function DoctorShiftsReportTable({
   isLoading,
   rowsPerPage = 50,
   onRowsPerPageChange,
+  selectable = false,
+  selectedIds = new Set(),
+  onSelectionChange,
 }: DoctorShiftsReportTableProps) {
   const navigate = useNavigate();
 
@@ -73,7 +58,6 @@ function DoctorShiftsReportTable({
   useEffect(() => { setLocalShifts(shifts); }, [shifts]);
 
   const [pendingReopen, setPendingReopen] = useState<Set<number>>(new Set());
-  const [pendingFlag, setPendingFlag] = useState<Map<number, ProofFlag>>(new Map());
 
   // Popover state: anchor element + which shift id is open
   const [popoverAnchor, setPopoverAnchor] = useState<HTMLElement | null>(null);
@@ -122,41 +106,40 @@ function DoctorShiftsReportTable({
       setPendingReopen((prev) => { const s = new Set(prev); s.delete(shiftId); return s; }),
   });
 
-  const flagMutation = useMutation({
-    mutationFn: ({ shiftId, flag, value }: { shiftId: number; flag: ProofFlag; value: boolean }) =>
-      updateDoctorShiftProofingFlags(shiftId, { [flag]: value }),
-    onMutate: ({ shiftId, flag }) =>
-      setPendingFlag((prev) => new Map(prev).set(shiftId, flag)),
-    onSuccess: (_, { shiftId, flag, value }) => {
-      setLocalShifts((prev) =>
-        prev.map((s) =>
-          s.id === shiftId
-            ? {
-                ...s,
-                [flag]: value,
-                status: flag === "is_cash_reclaim_prooved" ? false : s.status,
-              }
-            : s
-        )
-      );
-      toast.success("تم تحديث العلامة");
-    },
-    onError: (err: any) =>
-      toast.error(err?.response?.data?.message || "فشل تحديث العلامة"),
-    onSettled: (_, __, { shiftId }) =>
-      setPendingFlag((prev) => { const m = new Map(prev); m.delete(shiftId); return m; }),
-  });
 
-  const totals = localShifts.reduce(
-    (acc, s) => ({
-      total_income: acc.total_income + (s.total_income || 0),
-      clinic_enurance: acc.clinic_enurance + (s.clinic_enurance || 0),
-      cash_entitlement: acc.cash_entitlement + (s.cash_entitlement || 0),
-      insurance_entitlement: acc.insurance_entitlement + (s.insurance_entitlement || 0),
-      total_doctor_entitlement: acc.total_doctor_entitlement + (s.total_doctor_entitlement || 0),
-    }),
-    { total_income: 0, clinic_enurance: 0, cash_entitlement: 0, insurance_entitlement: 0, total_doctor_entitlement: 0 }
-  );
+  type DayTotals = {
+    total_income: number; clinic_enurance: number;
+    snap_total_insurance_services: number; snap_patients_count: number;
+    cash_entitlement: number; insurance_entitlement: number; total_doctor_entitlement: number;
+  };
+
+  const sumShifts = (arr: DoctorShiftReportItem[]): DayTotals =>
+    arr.reduce(
+      (acc, s) => ({
+        total_income:                 acc.total_income                 + (s.total_income                 || 0),
+        clinic_enurance:              acc.clinic_enurance              + (s.clinic_enurance              || 0),
+        snap_total_insurance_services: acc.snap_total_insurance_services + (Number(s.snap_total_insurance_services) || 0),
+        snap_patients_count:          acc.snap_patients_count          + (Number(s.snap_patients_count)          || 0),
+        cash_entitlement:             acc.cash_entitlement             + (s.cash_entitlement             || 0),
+        insurance_entitlement:        acc.insurance_entitlement        + (s.insurance_entitlement        || 0),
+        total_doctor_entitlement:     acc.total_doctor_entitlement     + (s.total_doctor_entitlement     || 0),
+      }),
+      { total_income: 0, clinic_enurance: 0, snap_total_insurance_services: 0, snap_patients_count: 0, cash_entitlement: 0, insurance_entitlement: 0, total_doctor_entitlement: 0 }
+    );
+
+  const dayGroups = useMemo(() => {
+    const map = new Map<string, DoctorShiftReportItem[]>();
+    for (const s of localShifts) {
+      const key = s.created_at ? dayjs(s.created_at).format("YYYY-MM-DD") : "unknown";
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(s);
+    }
+    return [...map.entries()]
+      .sort(([a], [b]) => b.localeCompare(a))
+      .map(([date, shifts]) => ({ date, shifts, totals: sumShifts(shifts) }));
+  }, [localShifts]);
+
+  const monthTotals = useMemo(() => sumShifts(localShifts), [localShifts]);
 
   if (isLoading) {
     return (
@@ -190,133 +173,167 @@ function DoctorShiftsReportTable({
         </FormControl>
       </Box>
 
-      <TableContainer dir="ltr" component={Paper} elevation={2}>
-        <Table size="small" sx={{ direction: "ltr" }}>
+      <TableContainer dir="ltr" component={Paper} elevation={2} sx={{ width: "100%", overflowX: "auto" }}>
+        <Table size="small" sx={{ direction: "ltr", width: "100%", "& .MuiTableCell-root": { whiteSpace: "nowrap" } }}>
           <TableHead>
             <TableRow>
+              {selectable && (
+                <TableCell padding="checkbox" align="center" sx={{ width: 40 }}>
+                  <Checkbox
+                    size="small"
+                    indeterminate={selectedIds.size > 0 && selectedIds.size < localShifts.length}
+                    checked={localShifts.length > 0 && selectedIds.size === localShifts.length}
+                    onChange={(e) => {
+                      onSelectionChange?.(e.target.checked ? new Set(localShifts.map(s => s.id)) : new Set());
+                    }}
+                  />
+                </TableCell>
+              )}
+              <TableCell align="center" sx={{ width: 36 }}>#</TableCell>
               <TableCell align="center">الحالة</TableCell>
               <TableCell align="center">تاريخ</TableCell>
               <TableCell align="center">التخصص</TableCell>
               <TableCell align="center">الطبيب</TableCell>
-              <TableCell align="center">إجمالي المدفوع</TableCell>
+              <TableCell align="center">الإيراد المدفوع</TableCell>
               <TableCell align="center">التحمل</TableCell>
+              <TableCell align="center">إيراد التأمين</TableCell>
+              <TableCell align="center">عدد المرضى</TableCell>
+              <TableCell align="center">% كاش</TableCell>
+              <TableCell align="center">% تأمين</TableCell>
               <TableCell align="center">استحقاق (كاش)</TableCell>
               <TableCell align="center">استحقاق (تأمين)</TableCell>
               <TableCell align="center">إجمالي الاستحقاق</TableCell>
-              <TableCell align="center">التحقق</TableCell>
+              <TableCell align="center">قيد</TableCell>
               <TableCell align="center">المستخدم</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {localShifts.map((shift, index) => {
-              const isReopening = pendingReopen.has(shift.id);
-              const proofedCount = countProofed(shift);
+            {dayGroups.map(({ date, shifts: dayShifts, totals: dayTotals }) => {
+              const colSpan = 16 + (selectable ? 1 : 0);
+              const dateLabel = dayjs(date).isValid()
+                ? dayjs(date).locale("ar").format("dddd DD/MM/YYYY")
+                : date;
 
               return (
-                <TableRow
-                  key={shift.id}
-                  onClick={() => handleRowClick(shift)}
-                  sx={{
-                    backgroundColor: index % 2 === 0 ? "background.paper" : "grey.50",
-                    cursor: "pointer",
-                  }}
-                >
-                  {/* Status dot + reopen button */}
-                  <TableCell align="center" onClick={(e) => e.stopPropagation()}>
-                    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0.5 }}>
-                      <Box
-                        sx={{
-                          width: 10,
-                          height: 10,
-                          borderRadius: "50%",
-                          backgroundColor: shift.status ? "#4CAF50" : "#F44336",
-                          border: "2px solid",
-                          borderColor: shift.status ? "#2E7D32" : "#C62828",
-                          flexShrink: 0,
-                        }}
-                        title={shift.status ? "مفتوح" : "مغلق"}
-                      />
-                      {!shift.status && (
-                        <Tooltip title="إعادة فتح المناوبة">
-                          <span>
-                            <IconButton
-                              size="small"
-                              color="warning"
-                              disabled={isReopening}
-                              onClick={(e) => { e.stopPropagation(); reopenMutation.mutate(shift.id); }}
-                              sx={{ p: 0.25 }}
-                            >
-                              {isReopening
-                                ? <CircularProgress size={14} />
-                                : <LockOpen sx={{ fontSize: 14 }} />}
-                            </IconButton>
-                          </span>
-                        </Tooltip>
-                      )}
-                    </Box>
-                  </TableCell>
-
-                  <TableCell align="center">
-                    {shift.created_at ? dayjs(shift.created_at).format("DD/MM/YYYY HH:mm") : "-"}
-                  </TableCell>
-                  <TableCell align="center">{shift.doctor_specialist_name || "-"}</TableCell>
-                  <TableCell align="center">
-                    <Link
-                      component="button"
-                      onClick={(e) => handleDoctorNameClick(shift, e)}
-                      sx={{ color: "primary.main", textDecoration: "none", cursor: "pointer", "&:hover": { textDecoration: "underline" }, fontWeight: "medium" }}
+                <React.Fragment key={date}>
+                  {/* ── Day header ── */}
+                  <TableRow sx={{ bgcolor: "#1565C0" }}>
+                    <TableCell
+                      colSpan={colSpan}
+                      align="center"
+                      sx={{ color: "#fff", fontWeight: 700, py: 0.75, fontSize: 13, letterSpacing: 0.5 }}
                     >
-                      {shift.doctor_name || "N/A"}
-                    </Link>
-                  </TableCell>
-                  <TableCell align="center" sx={{ fontWeight: "bold", color: "success.main" }}>
-                    {formatNumber(shift.total_income || 0)}
-                  </TableCell>
-                  <TableCell align="center" sx={{ fontWeight: "bold", color: "error.main" }}>
-                    {formatNumber(shift.clinic_enurance || 0)}
-                  </TableCell>
-                  <TableCell align="center">{formatNumber(shift.cash_entitlement || 0)}</TableCell>
-                  <TableCell align="center">{formatNumber(shift.insurance_entitlement || 0)}</TableCell>
-                  <TableCell align="center" sx={{ fontWeight: "bold" }}>
-                    {formatNumber(shift.total_doctor_entitlement || 0)}
-                  </TableCell>
+                      {dateLabel}
+                    </TableCell>
+                  </TableRow>
 
-                  {/* Proof flags — single compact cell, popover on click */}
-                  <TableCell align="center" onClick={(e) => e.stopPropagation()}>
-                    <Tooltip title={`${proofedCount} / ${proofColumns.length} محقق`}>
-                      <IconButton
-                        size="small"
-                        onClick={(e) => openPopover(e, shift.id)}
-                        sx={{ p: 0.5 }}
-                        color={proofedCount === proofColumns.length ? "success" : proofedCount > 0 ? "warning" : "default"}
+                  {/* ── Day rows ── */}
+                  {dayShifts.map((shift, index) => {
+                    const isReopening = pendingReopen.has(shift.id);
+                    return (
+                      <TableRow
+                        key={shift.id}
+                        onClick={() => !selectable && handleRowClick(shift)}
+                        selected={selectable && selectedIds.has(shift.id)}
+                        sx={{
+                          backgroundColor: index % 2 === 0 ? "background.paper" : "grey.50",
+                          cursor: selectable ? "default" : "pointer",
+                          ...(selectable && selectedIds.has(shift.id) && { bgcolor: "primary.50 !important" }),
+                        }}
                       >
-                        <Badge badgeContent={proofedCount} color={proofedCount === proofColumns.length ? "success" : "warning"} max={4}>
-                          <FactCheck sx={{ fontSize: 18 }} />
-                        </Badge>
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
+                        {selectable && (
+                          <TableCell padding="checkbox" align="center" onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              size="small"
+                              checked={selectedIds.has(shift.id)}
+                              onChange={(e) => {
+                                const next = new Set(selectedIds);
+                                e.target.checked ? next.add(shift.id) : next.delete(shift.id);
+                                onSelectionChange?.(next);
+                              }}
+                            />
+                          </TableCell>
+                        )}
+                        <TableCell align="center" sx={{ color: "text.secondary", fontSize: 11, fontWeight: 600 }}>{index + 1}</TableCell>
+                        <TableCell align="center" onClick={(e) => e.stopPropagation()}>
+                          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0.5 }}>
+                            <Box sx={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: shift.status ? "#4CAF50" : "#F44336", border: "2px solid", borderColor: shift.status ? "#2E7D32" : "#C62828", flexShrink: 0 }} title={shift.status ? "مفتوح" : "مغلق"} />
+                            {!shift.status && (
+                              <Tooltip title="إعادة فتح المناوبة">
+                                <span>
+                                  <IconButton size="small" color="warning" disabled={isReopening} onClick={(e) => { e.stopPropagation(); reopenMutation.mutate(shift.id); }} sx={{ p: 0.25 }}>
+                                    {isReopening ? <CircularProgress size={14} /> : <LockOpen sx={{ fontSize: 14 }} />}
+                                  </IconButton>
+                                </span>
+                              </Tooltip>
+                            )}
+                          </Box>
+                        </TableCell>
+                        <TableCell align="center">{shift.created_at ? dayjs(shift.created_at).locale("ar").format("hh:mm A") : "-"}</TableCell>
+                        <TableCell align="center">{shift.doctor_specialist_name || "-"}</TableCell>
+                        <TableCell align="center">
+                          <Link component="button" onClick={(e) => handleDoctorNameClick(shift, e)} sx={{ color: "primary.main", textDecoration: "none", cursor: "pointer", "&:hover": { textDecoration: "underline" }, fontWeight: "medium" }}>
+                            {shift.doctor_name || "N/A"}
+                          </Link>
+                        </TableCell>
+                        <TableCell align="center" sx={{ fontWeight: "bold", color: "success.main" }}>{formatNumber(shift.total_income || 0)}</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: "bold", color: "error.main" }}>{formatNumber(shift.clinic_enurance || 0)}</TableCell>
+                        <TableCell align="center" sx={{ color: "warning.dark" }}>{formatNumber(Number(shift.snap_total_insurance_services) || 0)}</TableCell>
+                        <TableCell align="center">{shift.snap_patients_count ?? "-"}</TableCell>
+                        <TableCell align="center" sx={{ color: "text.secondary", fontSize: 12 }}>{shift.snap_doctor_cash_percentage != null ? `${shift.snap_doctor_cash_percentage}%` : "-"}</TableCell>
+                        <TableCell align="center" sx={{ color: "text.secondary", fontSize: 12 }}>{shift.snap_doctor_insurance_percentage != null ? `${shift.snap_doctor_insurance_percentage}%` : "-"}</TableCell>
+                        <TableCell align="center">{formatNumber(shift.cash_entitlement || 0)}</TableCell>
+                        <TableCell align="center">{formatNumber(shift.insurance_entitlement || 0)}</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: "bold" }}>{formatNumber(shift.total_doctor_entitlement || 0)}</TableCell>
+                        <TableCell align="center" onClick={(e) => e.stopPropagation()}>
+                          <Tooltip title="قيد محاسبي">
+                            <IconButton size="small" onClick={(e) => { e.stopPropagation(); openPopover(e, shift.id); }} sx={{ p: 0.5 }}>
+                              <AccountBalance sx={{ fontSize: 18 }} />
+                            </IconButton>
+                          </Tooltip>
+                        </TableCell>
+                        <TableCell align="center">{shift.user_name_opened || "-"}</TableCell>
+                      </TableRow>
+                    );
+                  })}
 
-                  <TableCell align="center">{shift.user_name_opened || "-"}</TableCell>
-                </TableRow>
+                  {/* ── Day totals ── */}
+                  <TableRow sx={{ bgcolor: "#E3F2FD", "& .MuiTableCell-root": { fontWeight: 700, py: 0.5, fontSize: 12 } }}>
+                    {selectable && <TableCell />}
+                    <TableCell />{/* # */}
+                    <TableCell />
+                    <TableCell align="center" sx={{ color: "primary.dark" }}>مجموع اليوم</TableCell>
+                    <TableCell /><TableCell />
+                    <TableCell align="center" sx={{ color: "success.dark" }}>{formatNumber(dayTotals.total_income)}</TableCell>
+                    <TableCell align="center" sx={{ color: "error.dark" }}>{formatNumber(dayTotals.clinic_enurance)}</TableCell>
+                    <TableCell align="center" sx={{ color: "warning.dark" }}>{formatNumber(dayTotals.snap_total_insurance_services)}</TableCell>
+                    <TableCell align="center">{dayTotals.snap_patients_count}</TableCell>
+                    <TableCell /><TableCell />
+                    <TableCell align="center">{formatNumber(dayTotals.cash_entitlement)}</TableCell>
+                    <TableCell align="center">{formatNumber(dayTotals.insurance_entitlement)}</TableCell>
+                    <TableCell align="center">{formatNumber(dayTotals.total_doctor_entitlement)}</TableCell>
+                    <TableCell /><TableCell />
+                  </TableRow>
+                </React.Fragment>
               );
             })}
 
-            {/* Totals row */}
-            <TableRow
-              sx={{ "& .MuiTableCell-root": { fontWeight: "bold", borderTop: "2px solid", borderColor: "primary.main" } }}
-            >
-              <TableCell align="center">-</TableCell>
-              <TableCell align="center" sx={{ fontSize: "1rem" }}>المجموع</TableCell>
-              <TableCell align="center">-</TableCell>
-              <TableCell align="center">-</TableCell>
-              <TableCell align="center" sx={{ color: "success.main", fontSize: "1rem" }}>{formatNumber(totals.total_income)}</TableCell>
-              <TableCell align="center" sx={{ color: "error.main", fontSize: "1rem" }}>{formatNumber(totals.clinic_enurance)}</TableCell>
-              <TableCell align="center" sx={{ fontSize: "1rem" }}>{formatNumber(totals.cash_entitlement)}</TableCell>
-              <TableCell align="center" sx={{ fontSize: "1rem" }}>{formatNumber(totals.insurance_entitlement)}</TableCell>
-              <TableCell align="center" sx={{ fontSize: "1rem" }}>{formatNumber(totals.total_doctor_entitlement)}</TableCell>
-              <TableCell align="center">-</TableCell>
-              <TableCell align="center">-</TableCell>
+            {/* ── Monthly totals ── */}
+            <TableRow sx={{ "& .MuiTableCell-root": { fontWeight: 700, borderTop: "3px solid", borderColor: "primary.main", fontSize: "0.95rem" } }}>
+              {selectable && <TableCell />}
+              <TableCell />{/* # */}
+              <TableCell />
+              <TableCell align="center" sx={{ color: "primary.main" }}>مجموع الشهر</TableCell>
+              <TableCell /><TableCell />
+              <TableCell align="center" sx={{ color: "success.main" }}>{formatNumber(monthTotals.total_income)}</TableCell>
+              <TableCell align="center" sx={{ color: "error.main" }}>{formatNumber(monthTotals.clinic_enurance)}</TableCell>
+              <TableCell align="center" sx={{ color: "warning.dark" }}>{formatNumber(monthTotals.snap_total_insurance_services)}</TableCell>
+              <TableCell align="center">{monthTotals.snap_patients_count}</TableCell>
+              <TableCell /><TableCell />
+              <TableCell align="center">{formatNumber(monthTotals.cash_entitlement)}</TableCell>
+              <TableCell align="center">{formatNumber(monthTotals.insurance_entitlement)}</TableCell>
+              <TableCell align="center">{formatNumber(monthTotals.total_doctor_entitlement)}</TableCell>
+              <TableCell /><TableCell />
             </TableRow>
           </TableBody>
         </Table>
@@ -332,45 +349,7 @@ function DoctorShiftsReportTable({
         onClick={(e) => e.stopPropagation()}
       >
         {popoverShift && (
-          <Box sx={{ p: 1.5, minWidth: 200 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1, fontWeight: 600 }}>
-              التحقق من المستحقات
-            </Typography>
-            <Divider sx={{ mb: 1 }} />
-            {proofColumns.map((col, i) => {
-              const isPending = pendingFlag.get(popoverShift.id) === col.flag;
-              const anyPending = pendingFlag.has(popoverShift.id);
-              return (
-                <Box key={col.flag}>
-                  <FormControlLabel
-                    control={
-                      isPending ? (
-                        <Box sx={{ width: 42, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          <CircularProgress size={16} />
-                        </Box>
-                      ) : (
-                        <Checkbox
-                          size="small"
-                          checked={!!popoverShift[col.flag]}
-                          disabled={anyPending}
-                          onChange={(e) =>
-                            flagMutation.mutate({
-                              shiftId: popoverShift.id,
-                              flag: col.flag,
-                              value: e.target.checked,
-                            })
-                          }
-                        />
-                      )
-                    }
-                    label={<Typography variant="body2">{col.label}</Typography>}
-                    sx={{ display: "flex", m: 0 }}
-                  />
-                  {i < proofColumns.length - 1 && <Divider sx={{ my: 0.5 }} />}
-                </Box>
-              );
-            })}
-            <Divider sx={{ my: 1 }} />
+          <Box sx={{ p: 1.5, minWidth: 160 }}>
             <Button
               fullWidth size="small" variant="outlined" color="primary"
               startIcon={<AccountBalance fontSize="small" />}

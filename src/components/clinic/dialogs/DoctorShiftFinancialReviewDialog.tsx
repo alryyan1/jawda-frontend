@@ -34,16 +34,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import AddDoctorEntitlementCostDialog from './AddDoctorEntitlementCostDialog';
 import { formatNumber } from '@/lib/utils';
 import type { DoctorShiftReportItem } from '@/types/reports';
-import { updateDoctorShiftProofingFlags } from '@/services/doctorShiftService';
+import { closeDoctorShift } from '@/services/doctorShiftService';
 import { useAuthorization } from '@/hooks/useAuthorization';
 import { webUrl } from '@/pages/constants';
 
 // Combine DoctorShiftReportItem with its full financial summary
 interface DoctorShiftWithFinancials extends DoctorShiftReportItem {
-  is_cash_revenue_prooved: boolean;
-  is_cash_reclaim_prooved: boolean;
-  is_company_revenue_prooved: boolean;
-  is_company_reclaim_prooved: boolean;
   total_doctor_entitlement?: number;
   cash_entitlement?: number;
   insurance_entitlement?: number;
@@ -62,12 +58,6 @@ interface Filters {
   status: 'open' | 'closed' | 'all';
 }
 
-type ProofingFlags = {
-  is_cash_revenue_prooved: boolean;
-  is_cash_reclaim_prooved: boolean;
-  is_company_revenue_prooved: boolean;
-  is_company_reclaim_prooved: boolean;
-};
 
 const DoctorShiftFinancialReviewDialog: React.FC<DoctorShiftFinancialReviewDialogProps> = ({
   isOpen, onOpenChange
@@ -148,10 +138,6 @@ const DoctorShiftFinancialReviewDialog: React.FC<DoctorShiftFinancialReviewDialo
 
           return {
             ...ds,
-            is_cash_revenue_prooved: dsTyped.is_cash_revenue_prooved || false,
-            is_cash_reclaim_prooved: dsTyped.is_cash_reclaim_prooved || false,
-            is_company_revenue_prooved: dsTyped.is_company_revenue_prooved || false,
-            is_company_reclaim_prooved: dsTyped.is_company_reclaim_prooved || false,
             total_doctor_entitlement: financialSummary.total_doctor_share,
             cash_entitlement: financialSummary.doctor_cash_share_total,
             insurance_entitlement: financialSummary.doctor_insurance_share_total,
@@ -164,19 +150,14 @@ const DoctorShiftFinancialReviewDialog: React.FC<DoctorShiftFinancialReviewDialo
     enabled: isOpen,
   });
 
-  const proofingFlagsMutation = useMutation<DoctorShift, Error, { shiftId: number; flags: Partial<ProofingFlags> }, unknown>({
-    mutationFn: (params) => updateDoctorShiftProofingFlags(params.shiftId, params.flags),
+  const closeShiftMutation = useMutation<DoctorShift, Error, number>({
+    mutationFn: (shiftId) => closeDoctorShift(shiftId),
     onSuccess: () => {
       toast.success(t('clinic:doctorShiftReview.proofingStatusUpdated'));
       queryClient.invalidateQueries({ queryKey: shiftsQueryKey });
     },
     onError: (error: Error) => toast.error(error.message || t('common:error.updateFailed')),
   });
-
-  const handleProofingAction = (shiftId: number, flagField: keyof ProofingFlags, currentValue: boolean) => {
-    const flagsToUpdate: Partial<ProofingFlags> = { [flagField]: !currentValue };
-    proofingFlagsMutation.mutate({ shiftId, flags: flagsToUpdate });
-  };
 
   const handleOpenAddEntitlementCostDialog = (shift: DoctorShiftWithFinancials) => {
     setSelectedShiftForCost(shift);
@@ -185,7 +166,7 @@ const DoctorShiftFinancialReviewDialog: React.FC<DoctorShiftFinancialReviewDialo
 
   const handleCostAddedAndProved = () => {
     if (selectedShiftForCost) {
-      handleProofingAction(selectedShiftForCost.id, 'is_cash_revenue_prooved', false);
+      closeShiftMutation.mutate(selectedShiftForCost.id);
     }
     setIsAddCostDialogOpen(false);
     setSelectedShiftForCost(null);
@@ -417,24 +398,19 @@ const DoctorShiftFinancialReviewDialog: React.FC<DoctorShiftFinancialReviewDialo
                             <DropdownMenuContent align="end" className="text-sm dark:bg-slate-800 dark:border-slate-700">
                               <DropdownMenuItem
                                 onClick={() => handleOpenAddEntitlementCostDialog(ds)}
-                                disabled={proofingFlagsMutation.status === 'pending' || ds.is_cash_revenue_prooved}
+                                disabled={closeShiftMutation.status === 'pending'}
                                 className="dark:text-slate-200 dark:hover:bg-slate-700"
                               >
-                                {ds.is_cash_revenue_prooved ? <CheckCircle className="h-4 w-4 text-green-500 ltr:mr-2 rtl:ml-2" /> : <ShieldQuestion className="h-4 w-4 ltr:mr-2 rtl:ml-2" />}
+                                <ShieldQuestion className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
                                 {t('review.proveCashRevenue')}
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleProofingAction(ds.id, 'is_cash_reclaim_prooved', !!ds.is_cash_reclaim_prooved)} disabled={proofingFlagsMutation.status === 'pending'} className="dark:text-slate-200 dark:hover:bg-slate-700">
-                                {ds.is_cash_reclaim_prooved ? <CheckCircle className="h-4 w-4 text-green-500 ltr:mr-2 rtl:ml-2" /> : <ShieldQuestion className="h-4 w-4 ltr:mr-2 rtl:ml-2" />}
+                              <DropdownMenuItem
+                                onClick={() => closeShiftMutation.mutate(ds.id)}
+                                disabled={closeShiftMutation.status === 'pending' || !ds.status}
+                                className="dark:text-slate-200 dark:hover:bg-slate-700"
+                              >
+                                <ShieldQuestion className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
                                 {t('review.proveCashEntitlement')}
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator className="dark:bg-slate-700" />
-                              <DropdownMenuItem onClick={() => handleProofingAction(ds.id, 'is_company_revenue_prooved', !!ds.is_company_revenue_prooved)} disabled={proofingFlagsMutation.status === 'pending'} className="dark:text-slate-200 dark:hover:bg-slate-700">
-                                {ds.is_company_revenue_prooved ? <CheckCircle className="h-4 w-4 text-green-500 ltr:mr-2 rtl:ml-2" /> : <ShieldQuestion className="h-4 w-4 ltr:mr-2 rtl:ml-2" />}
-                                {t('review.proveInsuranceRevenue')}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleProofingAction(ds.id, 'is_company_reclaim_prooved', !!ds.is_company_reclaim_prooved)} disabled={proofingFlagsMutation.status === 'pending'} className="dark:text-slate-200 dark:hover:bg-slate-700">
-                                {ds.is_company_reclaim_prooved ? <CheckCircle className="h-4 w-4 text-green-500 ltr:mr-2 rtl:ml-2" /> : <ShieldQuestion className="h-4 w-4 ltr:mr-2 rtl:ml-2" />}
-                                {t('review.proveInsuranceEntitlement')}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>

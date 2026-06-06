@@ -720,15 +720,14 @@ const AppLayout: React.FC = () => {
       <TooltipProvider delayDuration={100}>
         <div
           style={{ direction: "rtl" }}
-          className="flex  h-screen bg-muted/30 dark:bg-background text-foreground"
+          className="flex h-screen overflow-hidden bg-muted/30 dark:bg-background text-foreground"
         >
           {/* Desktop Sidebar */}
           <aside
             style={{ direction: "rtl" }}
             className={cn(
-              "hidden md:flex flex-col fixed inset-y-0 border-border bg-card transition-all duration-300 ease-in-out z-40 h-screen", // Added h-screen for explicit height
-              isDesktopSidebarCollapsed ? "w-16" : "w-50",
-              "border-l",
+              "hidden md:flex flex-col flex-shrink-0 border-l border-border bg-card transition-all duration-300 ease-in-out overflow-y-auto",
+              isDesktopSidebarCollapsed ? "w-16" : "w-[200px]",
             )}
           >
             <div
@@ -810,12 +809,7 @@ const AppLayout: React.FC = () => {
         </Sheet> */}
 
           {/* Main Content Area */}
-          <div
-            className={cn(
-              "flex flex-col flex-1 transition-all duration-300 ease-in-out",
-              isDesktopSidebarCollapsed ? "md:mr-16" : "md:mr-50",
-            )}
-          >
+          <div className="flex flex-col flex-1 min-w-0 overflow-hidden transition-all duration-300 ease-in-out">
             {/* Header */}
             <header
               className={cn(
@@ -1319,8 +1313,8 @@ const AppLayout: React.FC = () => {
             </header>
 
             <main
-              style={{ userSelect: "none", overflow: "hidden" }}
-              className="flex-1 p-1 "
+              style={{ userSelect: "none" }}
+              className="flex-1 p-1 overflow-y-auto overflow-x-hidden"
             >
               <Outlet />
             </main>

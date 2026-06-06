@@ -75,6 +75,7 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
   const queryClient = useQueryClient();
   const nameInputRef = useRef<HTMLInputElement>(null);
   const phoneInputRef = useRef<HTMLInputElement>(null);
+  const insuranceNoRef = useRef<HTMLInputElement>(null);
   
   // Form state
   const [formData, setFormData] = useState<FormData>({
@@ -445,6 +446,9 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
                     if (errors.company_id) {
                       setErrors(prev => ({ ...prev, company_id: undefined }));
                     }
+                    if (newValue) {
+                      setTimeout(() => insuranceNoRef.current?.focus(), 50);
+                    }
                   }}
                   getOptionLabel={(option) => option.name}
                   isOptionEqualToValue={(option, value) => option.id === value.id}
@@ -480,6 +484,7 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
                       helperText={errors.insurance_no}
                       disabled={isSubmitting}
                       size="small"
+                      inputRef={insuranceNoRef}
                     />
                     <TextField
                       fullWidth

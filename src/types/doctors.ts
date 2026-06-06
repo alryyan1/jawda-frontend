@@ -152,10 +152,6 @@ export interface DoctorShift {
   cash_entitlement?: number;
   insurance_entitlement?: number;
   static_wage_applied?: number;
-  is_cash_revenue_prooved?: boolean;
-  is_cash_reclaim_prooved?: boolean;
-  is_company_revenue_prooved?: boolean;
-  is_company_reclaim_prooved?: boolean;
   created_at?: string;
   updated_at?: string;
 }

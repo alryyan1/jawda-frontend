@@ -139,7 +139,7 @@ export default function JournalEntryDialog({
         if (!s) return
         setClinicCash(s.total_cash ?? 0)
         setClinicBank(s.total_bank ?? 0)
-        setAmountsFromShift(true)
+setAmountsFromShift(true)
       })
       .catch(() => {})
   }, [open, doctorShiftId])
@@ -151,8 +151,12 @@ export default function JournalEntryDialog({
   interface UserAccsEntry { cashBoxAccountId: string | null; bankAccountId: string | null }
   const [userAccsMap, setUserAccsMap] = useState<Record<number, UserAccsEntry>>({})
 
-  const [payersList,        setPayersList]        = useState<UserPayment[]>([])
-  const [payersAccsMap,     setPayersAccsMap]     = useState<Record<number, UserAccsEntry>>({})
+  const [payersList,    setPayersList]    = useState<UserPayment[]>([])
+  const [payersAccsMap, setPayersAccsMap] = useState<Record<number, UserAccsEntry>>({})
+
+  const [insurancePayers,    setInsurancePayers]    = useState<UserPayment[]>([])
+  const [insurancePayersMap, setInsurancePayersMap] = useState<Record<number, UserAccsEntry>>({})
+
 
   const loadAccsMap = async (list: UserPayment[]): Promise<Record<number, UserAccsEntry>> => {
     const entries = await Promise.all(
@@ -169,26 +173,32 @@ export default function JournalEntryDialog({
     if (!open || !doctorShiftId) {
       setUsersPayment([]); setUserAccsMap({})
       setPayersList([]); setPayersAccsMap({})
+      setInsurancePayers([]); setInsurancePayersMap({})
       return
     }
     setUsersPaymentLoading(true)
     Promise.all([
       apiClient.get<{ data: UserPayment[] }>(`doctor-shifts/${doctorShiftId}/users-payment-summary`),
       apiClient.get<{ data: UserPayment[] }>(`doctor-shifts/${doctorShiftId}/users-who-payed-doctor`),
+      apiClient.get<{ data: UserPayment[] }>(`doctor-shifts/${doctorShiftId}/users-insurance-payment-summary`),
     ])
-      .then(async ([collectedRes, payersRes]) => {
-        const collected = collectedRes.data?.data ?? []
-        const payers    = payersRes.data?.data    ?? []
+      .then(async ([collectedRes, payersRes, insRes]) => {
+        const collected  = collectedRes.data?.data ?? []
+        const payers     = payersRes.data?.data    ?? []
+        const insPayers  = insRes.data?.data       ?? []
         setUsersPayment(collected)
         setPayersList(payers)
-        const [collectedMap, payersMap] = await Promise.all([
+        setInsurancePayers(insPayers)
+        const [collectedMap, payersMap, insMap] = await Promise.all([
           loadAccsMap(collected),
           loadAccsMap(payers),
+          loadAccsMap(insPayers),
         ])
         setUserAccsMap(collectedMap)
         setPayersAccsMap(payersMap)
+        setInsurancePayersMap(insMap)
       })
-      .catch(() => { setUsersPayment([]); setPayersList([]) })
+      .catch(() => { setUsersPayment([]); setPayersList([]); setInsurancePayers([]) })
       .finally(() => setUsersPaymentLoading(false))
   }, [open, doctorShiftId])
 
@@ -232,14 +242,35 @@ export default function JournalEntryDialog({
   // ── helpers ───────────────────────────────────────────────────────────────
   const findAcc = (id: string | null | undefined) => accounts.find(a => a.id === id) ?? null
 
-  const revenueAcc     = findAcc(global.clinicRevenueAccountId)
-  const receivablesAcc = findAcc(global.doctorReceivablesAccountId)
-  const feeAcc         = findAcc(global.doctorFeesExpenseAccountId)
-  const cashBoxAcc     = findAcc(userAccs.cashBoxAccountId)
-  const bankAcc        = findAcc(userAccs.bankAccountId)
+  const revenueAcc       = findAcc(global.clinicRevenueAccountId)
+  const insRevAcc        = findAcc(global.insuranceCopaymentRevenueAccountId)
+const receivablesAcc   = findAcc(global.doctorReceivablesAccountId)
+  const feeAcc           = findAcc(global.doctorFeesExpenseAccountId)
+  const cashBoxAcc       = findAcc(userAccs.cashBoxAccountId)
+  const bankAcc          = findAcc(userAccs.bankAccountId)
 
-  const clinicRevTotal = clinicCash + clinicBank
+  // Per-user net regular amounts (subtract insurance copayments from totals to avoid double-counting)
+  const insPayersById = Object.fromEntries(insurancePayers.map(u => [u.id, u]))
+  const regularPayersNet = usersPayment
+    .map(u => {
+      const ins = insPayersById[u.id]
+      return {
+        ...u,
+        total_cash: Number(u.total_cash) - Number(ins?.total_cash ?? 0),
+        total_bank: Number(u.total_bank) - Number(ins?.total_bank ?? 0),
+      }
+    })
+    .filter(u => u.total_cash > 0 || u.total_bank > 0)
+
+  const insRevTotal     = insurancePayers.reduce((s, u) => s + Number(u.total_cash) + Number(u.total_bank), 0)
+
+  const regularRevTotal = regularPayersNet.length > 0
+    ? regularPayersNet.reduce((s, u) => s + u.total_cash + u.total_bank, 0)
+    : usersPayment.length === 0 ? clinicCash + clinicBank : 0
+
+  const clinicRevTotal = regularRevTotal
   const hasRevEntry    = clinicRevTotal > 0
+  const hasInsEntry    = insRevTotal > 0 && !!insRevAcc
 
   const globalComplete   = isGlobalComplete(global)
   const userAccsComplete = isUserAccountsComplete(userAccs)
@@ -247,22 +278,40 @@ export default function JournalEntryDialog({
 
   // ── entry lines ───────────────────────────────────────────────────────────
 
-  const entry0Lines: JLine[] = [
-    ...usersPayment.flatMap(u => {
+  const buildPayerLines = (payers: UserPayment[]): JLine[] =>
+    payers.flatMap(u => {
       const a = userAccsMap[u.id]
       const lines: JLine[] = []
-      const cash = Number(u.total_cash)
-      const bank = Number(u.total_bank)
+      const cash = Number(u.total_cash); const bank = Number(u.total_bank)
       if (cash > 0) lines.push({ label: `صندوق — ${u.name}`, account: findAcc(a?.cashBoxAccountId), debit: cash, credit: 0 })
-      if (bank > 0) lines.push({ label: `بنك — ${u.name}`,    account: findAcc(a?.bankAccountId),    debit: bank, credit: 0 })
+      if (bank > 0) lines.push({ label: `بنك — ${u.name}`,   account: findAcc(a?.bankAccountId),    debit: bank, credit: 0 })
       return lines
-    }),
-    // fallback to current user accounts when no per-user data available
-    ...(usersPayment.length === 0 ? [
-      ...(clinicCash > 0 ? [{ label: 'صندوق الكاش', account: cashBoxAcc, debit: clinicCash, credit: 0 }] : []),
-      ...(clinicBank > 0 ? [{ label: 'بنك / شبكة',  account: bankAcc,   debit: clinicBank, credit: 0 }] : []),
-    ] : []),
-    { label: 'إيرادات العيادة', account: revenueAcc, party: doctorParty, debit: 0, credit: clinicRevTotal },
+    })
+
+  const buildInsPayerLines = (payers: UserPayment[]): JLine[] =>
+    payers.flatMap(u => {
+      const a = insurancePayersMap[u.id]
+      const lines: JLine[] = []
+      const cash = Number(u.total_cash); const bank = Number(u.total_bank)
+      if (cash > 0) lines.push({ label: `صندوق — ${u.name}`, account: findAcc(a?.cashBoxAccountId), debit: cash, credit: 0 })
+      if (bank > 0) lines.push({ label: `بنك — ${u.name}`,   account: findAcc(a?.bankAccountId),    debit: bank, credit: 0 })
+      return lines
+    })
+
+  const entry0Lines: JLine[] = [
+    ...(usersPayment.length > 0
+      ? buildPayerLines(regularPayersNet)
+      : [
+          ...(clinicCash > 0 ? [{ label: 'صندوق الكاش', account: cashBoxAcc, debit: clinicCash, credit: 0 }] : []),
+          ...(clinicBank > 0 ? [{ label: 'بنك / شبكة',  account: bankAcc,   debit: clinicBank, credit: 0 }] : []),
+        ]
+    ),
+    { label: 'إيرادات العيادة', account: revenueAcc, party: doctorParty, debit: 0, credit: regularRevTotal },
+  ]
+
+  const entry0BLines: JLine[] = [
+    ...buildInsPayerLines(insurancePayers),
+    { label: 'إيرادات التأمين (التحملات)', account: insRevAcc, party: doctorParty, debit: 0, credit: insRevTotal },
   ]
   const entry1Lines: JLine[] = [
     { label: 'مصروف أتعاب', account: feeAcc,          debit: totalAmount, credit: 0 },
@@ -321,16 +370,19 @@ export default function JournalEntryDialog({
 
       const reqs: Promise<string>[] = []
 
-      if (hasRevEntry && revenueAcc) {
-        const revDebitLines = usersPayment.length > 0
-          ? usersPayment.flatMap(u => {
-              const a = userAccsMap[u.id]
-              const ls: { account_id: string; description: string; debit: number; credit: number }[] = []
-              const cash = Number(u.total_cash); const bank = Number(u.total_bank)
-              if (cash > 0 && a?.cashBoxAccountId) ls.push({ account_id: a.cashBoxAccountId, description: `كاش — ${u.name}`,  debit: cash, credit: 0 })
-              if (bank > 0 && a?.bankAccountId)    ls.push({ account_id: a.bankAccountId,    description: `شبكة — ${u.name}`, debit: bank, credit: 0 })
-              return ls
-            })
+      const buildSubmitPayerLines = (payers: UserPayment[], accsMap: Record<number, UserAccsEntry>) =>
+        payers.flatMap(u => {
+          const a = accsMap[u.id]
+          const ls: { account_id: string; description: string; debit: number; credit: number }[] = []
+          const cash = Number(u.total_cash); const bank = Number(u.total_bank)
+          if (cash > 0 && a?.cashBoxAccountId) ls.push({ account_id: a.cashBoxAccountId, description: `كاش — ${u.name}`,  debit: cash, credit: 0 })
+          if (bank > 0 && a?.bankAccountId)    ls.push({ account_id: a.bankAccountId,    description: `شبكة — ${u.name}`, debit: bank, credit: 0 })
+          return ls
+        })
+
+      if (regularRevTotal > 0 && revenueAcc) {
+        const regularDebitLines = usersPayment.length > 0
+          ? buildSubmitPayerLines(regularPayersNet, userAccsMap)
           : [
               ...(clinicCash > 0 ? [{ account_id: userAccs.cashBoxAccountId!, description: 'كاش من المرضى',  debit: clinicCash,  credit: 0 }] : []),
               ...(clinicBank > 0 ? [{ account_id: userAccs.bankAccountId!,    description: 'شبكة من المرضى', debit: clinicBank,  credit: 0 }] : []),
@@ -339,8 +391,19 @@ export default function JournalEntryDialog({
           date, reference: ref,
           description: `إثبات إيراد العيادة | د. ${doctorName}${sfx}`,
           lines: [
-            ...revDebitLines,
-            { account_id: global.clinicRevenueAccountId!, party_id: doctorParty!.id, description: 'إيراد العيادة', debit: 0, credit: clinicRevTotal },
+            ...regularDebitLines,
+            { account_id: global.clinicRevenueAccountId!, party_id: doctorParty!.id, description: 'إيراد العيادة', debit: 0, credit: regularRevTotal },
+          ],
+        }))
+      }
+
+      if (hasInsEntry) {
+        reqs.push(createJournalEntry({
+          date, reference: ref,
+          description: `إثبات إيراد التأمين (تحملات) | د. ${doctorName}${sfx}`,
+          lines: [
+            ...buildSubmitPayerLines(insurancePayers, insurancePayersMap),
+            { account_id: global.insuranceCopaymentRevenueAccountId!, party_id: doctorParty!.id, description: 'إيراد التأمين (التحملات)', debit: 0, credit: insRevTotal },
           ],
         }))
       }
@@ -499,7 +562,8 @@ export default function JournalEntryDialog({
 
            
 
-                {hasRevEntry && <EntryTable lines={entry0Lines} title="قيد 0 — إثبات إيراد العيادة" />}
+                {regularRevTotal > 0 && <EntryTable lines={entry0Lines}  title="قيد 0 — إثبات إيراد العيادة" />}
+                {hasInsEntry        && <EntryTable lines={entry0BLines} title="قيد 0ب — إثبات إيراد التأمين (التحملات)" />}
                 <EntryTable lines={entry1Lines} title="قيد 1 — إثبات الأتعاب وذمة الطبيب" />
                 <EntryTable lines={entry2Lines} title="قيد 2 — صرف الأتعاب" />
 
@@ -511,7 +575,7 @@ export default function JournalEntryDialog({
                     onClick={handleSubmit}
                     startIcon={submitting ? <CircularProgress size={14} color="inherit" /> : undefined}
                   >
-                    {submitting ? 'جاري الإنشاء...' : `إنشاء ${hasRevEntry ? '3' : '2'} قيود`}
+                    {submitting ? 'جاري الإنشاء...' : `إنشاء ${2 + (regularRevTotal > 0 ? 1 : 0) + (hasInsEntry ? 1 : 0)} قيود`}
                   </Button>
                 </Box>
               </>

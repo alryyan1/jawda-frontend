@@ -69,15 +69,19 @@ export interface FinanceParty {
 }
 
 export interface FinanceGlobalAccounts {
-  clinicRevenueAccountId:     string | null
-  doctorReceivablesAccountId: string | null
-  doctorFeesExpenseAccountId: string | null
+  clinicRevenueAccountId:              string | null
+  doctorReceivablesAccountId:          string | null
+  doctorFeesExpenseAccountId:          string | null
+  insuranceCopaymentRevenueAccountId:  string | null
+  insuranceReceivableAccountId:        string | null
 }
 
 export const DEFAULT_GLOBAL: FinanceGlobalAccounts = {
-  clinicRevenueAccountId:     null,
-  doctorReceivablesAccountId: null,
-  doctorFeesExpenseAccountId: null,
+  clinicRevenueAccountId:              null,
+  doctorReceivablesAccountId:          null,
+  doctorFeesExpenseAccountId:          null,
+  insuranceCopaymentRevenueAccountId:  null,
+  insuranceReceivableAccountId:        null,
 }
 
 export function isGlobalComplete(a: FinanceGlobalAccounts) {
@@ -205,9 +209,11 @@ export async function fetchGlobalJournalSettings(): Promise<FinanceGlobalAccount
   if (!snap.exists()) return { ...DEFAULT_GLOBAL }
   const d = snap.data()
   return {
-    clinicRevenueAccountId:     d.clinicRevenueAccountId     ?? null,
-    doctorReceivablesAccountId: d.doctorReceivablesAccountId ?? null,
-    doctorFeesExpenseAccountId: d.doctorFeesExpenseAccountId ?? null,
+    clinicRevenueAccountId:             d.clinicRevenueAccountId             ?? null,
+    doctorReceivablesAccountId:         d.doctorReceivablesAccountId         ?? null,
+    doctorFeesExpenseAccountId:         d.doctorFeesExpenseAccountId         ?? null,
+    insuranceCopaymentRevenueAccountId: d.insuranceCopaymentRevenueAccountId ?? null,
+    insuranceReceivableAccountId:       d.insuranceReceivableAccountId       ?? null,
   }
 }
 

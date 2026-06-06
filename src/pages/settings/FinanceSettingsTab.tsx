@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   Alert, Autocomplete, Box, Button, Chip, CircularProgress,
+  FormControlLabel, Checkbox,
   InputAdornment, Paper, Stack, Tab, Tabs, TextField, Typography,
 } from '@mui/material'
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
@@ -398,6 +399,16 @@ export default function FinanceSettingsTab() {
                     value={findAcc(globalAccs.doctorFeesExpenseAccountId)}
                     onChange={v => setGlobalAccs(g => ({ ...g, doctorFeesExpenseAccountId: v?.id ?? null }))}
                   />
+                  <AccPicker
+                    label="حساب إيرادات التأمين (التحملات)"
+                    value={findAcc(globalAccs.insuranceCopaymentRevenueAccountId)}
+                    onChange={v => setGlobalAccs(g => ({ ...g, insuranceCopaymentRevenueAccountId: v?.id ?? null }))}
+                  />
+                  <AccPicker
+                    label="حساب ذمم التأمين (المستحق من الشركات)"
+                    value={findAcc(globalAccs.insuranceReceivableAccountId)}
+                    onChange={v => setGlobalAccs(g => ({ ...g, insuranceReceivableAccountId: v?.id ?? null }))}
+                  />
                   <Box>
                     <Button
                       variant="contained"
@@ -444,6 +455,16 @@ export default function FinanceSettingsTab() {
                             label="حساب البنك / الشبكة"
                             value={findAcc(accs.bankAccountId)}
                             onChange={v => setUserAccs(u.id, { bankAccountId: v?.id ?? null })}
+                          />
+                          <FormControlLabel
+                            control={
+                              <Checkbox
+                                size="small"
+                                checked={!!accs.isInsuranceCollector}
+                                onChange={e => setUserAccs(u.id, { isInsuranceCollector: e.target.checked })}
+                              />
+                            }
+                            label="متحصل تأمين (تحملات)"
                           />
                           <Box>
                             <Button

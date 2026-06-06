@@ -106,6 +106,7 @@ export interface DoctorShiftFinancialSummary {
   doctor_insurance_share_total: number;
   total_cash: number;
   total_bank: number;
+  total_insurance_services: number;
   patients_breakdown: PatientVisitFinancialBreakdown[];
 }
 export interface DailyServiceIncomeData {

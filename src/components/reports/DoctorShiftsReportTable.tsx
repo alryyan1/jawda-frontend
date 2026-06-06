@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 import {
-  Paper,
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   Box,
@@ -18,10 +16,9 @@ import {
   Tooltip,
   IconButton,
   Popover,
-  Divider,
   Checkbox,
 } from "@mui/material";
-import { LockOpen, AccountBalance } from "@mui/icons-material";
+import { LockOpen, AccountBalance, ViewColumn as ViewColumnIcon } from "@mui/icons-material";
 import { Button } from "@mui/material";
 import JournalEntryDialog from "@/components/clinic/JournalEntryDialog";
 import { formatNumber } from "@/lib/utils";
@@ -32,6 +29,46 @@ import "dayjs/locale/ar";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { reopenDoctorShift } from "@/services/doctorShiftService";
+
+// ── column definitions ────────────────────────────────────────────────────────
+
+const COLUMNS = [
+  { key: "index",             label: "#",                   defaultVisible: true },
+  { key: "status",            label: "الحالة",             defaultVisible: true },
+  { key: "date",              label: "تاريخ",              defaultVisible: true },
+  { key: "specialty",         label: "التخصص",             defaultVisible: true },
+  { key: "doctor",            label: "الطبيب",             defaultVisible: true },
+  { key: "income",            label: "الإيراد المدفوع",   defaultVisible: true },
+  { key: "deduction",         label: "التحمل",             defaultVisible: true },
+  { key: "ins_revenue",       label: "إيراد التأمين",     defaultVisible: true },
+  { key: "patients",          label: "عدد المرضى",         defaultVisible: true },
+  { key: "cash_pct",          label: "% كاش",             defaultVisible: true },
+  { key: "ins_pct",           label: "% تأمين",           defaultVisible: true },
+  { key: "cash_entitlement",  label: "استحقاق (كاش)",      defaultVisible: true },
+  { key: "ins_entitlement",   label: "استحقاق (تأمين)",    defaultVisible: true },
+  { key: "total_entitlement", label: "إجمالي الاستحقاق",  defaultVisible: true },
+  { key: "journal",           label: "قيد",                defaultVisible: true },
+  { key: "user",              label: "المستخدم",           defaultVisible: true },
+] as const;
+
+type ColumnKey = (typeof COLUMNS)[number]["key"];
+
+const COLS_STORAGE_KEY = "doctor_shifts_table_cols";
+
+function loadVisibility(): Record<ColumnKey, boolean> {
+  try {
+    const stored = JSON.parse(localStorage.getItem(COLS_STORAGE_KEY) ?? "{}");
+    return Object.fromEntries(
+      COLUMNS.map((c) => [c.key, stored[c.key] ?? c.defaultVisible])
+    ) as Record<ColumnKey, boolean>;
+  } catch {
+    return Object.fromEntries(
+      COLUMNS.map((c) => [c.key, c.defaultVisible])
+    ) as Record<ColumnKey, boolean>;
+  }
+}
+
+// ── component ─────────────────────────────────────────────────────────────────
 
 interface DoctorShiftsReportTableProps {
   shifts: DoctorShiftReportItem[];
@@ -58,13 +95,26 @@ function DoctorShiftsReportTable({
   useEffect(() => { setLocalShifts(shifts); }, [shifts]);
 
   const [pendingReopen, setPendingReopen] = useState<Set<number>>(new Set());
-
-  // Popover state: anchor element + which shift id is open
   const [popoverAnchor, setPopoverAnchor] = useState<HTMLElement | null>(null);
   const [popoverShiftId, setPopoverShiftId] = useState<number | null>(null);
-
-  // Journal dialog
   const [journalShift, setJournalShift] = useState<DoctorShiftReportItem | null>(null);
+
+  // Column visibility
+  const [colVisibility, setColVisibility] = useState<Record<ColumnKey, boolean>>(loadVisibility);
+  const [colMenuAnchor, setColMenuAnchor] = useState<HTMLElement | null>(null);
+
+  const vis = (key: ColumnKey) => colVisibility[key];
+
+  const toggleColumn = (key: ColumnKey) => {
+    setColVisibility((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      localStorage.setItem(COLS_STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const visibleColCount =
+    COLUMNS.filter((c) => colVisibility[c.key]).length + (selectable ? 1 : 0);
 
   const openPopover = (e: React.MouseEvent<HTMLElement>, shiftId: number) => {
     e.stopPropagation();
@@ -92,8 +142,7 @@ function DoctorShiftsReportTable({
 
   const reopenMutation = useMutation({
     mutationFn: (shiftId: number) => reopenDoctorShift(shiftId),
-    onMutate: (shiftId) =>
-      setPendingReopen((prev) => new Set(prev).add(shiftId)),
+    onMutate: (shiftId) => setPendingReopen((prev) => new Set(prev).add(shiftId)),
     onSuccess: (_, shiftId) => {
       setLocalShifts((prev) =>
         prev.map((s) => (s.id === shiftId ? { ...s, status: true, end_time: null } : s))
@@ -106,25 +155,24 @@ function DoctorShiftsReportTable({
       setPendingReopen((prev) => { const s = new Set(prev); s.delete(shiftId); return s; }),
   });
 
-
   type DayTotals = {
     total_income: number; clinic_enurance: number;
-    snap_total_insurance_services: number; snap_patients_count: number;
+    snap_total_insurance_revenue: number; snap_patients_count: number;
     cash_entitlement: number; insurance_entitlement: number; total_doctor_entitlement: number;
   };
 
   const sumShifts = (arr: DoctorShiftReportItem[]): DayTotals =>
     arr.reduce(
       (acc, s) => ({
-        total_income:                 acc.total_income                 + (s.total_income                 || 0),
-        clinic_enurance:              acc.clinic_enurance              + (s.clinic_enurance              || 0),
-        snap_total_insurance_services: acc.snap_total_insurance_services + (Number(s.snap_total_insurance_services) || 0),
-        snap_patients_count:          acc.snap_patients_count          + (Number(s.snap_patients_count)          || 0),
-        cash_entitlement:             acc.cash_entitlement             + (s.cash_entitlement             || 0),
-        insurance_entitlement:        acc.insurance_entitlement        + (s.insurance_entitlement        || 0),
-        total_doctor_entitlement:     acc.total_doctor_entitlement     + (s.total_doctor_entitlement     || 0),
+        total_income:                  acc.total_income                  + (s.total_income                  || 0),
+        clinic_enurance:               acc.clinic_enurance               + (s.clinic_enurance               || 0),
+        snap_total_insurance_revenue: acc.snap_total_insurance_revenue + (Number(s.snap_total_insurance_revenue) || 0),
+        snap_patients_count:           acc.snap_patients_count           + (Number(s.snap_patients_count)           || 0),
+        cash_entitlement:              acc.cash_entitlement              + (s.cash_entitlement              || 0),
+        insurance_entitlement:         acc.insurance_entitlement         + (s.insurance_entitlement         || 0),
+        total_doctor_entitlement:      acc.total_doctor_entitlement      + (s.total_doctor_entitlement      || 0),
       }),
-      { total_income: 0, clinic_enurance: 0, snap_total_insurance_services: 0, snap_patients_count: 0, cash_entitlement: 0, insurance_entitlement: 0, total_doctor_entitlement: 0 }
+      { total_income: 0, clinic_enurance: 0, snap_total_insurance_revenue: 0, snap_patients_count: 0, cash_entitlement: 0, insurance_entitlement: 0, total_doctor_entitlement: 0 }
     );
 
   const dayGroups = useMemo(() => {
@@ -155,6 +203,7 @@ function DoctorShiftsReportTable({
 
   return (
     <Box>
+      {/* Toolbar */}
       <Box sx={{ display: "flex", justifyContent: "flex-end", alignItems: "center", mb: 2, gap: 2 }}>
         <Typography variant="body2" sx={{ color: "text.secondary" }}>
           عدد الصفوف في الصفحة:
@@ -171,90 +220,133 @@ function DoctorShiftsReportTable({
             <MenuItem value={200}>200</MenuItem>
           </Select>
         </FormControl>
+
+        <Tooltip title="تحكم بالأعمدة">
+          <IconButton size="small" onClick={(e) => setColMenuAnchor(e.currentTarget)}>
+            <ViewColumnIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
       </Box>
 
-      <TableContainer dir="ltr" component={Paper} elevation={2} sx={{ width: "100%", overflowX: "auto" }}>
-        <Table size="small" sx={{ direction: "ltr", width: "100%", "& .MuiTableCell-root": { whiteSpace: "nowrap" } }}>
-          <TableHead>
-            <TableRow>
-              {selectable && (
-                <TableCell padding="checkbox" align="center" sx={{ width: 40 }}>
-                  <Checkbox
-                    size="small"
-                    indeterminate={selectedIds.size > 0 && selectedIds.size < localShifts.length}
-                    checked={localShifts.length > 0 && selectedIds.size === localShifts.length}
-                    onChange={(e) => {
-                      onSelectionChange?.(e.target.checked ? new Set(localShifts.map(s => s.id)) : new Set());
-                    }}
-                  />
-                </TableCell>
-              )}
-              <TableCell align="center" sx={{ width: 36 }}>#</TableCell>
-              <TableCell align="center">الحالة</TableCell>
-              <TableCell align="center">تاريخ</TableCell>
-              <TableCell align="center">التخصص</TableCell>
-              <TableCell align="center">الطبيب</TableCell>
-              <TableCell align="center">الإيراد المدفوع</TableCell>
-              <TableCell align="center">التحمل</TableCell>
-              <TableCell align="center">إيراد التأمين</TableCell>
-              <TableCell align="center">عدد المرضى</TableCell>
-              <TableCell align="center">% كاش</TableCell>
-              <TableCell align="center">% تأمين</TableCell>
-              <TableCell align="center">استحقاق (كاش)</TableCell>
-              <TableCell align="center">استحقاق (تأمين)</TableCell>
-              <TableCell align="center">إجمالي الاستحقاق</TableCell>
-              <TableCell align="center">قيد</TableCell>
-              <TableCell align="center">المستخدم</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {dayGroups.map(({ date, shifts: dayShifts, totals: dayTotals }) => {
-              const colSpan = 16 + (selectable ? 1 : 0);
-              const dateLabel = dayjs(date).isValid()
-                ? dayjs(date).locale("ar").format("dddd DD/MM/YYYY")
-                : date;
+      {/* Column visibility popover */}
+      <Popover
+        open={Boolean(colMenuAnchor)}
+        anchorEl={colMenuAnchor}
+        onClose={() => setColMenuAnchor(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+        transformOrigin={{ vertical: "top", horizontal: "left" }}
+      >
+        <Box sx={{ p: 1.5, minWidth: 200 }}>
+          <Typography variant="subtitle2" sx={{ mb: 0.5, fontWeight: 700 }}>
+            الأعمدة المرئية
+          </Typography>
+          {COLUMNS.map((col) => (
+            <Box key={col.key} sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+              <Checkbox
+                size="small"
+                checked={colVisibility[col.key]}
+                onChange={() => toggleColumn(col.key)}
+              />
+              <Typography variant="body2">{col.label}</Typography>
+            </Box>
+          ))}
+          <Button
+            size="small"
+            sx={{ mt: 1 }}
+            onClick={() => {
+              const all = Object.fromEntries(COLUMNS.map((c) => [c.key, true])) as Record<ColumnKey, boolean>;
+              setColVisibility(all);
+              localStorage.setItem(COLS_STORAGE_KEY, JSON.stringify(all));
+            }}
+          >
+            إظهار الكل
+          </Button>
+        </Box>
+      </Popover>
 
-              return (
-                <React.Fragment key={date}>
-                  {/* ── Day header ── */}
-                  <TableRow sx={{ bgcolor: "#1565C0" }}>
-                    <TableCell
-                      colSpan={colSpan}
-                      align="center"
-                      sx={{ color: "#fff", fontWeight: 700, py: 0.75, fontSize: 13, letterSpacing: 0.5 }}
+      <Table size="small" sx={{ direction: "ltr", width: "100%", "& .MuiTableCell-root": { whiteSpace: "nowrap" } }}>
+        <TableHead>
+          <TableRow>
+            {selectable && (
+              <TableCell padding="checkbox" align="center" sx={{ width: 40 }}>
+                <Checkbox
+                  size="small"
+                  indeterminate={selectedIds.size > 0 && selectedIds.size < localShifts.length}
+                  checked={localShifts.length > 0 && selectedIds.size === localShifts.length}
+                  onChange={(e) => {
+                    onSelectionChange?.(e.target.checked ? new Set(localShifts.map((s) => s.id)) : new Set());
+                  }}
+                />
+              </TableCell>
+            )}
+            {vis("index")             && <TableCell align="center" sx={{ width: 36 }}>#</TableCell>}
+            {vis("status")            && <TableCell align="center">الحالة</TableCell>}
+            {vis("date")              && <TableCell align="center">تاريخ</TableCell>}
+            {vis("specialty")         && <TableCell align="center">التخصص</TableCell>}
+            {vis("doctor")            && <TableCell align="center">الطبيب</TableCell>}
+            {vis("income")            && <TableCell align="center">الإيراد المدفوع</TableCell>}
+            {vis("deduction")         && <TableCell align="center">التحمل</TableCell>}
+            {vis("ins_revenue")       && <TableCell align="center">إيراد التأمين</TableCell>}
+            {vis("patients")          && <TableCell align="center">عدد المرضى</TableCell>}
+            {vis("cash_pct")          && <TableCell align="center">% كاش</TableCell>}
+            {vis("ins_pct")           && <TableCell align="center">% تأمين</TableCell>}
+            {vis("cash_entitlement")  && <TableCell align="center">استحقاق (كاش)</TableCell>}
+            {vis("ins_entitlement")   && <TableCell align="center">استحقاق (تأمين)</TableCell>}
+            {vis("total_entitlement") && <TableCell align="center">إجمالي الاستحقاق</TableCell>}
+            {vis("journal")           && <TableCell align="center">قيد</TableCell>}
+            {vis("user")              && <TableCell align="center">المستخدم</TableCell>}
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {dayGroups.map(({ date, shifts: dayShifts, totals: dayTotals }) => {
+            const dateLabel = dayjs(date).isValid()
+              ? dayjs(date).locale("ar").format("dddd DD/MM/YYYY")
+              : date;
+
+            return (
+              <React.Fragment key={date}>
+                {/* ── Day header ── */}
+                <TableRow sx={{ bgcolor: "#1565C0" }}>
+                  <TableCell
+                    colSpan={visibleColCount}
+                    align="center"
+                    sx={{ color: "#fff", fontWeight: 700, py: 0.75, fontSize: 13, letterSpacing: 0.5 }}
+                  >
+                    {dateLabel}
+                  </TableCell>
+                </TableRow>
+
+                {/* ── Day rows ── */}
+                {dayShifts.map((shift, index) => {
+                  const isReopening = pendingReopen.has(shift.id);
+                  return (
+                    <TableRow
+                      key={shift.id}
+                      onClick={() => !selectable && handleRowClick(shift)}
+                      selected={selectable && selectedIds.has(shift.id)}
+                      sx={{
+                        backgroundColor: index % 2 === 0 ? "background.paper" : "grey.50",
+                        cursor: selectable ? "default" : "pointer",
+                        ...(selectable && selectedIds.has(shift.id) && { bgcolor: "primary.50 !important" }),
+                      }}
                     >
-                      {dateLabel}
-                    </TableCell>
-                  </TableRow>
-
-                  {/* ── Day rows ── */}
-                  {dayShifts.map((shift, index) => {
-                    const isReopening = pendingReopen.has(shift.id);
-                    return (
-                      <TableRow
-                        key={shift.id}
-                        onClick={() => !selectable && handleRowClick(shift)}
-                        selected={selectable && selectedIds.has(shift.id)}
-                        sx={{
-                          backgroundColor: index % 2 === 0 ? "background.paper" : "grey.50",
-                          cursor: selectable ? "default" : "pointer",
-                          ...(selectable && selectedIds.has(shift.id) && { bgcolor: "primary.50 !important" }),
-                        }}
-                      >
-                        {selectable && (
-                          <TableCell padding="checkbox" align="center" onClick={(e) => e.stopPropagation()}>
-                            <Checkbox
-                              size="small"
-                              checked={selectedIds.has(shift.id)}
-                              onChange={(e) => {
-                                const next = new Set(selectedIds);
-                                e.target.checked ? next.add(shift.id) : next.delete(shift.id);
-                                onSelectionChange?.(next);
-                              }}
-                            />
-                          </TableCell>
-                        )}
+                      {selectable && (
+                        <TableCell padding="checkbox" align="center" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            size="small"
+                            checked={selectedIds.has(shift.id)}
+                            onChange={(e) => {
+                              const next = new Set(selectedIds);
+                              e.target.checked ? next.add(shift.id) : next.delete(shift.id);
+                              onSelectionChange?.(next);
+                            }}
+                          />
+                        </TableCell>
+                      )}
+                      {vis("index") && (
                         <TableCell align="center" sx={{ color: "text.secondary", fontSize: 11, fontWeight: 600 }}>{index + 1}</TableCell>
+                      )}
+                      {vis("status") && (
                         <TableCell align="center" onClick={(e) => e.stopPropagation()}>
                           <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0.5 }}>
                             <Box sx={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: shift.status ? "#4CAF50" : "#F44336", border: "2px solid", borderColor: shift.status ? "#2E7D32" : "#C62828", flexShrink: 0 }} title={shift.status ? "مفتوح" : "مغلق"} />
@@ -269,22 +361,26 @@ function DoctorShiftsReportTable({
                             )}
                           </Box>
                         </TableCell>
-                        <TableCell align="center">{shift.created_at ? dayjs(shift.created_at).locale("ar").format("hh:mm A") : "-"}</TableCell>
-                        <TableCell align="center">{shift.doctor_specialist_name || "-"}</TableCell>
+                      )}
+                      {vis("date")              && <TableCell align="center">{shift.created_at ? dayjs(shift.created_at).locale("ar").format("hh:mm A") : "-"}</TableCell>}
+                      {vis("specialty")         && <TableCell align="center">{shift.doctor_specialist_name || "-"}</TableCell>}
+                      {vis("doctor")            && (
                         <TableCell align="center">
                           <Link component="button" onClick={(e) => handleDoctorNameClick(shift, e)} sx={{ color: "primary.main", textDecoration: "none", cursor: "pointer", "&:hover": { textDecoration: "underline" }, fontWeight: "medium" }}>
                             {shift.doctor_name || "N/A"}
                           </Link>
                         </TableCell>
-                        <TableCell align="center" sx={{ fontWeight: "bold", color: "success.main" }}>{formatNumber(shift.total_income || 0)}</TableCell>
-                        <TableCell align="center" sx={{ fontWeight: "bold", color: "error.main" }}>{formatNumber(shift.clinic_enurance || 0)}</TableCell>
-                        <TableCell align="center" sx={{ color: "warning.dark" }}>{formatNumber(Number(shift.snap_total_insurance_services) || 0)}</TableCell>
-                        <TableCell align="center">{shift.snap_patients_count ?? "-"}</TableCell>
-                        <TableCell align="center" sx={{ color: "text.secondary", fontSize: 12 }}>{shift.snap_doctor_cash_percentage != null ? `${shift.snap_doctor_cash_percentage}%` : "-"}</TableCell>
-                        <TableCell align="center" sx={{ color: "text.secondary", fontSize: 12 }}>{shift.snap_doctor_insurance_percentage != null ? `${shift.snap_doctor_insurance_percentage}%` : "-"}</TableCell>
-                        <TableCell align="center">{formatNumber(shift.cash_entitlement || 0)}</TableCell>
-                        <TableCell align="center">{formatNumber(shift.insurance_entitlement || 0)}</TableCell>
-                        <TableCell align="center" sx={{ fontWeight: "bold" }}>{formatNumber(shift.total_doctor_entitlement || 0)}</TableCell>
+                      )}
+                      {vis("income")            && <TableCell align="center" sx={{ fontWeight: "bold", color: "success.main" }}>{formatNumber(shift.total_income || 0)}</TableCell>}
+                      {vis("deduction")         && <TableCell align="center" sx={{ fontWeight: "bold", color: "error.main" }}>{formatNumber(shift.clinic_enurance || 0)}</TableCell>}
+                      {vis("ins_revenue")       && <TableCell align="center" sx={{ color: "warning.dark" }}>{formatNumber(Number(shift.snap_total_insurance_revenue) || 0)}</TableCell>}
+                      {vis("patients")          && <TableCell align="center">{shift.snap_patients_count ?? "-"}</TableCell>}
+                      {vis("cash_pct")          && <TableCell align="center" sx={{ color: "text.secondary", fontSize: 12 }}>{shift.snap_doctor_cash_percentage != null ? `${shift.snap_doctor_cash_percentage}%` : "-"}</TableCell>}
+                      {vis("ins_pct")           && <TableCell align="center" sx={{ color: "text.secondary", fontSize: 12 }}>{shift.snap_doctor_insurance_percentage != null ? `${shift.snap_doctor_insurance_percentage}%` : "-"}</TableCell>}
+                      {vis("cash_entitlement")  && <TableCell align="center">{formatNumber(shift.cash_entitlement || 0)}</TableCell>}
+                      {vis("ins_entitlement")   && <TableCell align="center">{formatNumber(shift.insurance_entitlement || 0)}</TableCell>}
+                      {vis("total_entitlement") && <TableCell align="center" sx={{ fontWeight: "bold" }}>{formatNumber(shift.total_doctor_entitlement || 0)}</TableCell>}
+                      {vis("journal")           && (
                         <TableCell align="center" onClick={(e) => e.stopPropagation()}>
                           <Tooltip title="قيد محاسبي">
                             <IconButton size="small" onClick={(e) => { e.stopPropagation(); openPopover(e, shift.id); }} sx={{ p: 0.5 }}>
@@ -292,54 +388,60 @@ function DoctorShiftsReportTable({
                             </IconButton>
                           </Tooltip>
                         </TableCell>
-                        <TableCell align="center">{shift.user_name_opened || "-"}</TableCell>
-                      </TableRow>
-                    );
-                  })}
+                      )}
+                      {vis("user") && <TableCell align="center">{shift.user_name_opened || "-"}</TableCell>}
+                    </TableRow>
+                  );
+                })}
 
-                  {/* ── Day totals ── */}
-                  <TableRow sx={{ bgcolor: "#E3F2FD", "& .MuiTableCell-root": { fontWeight: 700, py: 0.5, fontSize: 12 } }}>
-                    {selectable && <TableCell />}
-                    <TableCell />{/* # */}
-                    <TableCell />
-                    <TableCell align="center" sx={{ color: "primary.dark" }}>مجموع اليوم</TableCell>
-                    <TableCell /><TableCell />
-                    <TableCell align="center" sx={{ color: "success.dark" }}>{formatNumber(dayTotals.total_income)}</TableCell>
-                    <TableCell align="center" sx={{ color: "error.dark" }}>{formatNumber(dayTotals.clinic_enurance)}</TableCell>
-                    <TableCell align="center" sx={{ color: "warning.dark" }}>{formatNumber(dayTotals.snap_total_insurance_services)}</TableCell>
-                    <TableCell align="center">{dayTotals.snap_patients_count}</TableCell>
-                    <TableCell /><TableCell />
-                    <TableCell align="center">{formatNumber(dayTotals.cash_entitlement)}</TableCell>
-                    <TableCell align="center">{formatNumber(dayTotals.insurance_entitlement)}</TableCell>
-                    <TableCell align="center">{formatNumber(dayTotals.total_doctor_entitlement)}</TableCell>
-                    <TableCell /><TableCell />
-                  </TableRow>
-                </React.Fragment>
-              );
-            })}
+                {/* ── Day totals ── */}
+                <TableRow sx={{ bgcolor: "#E3F2FD", "& .MuiTableCell-root": { fontWeight: 700, py: 0.5, fontSize: 12 } }}>
+                  {selectable            && <TableCell />}
+                  {vis("index")          && <TableCell />}
+                  {vis("status")         && <TableCell />}
+                  {vis("date")           && <TableCell align="center" sx={{ color: "primary.dark" }}>مجموع اليوم</TableCell>}
+                  {vis("specialty")      && <TableCell />}
+                  {vis("doctor")         && <TableCell />}
+                  {vis("income")         && <TableCell align="center" sx={{ color: "success.dark" }}>{formatNumber(dayTotals.total_income)}</TableCell>}
+                  {vis("deduction")      && <TableCell align="center" sx={{ color: "error.dark" }}>{formatNumber(dayTotals.clinic_enurance)}</TableCell>}
+                  {vis("ins_revenue")    && <TableCell align="center" sx={{ color: "warning.dark" }}>{formatNumber(dayTotals.snap_total_insurance_revenue)}</TableCell>}
+                  {vis("patients")       && <TableCell align="center">{dayTotals.snap_patients_count}</TableCell>}
+                  {vis("cash_pct")       && <TableCell />}
+                  {vis("ins_pct")        && <TableCell />}
+                  {vis("cash_entitlement")  && <TableCell align="center">{formatNumber(dayTotals.cash_entitlement)}</TableCell>}
+                  {vis("ins_entitlement")   && <TableCell align="center">{formatNumber(dayTotals.insurance_entitlement)}</TableCell>}
+                  {vis("total_entitlement") && <TableCell align="center">{formatNumber(dayTotals.total_doctor_entitlement)}</TableCell>}
+                  {vis("journal")        && <TableCell />}
+                  {vis("user")           && <TableCell />}
+                </TableRow>
+              </React.Fragment>
+            );
+          })}
 
-            {/* ── Monthly totals ── */}
-            <TableRow sx={{ "& .MuiTableCell-root": { fontWeight: 700, borderTop: "3px solid", borderColor: "primary.main", fontSize: "0.95rem" } }}>
-              {selectable && <TableCell />}
-              <TableCell />{/* # */}
-              <TableCell />
-              <TableCell align="center" sx={{ color: "primary.main" }}>مجموع الشهر</TableCell>
-              <TableCell /><TableCell />
-              <TableCell align="center" sx={{ color: "success.main" }}>{formatNumber(monthTotals.total_income)}</TableCell>
-              <TableCell align="center" sx={{ color: "error.main" }}>{formatNumber(monthTotals.clinic_enurance)}</TableCell>
-              <TableCell align="center" sx={{ color: "warning.dark" }}>{formatNumber(monthTotals.snap_total_insurance_services)}</TableCell>
-              <TableCell align="center">{monthTotals.snap_patients_count}</TableCell>
-              <TableCell /><TableCell />
-              <TableCell align="center">{formatNumber(monthTotals.cash_entitlement)}</TableCell>
-              <TableCell align="center">{formatNumber(monthTotals.insurance_entitlement)}</TableCell>
-              <TableCell align="center">{formatNumber(monthTotals.total_doctor_entitlement)}</TableCell>
-              <TableCell /><TableCell />
-            </TableRow>
-          </TableBody>
-        </Table>
-      </TableContainer>
+          {/* ── Monthly totals ── */}
+          <TableRow sx={{ "& .MuiTableCell-root": { fontWeight: 700, borderTop: "3px solid", borderColor: "primary.main", fontSize: "0.95rem" } }}>
+            {selectable            && <TableCell />}
+            {vis("index")          && <TableCell />}
+            {vis("status")         && <TableCell />}
+            {vis("date")           && <TableCell align="center" sx={{ color: "primary.main" }}>مجموع الشهر</TableCell>}
+            {vis("specialty")      && <TableCell />}
+            {vis("doctor")         && <TableCell />}
+            {vis("income")         && <TableCell align="center" sx={{ color: "success.main" }}>{formatNumber(monthTotals.total_income)}</TableCell>}
+            {vis("deduction")      && <TableCell align="center" sx={{ color: "error.main" }}>{formatNumber(monthTotals.clinic_enurance)}</TableCell>}
+            {vis("ins_revenue")    && <TableCell align="center" sx={{ color: "warning.dark" }}>{formatNumber(monthTotals.snap_total_insurance_revenue)}</TableCell>}
+            {vis("patients")       && <TableCell align="center">{monthTotals.snap_patients_count}</TableCell>}
+            {vis("cash_pct")       && <TableCell />}
+            {vis("ins_pct")        && <TableCell />}
+            {vis("cash_entitlement")  && <TableCell align="center">{formatNumber(monthTotals.cash_entitlement)}</TableCell>}
+            {vis("ins_entitlement")   && <TableCell align="center">{formatNumber(monthTotals.insurance_entitlement)}</TableCell>}
+            {vis("total_entitlement") && <TableCell align="center">{formatNumber(monthTotals.total_doctor_entitlement)}</TableCell>}
+            {vis("journal")        && <TableCell />}
+            {vis("user")           && <TableCell />}
+          </TableRow>
+        </TableBody>
+      </Table>
 
-      {/* Proof flags popover — shared, one at a time */}
+      {/* Journal popover */}
       <Popover
         open={Boolean(popoverAnchor)}
         anchorEl={popoverAnchor}

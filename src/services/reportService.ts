@@ -59,9 +59,12 @@ export const downloadClinicShiftSummaryPdf = async (filters: ClinicReportPdfFilt
   return response.data;
 };
 export const getDoctorShiftsReport = async (filters: DoctorShiftReportFilters): Promise<PaginatedResponse<DoctorShiftReportItem>> => {
-  // The endpoint for this DoctorShiftReportItem is DoctorShiftController@index
   const response = await apiClient.get<PaginatedResponse<DoctorShiftReportItem>>('/doctor-shifts', { params: filters });
-  return response.data; // Assuming Laravel pagination structure
+  return response.data;
+};
+
+export const markDoctorShiftJournal = async (doctorShiftId: number): Promise<void> => {
+  await apiClient.put(`/doctor-shifts/${doctorShiftId}/mark-journal`);
 };
 // src/services/reportService.ts
 // ... (existing functions) ...

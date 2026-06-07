@@ -15,7 +15,7 @@ import { createTheme, ThemeProvider } from "@mui/material";
 import { useTheme } from "next-themes";
 
 import { Loader2, Download, FileSpreadsheet, Users, Calculator, X } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 // Import the new components
 import DoctorShiftsReportTable from "@/components/reports/DoctorShiftsReportTable";
@@ -82,6 +82,7 @@ const DoctorShiftsReportPage: React.FC = () => {
   const { can } = useAuthorization();
   const { theme } = useTheme();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // Create MUI theme that supports dark mode
   const muiTheme = useMemo(() => createTheme({
@@ -125,19 +126,31 @@ const DoctorShiftsReportPage: React.FC = () => {
   const defaultDateFrom = format(startOfMonth(new Date()), "yyyy-MM-dd");
   const defaultDateTo   = format(endOfMonth(new Date()),   "yyyy-MM-dd");
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(50);
+  const [currentPage, setCurrentPage] = useState(Number(searchParams.get("page")) || 1);
+  const [rowsPerPage, setRowsPerPage] = useState(Number(searchParams.get("perPage")) || 50);
   const [filters, setFilters] = useState<Filters>({
-    userIdOpened: "",
-    doctorId: "all",
-    generalShiftId: "all",
-    dateFrom: defaultDateFrom,
-    dateTo: defaultDateTo,
-    searchDoctorName: "",
-    status: "all",
+    userIdOpened:    searchParams.get("userIdOpened")    ?? "",
+    doctorId:        searchParams.get("doctorId")        ?? "all",
+    generalShiftId:  searchParams.get("generalShiftId")  ?? "all",
+    dateFrom:        searchParams.get("dateFrom")        ?? defaultDateFrom,
+    dateTo:          searchParams.get("dateTo")          ?? defaultDateTo,
+    searchDoctorName:searchParams.get("searchDoctorName")?? "",
+    status:         (searchParams.get("status")          ?? "all") as Filters["status"],
   });
   const [debouncedSearchDoctorName, setDebouncedSearchDoctorName] =
-    useState("");
+    useState(searchParams.get("searchDoctorName") ?? "");
+
+  const buildUrlParams = (f: Filters, page: number, perPage: number): Record<string, string> => {
+    const params: Record<string, string> = { dateFrom: f.dateFrom, dateTo: f.dateTo };
+    if (f.userIdOpened && f.userIdOpened !== "")         params.userIdOpened     = f.userIdOpened;
+    if (f.doctorId     && f.doctorId !== "all")          params.doctorId         = f.doctorId;
+    if (f.generalShiftId && f.generalShiftId !== "all")  params.generalShiftId   = f.generalShiftId;
+    if (f.searchDoctorName)                              params.searchDoctorName  = f.searchDoctorName;
+    if (f.status !== "all")                              params.status            = f.status;
+    if (page !== 1)                                      params.page              = String(page);
+    if (perPage !== 50)                                  params.perPage           = String(perPage);
+    return params;
+  };
 
 
   const queryClient = useQueryClient();
@@ -174,16 +187,15 @@ const DoctorShiftsReportPage: React.FC = () => {
   }, [filters.searchDoctorName]);
 
   useEffect(() => {
-    setCurrentPage(1);
-  }, [filters, debouncedSearchDoctorName, rowsPerPage]);
-
-  useEffect(() => {
     if (
       !canViewAllUsersShifts &&
       filters.userIdOpened === "all" &&
       currentUser?.id
     ) {
-      setFilters((f) => ({ ...f, userIdOpened: currentUser.id.toString() }));
+      const newFilters = { ...filters, userIdOpened: currentUser.id.toString() };
+      setFilters(newFilters);
+      setSearchParams(buildUrlParams(newFilters, 1, rowsPerPage), { replace: true });
+      setCurrentPage(1);
     }
   }, [canViewAllUsersShifts, currentUser, filters.userIdOpened]);
 
@@ -253,7 +265,23 @@ const DoctorShiftsReportPage: React.FC = () => {
 
 
   const handleFilterChange = (filterName: keyof Filters, value: string) => {
-    setFilters((prev) => ({ ...prev, [filterName]: value }));
+    setFilters((prev) => {
+      const newFilters = { ...prev, [filterName]: value };
+      setSearchParams(buildUrlParams(newFilters, 1, rowsPerPage), { replace: true });
+      return newFilters;
+    });
+    setCurrentPage(1);
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    setSearchParams(buildUrlParams(filters, page, rowsPerPage), { replace: true });
+  };
+
+  const handleRowsPerPageChange = (perPage: number) => {
+    setRowsPerPage(perPage);
+    setCurrentPage(1);
+    setSearchParams(buildUrlParams(filters, 1, perPage), { replace: true });
   };
 
 
@@ -552,7 +580,7 @@ const DoctorShiftsReportPage: React.FC = () => {
           shifts={shifts}
           isLoading={isLoading}
           rowsPerPage={rowsPerPage}
-          onRowsPerPageChange={setRowsPerPage}
+          onRowsPerPageChange={handleRowsPerPageChange}
           selectable={selectMode}
           selectedIds={selectedIds}
           onSelectionChange={setSelectedIds}
@@ -562,7 +590,7 @@ const DoctorShiftsReportPage: React.FC = () => {
           meta={meta}
           currentPage={currentPage}
           isFetching={isFetching}
-          onPageChange={setCurrentPage}
+          onPageChange={handlePageChange}
         />
       </Box>
 

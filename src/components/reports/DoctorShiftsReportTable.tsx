@@ -29,6 +29,7 @@ import "dayjs/locale/ar";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { reopenDoctorShift } from "@/services/doctorShiftService";
+import { markDoctorShiftJournal } from "@/services/reportService";
 
 // ── column definitions ────────────────────────────────────────────────────────
 
@@ -98,6 +99,7 @@ function DoctorShiftsReportTable({
   const [popoverAnchor, setPopoverAnchor] = useState<HTMLElement | null>(null);
   const [popoverShiftId, setPopoverShiftId] = useState<number | null>(null);
   const [journalShift, setJournalShift] = useState<DoctorShiftReportItem | null>(null);
+  const [journaledShiftIds, setJournaledShiftIds] = useState<Set<number>>(new Set());
 
   // Column visibility
   const [colVisibility, setColVisibility] = useState<Record<ColumnKey, boolean>>(loadVisibility);
@@ -382,10 +384,12 @@ function DoctorShiftsReportTable({
                       {vis("total_entitlement") && <TableCell align="center" sx={{ fontWeight: "bold" }}>{formatNumber(shift.total_doctor_entitlement || 0)}</TableCell>}
                       {vis("journal")           && (
                         <TableCell align="center" onClick={(e) => e.stopPropagation()}>
-                          <Tooltip title="قيد محاسبي">
-                            <IconButton size="small" onClick={(e) => { e.stopPropagation(); openPopover(e, shift.id); }} sx={{ p: 0.5 }}>
-                              <AccountBalance sx={{ fontSize: 18 }} />
-                            </IconButton>
+                          <Tooltip title={shift.has_journal || journaledShiftIds.has(shift.id) ? "تم إنشاء القيد" : "قيد محاسبي"}>
+                            <span>
+                              <IconButton size="small" disabled={shift.has_journal || journaledShiftIds.has(shift.id)} onClick={(e) => { e.stopPropagation(); openPopover(e, shift.id); }} sx={{ p: 0.5 }}>
+                                <AccountBalance sx={{ fontSize: 18 }} />
+                              </IconButton>
+                            </span>
                           </Tooltip>
                         </TableCell>
                       )}
@@ -467,6 +471,10 @@ function DoctorShiftsReportTable({
         <JournalEntryDialog
           open={!!journalShift}
           onClose={() => setJournalShift(null)}
+          onSuccess={() => {
+            setJournaledShiftIds(prev => new Set(prev).add(journalShift.id));
+            markDoctorShiftJournal(journalShift.id);
+          }}
           doctorName={journalShift.doctor_name}
           doctorId={journalShift.doctor_id}
           totalAmount={journalShift.total_doctor_entitlement ?? 0}

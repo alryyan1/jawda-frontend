@@ -70,6 +70,7 @@ function EntryTable({ lines, title }: { lines: JLine[]; title: string }) {
 export interface JournalEntryDialogProps {
   open: boolean
   onClose: () => void
+  onSuccess?: () => void
   doctorName: string
   doctorId: number
   totalAmount: number
@@ -87,7 +88,7 @@ export interface JournalEntryDialogProps {
 // ── component ─────────────────────────────────────────────────────────────────
 
 export default function JournalEntryDialog({
-  open, onClose,
+  open, onClose, onSuccess,
   doctorName, doctorId,
   totalAmount, cashAmount, bankAmount,
   date, reference,
@@ -274,7 +275,7 @@ const receivablesAcc   = findAcc(global.doctorReceivablesAccountId)
 
   const globalComplete   = isGlobalComplete(global)
   const userAccsComplete = isUserAccountsComplete(userAccs)
-  const settingsReady    = globalComplete && userAccsComplete
+  const settingsReady    = globalComplete
 
   // ── entry lines ───────────────────────────────────────────────────────────
 
@@ -440,6 +441,7 @@ const receivablesAcc   = findAcc(global.doctorReceivablesAccountId)
 
       const ids = await Promise.all(reqs)
       setDone(ids)
+      onSuccess?.()
     } catch (e: unknown) {
       setError((e as Error)?.message ?? 'فشل إنشاء القيود. تحقق من إعدادات Firebase.')
     } finally {
@@ -497,26 +499,7 @@ const receivablesAcc   = findAcc(global.doctorReceivablesAccountId)
                   </Alert>
                 )}
 
-                {/* Row: user selector + doctor party */}
-                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 1 }}>
-                  <Autocomplete
-                    options={usersList}
-                    value={usersList.find(u => u.id === selectedUserId) ?? null}
-                    onChange={(_, v) => setSelectedUserId(v?.id ?? user?.id ?? null)}
-                    getOptionLabel={u => u.name}
-                    isOptionEqualToValue={(a, b) => a.id === b.id}
-                    size="small"
-                    renderInput={p => <TextField {...p} label="المستخدم (صندوق / بنك القيد 2)" />}
-                  />
-                  <Autocomplete
-                    options={parties} value={doctorParty}
-                    onChange={(_, v) => { setDoctorParty(v); if (v) saveDoctorPartyMapping(doctorId, v.id).catch(() => {}) }}
-                    getOptionLabel={p => p.name}
-                    isOptionEqualToValue={(a, b) => a.id === b.id}
-                    size="small"
-                    renderInput={p => <TextField {...p} label={`الطبيب كطرف — ${doctorName} *`} />}
-                  />
-                       {/* Users payment table */}
+                {/* Users payment table */}
                 {doctorShiftId && (
                   <Box sx={{ border: '1px dashed', borderColor: 'info.light', borderRadius: 1, bgcolor: '#F0F7FF', overflow: 'hidden' }}>
                     <Typography variant="caption" sx={{ fontWeight: 700, color: 'info.dark', display: 'block', px: 1, pt: 0.5 }}>
@@ -557,10 +540,46 @@ const receivablesAcc   = findAcc(global.doctorReceivablesAccountId)
                     )}
                   </Box>
                 )}
-
-                </Box>
-
-           
+  {console.log({ usersPayment, userAccsMap })}
+                {/* Doctor payment table (from costs table) */}
+                {doctorShiftId && payersList.length > 0 && (
+                  <Box sx={{ border: '1px dashed', borderColor: 'warning.light', borderRadius: 1, bgcolor: '#FFFDE7', overflow: 'hidden' }}>
+                    <Typography variant="caption" sx={{ fontWeight: 700, color: 'warning.dark', display: 'block', px: 1, pt: 0.5 }}>
+                      دفعات الطبيب {doctorName}
+                    </Typography>
+                    {usersPaymentLoading ? (
+                      <Box sx={{ display: 'flex', justifyContent: 'center', py: 0.5 }}><CircularProgress size={16} /></Box>
+                    ) : (
+                      <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+                        <Box component="thead">
+                          <Box component="tr" sx={{ bgcolor: '#F57F17', '& th': { color: '#fff', fontWeight: 700, p: '3px 6px', border: '1px solid #F57F17', textAlign: 'center' } }}>
+                            <Box component="th" sx={{ textAlign: 'right !important' }}>المستخدم</Box>
+                            <Box component="th">نقدي</Box>
+                            <Box component="th">بنك</Box>
+                            <Box component="th">الإجمالي</Box>
+                            <Box component="th">📒</Box>
+                            <Box component="th">🏦</Box>
+                          </Box>
+                        </Box>
+                        <Box component="tbody">
+                          {payersList.map((u, i) => {
+                            const accs = payersAccsMap[u.id]
+                            return (
+                              <Box component="tr" key={u.id} sx={{ bgcolor: i % 2 ? '#fffde7' : '#fff', '& td': { p: '2px 6px', border: '1px solid #ddd', textAlign: 'center', direction: 'ltr' } }}>
+                                <Box component="td" sx={{ textAlign: 'right !important', direction: 'rtl', fontWeight: 600 }}>{u.name}</Box>
+                                <Box component="td" sx={{ color: 'success.dark' }}>{Number(u.total_cash) > 0 ? Number(u.total_cash).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '—'}</Box>
+                                <Box component="td" sx={{ color: 'info.dark' }}>{Number(u.total_bank) > 0 ? Number(u.total_bank).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '—'}</Box>
+                                <Box component="td" sx={{ fontWeight: 700 }}>{Number(u.total).toLocaleString('en-US', { minimumFractionDigits: 2 })}</Box>
+                                <Box component="td">{accs == null ? '…' : accs.cashBoxAccountId ? '✅' : '❌'}</Box>
+                                <Box component="td">{accs == null ? '…' : accs.bankAccountId    ? '✅' : '❌'}</Box>
+                              </Box>
+                            )
+                          })}
+                        </Box>
+                      </Box>
+                    )}
+                  </Box>
+                )}
 
                 {regularRevTotal > 0 && <EntryTable lines={entry0Lines}  title="قيد 0 — إثبات إيراد العيادة" />}
                 {hasInsEntry        && <EntryTable lines={entry0BLines} title="قيد 0ب — إثبات إيراد التأمين (التحملات)" />}

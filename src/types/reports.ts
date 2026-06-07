@@ -39,6 +39,7 @@ export interface DoctorShiftReportItem {
   snap_doctor_insurance_entitlement?: number | null;
   snap_doctor_fixed_entitlement?: number | null;
   snap_total_doctor_entitlement?: number | null;
+  has_journal: boolean;
   created_at: string;
   updated_at: string;
 }

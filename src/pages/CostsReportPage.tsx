@@ -3,23 +3,25 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { format, parseISO, startOfMonth, endOfMonth } from "date-fns";
 import { toast } from "sonner";
 
 import type { CostFilters, CostCategory, PaginatedCostsResponse, Cost } from "@/types/finance";
+import type { DoctorShiftReportItem } from "@/types/reports";
 import type { User } from "@/types/users";
 import type { Shift } from "@/types/shifts";
-import { getCostsReportData, getCostCategoriesList, downloadCostsReportPdf, downloadCostsReportExcel } from "@/services/costService";
+import { getCostsReportData, getCostCategoriesList, downloadCostsReportPdf, downloadCostsReportExcel, updateCostDoctorShift } from "@/services/costService";
+import { getDoctorShiftsReport } from "@/services/reportService";
 import { getUsers } from "@/services/userService";
 import { getShiftsList } from "@/services/shiftService";
 import { formatNumber } from "@/lib/utils";
+import type { PaginatedResponse } from "@/types/common";
 
 // MUI components
 import {
   Box,
   Card,
-  CardContent,
   Typography,
   Button,
   TextField,
@@ -38,8 +40,12 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Popover,
+  Stack,
+  IconButton,
+  Badge,
 } from "@mui/material";
-import { Loader2, FileBarChart2, Filter, Printer, AlertTriangle, FileSpreadsheet } from "lucide-react";
+import { Loader2, Filter, Printer, AlertTriangle, FileSpreadsheet } from "lucide-react";
 
 const getCostReportFilterSchema = () =>
   z.object({
@@ -212,6 +218,42 @@ const CostsReportPage: React.FC = () => {
   const summary = reportData?.meta?.summary;
   const isLoadingDropdowns = isLoadingCategories || isLoadingUsers || isLoadingShifts;
 
+  // Filter popover
+  const [filterAnchor, setFilterAnchor] = useState<HTMLElement | null>(null);
+  const activeFilterCount = [
+    appliedFilters.cost_category_id, appliedFilters.user_cost_id,
+    appliedFilters.shift_id, appliedFilters.payment_method,
+    appliedFilters.search_description,
+  ].filter(Boolean).length;
+
+  // Doctor shifts for inline autocomplete (unassigned costs)
+  const { data: doctorShiftsData } = useQuery<PaginatedResponse<DoctorShiftReportItem>, Error>({
+    queryKey: ["doctorShiftsForCostAssign", appliedFilters.date_from, appliedFilters.date_to],
+    queryFn: () => getDoctorShiftsReport({
+      date_from: appliedFilters.date_from,
+      date_to: appliedFilters.date_to,
+      per_page: 100,
+      include_financials: false,
+    }),
+    refetchOnWindowFocus: false,
+  });
+  const doctorShiftOptions = useMemo(() =>
+    (doctorShiftsData?.data ?? []).map(ds => ({
+      id: ds.id,
+      label: `#${ds.id} — ${ds.doctor_name} (${ds.formatted_start_time})`,
+    })), [doctorShiftsData]);
+
+  const queryClient = useQueryClient();
+  const assignMutation = useMutation({
+    mutationFn: ({ costId, doctorShiftId }: { costId: number; doctorShiftId: number | null }) =>
+      updateCostDoctorShift(costId, doctorShiftId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["costsReportData"] });
+      toast.success("تم تعيين وردية الطبيب");
+    },
+    onError: () => toast.error("فشل التعيين"),
+  });
+
   const getPaymentMethodForDisplay = (cost: Cost): string => {
     const hasCash = cost.amount > 0;
     const hasBank = cost.amount_bankak > 0;
@@ -223,292 +265,217 @@ const CostsReportPage: React.FC = () => {
 
   if (error && !isLoading) {
     return (
-      <div className="container mx-auto py-4 sm:py-6 lg:py-8 space-y-6">
-        <div className="flex items-center gap-2">
-          <FileBarChart2 className="h-7 w-7 text-primary" />
-          <h1 className="text-2xl sm:text-3xl font-bold">تقرير التكاليف</h1>
-        </div>
-        <Alert severity="error" icon={<AlertTriangle />}>
-          <Typography>حدث خطأ أثناء الجلب</Typography>
-          <Typography variant="body2" color="text.secondary">{error.message}</Typography>
-        </Alert>
-      </div>
+      <Alert severity="error" icon={<AlertTriangle />} sx={{ m: 2 }}>
+        <Typography>حدث خطأ أثناء الجلب: {error.message}</Typography>
+      </Alert>
     );
   }
 
   return (
     <div className="container mx-auto">
-     <div className="space-y-4">
-          <form onSubmit={filterForm.handleSubmit(handleFilterFormSubmit)} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 items-end">
-              <Controller control={filterForm.control} name="date_from" render={({ field }) => (
-                <div>
-                  <Typography className="text-xs">من تاريخ</Typography>
-                  <TextField type="date" size="small" value={field.value || ''} onChange={field.onChange} disabled={isFetching || isLoadingDropdowns} />
-                </div>
-              )} />
-              <Controller control={filterForm.control} name="date_to" render={({ field }) => (
-                <div>
-                  <Typography className="text-xs">إلى تاريخ</Typography>
-                  <TextField type="date" size="small" value={field.value || ''} onChange={field.onChange} disabled={isFetching || isLoadingDropdowns} />
-                </div>
-              )} />
-              <Controller control={filterForm.control} name="cost_category_id" render={({ field }) => (
-                <Autocomplete<AutocompleteOption>
-                  options={[
-                    { id: "all", name: "كل الفئات" },
-                    ...(costCategories?.map((cat) => ({ id: String(cat.id), name: cat.name })) || [])
-                  ]}
-                  getOptionLabel={(option) => option.name}
-                  isOptionEqualToValue={(option, value) => option.id === value.id}
-                  value={(() => {
-                    if (!field.value || field.value === "all") {
-                      return { id: "all", name: "كل الفئات" };
-                    }
-                    const category = costCategories?.find(cat => String(cat.id) === field.value);
-                    return category ? { id: String(category.id), name: category.name } : null;
-                  })()}
-                  onChange={(_, newValue) => {
-                    field.onChange(newValue?.id || "all");
-                  }}
-                  disabled={isLoadingDropdowns || isFetching}
-                  size="small"
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="الفئة"
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          height: '40px',
-                          fontSize: '16px',
-                        },
-                        '& .MuiInputLabel-root': {
-                          fontSize: '14px',
-                        },
-                      }}
-                    />
-                  )}
-                />
-              )} />
-              <Controller control={filterForm.control} name="user_cost_id" render={({ field }) => (
-                <Autocomplete<AutocompleteOption>
-                  options={[
-                    { id: "all", name: "كل المستخدمين" },
-                    ...(usersList?.map((u: User) => ({ id: String(u.id), name: u.name })) || [])
-                  ]}
-                  getOptionLabel={(option) => option.name}
-                  isOptionEqualToValue={(option, value) => option.id === value.id}
-                  value={(() => {
-                    if (!field.value || field.value === "all") {
-                      return { id: "all", name: "كل المستخدمين" };
-                    }
-                    const user = usersList?.find(u => String(u.id) === field.value);
-                    return user ? { id: String(user.id), name: user.name } : null;
-                  })()}
-                  onChange={(_, newValue) => {
-                    field.onChange(newValue?.id || "all");
-                  }}
-                  disabled={isLoadingDropdowns || isFetching}
-                  size="small"
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="المستخدم"
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          height: '40px',
-                          fontSize: '16px',
-                        },
-                        '& .MuiInputLabel-root': {
-                          fontSize: '14px',
-                        },
-                      }}
-                    />
-                  )}
-                />
-              )} />
-              <Controller control={filterForm.control} name="shift_id" render={({ field }) => (
-                <Autocomplete<AutocompleteOption>
-                  options={[
-                    { id: "all", name: "كل المناوبات" },
-                    ...(shiftsList?.map((s) => ({
-                      id: String(s.id),
-                      name: s.name || `#${s.id} (${format(parseISO(s.created_at!), "P")})`
-                    })) || [])
-                  ]}
-                  getOptionLabel={(option) => option.name}
-                  isOptionEqualToValue={(option, value) => option.id === value.id}
-                  value={(() => {
-                    if (!field.value || field.value === "all") {
-                      return { id: "all", name: "كل المناوبات" };
-                    }
-                    const shift = shiftsList?.find(s => String(s.id) === field.value);
-                    return shift ? {
-                      id: String(shift.id),
-                      name: shift.name || `#${shift.id} (${format(parseISO(shift.created_at!), "P")})`
-                    } : null;
-                  })()}
-                  onChange={(_, newValue) => {
-                    field.onChange(newValue?.id || "all");
-                  }}
-                  disabled={isLoadingDropdowns || isFetching}
-                  size="small"
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="المناوبة"
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          height: '40px',
-                          fontSize: '16px',
-                        },
-                        '& .MuiInputLabel-root': {
-                          fontSize: '14px',
-                        },
-                      }}
-                    />
-                  )}
-                />
-              )} />
-              <Controller control={filterForm.control} name="payment_method" render={({ field }) => (
-                <Autocomplete<AutocompleteOption>
-                  options={[
-                    { id: "all", name: "كل الطرق" },
-                    { id: "cash", name: "نقدي" },
-                    { id: "bank", name: "بنكي" },
-                    { id: "mixed", name: "مختلط" },
-                  ]}
-                  getOptionLabel={(option) => option.name}
-                  isOptionEqualToValue={(option, value) => option.id === value.id}
-                  value={(() => {
-                    if (!field.value || field.value === "all") {
-                      return { id: "all", name: "كل الطرق" };
-                    }
-                    const options = [
-                      { id: "all", name: "كل الطرق" },
-                      { id: "cash", name: "نقدي" },
-                      { id: "bank", name: "بنكي" },
-                      { id: "mixed", name: "مختلط" },
-                    ];
-                    return options.find(opt => opt.id === field.value) || { id: "all", name: "كل الطرق" };
-                  })()}
-                  onChange={(_, newValue) => {
-                    field.onChange(newValue?.id || "all");
-                  }}
-                  disabled={isFetching}
-                  size="small"
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="طريقة الدفع"
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          height: '40px',
-                          fontSize: '16px',
-                        },
-                        '& .MuiInputLabel-root': {
-                          fontSize: '14px',
-                        },
-                      }}
-                    />
-                  )}
-                />
-              )} />
-              <Controller control={filterForm.control} name="search_description" render={({ field }) => (
-                <div className="lg:col-span-3 xl:col-span-1">
-                  <Typography className="text-xs">بحث بالوصف</Typography>
-                  <TextField type="search" size="small" {...field} disabled={isFetching} />
-                </div>
-              )} />
-              <Button type="submit" variant="contained" className="h-9 self-end w-full sm:w-auto" disabled={isFetching || isLoadingDropdowns} startIcon={!isFetching ? <Filter className="h-4 w-4" /> : undefined}>
-                {isFetching ? <Loader2 className="h-4 w-4 animate-spin" /> : 'تطبيق المرشحات'}
-              </Button>
-            </div>
-          </form>
 
-        </div>
-      <div className="mt-6 flex justify-end gap-2">
-        <Button onClick={handleDownloadExcel} disabled={isGeneratingExcel || isLoading || costs.length === 0} size="small" variant="outlined" startIcon={!isGeneratingExcel ? <FileSpreadsheet className="h-4 w-4" /> : undefined}>
-          {isGeneratingExcel ? <Loader2 className="h-4 w-4 animate-spin" /> : 'تصدير Excel'}
+      {/* ── Toolbar ── */}
+      <div className="flex items-center gap-2 mb-2">
+        {/* Filter button */}
+        <IconButton
+          size="small"
+          onClick={(e) => setFilterAnchor(e.currentTarget)}
+          sx={{ border: '1px solid', borderColor: activeFilterCount ? 'primary.main' : 'divider', borderRadius: 1, px: 1.5, py: 0.75 }}
+        >
+          <Badge badgeContent={activeFilterCount} color="primary">
+            <Filter size={16} />
+          </Badge>
+        </IconButton>
+
+        {/* Date range always visible */}
+        <form onSubmit={filterForm.handleSubmit(handleFilterFormSubmit)} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <Controller control={filterForm.control} name="date_from" render={({ field }) => (
+            <TextField label="من" type="date" size="small" value={field.value || ''} onChange={field.onChange}
+              disabled={isFetching} InputLabelProps={{ shrink: true }} sx={{ width: 135 }} />
+          )} />
+          <Controller control={filterForm.control} name="date_to" render={({ field }) => (
+            <TextField label="إلى" type="date" size="small" value={field.value || ''} onChange={field.onChange}
+              disabled={isFetching} InputLabelProps={{ shrink: true }} sx={{ width: 135 }} />
+          )} />
+          <Button type="submit" size="small" variant="contained" disabled={isFetching || isLoadingDropdowns}
+            startIcon={isFetching ? <Loader2 className="h-3 w-3 animate-spin" /> : <Filter size={13} />}>
+            {isFetching ? '' : 'تطبيق'}
+          </Button>
+        </form>
+
+        <Box sx={{ flex: 1 }} />
+        <Button onClick={handleDownloadExcel} disabled={isGeneratingExcel || isLoading || costs.length === 0}
+          size="small" variant="outlined" startIcon={isGeneratingExcel ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileSpreadsheet size={13} />}>
+          Excel
         </Button>
-        <Button onClick={handleGeneratePdf} disabled={isGeneratingPdf || isLoading || costs.length === 0} size="small" variant="contained" startIcon={!isGeneratingPdf ? <Printer className="h-4 w-4" /> : undefined}>
-          {isGeneratingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : 'توليد ومعاينة PDF'}
+        <Button onClick={handleGeneratePdf} disabled={isGeneratingPdf || isLoading || costs.length === 0}
+          size="small" variant="contained" color="secondary" startIcon={isGeneratingPdf ? <Loader2 className="h-3 w-3 animate-spin" /> : <Printer size={13} />}>
+          PDF
         </Button>
       </div>
 
-      {(isLoading && !isFetching && costs.length === 0) && <div className="text-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}
-      {isFetching && <div className="text-sm text-muted-foreground mb-2 text-center py-2"><Loader2 className="inline h-4 w-4 animate-spin"/> جاري تحديث القائمة...</div>}
-      
-      {!isLoading && !isFetching && costs.length === 0 && (
-        <Card className="text-center py-10 text-muted-foreground mt-6">
-            <CardContent>لا توجد بيانات</CardContent>
-        </Card>
-      )}
+      {/* ── Filter popover (vertical stack) ── */}
+      <Popover
+        open={Boolean(filterAnchor)}
+        anchorEl={filterAnchor}
+        onClose={() => setFilterAnchor(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+      >
+        <form onSubmit={filterForm.handleSubmit((data) => { handleFilterFormSubmit(data); setFilterAnchor(null); })}>
+          <Stack spacing={1.5} sx={{ p: 2, width: 260 }}>
+            <Typography variant="caption" fontWeight={700} color="text.secondary">فلترة إضافية</Typography>
+            <Controller control={filterForm.control} name="cost_category_id" render={({ field }) => (
+              <Autocomplete<AutocompleteOption>
+                options={[{ id: "all", name: "كل الفئات" }, ...(costCategories?.map(c => ({ id: String(c.id), name: c.name })) || [])]}
+                getOptionLabel={o => o.name}
+                isOptionEqualToValue={(a, b) => a.id === b.id}
+                value={costCategories?.find(c => String(c.id) === field.value) ? { id: field.value!, name: costCategories.find(c => String(c.id) === field.value)!.name } : { id: "all", name: "كل الفئات" }}
+                onChange={(_, v) => field.onChange(v?.id || "all")}
+                disabled={isLoadingDropdowns}
+                size="small"
+                renderInput={params => <TextField {...params} label="الفئة" />}
+              />
+            )} />
+            <Controller control={filterForm.control} name="user_cost_id" render={({ field }) => (
+              <Autocomplete<AutocompleteOption>
+                options={[{ id: "all", name: "كل المستخدمين" }, ...(usersList.map(u => ({ id: String(u.id), name: u.name })))]}
+                getOptionLabel={o => o.name}
+                isOptionEqualToValue={(a, b) => a.id === b.id}
+                value={usersList.find(u => String(u.id) === field.value) ? { id: field.value!, name: usersList.find(u => String(u.id) === field.value)!.name } : { id: "all", name: "كل المستخدمين" }}
+                onChange={(_, v) => field.onChange(v?.id || "all")}
+                disabled={isLoadingDropdowns}
+                size="small"
+                renderInput={params => <TextField {...params} label="المستخدم" />}
+              />
+            )} />
+            <Controller control={filterForm.control} name="shift_id" render={({ field }) => (
+              <Autocomplete<AutocompleteOption>
+                options={[{ id: "all", name: "كل المناوبات" }, ...(shiftsList?.map(s => ({ id: String(s.id), name: s.name || `#${s.id} (${format(parseISO(s.created_at!), "P")})` })) || [])]}
+                getOptionLabel={o => o.name}
+                isOptionEqualToValue={(a, b) => a.id === b.id}
+                value={shiftsList?.find(s => String(s.id) === field.value) ? { id: field.value!, name: shiftsList.find(s => String(s.id) === field.value)!.name || `#${field.value}` } : { id: "all", name: "كل المناوبات" }}
+                onChange={(_, v) => field.onChange(v?.id || "all")}
+                disabled={isLoadingDropdowns}
+                size="small"
+                renderInput={params => <TextField {...params} label="المناوبة" />}
+              />
+            )} />
+            <Controller control={filterForm.control} name="payment_method" render={({ field }) => (
+              <Autocomplete<AutocompleteOption>
+                options={[{ id: "all", name: "كل الطرق" }, { id: "cash", name: "نقدي" }, { id: "bank", name: "بنكي" }, { id: "mixed", name: "مختلط" }]}
+                getOptionLabel={o => o.name}
+                isOptionEqualToValue={(a, b) => a.id === b.id}
+                value={[{ id: "all", name: "كل الطرق" }, { id: "cash", name: "نقدي" }, { id: "bank", name: "بنكي" }, { id: "mixed", name: "مختلط" }].find(o => o.id === (field.value || "all")) ?? { id: "all", name: "كل الطرق" }}
+                onChange={(_, v) => field.onChange(v?.id || "all")}
+                size="small"
+                renderInput={params => <TextField {...params} label="طريقة الدفع" />}
+              />
+            )} />
+            <Controller control={filterForm.control} name="search_description" render={({ field }) => (
+              <TextField label="بحث بالوصف" type="search" size="small" {...field} />
+            )} />
+            <Button type="submit" variant="contained" size="small" fullWidth>تطبيق</Button>
+          </Stack>
+        </form>
+      </Popover>
 
-      {!isLoading && costs.length > 0 && (
-        <Card className="mt-6 overflow-hidden">
-          <TableContainer component={Paper} sx={{ maxHeight: 500 }}>
-            <div className="min-w-[800px]">
-              <MUITable size="small">
-                <MUITableHead>
-                  <MUITableRow>
-                    <MUITableCell align="center" className="w-[150px]">التاريخ</MUITableCell>
-                    <MUITableCell className="min-w-[200px]">الوصف</MUITableCell>
-                    <MUITableCell align="center" className="hidden md:table-cell min-w-[120px]">الفئة</MUITableCell>
-                    <MUITableCell align="center" className="hidden sm:table-cell min-w-[120px]">المستخدم</MUITableCell>
-                    <MUITableCell align="center" className="w-[100px]">طريقة الدفع</MUITableCell>
-                    <MUITableCell align="center" className="w-[90px]">نقدًا</MUITableCell>
-                    <MUITableCell align="center" className="w-[90px]">بنكي</MUITableCell>
-                    <MUITableCell align="right" className="w-[110px]">الإجمالي</MUITableCell>
-                  </MUITableRow>
-                </MUITableHead>
-                <MUITableBody>
-                  {costs.map((cost: Cost) => {
-                    const totalCostForRow = cost.amount + cost.amount_bankak;
-                    const paymentMethodDisplay = getPaymentMethodForDisplay(cost);
-                    return (
-                      <MUITableRow key={cost.id}>
-                        <MUITableCell align="center" className="text-xs">
-                          {cost.created_at ? format(parseISO(cost.created_at), "Pp") : "-"}
-                        </MUITableCell>
-                        <MUITableCell className="font-medium">{cost.description}</MUITableCell>
-                        <MUITableCell align="center" className="hidden md:table-cell">{cost.cost_category_name || "-"}</MUITableCell>
-                        <MUITableCell align="center" className="hidden sm:table-cell">{cost.user_cost_name || "-"}</MUITableCell>
-                        <MUITableCell align="center">
-                          <Chip label={paymentMethodDisplay} size="small" variant={paymentMethodDisplay === 'بنكي' ? 'outlined' : 'filled'} color={paymentMethodDisplay === 'مختلط' ? 'info' : (paymentMethodDisplay === 'نقدي' ? 'default' : 'secondary')} />
-                        </MUITableCell>
-                        <MUITableCell align="center">{formatNumber(cost.amount)}</MUITableCell>
-                        <MUITableCell align="center">{formatNumber(cost.amount_bankak)}</MUITableCell>
-                        <MUITableCell align="right" className="font-semibold">{formatNumber(totalCostForRow)}</MUITableCell>
-                      </MUITableRow>
-                    );
-                  })}
-                </MUITableBody>
-                {summary && (
-                  <MUITableFooter>
-                    <MUITableRow>
-                      <MUITableCell align="center">الإجمالي</MUITableCell>
-                      <MUITableCell />
-                      <MUITableCell className="hidden md:table-cell" />
-                      <MUITableCell className="hidden sm:table-cell" />
-                      <MUITableCell />
-                      <MUITableCell align="center">{formatNumber(summary.total_cash_paid)}</MUITableCell>
-                      <MUITableCell align="center">{formatNumber(summary.total_bank_paid)}</MUITableCell>
-                      <MUITableCell align="right" className="font-bold">{formatNumber(summary.grand_total_paid)}</MUITableCell>
+      {/* ── Status ── */}
+      {isFetching && <div className="text-xs text-muted-foreground py-1"><Loader2 className="inline h-3 w-3 animate-spin" /> جاري التحديث...</div>}
+      {isLoading && costs.length === 0 && <div className="text-center py-6"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>}
+      {!isLoading && !isFetching && costs.length === 0 && <div className="text-center py-6 text-muted-foreground text-sm">لا توجد بيانات</div>}
+
+      {/* ── Table ── */}
+      {costs.length > 0 && (
+        <Card className="overflow-hidden">
+          <TableContainer component={Paper} sx={{ maxHeight: 560 }}>
+            <MUITable size="small" stickyHeader>
+              <MUITableHead>
+                <MUITableRow sx={{ '& th': { fontWeight: 700, fontSize: 11, py: 0.5, px: 1, whiteSpace: 'nowrap', bgcolor: '#1565C0', color: '#fff' } }}>
+                  <MUITableCell align="center" sx={{ color: '#fff !important' }}>التاريخ</MUITableCell>
+                  <MUITableCell sx={{ color: '#fff !important' }}>الوصف</MUITableCell>
+                  <MUITableCell align="center" sx={{ color: '#fff !important' }}>ملاحظة</MUITableCell>
+                  <MUITableCell align="center" sx={{ color: '#fff !important' }}>المستخدم</MUITableCell>
+                  <MUITableCell align="center" sx={{ color: '#fff !important', minWidth: 200 }}>وردية الطبيب</MUITableCell>
+                  <MUITableCell align="center" sx={{ color: '#fff !important' }}>الدفع</MUITableCell>
+                  <MUITableCell align="center" sx={{ color: '#fff !important' }}>نقدًا</MUITableCell>
+                  <MUITableCell align="center" sx={{ color: '#fff !important' }}>بنكي</MUITableCell>
+                  <MUITableCell align="center" sx={{ color: '#fff !important' }}>الإجمالي</MUITableCell>
+                </MUITableRow>
+              </MUITableHead>
+              <MUITableBody>
+                {costs.map((cost: Cost) => {
+                  const unassigned = !cost.doctor_shift_id;
+                  const total = cost.amount + cost.amount_bankak;
+                  const pm = getPaymentMethodForDisplay(cost);
+                  return (
+                    <MUITableRow key={cost.id} sx={{
+                      bgcolor: unassigned ? '#FFF8E1' : 'inherit',
+                      '&:hover': { bgcolor: unassigned ? '#FFF3CD' : '#f5f5f5' },
+                      '& td': { fontSize: 11, py: 0.4, px: 1 },
+                    }}>
+                      <MUITableCell align="center" sx={{ whiteSpace: 'nowrap', color: 'text.secondary' }}>
+                        {cost.created_at ? format(parseISO(cost.created_at), "MM-dd HH:mm") : "-"}
+                      </MUITableCell>
+                      <MUITableCell sx={{ fontWeight: 500, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cost.description}</MUITableCell>
+                      <MUITableCell align="center" sx={{ color: 'text.secondary', fontStyle: cost.comment ? 'normal' : 'italic', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {cost.comment || "—"}
+                      </MUITableCell>
+                      <MUITableCell align="center" sx={{ whiteSpace: 'nowrap' }}>{cost.user_cost_name || "-"}</MUITableCell>
+                      <MUITableCell align="center">
+                        {unassigned ? (
+                          <Autocomplete
+                            options={doctorShiftOptions}
+                            getOptionLabel={o => o.label}
+                            size="small"
+                            sx={{ minWidth: 200 }}
+                            loading={assignMutation.isPending}
+                            onChange={(_, v) => {
+                              if (v) assignMutation.mutate({ costId: cost.id, doctorShiftId: v.id });
+                            }}
+                            renderInput={params => (
+                              <TextField {...params} placeholder="اختر وردية طبيب" size="small"
+                                sx={{ '& .MuiInputBase-root': { fontSize: 11, py: 0 } }} />
+                            )}
+                          />
+                        ) : (
+                          <Typography variant="caption" color="primary.main" sx={{ fontWeight: 600 }}>
+                            #{cost.doctor_shift_id} — {cost.doctor_shift_doctor_name || ""}
+                          </Typography>
+                        )}
+                      </MUITableCell>
+                      <MUITableCell align="center">
+                        <Chip label={pm} size="small" variant={pm === 'بنكي' ? 'outlined' : 'filled'}
+                          color={pm === 'مختلط' ? 'info' : pm === 'نقدي' ? 'default' : 'secondary'}
+                          sx={{ fontSize: 10, height: 18 }} />
+                      </MUITableCell>
+                      <MUITableCell align="center">{formatNumber(cost.amount)}</MUITableCell>
+                      <MUITableCell align="center">{formatNumber(cost.amount_bankak)}</MUITableCell>
+                      <MUITableCell align="center" sx={{ fontWeight: 600 }}>{formatNumber(total)}</MUITableCell>
                     </MUITableRow>
-                  </MUITableFooter>
-                )}
-              </MUITable>
-            </div>
+                  );
+                })}
+              </MUITableBody>
+              {summary && (
+                <MUITableFooter>
+                  <MUITableRow sx={{ '& td': { fontWeight: 700, fontSize: 12, bgcolor: '#E3F2FD' } }}>
+                    <MUITableCell align="center" colSpan={6}>الإجمالي</MUITableCell>
+                    <MUITableCell align="center">{formatNumber(summary.total_cash_paid)}</MUITableCell>
+                    <MUITableCell align="center">{formatNumber(summary.total_bank_paid)}</MUITableCell>
+                    <MUITableCell align="center">{formatNumber(summary.grand_total_paid)}</MUITableCell>
+                  </MUITableRow>
+                </MUITableFooter>
+              )}
+            </MUITable>
           </TableContainer>
         </Card>
       )}
 
       {meta && meta.last_page > 1 && (
-        <div className="mt-6 flex items-center justify-center px-2 gap-2">
-          <Button variant="outlined" size="small" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1 || isFetching}>السابق</Button>
+        <div className="mt-2 flex items-center justify-center gap-2">
+          <Button variant="outlined" size="small" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1 || isFetching}>السابق</Button>
           <span className="text-sm text-muted-foreground">الصفحة {meta.current_page} من {meta.last_page}</span>
-          <Button variant="outlined" size="small" onClick={() => setCurrentPage((p) => Math.min(meta.last_page, p + 1))} disabled={currentPage === meta.last_page || isFetching}>التالي</Button>
+          <Button variant="outlined" size="small" onClick={() => setCurrentPage(p => Math.min(meta.last_page, p + 1))} disabled={currentPage === meta.last_page || isFetching}>التالي</Button>
         </div>
       )}
 

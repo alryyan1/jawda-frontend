@@ -89,6 +89,7 @@ const LabGeneralReportPage: React.FC = () => {
       return getLabGeneralReport({ page: 1, per_page: 20, ...filters });
     },
     placeholderData: keepPreviousData,
+    refetchOnWindowFocus: false,
     enabled: true, // Always enabled since we removed shift filter
   });
 
@@ -150,7 +151,7 @@ const LabGeneralReportPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
+    <div className="space-y-6 ">
    
       
       <Card>

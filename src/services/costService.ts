@@ -51,3 +51,8 @@ export const downloadCostsReportExcel = async (filters: Omit<CostFilters, 'page'
 export const deleteCost = async (costId: number): Promise<void> => {
   await apiClient.delete(`${API_URL}/${costId}`);
 };
+
+export const updateCostDoctorShift = async (costId: number, doctorShiftId: number | null): Promise<Cost> => {
+  const response = await apiClient.put<{ data: Cost }>(`${API_URL}/${costId}`, { doctor_shift_id: doctorShiftId });
+  return response.data.data;
+};

@@ -220,8 +220,8 @@ export const uploadShiftClinicReportsToFirebase = async (
       uploaded_at: serverTimestamp(),
     };
 
-    // Firestore path: medical_centers/{storageName}/shifts/{shiftId}
-    const docRef = doc(db, 'medical_centers', storageName, 'shifts', String(shiftId));
+    // Firestore path: {storageName}/reports/shifts/{shiftId}
+    const docRef = doc(db, storageName, 'reports', 'shifts', String(shiftId));
     await setDoc(docRef, docData, { merge: true });
 
     return { success: true, urls };

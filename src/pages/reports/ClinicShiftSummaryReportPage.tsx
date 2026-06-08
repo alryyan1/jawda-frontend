@@ -43,6 +43,13 @@ import { getShiftsList } from "@/services/shiftService";
 import { getUsers, getUsersWithShiftTransactions, getUserShiftPatientTransactions, type PatientTransaction } from "@/services/userService";
 import {
   downloadClinicShiftSummaryPdf,
+  downloadShiftProfitLossPdf,
+  downloadShiftRevenuePdf,
+  downloadShiftExpensesPdf,
+  downloadShiftInsuranceStatsPdf,
+  downloadShiftLabStatsPdf,
+  downloadShiftDiscountsPdf,
+  downloadShiftDoctorLabPdf,
   type ClinicReportPdfFilters,
 } from "@/services/reportService";
 import type { User } from "@/types/users";
@@ -161,6 +168,29 @@ const ClinicShiftSummaryReportPage: React.FC = () => {
   }, [selectedShiftId, form]);
 
   const isLoadingDropdowns = isLoadingShifts || isLoadingUsers;
+
+  const [reportPdfUrl, setReportPdfUrl] = useState<string | null>(null);
+  const [reportTitle, setReportTitle] = useState('');
+  const [isLoadingReport, setIsLoadingReport] = useState(false);
+
+  const handleOpenReport = async (
+    fetcher: (shiftId: number) => Promise<Blob>,
+    title: string
+  ) => {
+    if (!selectedShiftId) return;
+    setIsLoadingReport(true);
+    setReportTitle(title);
+    if (reportPdfUrl) URL.revokeObjectURL(reportPdfUrl);
+    setReportPdfUrl(null);
+    try {
+      const blob = await fetcher(parseInt(selectedShiftId));
+      setReportPdfUrl(URL.createObjectURL(blob));
+    } catch {
+      toast.error(`فشل تحميل ${title}`);
+    } finally {
+      setIsLoadingReport(false);
+    }
+  };
 
   const handleCellClick = async (user: UserWithTransactions, column: string) => {
     if (!selectedShiftId) return;
@@ -328,6 +358,56 @@ const ClinicShiftSummaryReportPage: React.FC = () => {
           </form>
         </CardContent>
       </Card>
+
+      {/* ── Report Buttons ── */}
+      <Card>
+        <CardContent sx={{ py: 1.5 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+            تقارير الوردية — اختر وردية أولاً لتفعيل الأزرار
+          </Typography>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+            {[
+              { label: 'الأرباح والخسائر',  fetcher: downloadShiftProfitLossPdf,     color: 'primary'   },
+              { label: 'الإيرادات',          fetcher: downloadShiftRevenuePdf,         color: 'success'   },
+              { label: 'المصروفات',          fetcher: downloadShiftExpensesPdf,         color: 'error'     },
+              { label: 'إحصائيات التأمين',  fetcher: downloadShiftInsuranceStatsPdf,  color: 'secondary' },
+              { label: 'إحصائيات التحاليل', fetcher: downloadShiftLabStatsPdf,        color: 'info'      },
+              { label: 'التخفيضات',          fetcher: downloadShiftDiscountsPdf,        color: 'warning'   },
+              { label: 'أداء الأطباء - مختبر', fetcher: downloadShiftDoctorLabPdf,      color: 'primary'   },
+            ].map(({ label, fetcher, color }) => (
+              <Button
+                key={label}
+                variant="outlined"
+                size="small"
+                color={color as 'primary' | 'success' | 'error' | 'secondary' | 'info' | 'warning'}
+                disabled={!selectedShiftId || isLoadingReport}
+                startIcon={isLoadingReport && reportTitle === label ? <Loader2 className="h-3 w-3 animate-spin" /> : <Printer className="h-3 w-3" />}
+                onClick={() => handleOpenReport(fetcher, label)}
+              >
+                {label}
+              </Button>
+            ))}
+          </Box>
+        </CardContent>
+      </Card>
+
+      {/* ── Report PDF Viewer ── */}
+      {reportPdfUrl && (
+        <Card>
+          <CardHeader
+            title={<Typography variant="subtitle1">{reportTitle}</Typography>}
+            action={
+              <IconButton size="small" onClick={() => { URL.revokeObjectURL(reportPdfUrl); setReportPdfUrl(null); }}>
+                <XCircle className="h-4 w-4" />
+              </IconButton>
+            }
+            sx={{ py: 1 }}
+          />
+          <CardContent sx={{ p: 0 }}>
+            <iframe src={reportPdfUrl} className="w-full h-[70vh] border-0" title={reportTitle} />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Users Table - Show when shift is selected */}
       {selectedShiftId && (

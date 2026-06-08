@@ -149,6 +149,8 @@ if (isFirebaseEnabled()) {
 // Export Firebase services (may be null if disabled)
 export { storage, db, analytics, auth, labToLabDb, labToLabStorage, secondaryStorage, secondaryDb };
 export const isBothTargetsEnabled = activeTarget === 'both';
+export const primaryProjectName = primaryConfigTarget;   // 'sales' | 'hospital'
+export const secondaryProjectName = isBothTargetsEnabled ? 'hospital' : null;
 
 // Function to get Firebase access token
 export const getFirebaseAccessToken = async (): Promise<string | null> => {

@@ -44,6 +44,7 @@ import {
   Stack,
   IconButton,
   Badge,
+  Pagination,
 } from "@mui/material";
 import { Loader2, Filter, Printer, AlertTriangle, FileSpreadsheet } from "lucide-react";
 
@@ -472,10 +473,17 @@ const CostsReportPage: React.FC = () => {
       )}
 
       {meta && meta.last_page > 1 && (
-        <div className="mt-2 flex items-center justify-center gap-2">
-          <Button variant="outlined" size="small" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1 || isFetching}>السابق</Button>
-          <span className="text-sm text-muted-foreground">الصفحة {meta.current_page} من {meta.last_page}</span>
-          <Button variant="outlined" size="small" onClick={() => setCurrentPage(p => Math.min(meta.last_page, p + 1))} disabled={currentPage === meta.last_page || isFetching}>التالي</Button>
+        <div className="mt-2 flex justify-center">
+          <Pagination
+            count={meta.last_page}
+            page={currentPage}
+            onChange={(_, page) => setCurrentPage(page)}
+            disabled={isFetching}
+            size="small"
+            color="primary"
+            showFirstButton
+            showLastButton
+          />
         </div>
       )}
 

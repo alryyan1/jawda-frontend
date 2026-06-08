@@ -2,10 +2,17 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { storage, db, secondaryStorage, secondaryDb, isBothTargetsEnabled } from '@/lib/firebase';
 import { webUrl } from '@/pages/constants';
-import { getFinancialSummary } from './dashboardService';
 import { getSettings } from './settingService';
 import { sendWhatsAppCloudTemplate, type WhatsAppCloudTemplatePayload } from './whatsappCloudApiService';
-import { formatNumber } from '@/lib/utils';
+import {
+  downloadShiftProfitLossPdf,
+  downloadShiftRevenuePdf,
+  downloadShiftExpensesPdf,
+  downloadShiftInsuranceStatsPdf,
+  downloadShiftLabStatsPdf,
+  downloadShiftDiscountsPdf,
+  downloadShiftDoctorLabPdf,
+} from './reportService';
 
 export interface ShiftUploadResult {
   success: boolean;
@@ -141,50 +148,151 @@ export const uploadShiftReportsToFirebase = async (
   }
 };
 
-/**
- * Send the daily closing summary via WhatsApp template
- */
-export const sendShiftSummaryWhatsApp = async (shiftId: number, userName: string) => {
-  try {
-    const summary = await getFinancialSummary({ shift_id: shiftId });
-    const settings = await getSettings();
-    const to = (settings as any)?.shift_summary_phone ?? settings?.whatsapp_number;
+export interface ClinicShiftReportUploadResult {
+  success: boolean;
+  urls?: Record<string, string>;
+  error?: string;
+}
 
-    if (!to) {
-      console.warn('No WhatsApp number configured in settings for shift summary');
-      return { success: false, error: 'WhatsApp number not configured' };
+const CLINIC_REPORT_KEYS = [
+  { key: 'profit_loss',      label: 'الأرباح والخسائر',   fetcher: downloadShiftProfitLossPdf },
+  { key: 'revenue',          label: 'الإيرادات',           fetcher: downloadShiftRevenuePdf },
+  { key: 'expenses',         label: 'المصروفات',           fetcher: downloadShiftExpensesPdf },
+  { key: 'insurance_stats',  label: 'إحصائيات التأمين',   fetcher: downloadShiftInsuranceStatsPdf },
+  { key: 'lab_stats',        label: 'إحصائيات التحاليل',  fetcher: downloadShiftLabStatsPdf },
+  { key: 'discounts',        label: 'التخفيضات',           fetcher: downloadShiftDiscountsPdf },
+  { key: 'doctor_lab',       label: 'أداء الأطباء مختبر', fetcher: downloadShiftDoctorLabPdf },
+] as const;
+
+export type ClinicReportProgressCallback = (
+  step: 'fetch' | 'upload' | 'done',
+  label: string,
+  index: number,
+  total: number,
+) => void;
+
+/**
+ * Upload all 7 clinic shift PDFs to Firebase Storage (sales project only) and record URLs in Firestore.
+ * Storage path:  {storageName}/shifts/{shiftId}/documents/{key}.pdf
+ * Firestore doc: {storageName}_shifts/{shiftId}  →  field: documents
+ * Files are processed sequentially so onProgress reflects real per-file state.
+ */
+export const uploadShiftClinicReportsToFirebase = async (
+  shiftId: number,
+  onProgress?: ClinicReportProgressCallback,
+): Promise<ClinicShiftReportUploadResult> => {
+  if (!db || !storage) {
+    return { success: false, error: 'Firebase is not initialized or disabled.' };
+  }
+
+  try {
+    const settings = await getSettings();
+    const storageName = settings?.storage_name?.trim();
+    if (!storageName) {
+      return { success: false, error: 'storage_name is not configured in settings.' };
     }
 
-    const totalRevenue = (summary.lab_revenue.total || 0) + (summary.services_revenue.total || 0);
-    const totalCash = (summary.lab_revenue.cash || 0) + (summary.services_revenue.cash || 0);
-    const totalBank = (summary.lab_revenue.bank || 0) + (summary.services_revenue.bank || 0);
+    const total = CLINIC_REPORT_KEYS.length;
+    const urls: Record<string, string> = {};
+
+    for (let i = 0; i < total; i++) {
+      const { key, label, fetcher } = CLINIC_REPORT_KEYS[i];
+      try {
+        onProgress?.('fetch', label, i, total);
+        const blob = await fetcher(shiftId);
+
+        onProgress?.('upload', label, i, total);
+        const path = `${storageName}/shifts/${shiftId}/${key}.pdf`;
+        const storageRef = ref(storage, path);
+        const snapshot = await uploadBytes(storageRef, blob, { contentType: 'application/pdf' });
+        urls[key] = await getDownloadURL(snapshot.ref);
+
+        onProgress?.('done', label, i, total);
+      } catch (e) {
+        console.warn(`[Firebase] Skipping ${key}:`, e);
+      }
+    }
+
+    const docData = {
+      shift_id: shiftId,
+      storage_name: storageName,
+      documents: urls,
+      uploaded_at: serverTimestamp(),
+    };
+
+    // Firestore path: medical_centers/{storageName}/shifts/{shiftId}
+    const docRef = doc(db, 'medical_centers', storageName, 'shifts', String(shiftId));
+    await setDoc(docRef, docData, { merge: true });
+
+    return { success: true, urls };
+  } catch (error) {
+    console.error('[Firebase] Error uploading clinic shift reports:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+};
+
+/**
+ * Send the shift_close_reports WhatsApp template with all 7 PDF URLs as URL buttons.
+ * Body params: {{1}} shift_id, {{2}} date (DD-M-YYYY), {{3}} username
+ * Buttons 0-6: dynamic URL for each report
+ */
+export const sendShiftCloseReportsWhatsApp = async (
+  shiftId: number,
+  userName: string,
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const settings = await getSettings();
+    const to = (settings as any)?.shift_summary_phone ?? settings?.whatsapp_number;
+    if (!to) return { success: false, error: 'WhatsApp number not configured' };
+
+    const storageName = settings?.storage_name?.trim() ?? 'default';
+    const now = new Date();
+    const date = `${now.getDate()}-${now.getMonth() + 1}-${now.getFullYear()}`;
+
+    const reportOrder = [
+      'profit_loss',
+      'revenue',
+      'expenses',
+      'insurance_stats',
+      'lab_stats',
+      'discounts',
+      'doctor_lab',
+    ] as const;
+
+    // Payload format: "{storageName}:{shiftId}:{key}" — stays well under the 128-char limit.
+    // The webhook resolves this to the full URL via Firestore: {storageName}_shifts/{shiftId}.documents.{key}
+    const buttonComponents = reportOrder.map((key, index) => ({
+      type: 'button',
+      sub_type: 'quick_reply',
+      index: String(index),
+      parameters: [{ type: 'payload', payload: `${storageName}:${shiftId}:${key}` }],
+    }));
 
     const payload: WhatsAppCloudTemplatePayload = {
       to,
-      template_name: 'daily_closing_summary',
-      language_code: 'en',
+      template_name: 'shift_close_reports',
+      language_code: 'ar',
       components: [
         {
           type: 'body',
           parameters: [
-            { type: 'text', text: formatNumber(totalRevenue, 0) }, // {{1}} الإيرادات الإجمالية
-            { type: 'text', text: formatNumber(totalCash, 0) },    // {{2}} نقداً (كاش)
-            { type: 'text', text: formatNumber(totalBank, 0) },    // {{3}} تحويل (بنكك)
-            { type: 'text', text: formatNumber(summary.costs.total || 0, 0) }, // {{4}} إجمالي المصروفات
-            { type: 'text', text: formatNumber(summary.total_refunds || 0, 0) }, // {{5}} إجمالي المبالغ المستردة
-            { type: 'text', text: formatNumber(summary.total_discounts || 0, 0) }, // {{6}} إجمالي التخفيضات الممنوحة
-            { type: 'text', text: userName }, // {{7}} الموظف المسؤول
-            { type: 'text', text: formatNumber(summary.net_cash || 0, 0) }, // {{8}} الصافي (كاش)
-            { type: 'text', text: formatNumber(summary.net_bank || 0, 0) }, // {{9}} الصافي (بنكك)
+            { type: 'text', text: String(shiftId) },
+            { type: 'text', text: date },
+            { type: 'text', text: userName },
           ],
         },
+        ...buttonComponents,
       ],
     };
 
     const response = await sendWhatsAppCloudTemplate(payload);
-    return { success: response.success, data: response.data };
+    return { success: response.success, error: response.error };
   } catch (error) {
-    console.error('Error sending WhatsApp summary:', error);
+    console.error('[WhatsApp] Error sending shift_close_reports template:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 };
+

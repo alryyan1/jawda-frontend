@@ -587,24 +587,54 @@ const HomePage: React.FC = () => {
       refetchSummary();
       toast.success('تم إغلاق الوردية بنجاح');
 
-      // --- New: Upload shift reports to Firebase ---
+      // --- Upload base shift reports ---
       toast.promise(
         async () => {
-          const { uploadShiftReportsToFirebase, sendShiftSummaryWhatsApp } = await import('@/services/shiftFirestoreService');
+          const { uploadShiftReportsToFirebase } = await import('@/services/shiftFirestoreService');
           const result = await uploadShiftReportsToFirebase(shiftId, user?.id || 0);
           if (!result.success) throw new Error(result.error);
-          
-          // Send WhatsApp closing summary
-          await sendShiftSummaryWhatsApp(shiftId, user?.name || '');
-          
           return result;
         },
         {
-          loading: 'جاري رفع تقارير الوردية إلى السحابة...',
-          success: 'تم رفع التقارير وإرسال ملخص الواتساب بنجاح',
-          error: (err) => `فشل رفع التقارير أو إرسال الملخص: ${err.message}`,
+          loading: 'جاري رفع تقارير الوردية...',
+          success: 'تم رفع التقارير بنجاح',
+          error: (err) => `فشل رفع التقارير: ${err.message}`,
         }
       );
+
+      // --- Upload 7 clinic PDFs with per-file progress toasts ---
+      (async () => {
+        const { uploadShiftClinicReportsToFirebase, sendShiftCloseReportsWhatsApp } = await import('@/services/shiftFirestoreService');
+        const clinicToastId = toast.loading('جاري تجهيز التقارير الإدارية...');
+        const result = await uploadShiftClinicReportsToFirebase(
+          shiftId,
+          (step, label, index, total) => {
+            const counter = `(${index + 1}/${total})`;
+            if (step === 'fetch') {
+              toast.loading(`جاري تحميل: ${label} ${counter}`, { id: clinicToastId });
+            } else if (step === 'upload') {
+              toast.loading(`جاري رفع: ${label} ${counter}`, { id: clinicToastId });
+            } else {
+              toast.success(`تم رفع: ${label} ${counter}`, { id: clinicToastId, duration: 2000 });
+            }
+          }
+        );
+        const uploadedCount = Object.keys(result.urls ?? {}).length;
+        if (result.success) {
+          toast.success(`تم رفع ${uploadedCount} تقارير إدارية بنجاح`, { id: clinicToastId });
+          // Send WhatsApp template with PDF links
+          toast.promise(
+            sendShiftCloseReportsWhatsApp(shiftId, user?.name ?? ''),
+            {
+              loading: 'جاري إرسال رابط التقارير عبر الواتساب...',
+              success: 'تم إرسال رابط التقارير عبر الواتساب',
+              error: (err) => `فشل إرسال الواتساب: ${err.message}`,
+            }
+          );
+        } else {
+          toast.error(`فشل رفع التقارير الإدارية: ${result.error}`, { id: clinicToastId });
+        }
+      })();
 
       // Emit realtime event: close-general-shift
       try {
@@ -636,25 +666,41 @@ const HomePage: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const handleManualSync = useCallback(async (shiftId: number) => {
     setIsSyncing(true);
-    toast.promise(
-      async () => {
-        const { uploadShiftReportsToFirebase, sendShiftSummaryWhatsApp } = await import('@/services/shiftFirestoreService');
-        const result = await uploadShiftReportsToFirebase(shiftId, user?.id || 0);
-        if (!result.success) throw new Error(result.error);
-        
-        // Send WhatsApp closing summary
-        await sendShiftSummaryWhatsApp(shiftId, user?.name || '');
-        
-        return result;
-      },
-      {
-        loading: 'جاري رفع تقارير الوردية إلى السحابة...',
-        success: 'تم رفع التقارير وإرسال ملخص الواتساب بنجاح',
-        error: (err) => `فشل رفع التقارير أو إرسال الملخص: ${err.message}`,
-        finally: () => setIsSyncing(false),
-      },
-    );
-  }, [user?.name, user?.id]);
+    try {
+      const { uploadShiftClinicReportsToFirebase, sendShiftCloseReportsWhatsApp } = await import('@/services/shiftFirestoreService');
+
+      const clinicToastId = toast.loading('جاري تجهيز التقارير الإدارية...');
+      const result = await uploadShiftClinicReportsToFirebase(
+        shiftId,
+        (step, label, index, total) => {
+          const counter = `(${index + 1}/${total})`;
+          if (step === 'fetch') {
+            toast.loading(`جاري تحميل: ${label} ${counter}`, { id: clinicToastId });
+          } else if (step === 'upload') {
+            toast.loading(`جاري رفع: ${label} ${counter}`, { id: clinicToastId });
+          } else {
+            toast.success(`تم رفع: ${label} ${counter}`, { id: clinicToastId, duration: 2000 });
+          }
+        }
+      );
+      const uploadedCount = Object.keys(result.urls ?? {}).length;
+      if (result.success) {
+        toast.success(`تم رفع ${uploadedCount} تقارير إدارية بنجاح`, { id: clinicToastId });
+        toast.promise(
+          sendShiftCloseReportsWhatsApp(shiftId, user?.name ?? ''),
+          {
+            loading: 'جاري إرسال رابط التقارير عبر الواتساب...',
+            success: 'تم إرسال رابط التقارير عبر الواتساب',
+            error: (err) => `فشل إرسال الواتساب: ${err.message}`,
+          }
+        );
+      } else {
+        toast.error(`فشل رفع التقارير الإدارية: ${result.error}`, { id: clinicToastId });
+      }
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [user?.name]);
 
   const handleRefreshAllData = useCallback(() => {
     toast.info('جاري التحديث');

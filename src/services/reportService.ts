@@ -58,6 +58,19 @@ export const downloadClinicShiftSummaryPdf = async (filters: ClinicReportPdfFilt
   });
   return response.data;
 };
+const shiftPdfBlob = async (endpoint: string, shiftId: number): Promise<Blob> => {
+  const response = await apiClient.get(endpoint, { params: { shift: shiftId }, responseType: 'blob' });
+  return response.data;
+};
+
+export const downloadShiftProfitLossPdf       = (shiftId: number) => shiftPdfBlob('/reports/clinic-shift/profit-loss/pdf', shiftId);
+export const downloadShiftRevenuePdf          = (shiftId: number) => shiftPdfBlob('/reports/clinic-shift/revenue/pdf', shiftId);
+export const downloadShiftExpensesPdf         = (shiftId: number) => shiftPdfBlob('/reports/clinic-shift/expenses/pdf', shiftId);
+export const downloadShiftInsuranceStatsPdf   = (shiftId: number) => shiftPdfBlob('/reports/clinic-shift/insurance-stats/pdf', shiftId);
+export const downloadShiftLabStatsPdf         = (shiftId: number) => shiftPdfBlob('/reports/clinic-shift/lab-stats/pdf', shiftId);
+export const downloadShiftDiscountsPdf        = (shiftId: number) => shiftPdfBlob('/reports/clinic-shift/discounts/pdf', shiftId);
+export const downloadShiftDoctorLabPdf        = (shiftId: number) => shiftPdfBlob('/reports/clinic-shift/doctor-lab/pdf', shiftId);
+
 export const getDoctorShiftsReport = async (filters: DoctorShiftReportFilters): Promise<PaginatedResponse<DoctorShiftReportItem>> => {
   const response = await apiClient.get<PaginatedResponse<DoctorShiftReportItem>>('/doctor-shifts', { params: filters });
   return response.data;

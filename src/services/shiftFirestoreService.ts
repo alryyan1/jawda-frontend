@@ -247,7 +247,7 @@ export const sendShiftCloseReportsWhatsApp = async (
     const settings = await getSettings();
     const to = (settings as any)?.shift_summary_phone ?? settings?.whatsapp_number;
     if (!to) return { success: false, error: 'WhatsApp number not configured' };
-
+    console.log(`[WhatsApp] Sending shift_close_reports template to ${to} for shift ${shiftId}...`);
     const storageName = settings?.storage_name?.trim() ?? 'default';
     const now = new Date();
     const date = `${now.getDate()}-${now.getMonth() + 1}-${now.getFullYear()}`;

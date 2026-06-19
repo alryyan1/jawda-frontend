@@ -5,7 +5,7 @@ import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 
-import { Loader2, Search, Eye } from 'lucide-react';
+import { Loader2, Search, Eye, Filter } from 'lucide-react';
 
 // Helper function to format numbers with thousand separators
 const formatNumber = (num: number | string): string => {
@@ -19,7 +19,8 @@ const formatNumber = (num: number | string): string => {
 
 import type { LabGeneralReportFilters, LabGeneralReportWithUserRevenue, LabGeneralReportItem } from '@/types/reports';
 import { getLabGeneralReport } from '@/services/reportService';
-import { getUsers } from '@/services/userService';
+import { getUsers, getUsersWithLabDepositsForShift } from '@/services/userService';
+import { getAllShifts } from '@/services/shiftService';
 
 // MUI imports
 import {
@@ -36,6 +37,8 @@ import {
   TableRow as MUITableRow,
   TableCell as MUITableCell,
   Autocomplete,
+  Popover,
+  Badge,
 } from '@mui/material';
 import { webUrl } from '../constants';
 
@@ -46,6 +49,7 @@ type LabGeneralReportFilterFormValues = {
   end_time?: string;
   patient_name?: string;
   user_id?: string;
+  shift_id?: string;
 };
 
 const LabGeneralReportPage: React.FC = () => {
@@ -59,6 +63,7 @@ const LabGeneralReportPage: React.FC = () => {
       end_time: '23:59',
       patient_name: '',
       user_id: 'all',
+      shift_id: 'all',
     },
   });
 
@@ -66,6 +71,7 @@ const LabGeneralReportPage: React.FC = () => {
     date_from: defaultDateTo,
     date_to: defaultDateTo,
   });
+  const [filterAnchorEl, setFilterAnchorEl] = useState<HTMLButtonElement | null>(null);
   const navigate = useNavigate();
 
   // Fetch data for filters
@@ -73,6 +79,11 @@ const LabGeneralReportPage: React.FC = () => {
   const { data: users, isLoading: isLoadingUsers } = useQuery({
     queryKey: ['usersListForReport'],
     queryFn: () => getUsers(1, { per_page: 200 }),
+  });
+
+  const { data: shifts, isLoading: isLoadingShifts } = useQuery({
+    queryKey: ['shiftsListForReport'],
+    queryFn: () => getAllShifts(),
   });
 
 
@@ -94,14 +105,17 @@ const LabGeneralReportPage: React.FC = () => {
   });
 
   const handleFilterSubmit = (data: LabGeneralReportFilterFormValues) => {
+    const usingShift = data.shift_id && data.shift_id !== 'all';
     setAppliedFilters({
-      date_from: data.date_from || undefined,
-      date_to: data.date_to || undefined,
-      start_time: data.start_time || undefined,
-      end_time: data.end_time || undefined,
+      shift_id: usingShift ? parseInt(data.shift_id!) : undefined,
+      date_from: usingShift ? undefined : (data.date_from || undefined),
+      date_to: usingShift ? undefined : (data.date_to || undefined),
+      start_time: usingShift ? undefined : (data.start_time || undefined),
+      end_time: usingShift ? undefined : (data.end_time || undefined),
       patient_name: data.patient_name || undefined,
       user_id: data.user_id && data.user_id !== 'all' ? parseInt(data.user_id) : undefined,
     });
+    setFilterAnchorEl(null);
   };
 
 
@@ -116,6 +130,7 @@ const LabGeneralReportPage: React.FC = () => {
     params.append('end_time', currentEndTime);
     if (appliedFilters.patient_name) params.append('patient_name', appliedFilters.patient_name);
     if (appliedFilters.user_id) params.append('user_id', appliedFilters.user_id.toString());
+    if (appliedFilters.shift_id) params.append('shift_id', appliedFilters.shift_id.toString());
 
     // Open PDF in new tab using web route
     const pdfUrl = `${webUrl}reports/lab-general/pdf?${params.toString()}`;
@@ -133,6 +148,7 @@ const LabGeneralReportPage: React.FC = () => {
     params.append('end_time', currentEndTime);
     if (appliedFilters.patient_name) params.append('patient_name', appliedFilters.patient_name);
     if (appliedFilters.user_id) params.append('user_id', appliedFilters.user_id.toString());
+    if (appliedFilters.shift_id) params.append('shift_id', appliedFilters.shift_id.toString());
 
     // Navigate to details page
     navigate(`/reports/lab-general/details?${params.toString()}`);
@@ -140,7 +156,31 @@ const LabGeneralReportPage: React.FC = () => {
 
   const patients = (reportData as LabGeneralReportWithUserRevenue & { data: LabGeneralReportItem[] })?.data || [];
   const userRevenues = reportData?.user_revenues || [];
-  const isLoadingDropdowns = isLoadingUsers;
+  const isLoadingDropdowns = isLoadingUsers || isLoadingShifts;
+
+  const watchedShiftId = filterForm.watch('shift_id');
+  const shiftSelected = watchedShiftId !== 'all' && !!watchedShiftId;
+  const dateTimeDisabled = isFetching || isLoadingDropdowns || shiftSelected;
+
+  const shiftIdNum = shiftSelected ? parseInt(watchedShiftId!) : null;
+
+  const { data: shiftUsers, isLoading: isLoadingShiftUsers } = useQuery({
+    queryKey: ['usersForShiftLabDeposits', shiftIdNum],
+    queryFn: () => getUsersWithLabDepositsForShift(shiftIdNum!),
+    enabled: shiftIdNum !== null,
+  });
+
+  // When a shift is selected show only users who deposited in that shift; otherwise all users
+  const availableUsers: { id: number | string; name: string }[] = shiftSelected
+    ? (shiftUsers ?? [])
+    : (users?.data ?? []);
+
+  const activeFilterCount = [
+    appliedFilters.shift_id,
+    appliedFilters.date_from,
+    appliedFilters.user_id,
+    appliedFilters.patient_name,
+  ].filter(Boolean).length;
 
   if (error) {
     return (
@@ -151,152 +191,193 @@ const LabGeneralReportPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 ">
-   
-      
-      <Card>
-        <CardHeader>
-          <Typography variant="h6">المرشحات</Typography>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={filterForm.handleSubmit(handleFilterSubmit)} className="space-y-4">
-            <div className="flex gap-4 items-end">
-              
-              <Controller 
-                control={filterForm.control} 
-                name="date_from" 
-                render={({ field }) => (
-                  <TextField 
-                  sx={{width:'150px'}}
-                    label="من تاريخ" 
-                    type="date" 
-                    size="small" 
-                    value={field.value} 
-                    onChange={field.onChange} 
-                    disabled={isFetching || isLoadingDropdowns} 
-                  />
-                )} 
-              />
-              
-              <Controller 
-                control={filterForm.control} 
-                name="date_to" 
+    <div className="space-y-6">
 
-                render={({ field }) => (
-                  <TextField 
-                  sx={{width:'150px'}}
-                    label="إلى تاريخ" 
-                    type="date" 
-                    size="small" 
-                    value={field.value} 
-                    onChange={field.onChange} 
-                    disabled={isFetching || isLoadingDropdowns} 
-                  />
-                )} 
-              />
+      {/* Top action bar */}
+      <div className="flex gap-3 items-center">
+        <Badge badgeContent={activeFilterCount} color="error">
+          <Button
+            variant="outlined"
+            startIcon={<Filter className="h-4 w-4" />}
+            onClick={(e) => setFilterAnchorEl(e.currentTarget)}
+          >
+            المرشحات
+          </Button>
+        </Badge>
 
-              <Controller 
-                control={filterForm.control} 
-                name="start_time" 
-                render={({ field }) => (
-                  <TextField 
-                  sx={{width:'130px'}}
-                    label="من وقت" 
-                    type="time" 
-                    size="small" 
-                    value={field.value} 
-                    onChange={field.onChange} 
-                    disabled={isFetching || isLoadingDropdowns} 
-                    inputProps={{ step: 60 }}
-                  />
-                )} 
-              />
+        <Button
+          variant="outlined"
+          onClick={handleOpenPdfInNewTab}
+          disabled={isFetching || patients.length === 0}
+          startIcon={<Eye className="h-4 w-4" />}
+        >
+          PDF
+        </Button>
 
-              <Controller 
-                control={filterForm.control} 
-                name="end_time" 
-                render={({ field }) => (
-                  <TextField 
-                  sx={{width:'130px'}}
-                    label="إلى وقت" 
-                    type="time" 
-                    size="small" 
-                    value={field.value} 
-                    onChange={field.onChange} 
-                    disabled={isFetching || isLoadingDropdowns} 
-                    inputProps={{ step: 60 }}
+        <Button
+          variant="contained"
+          onClick={handleOpenDetailsPage}
+          disabled={isFetching || patients.length === 0}
+          startIcon={<Search className="h-4 w-4" />}
+        >
+          عرض التفاصيل
+        </Button>
+
+        {isFetching && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+      </div>
+
+      {/* Filter Popover */}
+      <Popover
+        open={Boolean(filterAnchorEl)}
+        anchorEl={filterAnchorEl}
+        onClose={() => setFilterAnchorEl(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+      >
+        <form onSubmit={filterForm.handleSubmit(handleFilterSubmit)}>
+          <div className="flex flex-col gap-4 p-4" style={{ minWidth: 340 }}>
+            <Typography variant="subtitle2" fontWeight="bold">المرشحات</Typography>
+
+            {/* Date range */}
+            <Controller
+              control={filterForm.control}
+              name="date_from"
+              render={({ field }) => (
+                <TextField
+                  fullWidth
+                  label="من تاريخ"
+                  type="date"
+                  size="small"
+                  value={field.value}
+                  onChange={(e) => { field.onChange(e); filterForm.setValue('shift_id', 'all'); }}
+                  disabled={dateTimeDisabled}
+                />
+              )}
+            />
+            <Controller
+              control={filterForm.control}
+              name="date_to"
+              render={({ field }) => (
+                <TextField
+                  fullWidth
+                  label="إلى تاريخ"
+                  type="date"
+                  size="small"
+                  value={field.value}
+                  onChange={(e) => { field.onChange(e); filterForm.setValue('shift_id', 'all'); }}
+                  disabled={dateTimeDisabled}
+                />
+              )}
+            />
+            <Controller
+              control={filterForm.control}
+              name="start_time"
+              render={({ field }) => (
+                <TextField
+                  fullWidth
+                  label="من وقت"
+                  type="time"
+                  size="small"
+                  value={field.value}
+                  onChange={field.onChange}
+                  disabled={dateTimeDisabled}
+                  slotProps={{ htmlInput: { step: 60 } }}
+                />
+              )}
+            />
+            <Controller
+              control={filterForm.control}
+              name="end_time"
+              render={({ field }) => (
+                <TextField
+                  fullWidth
+                  label="إلى وقت"
+                  type="time"
+                  size="small"
+                  value={field.value}
+                  onChange={field.onChange}
+                  disabled={dateTimeDisabled}
+                  slotProps={{ htmlInput: { step: 60 } }}
+                />
+              )}
+            />
+
+            {/* Shift */}
+            <Controller
+              control={filterForm.control}
+              name="shift_id"
+              render={({ field }) => {
+                const allOption = { id: 'all', label: 'كل المناوبات' };
+                const shiftOptions = [
+                  allOption,
+                  ...(shifts || []).map(s => ({
+                    id: s.id.toString(),
+                    label: `#${s.id} — ${format(new Date(s.created_at), 'yyyy-MM-dd')}${s.is_closed ? ' (مغلقة)' : ' (مفتوحة)'}`,
+                  })),
+                ];
+                const currentValue = shiftOptions.find(o => o.id === (field.value ?? 'all')) || allOption;
+                return (
+                  <Autocomplete
+                    fullWidth
+                    size="small"
+                    options={shiftOptions}
+                    getOptionLabel={(o) => o.label}
+                    value={currentValue}
+                    onChange={(_, newValue) => field.onChange(newValue?.id ?? 'all')}
+                    disabled={isLoadingDropdowns || isFetching}
+                    renderInput={(params) => (
+                      <TextField {...params} label="المناوبة" placeholder="اختر المناوبة" />
+                    )}
                   />
-                )} 
-              />
-              
-           
-              
-              <Controller 
-                control={filterForm.control} 
-                name="user_id" 
-                render={({ field }) => {
-                  // Create options with "all" option
-                  const allOption = { id: 'all', name: 'جميع المستخدمين' };
-                  const userOptions = [allOption, ...(users?.data || [])];
-                  
-                  const currentValue = field.value === 'all' ? allOption : users?.data?.find((user: { id: number; name: string }) => user.id.toString() === field.value) || allOption;
-                  
-                  return (
-                    <Autocomplete
-                      size="small"
-                      sx={{width:'200px'}}
-                      options={userOptions}
-                      getOptionLabel={(option) => option ? option.name : ''}
-                      value={currentValue}
-                      onChange={(_, newValue) => field.onChange(newValue?.id.toString() || 'all')}
-                      disabled={isLoadingDropdowns || isFetching}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label="المستخدم"
-                          placeholder="اختر المستخدم"
-                        />
-                      )}
-                    />
-                  );
-                }} 
-              />
-              
-              <Button 
-                type="submit" 
-                variant="contained" 
-                className="h-9" 
-                disabled={isFetching || isLoadingDropdowns}
-              >
-                {isFetching ? <Loader2 className="h-4 w-4 animate-spin" /> : ' بحث '}
-              </Button>
-              
-         
-              <Button 
-                type="button" 
-                variant="outlined" 
-                className="h-9" 
-                onClick={handleOpenPdfInNewTab}
-                disabled={isFetching || isLoadingDropdowns || patients.length === 0}
+                );
+              }}
+            />
+
+            {/* User */}
+            <Controller
+              control={filterForm.control}
+              name="user_id"
+              render={({ field }) => {
+                const allOption = { id: 'all' as const, name: 'جميع المستخدمين' };
+                const userOptions = [allOption, ...availableUsers];
+                const currentValue = field.value === 'all'
+                  ? allOption
+                  : availableUsers.find((u) => u.id.toString() === field.value) || allOption;
+                return (
+                  <Autocomplete
+                    fullWidth
+                    size="small"
+                    options={userOptions}
+                    getOptionLabel={(o) => o.name}
+                    value={currentValue}
+                    onChange={(_, newValue) => field.onChange(newValue?.id.toString() || 'all')}
+                    disabled={isLoadingDropdowns || isLoadingShiftUsers || isFetching}
+                    loading={isLoadingShiftUsers}
+                    renderInput={(params) => (
+                      <TextField {...params} label="المستخدم" placeholder="اختر المستخدم" />
+                    )}
+                  />
+                );
+              }}
+            />
+
+            <Button type="submit" variant="contained" disabled={isFetching || isLoadingDropdowns}>
+              {isFetching ? <Loader2 className="h-4 w-4 animate-spin" /> : 'بحث'}
+            </Button>
+
+            {shiftSelected && (
+              <Button
+                type="button"
+                variant="outlined"
                 startIcon={<Eye className="h-4 w-4" />}
+                onClick={() => window.open(`${webUrl}reports/lab-shift/pdf?shift=${watchedShiftId}`, '_blank')}
               >
-                 PDF
+                PDF المناوبة
               </Button>
-              
-              <Button 
-                type="button" 
-                variant="contained" 
-                className="h-9" 
-                onClick={handleOpenDetailsPage}
-                disabled={isFetching || isLoadingDropdowns || patients.length === 0}
-                startIcon={<Search className="h-4 w-4" />}
-              >
-                عرض التفاصيل
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+            )}
+          </div>
+        </form>
+      </Popover>
 
       {(isLoading && !isFetching) && <div className="text-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}
       {isFetching && <div className="text-sm text-muted-foreground mb-2 text-center">جارِ تحديث القائمة...</div>}

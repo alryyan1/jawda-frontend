@@ -120,6 +120,16 @@ export interface PatientTransaction {
   total_service_cash: number;
 }
 
+export const getUsersWithLabDepositsForShift = async (
+  shiftId: number
+): Promise<{ id: number; name: string }[]> => {
+  const response = await apiClient.get<{ data: { id: number; name: string }[] }>(
+    '/users/lab-deposits-for-shift',
+    { params: { shift_id: shiftId } }
+  );
+  return response.data.data;
+};
+
 export const getUserShiftPatientTransactions = async (
   shiftId: number,
   userId: number

@@ -245,9 +245,11 @@ export const sendShiftCloseReportsWhatsApp = async (
 ): Promise<{ success: boolean; error?: string }> => {
   try {
     const settings = await getSettings();
-    const to = (settings as any)?.shift_summary_phone ?? settings?.whatsapp_number;
-    if (!to) return { success: false, error: 'WhatsApp number not configured' };
-    console.log(`[WhatsApp] Sending shift_close_reports template to ${to} for shift ${shiftId}...`);
+    const rawTo = (settings as any)?.shift_summary_phone ?? settings?.whatsapp_number;
+    if (!rawTo) return { success: false, error: 'WhatsApp number not configured' };
+
+    const recipients = String(rawTo).split(',').map((n: string) => n.trim()).filter(Boolean);
+
     const storageName = settings?.storage_name?.trim() ?? 'default';
     const now = new Date();
     const date = `${now.getDate()}-${now.getMonth() + 1}-${now.getFullYear()}`;
@@ -262,8 +264,6 @@ export const sendShiftCloseReportsWhatsApp = async (
       'doctor_lab',
     ] as const;
 
-    // Payload format: "{storageName}:{shiftId}:{key}" — stays well under the 128-char limit.
-    // The webhook resolves this to the full URL via Firestore: {storageName}_shifts/{shiftId}.documents.{key}
     const buttonComponents = reportOrder.map((key, index) => ({
       type: 'button',
       sub_type: 'quick_reply',
@@ -271,25 +271,32 @@ export const sendShiftCloseReportsWhatsApp = async (
       parameters: [{ type: 'payload', payload: `${storageName}:${shiftId}:${key}` }],
     }));
 
-    const payload: WhatsAppCloudTemplatePayload = {
-      to,
-      template_name: 'shift_close_reports',
-      language_code: 'ar',
-      components: [
-        {
-          type: 'body',
-          parameters: [
-            { type: 'text', text: String(shiftId) },
-            { type: 'text', text: date },
-            { type: 'text', text: userName },
-          ],
-        },
-        ...buttonComponents,
-      ],
-    };
+    const errors: string[] = [];
+    for (const to of recipients) {
+      console.log(`[WhatsApp] Sending shift_close_reports template to ${to} for shift ${shiftId}...`);
+      const payload: WhatsAppCloudTemplatePayload = {
+        to,
+        template_name: 'shift_close_reports',
+        language_code: 'ar',
+        components: [
+          {
+            type: 'body',
+            parameters: [
+              { type: 'text', text: String(shiftId) },
+              { type: 'text', text: date },
+              { type: 'text', text: userName },
+            ],
+          },
+          ...buttonComponents,
+        ],
+      };
+      const response = await sendWhatsAppCloudTemplate(payload);
+      if (!response.success) errors.push(`${to}: ${response.error ?? 'failed'}`);
+    }
 
-    const response = await sendWhatsAppCloudTemplate(payload);
-    return { success: response.success, error: response.error };
+    return errors.length === recipients.length
+      ? { success: false, error: errors.join('; ') }
+      : { success: true, error: errors.length ? errors.join('; ') : undefined };
   } catch (error) {
     console.error('[WhatsApp] Error sending shift_close_reports template:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };

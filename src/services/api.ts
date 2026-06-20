@@ -28,6 +28,9 @@ apiClient.interceptors.request.use(
   }
 );
 
+// Guard to prevent multiple simultaneous redirects to login
+let isRedirectingToLogin = false;
+
 // Interceptor to handle 401/Unauthenticated errors and show global error toasts
 apiClient.interceptors.response.use(
   (response) => response,
@@ -40,14 +43,22 @@ apiClient.interceptors.response.use(
     if (
       error.response?.data?.message === "Unauthenticated." &&
       !isAuthEndpoint &&
-      !(error.config as any)?.skipAuthRedirect
+      !(error.config as any)?.skipAuthRedirect &&
+      !isRedirectingToLogin
     ) {
+      isRedirectingToLogin = true;
+
       // Clear auth data
       localStorage.removeItem("authToken");
       localStorage.removeItem("authUser");
 
-      // Redirect to login
-      window.location.href = "/login";
+      // Show message before redirect
+      toast.error("انتهت جلستك، يرجى تسجيل الدخول مجدداً");
+
+      // Redirect to login with a short delay so the toast is visible
+      setTimeout(() => {
+        window.location.href = "/login";
+      }, 1500);
 
       console.error("Session expired or invalid. Redirecting to login.");
       return Promise.reject(error);

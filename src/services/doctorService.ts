@@ -148,10 +148,27 @@ export const updateServiceConfigurationForDoctor = async (
 };
 
 export const removeServiceConfigurationFromDoctor = async (
-  doctorId: number, 
+  doctorId: number,
   serviceId: number
 ): Promise<void> => {
   await apiClient.delete(`${DOCTOR_API_URL}/${doctorId}/configure-service/${serviceId}`);
+};
+
+export const removeAllServiceConfigurationsFromDoctor = async (
+  doctorId: number
+): Promise<void> => {
+  await apiClient.delete(`${DOCTOR_API_URL}/${doctorId}/configure-services`);
+};
+
+export const importServicesByGroup = async (
+  doctorId: number,
+  data: { service_group_id: number; percentage?: string; fixed?: string }
+): Promise<{ count: number }> => {
+  const response = await apiClient.post<{ count: number }>(
+    `${DOCTOR_API_URL}/${doctorId}/configure-services/by-group`,
+    data
+  );
+  return response.data;
 };
 
 export const updateDoctorFirebaseId = async (id: number, firebaseId: string): Promise<Doctor> => {

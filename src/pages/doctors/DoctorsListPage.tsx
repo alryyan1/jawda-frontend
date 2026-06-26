@@ -13,12 +13,10 @@ import { toast } from "sonner";
 import {
   Box,
   Button,
-  Card,
-  CardContent,
   TextField,
+  InputAdornment,
   IconButton,
   CircularProgress,
-  Avatar,
   Table,
   TableBody,
   TableCell,
@@ -37,7 +35,6 @@ import {
   Edit as EditIcon,
   Search as SearchIcon,
   Checklist as ChecklistIcon,
-  Person as PersonIcon,
   Star as StarIcon,
   PictureAsPdf as PictureAsPdfIcon,
 } from "@mui/icons-material";
@@ -148,14 +145,6 @@ export default function DoctorsListPage() {
     }
   };
 
-  const getImageUrl = (imagePath?: string | null) => {
-    if (!imagePath) return undefined;
-    if (imagePath.startsWith("http")) return imagePath;
-    const baseUrl =
-      import.meta.env.VITE_API_BASE_URL?.replace("/api", "/storage/") ||
-      "/storage/";
-    return `${baseUrl}${imagePath}`;
-  };
 
   const handleExportPdf = async () => {
     try {
@@ -210,91 +199,65 @@ export default function DoctorsListPage() {
   };
 
   return (
-    <Box sx={{ maxWidth: 1200, mx: "auto", py: { xs: 2, sm: 3, lg: 4 } }}>
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 2,
-        }}
-      >
-        <Typography variant="h5" fontWeight={700}>
+    <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      {/* Compact single-line toolbar */}
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1, flexShrink: 0 }}>
+        <Typography variant="subtitle1" fontWeight={700} noWrap>
           إدارة الأطباء
         </Typography>
-        <Box sx={{ display: "flex", gap: 1 }}>
+        <TextField
+          variant="outlined"
+          size="small"
+          placeholder="ابحث بالاسم..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" color="action" />
+                </InputAdornment>
+              ),
+            },
+          }}
+          sx={{ width: 260, "& .MuiOutlinedInput-root": { height: 32, fontSize: "0.8rem" } }}
+        />
+        {isFetching && !isFetchingNextPage && <CircularProgress size={16} />}
+        <Box sx={{ ml: "auto", display: "flex", gap: 1 }}>
           <Button
             onClick={handleExportPdf}
             variant="outlined"
             size="small"
-            startIcon={
-              isExporting ? (
-                <CircularProgress size={14} />
-              ) : (
-                <PictureAsPdfIcon fontSize="small" />
-              )
-            }
+            startIcon={isExporting ? <CircularProgress size={14} /> : <PictureAsPdfIcon fontSize="small" />}
             disabled={isExporting}
           >
             تصدير PDF
           </Button>
-          <Button
-            component={Link}
-            to="/doctors/new"
-            variant="contained"
-            size="small"
-          >
-            إضافة طبيب جديد
+          <Button component={Link} to="/doctors/new" variant="contained" size="small">
+            إضافة طبيب
           </Button>
         </Box>
       </Box>
-
-      <Card sx={{ mb: 2 }}>
-        <CardContent>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <SearchIcon fontSize="small" color="action" />
-            <TextField
-              variant="outlined"
-              size="small"
-              placeholder="ابحث بالاسم..."
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-              }}
-              sx={{ maxWidth: 320 }}
-            />
-          </Box>
-        </CardContent>
-      </Card>
-
-      {isFetching && !isFetchingNextPage && (
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-          جاري التحديث...
-        </Typography>
-      )}
 
       {doctors.length === 0 && !isLoading ? (
         <Box sx={{ textAlign: "center", py: 5, color: "text.secondary" }}>
           لم يتم العثور على أطباء
         </Box>
       ) : (
-        <TableContainer
-          component={Paper}
-          sx={{ maxHeight: "calc(100vh - 270px)", overflowY: "auto" }}
-        >
+        <TableContainer component={Paper} sx={{ flex: 1, overflow: "auto" }}>
           <Table size="small" stickyHeader>
             <TableHead>
               <TableRow>
-                <TableCell align="center" sx={{ width: 80 }}>
-                  الصورة
+                <TableCell align="center" sx={{ width: 48, py: 0.5 }}>
+                  #
                 </TableCell>
-                <TableCell align="center">الاسم</TableCell>
-                <TableCell align="center">الهاتف</TableCell>
-                <TableCell align="center">الاختصاص</TableCell>
-                <TableCell align="center">الاجر الثابت</TableCell>
-                <TableCell align="center">نسبة النقد</TableCell>
-                <TableCell align="center">نسبة الشركة</TableCell>
-                <TableCell align="center">إجراءات</TableCell>
+                <TableCell align="center" sx={{ py: 0.5 }}>الاسم</TableCell>
+                <TableCell align="center" sx={{ py: 0.5 }}>الهاتف</TableCell>
+                <TableCell align="center" sx={{ py: 0.5 }}>الاختصاص</TableCell>
+                <TableCell align="center" sx={{ py: 0.5 }}>الاجر الثابت</TableCell>
+                <TableCell align="center" sx={{ py: 0.5 }}>نسبة النقد</TableCell>
+                <TableCell align="center" sx={{ py: 0.5 }}>نسبة الشركة</TableCell>
+                <TableCell align="center" sx={{ width: 48, py: 0.5 }}>إجراءات</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -303,58 +266,35 @@ export default function DoctorsListPage() {
                   key={doctor.id}
                   hover
                   onClick={() => navigate(`/doctors/${doctor.id}/edit`)}
-                  sx={{ cursor: "pointer" }}
+                  sx={{ cursor: "pointer", "& .MuiTableCell-root": { py: 0.25 } }}
                 >
-                  <TableCell align="center">
-                    <Avatar
-                      sx={{ width: 40, height: 40, mx: "auto" }}
-                      src={getImageUrl(doctor.image)}
-                      alt={doctor.name}
-                    >
-                      <PersonIcon />
-                    </Avatar>
+                  <TableCell align="center" sx={{ fontSize: "0.75rem", color: "text.secondary" }}>
+                    {doctor.id}
                   </TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 500 }}>
-                    <Box
-                      sx={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 0.5,
-                      }}
-                    >
+                  <TableCell align="center" sx={{ fontWeight: 500, fontSize: "0.8rem" }}>
+                    <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}>
                       {doctor.name}
-                      {doctor.is_default ? (
-                        <StarIcon sx={{ color: "gold", fontSize: 16 }} />
-                      ) : null}
+                      {doctor.is_default && <StarIcon sx={{ color: "gold", fontSize: 14 }} />}
                     </Box>
                   </TableCell>
-                  <TableCell align="center">{doctor.phone}</TableCell>
-                  <TableCell align="center">
-                    {doctor.specialist?.name || doctor.specialist_name || "N/A"}
+                  <TableCell align="center" sx={{ fontSize: "0.8rem" }}>{doctor.phone}</TableCell>
+                  <TableCell align="center" sx={{ fontSize: "0.8rem" }}>
+                    {doctor.specialist?.name || doctor.specialist_name || "—"}
                   </TableCell>
-                  <TableCell
-                    align="center"
-                    sx={{ color: "success.main", fontWeight: "bold" }}
-                  >
-                    {doctor.static_wage ? `${doctor.static_wage} SDG` : "N/A"}
+                  <TableCell align="center" sx={{ color: "success.main", fontWeight: "bold", fontSize: "0.8rem" }}>
+                    {doctor.static_wage ? `${doctor.static_wage} SDG` : "—"}
                   </TableCell>
-                  <TableCell align="center">
-                    {doctor.cash_percentage
-                      ? `${doctor.cash_percentage}%`
-                      : "N/A"}
+                  <TableCell align="center" sx={{ fontSize: "0.8rem" }}>
+                    {doctor.cash_percentage ? `${doctor.cash_percentage}%` : "—"}
                   </TableCell>
-                  <TableCell align="center">
-                    {doctor.company_percentage
-                      ? `${doctor.company_percentage}%`
-                      : "N/A"}
+                  <TableCell align="center" sx={{ fontSize: "0.8rem" }}>
+                    {doctor.company_percentage ? `${doctor.company_percentage}%` : "—"}
                   </TableCell>
                   <TableCell align="center">
                     <IconButton
                       size="small"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleMenuOpen(e, doctor);
-                      }}
+                      onClick={(e) => { e.stopPropagation(); handleMenuOpen(e, doctor); }}
+                      sx={{ p: 0.5 }}
                     >
                       <MoreHorizIcon fontSize="small" />
                     </IconButton>
@@ -365,31 +305,19 @@ export default function DoctorsListPage() {
           </Table>
 
           {hasNextPage && (
-            <Box
-              ref={loadMoreRef}
-              sx={{ display: "flex", justifyContent: "center", p: 2 }}
-            >
+            <Box ref={loadMoreRef} sx={{ display: "flex", justifyContent: "center", p: 1 }}>
               {isFetchingNextPage ? (
-                <CircularProgress size={24} />
+                <CircularProgress size={20} />
               ) : (
-                <Button
-                  onClick={() => fetchNextPage()}
-                  variant="outlined"
-                  size="small"
-                >
+                <Button onClick={() => fetchNextPage()} variant="outlined" size="small">
                   تحميل المزيد
                 </Button>
               )}
             </Box>
           )}
           {!hasNextPage && doctors.length > 0 && (
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              align="center"
-              sx={{ mt: 2, pb: 2 }}
-            >
-              لا يوجد المزيد من الأطباء
+            <Typography variant="caption" color="text.secondary" align="center" display="block" sx={{ py: 1 }}>
+              لا يوجد المزيد
             </Typography>
           )}
         </TableContainer>

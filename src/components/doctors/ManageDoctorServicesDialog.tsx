@@ -1,5 +1,5 @@
 // src/components/doctors/ManageDoctorServicesDialog.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -23,23 +23,27 @@ import {
   CircularProgress,
   IconButton,
   FormHelperText,
+  Divider,
 } from "@mui/material";
 import { DarkThemeAutocomplete } from "@/components/ui/mui-autocomplete";
-import { PlusCircle, Trash2, Save } from "lucide-react";
+import { PlusCircle, Trash2, Save, FolderInput } from "lucide-react";
 
 import type {
   DoctorStripped,
   DoctorService,
   DoctorServiceFormData,
 } from "@/types/doctors";
-import type { Service as ServiceType } from "@/types/services"; // Base service type
+import type { Service as ServiceType, ServiceGroup } from "@/types/services";
 import {
   getConfiguredServicesForDoctor,
   getAvailableServicesForDoctorConfig,
   addServiceConfigurationForDoctor,
   updateServiceConfigurationForDoctor,
   removeServiceConfigurationFromDoctor,
-} from "@/services/doctorService"; // Or your new service file
+  removeAllServiceConfigurationsFromDoctor,
+  importServicesByGroup,
+} from "@/services/doctorService";
+import { getAllServiceGroupsList } from "@/services/serviceGroupService";
 
 interface ManageDoctorServicesDialogProps {
   isOpen: boolean;
@@ -81,6 +85,13 @@ const ManageDoctorServicesDialog: React.FC<ManageDoctorServicesDialogProps> = ({
   ];
 
   const [isAddingNew, setIsAddingNew] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const fixedInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
+  const initializedForDoctorRef = useRef<number | null>(null);
+
+  const [selectedGroup, setSelectedGroup] = useState<ServiceGroup | null>(null);
+  const [groupPercentage, setGroupPercentage] = useState("");
+  const [groupFixed, setGroupFixed] = useState("");
 
   const { data: configuredServicesList = [], isLoading: isLoadingConfigured } =
     useQuery<DoctorService[], Error>({
@@ -97,6 +108,13 @@ const ManageDoctorServicesDialog: React.FC<ManageDoctorServicesDialogProps> = ({
       enabled: isOpen && !!doctor.id,
     });
 
+  const { data: serviceGroups = [], isLoading: isLoadingGroups } =
+    useQuery<ServiceGroup[], Error>({
+      queryKey: ["serviceGroupsList"],
+      queryFn: getAllServiceGroupsList,
+      enabled: isOpen,
+    });
+
   const form = useForm<ManageDoctorServicesFormValues>({
     resolver: zodResolver(ManageDoctorServicesFormSchema),
     defaultValues: { configuredServices: [] },
@@ -111,27 +129,27 @@ const ManageDoctorServicesDialog: React.FC<ManageDoctorServicesDialogProps> = ({
     keyName: "fieldId",
   });
 
-  // Only reset form when dialog opens or configuredServicesList changes
-  useEffect(() => {
-    if (isOpen && configuredServicesList.length > 0) {
-      const formatted = configuredServicesList.map((cs) => ({
-        doctor_service_id: cs.doctor_service_id,
-        service_id: String(cs.service_id),
-        service_name: cs.service_name,
-        percentage: cs.percentage !== null ? String(cs.percentage) : "",
-        fixed: cs.fixed !== null ? String(cs.fixed) : "",
-      }));
-      reset({ configuredServices: formatted });
-      setIsAddingNew(false);
-    }
-  }, [isOpen, configuredServicesList, reset]);
-
-  // Reset adding state when dialog closes
+  // Initialize form only once per dialog open — never on background refetches
   useEffect(() => {
     if (!isOpen) {
+      initializedForDoctorRef.current = null;
       setIsAddingNew(false);
+      return;
     }
-  }, [isOpen]);
+    if (initializedForDoctorRef.current === doctor.id) return;
+    if (isLoadingConfigured || isLoadingAvailable) return;
+
+    const formatted = configuredServicesList.map((cs) => ({
+      doctor_service_id: cs.doctor_service_id,
+      service_id: String(cs.service_id),
+      service_name: cs.service_name,
+      percentage: cs.percentage !== null ? String(cs.percentage) : "",
+      fixed: cs.fixed !== null ? String(cs.fixed) : "",
+    }));
+    reset({ configuredServices: formatted });
+    setIsAddingNew(false);
+    initializedForDoctorRef.current = doctor.id;
+  }, [isOpen, doctor.id, configuredServicesList, isLoadingConfigured, isLoadingAvailable, reset]);
 
   const handleServiceSelectionForNewRow = (
     index: number,
@@ -139,10 +157,8 @@ const ManageDoctorServicesDialog: React.FC<ManageDoctorServicesDialogProps> = ({
   ) => {
     if (service) {
       setValue(`configuredServices.${index}.service_id`, String(service.id));
-      setValue(
-        `configuredServices.${index}.service_name`,
-        service.name
-      );
+      setValue(`configuredServices.${index}.service_name`, service.name);
+      setTimeout(() => fixedInputRefs.current[index]?.focus(), 50);
     } else {
       setValue(`configuredServices.${index}.service_id`, "");
       setValue(`configuredServices.${index}.service_name`, "");
@@ -160,16 +176,16 @@ const ManageDoctorServicesDialog: React.FC<ManageDoctorServicesDialogProps> = ({
   const addMutation = useMutation({
     mutationFn: (data: DoctorServiceFormItemValues) =>
       addServiceConfigurationForDoctor(doctor.id, getPayload(data)),
-    onSuccess: () => {
+    onSuccess: (result) => {
       toast.success("تمت إضافة تكوين الخدمة بنجاح!");
-      queryClient.invalidateQueries({ queryKey: configuredServicesQueryKey });
-      queryClient.invalidateQueries({ queryKey: availableServicesQueryKey });
+      // Stamp the new row's doctor_service_id directly — no refetch, no reset
+      const newIdx = getValues("configuredServices").length - 1;
+      setValue(`configuredServices.${newIdx}.doctor_service_id`, result.doctor_service_id);
       setIsAddingNew(false);
+      queryClient.invalidateQueries({ queryKey: availableServicesQueryKey });
     },
     onError: (err: Error & { response?: { data?: { message?: string } } }) =>
-      toast.error(
-        err.response?.data?.message || "فشل في إنشاء التكوين"
-      ),
+      toast.error(err.response?.data?.message || "فشل في إنشاء التكوين"),
   });
 
   const updateMutation = useMutation({
@@ -181,26 +197,26 @@ const ManageDoctorServicesDialog: React.FC<ManageDoctorServicesDialogProps> = ({
       ),
     onSuccess: () => {
       toast.success("تم تحديث تكوين الخدمة بنجاح!");
-      queryClient.invalidateQueries({ queryKey: configuredServicesQueryKey });
+      // Form already has the correct values — no invalidation, no reset, no focus loss
     },
     onError: (err: Error & { response?: { data?: { message?: string } } }) =>
-      toast.error(
-        err.response?.data?.message || "فشل في تحديث التكوين"
-      ),
+      toast.error(err.response?.data?.message || "فشل في تحديث التكوين"),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (serviceId: number) =>
       removeServiceConfigurationFromDoctor(doctor.id, serviceId),
-    onSuccess: () => {
+    onSuccess: (_, serviceId) => {
       toast.success("تم الحذف بنجاح!");
-      queryClient.invalidateQueries({ queryKey: configuredServicesQueryKey });
+      // Remove the row directly from the form — no refetch, no reset
+      const idx = getValues("configuredServices").findIndex(
+        (f) => parseInt(f.service_id) === serviceId
+      );
+      if (idx !== -1) remove(idx);
       queryClient.invalidateQueries({ queryKey: availableServicesQueryKey });
     },
     onError: (err: Error & { response?: { data?: { message?: string } } }) =>
-      toast.error(
-        err.response?.data?.message || "فشل في الحذف"
-      ),
+      toast.error(err.response?.data?.message || "فشل في الحذف"),
   });
 
   const handleSaveRow = async (index: number) => {
@@ -232,10 +248,46 @@ const ManageDoctorServicesDialog: React.FC<ManageDoctorServicesDialogProps> = ({
     setIsAddingNew(false);
   };
 
+  const deleteAllMutation = useMutation({
+    mutationFn: () => removeAllServiceConfigurationsFromDoctor(doctor.id),
+    onSuccess: () => {
+      toast.success("تم حذف جميع خدمات الطبيب بنجاح!");
+      queryClient.invalidateQueries({ queryKey: configuredServicesQueryKey });
+      queryClient.invalidateQueries({ queryKey: availableServicesQueryKey });
+      reset({ configuredServices: [] });
+      setIsAddingNew(false);
+    },
+    onError: (err: Error & { response?: { data?: { message?: string } } }) =>
+      toast.error(err.response?.data?.message || "فشل في حذف الخدمات"),
+  });
+
+  const importGroupMutation = useMutation({
+    mutationFn: () =>
+      importServicesByGroup(doctor.id, {
+        service_group_id: selectedGroup!.id,
+        percentage: groupPercentage || undefined,
+        fixed: groupFixed || undefined,
+      }),
+    onSuccess: (data) => {
+      toast.success(`تمت إضافة ${data.count} خدمة بنجاح!`);
+      // Allow the form to re-initialize from server data after bulk import
+      initializedForDoctorRef.current = null;
+      queryClient.invalidateQueries({ queryKey: configuredServicesQueryKey });
+      queryClient.invalidateQueries({ queryKey: availableServicesQueryKey });
+      setSelectedGroup(null);
+      setGroupPercentage("");
+      setGroupFixed("");
+    },
+    onError: (err: Error & { response?: { data?: { message?: string } } }) =>
+      toast.error(err.response?.data?.message || "فشل في استيراد الخدمات"),
+  });
+
   const isMutating =
     addMutation.isPending ||
     updateMutation.isPending ||
-    deleteMutation.isPending;
+    deleteMutation.isPending ||
+    deleteAllMutation.isPending ||
+    importGroupMutation.isPending;
 
   return (
     <Dialog
@@ -263,7 +315,82 @@ const ManageDoctorServicesDialog: React.FC<ManageDoctorServicesDialogProps> = ({
           </Box>
         ) : (
           <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-            <Box sx={{ overflow: 'auto', flex: 1, p: 2 }}>
+            <Box sx={{ p: 2, pb: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+              {/* Search */}
+              <TextField
+                size="small"
+                fullWidth
+                placeholder="بحث عن خدمة..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                sx={{
+                  '& .MuiOutlinedInput-root': { height: '32px', fontSize: '0.8rem' },
+                  '& .MuiInputBase-input': { padding: '4px 8px', fontSize: '0.8rem' },
+                }}
+              />
+              {/* Import by group */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <DarkThemeAutocomplete
+                  options={serviceGroups}
+                  getOptionLabel={(o) => o.name}
+                  value={selectedGroup}
+                  onChange={(_, v) => setSelectedGroup(v)}
+                  loading={isLoadingGroups}
+                  size="small"
+                  sx={{ flex: 1 }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder="استيراد مجموعة خدمات..."
+                      size="small"
+                      sx={{
+                        '& .MuiOutlinedInput-root': { height: '32px', fontSize: '0.8rem' },
+                        '& .MuiInputBase-input': { padding: '4px 8px !important', fontSize: '0.8rem' },
+                      }}
+                    />
+                  )}
+                  isOptionEqualToValue={(o, v) => o.id === v?.id}
+                />
+                <TextField
+                  size="small"
+                  type="number"
+                  placeholder="نسبة %"
+                  value={groupPercentage}
+                  onChange={(e) => setGroupPercentage(e.target.value)}
+                  disabled={!selectedGroup || importGroupMutation.isPending}
+                  sx={{
+                    width: 80,
+                    '& .MuiOutlinedInput-root': { height: '32px', fontSize: '0.8rem' },
+                    '& .MuiInputBase-input': { padding: '4px 8px', fontSize: '0.8rem', textAlign: 'center' },
+                  }}
+                />
+                <TextField
+                  size="small"
+                  type="number"
+                  placeholder="ثابت"
+                  value={groupFixed}
+                  onChange={(e) => setGroupFixed(e.target.value)}
+                  disabled={!selectedGroup || importGroupMutation.isPending}
+                  sx={{
+                    width: 80,
+                    '& .MuiOutlinedInput-root': { height: '32px', fontSize: '0.8rem' },
+                    '& .MuiInputBase-input': { padding: '4px 8px', fontSize: '0.8rem', textAlign: 'center' },
+                  }}
+                />
+                <Button
+                  size="small"
+                  variant="contained"
+                  disabled={!selectedGroup || importGroupMutation.isPending}
+                  onClick={() => importGroupMutation.mutate()}
+                  startIcon={importGroupMutation.isPending ? <CircularProgress size={12} /> : <FolderInput size={14} />}
+                  sx={{ whiteSpace: 'nowrap', height: 32, fontSize: '0.75rem' }}
+                >
+                  استيراد
+                </Button>
+              </Box>
+              <Divider />
+            </Box>
+            <Box sx={{ overflow: 'auto', flex: 1, p: 2, pt: 0 }}>
               <Table size="small" dir="rtl" sx={{ fontSize: '0.75rem' }}>
                 <TableHead>
                   <TableRow>
@@ -287,6 +414,15 @@ const ManageDoctorServicesDialog: React.FC<ManageDoctorServicesDialogProps> = ({
                         !fieldItem.doctor_service_id &&
                         index === fields.length - 1 &&
                         isAddingNew;
+                      if (
+                        !isNewRow &&
+                        searchQuery.trim() &&
+                        !fieldItem.service_name
+                          ?.toLowerCase()
+                          .includes(searchQuery.trim().toLowerCase())
+                      ) {
+                        return null;
+                      }
                       return (
                         <TableRow key={fieldItem.fieldId}>
                           <TableCell sx={{ py: 0.5, verticalAlign: 'top' }}>
@@ -368,8 +504,8 @@ const ManageDoctorServicesDialog: React.FC<ManageDoctorServicesDialogProps> = ({
                                     size="small"
                                     value={f.value || ""}
                                     placeholder="%"
-                                    disabled={isMutating}
                                     error={!!error}
+                                    slotProps={{ input: { onFocus: (e) => e.target.select() } }}
                                     sx={{
                                       '& .MuiOutlinedInput-root': {
                                         height: '28px',
@@ -402,9 +538,16 @@ const ManageDoctorServicesDialog: React.FC<ManageDoctorServicesDialogProps> = ({
                                     type="number"
                                     size="small"
                                     value={f.value || ""}
-                                    placeholder="ج.س"
-                                    disabled={isMutating}
                                     error={!!error}
+                                    inputRef={(el) => { fixedInputRefs.current[index] = el; }}
+                                    slotProps={{ input: { onFocus: (e) => e.target.select() } }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        handleSaveRow(index);
+                                        fixedInputRefs.current[index + 1]?.focus();
+                                      }
+                                    }}
                                     sx={{
                                       '& .MuiOutlinedInput-root': {
                                         height: '28px',
@@ -495,7 +638,21 @@ const ManageDoctorServicesDialog: React.FC<ManageDoctorServicesDialogProps> = ({
             </Box>
           )}
       </DialogContent>
-      <DialogActions sx={{ p: 2 }}>
+      <DialogActions sx={{ p: 2, justifyContent: 'space-between' }}>
+        <Button
+          variant="outlined"
+          color="error"
+          size="small"
+          disabled={isMutating || fields.length === 0}
+          onClick={() => {
+            if (window.confirm("هل أنت متأكد من حذف جميع خدمات هذا الطبيب؟")) {
+              deleteAllMutation.mutate();
+            }
+          }}
+          startIcon={deleteAllMutation.isPending ? <CircularProgress size={14} /> : <Trash2 size={14} />}
+        >
+          حذف الكل
+        </Button>
         <Button
           onClick={() => onOpenChange(false)}
           disabled={isMutating}

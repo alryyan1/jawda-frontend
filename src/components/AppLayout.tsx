@@ -98,7 +98,7 @@ import type { DoctorShift } from "@/types/doctors";
 import { toast } from "sonner";
 import { useAuthorization } from "@/hooks/useAuthorization";
 import { clearAllCaches } from "@/hooks/useCachedData";
-import { firebaseProjectId } from "@/lib/firebase";
+import { firebaseProjectId, getLabToLabFirebaseSource } from "@/lib/firebase";
 import FavoriteServiceGroupsDialog from "@/components/clinic/FavoriteServiceGroupsDialog";
 
 // Define navigation items structure
@@ -714,6 +714,7 @@ const AppLayout: React.FC = () => {
       toast.success("تم مسح جميع البيانات المخزنة مؤقتاً بنجاح");
     };
 
+     const lab2labsource = getLabToLabFirebaseSource()
     return (
       <TooltipProvider delayDuration={100}>
         <div
@@ -906,20 +907,9 @@ const AppLayout: React.FC = () => {
                   </TooltipContent>
                 </Tooltip>
 
-                {/* Firebase Project Badge */}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-900/30 border border-orange-300 dark:border-orange-700 cursor-default">
-                      <span className="h-1.5 w-1.5 rounded-full bg-orange-500 shrink-0" />
-                      <span className="text-[10px] font-mono font-semibold text-orange-700 dark:text-orange-400 leading-none max-w-[90px] truncate">
-                        {firebaseProjectId}
-                      </span>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Firebase Project: <span className="font-mono font-bold">{firebaseProjectId}</span></p>
-                  </TooltipContent>
-                </Tooltip>
+            
+                    <p>lab2lab source: <span className="font-mono font-bold">{lab2labsource}</span></p>
+                 
 
                 {/* WhatsApp Cloud Phone Number Badge */}
                 {waPhoneNumber && (
@@ -972,6 +962,7 @@ const AppLayout: React.FC = () => {
                     <p>مسح البيانات المخزنة مؤقتاً</p>
                   </TooltipContent>
                 </Tooltip>
+                
 
                 {/* PDF Preview Visibility Toggle */}
                 <Tooltip>
@@ -1241,12 +1232,6 @@ const AppLayout: React.FC = () => {
                               icon={Syringe}
                               label="العمليات الجراحية"
                             />
-                            <SettingsMenuItem
-                              to="/settings/categories"
-                              icon={Layers}
-                              label="فئات الاطباء والخدمات"
-                            />
-
                             <SettingsMenuItem
                               to="/settings/services"
                               icon={ListOrdered}

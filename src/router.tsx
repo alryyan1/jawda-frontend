@@ -73,7 +73,6 @@ import YearlyPatientFrequencyReportPage from "./pages/reports/YearlyPatientFrequ
 import BindingMatchingPage from "./pages/settings/BindingMatchingPage";
 import MonthlyLabIncomeReportPage from "./pages/reports/MonthlyLabIncomeReportPage";
 import ServiceGroupsPage from "./pages/settings/ServiceGroupsPage";
-import CategoriesListPage from "./pages/settings/CategoriesListPage";
 import SampleCollectionPage from "./pages/lab/SampleCollectionPage";
 import LabTestStatisticsReportPage from "./pages/reports/LabTestStatisticsReportPage";
 import TestResultStatisticsPage from "./pages/reports/TestResultStatisticsPage";
@@ -449,10 +448,6 @@ const router = createBrowserRouter([
               {
                 path: "service-groups",
                 element: <ServiceGroupsPage />,
-              },
-              {
-                path: "categories",
-                element: <CategoriesListPage />,
               },
               {
                 path: "admission-settings",

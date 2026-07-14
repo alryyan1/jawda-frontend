@@ -45,11 +45,11 @@ import {
   Delete
 } from '@mui/icons-material';
 
-import { getMainTests, updateMainTest, deleteMainTest } from '@/services/mainTestService';
+import { getMainTests, updateMainTest, deleteMainTest, getAllActiveMainTestsForPriceList } from '@/services/mainTestService';
 import { updateTestAvailabilityAcrossAllLabs } from '@/services/firestoreTestService';
 import apiClient from '@/services/api';
 // import { useAuthorization } from '@/hooks/useAuthorization';
-import { db } from '@/lib/firebase';
+import { db, getLabToLabFirebaseSource, setLabToLabFirebaseSource, labToLabDb } from '@/lib/firebase';
 import { writeBatch, doc, collection } from 'firebase/firestore';
 
 interface MainTestWithContainer {
@@ -69,6 +69,7 @@ export default function MainTestsListPage() {
   // const { can } = useAuthorization();
   const canCreateTests = true; // Placeholder: can('create lab_tests');
 
+  const [isUploading, setIsUploading] = useState(false)
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
@@ -192,9 +193,9 @@ export default function MainTestsListPage() {
     setUpdatingAvailable(prev => ({ ...prev, [testId]: true }));
     try {
       // First update the main database
-      await updateAvailableMutation.mutateAsync({ 
-        id: testId, 
-        available: !currentAvailable 
+      await updateAvailableMutation.mutateAsync({
+        id: testId,
+        available: !currentAvailable
       });
 
       // Then update Firestore across all labs
@@ -239,7 +240,7 @@ export default function MainTestsListPage() {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-      
+
       toast.success('تم إنشاء قائمة الأسعار بنجاح');
     } catch (error) {
       toast.error('خطأ في إنشاء قائمة الأسعار');
@@ -247,41 +248,7 @@ export default function MainTestsListPage() {
     }
   };
 
-  const handleUploadCashPriceList = async () => {
-    try {
-      setIsUploadingPriceList(true);
-      const tests = (paginatedData?.data || []) as MainTestWithContainer[];
-      if (!tests.length) {
-        toast.info('لا توجد اختبارات في الصفحة الحالية لرفعها');
-        return;
-      }
 
-      const batch = writeBatch(db);
-      const priceListCol = collection(db, 'labToLap', 'global', 'cashPriceList');
-
-      tests.forEach((t) => {
-        const priceValue = priceInputs[t.id] ?? (t.price !== undefined && t.price !== null ? String(t.price) : '');
-        const priceNum = priceValue === '' ? 0 : Number(priceValue);
-        const docRef = doc(priceListCol, String(t.id));
-        batch.set(docRef, {
-          id: t.id,
-          name: t.main_test_name,
-          container_name: t.container?.container_name ?? t.container_name ?? null,
-          price: isNaN(priceNum) ? 0 : priceNum,
-          available: Boolean(t.available),
-          updated_at: new Date().toISOString(),
-        }, { merge: true });
-      });
-
-      await batch.commit();
-      toast.success('تم رفع قائمة الأسعار النقدية إلى Firestore (الصفحة الحالية)');
-    } catch (err) {
-      console.error('Firestore upload error:', err);
-      toast.error('فشل رفع قائمة الأسعار إلى Firestore');
-    } finally {
-      setIsUploadingPriceList(false);
-    }
-  };
 
   if (isLoading && !isFetching && currentPage === 1) {
     return (
@@ -293,7 +260,7 @@ export default function MainTestsListPage() {
       </Box>
     );
   }
-  
+
   if (error) {
     return (
       <Typography color="error" sx={{ p: 2 }}>
@@ -305,15 +272,53 @@ export default function MainTestsListPage() {
   const tests = (paginatedData?.data || []) as MainTestWithContainer[];
   const meta = paginatedData?.meta;
 
+  const lab2labsource = getLabToLabFirebaseSource()
+  console.log(lab2labsource, 'lab2labsource ')
+  const handleUploadLabPrices = async () => {
+
+    try {
+     const q =   confirm('سيتم رفع الاسعار في '+lab2labsource)
+      if(!q)return ;
+      toast.info( `uploading to  ${lab2labsource}`)
+      setIsUploading(true)
+      const tests = await getAllActiveMainTestsForPriceList('')
+      console.log(tests, 'tests')
+      if (!Array.isArray(tests) || tests.length == 0) {
+        toast.error('لا يوجد تحاليل لرفعها')
+        return
+      }
+      const colRef = collection(labToLabDb!, 'main-lab-prices')
+      const BATCH_LIMIT = 450;
+      for (let i = 0; i < tests.length; i += BATCH_LIMIT) {
+        const slice = tests.slice(i, i + BATCH_LIMIT)
+        const batch = writeBatch(labToLabDb!)
+        slice.forEach((test)=>{
+          const document = doc(colRef,String(test.id))
+          batch.set(document,{...test,updated_at: new Date().toISOString()},{merge:true})
+        })
+        await batch.commit()
+      }
+      toast.success('تم رفع وتحديث قائمه الاسعار ')
+    } catch (e) {
+        console.error('faild to upload lab test to firestore',e)
+        toast.error('فشل رفع الاسعار ')
+    } finally {
+      setIsUploading(false)
+    }
+    console.log('finshed')
+  }
+  // setLabToLabFirebaseSource('sales')
+  // console.log(getLabToLabFirebaseSource())
+
   return (
-    <Container  className="text-2xl! p-2 max-w-2xl mx-auto" sx={{ py: { xs: 2, sm: 3, md: 4 } }}>
+    <Container className="text-2xl! p-2 max-w-2xl mx-auto" sx={{ py: { xs: 2, sm: 3, md: 4 } }}>
       <p className="text-sm!  animate-bounce">
-        اضغط <kbd>Enter</kbd> <span style={{fontSize: '1.1em'}}>⏎</span> لتحديث السعر
+        اضغط <kbd>Enter</kbd> <span style={{ fontSize: '1.1em' }}>⏎</span> لتحديث السعر
       </p>
       <Stack spacing={3}>
-        <Stack 
-          direction={{ xs: 'column', sm: 'row' }} 
-          justifyContent="space-between" 
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          justifyContent="space-between"
           alignItems={{ xs: 'flex-start', sm: 'center' }}
           spacing={2}
         >
@@ -322,11 +327,14 @@ export default function MainTestsListPage() {
             <Typography variant="h4" component="h1" fontWeight="bold">
               قائمة التحاليل الرئيسية
             </Typography>
+            <Button onClick={handleUploadLabPrices} disabled={isUploading}>
+              {isUploading ? 'جاري الرفع...' : 'رفع الاسعار الي فايربيس'}
+            </Button>
           </Stack>
-          
-          <Stack 
-            direction={{ xs: 'column', sm: 'row' }} 
-            spacing={2} 
+
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            spacing={2}
             sx={{ width: { xs: '100%', sm: 'auto' } }}
           >
             <TextField
@@ -345,7 +353,7 @@ export default function MainTestsListPage() {
               }}
             />
             <Stack direction="row" spacing={1}>
-              <Button 
+              <Button
                 onClick={handleGeneratePDF}
                 variant="outlined"
                 size="small"
@@ -364,8 +372,8 @@ export default function MainTestsListPage() {
                 {isUploadingPriceList ? 'جاري الرفع...' : 'رفع الأسعار إلى Firestore'}
               </Button> */}
               {canCreateTests && (
-                <Button 
-                  component={Link} 
+                <Button
+                  component={Link}
                   to="/settings/laboratory/new"
                   variant="contained"
                   size="small"
@@ -377,13 +385,13 @@ export default function MainTestsListPage() {
             </Stack>
           </Stack>
         </Stack>
-        
+
         {isFetching && (
           <Typography variant="body2" color="text.secondary" textAlign="center">
             جاري تحديث القائمة...
           </Typography>
         )}
-      
+
         {!isLoading && tests.length === 0 ? (
           <Card>
             <CardContent sx={{ textAlign: 'center', py: 8 }}>
@@ -392,8 +400,8 @@ export default function MainTestsListPage() {
                 {searchTerm ? 'لم يتم العثور على نتائج' : 'لا توجد اختبارات'}
               </Typography>
               {canCreateTests && !searchTerm && (
-                <Button 
-                  component={Link} 
+                <Button
+                  component={Link}
                   to="/settings/laboratory/new"
                   variant="contained"
                   size="small"
@@ -424,7 +432,7 @@ export default function MainTestsListPage() {
               </TableHead>
               <TableBody>
                 {tests.map((test, index) => (
-                  <TableRow 
+                  <TableRow
                     key={test.id}
                     hover
                     onClick={() => navigate(`/settings/laboratory/${test.id}/edit`)}
@@ -439,9 +447,9 @@ export default function MainTestsListPage() {
                     <TableCell className="text-2xl!" align="center" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
                       {test.container?.container_name || test.container_name || '-'}
                     </TableCell>
-                    <TableCell 
-                      className="text-2xl!" 
-                      align="center" 
+                    <TableCell
+                      className="text-2xl!"
+                      align="center"
                       sx={{ display: { xs: 'none', md: 'table-cell' } }}
                       onClick={(e) => e.stopPropagation()}
                     >
@@ -452,13 +460,13 @@ export default function MainTestsListPage() {
                         onFocus={handlePriceFocus}
                         size="small"
                         type="number"
-                        inputProps={{ 
+                        inputProps={{
                           step: "0.01",
                           min: "0",
                           style: { textAlign: 'center', fontSize: '1.25rem' },
                           'data-price-index': index,
                         }}
-                        sx={{ 
+                        sx={{
                           width: 100,
                           '& .MuiInputBase-input': {
                             textAlign: 'center',
@@ -467,11 +475,11 @@ export default function MainTestsListPage() {
                         }}
                       />
                     </TableCell>
-                    <TableCell 
-                      className="text-2xl!" 
+                    <TableCell
+                      className="text-2xl!"
                       align="center"
                       onClick={(e) => { e.stopPropagation(); handleToggleAvailable(test.id, test.available); }}
-                      sx={{ 
+                      sx={{
                         cursor: 'pointer',
                         '&:hover': {
                           backgroundColor: 'action.hover',
@@ -529,30 +537,30 @@ export default function MainTestsListPage() {
             horizontal: 'right',
           }}
         >
-      
-            <MenuItem 
-              component={Link} 
-              to={`/settings/laboratory/${selectedTestId}/edit`}
-              onClick={handleMenuClose}
-            >
-              <ListItemIcon>
-                <Edit fontSize="small" />
-              </ListItemIcon>
-              <ListItemText>تعديل</ListItemText>
-            </MenuItem>
-            <MenuItem 
-              onClick={() => {
-                const test = tests.find(t => t.id === selectedTestId);
-                if (test) handleDeleteClick(test);
-              }}
-            >
-              <ListItemIcon>
-                <Delete fontSize="small" color="error" />
-              </ListItemIcon>
-              <ListItemText sx={{ color: 'error.main' }}>حذف</ListItemText>
-            </MenuItem>
-       
-         
+
+          <MenuItem
+            component={Link}
+            to={`/settings/laboratory/${selectedTestId}/edit`}
+            onClick={handleMenuClose}
+          >
+            <ListItemIcon>
+              <Edit fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>تعديل</ListItemText>
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
+              const test = tests.find(t => t.id === selectedTestId);
+              if (test) handleDeleteClick(test);
+            }}
+          >
+            <ListItemIcon>
+              <Delete fontSize="small" color="error" />
+            </ListItemIcon>
+            <ListItemText sx={{ color: 'error.main' }}>حذف</ListItemText>
+          </MenuItem>
+
+
         </Menu>
 
         {/* Delete Confirmation Dialog */}
@@ -576,9 +584,9 @@ export default function MainTestsListPage() {
             <Button onClick={handleDeleteCancel} color="primary">
               إلغاء
             </Button>
-            <Button 
-              onClick={handleDeleteConfirm} 
-              color="error" 
+            <Button
+              onClick={handleDeleteConfirm}
+              color="error"
               variant="contained"
               disabled={deleteTestMutation.isPending}
             >

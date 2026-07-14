@@ -33,6 +33,8 @@ import CompanyFormPage, {
   CompanyFormMode,
 } from "./pages/companies/CompanyFormPage";
 import CompanyServiceContractsPage from "./pages/companies/CompanyServiceContractsPage";
+import PartiesListPage from "./pages/parties/PartiesListPage";
+import PartyServiceCostsPage from "./pages/parties/PartyServiceCostsPage";
 import TodaysPatientsPage from "./pages/patients/TodaysPatientsPage";
 import VisitDetailsPage from "./pages/patients/VisitDetailsPage";
 import DiagnosisPage from "./pages/patients/DiagnosisPage";
@@ -48,8 +50,6 @@ import SettingsLayout from "./pages/settings/SettingsLayout";
 import GeneralSettingsPage from "./pages/GeneralSettingsPage";
 import ChildTestsManagementPage from "./pages/lab/ChildTestsManagementPage";
 import LabPriceListPage from "./pages/settings/LabPriceListPage";
-import LabToLab from "./pages/settings/LabToLab.tsx";
-import LabtoLabDashBoard from "./pages/settings/LabtoLabDashBoard.tsx";
 import CompanyMainTestContractsPage from "./pages/companies/CompanyMainTestContractsPage";
 import LabWorkstationPage from "./pages/lab/LabWorkstationPage";
 import NotFoundPage from "./pages/NotFoundPage";
@@ -70,18 +70,11 @@ import CompanyPerformanceReportPage from "./pages/reports/CompanyPerformanceRepo
 import DoctorCompanyEntitlementReportPage from "./pages/reports/DoctorCompanyEntitlementReportPage";
 import YearlyIncomeComparisonReportPage from "./pages/reports/YearlyIncomeComparisonReportPage";
 import YearlyPatientFrequencyReportPage from "./pages/reports/YearlyPatientFrequencyReportPage";
-import DailyAttendanceDetailPage from "./pages/reports/attendance/DailyAttendanceDetailPage";
-import PayrollAttendanceReportPage from "./pages/reports/PayrollAttendanceReportPage";
-// import MonthlyEmployeeAttendanceSummaryPage from "./pages/reports/attendance/MonthlyEmployeeAttendanceSummaryPage";
-import ShiftDefinitionsPage from "./pages/settings/ShiftDefinitionsPage";
-import AttendanceSheetPage from "./pages/attendance/AttendanceSheetPage";
-import HolidaysPage from "./pages/settings/attendance/HolidaysPage";
 import BindingMatchingPage from "./pages/settings/BindingMatchingPage";
 import MonthlyLabIncomeReportPage from "./pages/reports/MonthlyLabIncomeReportPage";
 import ServiceGroupsPage from "./pages/settings/ServiceGroupsPage";
 import CategoriesListPage from "./pages/settings/CategoriesListPage";
 import SampleCollectionPage from "./pages/lab/SampleCollectionPage";
-import MonthlyAttendanceSummaryPage from "./pages/attendance/MonthlyAttendanceSummaryPage";
 import LabTestStatisticsReportPage from "./pages/reports/LabTestStatisticsReportPage";
 import TestResultStatisticsPage from "./pages/reports/TestResultStatisticsPage";
 import LabGeneralReportPage from "./pages/reports/LabGeneralReportPage";
@@ -106,7 +99,6 @@ import WardsListPage from "./pages/settings/wards/WardsListPage";
 import WardFormPage, {
   WardFormMode,
 } from "./pages/settings/wards/WardFormPage";
-import PdfSettingsPage from "./pages/settings/PdfSettingsPage";
 import AdmissionSettingsPage from "./pages/settings/AdmissionSettingsPage";
 import RoomsListPage from "./pages/settings/rooms/RoomsListPage";
 import RoomFormPage, {
@@ -294,25 +286,6 @@ const router = createBrowserRouter([
           },
 
           {
-            path: "reports",
-            element: <ReportsLayout />,
-            children: [
-              // ... your existing report routes ...
-              {
-                path: "attendance-summary",
-                element: <MonthlyAttendanceSummaryPage />,
-              },
-              {
-                path: "attendance-daily",
-                element: <DailyAttendanceDetailPage />,
-              },
-              {
-                path: "attendance-payroll",
-                element: <PayrollAttendanceReportPage />,
-              },
-            ],
-          },
-          {
             path: "clinic",
             element: <ClinicPage />,
           },
@@ -456,15 +429,6 @@ const router = createBrowserRouter([
             path: "/diagnosis/:requestedServiceId",
             element: <DiagnosisPage />,
           },
-          // === NEW: ATTENDANCE MODULE ROUTES ===
-          {
-            path: "attendance", // Base path for main attendance features
-            children: [
-              { index: true, element: <Navigate to="sheet" replace /> }, // Default to sheet
-              { path: "sheet", element: <AttendanceSheetPage /> },
-              // Add other main attendance related pages here if any
-            ],
-          },
           // Settings & Profile (Placeholders)
           {
             path: "settings",
@@ -482,12 +446,6 @@ const router = createBrowserRouter([
                 path: "insurance-audit",
                 element: <InsuranceAuditPage />,
               },
-              // Inside your AppLayout children:
-              {
-                path: "attendance-summary", // Or your preferred path
-                element: <MonthlyAttendanceSummaryPage />,
-                // Add permission check if needed for the route
-              },
               {
                 path: "service-groups",
                 element: <ServiceGroupsPage />,
@@ -495,10 +453,6 @@ const router = createBrowserRouter([
               {
                 path: "categories",
                 element: <CategoriesListPage />,
-              },
-              {
-                path: "pdf",
-                element: <PdfSettingsPage />,
               },
               {
                 path: "admission-settings",
@@ -580,17 +534,6 @@ const router = createBrowserRouter([
                 element: <SurgicalOperationsPage />,
               },
               {
-                path: "attendance",
-                element: <Outlet />,
-                children: [
-                  {
-                    path: "shift-definitions",
-                    element: <ShiftDefinitionsPage />,
-                  },
-                  { path: "holidays", element: <HolidaysPage /> },
-                ],
-              },
-              {
                 path: "insurance-audit/visit/:visitId", // Or use auditRecordId if that's the primary identifier
                 element: <AuditRecordPage />,
               },
@@ -629,6 +572,18 @@ const router = createBrowserRouter([
                   }, // Page for managing main test contracts
                 ],
               },
+              // Parties Module
+              {
+                path: "parties",
+                element: <Outlet />,
+                children: [
+                  { index: true, element: <PartiesListPage /> },
+                  {
+                    path: ":partyId/service-costs",
+                    element: <PartyServiceCostsPage />,
+                  }, // Page for managing party service costs
+                ],
+              },
               {
                 path: "laboratory",
                 element: <Outlet />,
@@ -659,15 +614,6 @@ const router = createBrowserRouter([
                     path: "binding-matching",
                     element: <BindingMatchingPage />,
                   },
-                ],
-              },
-              {
-                path: "lab-to-lab",
-                element: <Outlet />,
-                children: [
-                  { index: true, element: <LabToLab /> },
-                  { path: ":labId", element: <LabtoLabDashBoard /> },
-                  { path: ":labId/price-list", element: <LabPriceListPage /> },
                 ],
               },
               {

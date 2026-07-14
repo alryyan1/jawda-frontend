@@ -39,6 +39,7 @@ import {
   WifiOff,
   Pencil,
   Building,
+  Handshake,
   ListOrdered,
   CreditCard,
   Layers,
@@ -53,8 +54,6 @@ import {
   LineChart,
   UsersRound,
   CalendarCheck2,
-  FileText,
-  ClipboardEditIcon,
   Eye,
   EyeOff,
   RefreshCw,
@@ -147,7 +146,6 @@ export const allMainNavItems: NavItem[] = [
   { to: "/lab-sample-collection", label: "جمع العينات", icon: Syringe },
   { to: "/lab-workstation", label: "نتائج المختبر", icon: FlaskConical },
   // { to: '/laboratory/offers', label: 'عروض التحاليل', icon: Package },
-  // { to: "/attendance/sheet", label: "سجل الحضور", icon: ClipboardEditIcon },
   { to: "/patients", label: "المرضى", icon: Users },
   // { to: "/admissions", label: "التنويم", icon: Hospital },
   { to: "/finance/employee-expenses", label: "مصروفات الموظفين", icon: HandCoins },
@@ -1157,11 +1155,6 @@ const AppLayout: React.FC = () => {
                               label="تفصيل تكلفة الخدمات"
                             />
                             <ReportMenuItem
-                              to="/settings/attendance-summary"
-                              icon={BarChartBig}
-                              label="ملخص الحضور والانصراف"
-                            />
-                            <ReportMenuItem
                               to="/reports/company-performance"
                               icon={BarChartBig}
                               label="أداء الشركات"
@@ -1224,6 +1217,11 @@ const AppLayout: React.FC = () => {
                               label="الشركات"
                             />
                             <SettingsMenuItem
+                              to="/settings/parties"
+                              icon={Handshake}
+                              label="الجهات"
+                            />
+                            <SettingsMenuItem
                               to="/settings/laboratory"
                               icon={FlaskConical}
                               label="المختبر"
@@ -1275,24 +1273,9 @@ const AppLayout: React.FC = () => {
                               label="المستخدمين"
                             />
                             <SettingsMenuItem
-                              to="/settings/attendance/shift-definitions"
-                              icon={BarChartBig}
-                              label="الورديات"
-                            />
-                            <SettingsMenuItem
                               to="/settings/roles"
                               icon={ShieldCheck}
                               label="الأدوار"
-                            />
-                            <SettingsMenuItem
-                              to="/settings/lab-to-lab"
-                              icon={Link2}
-                              label="المعامل المتعاقدة"
-                            />
-                            <SettingsMenuItem
-                              to="/settings/pdf"
-                              icon={FileText}
-                              label="إعدادات PDF"
                             />
                           </DropdownMenuSubContent>
                         </DropdownMenuSub>

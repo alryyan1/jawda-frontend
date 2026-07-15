@@ -33,7 +33,7 @@ import {
 } from '@mui/icons-material';
 
 // Removed local DB fetching; Firestore only
-import { db } from '@/lib/firebase';
+import { firestoreDb } from '@/lib/firebase_hospital';
 import { doc, setDoc, collection, getDoc, getDocs, writeBatch } from 'firebase/firestore';
 import { getAllActiveMainTestsForPriceList } from '@/services/mainTestService';
 
@@ -83,7 +83,7 @@ const LabPriceListPage = () => {
         return;
       }
       try {
-        const ref = doc(db, 'labToLap', String(labId));
+        const ref = doc(firestoreDb, 'labToLap', String(labId));
         const snap = await getDoc(ref);
         const data = snap.data() as { name?: string } | undefined;
         setLabName(data?.name || String(labId));
@@ -103,7 +103,7 @@ const LabPriceListPage = () => {
       setIsLoading(true);
       setError(null);
       try {
-        const colRef = collection(db, 'labToLap', String(labId), 'pricelist');
+        const colRef = collection(firestoreDb, 'labToLap', String(labId), 'pricelist');
         const snap = await getDocs(colRef);
         let items: MainTestWithContainer[] = snap.docs.map(d => {
           const data = d.data() as { id?: number; name?: string; price?: number | string };
@@ -160,7 +160,7 @@ const LabPriceListPage = () => {
         }
         const test = testsAll.find(t => t.id === testId);
         const name = test?.main_test_name || String(testId);
-        const colRef = collection(db, 'labToLap', String(labId), 'pricelist');
+        const colRef = collection(firestoreDb, 'labToLap', String(labId), 'pricelist');
         const ref = doc(colRef, String(testId));
         await setDoc(ref, {
           id: testId,
@@ -192,11 +192,11 @@ const LabPriceListPage = () => {
         toast.error('لا توجد تحاليل لرفعها من قاعدة البيانات');
         return;
       }
-      const colRef = collection(db, 'labToLap', String(labId), 'pricelist');
+      const colRef = collection(firestoreDb, 'labToLap', String(labId), 'pricelist');
       const BATCH_LIMIT = 450;
       for (let i = 0; i < freshTests.length; i += BATCH_LIMIT) {
         const slice = freshTests.slice(i, i + BATCH_LIMIT);
-        const batch = writeBatch(db);
+        const batch = writeBatch(firestoreDb);
         slice.forEach(item => {
           const priceNum = item.price !== null && item.price !== undefined ? Number(item.price) : 0;
           const docRef = doc(colRef, String(item.id));
@@ -234,7 +234,7 @@ const LabPriceListPage = () => {
 
     try {
       setIsAdjusting(true);
-      const colRef = collection(db, 'labToLap', String(labId), 'pricelist');
+      const colRef = collection(firestoreDb, 'labToLap', String(labId), 'pricelist');
       const BATCH_LIMIT = 450;
       
       // Get all current tests
@@ -250,7 +250,7 @@ const LabPriceListPage = () => {
       
       for (let i = 0; i < currentTests.length; i += BATCH_LIMIT) {
         const slice = currentTests.slice(i, i + BATCH_LIMIT);
-        const batch = writeBatch(db);
+        const batch = writeBatch(firestoreDb);
         
         slice.forEach(test => {
           const currentPrice = parseFloat(String(test.price)) || 0;
@@ -310,7 +310,7 @@ const LabPriceListPage = () => {
 
       toast.info(`جاري تحديث ${cashPriceMap.size} سعر نقدي...`);
 
-      const colRef = collection(db, 'labToLap', String(labId), 'pricelist');
+      const colRef = collection(firestoreDb, 'labToLap', String(labId), 'pricelist');
       const BATCH_LIMIT = 450;
       let updatedCount = 0;
 
@@ -318,7 +318,7 @@ const LabPriceListPage = () => {
       const testIds = Array.from(cashPriceMap.keys());
       for (let i = 0; i < testIds.length; i += BATCH_LIMIT) {
         const slice = testIds.slice(i, i + BATCH_LIMIT);
-        const batch = writeBatch(db);
+        const batch = writeBatch(firestoreDb);
         
         slice.forEach(testId => {
           const cashPrice = cashPriceMap.get(testId);
@@ -363,7 +363,7 @@ const LabPriceListPage = () => {
       }
 
       // Get existing tests from Firestore
-      const colRef = collection(db, 'labToLap', String(labId), 'pricelist');
+      const colRef = collection(firestoreDb, 'labToLap', String(labId), 'pricelist');
       const snapshot = await getDocs(colRef);
       const existingTestIds = new Set<string>();
       
@@ -385,7 +385,7 @@ const LabPriceListPage = () => {
       
       for (let i = 0; i < missingTests.length; i += BATCH_LIMIT) {
         const slice = missingTests.slice(i, i + BATCH_LIMIT);
-        const batch = writeBatch(db);
+        const batch = writeBatch(firestoreDb);
         
         slice.forEach(test => {
           const docRef = doc(colRef, String(test.id));

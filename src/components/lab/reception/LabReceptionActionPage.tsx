@@ -26,6 +26,8 @@ import LabUserShiftSummaryDialog from './LabUserShiftSummaryDialog';
 import OnlineLabPatientsDialog from './OnlineLabPatientsDialog';
 import BankakGallery from '../../gallery/BankakGallery';
 import { Calculate } from '@mui/icons-material';
+import { Badge } from '@mui/material';
+import { useLab2LabTodayCount } from '@/hooks/useLab2LabTodayCount';
 
 interface LabReceptionActionPageProps {
   isFormVisible: boolean;
@@ -61,6 +63,9 @@ const LabReceptionActionPage: React.FC<LabReceptionActionPageProps> = ({
   
   // State to control the visibility of the bankak gallery dialog
   const [isBankakGalleryOpen, setIsBankakGalleryOpen] = useState(false);
+
+  // Realtime count of today's lab2lab patients, shown as a badge on the Globe button
+  const lab2LabTodayCount = useLab2LabTodayCount();
 
   // CBC Populate mutation
   const populateCbcMutation = useMutation({
@@ -277,17 +282,19 @@ const LabReceptionActionPage: React.FC<LabReceptionActionPageProps> = ({
         {/* Button 4 (Globe): Open Online Lab Patients Dialog */}
          <Tooltip>
             <TooltipTrigger asChild>
-                <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="w-11 h-11" 
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="w-11 h-11"
                     onClick={() => {
                         console.log('Globe button clicked');
                         setIsOnlineLabPatientsDialogOpen(true);
-                    }} 
+                    }}
                     aria-label="المرضى من المختبرات الأخرى"
                 >
-                    <Globe className="h-5 w-5" />
+                    <Badge badgeContent={lab2LabTodayCount} color="error" max={99}>
+                        <Globe className="h-5 w-5" />
+                    </Badge>
                 </Button>
             </TooltipTrigger>
             <TooltipContent side="left">

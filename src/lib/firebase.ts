@@ -67,6 +67,7 @@ export const setLabToLabFirebaseSource = (source: 'sales' | 'hospital'): void =>
 
 // Select configuration based on setting
 const activeTarget = getFirebaseUploadTarget();
+console.log(`[Firebase] Active target: ${activeTarget}`);
 const primaryConfigTarget = (activeTarget === 'both') ? 'sales' : activeTarget;
 const firebaseConfig = configs[primaryConfigTarget];
 
@@ -121,9 +122,9 @@ if (isFirebaseEnabled() && hasFirebaseConfig()) {
 // Dedicated Lab-to-Lab instances
 let labToLabDb: Firestore | null = null;
 let labToLabStorage: FirebaseStorage | null = null;
-
 if (isFirebaseEnabled()) {
   const labSource = getLabToLabFirebaseSource();
+  // alert(labSource);
   console.log(`[Firebase] Initializing Lab-to-Lab with source: ${labSource}`);
   
   if (labSource === primaryConfigTarget && db && storage) {
@@ -179,9 +180,7 @@ export const setFirebaseEnabled = (enabled: boolean): void => {
   localStorage.setItem('firebase_enabled', enabled.toString());
 };
 
-export const firebaseProjectId: string = (activeTarget === 'both') 
-  ? "Both (Sales & Hospital)" 
-  : firebaseConfig.projectId;
+export const firebaseProjectId: string = (activeTarget === 'both') ? "Both (Sales & Hospital)" : firebaseConfig.projectId;
 export const labToLabProjectId: string = configs[getLabToLabFirebaseSource()].projectId;
 
 export default app;

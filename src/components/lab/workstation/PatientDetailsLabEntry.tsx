@@ -271,10 +271,11 @@ const PatientDetailsLabEntry: React.FC<PatientDetailsLabEntryProps> = ({
         }
       }}
     >
+      
       {/* Enhanced Header */}
       <Box
         sx={{
-          background: '#92b7ff',
+          background:`${selectedQueueItem?.lab_to_lab_object_id != null ? '' : 'linear-gradient(90deg, #92b7ff 0%, #1e3a8a 100%)'}`,
           color: 'white',
           py: 1,
           px: 1,
@@ -292,16 +293,16 @@ const PatientDetailsLabEntry: React.FC<PatientDetailsLabEntryProps> = ({
       >
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 0.1 }}>
           <div className="flex items-center gap-2">
-            <div className="text-black! text-4xl font-bold">
+            <div className="text-black! text-3xl font-bold">
               {visitId}
             </div>
-            <button
+            {/* <button
               onClick={handleCopyVisitId}
               className="p-1 hover:bg-white/20 rounded transition-colors"
               title="نسخ رقم الزيارة"
             >
               <Copy size={16} className="text-black/70 hover:text-black" />
-            </button>
+            </button> */}
           </div>
         </Box>
         <Typography className="text-black!" variant="h6"  sx={{ fontWeight: 600, textAlign: 'center', fontSize: '1.6rem' }}>

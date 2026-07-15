@@ -697,15 +697,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                     }
                   </div>
                 ) : (
-                  <TableContainer
-                    component={Paper}
-                    sx={{
-                      backgroundColor: "var(--background)",
-                      boxShadow: "none",
-                      border: "1px solid var(--border)",
-                      borderRadius: "var(--radius)",
-                    }}
-                  >
+             
                     <Table
                       size="small"
                       aria-label="child test results table"
@@ -909,9 +901,7 @@ const ResultEntryPanel: React.FC<ResultEntryPanelProps> = ({
                         )}
                       </TableBody>
                     </Table>
-                        {/* Normal Range Display */}
-             
-                  </TableContainer>
+                   
                 )}
 
                 {/* Organism Button */}

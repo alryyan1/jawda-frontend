@@ -702,7 +702,6 @@ const LabWorkstationPage: React.FC = () => {
     >
       <header className="flex-shrink-0 h-auto p-1 border-b bg-card flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4 shadow-sm dark:border-slate-800">
         <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
-          <FlaskConical className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
 
           <Autocomplete
             id="recent-visits-by-patient-dropdown"

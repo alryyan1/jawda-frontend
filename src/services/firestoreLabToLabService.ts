@@ -1,5 +1,6 @@
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { hospitalDb as db } from '@/lib/firebase-hospital';
+import { labToLabDb } from '@/lib/firebase';
 
 export interface FirestoreLabToLab {
   id: string;
@@ -50,7 +51,7 @@ export const fetchFirestoreLabToLab = async (): Promise<FirestoreLabToLab[]> => 
   }
   try {
     // Reference to the labToLap collection
-    const labToLabRef = collection(db, 'labToLap');
+    const labToLabRef = collection(labToLabDb!, 'labToLap');
     
     // Query to get all lab-to-lab companies, ordered by name
     console.log('Attempting to fetch from labToLap collection...');

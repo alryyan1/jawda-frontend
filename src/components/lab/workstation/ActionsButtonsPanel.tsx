@@ -28,14 +28,33 @@ import { hasPatientResultUrl } from "@/services/firebaseStorageService";
 import { useAuthorization } from "@/hooks/useAuthorization";
 import { smsService } from "@/services/smsService";
 import echo from "@/services/echoService";
+import type { Setting } from "@/types/settings";
+import { doc, getDoc } from "firebase/firestore";
+import { labToLabDb } from "@/lib/firebase";
+
 interface ActionsButtonsPanelProps {
   visitId: number | null;
   patient: Patient | null;
   patientLabQueueItem: PatientLabQueueItem | null;
   resultsLocked: boolean;
   onPatientUpdate?: (updatedPatient: PatientLabQueueItem) => void;
-  settings?: any;
+  settings?: Setting;
 }
+
+// Best-effort extraction of a human-readable message from an unknown error
+// (typically an Axios error), without introducing a hard dependency on axios types.
+const getErrorMessage = (err: unknown): string => {
+  if (err && typeof err === "object") {
+    const maybeAxios = err as { response?: { data?: { error?: string; message?: string } }; message?: string };
+    return (
+      maybeAxios.response?.data?.error ||
+      maybeAxios.response?.data?.message ||
+      maybeAxios.message ||
+      "Unknown error"
+    );
+  }
+  return err instanceof Error ? err.message : "Unknown error";
+};
 
 const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
   visitId,
@@ -234,8 +253,7 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
             const abnormalQual = isQualitativeAbnormal(ct, value);
             if (abnormalNumeric || abnormalQual) {
               abnormal.push(
-                `${req.main_test_name}: ${
-                  ct.child_test_name
+                `${req.main_test_name}: ${ct.child_test_name
                 } (${toComparableName(value)})`,
               );
             }
@@ -246,179 +264,277 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
     [isValueEmpty, isNumericAbnormal, isQualitativeAbnormal, toComparableName],
   );
 
+  // Returns false (and toasts) when empty/abnormal results should block authentication.
+  const checkResultsBeforeAuth = useCallback(async (): Promise<boolean> => {
+    const labRequestIds = patientLabQueueItem?.lab_request_ids || [];
+    if (labRequestIds.length === 0) return true;
+
+    const { abnormal, empty } = await validateAllLabRequests(labRequestIds);
+
+    if (empty.length > 0) {
+      const shouldBlock = settings?.block_auth_on_empty_results ?? true;
+      const description = [
+        `حقول فارغة: ${empty.length}`,
+        ...empty.slice(0, 5).map((t: string) => `• ${t}`),
+        empty.length > 5 ? `وغيرها ${empty.length - 5}...` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+      if (shouldBlock) {
+        toast.error("لا يمكن اعتماد النتائج لوجود حقول فارغة", { description });
+        return false;
+      }
+      toast.warning("تحذير: توجد حقول نتائج فارغة", { description });
+    }
+
+    if (abnormal.length > 0) {
+      toast.warning("تحذير: توجد نتائج غير طبيعية", {
+        description: [
+          `نتائج غير طبيعية: ${abnormal.length}`,
+          ...abnormal.slice(0, 5).map((t) => `• ${t}`),
+          abnormal.length > 5 ? `وغيرها ${abnormal.length - 5}...` : "",
+        ]
+          .filter(Boolean)
+          .join("\n"),
+      });
+    }
+
+    return true;
+  }, [patientLabQueueItem?.lab_request_ids, validateAllLabRequests, settings?.block_auth_on_empty_results]);
+
+  // Uploads the authenticated result PDF to Firebase Storage. Returns whether it succeeded.
+  const uploadResultToFirebase = useCallback(async (patientId: number): Promise<boolean> => {
+    toast.info("جاري رفع النتيجة إلى السحابة...");
+    try {
+      const uploadResponse = await apiClient.post(`/patients/${patientId}/upload-to-firebase`);
+      if (!uploadResponse.data?.success) {
+        toast.error("فشل رفع النتيجة إلى السحابة: " + (uploadResponse.data?.message || "Error"));
+        return false;
+      }
+      toast.success("تم رفع النتيجة إلى السحابة بنجاح");
+      return true;
+    } catch (uploadError) {
+      console.error("Firebase upload failed:", uploadError);
+      toast.error("حدث خطأ أثناء رفع النتيجة إلى السحابة");
+      return false;
+    }
+  }, []);
+
+  const sendResultSms = useCallback(
+    async (phone: string, currentVisitId: number) => {
+      try {
+        const waNumber = settings?.whatsapp_number || "96878622990";
+        const message = `عزيزي الزائر نفيدك بانتهاء التحاليل الطبيه\nشكرا لزيارتك\n\nللحصول على النتيجة واتساب اضغط علي الرابط:\nhttps://wa.me/${waNumber}?text=${currentVisitId}`;
+
+        await smsService.sendSms(phone, message);
+        toast.info("تم إرسال رسالة SMS عبر النظام");
+      } catch (smsError) {
+        console.error("Failed to send frontend SMS:", smsError);
+        toast.error("فشل إرسال رسالة SMS من المتصفح");
+      }
+    },
+    [settings?.whatsapp_number],
+  );
+
+  const sendResultWhatsapp = useCallback(
+    async (phone: string, currentVisitId: number) => {
+      setWaStatus({ type: "loading", message: "جاري الإرسال واتساب..." });
+      try {
+        const waResponse = await apiClient.post("/whatsapp-cloud/send-template", {
+          to: phone,
+          template_name: settings?.whatsapp_result_template_name ?? "result_download",
+          language_code: settings?.whatsapp_result_language_code ?? "ar",
+          components: [
+            {
+              type: "body",
+              parameters: [{ type: "text", text: String(currentVisitId) }],
+            },
+            {
+              type: "button",
+              sub_type: "quick_reply",
+              index: "0",
+              parameters: [
+                {
+                  type: "payload",
+                  payload: JSON.stringify({
+                    visitId: currentVisitId,
+                    collection: settings?.firestore_result_collection || "one_care",
+                  }),
+                },
+              ],
+            },
+          ],
+        });
+
+        if (waResponse.data?.success) {
+          const msgId = waResponse.data.message_id || waResponse.data.data?.messages?.[0]?.id;
+          setWaStatus({
+            type: "success",
+            message: "تم إرسال رسالة واتساب بنجاح",
+            description: `ID: ${msgId || "N/A"}`,
+            messageId: msgId,
+          });
+          setTimeout(() => setWaStatus((prev) => ({ ...prev, type: null })), 7000);
+        } else {
+          setWaStatus((prev) => ({
+            ...prev,
+            type: "error",
+            message: "فشل إرسال رسالة واتساب",
+            description: waResponse.data?.error || "حدث خطأ ما",
+          }));
+        }
+      } catch (waError) {
+        console.error("Failed to send frontend WhatsApp:", waError);
+        setWaStatus((prev) => ({
+          ...prev,
+          type: "error",
+          message: "حدث خطأ أثناء الإرسال",
+          description: getErrorMessage(waError),
+        }));
+      }
+    },
+    [settings?.whatsapp_result_template_name, settings?.whatsapp_result_language_code, settings?.firestore_result_collection],
+  );
+
+  // Resolves the referring lab's WhatsApp number for a lab-to-lab patient:
+  // labToLap/global/patients/{lab_to_lab_object_id} -> labId -> labToLap/{labId} -> whatsapp
+  const getLab2LabWhatsappNumber = useCallback(async (labToLabObjectId: string): Promise<string | null> => {
+    if (!labToLabDb) return null;
+
+    const patientDocSnap = await getDoc(doc(labToLabDb, "labToLap", "global", "patients", labToLabObjectId));
+    const labId = patientDocSnap.data()?.labId as string | undefined;
+    if (!labId) return null;
+
+    const labDocSnap = await getDoc(doc(labToLabDb, "labToLap", labId));
+    return (labDocSnap.data()?.whatsapp as string | undefined) || null;
+  }, []);
+
+  const sendLab2LabResultWhatsapp = useCallback(
+    async (phone: string) => {
+      setWaStatus({ type: "loading", message: "جاري الإرسال إلى المعمل المحيل عبر واتساب..." });
+      try {
+        const whatsappNumber = phone;
+        if (!whatsappNumber) {
+          setWaStatus((prev) => ({
+            ...prev,
+            type: "error",
+            message: "تعذر إرسال واتساب للمعمل المحيل",
+            description: "لم يتم العثور على رقم واتساب الخاص بالمعمل",
+          }));
+          return;
+        }
+
+        const testNames = (
+          await Promise.all(
+            (patientLabQueueItem?.lab_request_ids || []).map((id) => getLabRequestForEntry(id)),
+          )
+        )
+          .map((req) => req.main_test_name)
+          .filter(Boolean)
+          .join("، ");
+        // alert(whatsappNumber)
+        const waResponse = await apiClient.post("/whatsapp-cloud/send-template", {
+          to: whatsappNumber,
+          template_name: "lab2lab_result",
+          language_code: "ar",
+          components: [
+            {
+              type: "body",
+              parameters: [
+                { type: "text", text: patientLabQueueItem?.lab_to_lab_object_id },
+                { type: "text", text: patient?.name ?? "" },
+                { type: "text", text: '-' },
+                { type: "text", text: testNames || "-" },
+                { type: "text", text: settings?.lab_name || settings?.hospital_name || "مختبرنا" },
+              ],
+            },
+            {
+              type:'button',
+              sub_type:'quick_reply',
+              index:0,
+              parameters:[
+                {
+                  type:'payload',
+                  payload: JSON.stringify({
+                    collection: settings?.firestore_result_collection ,
+                    visitId: visitId,
+                  })
+                }
+              ]
+
+            }
+          ],
+        });
+
+        if (waResponse.data?.success) {
+          const msgId = waResponse.data.message_id || waResponse.data.data?.messages?.[0]?.id;
+          setWaStatus({
+            type: "success",
+            message: "تم إرسال النتيجة إلى المعمل المحيل عبر واتساب",
+            description: `ID: ${msgId || "N/A"}`,
+            messageId: msgId,
+          });
+          setTimeout(() => setWaStatus((prev) => ({ ...prev, type: null })), 7000);
+        } else {
+          setWaStatus((prev) => ({
+            ...prev,
+            type: "error",
+            message: "فشل إرسال رسالة واتساب للمعمل المحيل",
+            description: waResponse.data?.error || "حدث خطأ ما",
+          }));
+        }
+      } catch (waError) {
+        console.error("Failed to send lab2lab result WhatsApp:", waError);
+        setWaStatus((prev) => ({
+          ...prev,
+          type: "error",
+          message: "حدث خطأ أثناء إرسال النتيجة للمعمل المحيل",
+          description: getErrorMessage(waError),
+        }));
+      }
+    },
+    [getLab2LabWhatsappNumber, patientLabQueueItem?.lab_request_ids, patientLabQueueItem?.lab_number, patient?.name, settings?.lab_name, settings?.hospital_name],
+  );
+
   const handleAuthenticateResults = useCallback(async () => {
     if (!patient?.id || !visitId) return;
 
     setIsAuthenticating(true);
     try {
-      // Validate results before authenticating
-      const labRequestIds = patientLabQueueItem?.lab_request_ids || [];
-      if (labRequestIds.length > 0) {
-        const { abnormal, empty } = await validateAllLabRequests(labRequestIds);
+      const canProceed = await checkResultsBeforeAuth();
+      if (!canProceed) return;
 
-        // Block or warn about empty fields based on settings
-        if (empty.length > 0) {
-          const shouldBlock = settings?.block_auth_on_empty_results ?? true;
-          const description = [
-            `حقول فارغة: ${empty.length}`,
-            ...empty.slice(0, 5).map((t: string) => `• ${t}`),
-            empty.length > 5 ? `وغيرها ${empty.length - 5}...` : "",
-          ]
-            .filter(Boolean)
-            .join("\n");
-
-          if (shouldBlock) {
-            setIsAuthenticating(false);
-            toast.error("لا يمكن اعتماد النتائج لوجود حقول فارغة", { description });
-            return;
-          } else {
-            toast.warning("تحذير: توجد حقول نتائج فارغة", { description });
-          }
-        }
-
-        // Show warning for abnormal results but don't block
-        if (abnormal.length > 0) {
-          toast.warning("تحذير: توجد نتائج غير طبيعية", {
-            description: [
-              `نتائج غير طبيعية: ${abnormal.length}`,
-              ...abnormal.slice(0, 5).map((t) => `• ${t}`),
-              abnormal.length > 5 ? `وغيرها ${abnormal.length - 5}...` : "",
-            ]
-              .filter(Boolean)
-              .join("\n"),
-          });
-        }
-      }
-
-      const response = await apiClient.patch(
-        `/patients/${patient.id}/authenticate-results`,
-      );
+      const response = await apiClient.patch(`/patients/${patient.id}/authenticate-results`);
       const updatedQueueItem = response.data.data as PatientLabQueueItem;
-      console.log(
-        updatedQueueItem,
-        "updatedQueueItem from authenticate-results",
-      );
 
-      // Update the queue item immediately after authentication using the response directly
       if (onPatientUpdate && updatedQueueItem) {
         onPatientUpdate(updatedQueueItem);
       }
 
       toast.success("تم اعتماد النتائج بنجاح");
 
-      // Upload to Firebase synchronously from frontend
-      toast.info("جاري رفع النتيجة إلى السحابة...");
-      try {
-        const uploadResponse = await apiClient.post(
-          `/patients/${patient.id}/upload-to-firebase`,
-        );
-        if (uploadResponse.data?.success) {
-          toast.success("تم رفع النتيجة إلى السحابة بنجاح");
-          // If the upload returned an updated result_url, we might want to update the patient object again
-          // but usually result_auth is enough for the UI to show the ☁️ icon if it re-renders
-        } else {
-          toast.error(
-            "فشل رفع النتيجة إلى السحابة: " +
-              (uploadResponse.data?.message || "Error"),
-          );
+      const uploaded = await uploadResultToFirebase(patient.id);
+      if (!uploaded) return;
+      console.log(patient,'patient in actionsbuttonpanel',patient.lab_to_lab_object_id,'patient.labtolab')
+      if (patient.lab_to_lab_object_id != null) {
+        console.log(patient,'patient before sending')
+        // alert(patient.company?.phone)
+        await sendLab2LabResultWhatsapp(patient.company?.phone ?? '0');
+      } else {
+        if (settings?.send_sms_after_auth && patient.phone) {
+          await sendResultSms(patient.phone, visitId);
         }
-      } catch (uploadError: any) {
-        console.error("Firebase upload failed:", uploadError);
-        toast.error("حدث خطأ أثناء رفع النتيجة إلى السحابة");
-      }
 
-      // Send SMS from frontend if enabled
-      if (settings?.send_sms_after_auth && patient?.phone) {
-        try {
-          const waNumber = settings.whatsapp_number || "96878622990";
-          const message = `عزيزي الزائر نفيدك بانتهاء التحاليل الطبيه\nشكرا لزيارتك\n\nللحصول على النتيجة واتساب اضغط علي الرابط:\nhttps://wa.me/${waNumber}?text=${visitId}`;
-
-          await smsService.sendSms(patient.phone, message);
-          toast.info("تم إرسال رسالة SMS عبر النظام");
-        } catch (smsError) {
-          console.error("Failed to send frontend SMS:", smsError);
-          toast.error("فشل إرسال رسالة SMS من المتصفح");
+        if (settings?.send_whatsapp_after_auth && patient.phone) {
+          await sendResultWhatsapp(patient.phone, visitId);
         }
       }
-      console.log(settings.whatsapp_result_template_name, "settings.whatsapp_result_template_name");
-      console.log(settings.whatsapp_result_language_code, "settings.whatsapp_result_language_code");
-      // Send WhatsApp from frontend if enabled (temporarily moved from backend job)
-      if (settings?.send_whatsapp_after_auth && patient?.phone) {
-        setWaStatus({ type: "loading", message: "جاري الإرسال واتساب..." });
-        try {
-          const waResponse = await apiClient.post(
-            "/whatsapp-cloud/send-template",
-            {
-              to: patient.phone,
-              template_name: settings?.whatsapp_result_template_name ?? "result_download",
-              language_code: settings?.whatsapp_result_language_code ?? "ar",
-              components: [
-                {
-                  type: "body",
-                  parameters: [
-                    {
-                      type: "text",
-                      text: String(visitId),
-                    },
-                  ],
-                },
-                {
-                  type: "button",
-                  sub_type: "quick_reply",
-                  index: "0",
-                  parameters: [
-                    {
-                      type: "payload",
-                      payload: JSON.stringify({
-                        visitId: visitId,
-                        collection: settings?.firestore_result_collection || "one_care",
-                      }),
-                    },
-                  ],
-                },
-              ],
-            },
-          );
 
-          if (waResponse.data?.success) {
-            const msgId =
-              waResponse.data.message_id ||
-              waResponse.data.data?.messages?.[0]?.id;
-            setWaStatus({
-              type: "success",
-              message: "تم إرسال رسالة واتساب بنجاح",
-              description: `ID: ${msgId || "N/A"}`,
-              messageId: msgId,
-            });
-            setTimeout(
-              () => setWaStatus((prev) => ({ ...prev, type: null })),
-              7000,
-            );
-          } else {
-            setWaStatus((prev) => ({
-              ...prev,
-              type: "error",
-              message: "فشل إرسال رسالة واتساب",
-              description: waResponse.data?.error || "حدث خطأ ما",
-            }));
-          }
-        } catch (waError: any) {
-          console.error("Failed to send frontend WhatsApp:", waError);
-          const errorMsg = waError.response?.data?.error || waError.message;
-          setWaStatus((prev) => ({
-            ...prev,
-            type: "error",
-            message: "حدث خطأ أثناء الإرسال",
-            description: errorMsg,
-          }));
-        }
-      }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error("Error authenticating results:", error);
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error occurred";
       toast.error("حدث خطأ أثناء اعتماد النتائج", {
-        description: errorMessage,
+        description: getErrorMessage(error),
       });
     } finally {
       setIsAuthenticating(false);
@@ -427,8 +543,13 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
     patient,
     visitId,
     onPatientUpdate,
-    patientLabQueueItem?.lab_request_ids,
-    validateAllLabRequests,
+    checkResultsBeforeAuth,
+    uploadResultToFirebase,
+    sendResultSms,
+    sendResultWhatsapp,
+    sendLab2LabResultWhatsapp,
+    settings?.send_sms_after_auth,
+    settings?.send_whatsapp_after_auth,
   ]);
 
   const generateAndShowPdf = useCallback(
@@ -537,9 +658,8 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
             title={resultsLocked ? "النتائج مقفلة" : "اعتماد النتائج"}
           >
             <ShieldCheck
-              className={`ltr:mr-2 rtl:ml-2 h-3.5 w-3.5 ${
-                isAuthenticating ? "animate-spin" : ""
-              }`}
+              className={`ltr:mr-2 rtl:ml-2 h-3.5 w-3.5 ${isAuthenticating ? "animate-spin" : ""
+                }`}
             />
             {isAuthenticating ? "جاري الاعتماد..." : "اعتماد النتائج"}
           </MuiButton>
@@ -594,15 +714,14 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
             padding: "12px 16px",
             borderRadius: "12px",
             boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
-            border: `1px solid ${
-              waStatus.type === "success"
-                ? "#4caf50"
-                : waStatus.type === "read"
-                  ? "#2196f3"
-                  : waStatus.type === "error"
-                    ? "#f44336"
-                    : "#e0e0e0"
-            }`,
+            border: `1px solid ${waStatus.type === "success"
+              ? "#4caf50"
+              : waStatus.type === "read"
+                ? "#2196f3"
+                : waStatus.type === "error"
+                  ? "#f44336"
+                  : "#e0e0e0"
+              }`,
             animation: "fadeInUp 0.3s ease-out",
             maxWidth: "300px",
           }}
@@ -622,13 +741,12 @@ const ActionsButtonsPanel: React.FC<ActionsButtonsPanelProps> = ({
 
           <div className="flex flex-col flex-1 min-w-0">
             <span
-              className={`text-sm font-bold truncate ${
-                waStatus.type === "success"
-                  ? "text-green-700"
-                  : waStatus.type === "error"
-                    ? "text-red-700"
-                    : "text-gray-900"
-              }`}
+              className={`text-sm font-bold truncate ${waStatus.type === "success"
+                ? "text-green-700"
+                : waStatus.type === "error"
+                  ? "text-red-700"
+                  : "text-gray-900"
+                }`}
             >
               {waStatus.message}
             </span>

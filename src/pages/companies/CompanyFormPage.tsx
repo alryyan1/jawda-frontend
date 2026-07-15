@@ -21,6 +21,7 @@ import {
   Button,
   Box,
   CircularProgress,
+  Autocomplete,
 } from '@mui/material';
 import { Loader2 } from 'lucide-react';
 
@@ -246,7 +247,7 @@ const CompanyFormPage: React.FC<{ mode: typeof CompanyFormMode[keyof typeof Comp
               <Typography variant="subtitle2" sx={{ mb: 1 }}>
                 ربط بـ Firestore (Lab-to-Lab)
               </Typography>
-              <DarkThemeAutocomplete
+              <Autocomplete
                 options={firestoreLabs || []}
                 getOptionLabel={(option) => option.name}
                 value={selectedFirestoreLab}

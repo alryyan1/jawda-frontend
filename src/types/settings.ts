@@ -34,6 +34,9 @@ export interface Setting {
   send_result_after_auth: boolean;
   send_result_after_result: boolean;
   edit_result_after_auth: boolean;
+  block_auth_on_empty_results?: boolean;
+  send_sms_after_auth?: boolean;
+  send_whatsapp_after_auth?: boolean;
   auditor_stamp?: string | null; // base64 or path
   manager_stamp?: string | null; // base64 or path
   finance_account_id?: number | null;

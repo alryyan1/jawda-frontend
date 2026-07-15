@@ -12,7 +12,7 @@ export function cn(...inputs: ClassValue[]) {
  * @param locale - The locale to use for formatting (default: current i18n locale)
  * @returns Formatted string with thousand separators
  */
-export const formatNumber = (value: number | string, decimals: number = 2, locale?: string): string => {
+export const formatNumber = (value: number | string, decimals: number = 0, locale?: string): string => {
   const num = typeof value === 'string' ? parseFloat(value) : value;
   if (isNaN(num)) return '0';
   

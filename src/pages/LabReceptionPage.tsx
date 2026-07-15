@@ -44,6 +44,8 @@ import MainTestsPriceListDialog from "@/components/lab/reception/MainTestsPriceL
 import OffersDialog from "@/components/lab/reception/OffersDialog";
 import { usePdfPreviewVisibility } from "@/contexts/PdfPreviewVisibilityContext";
 import { useAuthorization } from "@/hooks/useAuthorization";
+import { useLab2LabNewPatientAlert } from "@/hooks/useLab2LabNewPatientAlert";
+import { playNotificationSound } from "@/lib/notificationSound";
 
 // Material Theme
 const materialTheme = createTheme({
@@ -87,6 +89,12 @@ const LabReceptionPage: React.FC = () => {
   const queryClient = useQueryClient();
   const { currentClinicShift } = useAuth();
   const { isVisible: isPdfPreviewVisible } = usePdfPreviewVisibility();
+
+  // Notify with a sound + toast whenever a new patient arrives from another lab
+  useLab2LabNewPatientAlert((patientName) => {
+    playNotificationSound();
+    toast.info(`مريض جديد من مختبر آخر: ${patientName}`);
+  });
 
   // Helper function to convert DoctorVisit to PatientLabQueueItem format
   const convertVisitToQueueItem = (visit: DoctorVisit): PatientLabQueueItem => {

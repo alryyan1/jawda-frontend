@@ -23,7 +23,7 @@ const PatientCompanyDetails: React.FC<PatientCompanyDetailsProps> = ({ patient }
   if (!patient?.company) return null;
 
   return (
-    <div className="w-full rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50/60 dark:bg-blue-950/30 px-3 py-2">
+    <div className="w-full rounded-lg border border-blue-200 dark:border-blue-800 m-1 bg-blue-50/60 dark:bg-blue-950/30 px-3 py-2">
       <div className="flex items-center gap-1.5 mb-1.5 pb-1.5 border-b border-blue-200 dark:border-blue-800">
         <Shield size={12} className="text-blue-600 dark:text-blue-400" />
         <span className="text-[11px] font-semibold text-blue-700 dark:text-blue-300 uppercase tracking-wide">بيانات التأمين</span>

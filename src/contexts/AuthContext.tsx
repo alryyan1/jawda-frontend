@@ -136,7 +136,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   // Sync settings (Firebase target) from backend
-  useEffect(() => {
+  useEffect  (() => {
     if (token && user) {
       getSettings().then((settings) => {
         if (settings && (settings as any).firebase_upload_target) {

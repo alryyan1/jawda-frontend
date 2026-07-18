@@ -146,7 +146,6 @@ export const allMainNavItems: NavItem[] = [
   { to: "/lab-workstation", label: "نتائج المختبر", icon: FlaskConical },
   // { to: '/laboratory/offers', label: 'عروض التحاليل', icon: Package },
   { to: "/patients", label: "المرضى", icon: Users },
-  { to: "/finance/employee-expenses", label: "مصروفات الموظفين", icon: HandCoins },
   { to: "/online-booking", label: "الحجز ", icon: CalendarCheck2 },
   { to: "/cash-reconciliation", label: "الفئات الماليه", icon: CreditCard },
  
@@ -1105,11 +1104,6 @@ const AppLayout: React.FC = () => {
                               to="/reports/costs"
                               icon={FileSpreadsheet}
                               label="المصروفات"
-                            />
-                            <ReportMenuItem
-                              to="/reports/employee-expenses"
-                              icon={Users}
-                              label="مصروفات الموظفين"
                             />
                             <ReportMenuItem
                               to="/reports/daily-costs"

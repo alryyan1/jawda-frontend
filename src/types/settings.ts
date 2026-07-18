@@ -39,17 +39,8 @@ export interface Setting {
   send_whatsapp_after_auth?: boolean;
   auditor_stamp?: string | null; // base64 or path
   manager_stamp?: string | null; // base64 or path
-  finance_account_id?: number | null;
-  bank_id?: number | null;
-  company_account_id?: number | null;
-  endurance_account_id?: number | null;
-  main_cash?: number | null;
-  main_bank?: number | null;
   financial_year_start?: string | null; // YYYY-MM-DD
   financial_year_end?: string | null; // YYYY-MM-DD
-  pharmacy_bank?: number | null;
-  pharmacy_cash?: number | null;
-  pharmacy_income?: number | null;
   welcome_message?: string | null;
   send_welcome_message: boolean;
   updated_at?: string;

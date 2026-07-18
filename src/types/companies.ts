@@ -1,5 +1,4 @@
 import type { PaginatedResponse } from './common';
-import type { FinanceAccount } from './finance'; // Assuming FinanceAccount type is in finance.ts
 
 // Based on the `companies` table
 export interface Company {
@@ -12,9 +11,7 @@ export interface Company {
   service_roof: number;
   phone: string;
   email: string;
-  
-  finance_account_id?: number | null;
-  finance_account?: FinanceAccount; // Optional: loaded FinanceAccount object
+
   lab2lab_firestore_id?: string | null;
 
   created_at: string; // DateTime string (ISO 8601)

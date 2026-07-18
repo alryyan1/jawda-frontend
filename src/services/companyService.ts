@@ -62,7 +62,6 @@ export const createCompany = async (data: CompanyFormData): Promise<{ data: Comp
     service_endurance: parseFloat(String(data.service_endurance)),
     lab_roof: parseInt(String(data.lab_roof)),
     service_roof: parseInt(String(data.service_roof)),
-    finance_account_id: data.finance_account_id ? parseInt(String(data.finance_account_id)) : undefined,
   };
   const response = await apiClient.post<{ data: Company }>(API_URL, payload);
   return response.data;
@@ -75,8 +74,7 @@ export const updateCompany = async (id: number, data: Partial<CompanyFormData>):
   if (data.service_endurance !== undefined) payload.service_endurance = parseFloat(String(data.service_endurance));
   if (data.lab_roof !== undefined) payload.lab_roof = parseInt(String(data.lab_roof));
   if (data.service_roof !== undefined) payload.service_roof = parseInt(String(data.service_roof));
-  if (data.finance_account_id !== undefined) payload.finance_account_id = data.finance_account_id ? parseInt(String(data.finance_account_id)) : undefined;
-  
+
   const response = await apiClient.put<{ data: Company }>(`${API_URL}/${id}`, payload);
   return response.data;
 };

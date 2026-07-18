@@ -58,8 +58,6 @@ import ClinicShiftSummaryReportPage from "./pages/reports/ClinicShiftSummaryRepo
 import CostsReportPage from "./pages/CostsReportPage";
 import DailyCostsReportPage from "./pages/reports/DailyCostsReportPage";
 import MonthlyShiftsReportPage from "./pages/reports/MonthlyShiftsReportPage";
-import InsuranceAuditPage from "./pages/audit/InsuranceAuditPage";
-import AuditRecordPage from "./pages/audit/AuditRecordPage";
 import MonthlyServiceIncomeReportPage from "./pages/reports/MonthlyServiceIncomeReportPage";
 import AnalysisPage from "./pages/anaylsis/AnalysisPage";
 import BulkWhatsAppPage from "./pages/communication/BulkWhatsAppPage";
@@ -88,7 +86,6 @@ import AppointmentsPlaceholderPage from "./pages/AppointmentsPlaceholderPage";
 import HL7ParserPage from "./pages/HL7ParserPage";
 import OnlineBookingPage from "./pages/onlineBooking/OnlineBookingPage";
 import DeletedServiceDepositsPage from "./pages/DeletedServiceDepositsPage";
-import EmployeeExpensesPage from "./pages/finance/EmployeeExpensesPage";
 
 const router = createBrowserRouter([
   // --- PUBLIC ROUTES ---
@@ -259,10 +256,6 @@ const router = createBrowserRouter([
             element: <ProfilePage />,
           },
           {
-            path: "finance/employee-expenses",
-            element: <EmployeeExpensesPage />,
-          },
-          {
             path: "reports",
             element: <ReportsLayout />, // Or <Outlet /> if reports are top-level sections
             children: [
@@ -380,16 +373,8 @@ const router = createBrowserRouter([
               { path: "roles", element: <RolesListPage /> },
               { path: "specialists", element: <SpecialistsPage /> },
               {
-                path: "insurance-audit",
-                element: <InsuranceAuditPage />,
-              },
-              {
                 path: "service-groups",
                 element: <ServiceGroupsPage />,
-              },
-              {
-                path: "insurance-audit/visit/:visitId", // Or use auditRecordId if that's the primary identifier
-                element: <AuditRecordPage />,
               },
               // { path: "laboratory", element: <LabSettingsPage /> },
               // Companies Module

@@ -1,13 +1,3 @@
-// src/types/finance.ts
-export interface FinanceAccount {
-  id: number;
-  name: string;
-  code?: string;
-  debit: "debit" | "credit";
-  created_at: string;
-  updated_at: string;
-}
-
 // src/types/finances.ts
 export interface CostCategory {
   id: number;

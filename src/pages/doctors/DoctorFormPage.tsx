@@ -28,13 +28,12 @@ import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { Save as SaveIcon } from '@mui/icons-material';
 import { toast } from "sonner";
 
-import type { DoctorFormData, Specialist, FinanceAccount, DoctorStripped, Doctor } from "@/types/doctors";
+import type { DoctorFormData, Specialist, DoctorStripped, Doctor } from "@/types/doctors";
 import {
   createDoctor,
   updateDoctor,
   getDoctorById,
   getSpecialistsList,
-  getFinanceAccountsList,
   updateDoctorFirebaseId,
   DoctorFormMode,
 } from "@/services/doctorService";
@@ -249,7 +248,7 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
 
 
     // Ensure numeric fields are numbers, not strings, if backend expects numbers
-    const submissionData: DoctorFormData & { finanace_account_id_insurance?: string; sub_specialist_id?: string } = {
+    const submissionData: DoctorFormData & { sub_specialist_id?: string } = {
       ...data,
       specialist_id: String(data.specialist_id!),
       sub_specialist_id: data.sub_specialist_id ? String(data.sub_specialist_id) : undefined,
@@ -258,7 +257,6 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
       static_wage: String(data.static_wage),
       lab_percentage: String(data.lab_percentage),
       start: String(data.start),
-      // Backend column is misspelled as 'finanace_account_id_insurance'
       is_default: data.is_default ?? false,
     };
     // if (!isEditMode && !data.image_file) {

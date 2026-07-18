@@ -18,8 +18,6 @@ import apiClient from '@/services/api';
 import { webUrl } from '@/pages/constants';
 import { getUsers } from '@/services/userService';
 import type { User } from '@/types/users';
-import { getEmployees } from '@/services/employeeService';
-import type { Employee } from '@/services/employeeService';
 
 // Cost interface
 interface Cost {
@@ -29,8 +27,6 @@ interface Cost {
   amount_bankak: number; // Bank portion
   created_at: string;
   user_cost_name?: string;
-  employee_name?: string;
-  employee_id?: number;
   comment?: string;
 }
 
@@ -47,7 +43,6 @@ const CashReconciliationPage: React.FC = () => {
     description: '',
     amount_cash: '',
     amount_bank: '',
-    employee_id: '' as string | number
   });
   const [costDialogOpen, setCostDialogOpen] = useState(false);
 
@@ -66,12 +61,6 @@ const CashReconciliationPage: React.FC = () => {
   const hasInitializedUser = useRef(false);
 
   const usersList = useMemo(() => usersData?.data || [], [usersData?.data]);
-  
-  // Fetch employees for cost selection
-  const { data: employeesData, isLoading: isLoadingEmployeesData } = useQuery<Employee[], Error>({
-    queryKey: ['allEmployeesForReconciliation'],
-    queryFn: getEmployees,
-  });
 
   // Set default selected user to current logged in user
   useEffect(() => {
@@ -126,13 +115,13 @@ const CashReconciliationPage: React.FC = () => {
 
   // Cost creation mutation
   const createCostMutation = useMutation({
-    mutationFn: async (costData: { description: string; amount_cash_input: number; amount_bank_input: number; shift_id: number; employee_id?: number }) => {
+    mutationFn: async (costData: { description: string; amount_cash_input: number; amount_bank_input: number; shift_id: number }) => {
       const response = await apiClient.post('/costs', costData);
       return response.data;
     },
     onSuccess: () => {
       toast.success('تم إضافة المصروف بنجاح');
-      setCostForm({ description: '', amount_cash: '', amount_bank: '', employee_id: '' });
+      setCostForm({ description: '', amount_cash: '', amount_bank: '' });
       setCostDialogOpen(false);
       // Invalidate income summary and costs to refresh the data
       queryClient.invalidateQueries({ queryKey: ['userIncomeSummary', selectedShiftId] });
@@ -277,7 +266,6 @@ const CashReconciliationPage: React.FC = () => {
       amount_cash_input: cashAmount,
       amount_bank_input: bankAmount,
       shift_id: Number(selectedShiftId),
-      employee_id: costForm.employee_id ? Number(costForm.employee_id) : undefined
     };
 
     createCostMutation.mutate(costData);
@@ -460,30 +448,6 @@ const CashReconciliationPage: React.FC = () => {
               <DialogTitle>إضافة مصروف</DialogTitle>
               <DialogContent>
                 <Stack spacing={2} sx={{ mt: 1 }}>
-                  <Autocomplete
-                    options={employeesData || []}
-                    getOptionLabel={(option) => option.name}
-                    onChange={(_, newValue) => {
-                      if (newValue) {
-                        setCostForm(prev => ({
-                          ...prev,
-                          description: newValue.name,
-                          amount_cash: newValue.fixed_amount.toString(),
-                          employee_id: newValue.id
-                        }));
-                      }
-                    }}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        label="اختر الموظف"
-                        placeholder="ابحث عن موظف..."
-                        size="small"
-                        fullWidth
-                      />
-                    )}
-                    loading={isLoadingEmployeesData}
-                  />
                   <TextField
                     label="وصف المصروف"
                     value={costForm.description}
@@ -550,7 +514,6 @@ const CashReconciliationPage: React.FC = () => {
                         <TableHead>
                           <TableRow>
                             <TableCell>الوصف</TableCell>
-                            <TableCell align="center">الموظف</TableCell>
                             <TableCell align="center">النقدي</TableCell>
                             <TableCell align="center">البنكي</TableCell>
                             <TableCell align="center">المجموع</TableCell>
@@ -563,11 +526,6 @@ const CashReconciliationPage: React.FC = () => {
                               <TableCell>
                                 <Typography variant="body2">
                                   {cost.description}
-                                </Typography>
-                              </TableCell>
-                              <TableCell align="center">
-                                <Typography variant="caption" color="text.secondary">
-                                  {cost.employee_name || '-'}
                                 </Typography>
                               </TableCell>
                               <TableCell align="center">

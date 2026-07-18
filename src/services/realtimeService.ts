@@ -4,17 +4,6 @@ import type { Patient } from '@/types/patients';
 import type { DoctorVisit, LabRequest } from '@/types/visits';
 import type { SysmexResultEventData } from '@/types/sysmex';
 import type { PatientLabQueueItem } from '@/types/labWorkflow';
-
-interface BankakImageEventData {
-  id: number;
-  image_url: string;
-  full_image_url: string;
-  phone: string;
-  doctorvisit_id: number | null;
-  patient_name: string;
-  created_at: string;
-  created_at_human: string;
-}
 import { realtimeUrlFromConstants } from '@/pages/constants';
 
 class RealtimeService {
@@ -184,32 +173,6 @@ class RealtimeService {
         this.socket.off('sysmex-result-inserted', callback);
       } else {
         this.socket.off('sysmex-result-inserted');
-      }
-    }
-  }
-
-  // Subscribe to bankak-image-inserted events
-  public onBankakImageInserted(callback: (data: BankakImageEventData) => void): void {
-    if (this.socket) {
-      const eventHandler = (data: BankakImageEventData) => {
-        console.log('Received bankak-image-inserted event:', data);
-        callback(data);
-      };
-      
-      // Store the handler so we can remove it later
-      (callback as any).__eventHandler = eventHandler;
-      this.socket.on('bankak-image-inserted', eventHandler);
-    }
-  }
-
-  // Unsubscribe from bankak-image-inserted events
-  public offBankakImageInserted(callback?: (data: BankakImageEventData) => void): void {
-    if (this.socket) {
-      if (callback && (callback as any).__eventHandler) {
-        this.socket.off('bankak-image-inserted', (callback as any).__eventHandler);
-        delete (callback as any).__eventHandler;
-      } else {
-        this.socket.off('bankak-image-inserted');
       }
     }
   }

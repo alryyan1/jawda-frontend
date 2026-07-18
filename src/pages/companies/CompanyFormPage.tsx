@@ -14,10 +14,6 @@ import {
   TextField,
   Switch,
   FormControlLabel,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   Button,
   Box,
   CircularProgress,
@@ -26,9 +22,7 @@ import {
 import { Loader2 } from 'lucide-react';
 
 import type { CompanyFormData, Company } from '@/types/companies';
-import type { FinanceAccount } from '@/types/doctors';
 import { createCompany, updateCompany, getCompanyById, updateCompanyFirestoreId } from '@/services/companyService';
-import { getFinanceAccountsList } from '@/services/doctorService';
 import { fetchFirestoreLabToLab, testFirestoreConnection, type FirestoreLabToLab } from '@/services/firestoreLabToLabService';
 import { DarkThemeAutocomplete } from '@/components/ui/mui-autocomplete';
 
@@ -46,7 +40,6 @@ type CompanyFormValues = {
   service_endurance: string;
   lab_roof: string;
   service_roof: string;
-  finance_account_id?: string;
 };
 
 const CompanyFormPage: React.FC<{ mode: typeof CompanyFormMode[keyof typeof CompanyFormMode] }> = ({ mode }) => {
@@ -64,17 +57,11 @@ const CompanyFormPage: React.FC<{ mode: typeof CompanyFormMode[keyof typeof Comp
     enabled: isEditMode && !!companyId,
   });
 
-  const { data: financeAccounts = [], isLoading: isLoadingFinanceAccounts } = useQuery<FinanceAccount[], Error>({
-    queryKey: ['financeAccountsList'],
-    queryFn: getFinanceAccountsList,
-  });
-
   const form = useForm<CompanyFormValues>({
     defaultValues: {
       name: '', phone: '', email: '', status: true,
       lab_endurance: '0', service_endurance: '0',
       lab_roof: '0', service_roof: '0',
-      finance_account_id: undefined,
     },
   });
   const { control, handleSubmit, reset } = form;
@@ -90,7 +77,6 @@ const CompanyFormPage: React.FC<{ mode: typeof CompanyFormMode[keyof typeof Comp
         service_endurance: String(companyData.service_endurance ?? '0'),
         lab_roof: String(companyData.lab_roof ?? '0'),
         service_roof: String(companyData.service_roof ?? '0'),
-        finance_account_id: companyData.finance_account_id ? String(companyData.finance_account_id) : undefined,
       });
     }
   }, [isEditMode, companyData, reset]);
@@ -177,7 +163,6 @@ const CompanyFormPage: React.FC<{ mode: typeof CompanyFormMode[keyof typeof Comp
       service_endurance: parseFloat(data.service_endurance || '0'),
       lab_roof: parseInt(data.lab_roof || '0'),
       service_roof: parseInt(data.service_roof || '0'),
-      finance_account_id: data.finance_account_id ? parseInt(data.finance_account_id) : undefined,
     } as CompanyFormData;
 
     mutation.mutate(submissionData);
@@ -193,7 +178,7 @@ const CompanyFormPage: React.FC<{ mode: typeof CompanyFormMode[keyof typeof Comp
   };
 
   const formIsSubmitting = mutation.isPending;
-  const dataIsLoading = isLoadingCompany || isFetchingCompany || isLoadingFinanceAccounts;
+  const dataIsLoading = isLoadingCompany || isFetchingCompany;
 
   if (isEditMode && isLoadingCompany) {
     return (
@@ -224,22 +209,6 @@ const CompanyFormPage: React.FC<{ mode: typeof CompanyFormMode[keyof typeof Comp
               <TextField fullWidth label="البريد الإلكتروني" placeholder="example@email.com" {...field} disabled={dataIsLoading || formIsSubmitting} error={!!fieldState.error} helperText={fieldState.error?.message} />
             )} />
           </Box>
-
-          <Controller name="finance_account_id" control={control} render={({ field }) => (
-            <FormControl fullWidth size="small" disabled={dataIsLoading || formIsSubmitting}>
-              <InputLabel id="finance-account-label">الحساب المالي</InputLabel>
-              <Select labelId="finance-account-label" label="الحساب المالي" value={field.value || ''} onChange={(e) => field.onChange(e.target.value)}>
-                <MenuItem value=" ">لا يوجد</MenuItem>
-                {isLoadingFinanceAccounts ? (
-                  <MenuItem value="loading_fa" disabled>جار التحميل...</MenuItem>
-                ) : (
-                  financeAccounts.map((fa) => (
-                    <MenuItem key={fa.id} value={String(fa.id)}>{fa.name}</MenuItem>
-                  ))
-                )}
-              </Select>
-            </FormControl>
-          )} />
 
           {/* Firestore Lab-to-Lab Selection - Only show in edit mode */}
           {isEditMode && (

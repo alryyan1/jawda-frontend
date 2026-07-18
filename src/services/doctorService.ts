@@ -1,6 +1,6 @@
 // src/services/doctorService.ts
 import apiClient from './api';
-import type { Doctor, DoctorFormData, PaginatedDoctorsResponse, Specialist, FinanceAccount, DoctorStripped, DoctorServiceFormData, DoctorService } from '../types/doctors'; // Adjust imports as needed
+import type { Doctor, DoctorFormData, PaginatedDoctorsResponse, Specialist, DoctorStripped, DoctorServiceFormData, DoctorService } from '../types/doctors'; // Adjust imports as needed
 import type { Service } from '@/types/services';
 
 const API_URL = '/doctors';
@@ -88,9 +88,6 @@ export interface PaginatedResponse<T> {
 
 export const getSpecialistsList = (): Promise<Specialist[]> => { // Assuming direct array response
     return apiClient.get<PaginatedResponse<Specialist>>('/specialists-list').then(res => res.data.data);
-}
-export const getFinanceAccountsList = (): Promise<FinanceAccount[]> => { // Assuming direct array response
-    return apiClient.get('/finance-accounts-list').then(res => res.data.data);
 }
 // Ensure this function is EXPORTED
 export const createSpecialist = async (data: { name: string }): Promise<Specialist> => {

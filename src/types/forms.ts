@@ -28,15 +28,6 @@ export interface SettingsFormValues {
   inventory_notification_number: string | null;
   instance_id: string | null;
   token: string | null;
-  finance_account_id: string | null;
-  bank_id: string | null;
-  company_account_id: string | null;
-  endurance_account_id: string | null;
-  main_cash: string | null;
-  main_bank: string | null;
-  pharmacy_cash: string | null;
-  pharmacy_bank: string | null;
-  pharmacy_income: string | null;
   auditor_stamp_file: File | null;
   clear_auditor_stamp: boolean;
   manager_stamp_file: File | null;

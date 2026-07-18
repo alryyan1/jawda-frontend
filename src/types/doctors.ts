@@ -7,11 +7,6 @@ export interface Specialist {
   name: string;
 }
 
-export interface FinanceAccount {
-  id: number;
-  name: string;
-  // add other fields if needed by UI
-}
 export interface SpecialistFormData {
   name: string;
 }
@@ -49,10 +44,6 @@ export interface Doctor {
   start: number;
   image?: string | null; // path to image
   image_url?: string | null; // full URL for display
-  finance_account_id?: number | null;
-  finance_account_name?: string;
-  finanace_account_id_insurance: number;
-  insurance_finance_account_name?: string;
   calc_insurance: boolean;
   is_default?: boolean;
   user_id?: number | null;

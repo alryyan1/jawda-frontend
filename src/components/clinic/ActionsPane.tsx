@@ -33,7 +33,6 @@ import DoctorCredits from "./DoctorCredits";
 import { useAuth } from "@/contexts/AuthContext";
 import ShiftSummaryDialog from "./ShiftSummaryDialog";
 import OnlineAppointmentsDialog from "./OnlineAppointmentsDialog";
-import BankakGallery from "../gallery/BankakGallery";
 import type { DoctorShift, OnlineAppointment } from "@/types/doctors";
 import type { ActivePatientVisit } from "@/types/patients";
 import { webUrl } from "@/pages/constants";
@@ -75,7 +74,6 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
   const [showShiftSummaryDialog, setShowShiftSummaryDialog] = useState(false);
   const [isDoctorCreditsOpen, setIsDoctorCreditsOpen] = useState(false);
   const [isOnlineAppointmentsOpen, setIsOnlineAppointmentsOpen] = useState(false);
-  const [isBankakGalleryOpen, setIsBankakGalleryOpen] = useState(false);
   console.log(activeDoctorShift, 'activeDoctorShift')
   useEffect(() => {
     if (activeDoctorShift && activeDoctorShift.firebase_id) {

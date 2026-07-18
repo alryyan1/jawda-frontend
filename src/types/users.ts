@@ -67,7 +67,6 @@ export interface User {
   user_money_collector_type?: "lab" | "company" | "clinic" | "all";
   user_type?: string | null; // Arabic enum from backend; nullable when clearing
   nav_items?: string[] | null; // Array of route paths for navigation items
-  admission_tabs?: string[] | null; // Array of tab IDs for admission details
   roles?: Role[];
   created_at?: string;
   updated_at?: string;
@@ -85,7 +84,6 @@ export interface UserFormData {
   user_money_collector_type?: "lab" | "company" | "clinic" | "all";
   user_type?: string | null;
   nav_items?: string[] | null;
-  admission_tabs?: string[] | null;
   roles: string[];
 }
 

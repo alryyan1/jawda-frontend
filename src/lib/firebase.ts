@@ -84,9 +84,6 @@ const hasFirebaseConfig = (): boolean => {
   return !!(firebaseConfig.apiKey && firebaseConfig.appId);
 };
 
-// Note: Admissions Firestore (pharmacies/one_care/admissions) lives in sales-9e9b8.
-// Set VITE_FIREBASE_* in .env for sales-9e9b8 to get real-time admission updates.
-
 // Initialize Firebase only if enabled and config present
 let app: FirebaseApp | null = null;
 let storage: FirebaseStorage | null = null;

@@ -43,18 +43,14 @@ type QuickAddFormState = {
 interface UseQuickAddPatientOptions {
   onClose?: () => void;
   onPatientAdded: (patient: PatientSearchResult) => void;
-  /** When true, sets from_addmission_page on the created patient. */
-  fromAdmissionPage?: boolean;
 }
 
 /**
  * Shared hook encapsulating the quick-add patient state and mutation logic.
- * Used by both the dialog and inline admission page form.
  */
 export function useQuickAddPatient({
   onClose,
   onPatientAdded,
-  fromAdmissionPage = false,
 }: UseQuickAddPatientOptions) {
   const theme = useTheme();
   const queryClient = useQueryClient();
@@ -100,7 +96,6 @@ export function useQuickAddPatient({
             | "widowed"
             | "divorced"
             | null) || null,
-        from_addmission_page: fromAdmissionPage,
       };
 
       return registerNewPatient(patientData);
@@ -223,8 +218,7 @@ interface QuickAddPatientFormFieldsProps {
 }
 
 /**
- * Shared form fields for quick patient creation.
- * This is used both in the dialog and the inline admissions page column.
+ * Shared form fields for quick patient creation/editing.
  */
 export function QuickAddPatientFormFields({
   theme,
@@ -300,7 +294,7 @@ export function QuickAddPatientFormFields({
                 }}
                 required
                 disabled={quickAddPatientMutation.isPending}
-             
+
               />
             </Box>
           </Box>
@@ -641,7 +635,6 @@ export default function QuickAddPatientDialog({
       });
       onClose();
       queryClient.invalidateQueries({ queryKey: ["patientSearch"] });
-      queryClient.invalidateQueries({ queryKey: ["clinicActivePatientsForAdmission"] });
     },
     onError: (error: any) => {
       const message =
@@ -800,7 +793,7 @@ export default function QuickAddPatientDialog({
   if (embedded) {
     return (
       <Box sx={{ maxWidth: 600 }}>
-      
+
         {formContent}
       </Box>
     );

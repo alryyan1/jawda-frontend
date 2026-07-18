@@ -6,14 +6,10 @@ import { Box, Typography, CircularProgress, Button, Tabs, Tab } from "@mui/mater
 import { ArrowLeft } from "lucide-react";
 
 import { getDoctorVisitById } from "@/services/visitService";
-import { getPatientActiveAdmission, getAdmissionById } from "@/services/admissionService";
 import type { DoctorVisit } from "@/types/visits";
 import type { Patient } from "@/types/patients";
 import LabRequestsColumn from "@/components/lab/reception/LabRequestsColumn";
 import SelectedPatientWorkspace from "@/components/clinic/SelectedPatientWorkspace";
-import QuickAddPatientDialog from "@/components/admissions/QuickAddPatientDialog";
-import AdmissionOverviewTab from "@/components/admissions/tabs/AdmissionOverviewTab";
-import type { Admission } from "@/types/admissions";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -45,22 +41,6 @@ const VisitDetailsPage: React.FC = () => {
     queryFn: () => getDoctorVisitById(id),
     enabled: !isNaN(id),
   });
-
-  const patientId = visit?.patient?.id ?? null;
-
-  const { data: activeAdmission, isLoading: isLoadingAdmission } = useQuery<Admission | null>({
-    queryKey: ["patientActiveAdmission", patientId],
-    queryFn: () => getPatientActiveAdmission(patientId!),
-    enabled: !!patientId,
-  });
-
-  const { data: fullAdmission } = useQuery<Admission>({
-    queryKey: ["admission", activeAdmission?.id],
-    queryFn: () => getAdmissionById(activeAdmission!.id).then((r) => r.data),
-    enabled: !!activeAdmission?.id,
-  });
-
-  const hasAdmission = !!activeAdmission;
 
   if (isNaN(id)) {
     return (
@@ -108,9 +88,6 @@ const VisitDetailsPage: React.FC = () => {
         <Tabs value={currentTab} onChange={handleTabChange} aria-label="visit tabs">
           <Tab label="المختبر" id="visit-tab-0" aria-controls="visit-tabpanel-0" />
           <Tab label="الخدمات" id="visit-tab-1" aria-controls="visit-tabpanel-1" />
-          {hasAdmission && (
-            <Tab label="التنويم" id="visit-tab-2" aria-controls="visit-tabpanel-2" />
-          )}
         </Tabs>
       </Box>
 
@@ -132,20 +109,6 @@ const VisitDetailsPage: React.FC = () => {
             visitId={visit.id}
           />
         </TabPanel>
-
-        {hasAdmission && (
-          <TabPanel value={currentTab} index={2}>
-            {isLoadingAdmission ? (
-              <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-                <CircularProgress />
-              </Box>
-            ) : fullAdmission ? (
-              <AdmissionOverviewTab admission={fullAdmission} />
-            ) : (
-              <Typography color="text.secondary">جاري تحميل بيانات التنويم...</Typography>
-            )}
-          </TabPanel>
-        )}
       </Box>
     </Box>
   );

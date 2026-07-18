@@ -58,7 +58,6 @@ type UserFormValues = {
   is_active: boolean;
   user_type?: string;
   roles: string[];
-  admission_tabs: string[];
 };
 
 const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
@@ -83,7 +82,6 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
       is_active: true,
       user_type: "",
       roles: [],
-      admission_tabs: ["overview", "operations"],
     },
   });
   const {
@@ -137,7 +135,6 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
           (userData as unknown as { user_type?: string | null })?.user_type ??
           "",
         roles: userData.roles?.map((role) => role.name) || [],
-        admission_tabs: userData.admission_tabs || ["overview", "operations"],
       });
     } else if (!isEditMode) {
       reset({
@@ -150,7 +147,6 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
         is_active: true,
         user_type: "",
         roles: [],
-        admission_tabs: ["overview", "operations"],
       });
     }
   }, [isEditMode, userData, reset]);
@@ -209,7 +205,6 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
       user_type: formData.user_type ? formData.user_type : null,
       roles: formData.roles || [],
       user_money_collector_type: "all",
-      admission_tabs: formData.admission_tabs || [],
     };
 
     // Only include password if it's provided (for create or if edit form allows password change)
@@ -560,77 +555,6 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
                     ))}
                   </Paper>
                 )}
-              </Box>
-
-              <Box sx={{display:'none'}}>
-                <Typography variant="h6" sx={{ mb: 1 }}>
-                  تبويبات التنويم
-                </Typography>
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{ mb: 2 }}
-                >
-                  اختر التبويبات التي تظهر للمستخدم في صفحة تفاصيل التنويم
-                </Typography>
-                <Paper
-                  elevation={1}
-                  sx={{
-                    p: 2,
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                    gap: 1,
-                  }}
-                >
-                  {[
-                    { id: "overview", label: "نظرة عامة (Overview)" },
-                    {
-                      id: "operations",
-                      label: "العمليات الجراحية (Surgical Operations)",
-                    },
-                    { id: "lab", label: "المعمل (Laboratory)" },
-                    { id: "radiology", label: "الأشعة (Radiology)" },
-                    {
-                      id: "vital-signs",
-                      label: "العلامات الحيوية (Vital Signs)",
-                    },
-                    { id: "treatments", label: "العلاجات (Treatments)" },
-                    {
-                      id: "nursing-assignment",
-                      label: "التمريض (Nursing Assignment)",
-                    },
-                    { id: "stay-days", label: "أيام الإقامة (Stay Days)" },
-                    { id: "finance", label: "الحسابات (Finance)" },
-                    { id: "companion", label: "المرافقين (Companion)" },
-                    { id: "discharge", label: "الخروج (Discharge)" },
-                    { id: "attachments", label: "المرفقات (Attachments)" },
-                  ].map((tab) => (
-                    <Controller
-                      key={tab.id}
-                      control={control}
-                      name="admission_tabs"
-                      render={({ field: tabsField }) => (
-                        <FormControlLabel
-                          control={
-                            <Checkbox
-                              checked={tabsField.value?.includes(tab.id)}
-                              disabled={dataIsLoading || mutation.isPending}
-                              onChange={(e) => {
-                                const currentTabs = tabsField.value || [];
-                                const newTabs = e.target.checked
-                                  ? [...currentTabs, tab.id]
-                                  : currentTabs.filter((id) => id !== tab.id);
-                                tabsField.onChange(newTabs);
-                              }}
-                            />
-                          }
-                          label={tab.label}
-                          sx={{ margin: 0 }}
-                        />
-                      )}
-                    />
-                  ))}
-                </Paper>
               </Box>
 
               <Box

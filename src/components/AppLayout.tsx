@@ -58,7 +58,6 @@ import {
   EyeOff,
   RefreshCw,
   Star,
-  BedDouble,
   MessageSquare,
 } from "lucide-react";
 import { Toaster } from "sonner";
@@ -147,13 +146,7 @@ export const allMainNavItems: NavItem[] = [
   { to: "/lab-workstation", label: "نتائج المختبر", icon: FlaskConical },
   // { to: '/laboratory/offers', label: 'عروض التحاليل', icon: Package },
   { to: "/patients", label: "المرضى", icon: Users },
-  // { to: "/admissions", label: "التنويم", icon: Hospital },
   { to: "/finance/employee-expenses", label: "مصروفات الموظفين", icon: HandCoins },
-  {
-    to: "/admissions/patient-registration",
-    label: "التنويم  ",
-    icon: BedDouble,
-  },
   { to: "/online-booking", label: "الحجز ", icon: CalendarCheck2 },
   { to: "/cash-reconciliation", label: "الفئات الماليه", icon: CreditCard },
  
@@ -179,8 +172,6 @@ export const DEFAULT_NAV_ITEMS_BY_TYPE: Record<string, string[]> = {
     "/clinic",
     "/cash-reconciliation",
     "/patients",
-    "/admissions",
-    "/admissions/patient-registration",
     "/online-booking",
   ],
   "خزنه موحده": ["/dashboard", "/clinic", "/cash-reconciliation", "/patients"],

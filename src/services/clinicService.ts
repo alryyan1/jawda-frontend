@@ -22,10 +22,3 @@ export const getActiveClinicPatients = async (filters: ActivePatientFilters): Pr
   const response = await apiClient.get<{ data: ActivePatientVisit[] }>('/clinic-active-patients', { params: filters });
   return response.data.data; // Return the array from the data property
 };
-
-export const getAdmissionPatientsByDate = async (date: string): Promise<ActivePatientVisit[]> => {
-  const response = await apiClient.get<{ data: ActivePatientVisit[] }>('/admission-patients-by-date', {
-    params: { date },
-  });
-  return response.data.data;
-};

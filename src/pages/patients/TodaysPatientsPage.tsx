@@ -45,7 +45,7 @@ import {
 } from "@/services/visitService";
 import type { PatientVisitSummary } from "@/types/visits";
 import RequestedServicesTable from "@/components/clinic/RequestedServicesTable";
-import QuickAddPatientDialog from "@/components/admissions/QuickAddPatientDialog";
+import QuickAddPatientDialog from "@/components/patients/QuickAddPatientDialog";
 import LabRequestsColumn from "@/components/lab/reception/LabRequestsColumn";
 import type { Company } from "@/types/companies";
 import { useDebounce } from "@/hooks/useDebounce";

@@ -39,7 +39,6 @@ export interface PatientFormData {
   email?: string | null;
   nationality?: string | null;
   dob?: Date | null;
-  from_addmission_page?: boolean;
 }
 // src/types/patients.ts
 // ... (Patient, PatientFormData) ...
@@ -92,7 +91,7 @@ export interface PaginatedPatientsResponse {
 /**
  * Lean visit shape returned by GET /clinic-active-patients (DoctorVisitListItemResource).
  * Only fields actually consumed by the list/card UI are required.
- * Fields from the full DoctorVisitResource (admission page, report page) are optional.
+ * Fields from the full DoctorVisitResource are optional.
  */
 export interface ActivePatientVisit {
   // --- Core fields (always present from lean resource) ---
@@ -128,15 +127,6 @@ export interface ActivePatientVisit {
     full_age: string;
     company_id: number | null;
     company: { id: number; name: string; status: boolean } | null;
-    /** Loaded only by the admission-patients-by-date endpoint (full resource). */
-    admission?: {
-      id: number;
-      bed_id: number | null;
-      ward?: { id: number; name: string };
-      room?: { id: number; room_number: string };
-      bed?: { id: number; bed_number: string; room?: { room_number: string } };
-      requested_surgeries_summary?: { total_initial: number; paid: number; balance: number };
-    } | null;
   };
 
   // --- Fields present only in the full DoctorVisitResource ---
@@ -268,9 +258,6 @@ export interface Patient {
   // ... other existing patient fields ...
   created_at: string;
   updated_at: string;
-
-  /** Active admission (when loaded via PatientResource, e.g. doctor-visits index) */
-  admission?: { id: number; bed_id?: number | null; [key: string]: unknown } | null;
 }
 
 // Form data for the new EditPatientInfoDialog

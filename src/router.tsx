@@ -88,28 +88,7 @@ import AppointmentsPlaceholderPage from "./pages/AppointmentsPlaceholderPage";
 import HL7ParserPage from "./pages/HL7ParserPage";
 import OnlineBookingPage from "./pages/onlineBooking/OnlineBookingPage";
 import DeletedServiceDepositsPage from "./pages/DeletedServiceDepositsPage";
-import AdmissionsListPage from "./pages/admissions/AdmissionsListPage";
 import EmployeeExpensesPage from "./pages/finance/EmployeeExpensesPage";
-import AdmissionFormPage from "./pages/admissions/AdmissionFormPage";
-import AdmissionDetailsPage from "./pages/admissions/AdmissionDetailsPage";
-import AdmissionsDashboardPage from "./pages/admissions/AdmissionsDashboardPage";
-import RoomsVisualPage from "./pages/admissions/RoomsVisualPage";
-import WardsListPage from "./pages/settings/wards/WardsListPage";
-import WardFormPage, {
-  WardFormMode,
-} from "./pages/settings/wards/WardFormPage";
-import AdmissionSettingsPage from "./pages/settings/AdmissionSettingsPage";
-import RoomsListPage from "./pages/settings/rooms/RoomsListPage";
-import RoomFormPage, {
-  RoomFormMode,
-} from "./pages/settings/rooms/RoomFormPage";
-import BedsListPage from "./pages/settings/beds/BedsListPage";
-import BedFormPage, { BedFormMode } from "./pages/settings/beds/BedFormPage";
-import ShortStayBedsListPage from "./pages/settings/short-stay-beds/ShortStayBedsListPage";
-import SurgicalOperationsPage from "./pages/settings/SurgicalOperationsPage";
-import SurgeryStatisticsPage from "./pages/admissions/SurgeryStatisticsPage";
-import SurgeryMonthlyReportPage from "./pages/admissions/SurgeryMonthlyReportPage";
-import AdmissionPatientRegistrationPage from "./pages/admissions/AdmissionPatientRegistrationPage";
 
 const router = createBrowserRouter([
   // --- PUBLIC ROUTES ---
@@ -188,47 +167,6 @@ const router = createBrowserRouter([
             path: "online-booking",
             element: <OnlineBookingPage />,
           },
-          // Admissions Management
-          {
-            path: "admissions",
-            element: <Outlet />,
-            children: [
-              { index: true, element: <AdmissionsListPage /> },
-              {
-                path: "dashboard",
-                element: <AdmissionsDashboardPage />,
-              },
-              {
-                path: "list",
-                element: <AdmissionsListPage />,
-              },
-              {
-                path: "patient-registration",
-                element: <AdmissionPatientRegistrationPage />,
-              },
-              {
-                path: "new",
-                element: <AdmissionFormPage />,
-              },
-              {
-                path: "visual",
-                element: <RoomsVisualPage />,
-              },
-              {
-                path: "statistics",
-                element: <SurgeryStatisticsPage />,
-              },
-              {
-                path: "daily-report",
-                element: <SurgeryMonthlyReportPage />,
-              },
-              {
-                path: ":id",
-                element: <AdmissionDetailsPage />,
-              },
-            ],
-          },
-
           {
             path: "dashboard", // Explicit dashboard route if needed, often same as index
             element: <HomePage />,
@@ -448,85 +386,6 @@ const router = createBrowserRouter([
               {
                 path: "service-groups",
                 element: <ServiceGroupsPage />,
-              },
-              {
-                path: "admission-settings",
-                element: <AdmissionSettingsPage />,
-              },
-              // Wards Management
-              {
-                path: "wards",
-                element: <Outlet />,
-                children: [
-                  { index: true, element: <WardsListPage /> },
-                  {
-                    path: "new",
-                    element: (
-                      <WardFormPage
-                        mode={WardFormMode.CREATE}
-                        key="wardCreate"
-                      />
-                    ),
-                  },
-                  {
-                    path: ":wardId/edit",
-                    element: (
-                      <WardFormPage mode={WardFormMode.EDIT} key="wardEdit" />
-                    ),
-                  },
-                ],
-              },
-              // Rooms Management
-              {
-                path: "rooms",
-                element: <Outlet />,
-                children: [
-                  { index: true, element: <RoomsListPage /> },
-                  {
-                    path: "new",
-                    element: (
-                      <RoomFormPage
-                        mode={RoomFormMode.CREATE}
-                        key="roomCreate"
-                      />
-                    ),
-                  },
-                  {
-                    path: ":roomId/edit",
-                    element: (
-                      <RoomFormPage mode={RoomFormMode.EDIT} key="roomEdit" />
-                    ),
-                  },
-                ],
-              },
-              // Beds Management
-
-              {
-                path: "beds",
-                element: <Outlet />,
-                children: [
-                  { index: true, element: <BedsListPage /> },
-                  {
-                    path: "new",
-                    element: (
-                      <BedFormPage mode={BedFormMode.CREATE} key="bedCreate" />
-                    ),
-                  },
-                  {
-                    path: ":bedId/edit",
-                    element: (
-                      <BedFormPage mode={BedFormMode.EDIT} key="bedEdit" />
-                    ),
-                  },
-                ],
-              },
-              {
-                path: "short-stay-beds",
-                element: <ShortStayBedsListPage />,
-              },
-              {
-                path: "operations",
-                element: <SurgicalOperationsPage />,
               },
               {
                 path: "insurance-audit/visit/:visitId", // Or use auditRecordId if that's the primary identifier

@@ -17,7 +17,6 @@ import {
 export interface ShiftUploadResult {
   success: boolean;
   discountUrl?: string;
-  refundUrl?: string;
   reconciliationUrl?: string;
   error?: string;
 }
@@ -28,7 +27,7 @@ export interface ShiftUploadResult {
 const uploadReportToStorage = async (
   shiftId: number,
   blob: Blob,
-  reportType: "discount" | "refund" | "reconciliation",
+  reportType: "discount" | "reconciliation",
   useSecondary = false
 ): Promise<string> => {
   const currentStorage = useSecondary ? secondaryStorage : storage;
@@ -43,7 +42,7 @@ const uploadReportToStorage = async (
 };
 
 /**
- * Orchestrate the upload of both discount and refund reports for a given shift
+ * Orchestrate the upload of both discount and reconciliation reports for a given shift
  */
 export const uploadShiftReportsToFirebase = async (
   shiftId: number,
@@ -61,25 +60,17 @@ export const uploadShiftReportsToFirebase = async (
     const discountPdfResp = await fetch(
       `${webUrl}reports/shift-patients-discount/pdf?shift_id=${shiftId}`,
     );
-    const refundPdfResp = await fetch(
-      `${webUrl}reports/shift-refunds/pdf?shift_id=${shiftId}`,
-    );
     const reconciliationPdfResp = await fetch(
       `${webUrl}reports/cash-reconciliation/pdf?shift_id=${shiftId}&user_id=${userId}`,
     );
 
-    if (
-      !discountPdfResp.ok ||
-      !refundPdfResp.ok ||
-      !reconciliationPdfResp.ok
-    ) {
+    if (!discountPdfResp.ok || !reconciliationPdfResp.ok) {
       throw new Error(
         "Failed to fetch one or more shift reports from the server.",
       );
     }
 
     const discountBlob = await discountPdfResp.blob();
-    const refundBlob = await refundPdfResp.blob();
     const reconciliationBlob = await reconciliationPdfResp.blob();
 
     // 2. Upload to Primary Storage
@@ -88,7 +79,6 @@ export const uploadShiftReportsToFirebase = async (
       discountBlob,
       "discount",
     );
-    const refundUrl = await uploadReportToStorage(shiftId, refundBlob, "refund");
     const reconciliationUrl = await uploadReportToStorage(
       shiftId,
       reconciliationBlob,
@@ -100,22 +90,20 @@ export const uploadShiftReportsToFirebase = async (
     const docData = {
       shift_id: shiftId,
       discount_report_url: discountUrl,
-      refund_report_url: refundUrl,
       reconciliation_report_url: reconciliationUrl,
       uploaded_at: serverTimestamp(),
       status: "closed",
     };
-    
+
     await setDoc(shiftDocRef, docData, { merge: true });
 
     // 4. Handle Secondary Project if enabled
     if (isBothTargetsEnabled && secondaryStorage && secondaryDb) {
       try {
         console.log('[Firebase] Syncing shift reports to secondary project...');
-        
+
         // Upload to Secondary Storage
         const discountUrlSec = await uploadReportToStorage(shiftId, discountBlob, "discount", true);
-        const refundUrlSec = await uploadReportToStorage(shiftId, refundBlob, "refund", true);
         const reconciliationUrlSec = await uploadReportToStorage(shiftId, reconciliationBlob, "reconciliation", true);
 
         // Save to Secondary Firestore
@@ -123,7 +111,6 @@ export const uploadShiftReportsToFirebase = async (
         await setDoc(shiftDocRefSec, {
           ...docData,
           discount_report_url: discountUrlSec,
-          refund_report_url: refundUrlSec,
           reconciliation_report_url: reconciliationUrlSec,
         }, { merge: true });
 
@@ -136,7 +123,6 @@ export const uploadShiftReportsToFirebase = async (
     return {
       success: true,
       discountUrl,
-      refundUrl,
       reconciliationUrl,
     };
   } catch (error) {

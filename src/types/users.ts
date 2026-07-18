@@ -31,19 +31,12 @@ export interface UserShiftIncomeSummary {
     total: number;
     bank: number;
     cash: number;
-    cash_refund?: number;
-    bank_refund?: number;
   };
   service_income: {
     total: number;
     bank: number;
     cash: number;
-    cash_refund?: number;
-    bank_refund?: number;
   };
-  total_cash_refund?: number;
-  total_bank_refund?: number;
-  total_refund?: number;
   net_total?: number;
 }
 

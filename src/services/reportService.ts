@@ -96,8 +96,6 @@ export interface MonthlyShiftSummaryRow {
   revenue_bank: number;
   cost_cash: number;
   cost_bank: number;
-  refund_cash: number;
-  refund_bank: number;
   net_cash: number;
   net_bank: number;
   net_total: number;
@@ -110,8 +108,6 @@ export interface MonthlyShiftsSummaryResponse {
     revenue_bank: number;
     cost_cash: number;
     cost_bank: number;
-    refund_cash: number;
-    refund_bank: number;
     net_cash: number;
     net_bank: number;
     net_total: number;

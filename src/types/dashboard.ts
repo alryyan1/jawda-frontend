@@ -36,7 +36,6 @@ export interface FinancialSummary {
   net: number;
   net_cash?: number;
   net_bank?: number;
-  total_refunds?: number;
   total_discounts?: number;
   patients_count?: number;
 }

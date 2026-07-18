@@ -43,17 +43,14 @@ import {
   PrinterIcon,
   MessageSquare,
   XCircle,
-  RotateCcw,
 } from "lucide-react";
 
 // Services & Types
-import { 
+import {
   clearPendingLabRequestsForVisit,
   unpayLabRequest,
   recordDirectLabRequestPayment,
-  recordLabRequestRefund,
   updateAllLabRequestsBankak,
-  updateLabRequestRefund,
 } from "@/services/labRequestService";
 import { useAuth } from "@/contexts/AuthContext";
 import apiClient from "@/services/api";
@@ -61,7 +58,6 @@ import type { DoctorVisit } from "@/types/visits";
 import BatchLabPaymentDialog from "@/components/clinic/BatchLabPaymentDialog";
 import PdfPreviewDialog from "@/components/common/PdfPreviewDialog";
 import DiscountCommentDialog from "./DiscountCommentDialog";
-import RefundDialog from "@/components/common/RefundDialog";
 import { updatePatient } from "@/services/patientService";
 import {
   Dialog as ActionsDialog,
@@ -101,7 +97,6 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
   const [isSavingPatientDiscountComment, setIsSavingPatientDiscountComment] = useState(false);
   const [rowActionsDialogOpen, setRowActionsDialogOpen] = useState(false);
   const [selectedRequestForRowDialog, setSelectedRequestForRowDialog] = useState<NonNullable<DoctorVisit['lab_requests']>[number] | null>(null);
-  const [refundLabRequest, setRefundLabRequest] = useState<NonNullable<DoctorVisit['lab_requests']>[number] | null>(null);
 
   // Update discount mutation
   const updateDiscountMutation = useMutation({
@@ -247,50 +242,6 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
     onError: (error: Error) => {
       const apiError = error as { response?: { data?: { message?: string } } };
       toast.error(apiError.response?.data?.message || "فشل الدفع");
-    },
-  });
-
-  // Refund lab request mutation
-  const refundLabRequestMutation = useMutation({
-    mutationFn: (params: { labRequestId: number; amount: number; returned_payment_method: "cash" | "bank"; return_reason?: string }) =>
-      recordLabRequestRefund(params.labRequestId, { 
-        amount: params.amount, 
-        returned_payment_method: params.returned_payment_method,
-        return_reason: params.return_reason 
-      }),
-    onSuccess: () => {
-      toast.success("تم تسجيل الاسترداد بنجاح");
-      queryClient.invalidateQueries({ queryKey: ["activeVisitForLabRequests", activeVisitId] });
-      queryClient.invalidateQueries({ queryKey: ["doctorVisit", activeVisitId] });
-      queryClient.invalidateQueries({ queryKey: ["labRequestsForVisit", activeVisitId] });
-      setRefundLabRequest(null);
-    },
-    onError: (error: Error) => {
-      const apiError = error as { response?: { data?: { message?: string } } };
-      toast.error(apiError.response?.data?.message || "فشل تسجيل الاسترداد");
-    },
-  });
-
-  const updateLabRequestRefundMutation = useMutation({
-    mutationFn: (params: { refundId: number; paymentMethod: "cash" | "bank" }) =>
-      updateLabRequestRefund(params.refundId, { returned_payment_method: params.paymentMethod }),
-    onSuccess: (data) => {
-      toast.success("تم تحديث الاسترداد بنجاح");
-      if (refundLabRequest && data.data) {
-        setRefundLabRequest({
-          ...refundLabRequest,
-          returned_refunds: refundLabRequest.returned_refunds?.map((r) =>
-            r.id === data.data.id ? { ...r, returned_payment_method: data.data.returned_payment_method } : r
-          ),
-        });
-      }
-      queryClient.invalidateQueries({ queryKey: ["activeVisitForLabRequests", activeVisitId] });
-      queryClient.invalidateQueries({ queryKey: ["doctorVisit", activeVisitId] });
-      queryClient.invalidateQueries({ queryKey: ["labRequestsForVisit", activeVisitId] });
-    },
-    onError: (error: Error) => {
-      const apiError = error as { response?: { data?: { message?: string } } };
-      toast.error(apiError.response?.data?.message || "فشل تحديث الاسترداد");
     },
   });
 
@@ -796,34 +747,20 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                               )}
                             </Button>
                           ) : (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50"
-                                onClick={() => handleUnpayLabRequest(request.id)}
-                                disabled={unpayLabRequestMutation.isPending || visit?.patient?.result_print_date != null || !can('الغاء سداد فحص') || visit?.result_auth == true || (request.returned_refunds?.length ?? 0) > 0}
-                                title="إلغاء السداد"
-                              >
-                                {unpayLabRequestMutation.isPending ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <XCircle className="h-4 w-4" />
-                                )}
-                              </Button>
-                              {Number(request.amount_paid) > 0 && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0 text-orange-600 hover:text-orange-800 hover:bg-orange-50"
-                                  onClick={() => setRefundLabRequest(request)}
-                                  title="استرداد"
-                                  disabled={(request.returned_refunds?.length ?? 0) > 0}
-                                >
-                                  <RotateCcw className="h-4 w-4" />
-                                </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50"
+                              onClick={() => handleUnpayLabRequest(request.id)}
+                              disabled={unpayLabRequestMutation.isPending || visit?.patient?.result_print_date != null || !can('الغاء سداد فحص') || visit?.result_auth == true}
+                              title="إلغاء السداد"
+                            >
+                              {unpayLabRequestMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <XCircle className="h-4 w-4" />
                               )}
-                            </>
+                            </Button>
                           )}
 
                           {/* Bankak Toggle Checkbox */}
@@ -920,37 +857,6 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
       )}
 
       {/* Row Actions Dialog for small screens */}
-      {refundLabRequest && (
-        <RefundDialog
-          open={!!refundLabRequest}
-          onClose={() => setRefundLabRequest(null)}
-          title={`استرداد - ${refundLabRequest.main_test?.main_test_name || "فحص"}`}
-          itemLabel={refundLabRequest.main_test?.main_test_name || "فحص"}
-          maxRefundable={
-            Number(refundLabRequest.amount_paid) -
-            (refundLabRequest.returned_refunds?.reduce((s, r) => s + Number(r.amount), 0) ?? 0)
-          }
-          refunds={refundLabRequest.returned_refunds ?? []}
-            onRefund={async (amount, method, reason) => {
-              await refundLabRequestMutation.mutateAsync({
-                labRequestId: refundLabRequest.id,
-                amount,
-                returned_payment_method: method,
-                return_reason: reason,
-              });
-            }}
-            onUpdateRefund={async (refundId, method) => {
-              await updateLabRequestRefundMutation.mutateAsync({
-                refundId,
-                paymentMethod: method,
-              });
-            }}
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ["labRequestsForVisit", activeVisitId] });
-            queryClient.invalidateQueries({ queryKey: ["doctorVisit", activeVisitId] });
-          }}
-        />
-      )}
       {selectedRequestForRowDialog && (
         <ActionsDialog  open={rowActionsDialogOpen} onOpenChange={setRowActionsDialogOpen}>
           <ActionsDialogContent>
@@ -1015,20 +921,6 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                   className="w-full text-yellow-700"
                 >
                   <AlertCircle className="h-4 w-4 mr-2" /> إلغاء الدفع
-                </Button>
-              )}
-
-              {/* Refund Option */}
-              {selectedRequestForRowDialog.is_paid && Number(selectedRequestForRowDialog.amount_paid) > 0 && (
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setRefundLabRequest(selectedRequestForRowDialog);
-                    setRowActionsDialogOpen(false);
-                  }}
-                  className="w-full text-orange-700"
-                >
-                  <RotateCcw className="h-4 w-4 mr-2" /> استرداد
                 </Button>
               )}
 

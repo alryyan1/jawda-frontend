@@ -78,11 +78,6 @@ export const recordDirectLabRequestPayment = async (labRequestId: number, payloa
   return response.data.data;
 };
 
-export const updateLabRequestRefund = async (refundId: number, payload: { returned_payment_method: "cash" | "bank" }) => {
-  const response = await apiClient.put(`/returned-lab-requests/${refundId}`, payload);
-  return response.data;
-};
-
 export const clearPendingLabRequestsForVisit = async (visitId: number): Promise<{ message: string; deleted_count: number }> => {
   const response = await apiClient.delete<{ message: string; deleted_count: number }>(`${VISIT_BASE_URL}/${visitId}/lab-requests/clear-pending`);
   return response.data;
@@ -104,24 +99,6 @@ export const cancelLabRequest = async (labRequestId: number): Promise<void> => {
 
 export const unpayLabRequest = async (labRequestId: number): Promise<void> => {
   await apiClient.post(`${LABREQUEST_BASE_URL}/${labRequestId}/unpay`);
-};
-
-export interface RecordLabRefundPayload {
-  amount: number;
-  returned_payment_method: 'cash' | 'bank';
-  return_reason?: string;
-}
-
-export const recordLabRequestRefund = async (
-  labRequestId: number,
-  payload: RecordLabRefundPayload
-): Promise<{ data: { id: number; amount: number; returned_payment_method: string; user_id: number; user?: { id: number; name: string }; created_at: string } }> => {
-  const response = await apiClient.post(
-    `${LABREQUEST_BASE_URL}/${labRequestId}/refunds`,
-    payload,
-    { headers: { "X-Suppress-Error-Toast": "1" } },
-  );
-  return response.data;
 };
 
 export const updateAllLabRequestsBankak = async (visitId: number, isBankak: boolean): Promise<DoctorVisit> => {

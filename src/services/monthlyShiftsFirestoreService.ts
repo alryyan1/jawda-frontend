@@ -19,9 +19,7 @@ export type EditableField =
   | "revenue_cash"
   | "revenue_bank"
   | "cost_cash"
-  | "cost_bank"
-  | "refund_cash"
-  | "refund_bank";
+  | "cost_bank";
 
 export interface CellEdit {
   original: number;

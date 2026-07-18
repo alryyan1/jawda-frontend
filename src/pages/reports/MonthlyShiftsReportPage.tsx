@@ -54,8 +54,6 @@ const EDITABLE_FIELDS: { key: EditableField; label: string }[] = [
   { key: "revenue_bank", label: "إيراد بنك" },
   { key: "cost_cash", label: "مصروف كاش" },
   { key: "cost_bank", label: "مصروف بنك" },
-  { key: "refund_cash", label: "استرداد كاش" },
-  { key: "refund_bank", label: "استرداد بنك" },
 ];
 
 const currentYear = new Date().getFullYear();
@@ -90,9 +88,7 @@ function computeRowNet(
   const revBank = getCellValue(row, edits, "revenue_bank").display;
   const costCash = getCellValue(row, edits, "cost_cash").display;
   const costBank = getCellValue(row, edits, "cost_bank").display;
-  const refCash = getCellValue(row, edits, "refund_cash").display;
-  const refBank = getCellValue(row, edits, "refund_bank").display;
-  return revCash + revBank - costCash - costBank - refCash - refBank;
+  return revCash + revBank - costCash - costBank;
 }
 
 function computeSummary(
@@ -109,19 +105,15 @@ function computeSummary(
   const revBank = sum("revenue_bank");
   const costCash = sum("cost_cash");
   const costBank = sum("cost_bank");
-  const refCash = sum("refund_cash");
-  const refBank = sum("refund_bank");
 
   return {
     revenue_cash: revCash,
     revenue_bank: revBank,
     cost_cash: costCash,
     cost_bank: costBank,
-    refund_cash: refCash,
-    refund_bank: refBank,
-    net_total: revCash + revBank - costCash - costBank - refCash - refBank,
-    net_cash: revCash - costCash - refCash,
-    net_bank: revBank - costBank - refBank,
+    net_total: revCash + revBank - costCash - costBank,
+    net_cash: revCash - costCash,
+    net_bank: revBank - costBank,
   };
 }
 
@@ -375,8 +367,6 @@ const MonthlyShiftsReportPage: React.FC = () => {
                       <MUITableCell sx={{ color: "white", fontWeight: "bold", textAlign: "center", py: 0.5, fontSize: "0.8125rem" }}>إيراد بنك</MUITableCell>
                       <MUITableCell sx={{ color: "white", fontWeight: "bold", textAlign: "center", py: 0.5, fontSize: "0.8125rem" }}>مصروف كاش</MUITableCell>
                       <MUITableCell sx={{ color: "white", fontWeight: "bold", textAlign: "center", py: 0.5, fontSize: "0.8125rem" }}>مصروف بنك</MUITableCell>
-                      <MUITableCell sx={{ color: "white", fontWeight: "bold", textAlign: "center", py: 0.5, fontSize: "0.8125rem" }}>استرداد كاش</MUITableCell>
-                      <MUITableCell sx={{ color: "white", fontWeight: "bold", textAlign: "center", py: 0.5, fontSize: "0.8125rem" }}>استرداد بنك</MUITableCell>
                       <MUITableCell sx={{ color: "white", fontWeight: "bold", textAlign: "center", py: 0.5, fontSize: "0.8125rem" }}>الصافي</MUITableCell>
                     </MUITableRow>
                   </MUITableHead>
@@ -409,8 +399,6 @@ const MonthlyShiftsReportPage: React.FC = () => {
                         <EditableCell row={row} field="revenue_bank" edits={edits} color="info.main" onEdit={handleEdit} />
                         <EditableCell row={row} field="cost_cash" edits={edits} color="error.main" onEdit={handleEdit} />
                         <EditableCell row={row} field="cost_bank" edits={edits} color="error.main" onEdit={handleEdit} />
-                        <EditableCell row={row} field="refund_cash" edits={edits} color="warning.main" onEdit={handleEdit} />
-                        <EditableCell row={row} field="refund_bank" edits={edits} color="warning.main" onEdit={handleEdit} />
                         <MUITableCell sx={{ textAlign: "center", fontWeight: "bold", color: "primary.main" }}>
                           {formatNumber(computeRowNet(row, edits))}
                         </MUITableCell>
@@ -435,12 +423,6 @@ const MonthlyShiftsReportPage: React.FC = () => {
                           </MUITableCell>
                           <MUITableCell sx={{ fontWeight: "bold", textAlign: "center", fontSize: "0.875rem", py: 0.5, color: "error.main" }}>
                             {formatNumber(computedSummary.cost_bank)}
-                          </MUITableCell>
-                          <MUITableCell sx={{ fontWeight: "bold", textAlign: "center", fontSize: "0.875rem", py: 0.5, color: "warning.main" }}>
-                            {formatNumber(computedSummary.refund_cash)}
-                          </MUITableCell>
-                          <MUITableCell sx={{ fontWeight: "bold", textAlign: "center", fontSize: "0.875rem", py: 0.5, color: "warning.main" }}>
-                            {formatNumber(computedSummary.refund_bank)}
                           </MUITableCell>
                           <MUITableCell sx={{ fontWeight: "bold", textAlign: "center", fontSize: "0.875rem", py: 0.5, color: "primary.main" }}>
                             {formatNumber(computedSummary.net_total)}

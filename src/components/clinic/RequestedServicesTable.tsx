@@ -38,7 +38,6 @@ import {
   PackageOpen,
   PrinterIcon,
   Zap,
-  RotateCcw,
 } from "lucide-react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -48,13 +47,10 @@ import {
   updateRequestedServiceDetails,
   removeRequestedServiceFromVisit,
   recordServicePayment,
-  recordRequestedServiceRefund,
-  updateRequestedServiceRefund,
   markRequestedServiceDone,
 } from "@/services/visitService";
 import ManageRequestedServiceCostsDialog from "./ManageRequestedServiceCostsDialog";
 import ManageServiceDepositsDialog from "./ManageServiceDepositsDialog";
-import RefundDialog from "../common/RefundDialog";
 import type { AxiosError } from "axios";
 import {
   getDepositsForRequestedService,
@@ -215,7 +211,6 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
     useState(false);
   const [selectedServiceForDeposits, setSelectedServiceForDeposits] =
     useState<RequestedService | null>(null);
-  const [refundService, setRefundService] = useState<RequestedService | null>(null);
 
   // PDF Preview state
   const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false);
@@ -534,47 +529,6 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
     setSelectedRequestedServiceForCosts(null);
   };
 
-  const refundMutation = useMutation({
-    mutationFn: (params: { requestedServiceId: number; amount: number; returned_payment_method: "cash" | "bank"; return_reason?: string }) =>
-      recordRequestedServiceRefund(params.requestedServiceId, { 
-        amount: params.amount, 
-        returned_payment_method: params.returned_payment_method,
-        return_reason: params.return_reason
-      }),
-    onSuccess: () => {
-      toast.success("تم تسجيل الاسترداد بنجاح");
-      queryClient.invalidateQueries({ queryKey: ["requestedServicesForVisit", visitId] });
-      queryClient.invalidateQueries({ queryKey: ["doctorVisit", visitId] });
-      setRefundService(null);
-    },
-    onError: (error: Error) => {
-      const apiError = error as { response?: { data?: { message?: string } } };
-      toast.error(apiError.response?.data?.message || "فشل تسجيل الاسترداد");
-    },
-  });
-
-  const updateRefundMutation = useMutation({
-    mutationFn: (params: { refundId: number; paymentMethod: "cash" | "bank" }) =>
-      updateRequestedServiceRefund(params.refundId, { returned_payment_method: params.paymentMethod }),
-    onSuccess: (data) => {
-      toast.success("تم تحديث الاسترداد بنجاح");
-      if (refundService && data.data) {
-        setRefundService({
-          ...refundService,
-          returned_refunds: refundService.returned_refunds?.map((r) =>
-            r.id === data.data.id ? { ...r, returned_payment_method: data.data.returned_payment_method } : r
-          ),
-        });
-      }
-      queryClient.invalidateQueries({ queryKey: ["requestedServicesForVisit", visitId] });
-      queryClient.invalidateQueries({ queryKey: ["doctorVisit", visitId] });
-    },
-    onError: (error: Error) => {
-      const apiError = error as { response?: { data?: { message?: string } } };
-      toast.error(apiError.response?.data?.message || "فشل تحديث الاسترداد");
-    },
-  });
-
   const calculateItemBalance = (
     rs: RequestedService,
     editData?: RowEditData,
@@ -708,7 +662,6 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                     {requestedServices.map((rs) => {
                       const price = Number(rs.price) || 0;
                       const hasPayment = Number(rs.amount_paid) > 0;
-                      const isReturned = (rs.returned_refunds?.length ?? 0) > 0;
                       return (
                         <React.Fragment key={rs.id}>
                           <TableRow
@@ -716,24 +669,18 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                             onClick={() => handleOpenRowOptions(rs)}
                             sx={{
                               cursor: "pointer",
-                              backgroundColor: isReturned
-                                ? "rgba(244, 67, 54, 0.08)"
-                                : hasPayment
-                                  ? "rgba(76, 175, 80, 0.1)"
-                                  : "transparent",
+                              backgroundColor: hasPayment
+                                ? "rgba(76, 175, 80, 0.1)"
+                                : "transparent",
                               "&:hover": {
-                                backgroundColor: isReturned
-                                  ? "rgba(244, 67, 54, 0.14)"
-                                  : hasPayment
-                                    ? "rgba(76, 175, 80, 0.15)"
-                                    : undefined,
+                                backgroundColor: hasPayment
+                                  ? "rgba(76, 175, 80, 0.15)"
+                                  : undefined,
                               },
                             }}
                           >
                             <TableCell className=" " align="center">
-                              <span
-                                style={isReturned ? { textDecoration: 'line-through', color: 'var(--mui-palette-error-main, #f44336)' } : undefined}
-                              >
+                              <span>
                                 {rs.service?.name || "خدمة غير معروفة"}
                               </span>
                             </TableCell>
@@ -1108,7 +1055,6 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                     handleManageServiceCosts(rowOptionsService);
                   }}
                   startIcon={<Settings2 className="h-4 w-4" />}
-                  disabled={(rowOptionsService.returned_refunds?.length || 0) > 0}
                 >
                   التكاليف
                 </Button>
@@ -1119,11 +1065,10 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                     handleManageDeposits(rowOptionsService);
                   }}
                   startIcon={<PackageOpen className="h-4 w-4" />}
-                  disabled={(rowOptionsService.returned_refunds?.length || 0) > 0}
                 >
                   المدفوعات
                 </Button>
-          
+
                 {rowOptionsService &&
                   calculateItemBalance(rowOptionsService) > 0.01 && (
                     <Button
@@ -1132,11 +1077,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                         setIsRowOptionsDialogOpen(false);
                         setPayingService(rowOptionsService);
                       }}
-                      disabled={
-                        (rowOptionsService.returned_refunds?.length || 0) > 0 ||
-                        !currentClinicShiftId ||
-                        !can("سداد خدمه")
-                      }
+                      disabled={!currentClinicShiftId || !can("سداد خدمه")}
                       startIcon={<DollarSign className="h-4 w-4" />}
                     >
                       دفع
@@ -1151,10 +1092,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                     setServiceToDeleteObj(rowOptionsService);
                   }}
                   startIcon={<Trash2 className="h-4 w-4" />}
-                  disabled={
-                    (rowOptionsService.returned_refunds?.length || 0) > 0 ||
-                    !can("حذف خدمه مضافه")
-                  }
+                  disabled={!can("حذف خدمه مضافه")}
                 >
                   حذف
                 </Button>
@@ -1179,36 +1117,6 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
               </Button>
             </DialogActions>
           </Dialog>
-        )}
-        {refundService && (
-          <RefundDialog
-            open={!!refundService}
-            onClose={() => setRefundService(null)}
-            title={`استرداد - ${refundService.service?.name || "خدمة"}`}
-            itemLabel={refundService.service?.name || "خدمة"}
-            maxRefundable={
-              Number(refundService.amount_paid) -
-              (refundService.returned_refunds?.reduce((s, r) => s + Number(r.amount), 0) ?? 0)
-            }
-            refunds={refundService.returned_refunds ?? []}
-            onRefund={async (amount, method, reason) => {
-              await refundMutation.mutateAsync({
-                requestedServiceId: refundService.id,
-                amount,
-                returned_payment_method: method,
-                return_reason: reason,
-              });
-            }}
-            onUpdateRefund={async (refundId, method) => {
-              await updateRefundMutation.mutateAsync({
-                refundId,
-                paymentMethod: method,
-              });
-            }}
-            onSuccess={() => {
-              queryClient.invalidateQueries({ queryKey: ["requestedServicesForVisit", visitId] });
-            }}
-          />
         )}
         {isPdfPreviewVisible && (
           <PdfPreviewDialog

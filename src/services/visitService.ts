@@ -86,29 +86,6 @@ export const removeRequestedServiceFromVisit = async (
   );
 };
 
-export interface RecordServiceRefundPayload {
-  amount: number;
-  returned_payment_method: 'cash' | 'bank';
-  return_reason?: string;
-}
-
-export const recordRequestedServiceRefund = async (
-  requestedServiceId: number,
-  payload: RecordServiceRefundPayload,
-): Promise<{ data: { id: number; amount: number; returned_payment_method: string; user_id: number; user?: { id: number; name: string }; created_at: string } }> => {
-  const response = await apiClient.post(
-    `/requested-services/${requestedServiceId}/refunds`,
-    payload,
-    { headers: { "X-Suppress-Error-Toast": "1" } },
-  );
-  return response.data;
-};
-
-export const updateRequestedServiceRefund = async (refundId: number, payload: { returned_payment_method: "cash" | "bank" }) => {
-  const response = await apiClient.put(`/returned-requested-services/${refundId}`, payload);
-  return response.data;
-};
-
 // --- NEW: Functions for DoctorVisit CRUD and status update ---
 
 /**

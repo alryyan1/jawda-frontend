@@ -814,15 +814,6 @@ const HomePage: React.FC = () => {
           unit="SDG"
         />
         <StatCard
-          title="إجمالي المستردات"
-          value={financialSummary?.total_refunds ?? 0}
-          icon={TrendingDown}
-          description="إجمالي المبالغ المستردة للمرضى"
-          isLoading={isLoadingFinancialSummary || isFetchingFinancialSummary}
-          variant="warning"
-          unit="SDG"
-        />
-        <StatCard
           title="إجمالي الخصومات"
           value={financialSummary?.total_discounts ?? 0}
           icon={TrendingDown}

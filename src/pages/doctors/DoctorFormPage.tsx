@@ -53,7 +53,6 @@ interface DoctorFormValues {
   name: string;
   phone: string;
   specialist_id?: string;
-  sub_specialist_id?: string;
   cash_percentage: string;
   company_percentage: string;
   static_wage: string;
@@ -166,7 +165,6 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
       name: "",
       phone: "0",
       specialist_id: undefined,
-      sub_specialist_id: undefined,
       cash_percentage: "0",
       company_percentage: "0",
       static_wage: "0",
@@ -248,10 +246,9 @@ const DoctorFormPage: React.FC<DoctorFormPageProps> = ({ mode }) => {
 
 
     // Ensure numeric fields are numbers, not strings, if backend expects numbers
-    const submissionData: DoctorFormData & { sub_specialist_id?: string } = {
+    const submissionData: DoctorFormData = {
       ...data,
       specialist_id: String(data.specialist_id!),
-      sub_specialist_id: data.sub_specialist_id ? String(data.sub_specialist_id) : undefined,
       cash_percentage: String(data.cash_percentage),
       company_percentage: String(data.company_percentage),
       static_wage: String(data.static_wage),

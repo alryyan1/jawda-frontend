@@ -13,7 +13,6 @@ import {
   BookOpen,
   Activity,
   Scan,
-  Pill,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ActivePatientVisit } from '@/types/patients';
@@ -25,8 +24,7 @@ export type SectionKey =
   | 'notes'
   | 'history'
   | 'vitals'
-  | 'systems'
-  | 'prescriptions';
+  | 'systems';
 
 interface ActionDef {
   key: SectionKey;
@@ -43,7 +41,6 @@ const ACTIONS: ActionDef[] = [
   { key: 'history',       label: 'السجل الطبي',       icon: BookOpen },
   { key: 'vitals',        label: 'العلامات الحيوية',  icon: Activity },
   { key: 'systems',       label: 'مراجعة الأجهزة',   icon: Scan },
-  { key: 'prescriptions', label: 'الوصفات الطبية',   icon: Pill, placeholder: true },
 ];
 
 interface MedicalActionGridProps {

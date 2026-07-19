@@ -34,7 +34,6 @@ import {
   Trash2,
   DollarSign,
   Save,
-  Settings2,
   PackageOpen,
   PrinterIcon,
   Zap,
@@ -49,7 +48,6 @@ import {
   recordServicePayment,
   markRequestedServiceDone,
 } from "@/services/visitService";
-import ManageRequestedServiceCostsDialog from "./ManageRequestedServiceCostsDialog";
 import ManageServiceDepositsDialog from "./ManageServiceDepositsDialog";
 import type { AxiosError } from "axios";
 import {
@@ -201,12 +199,6 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
     price: 0,
   });
   const { can, hasRole } = useAuthorization();
-  const [isManageServiceCostsDialogOpen, setIsManageServiceCostsDialogOpen] =
-    useState(false);
-  const [
-    selectedRequestedServiceForCosts,
-    setSelectedRequestedServiceForCosts,
-  ] = useState<RequestedService | null>(null);
   const [isManageDepositsDialogOpen, setIsManageDepositsDialogOpen] =
     useState(false);
   const [selectedServiceForDeposits, setSelectedServiceForDeposits] =
@@ -516,18 +508,6 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
   };
 
   // Inline edit removed
-
-  const handleManageServiceCosts = (requestedService: RequestedService) => {
-    if (!isManageServiceCostsDialogOpen) {
-      setSelectedRequestedServiceForCosts(requestedService);
-      setIsManageServiceCostsDialogOpen(true);
-    }
-  };
-
-  const handleCloseServiceCostsDialog = () => {
-    setIsManageServiceCostsDialogOpen(false);
-    setSelectedRequestedServiceForCosts(null);
-  };
 
   const calculateItemBalance = (
     rs: RequestedService,
@@ -879,20 +859,6 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
             onAllDepositsUpdated={handleDepositsUpdated}
           />
         )}
-        {selectedRequestedServiceForCosts && (
-          <ManageRequestedServiceCostsDialog
-            isOpen={isManageServiceCostsDialogOpen}
-            onOpenChange={handleCloseServiceCostsDialog}
-            requestedService={selectedRequestedServiceForCosts}
-            onCostsUpdated={() => {
-              queryClient.invalidateQueries({
-                queryKey: ["requestedServicesForVisit", visitId],
-                exact: true,
-              });
-              handleCloseServiceCostsDialog();
-            }}
-          />
-        )}
 
         {rowOptionsService && (
           <Dialog
@@ -1048,16 +1014,6 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                 gap={1.25}
                 mt={2}
               >
-                <Button
-                  variant="outlined"
-                  onClick={() => {
-                    setIsRowOptionsDialogOpen(false);
-                    handleManageServiceCosts(rowOptionsService);
-                  }}
-                  startIcon={<Settings2 className="h-4 w-4" />}
-                >
-                  التكاليف
-                </Button>
                 <Button
                   variant="outlined"
                   onClick={() => {

@@ -1,5 +1,5 @@
 // src/pages/services/ServicesListPage.tsx
-import React, { useState, useCallback, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import {
   useQuery,
@@ -41,24 +41,19 @@ import {
   Loader2,
   CheckCircle2,
   XCircle,
-  Settings2,
   Search,
   SlidersHorizontal,
-  History,
 } from "lucide-react"; // Added Search, FilterIcon
 import { toast } from "sonner";
 // Replaced Shadcn AlertDialog with MUI Dialog
 import type { Service } from "@/types/services";
-import ManageServiceCostsDialog from "./ManageServiceCostsDialog";
 import { useDebounce } from "@/hooks/useDebounce"; // IMPORT
 import {
   downloadServicesListExcel,
   downloadServicesListPdf,
-  downloadServicesWithCostsExcel,
 } from "@/services/reportService";
 import BatchUpdatePricesDialog from "./BatchUpdatePricesDialog";
 import AddServiceDialog from "./AddServiceDialog";
-import ServicePriceHistoryDialog from "./ServicePriceHistoryDialog";
 
 interface ApiError {
   message?: string;
@@ -85,23 +80,10 @@ export default function ServicesListPage() {
   });
   const debouncedSearchTerm = useDebounce(filters.search, 500);
   const [isExporting, setIsExporting] = useState(false); // State for export button loader
-  const [isExportingCosts, setIsExportingCosts] = useState(false); // NEW state for new button
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [serviceToDelete, setServiceToDelete] = useState<Service | null>(null);
   const [isExportingPdf, setIsExportingPdf] = useState(false); // State for PDF loader
-  const [manageCostsState, setManageCostsState] = useState<{
-    isOpen: boolean;
-    service: Service | null;
-  }>({
-    isOpen: false,
-    service: null,
-  });
-
-  const [priceHistoryState, setPriceHistoryState] = useState<{
-    isOpen: boolean;
-    service: Service | null;
-  }>({ isOpen: false, service: null });
 
   // Fetch Service Groups for Filter Dropdown
   const { data: serviceGroupsData, isLoading: isLoadingServiceGroups } =
@@ -224,36 +206,6 @@ export default function ServicesListPage() {
       setIsExporting(false);
     }
   };
-  // --- NEW HANDLER FOR COST DETAILS EXPORT ---
-  const handleExportWithCosts = async () => {
-    setIsExportingCosts(true);
-    toast.info("جارٍ بدء التصدير...");
-    try {
-      const blob = await downloadServicesWithCostsExcel();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `services_with_cost_details_${new Date().toISOString().slice(0, 10)}.xlsx`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-      toast.success("تم التصدير بنجاح");
-    } catch (error: unknown) {
-      console.error("Export with costs failed:", error);
-      const errorMessage =
-        error && typeof error === "object" && "response" in error
-          ? (error.response as { data?: { message?: string } })?.data?.message
-          : error && typeof error === "object" && "message" in error
-            ? (error as { message: string }).message
-            : "Export failed";
-      toast.error("فشل التصدير", {
-        description: errorMessage,
-      });
-    } finally {
-      setIsExportingCosts(false);
-    }
-  };
   // Activate all services
   const activateAllMutation = useMutation({
     mutationFn: () => activateAllServices(),
@@ -305,40 +257,13 @@ export default function ServicesListPage() {
     }
   };
 
-  const handleManageCosts = useCallback((service: Service) => {
-    setManageCostsState({ isOpen: true, service });
-  }, []);
-
-  const handleManageCostsDialogClose = useCallback((open: boolean) => {
-    if (!open) {
-      setTimeout(() => {
-        setManageCostsState((prev) => ({ ...prev, isOpen: false }));
-        setTimeout(() => {
-          setManageCostsState({ isOpen: false, service: null });
-        }, 300);
-      }, 0);
-    }
-  }, []);
-
-  const handleCostsUpdated = useCallback(() => {
-    queryClient.invalidateQueries({
-      queryKey: [
-        "services",
-        currentPage,
-        debouncedSearchTerm,
-        filters.service_group_id,
-      ],
-    });
-  }, [queryClient, currentPage, debouncedSearchTerm, filters.service_group_id]);
-
   // Local component for row actions menu (MUI)
   const ActionsMenu: React.FC<{
     serviceId: number;
     onEditLink: string;
-    onManageCosts: () => void;
     onDelete: () => void;
     isDeleting: boolean;
-  }> = ({ onEditLink, onManageCosts, onDelete, isDeleting }) => {
+  }> = ({ onEditLink }) => {
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const open = Boolean(anchorEl);
     return (
@@ -360,15 +285,6 @@ export default function ServicesListPage() {
           <MenuItem component={Link as any} to={onEditLink}>
             <Edit className="rtl:ml-2 ltr:mr-2 h-4 w-4" /> تعديل
           </MenuItem>
-          <MenuItem
-            onClick={() => {
-              setAnchorEl(null);
-              onManageCosts();
-            }}
-          >
-            <Settings2 className="rtl:ml-2 ltr:mr-2 h-4 w-4" /> إدارة التكلفة
-          </MenuItem>
-       
         </Menu>
       </>
     );
@@ -453,9 +369,6 @@ export default function ServicesListPage() {
           </Button>
           <Button onClick={handleExport} disabled={isExporting} size="small" variant="outlined">
             تصدير
-          </Button>
-          <Button onClick={handleExportWithCosts} disabled={isExportingCosts} size="small" variant="outlined">
-            تصدير مع التكلفة
           </Button>
           <Button
             onClick={() => activateAllMutation.mutate()}
@@ -569,15 +482,6 @@ export default function ServicesListPage() {
                           }}
                           sx={{ width: 120 }}
                         />
-                        <Button
-                          size="small"
-                          variant="text"
-                          title="سجل تغييرات السعر"
-                          onClick={() => setPriceHistoryState({ isOpen: true, service })}
-                          sx={{ minWidth: 0, p: 0.5, ml: 0.5 }}
-                        >
-                          <History className="h-4 w-4 text-slate-400" />
-                        </Button>
                       </TableCell>
                       <TableCell className="hidden md:table-cell text-center align-middle">
                         <Button
@@ -614,7 +518,6 @@ export default function ServicesListPage() {
                         <ActionsMenu
                           serviceId={service.id}
                           onEditLink={`/settings/services/${service.id}/edit`}
-                          onManageCosts={() => handleManageCosts(service)}
                           onDelete={() => openDeleteDialog(service)}
                           isDeleting={
                             deleteMutation.isPending &&
@@ -685,28 +588,6 @@ export default function ServicesListPage() {
           </Button>
         </DialogActions>
       </Dialog>
-
-      {/* Manage Service Costs Dialog ... */}
-      {manageCostsState.service && (
-        <ManageServiceCostsDialog
-          key={`costs-dialog-${manageCostsState.service.id}`}
-          isOpen={manageCostsState.isOpen}
-          onOpenChange={handleManageCostsDialogClose}
-          service={manageCostsState.service}
-          onCostsUpdated={handleCostsUpdated}
-        />
-      )}
-
-      {/* Price History Dialog */}
-      {priceHistoryState.service && (
-        <ServicePriceHistoryDialog
-          key={`price-history-${priceHistoryState.service.id}`}
-          serviceId={priceHistoryState.service.id}
-          serviceName={priceHistoryState.service.name}
-          open={priceHistoryState.isOpen}
-          onClose={() => setPriceHistoryState({ isOpen: false, service: null })}
-        />
-      )}
     </>
   );
 }

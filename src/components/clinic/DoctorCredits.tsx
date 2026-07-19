@@ -20,7 +20,6 @@ import {
   Box,
 } from "@mui/material";
 import dayjs from "dayjs";
-import { Eye } from "lucide-react";
 import { formatNumber } from "@/lib/utils";
 import type { DoctorShift as DoctorShiftType, Doctor } from "@/types/doctors";
 import type { DoctorShiftFinancialSummary } from "@/types/reports";
@@ -94,19 +93,8 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
   const [clinicTotals, setClinicTotals] = useState({ cash: 0, bank: 0 });
   const [clinicTotalsLoading, setClinicTotalsLoading] = useState(false);
   const [update, setUpdate] = useState(0);
-  const [showAdditionalCosts, setShowAdditionalCosts] = useState(false);
   const [selectedDoctorShift, setSelectedDoctorShift] =
     useState<DoctorShiftItem | null>(null);
-  const [shiftServiceCosts, setShiftServiceCosts] = useState<
-    { id: number; name: string; amount: number }[]
-  >([]);
-  const [shiftServiceCostsLoading, setShiftServiceCostsLoading] =
-    useState(false);
-  /** Sub-service-cost IDs already added to costs table for the selected doctor shift (استحقاق نقدي per cost) */
-  const [addedSubCostIds, setAddedSubCostIds] = useState<number[]>([]);
-  /** When opening cash reclaim from a cost row, this is that cost's sub_service_cost_id */
-  const [selectedSubCostIdForReclaim, setSelectedSubCostIdForReclaim] =
-    useState<number | null>(null);
   const [isAddingCost, setIsAddingCost] = useState(false);
   const [journalLoadingId, setJournalLoadingId] = useState<number | null>(null);
   // Removed fetching of last shift as it is not used currently
@@ -114,43 +102,6 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
   useEffect(() => {
     document.title = "استحقاق الاطباء";
   }, []);
-
-  // Fetch shift service costs and added costs when additional costs dialog opens
-  useEffect(() => {
-    if (!showAdditionalCosts || !selectedDoctorShift?.id) {
-      setShiftServiceCosts([]);
-      setAddedSubCostIds([]);
-      return;
-    }
-    setShiftServiceCostsLoading(true);
-    Promise.all([
-      apiClient.get(
-        `/doctor-shifts/${selectedDoctorShift.id}/shift-service-costs`,
-      ),
-      apiClient.get("/costs-report-data", {
-        params: {
-          doctor_shift_id_for_sub_cost: selectedDoctorShift.id,
-          per_page: 100,
-        },
-      }),
-    ])
-      .then(([costsRes, addedRes]) => {
-        const list = Array.isArray(costsRes.data?.data)
-          ? costsRes.data.data
-          : [];
-        setShiftServiceCosts(list);
-        const addedList = addedRes.data?.data ?? addedRes.data ?? [];
-        const ids = (Array.isArray(addedList) ? addedList : [])
-          .map((c: { sub_service_cost_id?: number }) => c.sub_service_cost_id)
-          .filter((id: number | undefined): id is number => id != null);
-        setAddedSubCostIds(ids);
-      })
-      .catch(() => {
-        setShiftServiceCosts([]);
-        setAddedSubCostIds([]);
-      })
-      .finally(() => setShiftServiceCostsLoading(false));
-  }, [showAdditionalCosts, selectedDoctorShift?.id]);
 
   useEffect(() => {
     // Get all doctor shifts
@@ -175,8 +126,6 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
     amountBank: number,
     doctorName: string,
     setIsLoading: (loading: boolean) => void,
-    subServiceCostId?: number,
-    onSubCostSuccess?: () => void,
   ) => {
     setIsLoading(true);
     setIsAddingCost(true);
@@ -201,22 +150,12 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
 
     const payload: Record<string, unknown> = {
       shift_id: currentShiftId,
-      doctor_shift_id: subServiceCostId != null ? undefined : doctorShiftId,
-      description:
-        subServiceCostId != null
-          ? `خصم مصروف خدمة - استحقاق الطبيب ${doctorName}`
-          : `خصم استحقاق الطبيب ${doctorName}`,
-      comment:
-        subServiceCostId != null
-          ? `خصم تكلفة إضافية (مصروف الخدمة) - ${doctorName}`
-          : `خصم تلقائي من استحقاق الطبيب ${doctorName}`,
+      doctor_shift_id: doctorShiftId,
+      description: `خصم استحقاق الطبيب ${doctorName}`,
+      comment: `خصم تلقائي من استحقاق الطبيب ${doctorName}`,
       amount_cash_input: amountCash,
       amount_bank_input: amountBank,
     };
-    if (subServiceCostId != null) {
-      payload.doctor_shift_id_for_sub_cost = doctorShiftId;
-      payload.sub_service_cost_id = subServiceCostId;
-    }
 
     apiClient
       .post("/costs", payload)
@@ -224,15 +163,6 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
         console.log("Cost added successfully:", data);
         setUpdate((prev) => prev + 1);
         setAllMoneyUpdatedLab((prev) => prev + 1);
-        if (subServiceCostId != null) {
-          setAddedSubCostIds((prev) =>
-            prev.includes(subServiceCostId)
-              ? prev
-              : [...prev, subServiceCostId],
-          );
-          setSelectedSubCostIdForReclaim(null);
-          onSubCostSuccess?.();
-        }
       })
       .catch((error) => {
         console.error("Error adding cost:", error);
@@ -289,40 +219,30 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
       return;
     }
 
-    const subCostId = selectedSubCostIdForReclaim ?? undefined;
     addCost(
       selectedDoctorShift.id,
       cashAmount,
       bankAmount,
       selectedDoctorShift.doctor?.name || selectedDoctorShift.doctor_name || "",
       setIsLoading,
-      subCostId,
-      subCostId != null
-        ? () => {
-            setShowCashReclaimDialog(false);
-          }
-        : undefined,
     );
 
-    // Only update proofing flags when this is the main cash reclaim (not per-cost)
-    if (subCostId == null) {
-      apiClient
-        .put(`/doctor-shifts/${selectedDoctorShift.id}/update-proofing-flags`)
-        .then(({ data }) => {
-          setShowCashReclaimDialog(false);
-          const updated = data?.data ?? data;
-          setDoctorShifts((prev) =>
-            prev.map((item) =>
-              item.id === selectedDoctorShift.id ? updated : item,
-            ),
-          );
-          // Open journal entry dialog after proofing succeeds
-          setJournalAmounts({ cash: cashAmount, bank: bankAmount, total: temp, clinicCashTotal: clinicTotals.cash, clinicBankTotal: clinicTotals.bank });
-          setShowJournalDialog(true);
-        })
-        .catch(() => {})
-        .finally(() => setIsLoading(false));
-    }
+    apiClient
+      .put(`/doctor-shifts/${selectedDoctorShift.id}/update-proofing-flags`)
+      .then(({ data }) => {
+        setShowCashReclaimDialog(false);
+        const updated = data?.data ?? data;
+        setDoctorShifts((prev) =>
+          prev.map((item) =>
+            item.id === selectedDoctorShift.id ? updated : item,
+          ),
+        );
+        // Open journal entry dialog after proofing succeeds
+        setJournalAmounts({ cash: cashAmount, bank: bankAmount, total: temp, clinicCashTotal: clinicTotals.cash, clinicBankTotal: clinicTotals.bank });
+        setShowJournalDialog(true);
+      })
+      .catch(() => {})
+      .finally(() => setIsLoading(false));
   };
   const openJournalDirectly = async (shift: DoctorShiftItem) => {
     setJournalLoadingId(shift.id);
@@ -371,7 +291,6 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
             <TableCell>الزمن</TableCell>
             <TableCell>اثبات</TableCell>
             <TableCell>قيد محاسبي</TableCell>
-            <TableCell>اخري</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -467,87 +386,11 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
                       قيد
                     </Button>
                   </TableCell>
-                  <TableCell className="text-sm!">
-                    <Button
-                      onClick={() => {
-                        setSelectedDoctorShift(shift);
-                        setShowAdditionalCosts(true);
-                      }}
-                      size="small"
-                    >
-                      <Eye />
-                    </Button>
-                  </TableCell>
                 </TableRow>
               );
             })}
         </TableBody>
-      </Table> {/* Additional Costs Dialog – shift service costs (مصروف الخدمات) */}
-      <Dialog
-        open={showAdditionalCosts}
-        onClose={() => setShowAdditionalCosts(false)}
-        
-        maxWidth="sm"
-      >
-        <DialogTitle>التكاليف الإضافية (مصروف الخدمات)</DialogTitle>
-        <DialogContent>
-          {selectedDoctorShift && (
-            <Typography variant="body2" sx={{ mb: 2 }}>
-              الطبيب:{" "}
-              {selectedDoctorShift.doctor?.name ||
-                selectedDoctorShift.doctor_name}
-            </Typography>
-          )}
-          {shiftServiceCostsLoading ? (
-            <Typography variant="body2">جاري التحميل...</Typography>
-          ) : shiftServiceCosts.length === 0 ? (
-            <Typography variant="body2">
-              لا توجد تكاليف إضافية مسجلة لهذه الوردية.
-            </Typography>
-          ) : (
-            <Table size="small" sx={{ mt: 1 }}>
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 600 }}>مصروف الخدمة</TableCell>
-                  <TableCell align="left" sx={{ fontWeight: 600 }}>
-                    الإجمالي
-                  </TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 600 }}>
-                    إجراء
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {shiftServiceCosts.map((cost) => (
-                  <TableRow key={cost.id}>
-                    <TableCell>{cost.name}</TableCell>
-                    <TableCell align="left">
-                      {formatNumber(cost.amount)}
-                    </TableCell>
-                    <TableCell align="center">
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        disabled={addedSubCostIds.includes(cost.id)}
-                        onClick={() => {
-                          setCashAmount(cost.amount);
-                          setBankAmount(0);
-                          setTemp(cost.amount);
-                          setSelectedSubCostIdForReclaim(cost.id);
-                          setShowAdditionalCosts(false);
-                          setShowCashReclaimDialog(true);
-                        }}
-                      >
-                        استحقاق النقدي
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </DialogContent>
-      </Dialog>
+      </Table>
 
       {/* Journal entry dialog — opens after cash reclaim is proved */}
       {showJournalDialog && selectedDoctorShift && (
@@ -572,10 +415,7 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
       {/* Cash reclaim dialog */}
       <Dialog
         open={showCashReclaimDialog}
-        onClose={() => {
-          setShowCashReclaimDialog(false);
-          setSelectedSubCostIdForReclaim(null);
-        }}
+        onClose={() => setShowCashReclaimDialog(false)}
         fullWidth
         maxWidth="sm"
       >

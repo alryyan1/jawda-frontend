@@ -13,10 +13,8 @@ import { Loader2, Edit, Trash2, MoreHorizontal, Stethoscope, PlusCircle, Search 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { getSpecialistsPaginated, deleteSpecialist } from '@/services/specialistService';
 import ManageSpecialistDialog from '@/components/specialists/ManageSpecialistDialog';
-import type { Specialist, SubSpecialist } from '@/types/doctors';
+import type { Specialist } from '@/types/doctors';
 import type { PaginatedResponse } from '@/types/common';
-import { getSubSpecialists } from '@/services/subSpecialistService';
-import ManageSubSpecialistsDialog from '@/components/specialists/ManageSubSpecialistsDialog';
 
 const SpecialistsPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -27,8 +25,6 @@ const SpecialistsPage: React.FC = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [specialistToEdit, setSpecialistToEdit] = useState<Specialist | null>(null);
   const [specialistToDelete, setSpecialistToDelete] = useState<Specialist | null>(null);
-  const [specialistForSubSpecialists, setSpecialistForSubSpecialists] = useState<Specialist | null>(null);
-  const [isSubSpecialistsDialogOpen, setIsSubSpecialistsDialogOpen] = useState(false);
 
   useEffect(() => {
     setCurrentPage(1); // Reset page on new search
@@ -62,11 +58,6 @@ const SpecialistsPage: React.FC = () => {
   const handleSuccess = () => {
     queryClient.invalidateQueries({ queryKey: ['specialists'] });
     queryClient.invalidateQueries({ queryKey: ['specialistsList'] }); // Invalidate simple list too
-  };
-
-  const handleOpenSubSpecialistsDialog = (specialist: Specialist) => {
-    setSpecialistForSubSpecialists(specialist);
-    setIsSubSpecialistsDialogOpen(true);
   };
 
   const specialists = paginatedData?.data || [];
@@ -110,7 +101,6 @@ const SpecialistsPage: React.FC = () => {
                   <TableHead className="text-center">م</TableHead>
                   <TableHead className="text-center">الاسم</TableHead>
                   <TableHead className="text-center">عدد الأطباء</TableHead>
-                  <TableHead className="text-center">الاختصاصات الفرعية</TableHead>
                   <TableHead className="text-center">إجراءات</TableHead>
                 </TableRow>
               </TableHeader>
@@ -121,16 +111,6 @@ const SpecialistsPage: React.FC = () => {
                       <TableCell className="font-medium text-center">{spec.id}</TableCell>
                       <TableCell className="text-center">{spec.name}</TableCell>
                       <TableCell className="text-center">{spec.doctors_count}</TableCell>
-                      <TableCell className="text-center">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleOpenSubSpecialistsDialog(spec)}
-                          className="h-8"
-                        >
-                          إدارة الاختصاصات الفرعية
-                        </Button>
-                      </TableCell>
                       <TableCell className="text-center">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
@@ -162,12 +142,6 @@ const SpecialistsPage: React.FC = () => {
         onOpenChange={setIsDialogOpen}
         specialistToEdit={specialistToEdit}
         onSuccess={handleSuccess}
-      />
-
-      <ManageSubSpecialistsDialog
-        isOpen={isSubSpecialistsDialogOpen}
-        onOpenChange={setIsSubSpecialistsDialogOpen}
-        specialist={specialistForSubSpecialists}
       />
 
       <AlertDialog open={!!specialistToDelete} onOpenChange={(open) => !open && setSpecialistToDelete(null)}>

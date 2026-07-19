@@ -194,12 +194,6 @@ const PatientWorkspace: React.FC<PatientWorkspaceProps> = ({ visitId, initialVis
             isLoading={isLoadingMedHistory}
           />
         )}
-        {activeSection === 'prescriptions' && (
-          <Box sx={{ p: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, color: 'text.disabled' }}>
-            <Typography variant="h6">قريباً</Typography>
-            <Typography variant="body2">ميزة الوصفات الطبية قيد التطوير</Typography>
-          </Box>
-        )}
       </Box>
     </Box>
   );

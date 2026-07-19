@@ -38,7 +38,6 @@ import PartyServiceCostsPage from "./pages/parties/PartyServiceCostsPage";
 import TodaysPatientsPage from "./pages/patients/TodaysPatientsPage";
 import VisitDetailsPage from "./pages/patients/VisitDetailsPage";
 import DiagnosisPage from "./pages/patients/DiagnosisPage";
-import DoctorSchedulesPage from "./components/schedules/DoctorSchedulesPage";
 import DoctorShiftsReportPage from "./pages/reports/DoctorShiftsReportPage";
 import DoctorShiftDetailsPage from "./pages/reports/DoctorShiftDetailsPage";
 import SpecialistShiftsReportPage from "./pages/reports/SpecialistShiftsReportPage";
@@ -62,7 +61,6 @@ import MonthlyServiceIncomeReportPage from "./pages/reports/MonthlyServiceIncome
 import AnalysisPage from "./pages/anaylsis/AnalysisPage";
 import BulkWhatsAppPage from "./pages/communication/BulkWhatsAppPage";
 import WhatsAppCloudApiPage from "./pages/communication/WhatsAppCloudApiPage";
-import ServiceCostBreakdownReportPage from "./pages/reports/ServiceCostBreakdownReportPage";
 import DoctorStatisticsReportPage from "./pages/reports/DoctorStatisticsReportPage";
 import CompanyPerformanceReportPage from "./pages/reports/CompanyPerformanceReportPage";
 import DoctorCompanyEntitlementReportPage from "./pages/reports/DoctorCompanyEntitlementReportPage";
@@ -82,10 +80,7 @@ import SpecialistsPage from "./pages/specialists/SpecialistsPage";
 import CashReconciliationPage from "./pages/CashReconciliationPage";
 // import NotFoundPage from './pages/NotFoundPage'; // Optional: For 404 handling
 
-import AppointmentsPlaceholderPage from "./pages/AppointmentsPlaceholderPage";
 import HL7ParserPage from "./pages/HL7ParserPage";
-import OnlineBookingPage from "./pages/onlineBooking/OnlineBookingPage";
-import DeletedServiceDepositsPage from "./pages/DeletedServiceDepositsPage";
 
 const router = createBrowserRouter([
   // --- PUBLIC ROUTES ---
@@ -137,10 +132,6 @@ const router = createBrowserRouter([
             element: <CashReconciliationPage />,
           },
           {
-            path: "deleted-service-deposits",
-            element: <DeletedServiceDepositsPage />,
-          },
-          {
             path: "specialists",
             element: <SpecialistsPage />,
           },
@@ -159,10 +150,6 @@ const router = createBrowserRouter([
           {
             path: "hl7-parser",
             element: <HL7ParserPage />,
-          },
-          {
-            path: "online-booking",
-            element: <OnlineBookingPage />,
           },
           {
             path: "dashboard", // Explicit dashboard route if needed, often same as index
@@ -226,12 +213,6 @@ const router = createBrowserRouter([
 
           // Patients Module (Placeholder)
 
-          // Appointments Module (Placeholder)
-          {
-            path: "appointments",
-            element: <AppointmentsPlaceholderPage />,
-            // Example for nested appointment routes later
-          },
           {
             path: "users", // Or 'settings/users' if you prefer
             element: <Outlet />,
@@ -327,10 +308,6 @@ const router = createBrowserRouter([
                 element: <DoctorCompanyEntitlementReportPage />,
               },
               {
-                path: "service-cost-breakdown",
-                element: <ServiceCostBreakdownReportPage />,
-              },
-              {
                 path: "yearly-income-comparison",
                 element: <YearlyIncomeComparisonReportPage />,
               },
@@ -342,10 +319,6 @@ const router = createBrowserRouter([
               // Add other report routes here
               // { path: 'patient-visits', element: <PatientVisitsReportPage /> },
             ],
-          },
-          {
-            path: "schedules-appointments", // Or just 'schedules' or 'appointments'
-            element: <DoctorSchedulesPage />,
           },
           {
             path: "/patients",

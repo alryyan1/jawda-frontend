@@ -133,7 +133,6 @@ export interface RequestedService {
   created_at: string;
   updated_at: string;
   deposits?: RequestedServiceDeposit[]; // If tracking multiple payments per service
-  // costBreakdown?: RequestedServiceCost[]; // If you have this
 }
 
 // --- DoctorVisit ---

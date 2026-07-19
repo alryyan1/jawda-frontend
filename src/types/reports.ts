@@ -141,23 +141,6 @@ export interface MonthlyServiceIncomeReportResponse {
   };
 }
 
-// src/types/reports.ts (or similar)
-
-export interface ServiceCostBreakdownItem {
-  sub_service_cost_id: number;
-  sub_service_cost_name: string;
-  total_amount: number;
-}
-
-export interface ServiceCostBreakdownReportResponse {
-  data: ServiceCostBreakdownItem[];
-  grand_total_cost: number;
-  report_period: {
-    from: string;
-    to: string;
-  };
-}
-
 // src/types/reports.ts
 // ... (existing types) ...
 

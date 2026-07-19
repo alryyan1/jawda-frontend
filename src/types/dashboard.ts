@@ -14,7 +14,6 @@ export interface DashboardSummary {
   patientsToday: number;
   doctorsOnShift: number;
   revenueToday: number;
-  appointmentsToday: number;
 }
 
 export interface FinancialSummary {

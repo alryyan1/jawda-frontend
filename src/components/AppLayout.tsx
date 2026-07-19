@@ -53,7 +53,6 @@ import {
   HandCoins,
   LineChart,
   UsersRound,
-  CalendarCheck2,
   Eye,
   EyeOff,
   RefreshCw,
@@ -146,7 +145,6 @@ export const allMainNavItems: NavItem[] = [
   { to: "/lab-workstation", label: "نتائج المختبر", icon: FlaskConical },
   // { to: '/laboratory/offers', label: 'عروض التحاليل', icon: Package },
   { to: "/patients", label: "المرضى", icon: Users },
-  { to: "/online-booking", label: "الحجز ", icon: CalendarCheck2 },
   { to: "/cash-reconciliation", label: "الفئات الماليه", icon: CreditCard },
  
 ];
@@ -171,7 +169,6 @@ export const DEFAULT_NAV_ITEMS_BY_TYPE: Record<string, string[]> = {
     "/clinic",
     "/cash-reconciliation",
     "/patients",
-    "/online-booking",
   ],
   "خزنه موحده": ["/dashboard", "/clinic", "/cash-reconciliation", "/patients"],
   تامين: [
@@ -1126,11 +1123,6 @@ const AppLayout: React.FC = () => {
                               label="دخل الخدمات الشهري"
                             />
                             <ReportMenuItem
-                              to="/reports/service-cost-breakdown"
-                              icon={BarChartBig}
-                              label="تفصيل تكلفة الخدمات"
-                            />
-                            <ReportMenuItem
                               to="/reports/company-performance"
                               icon={BarChartBig}
                               label="أداء الشركات"
@@ -1164,11 +1156,6 @@ const AppLayout: React.FC = () => {
                               to="/reports/lab-test-statistics"
                               icon={BarChartBig}
                               label="إحصائيات تحاليل المختبر"
-                            />
-                            <ReportMenuItem
-                              to="/deleted-service-deposits"
-                              icon={BarChartBig}
-                              label="الخدمات المحذوفة"
                             />
                           </DropdownMenuSubContent>
                         </DropdownMenuSub>

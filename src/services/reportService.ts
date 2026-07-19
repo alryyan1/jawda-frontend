@@ -232,36 +232,6 @@ export const downloadDoctorReclaimsPdf = async (filters: DoctorReclaimsPdfFilter
 };
 // src/services/reportService.ts
 // ... (existing imports and functions) ...
-import type { ServiceCostBreakdownReportResponse } from '@/types/reports'; // Adjust path
-
-export interface ServiceCostBreakdownFilters {
-  date_from: string;
-  date_to: string;
-  sub_service_cost_id?: string | null;
-  service_id?: string | null;
-  doctor_id?: string | null;
-}
-
-export const getServiceCostBreakdownReport = async (
-  filters: ServiceCostBreakdownFilters
-): Promise<ServiceCostBreakdownReportResponse> => {
-  const response = await apiClient.get<ServiceCostBreakdownReportResponse>(
-    '/reports/service-cost-breakdown', 
-    { params: filters }
-  );
-  return response.data; 
-};
-
-export const downloadServiceCostBreakdownPdf = async (filters: ServiceCostBreakdownFilters): Promise<Blob> => {
-  const response = await apiClient.get<Blob>('/reports/service-cost-breakdown/pdf', {
-    params: filters,
-    responseType: 'blob',
-  });
-  return response.data;
-};
-
-// src/services/reportService.ts
-// ... (existing imports and functions) ...
 import type { DoctorStatisticsReportResponse } from '@/types/reports';
 
 export interface DoctorStatisticsFilters {
@@ -475,15 +445,6 @@ export const downloadServicesListExcel = async (filters: ServicesExportFilters):
   const response = await apiClient.get('/reports/services-list/excel', {
     params: filters,
     responseType: 'blob', // Important: expect binary data
-  });
-  return response.data;
-};
-
-// NEW FUNCTION
-export const downloadServicesWithCostsExcel = async (): Promise<Blob> => {
-  // This report might not need filters if it always shows all services with costs
-  const response = await apiClient.get('/reports/services-with-costs/excel', {
-    responseType: 'blob',
   });
   return response.data;
 };

@@ -3,9 +3,8 @@ import React, { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { useNavigate } from 'react-router-dom';
 
-import { Loader2, Search, Eye, Filter } from 'lucide-react';
+import { Loader2, Eye } from 'lucide-react';
 
 // Helper function to format numbers with thousand separators
 const formatNumber = (num: number | string): string => {
@@ -37,8 +36,8 @@ import {
   TableRow as MUITableRow,
   TableCell as MUITableCell,
   Autocomplete,
-  Popover,
-  Badge,
+  Pagination,
+  Stack,
 } from '@mui/material';
 import { webUrl } from '../constants';
 
@@ -71,8 +70,7 @@ const LabGeneralReportPage: React.FC = () => {
     date_from: defaultDateTo,
     date_to: defaultDateTo,
   });
-  const [filterAnchorEl, setFilterAnchorEl] = useState<HTMLButtonElement | null>(null);
-  const navigate = useNavigate();
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Fetch data for filters
 
@@ -87,7 +85,7 @@ const LabGeneralReportPage: React.FC = () => {
   });
 
 
-  const reportQueryKey = ['labGeneralReport', appliedFilters] as const;
+  const reportQueryKey = ['labGeneralReport', appliedFilters, currentPage] as const;
   const {
     data: reportData,
     isLoading,
@@ -97,7 +95,7 @@ const LabGeneralReportPage: React.FC = () => {
     queryKey: reportQueryKey,
     queryFn: () => {
       const { page, per_page, ...filters } = appliedFilters;
-      return getLabGeneralReport({ page: 1, per_page: 20, ...filters });
+      return getLabGeneralReport({ page: currentPage, per_page: 20, ...filters });
     },
     placeholderData: keepPreviousData,
     refetchOnWindowFocus: false,
@@ -115,7 +113,7 @@ const LabGeneralReportPage: React.FC = () => {
       patient_name: data.patient_name || undefined,
       user_id: data.user_id && data.user_id !== 'all' ? parseInt(data.user_id) : undefined,
     });
-    setFilterAnchorEl(null);
+    setCurrentPage(1);
   };
 
 
@@ -137,25 +135,9 @@ const LabGeneralReportPage: React.FC = () => {
     window.open(pdfUrl, '_blank');
   };
 
-  const handleOpenDetailsPage = () => {
-    // Build query parameters
-    const params = new URLSearchParams();
-    if (appliedFilters.date_from) params.append('date_from', appliedFilters.date_from);
-    if (appliedFilters.date_to) params.append('date_to', appliedFilters.date_to);
-    const currentStartTime = filterForm.getValues('start_time') || '00:00';
-    const currentEndTime = filterForm.getValues('end_time') || '23:59';
-    params.append('start_time', currentStartTime);
-    params.append('end_time', currentEndTime);
-    if (appliedFilters.patient_name) params.append('patient_name', appliedFilters.patient_name);
-    if (appliedFilters.user_id) params.append('user_id', appliedFilters.user_id.toString());
-    if (appliedFilters.shift_id) params.append('shift_id', appliedFilters.shift_id.toString());
-
-    // Navigate to details page
-    navigate(`/reports/lab-general/details?${params.toString()}`);
-  };
-
   const patients = (reportData as LabGeneralReportWithUserRevenue & { data: LabGeneralReportItem[] })?.data || [];
   const userRevenues = reportData?.user_revenues || [];
+  const meta = reportData?.meta;
   const isLoadingDropdowns = isLoadingUsers || isLoadingShifts;
 
   const watchedShiftId = filterForm.watch('shift_id');
@@ -175,13 +157,6 @@ const LabGeneralReportPage: React.FC = () => {
     ? (shiftUsers ?? [])
     : (users?.data ?? []);
 
-  const activeFilterCount = [
-    appliedFilters.shift_id,
-    appliedFilters.date_from,
-    appliedFilters.user_id,
-    appliedFilters.patient_name,
-  ].filter(Boolean).length;
-
   if (error) {
     return (
       <Alert severity="error" className="m-4">
@@ -193,64 +168,22 @@ const LabGeneralReportPage: React.FC = () => {
   return (
     <div className="space-y-6">
 
-      {/* Top action bar */}
-      <div className="flex gap-3 items-center">
-        <Badge badgeContent={activeFilterCount} color="error">
-          <Button
-            variant="outlined"
-            startIcon={<Filter className="h-4 w-4" />}
-            onClick={(e) => setFilterAnchorEl(e.currentTarget)}
-          >
-            المرشحات
-          </Button>
-        </Badge>
-
-        <Button
-          variant="outlined"
-          onClick={handleOpenPdfInNewTab}
-          disabled={isFetching || patients.length === 0}
-          startIcon={<Eye className="h-4 w-4" />}
-        >
-          PDF
-        </Button>
-
-        <Button
-          variant="contained"
-          onClick={handleOpenDetailsPage}
-          disabled={isFetching || patients.length === 0}
-          startIcon={<Search className="h-4 w-4" />}
-        >
-          عرض التفاصيل
-        </Button>
-
-        {isFetching && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
-      </div>
-
-      {/* Filter Popover */}
-      <Popover
-        open={Boolean(filterAnchorEl)}
-        anchorEl={filterAnchorEl}
-        onClose={() => setFilterAnchorEl(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-      >
+      {/* Filters row */}
+      <Card sx={{ p: 2, borderRadius: 3 }}>
         <form onSubmit={filterForm.handleSubmit(handleFilterSubmit)}>
-          <div className="flex flex-col gap-4 p-4" style={{ minWidth: 340 }}>
-            <Typography variant="subtitle2" fontWeight="bold">المرشحات</Typography>
-
-            {/* Date range */}
+          <div className="flex flex-wrap items-center gap-3">
             <Controller
               control={filterForm.control}
               name="date_from"
               render={({ field }) => (
                 <TextField
-                  fullWidth
                   label="من تاريخ"
                   type="date"
                   size="small"
                   value={field.value}
                   onChange={(e) => { field.onChange(e); filterForm.setValue('shift_id', 'all'); }}
                   disabled={dateTimeDisabled}
+                  sx={{ width: 160 }}
                 />
               )}
             />
@@ -259,13 +192,13 @@ const LabGeneralReportPage: React.FC = () => {
               name="date_to"
               render={({ field }) => (
                 <TextField
-                  fullWidth
                   label="إلى تاريخ"
                   type="date"
                   size="small"
                   value={field.value}
                   onChange={(e) => { field.onChange(e); filterForm.setValue('shift_id', 'all'); }}
                   disabled={dateTimeDisabled}
+                  sx={{ width: 160 }}
                 />
               )}
             />
@@ -274,7 +207,6 @@ const LabGeneralReportPage: React.FC = () => {
               name="start_time"
               render={({ field }) => (
                 <TextField
-                  fullWidth
                   label="من وقت"
                   type="time"
                   size="small"
@@ -282,6 +214,7 @@ const LabGeneralReportPage: React.FC = () => {
                   onChange={field.onChange}
                   disabled={dateTimeDisabled}
                   slotProps={{ htmlInput: { step: 60 } }}
+                  sx={{ width: 130 }}
                 />
               )}
             />
@@ -290,7 +223,6 @@ const LabGeneralReportPage: React.FC = () => {
               name="end_time"
               render={({ field }) => (
                 <TextField
-                  fullWidth
                   label="إلى وقت"
                   type="time"
                   size="small"
@@ -298,11 +230,11 @@ const LabGeneralReportPage: React.FC = () => {
                   onChange={field.onChange}
                   disabled={dateTimeDisabled}
                   slotProps={{ htmlInput: { step: 60 } }}
+                  sx={{ width: 130 }}
                 />
               )}
             />
 
-            {/* Shift */}
             <Controller
               control={filterForm.control}
               name="shift_id"
@@ -312,19 +244,23 @@ const LabGeneralReportPage: React.FC = () => {
                   allOption,
                   ...(shifts || []).map(s => ({
                     id: s.id.toString(),
-                    label: `#${s.id} — ${format(new Date(s.created_at), 'yyyy-MM-dd')}${s.is_closed ? ' (مغلقة)' : ' (مفتوحة)'}`,
+                    label: `#${s.id} — ${format(new Date(s.created_at), 'yyyy-MM-dd')}`,
                   })),
                 ];
                 const currentValue = shiftOptions.find(o => o.id === (field.value ?? 'all')) || allOption;
                 return (
                   <Autocomplete
-                    fullWidth
                     size="small"
                     options={shiftOptions}
                     getOptionLabel={(o) => o.label}
                     value={currentValue}
-                    onChange={(_, newValue) => field.onChange(newValue?.id ?? 'all')}
+                    onChange={(_, newValue) => {
+                      field.onChange(newValue?.id ?? 'all');
+                      filterForm.setValue('user_id', 'all');
+                      filterForm.handleSubmit(handleFilterSubmit)();
+                    }}
                     disabled={isLoadingDropdowns || isFetching}
+                    sx={{ width: 220 }}
                     renderInput={(params) => (
                       <TextField {...params} label="المناوبة" placeholder="اختر المناوبة" />
                     )}
@@ -333,7 +269,6 @@ const LabGeneralReportPage: React.FC = () => {
               }}
             />
 
-            {/* User */}
             <Controller
               control={filterForm.control}
               name="user_id"
@@ -345,7 +280,6 @@ const LabGeneralReportPage: React.FC = () => {
                   : availableUsers.find((u) => u.id.toString() === field.value) || allOption;
                 return (
                   <Autocomplete
-                    fullWidth
                     size="small"
                     options={userOptions}
                     getOptionLabel={(o) => o.name}
@@ -353,6 +287,7 @@ const LabGeneralReportPage: React.FC = () => {
                     onChange={(_, newValue) => field.onChange(newValue?.id.toString() || 'all')}
                     disabled={isLoadingDropdowns || isLoadingShiftUsers || isFetching}
                     loading={isLoadingShiftUsers}
+                    sx={{ width: 200 }}
                     renderInput={(params) => (
                       <TextField {...params} label="المستخدم" placeholder="اختر المستخدم" />
                     )}
@@ -365,6 +300,15 @@ const LabGeneralReportPage: React.FC = () => {
               {isFetching ? <Loader2 className="h-4 w-4 animate-spin" /> : 'بحث'}
             </Button>
 
+            <Button
+              variant="outlined"
+              onClick={handleOpenPdfInNewTab}
+              disabled={isFetching || patients.length === 0}
+              startIcon={<Eye className="h-4 w-4" />}
+            >
+              PDF
+            </Button>
+
             {shiftSelected && (
               <Button
                 type="button"
@@ -375,9 +319,11 @@ const LabGeneralReportPage: React.FC = () => {
                 PDF المناوبة
               </Button>
             )}
+
+            {isFetching && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
           </div>
         </form>
-      </Popover>
+      </Card>
 
       {(isLoading && !isFetching) && <div className="text-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}
       {isFetching && <div className="text-sm text-muted-foreground mb-2 text-center">جارِ تحديث القائمة...</div>}
@@ -451,7 +397,92 @@ const LabGeneralReportPage: React.FC = () => {
         </Card>
       )}
 
+      {/* Patients Table */}
+      {patients.length > 0 && (
+        <Card>
+          <CardHeader>
+            <Typography variant="h6">المرضى {meta ? `(${meta.total})` : ''}</Typography>
+          </CardHeader>
+          <CardContent>
+            <MUITable size="small" sx={{ '& .MuiTableCell-root': { py: '6px', fontSize: '0.875rem' } }}>
+              <MUITableHead>
+                <MUITableRow>
+                  <MUITableCell align="center" sx={{ fontWeight: 'bold' }}>الزيارة</MUITableCell>
+                  <MUITableCell align="center" sx={{ fontWeight: 'bold' }}>المريض</MUITableCell>
+                  <MUITableCell align="center" sx={{ fontWeight: 'bold' }}>الطبيب</MUITableCell>
+                  <MUITableCell align="center" sx={{ fontWeight: 'bold' }}>الشركة</MUITableCell>
+                  <MUITableCell align="center" sx={{ fontWeight: 'bold' }}>التحاليل</MUITableCell>
+                  <MUITableCell align="center" sx={{ fontWeight: 'bold' }}>المبالغ</MUITableCell>
+                  <MUITableCell align="center" sx={{ fontWeight: 'bold' }}>المستخدم</MUITableCell>
+                  <MUITableCell align="center" sx={{ fontWeight: 'bold' }}>الوقت</MUITableCell>
+                </MUITableRow>
+              </MUITableHead>
+              <MUITableBody>
+                {patients.map((patient, index) => {
+                  const totalAmount = Number(patient.total_lab_amount || 0);
+                  const totalPaid = Number(patient.total_paid_for_lab || 0);
+                  const totalDiscount = Number(patient.discount || 0);
+                  const totalBank = Number(patient.total_amount_bank || 0);
+                  return (
+                    <MUITableRow
+                      key={patient.doctorvisit_id}
+                      sx={{
+                        backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'inherit',
+                      }}
+                    >
+                      <MUITableCell align="center">{patient.doctorvisit_id}</MUITableCell>
+                      <MUITableCell align="center" className="font-medium">{patient.name}</MUITableCell>
+                      <MUITableCell align="center">{patient.doctor_name}</MUITableCell>
+                      <MUITableCell align="center">{patient.company_name || '—'}</MUITableCell>
+                      <MUITableCell align="center" sx={{ maxWidth: 260, whiteSpace: 'normal' }}>
+                        {patient.main_tests_names || '—'}
+                      </MUITableCell>
+                      <MUITableCell align="center" sx={{ minWidth: 150 }}>
+                        <Stack spacing={0} alignItems="center">
+                          <Typography variant="body2" fontWeight={700}>
+                            {formatNumber(totalAmount)}
+                          </Typography>
+                          <Typography variant="caption" color={totalPaid >= totalAmount - totalDiscount ? 'success.main' : 'warning.main'}>
+                            مدفوع: {formatNumber(totalPaid)}
+                          </Typography>
+                          {totalDiscount > 0 && (
+                            <Typography variant="caption" color="warning.main">
+                              تخفيض: {formatNumber(totalDiscount)}
+                            </Typography>
+                          )}
+                          {totalBank > 0 && (
+                            <Typography variant="caption" color="error.main">
+                              بنك: {formatNumber(totalBank)}
+                            </Typography>
+                          )}
+                        </Stack>
+                      </MUITableCell>
+                      <MUITableCell align="center">{patient.user_name || '—'}</MUITableCell>
+                      <MUITableCell align="center">
+                        {patient.created_at ? format(new Date(patient.created_at), 'yyyy-MM-dd HH:mm') : '—'}
+                      </MUITableCell>
+                    </MUITableRow>
+                  );
+                })}
+              </MUITableBody>
+            </MUITable>
 
+            {meta && meta.last_page > 1 && (
+              <Stack direction="row" justifyContent="center" sx={{ pt: 2 }}>
+                <Pagination
+                  count={meta.last_page}
+                  page={currentPage}
+                  onChange={(_, page) => setCurrentPage(page)}
+                  disabled={isFetching}
+                  color="primary"
+                  shape="rounded"
+                  size="small"
+                />
+              </Stack>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
     </div>
   );

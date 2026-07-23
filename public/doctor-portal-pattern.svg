@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240">
+  <defs>
+    <pattern id="pulse-grid" width="120" height="120" patternUnits="userSpaceOnUse">
+      <!-- fine dot grid for depth -->
+      <g fill="#64748b" opacity="0.10">
+        <circle cx="10" cy="10" r="1.2" />
+        <circle cx="70" cy="10" r="1.2" />
+        <circle cx="40" cy="40" r="1.2" />
+        <circle cx="100" cy="40" r="1.2" />
+        <circle cx="10" cy="70" r="1.2" />
+        <circle cx="70" cy="70" r="1.2" />
+        <circle cx="40" cy="100" r="1.2" />
+        <circle cx="100" cy="100" r="1.2" />
+      </g>
+      <!-- heartbeat / ECG pulse line -->
+      <path
+        d="M0 60 H24 L32 34 L42 86 L52 46 L60 60 H120"
+        fill="none"
+        stroke="#0d9488"
+        stroke-width="3"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        opacity="0.16"
+      />
+    </pattern>
+  </defs>
+  <rect width="240" height="240" fill="url(#pulse-grid)" />
+</svg>

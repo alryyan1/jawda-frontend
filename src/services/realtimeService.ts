@@ -6,6 +6,8 @@ import type { SysmexResultEventData } from '@/types/sysmex';
 import type { PatientLabQueueItem } from '@/types/labWorkflow';
 import { realtimeUrlFromConstants } from '@/pages/constants';
 
+const REALTIME_ENABLED_STORAGE_KEY = 'realtimeEnabled';
+
 class RealtimeService {
   private socket: Socket | null = null;
   private isConnected = false;
@@ -14,26 +16,24 @@ class RealtimeService {
   private reconnectDelay = 1000; // 1 second
 
   constructor() {
-    // Only connect if not already connected
-    if (!this.socket || !this.socket.connected) {
+    this.ensureSocket();
+    if (this.isEnabled()) {
       this.connect();
     }
   }
 
-  private connect(): void {
-    // Don't create a new connection if one already exists and is connected
-    if (this.socket && this.socket.connected) {
-      console.log('Socket already connected, skipping new connection');
-      return;
+  private ensureSocket(): Socket {
+    if (this.socket) {
+      return this.socket;
     }
 
     const realtimeUrl = import.meta.env.VITE_REALTIME_URL || realtimeUrlFromConstants;
-    
+
     this.socket = io(realtimeUrl, {
       transports: ['websocket', 'polling'],
       timeout: 20000,
       forceNew: false, // Don't force new connections
-      autoConnect: true,
+      autoConnect: false, // Connection is controlled by the enabled preference
     });
 
     this.socket.on('connect', () => {
@@ -45,8 +45,8 @@ class RealtimeService {
     this.socket.on('disconnect', (reason) => {
       console.log('Disconnected from realtime server:', reason);
       this.isConnected = false;
-      
-      if (reason === 'io server disconnect') {
+
+      if (reason === 'io server disconnect' && this.isEnabled()) {
         // Server disconnected, try to reconnect
         this.handleReconnect();
       }
@@ -55,20 +55,54 @@ class RealtimeService {
     this.socket.on('connect_error', (error) => {
       console.error('Connection error:', error);
       this.isConnected = false;
-      this.handleReconnect();
+      if (this.isEnabled()) {
+        this.handleReconnect();
+      }
     });
+
+    return this.socket;
+  }
+
+  private connect(): void {
+    if (!this.isEnabled()) {
+      return;
+    }
+    const socket = this.ensureSocket();
+    if (!socket.connected) {
+      socket.connect();
+    }
   }
 
   private handleReconnect(): void {
+    if (!this.isEnabled()) {
+      return;
+    }
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
       console.log(`Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
-      
+
       setTimeout(() => {
         this.connect();
       }, this.reconnectDelay * this.reconnectAttempts);
     } else {
       console.error('Max reconnection attempts reached');
+    }
+  }
+
+  // Whether realtime sync is enabled (persisted across reloads; defaults to enabled)
+  public isEnabled(): boolean {
+    return localStorage.getItem(REALTIME_ENABLED_STORAGE_KEY) !== 'false';
+  }
+
+  // Enable/disable realtime sync: connects or disconnects the socket accordingly
+  public setEnabled(enabled: boolean): void {
+    localStorage.setItem(REALTIME_ENABLED_STORAGE_KEY, String(enabled));
+    if (enabled) {
+      this.reconnectAttempts = 0;
+      this.connect();
+    } else {
+      this.socket?.disconnect();
+      this.isConnected = false;
     }
   }
 

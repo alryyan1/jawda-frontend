@@ -4,6 +4,7 @@ import type { CompanyRelation } from "@/types/companies";
 import type { DoctorStripped } from "./doctors";
 import type { DoctorVisit } from "./visits";
 import type { UserStripped } from "./auth";
+import type { MedicalAttachment } from "./attachments";
 // import type { Doctor } from "./doctors"; // Assuming this type is defined
 // import { User } from "./index"; // Assuming User type from a general index.ts or auth types
 // import { Country } from './locations'; // If you have a Country type
@@ -114,6 +115,8 @@ export interface ActivePatientVisit {
   requested_services_count: number;
   doctor_id: number;
   doctor_shift_id: number;
+  /** Persistent identity linking this visit to the patient's other visits, if any. */
+  file_id: number | null;
   /** Slim company object for card styling; null for cash patients. */
   company: { id: number; name: string } | null;
   patient: {
@@ -194,6 +197,7 @@ export interface ActivePatientVisit {
     balance_due: number;
   }>;
   lab_requests?: any[];
+  attachments?: MedicalAttachment[];
   requested_services_summary?: Array<{
     id: number;
     service_name: string;

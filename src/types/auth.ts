@@ -28,8 +28,6 @@ export interface User {
   // email?: string;
   doctor_id?: number | null;
   doctor?: Doctor; // If you eager load and want to display doctor name
-  is_nurse: boolean;
-  user_money_collector_type: 'lab' | 'company' | 'clinic' | 'all';
   user_type?: string; // Arabic enum from backend migration
   nav_items?: string[] | null; // Array of route paths for navigation items
   created_at: string;

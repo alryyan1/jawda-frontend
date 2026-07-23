@@ -6,10 +6,11 @@ import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 import Grid from '@mui/material/Grid';
-import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
 import { saveMedicalHistory } from '@/services/patientMedicalHistoryService';
+import { registerManyFieldTextSuggestions } from '@/services/fieldTextSuggestionService';
+import FieldAutocompleteEditor from '@/components/common/FieldAutocompleteEditor';
 import type { PatientMedicalHistory } from '@/types/medicalHistory';
 
 interface SystemsReviewSectionProps {
@@ -79,9 +80,18 @@ const SystemsReviewSection: React.FC<SystemsReviewSectionProps> = ({ patientId, 
 
   const mutation = useMutation({
     mutationFn: (data: SystemsFormValues) => saveMedicalHistory(patientId!, data),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['medicalHistory', patientId] });
       toast.success('تم حفظ مراجعة الأجهزة');
+
+      // Best-effort: grow each field's autocomplete dictionary with whatever
+      // was just typed, then refresh those suggestion lists in the cache.
+      const entries = SYSTEMS.map(({ key }) => ({ fieldKey: key, text: variables[key] }));
+      registerManyFieldTextSuggestions(entries).then(updatedFieldKeys => {
+        updatedFieldKeys.forEach(fieldKey => {
+          queryClient.invalidateQueries({ queryKey: ['fieldTextSuggestions', fieldKey] });
+        });
+      });
     },
     onError: () => toast.error('حدث خطأ أثناء الحفظ'),
   });
@@ -107,17 +117,12 @@ const SystemsReviewSection: React.FC<SystemsReviewSectionProps> = ({ patientId, 
                 name={key}
                 control={control}
                 render={({ field }) => (
-                  <TextField
-                    {...field}
+                  <FieldAutocompleteEditor
                     value={field.value ?? ''}
+                    onChange={field.onChange}
+                    fieldKey={key}
                     label={arabicLabel}
-                    multiline
-                    rows={2}
-                    fullWidth
-                    size="small"
                     placeholder="طبيعي / موجودات..."
-                    InputLabelProps={{ sx: { fontSize: '0.8rem' } }}
-                    inputProps={{ style: { fontSize: '0.82rem' } }}
                   />
                 )}
               />

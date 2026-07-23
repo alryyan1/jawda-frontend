@@ -10,6 +10,7 @@ export interface RequestedService {
   visit_id: number;
   doctorvisits_id: number; // ID of the doctor visit this service belongs to
   service_id: number;
+  tooth_id?: number | null; // Universal tooth number (1-32) this service applies to, if dental
   service?: Service; // Eager-loaded service details
   user_id: number;
   user_name?: string;
@@ -20,6 +21,7 @@ export interface RequestedService {
   price: number;
   amount_paid: number;
   endurance: number;
+  total_cost?: number;
   user_deposited?: number | null;
   is_paid: boolean;
   discount: number;
@@ -41,6 +43,8 @@ export interface Service {
   price: number | string; // Can be string from form, number from API
   activate: boolean;
   variable: boolean;
+  has_cost?: boolean;
+  deleted_at?: string;
   created_at: string;
   updated_at: string;
   contract_price?: number | null;
@@ -54,6 +58,7 @@ export interface ServiceFormData {
   price: string; // Input as string
   activate: boolean;
   variable: boolean;
+  has_cost: boolean;
 }
 
 export interface ServiceGroupWithServices extends ServiceGroup {
@@ -96,4 +101,15 @@ export interface RequestedServiceDepositFormData {
   amount: string; // Input as string
   is_bank: boolean;
   // shift_id and user_id will usually be set by the backend or from context
+}
+
+export interface RequestedServiceCost {
+  id: number;
+  requested_service_id: number;
+  party_id: number;
+  amount: number | null;
+  user_id: number;
+  party?: { id: number; name: string };
+  user?: Pick<User, 'id' | 'name'>;
+  created_at: string;
 }

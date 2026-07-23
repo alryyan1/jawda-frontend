@@ -16,7 +16,6 @@ import {
   Checkbox,
   Card,
   CardContent,
-  CardHeader,
   Typography,
   Box,
   Grid,
@@ -25,6 +24,7 @@ import {
   Alert,
   Paper,
   Autocomplete,
+  Divider,
 } from "@mui/material";
 import { ArrowLeft, UserPlus, UserCog } from "lucide-react";
 import { toast } from "sonner";
@@ -59,6 +59,14 @@ type UserFormValues = {
   user_type?: string;
   roles: string[];
 };
+
+const USER_TYPE_OPTIONS = [
+  "استقبال معمل",
+  "ادخال نتائج",
+  "استقبال عياده",
+  "خزنه موحده",
+  "تامين",
+];
 
 const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
   const navigate = useNavigate();
@@ -199,12 +207,10 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
       name: formData.name,
       username: formData.username,
       doctor_id: formData.doctor_id ? Number(formData.doctor_id) : undefined,
-      is_nurse: false,
       is_supervisor: formData.is_supervisor,
       is_active: formData.is_active,
       user_type: formData.user_type ? formData.user_type : null,
       roles: formData.roles || [],
-      user_money_collector_type: "all",
     };
 
     // Only include password if it's provided (for create or if edit form allows password change)
@@ -216,6 +222,7 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
   };
 
   const dataIsLoading = isLoadingUser || isLoadingRoles || isLoadingDoctors;
+  const fieldsDisabled = dataIsLoading || mutation.isPending;
 
   if (isEditMode && isLoadingUser && !userData) {
     return (
@@ -243,356 +250,335 @@ const UserFormPage: React.FC<UserFormPageProps> = ({ mode }) => {
   }
 
   return (
-    <>
-      <Box sx={{ maxWidth: 1200, mx: "auto", py: 3, px: 2 }}>
+    <Box sx={{ maxWidth: 900, mx: "auto", py: 2, px: 2 }}>
+      <Box display="flex" alignItems="center" gap={1} mb={1.5}>
         <Button
-          variant="outlined"
+          variant="text"
           size="small"
           onClick={() => navigate("/users")}
-          sx={{ mb: 2 }}
-          startIcon={<ArrowLeft size={16} />}
+          startIcon={<ArrowLeft className="h-4 w-4" />}
         >
-          العودة إلى قائمة إدارة المستخدمين
+          رجوع
         </Button>
+        <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
+        {isEditMode ? (
+          <UserCog className="h-5 w-5 text-primary" />
+        ) : (
+          <UserPlus className="h-5 w-5 text-primary" />
+        )}
+        <Typography variant="h6" component="h1">
+          {isEditMode ? "تعديل بيانات المستخدم" : "إضافة مستخدم جديد"}
+        </Typography>
+      </Box>
 
-        <Card>
-          <CardHeader
-            sx={{
-              display: "flex",
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-              pb: 1,
-            }}
+      <Card>
+        <CardContent sx={{ p: 2.5 }}>
+          <Box
+            component="form"
+            onSubmit={handleSubmit(onSubmit)}
+            sx={{ "& > *": { mb: 2 } }}
           >
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              {isEditMode ? (
-                <UserCog size={24} color="primary" />
-              ) : (
-                <UserPlus size={24} color="primary" />
-              )}
-              <Box>
-                <Typography variant="h6" component="h1">
-                  {isEditMode ? "تعديل بيانات المستخدم" : "إضافة مستخدم جديد"}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {isEditMode
-                    ? "قم بتعديل بيانات المستخدم أدناه."
-                    : "الرجاء ملء التفاصيل أدناه."}
-                </Typography>
-              </Box>
-            </Box>
-          </CardHeader>
-          <CardContent className="h-[calc(100vh-200px)] overflow-y-auto">
-            <Box
-              component="form"
-              onSubmit={handleSubmit(onSubmit)}
-              sx={{ "& > *": { mb: 3 } }}
-            >
-              <Grid container spacing={2}>
-                <Grid xs={12} md={6}>
-                  <Controller
-                    control={control}
-                    name="name"
-                    render={({ field, fieldState: { error } }) => (
-                      <TextField
-                        {...field}
-                        label="الاسم الكامل"
-                        fullWidth
-                        disabled={dataIsLoading || mutation.isPending}
-                        error={!!error}
-                        helperText={error?.message}
-                      />
-                    )}
-                  />
-                </Grid>
-                <Grid xs={12} md={6}>
-                  <Controller
-                    control={control}
-                    name="username"
-                    render={({ field, fieldState: { error } }) => (
-                      <TextField
-                        {...field}
-                        label="اسم المستخدم"
-                        fullWidth
-                        disabled={dataIsLoading || mutation.isPending}
-                        error={!!error}
-                        helperText={error?.message}
-                      />
-                    )}
-                  />
-                </Grid>
-                <Grid xs={12} md={6}>
-                  <Controller
-                    control={control}
-                    name="user_type"
-                    render={({ field, fieldState: { error } }) => (
-                      <FormControl fullWidth error={!!error}>
-                        <InputLabel>نوع المستخدم</InputLabel>
-                        <Select
-                          sx={{
-                            width: "300px",
-                          }}
-                          {...field}
-                          value={field.value || ""}
-                          disabled={dataIsLoading || mutation.isPending}
-                          label="نوع المستخدم"
-                        >
-                          <MenuItem value="">بدون</MenuItem>
-                          <MenuItem value="استقبال معمل">استقبال معمل</MenuItem>
-                          <MenuItem value="ادخال نتائج">ادخال نتائج</MenuItem>
-                          <MenuItem value="استقبال عياده">
-                            استقبال عياده
+            <Grid container spacing={1.5}>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <Controller
+                  control={control}
+                  name="name"
+                  rules={{ required: "الاسم مطلوب" }}
+                  render={({ field, fieldState: { error } }) => (
+                    <TextField
+                      {...field}
+                      size="small"
+                      label="الاسم الكامل"
+                      fullWidth
+                      disabled={fieldsDisabled}
+                      error={!!error}
+                      helperText={error?.message}
+                    />
+                  )}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <Controller
+                  control={control}
+                  name="username"
+                  rules={{ required: "اسم المستخدم مطلوب" }}
+                  render={({ field, fieldState: { error } }) => (
+                    <TextField
+                      {...field}
+                      size="small"
+                      label="اسم المستخدم"
+                      fullWidth
+                      disabled={fieldsDisabled}
+                      error={!!error}
+                      helperText={error?.message}
+                    />
+                  )}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 4 }}>
+                <Controller
+                  control={control}
+                  name="user_type"
+                  render={({ field, fieldState: { error } }) => (
+                    <FormControl fullWidth size="small" error={!!error}>
+                      <InputLabel>نوع المستخدم</InputLabel>
+                      <Select {...field} value={field.value || ""} disabled={fieldsDisabled} label="نوع المستخدم">
+                        <MenuItem value="">بدون</MenuItem>
+                        {USER_TYPE_OPTIONS.map((type) => (
+                          <MenuItem key={type} value={type}>
+                            {type}
                           </MenuItem>
-                          <MenuItem value="خزنه موحده">خزنه موحده</MenuItem>
-                          <MenuItem value="تامين">تامين</MenuItem>
-                        </Select>
-                        <FormHelperText>{error?.message}</FormHelperText>
-                      </FormControl>
-                    )}
-                  />
-                </Grid>
+                        ))}
+                      </Select>
+                      <FormHelperText>{error?.message}</FormHelperText>
+                    </FormControl>
+                  )}
+                />
               </Grid>
+            </Grid>
 
-              <Grid container spacing={2}>
-                <Grid xs={12} md={6}>
-                  <Controller
-                    control={control}
-                    name="password"
-                    render={({ field, fieldState: { error } }) => (
-                      <TextField
-                        {...field}
-                        type="password"
-                        label={
-                          isEditMode
-                            ? "كلمة المرور الجديدة (اختياري)"
-                            : "كلمة المرور"
-                        }
-                        fullWidth
-                        disabled={mutation.isPending}
-                        error={!!error}
-                        helperText={
-                          error?.message ||
-                          (isEditMode
-                            ? "اتركه فارغاً إذا كنت لا تريد تغيير كلمة المرور."
-                            : "يجب أن تكون كلمة المرور 8 أحرف على الأقل.")
-                        }
-                      />
-                    )}
-                  />
-                </Grid>
-                <Grid xs={12} md={6}>
-                  <Controller
-                    control={control}
-                    name="password_confirmation"
-                    render={({ field, fieldState: { error } }) => (
-                      <TextField
-                        {...field}
-                        type="password"
-                        label={
-                          isEditMode
-                            ? "تأكيد كلمة المرور الجديدة"
-                            : "تأكيد كلمة المرور"
-                        }
-                        fullWidth
-                        disabled={mutation.isPending}
-                        error={!!error}
-                        helperText={error?.message}
-                      />
-                    )}
-                  />
-                </Grid>
+            <Grid container spacing={1.5}>
+              <Grid size={{ xs: 12, md: 6 }}>
+                <Controller
+                  control={control}
+                  name="password"
+                  rules={{
+                    validate: (value) => {
+                      if (!isEditMode && !value?.trim()) {
+                        return "كلمة المرور مطلوبة";
+                      }
+                      if (value && value.length < 8) {
+                        return "يجب أن تكون كلمة المرور 8 أحرف على الأقل";
+                      }
+                      return true;
+                    },
+                  }}
+                  render={({ field, fieldState: { error } }) => (
+                    <TextField
+                      {...field}
+                      size="small"
+                      type="password"
+                      label={
+                        isEditMode
+                          ? "كلمة المرور الجديدة (اختياري)"
+                          : "كلمة المرور"
+                      }
+                      fullWidth
+                      disabled={mutation.isPending}
+                      error={!!error}
+                      helperText={
+                        error?.message ||
+                        (isEditMode
+                          ? "اتركه فارغاً إذا كنت لا تريد تغيير كلمة المرور."
+                          : "8 أحرف على الأقل.")
+                      }
+                    />
+                  )}
+                />
               </Grid>
+              <Grid size={{ xs: 12, md: 6 }}>
+                <Controller
+                  control={control}
+                  name="password_confirmation"
+                  rules={{
+                    validate: (value, formValues) => {
+                      if (!isEditMode && !value?.trim()) {
+                        return "تأكيد كلمة المرور مطلوب";
+                      }
+                      if (formValues.password && value !== formValues.password) {
+                        return "كلمتا المرور غير متطابقتين";
+                      }
+                      return true;
+                    },
+                  }}
+                  render={({ field, fieldState: { error } }) => (
+                    <TextField
+                      {...field}
+                      size="small"
+                      type="password"
+                      label={
+                        isEditMode
+                          ? "تأكيد كلمة المرور الجديدة"
+                          : "تأكيد كلمة المرور"
+                      }
+                      fullWidth
+                      disabled={mutation.isPending}
+                      error={!!error}
+                      helperText={error?.message}
+                    />
+                  )}
+                />
+              </Grid>
+            </Grid>
 
+            <Controller
+              control={control}
+              name="doctor_id"
+              render={({ field, fieldState: { error } }) => (
+                <Autocomplete
+                  size="small"
+                  options={doctorsList}
+                  loading={isLoadingDoctors}
+                  disabled={fieldsDisabled}
+                  getOptionLabel={(doc: DoctorStripped) =>
+                    doc.specialist_name
+                      ? `${doc.name} (${doc.specialist_name})`
+                      : doc.name
+                  }
+                  value={
+                    doctorsList.find(
+                      (doc) => String(doc.id) === field.value,
+                    ) ?? null
+                  }
+                  onChange={(_, newValue) =>
+                    field.onChange(
+                      newValue ? String(newValue.id) : undefined,
+                    )
+                  }
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="الطبيب المرتبط (اختياري)"
+                      error={!!error}
+                      helperText={error?.message}
+                    />
+                  )}
+                />
+              )}
+            />
+
+            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
               <Controller
                 control={control}
-                name="doctor_id"
-                render={({ field, fieldState: { error } }) => (
-                  <Autocomplete
-                    options={doctorsList}
-                    loading={isLoadingDoctors}
-                    disabled={dataIsLoading || mutation.isPending}
-                    getOptionLabel={(doc: DoctorStripped) =>
-                      doc.specialist_name
-                        ? `${doc.name} (${doc.specialist_name})`
-                        : doc.name
-                    }
-                    value={
-                      doctorsList.find(
-                        (doc) => String(doc.id) === field.value,
-                      ) ?? null
-                    }
-                    onChange={(_, newValue) =>
-                      field.onChange(
-                        newValue ? String(newValue.id) : undefined,
-                      )
-                    }
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        label="الطبيب المرتبط (اختياري)"
-                        error={!!error}
-                        helperText={
-                          error?.message || "هذا المستخدم مرتبط بطبيب معين."
-                        }
+                name="is_supervisor"
+                render={({ field }) => (
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        size="small"
+                        checked={field.value}
+                        onChange={field.onChange}
+                        disabled={fieldsDisabled}
                       />
-                    )}
+                    }
+                    label="مشرف"
                   />
                 )}
               />
-
-              <Grid container spacing={2}>
-                <Grid xs={12} sm={6}>
-                  <Controller
-                    control={control}
-                    name="is_supervisor"
-                    render={({ field }) => (
-                      <Paper
-                        elevation={1}
-                        sx={{
-                          p: 2,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          height: "100%",
-                        }}
-                      >
-                        <Typography variant="body1">هل هو مشرف؟</Typography>
-                        <Switch
-                          checked={field.value}
-                          onChange={field.onChange}
-                          disabled={dataIsLoading || mutation.isPending}
-                        />
-                      </Paper>
-                    )}
-                  />
-                </Grid>
-                <Grid xs={12} sm={6}>
-                  <Controller
-                    control={control}
-                    name="is_active"
-                    render={({ field }) => (
-                      <Paper
-                        elevation={1}
-                        sx={{
-                          p: 2,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          height: "100%",
-                        }}
-                      >
-                        <Typography variant="body1">نشط</Typography>
-                        <Switch
-                          checked={field.value}
-                          onChange={field.onChange}
-                          disabled={dataIsLoading || mutation.isPending}
-                        />
-                      </Paper>
-                    )}
-                  />
-                </Grid>
-              </Grid>
-
-              <Box>
-                <Typography variant="h6" sx={{ mb: 1 }}>
-                  الأدوار
-                </Typography>
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{ mb: 2 }}
-                >
-                  اختر صلاحيات المستخدم
-                </Typography>
-                {isLoadingRoles ? (
-                  <Box sx={{ display: "flex", justifyContent: "center", p: 2 }}>
-                    <CircularProgress size={24} />
-                  </Box>
-                ) : (
-                  <Paper
-                    elevation={1}
-                    sx={{
-                      p: 2,
-                      maxHeight: 240,
-                      overflow: "auto",
-                      display: "grid",
-                      gridTemplateColumns:
-                        "repeat(auto-fit, minmax(200px, 1fr))",
-                      gap: 1,
-                    }}
-                  >
-                    {rolesList.map((role) => (
-                      <Controller
-                        key={role.id}
-                        control={control}
-                        name="roles"
-                        render={({ field: roleArrayField }) => (
-                          <FormControlLabel
-                            control={
-                              <Checkbox
-                                checked={roleArrayField.value?.includes(
-                                  role.name,
-                                )}
-                                disabled={dataIsLoading || mutation.isPending}
-                                onChange={(e) => {
-                                  const currentRoles =
-                                    roleArrayField.value || [];
-                                  const newRoles = e.target.checked
-                                    ? [...currentRoles, role.name]
-                                    : currentRoles.filter(
-                                        (name) => name !== role.name,
-                                      );
-                                  roleArrayField.onChange(newRoles);
-                                }}
-                              />
-                            }
-                            label={role.name}
-                            sx={{ margin: 0 }}
-                          />
-                        )}
+              <Controller
+                control={control}
+                name="is_active"
+                render={({ field }) => (
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        size="small"
+                        checked={field.value}
+                        onChange={field.onChange}
+                        disabled={fieldsDisabled}
                       />
-                    ))}
-                  </Paper>
+                    }
+                    label="نشط"
+                  />
                 )}
-              </Box>
-
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  gap: 1,
-                  pt: 2,
-                }}
-              >
-                <Button
-                  type="button"
-                  variant="outlined"
-                  onClick={() => navigate("/users")}
-                  disabled={mutation.isPending}
-                >
-                  إلغاء
-                </Button>
-                <Button
-                  type="submit"
-                  variant="contained"
-                  disabled={
-                    dataIsLoading ||
-                    mutation.isPending ||
-                    (!isDirty && isEditMode)
-                  }
-                  startIcon={
-                    mutation.isPending ? <CircularProgress size={16} /> : null
-                  }
-                >
-                  {isEditMode ? "حفظ التغييرات" : "إنشاء"}
-                </Button>
-              </Box>
+              />
             </Box>
-          </CardContent>
-        </Card>
-      </Box>
-    </>
+
+            <Box>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                الأدوار
+              </Typography>
+              {isLoadingRoles ? (
+                <Box sx={{ display: "flex", justifyContent: "center", p: 2 }}>
+                  <CircularProgress size={24} />
+                </Box>
+              ) : (
+                <Controller
+                  control={control}
+                  name="roles"
+                  render={({ field: roleArrayField }) => (
+                    <Paper
+                      variant="outlined"
+                      sx={{
+                        p: 1.5,
+                        maxHeight: 200,
+                        overflow: "auto",
+                        display: "grid",
+                        gridTemplateColumns:
+                          "repeat(auto-fit, minmax(180px, 1fr))",
+                        gap: 0.5,
+                      }}
+                    >
+                      {rolesList.map((role) => (
+                        <FormControlLabel
+                          key={role.id}
+                          control={
+                            <Checkbox
+                              size="small"
+                              checked={roleArrayField.value?.includes(
+                                role.name,
+                              )}
+                              disabled={fieldsDisabled}
+                              onChange={(e) => {
+                                const currentRoles =
+                                  roleArrayField.value || [];
+                                const newRoles = e.target.checked
+                                  ? [...currentRoles, role.name]
+                                  : currentRoles.filter(
+                                      (name) => name !== role.name,
+                                    );
+                                roleArrayField.onChange(newRoles);
+                              }}
+                            />
+                          }
+                          label={<Typography variant="body2">{role.name}</Typography>}
+                          sx={{ margin: 0 }}
+                        />
+                      ))}
+                    </Paper>
+                  )}
+                />
+              )}
+            </Box>
+
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 1,
+                pt: 1,
+                mb: 0,
+              }}
+            >
+              <Button
+                type="button"
+                size="small"
+                variant="outlined"
+                onClick={() => navigate("/users")}
+                disabled={mutation.isPending}
+              >
+                إلغاء
+              </Button>
+              <Button
+                type="submit"
+                size="small"
+                variant="contained"
+                disabled={
+                  dataIsLoading ||
+                  mutation.isPending ||
+                  (!isDirty && isEditMode)
+                }
+                startIcon={
+                  mutation.isPending ? <CircularProgress size={16} /> : null
+                }
+              >
+                {isEditMode ? "حفظ التغييرات" : "إنشاء"}
+              </Button>
+            </Box>
+          </Box>
+        </CardContent>
+      </Card>
+    </Box>
   );
 };
 export default UserFormPage;

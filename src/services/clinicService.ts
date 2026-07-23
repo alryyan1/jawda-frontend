@@ -15,6 +15,7 @@ export const getActiveDoctorShifts = async (clinicShiftId?: number): Promise<Doc
 interface ActivePatientFilters {
     doctor_shift_id?: number | null; // If filtering by doctor's specific session
     doctor_id?: number | null;       // If filtering by doctor directly
+    date?: string;                   // YYYY-MM-DD, only used with doctor_id (default: today)
     search?: string;
 }
 

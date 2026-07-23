@@ -1,35 +1,22 @@
-import React, { useState } from "react";
+// src/components/lab/reception/LabRequestsColumn.tsx
+import React, { useState, useCallback } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-// Utility function to format currency with thousands separator
-const formatCurrency = (amount: number): string => {
-  return amount.toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  });
-};
-
-// Shadcn UI Components
+// UI
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Dialog as ActionsDialog,
+  DialogContent as ActionsDialogContent,
+  DialogHeader as ActionsDialogHeader,
+  DialogTitle as ActionsDialogTitle,
+  DialogFooter as ActionsDialogFooter,
+} from "@/components/ui/dialog";
 
 // Icons
 import {
@@ -46,28 +33,15 @@ import {
 } from "lucide-react";
 
 // Services & Types
-import {
-  clearPendingLabRequestsForVisit,
-  unpayLabRequest,
-  recordDirectLabRequestPayment,
-  updateAllLabRequestsBankak,
-} from "@/services/labRequestService";
+import { unpayLabRequest, recordDirectLabRequestPayment, updateAllLabRequestsBankak } from "@/services/labRequestService";
+import { updatePatient } from "@/services/patientService";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAuthorization } from "@/hooks/useAuthorization";
 import apiClient from "@/services/api";
 import type { DoctorVisit } from "@/types/visits";
-import BatchLabPaymentDialog from "@/components/clinic/BatchLabPaymentDialog";
-import PdfPreviewDialog from "@/components/common/PdfPreviewDialog";
 import DiscountCommentDialog from "./DiscountCommentDialog";
-import { updatePatient } from "@/services/patientService";
-import {
-  Dialog as ActionsDialog,
-  DialogContent as ActionsDialogContent,
-  DialogHeader as ActionsDialogHeader,
-  DialogTitle as ActionsDialogTitle,
-  DialogFooter as ActionsDialogFooter,
-} from "@/components/ui/dialog";
-import { useAuthorization } from "@/hooks/useAuthorization";
-import { usePdfPreviewVisibility } from "@/contexts/PdfPreviewVisibilityContext";
+
+type LabRequestItem = NonNullable<DoctorVisit["lab_requests"]>[number];
 
 interface LabRequestsColumnProps {
   activeVisitId: number | null;
@@ -76,81 +50,104 @@ interface LabRequestsColumnProps {
   onPrintReceipt: () => void;
 }
 
-const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
-  activeVisitId,
-  visit,
-  isLoading,
-  onPrintReceipt,
-}) => {
-//  console.log(visit,'visit in LabRequestsColumn');
-  const queryClient = useQueryClient();
-  const { currentClinicShift , user  } = useAuth();
-  const { can } = useAuthorization();
-  const { isVisible: isPdfPreviewVisible } = usePdfPreviewVisibility();
+/* ------------------------------- Helpers --------------------------------- */
 
-  // State for dialogs
-  const [showBatchPaymentDialog, setShowBatchPaymentDialog] = useState(false);
-  const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false);
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+const formatCurrency = (amount: number): string =>
+  amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const calculateDiscountedAmount = (price: number, discountPer: number): number =>
+  price - (price * discountPer) / 100;
+
+const DISCOUNT_VALUES = [0, 10, 15, 20, 25, 30, 35, 40, 45, 50, 100];
+
+/* ----------------------------- View states -------------------------------- */
+
+const ColumnLoadingState: React.FC = () => (
+  <div className="flex h-full items-center justify-center" role="status">
+    <div className="space-y-3 text-center">
+      <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+      <p className="text-sm text-muted-foreground">جاري التحميل...</p>
+    </div>
+  </div>
+);
+
+const NoVisitState: React.FC = () => (
+  <div className="flex h-full items-center justify-center text-muted-foreground">
+    <div className="space-y-4 text-center">
+      <Activity className="mx-auto h-16 w-16 opacity-30" />
+      <div className="space-y-2">
+        <p className="text-lg font-medium">اختر مريضاً</p>
+        <p className="mx-auto max-w-xs text-sm leading-relaxed">اختر مريضاً من القائمة لعرض طلباته</p>
+      </div>
+    </div>
+  </div>
+);
+
+const NoRequestsState: React.FC = () => (
+  <div className="flex h-full items-center justify-center">
+    <div className="space-y-4 text-center">
+      <FileText className="mx-auto h-16 w-16 text-muted-foreground/30" />
+      <p className="text-lg font-medium text-muted-foreground">لا توجد تحاليل مطلوبة</p>
+    </div>
+  </div>
+);
+
+/* -------------------------------- Column ---------------------------------- */
+
+const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({ activeVisitId, visit, isLoading, onPrintReceipt }) => {
+  const queryClient = useQueryClient();
+  const { currentClinicShift, user } = useAuth();
+  const { can } = useAuthorization();
+
   const [showDiscountCommentDialog, setShowDiscountCommentDialog] = useState(false);
   const [selectedLabRequestForComment, setSelectedLabRequestForComment] = useState<number | null>(null);
   const [isSavingPatientDiscountComment, setIsSavingPatientDiscountComment] = useState(false);
   const [rowActionsDialogOpen, setRowActionsDialogOpen] = useState(false);
-  const [selectedRequestForRowDialog, setSelectedRequestForRowDialog] = useState<NonNullable<DoctorVisit['lab_requests']>[number] | null>(null);
+  const [selectedRequestForRowDialog, setSelectedRequestForRowDialog] = useState<LabRequestItem | null>(null);
 
-  // Update discount mutation
+  const invalidateVisitQueries = useCallback(
+    (options?: { includeDashboard?: boolean }) => {
+      queryClient.invalidateQueries({ queryKey: ["activeVisitForLabRequests", activeVisitId] });
+      queryClient.invalidateQueries({ queryKey: ["doctorVisit", activeVisitId] });
+      queryClient.invalidateQueries({ queryKey: ["labRequestsForVisit", activeVisitId] });
+      if (options?.includeDashboard) {
+        queryClient.invalidateQueries({ queryKey: ["dashboardSummary"] });
+      }
+    },
+    [queryClient, activeVisitId]
+  );
+
+  const mutationErrorToast = (fallback: string) => (error: Error) => {
+    const apiError = error as { response?: { data?: { message?: string } } };
+    toast.error(apiError.response?.data?.message || fallback);
+  };
+
+  /* ------------------------------ Mutations ------------------------------- */
+
   const updateDiscountMutation = useMutation({
     mutationFn: async ({ requestId, discount }: { requestId: number; discount: number }) => {
-      const response = await apiClient.patch(`/labrequests/${requestId}/discount`, { 
-        discount_per: discount 
-      });
+      const response = await apiClient.patch(`/labrequests/${requestId}/discount`, { discount_per: discount });
       return response.data;
     },
     onSuccess: () => {
       toast.success("تم تحديث الخصم بنجاح");
-      queryClient.invalidateQueries({
-        queryKey: ["activeVisitForLabRequests", activeVisitId],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["doctorVisit", activeVisitId],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["labRequestsForVisit", activeVisitId],
-      });
+      invalidateVisitQueries();
     },
-    onError: (error: Error) => {
-      const apiError = error as { response?: { data?: { message?: string } } };
-      toast.error(apiError.response?.data?.message || "فشل التحديث");
-    },
+    onError: mutationErrorToast("فشل التحديث"),
   });
 
-  // Toggle bankak mutation
   const toggleBankakMutation = useMutation({
     mutationFn: async ({ requestId, isBankak }: { requestId: number; isBankak: boolean }) => {
-      const response = await apiClient.patch(`/labrequests/${requestId}/toggle-bankak`, { 
-        is_bankak: isBankak 
-      });
+      const response = await apiClient.patch(`/labrequests/${requestId}/toggle-bankak`, { is_bankak: isBankak });
       return response.data;
     },
     onSuccess: () => {
       toast.success("تم تحديث طريقة الدفع بنجاح");
-      queryClient.invalidateQueries({
-        queryKey: ["activeVisitForLabRequests", activeVisitId],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["doctorVisit", activeVisitId],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["labRequestsForVisit", activeVisitId],
-      });
+      invalidateVisitQueries();
     },
-    onError: (error: Error) => {
-      const apiError = error as { response?: { data?: { message?: string } } };
-      toast.error(apiError.response?.data?.message || "فشل التحديث");
-    },
+    onError: mutationErrorToast("فشل التحديث"),
   });
 
-  // Delete lab request mutation
   const deleteRequestMutation = useMutation({
     mutationFn: async (requestId: number) => {
       const response = await apiClient.delete(`/labrequests/${requestId}`);
@@ -158,121 +155,45 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
     },
     onSuccess: () => {
       toast.success("تم حذف طلب المختبر بنجاح");
-      queryClient.invalidateQueries({
-        queryKey: ["activeVisitForLabRequests", activeVisitId],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["doctorVisit", activeVisitId],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["labRequestsForVisit", activeVisitId],
-      });
+      invalidateVisitQueries();
     },
-    onError: (error: Error) => {
-      const apiError = error as { response?: { data?: { message?: string } } };
-      toast.error(apiError.response?.data?.message || "فشل الحذف");
-    },
+    onError: mutationErrorToast("فشل الحذف"),
   });
 
-  // Remove all pending lab requests mutation
-  const removeAllPendingMutation = useMutation({
-    mutationFn: () => clearPendingLabRequestsForVisit(activeVisitId!),
-    onSuccess: (result) => {
-      toast.success(`تم حذف ${result.deleted_count} فحص قيد الانتظار`);
-      queryClient.invalidateQueries({
-        queryKey: ["activeVisitForLabRequests", activeVisitId],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["doctorVisit", activeVisitId],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["labRequestsForVisit", activeVisitId],
-      });
-    },
-    onError: (error: Error) => {
-      const apiError = error as { response?: { data?: { message?: string } } };
-      toast.error(apiError.response?.data?.message || "فشل الطلب");
-    },
-  });
-
-  // Unpay lab request mutation
   const unpayLabRequestMutation = useMutation({
     mutationFn: (labRequestId: number) => unpayLabRequest(labRequestId),
     onSuccess: () => {
       toast.success("تم إلغاء الدفع بنجاح");
-      queryClient.invalidateQueries({
-        queryKey: ["activeVisitForLabRequests", activeVisitId],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["doctorVisit", activeVisitId],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["labRequestsForVisit", activeVisitId],
-      });
+      invalidateVisitQueries();
     },
-    onError: (error: Error) => {
-      const apiError = error as { response?: { data?: { message?: string } } };
-      toast.error(apiError.response?.data?.message || "فشل الطلب");
-    },
+    onError: mutationErrorToast("فشل الطلب"),
   });
 
-  // Direct pay item mutation
   const directPayItemMutation = useMutation({
-    mutationFn: (params: {
-      labRequestId: number;
-      is_bankak: boolean;
-      shift_id: number;
-    }) =>
-      recordDirectLabRequestPayment(params.labRequestId, {
-        is_bankak: params.is_bankak,
-      }),
+    mutationFn: (params: { labRequestId: number; is_bankak: boolean; shift_id: number }) =>
+      recordDirectLabRequestPayment(params.labRequestId, { is_bankak: params.is_bankak }),
     onSuccess: () => {
       toast.success("تم تسجيل الدفع بنجاح");
-      queryClient.invalidateQueries({
-        queryKey: ["activeVisitForLabRequests", activeVisitId],
-      });
-      queryClient.invalidateQueries({ queryKey: ["dashboardSummary"] });
-      queryClient.invalidateQueries({
-        queryKey: ["doctorVisit", activeVisitId],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["labRequestsForVisit", activeVisitId],
-      });
+      invalidateVisitQueries({ includeDashboard: true });
     },
-    onError: (error: Error) => {
-      const apiError = error as { response?: { data?: { message?: string } } };
-      toast.error(apiError.response?.data?.message || "فشل الدفع");
-    },
+    onError: mutationErrorToast("فشل الدفع"),
   });
 
-  // Update all lab requests bankak mutation
   const updateAllBankakMutation = useMutation({
     mutationFn: (isBankak: boolean) => updateAllLabRequestsBankak(activeVisitId!, isBankak),
     onSuccess: () => {
       toast.success("تم تعيين جميع الطلبات بنكك");
-      queryClient.invalidateQueries({
-        queryKey: ["activeVisitForLabRequests", activeVisitId],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["doctorVisit", activeVisitId],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["labRequestsForVisit", activeVisitId],
-      });
+      invalidateVisitQueries();
     },
-    onError: (error: Error) => {
-      const apiError = error as { response?: { data?: { message?: string } } };
-      toast.error(apiError.response?.data?.message || "فشل الطلب");
-    },
+    onError: mutationErrorToast("فشل الطلب"),
   });
 
-  // Removed lab request comment mutation; comment saved at patient level instead
+  /* ------------------------------ Handlers -------------------------------- */
 
   const handleDiscountChange = (requestId: number, discount: string) => {
     const discountValue = parseInt(discount);
     updateDiscountMutation.mutate({ requestId, discount: discountValue });
-    
-    // If discount is greater than 0, open comment dialog
+
     if (discountValue > 0 && !visit?.patient?.discount_comment) {
       setSelectedLabRequestForComment(requestId);
       setShowDiscountCommentDialog(true);
@@ -284,21 +205,11 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
   };
 
   const handleDeleteRequest = (requestId: number) => {
-    // if (window.confirm("هل أنت متأكد من حذف طلب المختبر؟")) {
-      deleteRequestMutation.mutate(requestId);
-    
-  };
-
-  const handleRemoveAllPending = () => {
-    if (window.confirm("هل أنت متأكد من إزالة جميع الطلبات المعلقة؟")) {
-      removeAllPendingMutation.mutate();
-    }
+    deleteRequestMutation.mutate(requestId);
   };
 
   const handleUnpayLabRequest = (requestId: number) => {
-    // if (window.confirm("هل أنت متأكد من إلغاء دفع هذا الطلب؟")) {
-      unpayLabRequestMutation.mutate(requestId);
-    // }
+    unpayLabRequestMutation.mutate(requestId);
   };
 
   const handleDirectPayItem = (requestId: number, isBankak: boolean) => {
@@ -314,9 +225,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
   };
 
   const handleUpdateAllBankak = () => {
-    // if (window.confirm("هل تريد تعيين كل الطلبات بنكك")) {
-      updateAllBankakMutation.mutate(true);
-    // }
+    updateAllBankakMutation.mutate(true);
   };
 
   const handleOpenCommentDialog = (requestId: number) => {
@@ -338,46 +247,19 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
     }
   };
 
-  // Print barcode to Zebra printer
-  const printToZebra = async () => {
-    if (!activeVisitId) {
-      toast.error("يرجى اختيار زيارة أولاً");
-      return;
-    }
-    
-    try {
-      const response = await apiClient.post(`/visits/${activeVisitId}/print-barcode`);
-      fetch("http://127.0.0.1:5000/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "APPLICATION/JSON",
-        },
-
-        body: JSON.stringify(visit),
-      }).then(() => {});
-      if (response.data.status) {
-        toast.success("تم طباعة الباركود بنجاح");
-      } else {
-        toast.error(response.data.message || "فشل في طباعة الباركود");
-      }
-    } catch (error: unknown) {
-      console.error('Error printing barcode:', error);
-      const errorMessage = error instanceof Error ? error.message : "فشل في طباعة الباركود";
-      toast.error(errorMessage);
-    }
-  };
-
-  // Print barcode PDF using the same endpoint as ReportController
+  /**
+   * Prints barcode labels: primary path via the local print server, with an
+   * iframe-print of the backend PDF as fallback.
+   */
   const printBarcodePdf = async () => {
     if (!activeVisitId) {
       toast.error("يرجى اختيار زيارة أولاً");
       return;
     }
-    
+
     try {
-      toast.info('جاري إنشاء الباركود...');
-      
-      // Get dimensions from localStorage (same as BarcodePrintDialog)
+      toast.info("جاري إنشاء الباركود...");
+
       const BARCODE_LABEL_DIMENSIONS_KEY = "barcodeLabelDimensions";
       let dimensions = { width: 50, height: 25 };
       try {
@@ -392,367 +274,267 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
         console.error("Error reading stored dimensions:", error);
       }
 
-      // Call print server to automatically print barcode
-      const printServerUrl = 'http://localhost:4002';
+      const printServerUrl = "http://localhost:4002";
       fetch(`${printServerUrl}/emit/print-barcode`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'x-internal-token': import.meta.env.VITE_SERVER_AUTH_TOKEN || 'changeme'
+          "Content-Type": "application/json",
+          "x-internal-token": import.meta.env.VITE_SERVER_AUTH_TOKEN || "changeme",
         },
         body: JSON.stringify({
           visit_id: activeVisitId,
           width: dimensions.width,
           height: dimensions.height,
-        })
+        }),
       })
-      .then(async (response) => {
-        const result = await response.json();
-        if (response.ok) {
-          toast.success("تم إرسال طلب الطباعة بنجاح");
-        } else {
-          console.error('Print server error:', result);
-          toast.error(result.error || "فشل في إرسال طلب الطباعة");
-        }
-      })
-      .catch((error) => {
-        console.error('Error calling print server:', error);
-        toast.error("فشل في الاتصال بخادم الطباعة");
-      });
-      
-      // Also open PDF in iframe for manual printing/fallback
-      try {
-        // Call the same backend API endpoint
-        const response = await apiClient.get(`/visits/${activeVisitId}/lab-barcode/pdf`, { 
-          responseType: 'blob',
-          params: {
-            width: dimensions.width,
-            height: dimensions.height,
+        .then(async (response) => {
+          const result = await response.json();
+          if (response.ok) {
+            toast.success("تم إرسال طلب الطباعة بنجاح");
+          } else {
+            console.error("Print server error:", result);
+            toast.error(result.error || "فشل في إرسال طلب الطباعة");
           }
+        })
+        .catch((error) => {
+          console.error("Error calling print server:", error);
+          toast.error("فشل في الاتصال بخادم الطباعة");
         });
-        
-        // Create blob URL and open in iframe for printing
-        const blob = new Blob([response.data], { type: 'application/pdf' });
+
+      try {
+        const response = await apiClient.get(`/visits/${activeVisitId}/lab-barcode/pdf`, {
+          responseType: "blob",
+          params: { width: dimensions.width, height: dimensions.height },
+        });
+
+        const blob = new Blob([response.data], { type: "application/pdf" });
         const fileURL = URL.createObjectURL(blob);
-        
-        // Create iframe for printing
-        const iframe = document.createElement('iframe');
-        iframe.style.display = 'none';
+
+        const iframe = document.createElement("iframe");
+        iframe.style.display = "none";
         iframe.src = fileURL;
         document.body.appendChild(iframe);
-        
+
         iframe.onload = () => {
-          // Auto-print via iframe as fallback
           iframe.contentWindow?.print();
-          // Cleanup after printing
           setTimeout(() => {
             document.body.removeChild(iframe);
             URL.revokeObjectURL(fileURL);
           }, 1000);
         };
       } catch (error) {
-        console.error('Error opening PDF in iframe:', error);
-        // Don't show error toast here as print server might have succeeded
+        console.error("Error opening PDF in iframe:", error);
+        // Print server may still have succeeded — stay silent here
       }
     } catch (error: unknown) {
-      console.error('Error printing barcode PDF:', error);
+      console.error("Error printing barcode PDF:", error);
       const errorMessage = error instanceof Error ? error.message : "فشل في إنشاء باركود PDF";
       toast.error(errorMessage);
     }
   };
 
-  const calculateDiscountedAmount = (price: number, discountPer: number) => {
-    return price - (price * discountPer / 100);
-  };
+  /* -------------------------------- Render -------------------------------- */
 
-  const generateDiscountOptions = () => {
-    const options: React.ReactNode[] = [];
-    // Only specific discount values: 10%, 20%, 30%, 40%, 50%, 100%
-    const discountValues = [0,10,15, 20,25, 30, 35, 40, 45, 50, 100];
-    
-    discountValues.forEach(value => {
-      options.push(
-        <SelectItem key={value} value={value.toString()}>
-          {value}%
-        </SelectItem>
-      );
-    });
-    return options;
-  };
+  if (isLoading) return <ColumnLoadingState />;
+  if (!activeVisitId) return <NoVisitState />;
 
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center space-y-3">
-          <Loader2 className="h-8 w-8 animate-spin text-purple-600 mx-auto" />
-          <p className="text-sm text-slate-600 dark:text-slate-400">
-            {"جاري التحميل"}...
-          </p>
-        </div>
-      </div>
-    );
-  }
+  const labRequests = visit?.lab_requests ?? [];
+  const isCompanyPatient = Boolean(visit?.patient?.company);
 
-  // No active visit state
-  if (!activeVisitId) {
-    return (
-      <div className="flex items-center justify-center h-full text-slate-500 dark:text-slate-400">
-        <div className="text-center space-y-4">
-          <Activity className="h-16 w-16 mx-auto opacity-30" />
-          <div className="space-y-2">
-            <p className="text-lg font-medium">
-              {"اختر مريضاً"}
-            </p>
-            <p className="text-sm max-w-xs mx-auto leading-relaxed">
-              {"اختر مريضاً من  لعرض طلباته"}
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-//  console.log(can('تخفيض فحص'),'can')
   return (
-    <div className="h-full flex flex-col">
-      {/* Header with Print Receipt and Remove All Pending buttons */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-1 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+    <div className="flex h-full flex-col">
+      {/* Toolbar */}
+      <div className="flex flex-col items-start justify-between gap-2 border-b border-border bg-muted/40 p-1.5 sm:flex-row sm:items-center">
         <div className="flex items-center gap-2">
-          <Button
-            onClick={onPrintReceipt}
-            variant="outline"
-            size="sm"
-            disabled={visit?.lab_requests?.length === 0}
-          >
-            <PrinterIcon className="h-4 w-4 mr-2" />
+          <Button onClick={onPrintReceipt} variant="outline" size="sm" disabled={labRequests.length === 0}>
+            <PrinterIcon className="mr-2 h-4 w-4" />
             <span className="hidden sm:inline">طباعة الإيصال</span>
           </Button>
           <Button
             onClick={printBarcodePdf}
             variant="outline"
             size="sm"
-            disabled={visit?.lab_requests?.length === 0}
+            disabled={labRequests.length === 0}
             title="طباعة الباركود PDF"
           >
-            {/* <Barcode className="h-4 w-4 mr-2" /> */}
             <span className="hidden sm:inline">طباعة الباركود</span>
           </Button>
         </div>
-        
-        <div className="flex items-center gap-2">
-          {/* <Button
-            onClick={handleRemoveAllPending}
 
-            //add red border
-            className="  hover:bg-red-600 hover:text-white !border-red-200 !border-2"
-            size="sm"
-            disabled={removeAllPendingMutation.isPending || (visit?.lab_requests?.length ?? 0) === 0 || visit?.patient?.result_print_date != null}
-          >
-            {removeAllPendingMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <Trash2 className="h-4 w-4 mr-2" />
-            )}
-            <span className="hidden sm:inline">حذف  التحاليل </span>
-          </Button> */}
-          
-          <Button
-            onClick={handleUpdateAllBankak}
-            variant="outline"
-            size="sm"
-            disabled={updateAllBankakMutation.isPending || (visit?.lab_requests?.length ?? 0) === 0}
-          >
-            {updateAllBankakMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              ''
-            )}
-            <span className="hidden sm:inline"> بنكك </span>
-          </Button>
-        </div>
+        <Button
+          onClick={handleUpdateAllBankak}
+          variant="outline"
+          size="sm"
+          disabled={updateAllBankakMutation.isPending || labRequests.length === 0}
+        >
+          {updateAllBankakMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          <span className="hidden sm:inline">بنكك</span>
+        </Button>
       </div>
 
-      {/* Lab Requests Table */}
-      <div className="flex-1 overflow-hidden">
-        {visit?.lab_requests?.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center space-y-4">
-              <FileText className="h-16 w-16 mx-auto text-slate-300 dark:text-slate-600" />
-              <div className="space-y-2">
-                <p className="text-lg font-medium text-slate-600 dark:text-slate-400">لا توجد  تحاليل مطلوبة</p>
-              </div>
-            </div>
-          </div>
+      {/* Requests table */}
+      <div className="min-h-0 flex-1 overflow-hidden">
+        {labRequests.length === 0 ? (
+          <NoRequestsState />
         ) : (
           <ScrollArea className="h-full">
             <Table>
-              <TableHeader>
+              <TableHeader className="sticky top-0 z-10 bg-card">
                 <TableRow>
                   <TableHead className="min-w-[150px]">اسم الفحص</TableHead>
-                  <TableHead className="min-w-[80px] hidden sm:table-cell">السعر</TableHead>
-                  {!visit?.patient?.company && (
-                    <TableHead className="min-w-[100px] hidden md:table-cell">الخصم</TableHead>
-                  )}
-                  {!visit?.patient?.company && (
-                    <TableHead className="min-w-[80px]">المبلغ</TableHead>
-                  )}
-                  {visit?.patient?.company && (
-                    <TableHead className="min-w-[100px] text-red-600">التحمل</TableHead>
-                  )}
-                  {/* Removed separate approval column; approval shown as badge near test name */}
-                  <TableHead className="min-w-[60px] hidden xl:table-cell">الإجراءات</TableHead>
+                  <TableHead className="hidden min-w-[80px] sm:table-cell">السعر</TableHead>
+                  {!isCompanyPatient && <TableHead className="hidden min-w-[100px] md:table-cell">الخصم</TableHead>}
+                  {!isCompanyPatient && <TableHead className="min-w-[80px]">المبلغ</TableHead>}
+                  {isCompanyPatient && <TableHead className="min-w-[100px] text-red-600">التحمل</TableHead>}
+                  <TableHead className="hidden min-w-[60px] xl:table-cell">الإجراءات</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(visit?.lab_requests ?? []).map((request) => {
+                {labRequests.map((request) => {
                   const discountedAmount = calculateDiscountedAmount(request.price, request.discount_per);
                   const remainingAmount = discountedAmount - request.amount_paid;
-                  
+
                   return (
-  <TableRow
+                    <TableRow
                       key={request.id}
-                      className={`xl:cursor-default cursor-pointer ${request.is_bankak ? 'bg-green-50 dark:bg-green-900/20' : ''} ${request.amount_paid > 0 ? 'bg-emerald-50 dark:bg-emerald-900/20' : ''}`}
+                      className={`cursor-pointer xl:cursor-default ${
+                        request.is_bankak ? "bg-green-50 dark:bg-green-900/20" : ""
+                      } ${request.amount_paid > 0 ? "bg-emerald-50 dark:bg-emerald-900/20" : ""}`}
                       onClick={() => {
-                        // Open dialog only on small screens (< 1280px)
+                        // Small screens use a dedicated actions dialog instead of inline buttons
                         if (window.innerWidth < 1280) {
                           setSelectedRequestForRowDialog(request);
                           setRowActionsDialogOpen(true);
                         }
                       }}
                     >
+                      {/* Test name + inline metadata */}
                       <TableCell className="font-medium">
                         <div className="flex flex-col">
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-semibold">
                               {request.main_test?.main_test_name || "Unknown Test"}
                             </span>
-                            {/* Approval status inline badge for company patients */}
-                            {visit?.patient?.company && (
+                            {isCompanyPatient && (
                               <Badge variant={!request.approve ? "success" : "destructive"} className="ml-1">
-                                {!request.approve  ? " " : "يحتاج موافقة"}
+                                {!request.approve ? " " : "يحتاج موافقة"}
                               </Badge>
                             )}
-                            {/* Comment icon if comment exists */}
-                          {request.comment && (
+                            {request.comment && (
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 className="h-6 w-6 p-0 text-blue-600 hover:text-blue-800"
                                 onClick={() => handleOpenCommentDialog(request.id)}
-                              title={"عرض الملاحظة"}
+                                title="عرض الملاحظة"
                               >
                                 <MessageSquare className="h-4 w-4" />
                               </Button>
                             )}
                           </div>
-                          <span className="text-xs text-slate-500">
+                          <span className="text-xs text-muted-foreground">
                             ID: {request.id}
                             {request.user_deposited && (
                               <span className="ml-2 text-xs text-blue-500"> {request.deposit_user_name}</span>
                             )}
                           </span>
-                          {/* Mobile-only info */}
-                          <div className="sm:hidden space-y-1 mt-2">
+
+                          {/* Mobile-only financial summary */}
+                          <div className="mt-2 space-y-1 sm:hidden">
                             <div className="flex justify-between text-xs">
-                              <span className="text-slate-500">السعر:</span>
+                              <span className="text-muted-foreground">السعر:</span>
                               <span className="font-medium">${formatCurrency(request.price)}</span>
                             </div>
                             <div className="flex justify-between text-xs">
-                              <span className="text-slate-500">المبلغ:</span>
+                              <span className="text-muted-foreground">المبلغ:</span>
                               <span className="font-medium">${formatCurrency(discountedAmount)}</span>
                             </div>
                             <div className="flex justify-between text-xs">
-                              <span className="text-slate-500">المدفوع:</span>
-                              <span className={`font-medium ${request.is_paid ? 'text-green-600' : 'text-red-600'}`}>
+                              <span className="text-muted-foreground">المدفوع:</span>
+                              <span className={`font-medium ${request.is_paid ? "text-green-600" : "text-red-600"}`}>
                                 ${formatCurrency(request.amount_paid)}
                               </span>
                             </div>
                             {!request.is_paid && (
                               <div className="flex justify-between text-xs">
-                                <span className="text-slate-500">المتبقي:</span>
+                                <span className="text-muted-foreground">المتبقي:</span>
                                 <span className="font-medium text-red-600">${formatCurrency(remainingAmount)}</span>
                               </div>
                             )}
                           </div>
                         </div>
                       </TableCell>
-                      
+
                       <TableCell className="hidden sm:table-cell">
                         <span className="font-medium">${formatCurrency(request.price)}</span>
                       </TableCell>
-                      
-                      {!visit?.patient?.company && (
+
+                      {!isCompanyPatient && (
                         <TableCell className="hidden md:table-cell">
                           <Select
                             value={request.discount_per.toString()}
                             onValueChange={(value) => handleDiscountChange(request.id, value)}
-                            disabled={updateDiscountMutation.isPending || request.is_paid  || !can('تخفيض فحص')}
+                            disabled={updateDiscountMutation.isPending || request.is_paid || !can("تخفيض فحص")}
                           >
                             <SelectTrigger className="w-full">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              {generateDiscountOptions()}
+                              {DISCOUNT_VALUES.map((value) => (
+                                <SelectItem key={value} value={value.toString()}>
+                                  {value}%
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </TableCell>
                       )}
-                      
-                      {!visit?.patient?.company && (
+
+                      {!isCompanyPatient && (
                         <TableCell>
                           <div className="flex flex-col">
                             <span className="font-medium">${formatCurrency(discountedAmount)}</span>
                             {request.discount_per > 0 && (
-                              <span className="text-xs text-green-600">
-                                -{request.discount_per}%
-                              </span>
+                              <span className="text-xs text-green-600">-{request.discount_per}%</span>
                             )}
                           </div>
                         </TableCell>
                       )}
-                      
-                      {visit?.patient?.company && (
+
+                      {isCompanyPatient && (
                         <TableCell>
-                          <span className="font-medium text-red-600">
-                            ${formatCurrency(request.endurance || 0)}
-                          </span>
+                          <span className="font-medium text-red-600">${formatCurrency(request.endurance || 0)}</span>
                         </TableCell>
                       )}
-                      
-                      {/* Removed separate approval cell; handled near test name */}
-                      
-                      {/* Action Buttons - hidden on < 1280px */}
+
+                      {/* Inline actions — desktop (≥ xl) only */}
                       <TableCell className="hidden xl:table-cell">
                         <div className="flex items-center gap-1">
-                          {/* Green checkmark if fully paid */}
-                          {request.is_paid && (
-                            <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0" />
-                          )}
-                          
-                          {/* Payment/Unpay Button */}
+                          {request.is_paid && <CheckCircle2 className="h-5 w-5 flex-shrink-0 text-green-600" />}
+
                           {!request.is_paid ? (
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8 w-8 border-2 border-green-200 p-0 text-green-600 hover:text-green-800 hover:bg-green-50"
+                              className="h-8 w-8 border-2 border-green-200 p-0 text-green-600 hover:bg-green-50 hover:text-green-800"
                               onClick={() => handleDirectPayItem(request.id, false)}
-                              disabled={directPayItemMutation.isPending || !can('سداد فحص')}
+                              disabled={directPayItemMutation.isPending || !can("سداد فحص")}
                               title="دفع نقدي"
                             >
-                              {directPayItemMutation.isPending ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                'دفع'
-                              )}
+                              {directPayItemMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "دفع"}
                             </Button>
                           ) : (
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8 w-8 p-0 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50"
+                              className="h-8 w-8 p-0 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-800"
                               onClick={() => handleUnpayLabRequest(request.id)}
-                              disabled={unpayLabRequestMutation.isPending || visit?.patient?.result_print_date != null || !can('الغاء سداد فحص') || visit?.result_auth == true}
+                              disabled={
+                                unpayLabRequestMutation.isPending ||
+                                visit?.patient?.result_print_date != null ||
+                                !can("الغاء سداد فحص") ||
+                                visit?.result_auth == true
+                              }
                               title="إلغاء السداد"
                             >
                               {unpayLabRequestMutation.isPending ? (
@@ -763,7 +545,6 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                             </Button>
                           )}
 
-                          {/* Bankak Toggle Checkbox */}
                           {request.amount_paid > 0 && (
                             <div className="flex items-center gap-1" title={request.is_bankak ? "إلغاء بنكك" : "تعيين بنكك"}>
                               {toggleBankakMutation.isPending ? (
@@ -772,21 +553,28 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                                 <Checkbox
                                   checked={!!request.is_bankak}
                                   onCheckedChange={(checked) => handleToggleBankak(request.id, !!checked)}
-                                  disabled={toggleBankakMutation.isPending || !request.is_paid || user?.id != request.user_deposited}
-                                  className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                                  disabled={
+                                    toggleBankakMutation.isPending || !request.is_paid || user?.id != request.user_deposited
+                                  }
+                                  className="data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600"
                                 />
                               )}
-                              <span className="text-xs text-slate-600">بنكك</span>
+                              <span className="text-xs text-muted-foreground">بنكك</span>
                             </div>
                           )}
 
-                          {/* Delete Button */}
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-8 w-8 p-0 text-red-600 hover:text-red-800 hover:bg-red-50"
+                            className="h-8 w-8 p-0 text-red-600 hover:bg-red-50 hover:text-red-800"
                             onClick={() => handleDeleteRequest(request.id)}
-                            disabled={deleteRequestMutation.isPending || visit?.patient?.result_print_date != null || !can('حذف فحص مضاف') || visit?.result_auth == true || (user?.id != request.user_deposited && request.user_deposited != null)}
+                            disabled={
+                              deleteRequestMutation.isPending ||
+                              visit?.patient?.result_print_date != null ||
+                              !can("حذف فحص مضاف") ||
+                              visit?.result_auth == true ||
+                              (user?.id != request.user_deposited && request.user_deposited != null)
+                            }
                             title="حذف"
                           >
                             {deleteRequestMutation.isPending ? (
@@ -806,45 +594,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
         )}
       </div>
 
-      {/* Batch Payment Dialog */}
-      {currentClinicShift && (visit?.lab_requests?.length ?? 0) > 0 && visit?.patient && (
-        <BatchLabPaymentDialog
-          isOpen={showBatchPaymentDialog}
-          onOpenChange={setShowBatchPaymentDialog}
-          visitId={activeVisitId}
-          requestedTests={visit?.lab_requests ?? []}
-          currentPatient={visit.patient}
-          currentClinicShift={currentClinicShift}
-          onBatchPaymentSuccess={() => {
-            queryClient.invalidateQueries({
-              queryKey: ["activeVisitForLabRequests", activeVisitId],
-            });
-            queryClient.invalidateQueries({ queryKey: ["dashboardSummary"] });
-            setShowBatchPaymentDialog(false);
-          }}
-        />
-      )}
-
-      {/* PDF Preview Dialog */}
-      {isPdfPreviewVisible && (
-        <PdfPreviewDialog
-          widthClass="w-[300px]"
-          isOpen={isPdfPreviewOpen}
-          onOpenChange={(open) => {
-            setIsPdfPreviewOpen(open);
-            if (!open && pdfUrl) {
-              URL.revokeObjectURL(pdfUrl);
-              setPdfUrl(null);
-            }
-          }}
-          pdfUrl={pdfUrl}
-          isLoading={false}
-          title={""}
-          fileName={""}
-        />
-      )}
-
-      {/* Discount Comment Dialog */}
+      {/* Discount comment dialog */}
       {selectedLabRequestForComment && (
         <DiscountCommentDialog
           isOpen={showDiscountCommentDialog}
@@ -856,41 +606,42 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
         />
       )}
 
-      {/* Row Actions Dialog for small screens */}
+      {/* Row actions dialog — small screens */}
       {selectedRequestForRowDialog && (
-        <ActionsDialog  open={rowActionsDialogOpen} onOpenChange={setRowActionsDialogOpen}>
+        <ActionsDialog open={rowActionsDialogOpen} onOpenChange={setRowActionsDialogOpen}>
           <ActionsDialogContent>
             <ActionsDialogHeader>
               <ActionsDialogTitle>إجراءات الطلب #{selectedRequestForRowDialog.id}</ActionsDialogTitle>
             </ActionsDialogHeader>
             <div className="space-y-3">
-              {/* Paid Status */}
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-600">الحالة</span>
+                <span className="text-sm text-muted-foreground">الحالة</span>
                 {selectedRequestForRowDialog.is_paid ? (
-                  <Badge variant="default" className="text-xs w-fit">
-                    <CheckCircle2 className="h-3 w-3 mr-1" /> مدفوع
+                  <Badge variant="default" className="w-fit text-xs">
+                    <CheckCircle2 className="mr-1 h-3 w-3" /> مدفوع
                   </Badge>
                 ) : (
-                  <Badge variant="destructive" className="text-xs w-fit">
-                    { formatCurrency(calculateDiscountedAmount(selectedRequestForRowDialog.price, selectedRequestForRowDialog.discount_per) - selectedRequestForRowDialog.amount_paid) } مستحق
+                  <Badge variant="destructive" className="w-fit text-xs">
+                    {formatCurrency(
+                      calculateDiscountedAmount(selectedRequestForRowDialog.price, selectedRequestForRowDialog.discount_per) -
+                        selectedRequestForRowDialog.amount_paid
+                    )}{" "}
+                    مستحق
                   </Badge>
                 )}
               </div>
 
-              {/* Bankak Toggle */}
               <div className="flex items-center justify-between">
                 <span className="text-sm">بنكك</span>
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    checked={!!selectedRequestForRowDialog.is_bankak}
-                    onCheckedChange={() => handleToggleBankak(selectedRequestForRowDialog.id, !selectedRequestForRowDialog.is_bankak)}
-                    disabled={toggleBankakMutation.isPending}
-                  />
-                </div>
+                <Checkbox
+                  checked={!!selectedRequestForRowDialog.is_bankak}
+                  onCheckedChange={() =>
+                    handleToggleBankak(selectedRequestForRowDialog.id, !selectedRequestForRowDialog.is_bankak)
+                  }
+                  disabled={toggleBankakMutation.isPending}
+                />
               </div>
 
-              {/* Payment Button */}
               {!selectedRequestForRowDialog.is_paid && (
                 <Button
                   onClick={() => {
@@ -901,15 +652,14 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                   className="w-full"
                 >
                   {directPayItemMutation.isPending ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
-                    <Banknote className="h-4 w-4 mr-2" />
+                    <Banknote className="mr-2 h-4 w-4" />
                   )}
                   دفع نقدي
                 </Button>
               )}
 
-              {/* Unpay Option */}
               {selectedRequestForRowDialog.is_paid && (
                 <Button
                   variant="outline"
@@ -920,25 +670,30 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
                   disabled={unpayLabRequestMutation.isPending || visit?.patient?.result_print_date != null}
                   className="w-full text-yellow-700"
                 >
-                  <AlertCircle className="h-4 w-4 mr-2" /> إلغاء الدفع
+                  <AlertCircle className="mr-2 h-4 w-4" /> إلغاء الدفع
                 </Button>
               )}
 
-              {/* Delete Option */}
               <Button
                 variant="destructive"
                 onClick={() => {
                   handleDeleteRequest(selectedRequestForRowDialog.id);
                   setRowActionsDialogOpen(false);
                 }}
-                disabled={deleteRequestMutation.isPending || visit?.patient?.result_print_date != null || !can('حذف فحص مضاف')}
+                disabled={
+                  deleteRequestMutation.isPending ||
+                  visit?.patient?.result_print_date != null ||
+                  !can("حذف فحص مضاف")
+                }
                 className="w-full"
               >
-                <Trash2 className="h-4 w-4 mr-2" /> حذف
+                <Trash2 className="mr-2 h-4 w-4" /> حذف
               </Button>
             </div>
             <ActionsDialogFooter>
-              <Button variant="outline" onClick={() => setRowActionsDialogOpen(false)}>إغلاق</Button>
+              <Button variant="outline" onClick={() => setRowActionsDialogOpen(false)}>
+                إغلاق
+              </Button>
             </ActionsDialogFooter>
           </ActionsDialogContent>
         </ActionsDialog>
@@ -947,4 +702,4 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({
   );
 };
 
-export default LabRequestsColumn; 
+export default LabRequestsColumn;

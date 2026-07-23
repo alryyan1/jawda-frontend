@@ -368,3 +368,23 @@ export interface SpecialistShiftReportItem {
     shifts_count: number;
   };
 }
+
+// Patient Requested-Service Costs Report Types
+export interface PatientServiceCostItem {
+  requested_service_id: number;
+  patient_id: number | null;
+  patient_name: string | null;
+  visit_date: string | null;
+  service_id: number;
+  service_name: string | null;
+  total_cost: number;
+}
+
+export interface PatientServiceCostReportResponse {
+  data: PatientServiceCostItem[];
+  total_cost: number;
+  report_period: {
+    from: string;
+    to: string;
+  };
+}

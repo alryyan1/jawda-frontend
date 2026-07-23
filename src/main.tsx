@@ -1,10 +1,11 @@
 // src/main.tsx
 import { Buffer } from 'buffer';
-import { Suspense } from 'react';
+import { Suspense, useMemo, type ReactNode, type JSX } from 'react';
 import ReactDOM from 'react-dom/client';
 import { RouterProvider } from 'react-router-dom';
 import router from './router';
 import { AuthProvider } from './contexts/AuthContext';
+import { ThemeModeProvider, useThemeMode } from './contexts/ThemeModeContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'; // Import
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'; // Optional: for dev tools
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
@@ -39,16 +40,34 @@ const queryClient = new QueryClient({
 // Create RTL emotion cache for MUI
 const rtlCache = createCache({ key: 'mui-rtl', stylisPlugins: [prefixer, rtlPlugin] });
 
-// Create MUI theme with RTL direction and Tajawal font
-const theme = createTheme({ 
-  direction: 'rtl',
-  typography: {
-    fontFamily: "'Tajawal', 'Cairo', sans-serif",
-  },
-});
-
 // Ensure document is RTL
 document.documentElement.setAttribute('dir', 'rtl');
+
+// Builds the MUI theme with a palette mode driven by ThemeModeContext, so
+// MUI components (including the standalone doctor-portal route) follow the
+// same light/dark toggle as the rest of the app.
+const AppMuiThemeProvider = ({ children }: { children: ReactNode }): JSX.Element => {
+  const { theme: mode } = useThemeMode();
+
+  const theme = useMemo(
+    () =>
+      createTheme({
+        direction: 'rtl',
+        palette: { mode },
+        typography: {
+          fontFamily: "'Tajawal', 'Cairo', sans-serif",
+        },
+      }),
+    [mode]
+  );
+
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      {children}
+    </ThemeProvider>
+  );
+};
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   // Temporarily disabled StrictMode to prevent double execution in development
@@ -56,12 +75,13 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <Suspense  fallback={<div className="flex items-center justify-center min-h-screen">جار التحميل...</div>}>
       <QueryClientProvider client={queryClient}> {/* Wrap */}
         <CacheProvider value={rtlCache}>
-          <ThemeProvider theme={theme}>
-            <CssBaseline />
-            <AuthProvider>
-              <RouterProvider router={router} />
-            </AuthProvider>
-          </ThemeProvider>
+          <ThemeModeProvider>
+            <AppMuiThemeProvider>
+              <AuthProvider>
+                <RouterProvider router={router} />
+              </AuthProvider>
+            </AppMuiThemeProvider>
+          </ThemeModeProvider>
         </CacheProvider>
         {/* <ReactQueryDevtools initialIsOpen={false} />  */}
       </QueryClientProvider>

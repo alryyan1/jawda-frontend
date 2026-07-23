@@ -6,9 +6,13 @@ import Chip from '@mui/material/Chip';
 import CircularProgress from '@mui/material/CircularProgress';
 import Paper from '@mui/material/Paper';
 import Divider from '@mui/material/Divider';
+import Button from '@mui/material/Button';
 import { Male, Female } from '@mui/icons-material';
+import { Printer } from 'lucide-react';
+import { toast } from 'sonner';
 import { getDoctorVisitById } from '@/services/visitService';
 import { getMedicalHistory } from '@/services/patientMedicalHistoryService';
+import { getVisitSummaryPdfUrl } from '@/services/visitSummaryService';
 import type { DoctorVisit } from '@/types/visits';
 import type { ActivePatientVisit } from '@/types/patients';
 import type { PatientMedicalHistory } from '@/types/medicalHistory';
@@ -21,6 +25,11 @@ import VisitNotesSection from './sections/VisitNotesSection';
 import MedicalHistorySection from './sections/MedicalHistorySection';
 import VitalsSection from './sections/VitalsSection';
 import SystemsReviewSection from './sections/SystemsReviewSection';
+import DiagnosisSection from './sections/DiagnosisSection';
+import AttachmentsSection from './sections/AttachmentsSection';
+import PrescriptionsSection from './sections/PrescriptionsSection';
+import TeethSection from './sections/TeethSection';
+import LabReportPdfPreviewDialog from '@/components/common/LabReportPdfPreviewDialog';
 
 interface PatientWorkspaceProps {
   visitId: number;
@@ -40,6 +49,23 @@ const STATUS_LABELS: Record<string, { label: string; color: 'default' | 'primary
 
 const PatientWorkspace: React.FC<PatientWorkspaceProps> = ({ visitId, initialVisit }) => {
   const [activeSection, setActiveSection] = useState<SectionKey>('info');
+  const [summaryPdfUrl, setSummaryPdfUrl] = useState<string | null>(null);
+  const [isSummaryPdfOpen, setIsSummaryPdfOpen] = useState(false);
+  const [isSummaryPdfLoading, setIsSummaryPdfLoading] = useState(false);
+
+  const handlePrintSummary = async () => {
+    setIsSummaryPdfOpen(true);
+    setIsSummaryPdfLoading(true);
+    try {
+      const url = await getVisitSummaryPdfUrl(visitId);
+      setSummaryPdfUrl(url);
+    } catch {
+      toast.error('فشل إنشاء ملخص الزيارة');
+      setIsSummaryPdfOpen(false);
+    } finally {
+      setIsSummaryPdfLoading(false);
+    }
+  };
 
   // Visit data
   const { data: visit, isLoading: isLoadingVisit } = useQuery<DoctorVisit>({
@@ -141,15 +167,22 @@ const PatientWorkspace: React.FC<PatientWorkspaceProps> = ({ visitId, initialVis
           />
         )}
 
-        {/* New patient badge */}
-        {(visit?.is_new ?? initialVisit?.is_new) && (
-          <Chip label="جديد" size="small" color="primary" sx={{ fontSize: '0.72rem', height: 22 }} />
-        )}
-
+       
         {/* Loading indicator while visit is fetching in background */}
         {isLoadingVisit && (
-          <CircularProgress size={14} sx={{ ml: 'auto' }} />
+          <CircularProgress size={14} />
         )}
+
+        <Box sx={{ flex: 1 }} />
+
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<Printer size={16} />}
+          onClick={handlePrintSummary}
+        >
+          طباعة ملخص الزيارة
+        </Button>
       </Paper>
 
       {/* Medical action grid */}
@@ -163,6 +196,15 @@ const PatientWorkspace: React.FC<PatientWorkspaceProps> = ({ visitId, initialVis
       <Box sx={{ flex: 1, overflowY: 'auto' }}>
         {activeSection === 'info' && (
           <PatientInfoSection visit={visit} />
+        )}
+        {activeSection === 'diagnosis' && (
+          <DiagnosisSection visit={visit} />
+        )}
+        {activeSection === 'attachments' && (
+          <AttachmentsSection visit={visit} />
+        )}
+        {activeSection === 'prescriptions' && (
+          <PrescriptionsSection visit={visit} />
         )}
         {activeSection === 'services' && (
           <ServicesSection visit={visit} />
@@ -183,6 +225,7 @@ const PatientWorkspace: React.FC<PatientWorkspaceProps> = ({ visitId, initialVis
         {activeSection === 'vitals' && (
           <VitalsSection
             patientId={patientId}
+            visitId={visit?.id}
             medHistory={medHistory}
             isLoading={isLoadingMedHistory}
           />
@@ -194,7 +237,22 @@ const PatientWorkspace: React.FC<PatientWorkspaceProps> = ({ visitId, initialVis
             isLoading={isLoadingMedHistory}
           />
         )}
+        {activeSection === 'teeth' && (
+          <TeethSection visit={visit} />
+        )}
       </Box>
+
+      <LabReportPdfPreviewDialog
+        isOpen={isSummaryPdfOpen}
+        onOpenChange={(open) => {
+          setIsSummaryPdfOpen(open);
+          if (!open) setSummaryPdfUrl(null);
+        }}
+        pdfUrl={summaryPdfUrl}
+        title="ملخص الزيارة"
+        fileName={`visit-summary-${visitId}.pdf`}
+        isLoading={isSummaryPdfLoading}
+      />
     </Box>
   );
 };

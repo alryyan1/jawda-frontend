@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { arSA } from "date-fns/locale";
 
-// MUI Components
+// MUI
 import {
   Table,
   TableBody,
@@ -27,7 +27,7 @@ import type { PatientSearchResult } from "@/types/patients";
 import type { DoctorStripped } from "@/types/doctors";
 import type { Company } from "@/types/companies";
 
-// Services
+// Hooks
 import { useCachedDoctorsList, useCachedCompaniesList } from "@/hooks/useCachedData";
 import { useAuthorization } from "@/hooks/useAuthorization";
 
@@ -35,7 +35,67 @@ interface PatientHistoryTableProps {
   searchResults: PatientSearchResult[];
   isLoading: boolean;
   onSelectPatient: (patientId: number, doctorId: number, companyId?: number) => void;
-  referringDoctor: DoctorStripped | null; // The doctor selected in the main form
+  referringDoctor: DoctorStripped | null;
+}
+
+const CELL_PADDING = { padding: "4px 8px" } as const;
+
+const POPPER_SLOT_PROPS = {
+  popper: { sx: { zIndex: 9999 }, placement: "bottom-start" as const },
+  paper: { sx: { zIndex: 9999, maxHeight: 200 } },
+};
+
+/** Compact autocomplete used inside a table cell (doctor / company pickers). */
+function CellAutocomplete<T extends { id: number; name: string }>({
+  options,
+  value,
+  onChange,
+  loading,
+  placeholder,
+  disabled,
+}: {
+  options: T[];
+  value: T | null;
+  onChange: (value: T | null) => void;
+  loading: boolean;
+  placeholder: string;
+  disabled?: boolean;
+}) {
+  return (
+    <Box onClick={(e) => e.stopPropagation()} sx={{ margin: 0, padding: 0 }}>
+      <Autocomplete
+        options={options}
+        getOptionLabel={(option) => option.name}
+        value={value}
+        onChange={(_, newValue) => onChange(newValue)}
+        loading={loading}
+        disabled={disabled}
+        disableCloseOnSelect
+        PaperComponent={Paper}
+        slotProps={POPPER_SLOT_PROPS}
+        renderInput={(params) => (
+          <TextField
+            {...params}
+            size="small"
+            placeholder={placeholder}
+            sx={{
+              "& .MuiInputBase-root": { padding: "2px 4px" },
+              "& .MuiInputBase-input": { padding: "4px 8px" },
+            }}
+            InputProps={{
+              ...params.InputProps,
+              endAdornment: (
+                <>
+                  {loading ? <CircularProgress color="inherit" size={20} /> : null}
+                  {params.InputProps.endAdornment}
+                </>
+              ),
+            }}
+          />
+        )}
+      />
+    </Box>
+  );
 }
 
 const PatientHistoryTable: React.FC<PatientHistoryTableProps> = ({
@@ -45,253 +105,134 @@ const PatientHistoryTable: React.FC<PatientHistoryTableProps> = ({
   referringDoctor,
 }) => {
   const dateLocale = arSA;
-
-  // State for patient selections
-  const [patientSelections, setPatientSelections] = useState<Record<number, { doctor?: DoctorStripped | null; company?: Company | null }>>({});
-
-  // Queries for doctors and companies using cached data
-  const { data: doctors, isLoading: doctorsLoading } = useCachedDoctorsList();
-  const { data: companies, isLoading: companiesLoading } = useCachedCompaniesList();
   const { can } = useAuthorization();
 
+  // Per-patient doctor/company overrides picked inside the table
+  const [patientSelections, setPatientSelections] = useState<
+    Record<number, { doctor?: DoctorStripped | null; company?: Company | null }>
+  >({});
+
+  const { data: doctors, isLoading: doctorsLoading } = useCachedDoctorsList();
+  const { data: companies, isLoading: companiesLoading } = useCachedCompaniesList();
 
   const handleSelect = (patientId: number) => {
-    // Find the patient in search results
-    const patient = searchResults.find(p => p.id === patientId);
+    const patient = searchResults.find((p) => p.id === patientId);
     if (!patient) return;
-    
-    // Get the selected doctor and company for this patient from state
+
     const patientSelection = patientSelections[patientId];
     let selectedDoctor = patientSelection?.doctor;
     let selectedCompany = patientSelection?.company;
-    
-    // If no doctor was explicitly selected, use the last visit doctor from patient data
+
+    // Fall back to the patient's last-visit doctor/company when nothing was picked
     if (!selectedDoctor && patient.last_visit_doctor_id) {
-      selectedDoctor = doctors?.find(doctor => doctor.id === patient.last_visit_doctor_id) || null;
+      selectedDoctor = doctors?.find((doctor) => doctor.id === patient.last_visit_doctor_id) || null;
     }
-    
-    // If no company was explicitly selected, use the last visit company from patient data
     if (!selectedCompany && patient.last_visit_company_id) {
-      selectedCompany = companies?.find(company => company.id === patient.last_visit_company_id) || null;
+      selectedCompany = companies?.find((company) => company.id === patient.last_visit_company_id) || null;
     }
-    
-    // Use selected doctor if available, otherwise fall back to referring doctor
+
     const doctorToUse = selectedDoctor || referringDoctor;
-    
     if (!doctorToUse?.id) {
       toast.error("يرجى اختيار الطبيب أولاً");
       return;
     }
-    
-    // Pass the company ID if selected, otherwise undefined
-    const companyId = selectedCompany?.id;
-    onSelectPatient(patientId, doctorToUse.id, companyId);
+
+    onSelectPatient(patientId, doctorToUse.id, selectedCompany?.id);
   };
 
   const handleDoctorChange = (patientId: number, doctor: DoctorStripped | null) => {
-    setPatientSelections(prev => ({
-      ...prev,
-      [patientId]: { ...prev[patientId], doctor }
-    }));
+    setPatientSelections((prev) => ({ ...prev, [patientId]: { ...prev[patientId], doctor } }));
   };
-// console.log(can('تسجيل مريض تامين'),'can');
+
   const handleCompanyChange = (patientId: number, company: Company | null) => {
-    setPatientSelections(prev => ({
-      ...prev,
-      [patientId]: { ...prev[patientId], company }
-    }));
+    setPatientSelections((prev) => ({ ...prev, [patientId]: { ...prev[patientId], company } }));
   };
-  // console.log(searchResults,'searchResults');
-  // The component is now just the content, without its own Card or Header
+
   return (
-    <TableContainer className="shadow-md" component={Paper} sx={{ maxHeight: 400, padding: 0, margin: 0 }}>
-      <Table className="shadow-md" stickyHeader sx={{ '& .MuiTableCell-root': { padding: '4px 8px' } }}>
+    <TableContainer component={Paper} elevation={0} sx={{ maxHeight: 400, padding: 0, margin: 0 }}>
+      <Table stickyHeader sx={{ "& .MuiTableCell-root": CELL_PADDING }}>
         <TableHead>
           <TableRow>
-            <TableCell sx={{ width: 190, fontWeight: 'bold', padding: '4px 8px' }}>
-              اسم 
+            <TableCell sx={{ width: 190, fontWeight: "bold", ...CELL_PADDING }}>الاسم</TableCell>
+            <TableCell sx={{ display: { xs: "none", sm: "table-cell" }, textAlign: "center", fontWeight: "bold", ...CELL_PADDING }}>
+              التاريخ
             </TableCell>
-            <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' }, textAlign: 'center', fontWeight: 'bold', padding: '4px 8px' }}>
-           التاريخ
-            </TableCell>
-            <TableCell sx={{ width: 200, textAlign: 'center', fontWeight: 'bold', padding: '4px 8px' }}>
-              الطبيب
-            </TableCell>
-            <TableCell sx={{ width: 200, textAlign: 'center', fontWeight: 'bold', padding: '4px 8px' }}>
-              الشركة
-            </TableCell>
-            <TableCell sx={{ textAlign: 'right', fontWeight: 'bold', padding: '4px 8px' }}>
-              الإجراءات
-            </TableCell>
+            <TableCell sx={{ width: 200, textAlign: "center", fontWeight: "bold", ...CELL_PADDING }}>الطبيب</TableCell>
+            <TableCell sx={{ width: 200, textAlign: "center", fontWeight: "bold", ...CELL_PADDING }}>الشركة</TableCell>
+            <TableCell sx={{ textAlign: "right", fontWeight: "bold", ...CELL_PADDING }}>الإجراءات</TableCell>
           </TableRow>
         </TableHead>
+
         <TableBody>
           {isLoading && (
             <TableRow>
-              <TableCell colSpan={5} sx={{ height: 48, textAlign: 'center', padding: '4px 8px' }}>
+              <TableCell colSpan={5} sx={{ height: 48, textAlign: "center", ...CELL_PADDING }}>
                 <CircularProgress size={24} />
               </TableCell>
             </TableRow>
           )}
+
           {!isLoading && searchResults.length === 0 && (
             <TableRow>
-              <TableCell
-                colSpan={5}
-                sx={{ height: 48, textAlign: 'center', color: 'text.secondary', padding: '4px 8px' }}
-              >
+              <TableCell colSpan={5} sx={{ height: 48, textAlign: "center", color: "text.secondary", ...CELL_PADDING }}>
                 لم يتم العثور على تاريخ للمريض
               </TableCell>
             </TableRow>
           )}
+
           {!isLoading &&
             searchResults.map((patient) => (
               <TableRow
                 key={patient.id}
-                sx={{ 
-                  cursor: 'pointer',
-                  '&:hover': { backgroundColor: 'action.hover' }
-                }}
+                hover
+                sx={{ cursor: "pointer" }}
                 onClick={() => handleSelect(patient.id)}
               >
-                <TableCell sx={{ fontWeight: 'medium', padding: '4px 8px' }}>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', margin: 0, padding: 0 }}>
-                    <Typography variant="body2" component="span" sx={{ margin: 0, lineHeight: 1.2 }}>
+                <TableCell sx={{ fontWeight: "medium", ...CELL_PADDING }}>
+                  <Box sx={{ display: "flex", flexDirection: "column" }}>
+                    <Typography variant="body2" component="span" sx={{ lineHeight: 1.2 }}>
                       {patient.name}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary" sx={{ margin: 0, lineHeight: 1.2 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.2 }}>
                       {patient.phone}
                     </Typography>
                   </Box>
                 </TableCell>
-                <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' }, textAlign: 'center', padding: '4px 8px' }}>
+
+                <TableCell sx={{ display: { xs: "none", sm: "table-cell" }, textAlign: "center", ...CELL_PADDING }}>
                   {patient.last_visit_date
-                    ? format(parseISO(patient.last_visit_date), "P", {
-                        locale: dateLocale,
-                      })
+                    ? format(parseISO(patient.last_visit_date), "P", { locale: dateLocale })
                     : "-"}
                 </TableCell>
-                <TableCell sx={{ textAlign: 'center', padding: '4px 8px' }}>
-                  <Box onClick={(e) => e.stopPropagation()} sx={{ margin: 0, padding: 0 }}>
-                    <Autocomplete
-                      options={doctors || []}
-                      getOptionLabel={(option) => option.name}
-                      value={doctors?.find(doctor => doctor.id === patient.last_visit_doctor_id) || null}
-                      onChange={(_, newValue) => handleDoctorChange(patient.id, newValue)}
-                      loading={doctorsLoading}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          size="small"
-                          placeholder="اختر الطبيب"
-                          sx={{ 
-                            '& .MuiInputBase-root': { padding: '2px 4px' },
-                            '& .MuiInputBase-input': { padding: '4px 8px' }
-                          }}
-                          InputProps={{
-                            ...params.InputProps,
-                            endAdornment: (
-                              <>
-                                {doctorsLoading ? <CircularProgress color="inherit" size={20} /> : null}
-                                {params.InputProps.endAdornment}
-                              </>
-                            ),
-                          }}
-                        />
-                      )}
-                      PaperComponent={Paper}
-                      disableCloseOnSelect
-                      sx={{
-                        '& .MuiAutocomplete-popper': {
-                          zIndex: 9999,
-                        },
-                        '& .MuiPaper-root': {
-                          zIndex: 9999,
-                        },
-                      }}
-                      slotProps={{
-                        popper: {
-                          sx: {
-                            zIndex: 9999,
-                          },
-                          placement: 'bottom-start',
-                        },
-                        paper: {
-                          sx: {
-                            zIndex: 9999,
-                            maxHeight: 200,
-                          },
-                        },
-                      }}
-                    />
-                  </Box>
+
+                <TableCell sx={{ textAlign: "center", ...CELL_PADDING }}>
+                  <CellAutocomplete
+                    options={doctors || []}
+                    value={doctors?.find((doctor) => doctor.id === patient.last_visit_doctor_id) || null}
+                    onChange={(newValue) => handleDoctorChange(patient.id, newValue)}
+                    loading={doctorsLoading}
+                    placeholder="اختر الطبيب"
+                  />
                 </TableCell>
-                <TableCell sx={{ textAlign: 'center', padding: '4px 8px' }}>
-                  <Box onClick={(e) => e.stopPropagation()} sx={{ margin: 0, padding: 0 }}>
-                    <Autocomplete
-                      options={companies || []}
-                      getOptionLabel={(option) => option.name}
-                      value={companies?.find(company => company.id === patient.last_visit_company_id) || null}
-                      onChange={(_, newValue) => handleCompanyChange(patient.id, newValue)}
-                      loading={companiesLoading}
-                      disabled={companiesLoading || !can('تسجيل مريض تامين')}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          size="small"
-                          placeholder="اختر الشركة"
-                          sx={{ 
-                            '& .MuiInputBase-root': { padding: '2px 4px' },
-                            '& .MuiInputBase-input': { padding: '4px 8px' }
-                          }}
-                          InputProps={{
-                            ...params.InputProps,
-                            endAdornment: (
-                              <>
-                                {companiesLoading ? <CircularProgress color="inherit" size={20} /> : null}
-                                {params.InputProps.endAdornment}
-                              </>
-                            ),
-                          }}
-                        />
-                      )}
-                      PaperComponent={Paper}
-                      disableCloseOnSelect
-                      sx={{
-                        '& .MuiAutocomplete-popper': {
-                          zIndex: 9999,
-                        },
-                        '& .MuiPaper-root': {
-                          zIndex: 9999,
-                        },
-                      }}
-                      slotProps={{
-                        popper: {
-                          sx: {
-                            zIndex: 9999,
-                          },
-                          placement: 'bottom-start',
-                        },
-                        paper: {
-                          sx: {
-                            zIndex: 9999,
-                            maxHeight: 200,
-                          },
-                        },
-                      }}
-                    />
-                  </Box>
+
+                <TableCell sx={{ textAlign: "center", ...CELL_PADDING }}>
+                  <CellAutocomplete
+                    options={companies || []}
+                    value={companies?.find((company) => company.id === patient.last_visit_company_id) || null}
+                    onChange={(newValue) => handleCompanyChange(patient.id, newValue)}
+                    loading={companiesLoading}
+                    placeholder="اختر الشركة"
+                    disabled={companiesLoading || !can("تسجيل مريض تامين")}
+                  />
                 </TableCell>
-                <TableCell sx={{ textAlign: 'right', padding: '4px 8px' }}>
+
+                <TableCell sx={{ textAlign: "right", ...CELL_PADDING }}>
                   <Button
                     size="small"
                     variant="text"
                     disabled={!referringDoctor}
-                    sx={{ minWidth: 'auto', padding: '2px 4px' }}
-                    title={
-                      !referringDoctor
-                        ? "يرجى اختيار الطبيب أولاً"
-                        : "إنشاء زيارة مختبر جديدة"
-                    }
+                    sx={{ minWidth: "auto", padding: "2px 4px" }}
+                    title={!referringDoctor ? "يرجى اختيار الطبيب أولاً" : "إنشاء زيارة مختبر جديدة"}
                   >
                     <UserPlus fontSize="small" />
                   </Button>
@@ -303,4 +244,5 @@ const PatientHistoryTable: React.FC<PatientHistoryTableProps> = ({
     </TableContainer>
   );
 };
+
 export default PatientHistoryTable;

@@ -6,16 +6,22 @@ import { useNavigate } from "react-router-dom";
 import type { RequestedService } from "@/types/services";
 import type { DoctorVisit } from "@/types/visits";
 import {
+  Autocomplete,
   Box,
   Button,
   Card,
   CardContent,
   Checkbox,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
   DialogContentText,
   DialogTitle,
+  Divider,
+  List,
+  ListItem,
+  ListItemText,
   MenuItem,
   Select,
   Table,
@@ -37,6 +43,7 @@ import {
   PackageOpen,
   PrinterIcon,
   Zap,
+  Coins,
 } from "lucide-react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -56,6 +63,15 @@ import {
 } from "@/services/requestedServiceDepositService";
 import { useAuthorization } from "@/hooks/useAuthorization";
 import apiClient from "@/services/api";
+import { getPartiesList } from "@/services/partyService";
+import {
+  createRequestedServiceCost,
+  deleteRequestedServiceCost,
+  getRequestedServiceCosts,
+  updateRequestedServiceCost,
+} from "@/services/requestedServiceCostService";
+import type { RequestedServiceCost } from "@/types/services";
+import type { Party } from "@/types/parties";
 import PdfPreviewDialog from "../common/PdfPreviewDialog";
 import { usePdfPreviewVisibility } from "@/contexts/PdfPreviewVisibilityContext";
 import realtimeService from "@/services/realtimeService";
@@ -145,6 +161,203 @@ const ToggleDepositsButton: React.FC<ToggleDepositsButtonProps> = ({
         ) : null}
       </IconButton>
     </Tooltip>
+  );
+};
+
+const EditableCostAmount: React.FC<{
+  cost: RequestedServiceCost;
+  onSaved: () => void;
+}> = ({ cost, onSaved }) => {
+  const [value, setValue] = useState(
+    cost.amount !== null ? String(cost.amount) : "",
+  );
+
+  const updateMutation = useMutation({
+    mutationFn: (amount: number | null) =>
+      updateRequestedServiceCost(cost.id, { amount }),
+    onSuccess: () => {
+      onSaved();
+    },
+    onError: (error: AxiosError<{ message?: string }>) => {
+      toast.error(error.response?.data?.message || "فشل تحديث المبلغ");
+    },
+  });
+
+  const commit = () => {
+    const trimmed = value.trim();
+    const newAmount = trimmed === "" ? null : Number(trimmed);
+    if (newAmount !== null && Number.isNaN(newAmount)) {
+      toast.error("قيمة غير صالحة");
+      return;
+    }
+    if (newAmount === cost.amount) return;
+    updateMutation.mutate(newAmount);
+  };
+
+  return (
+    <TextField
+      size="small"
+      type="number"
+      label="المبلغ"
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      onClick={(e) => e.stopPropagation()}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          (e.target as HTMLInputElement).blur();
+        }
+      }}
+      disabled={updateMutation.isPending}
+      sx={{ width: 120 }}
+      InputProps={{
+        endAdornment: updateMutation.isPending ? (
+          <CircularProgress size={14} />
+        ) : undefined,
+      }}
+    />
+  );
+};
+
+const ServiceCostButton: React.FC<{ requestedServiceId: number; visitId: number }> = ({
+  requestedServiceId,
+  visitId,
+}) => {
+  const queryClient = useQueryClient();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const costsQueryKey = ["requestedServiceCosts", requestedServiceId];
+
+  const { data: costs = [], isLoading: isLoadingCosts } = useQuery({
+    queryKey: costsQueryKey,
+    queryFn: () => getRequestedServiceCosts(requestedServiceId),
+    enabled: isDialogOpen,
+  });
+
+  const { data: parties = [], isLoading: isLoadingParties } = useQuery({
+    queryKey: ["partiesList"],
+    queryFn: getPartiesList,
+    enabled: isDialogOpen,
+  });
+
+  const addCostMutation = useMutation({
+    mutationFn: (partyId: number) =>
+      createRequestedServiceCost(requestedServiceId, partyId),
+    onSuccess: () => {
+      toast.success("تمت إضافة التكلفة بنجاح");
+      queryClient.invalidateQueries({ queryKey: costsQueryKey });
+      queryClient.invalidateQueries({
+        queryKey: ["requestedServicesForVisit", visitId],
+      });
+    },
+    onError: (error: AxiosError<{ message?: string }>) => {
+      toast.error(error.response?.data?.message || "فشل إضافة التكلفة");
+    },
+  });
+
+  const deleteCostMutation = useMutation({
+    mutationFn: (costId: number) => deleteRequestedServiceCost(costId),
+    onSuccess: () => {
+      toast.success("تم حذف التكلفة بنجاح");
+      queryClient.invalidateQueries({ queryKey: costsQueryKey });
+      queryClient.invalidateQueries({
+        queryKey: ["requestedServicesForVisit", visitId],
+      });
+    },
+    onError: (error: AxiosError<{ message?: string }>) => {
+      toast.error(error.response?.data?.message || "فشل حذف التكلفة");
+    },
+  });
+
+  return (
+    <>
+      <Tooltip title="هذه الخدمة لها تكلفة - اضغط لعرض التكاليف">
+        <IconButton
+          size="small"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsDialogOpen(true);
+          }}
+          sx={{ p: 0.25 }}
+        >
+          <Coins className="h-4 w-4" color="#ed6c02" />
+        </IconButton>
+      </Tooltip>
+      <Dialog
+        open={isDialogOpen}
+        onClose={() => setIsDialogOpen(false)}
+        onClick={(e) => e.stopPropagation()}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>تكاليف الخدمة</DialogTitle>
+        <DialogContent dividers>
+          {isLoadingCosts ? (
+            <Box display="flex" justifyContent="center" py={2}>
+              <CircularProgress size={24} />
+            </Box>
+          ) : costs.length === 0 ? (
+            <Typography variant="body2" color="text.secondary" textAlign="center" py={1}>
+              لا توجد تكاليف مسجلة لهذه الخدمة
+            </Typography>
+          ) : (
+            <List dense disablePadding>
+              {costs.map((cost) => (
+                <ListItem
+                  key={cost.id}
+                  divider
+                  disableGutters
+                  sx={{ gap: 1 }}
+                  secondaryAction={
+                    <Box display="flex" alignItems="center" gap={0.5}>
+                      <EditableCostAmount
+                        cost={cost}
+                        onSaved={() =>
+                          queryClient.invalidateQueries({ queryKey: costsQueryKey })
+                        }
+                      />
+                      <Tooltip title="حذف">
+                        <span>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            disabled={deleteCostMutation.isPending}
+                            onClick={() => deleteCostMutation.mutate(cost.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                    </Box>
+                  }
+                >
+                  <ListItemText primary={cost.party?.name || `جهة #${cost.party_id}`} />
+                </ListItem>
+              ))}
+            </List>
+          )}
+          <Divider sx={{ my: 1.5 }} />
+          <Autocomplete
+            size="small"
+            options={parties}
+            getOptionLabel={(party) => party.name}
+            loading={isLoadingParties}
+            disabled={addCostMutation.isPending}
+            onChange={(_, value: Party | null) => {
+              if (value) {
+                addCostMutation.mutate(value.id);
+              }
+            }}
+            renderInput={(params) => (
+              <TextField {...params} label="إضافة جهة جديدة" autoFocus />
+            )}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsDialogOpen(false)}>إغلاق</Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 };
 
@@ -660,9 +873,22 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                             }}
                           >
                             <TableCell className=" " align="center">
-                              <span>
-                                {rs.service?.name || "خدمة غير معروفة"}
-                              </span>
+                              <Box
+                                display="flex"
+                                alignItems="center"
+                                justifyContent="center"
+                                gap={0.5}
+                              >
+                                <span>
+                                  {rs.service?.name || "خدمة غير معروفة"}
+                                </span>
+                                {rs.service?.has_cost && (
+                                  <ServiceCostButton
+                                    requestedServiceId={rs.id}
+                                    visitId={visitId}
+                                  />
+                                )}
+                              </Box>
                             </TableCell>
                             <TableCell className="" align="center">
                               <Box
@@ -678,6 +904,15 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                                     color="error"
                                   >
                                     x {Number(rs.count)}
+                                  </Typography>
+                                )}
+                                {Number(rs.total_cost) > 0 && (
+                                  <Typography
+                                    component="span"
+                                    variant="caption"
+                                    color="error"
+                                  >
+                                    {formatNumber(Number(rs.total_cost))}
                                   </Typography>
                                 )}
                               </Box>

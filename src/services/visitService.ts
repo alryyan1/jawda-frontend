@@ -52,6 +52,7 @@ interface UpdateRequestedServicePayload {
   discount_per?: number; // Assuming discount is primarily by percentage here
   discount?: number; // Or a fixed discount amount
   price?: number;
+  tooth_id?: number | null; // Universal tooth number (1-32), or null to unassign
   // Add other editable fields if any
 }
 

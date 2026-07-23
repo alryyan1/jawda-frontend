@@ -1,7 +1,7 @@
 // src/services/reportService.ts
 import type { PaginatedResponse } from '@/types/common';
 import apiClient from './api';
-import type { DoctorShiftFinancialSummary, DoctorShiftReportItem, MonthlyServiceIncomeReportResponse, ServiceStatisticItem, YearlyPatientFrequencyReportResponse, MonthlyLabIncomeReportResponse, LabTestStatisticItem, LabGeneralReportItem, LabGeneralReportFilters, LabGeneralReportWithUserRevenue } from '@/types/reports';
+import type { DoctorShiftFinancialSummary, DoctorShiftReportItem, MonthlyServiceIncomeReportResponse, ServiceStatisticItem, YearlyPatientFrequencyReportResponse, MonthlyLabIncomeReportResponse, LabTestStatisticItem, LabGeneralReportItem, LabGeneralReportFilters, LabGeneralReportWithUserRevenue, PatientServiceCostReportResponse } from '@/types/reports';
 
 export interface DoctorShiftReportFilters {
   page?: number;
@@ -518,6 +518,30 @@ export const downloadSpecialistShiftsReportExcel = async (filters: Omit<Speciali
   
   const response = await apiClient.get<Blob>('/reports/specialist-shifts/excel', {
     params: specialistShiftsFilters,
+    responseType: 'blob',
+  });
+  return response.data;
+};
+
+export interface PatientServiceCostFilters {
+  date_from: string;
+  date_to: string;
+  party_id?: string | null;
+}
+
+export const getPatientServiceCostsReport = async (
+  filters: PatientServiceCostFilters
+): Promise<PatientServiceCostReportResponse> => {
+  const response = await apiClient.get<PatientServiceCostReportResponse>(
+    '/reports/patient-service-costs',
+    { params: filters }
+  );
+  return response.data;
+};
+
+export const downloadPatientServiceCostsPdf = async (filters: PatientServiceCostFilters): Promise<Blob> => {
+  const response = await apiClient.get<Blob>('/reports/patient-service-costs/pdf', {
+    params: filters,
     responseType: 'blob',
   });
   return response.data;

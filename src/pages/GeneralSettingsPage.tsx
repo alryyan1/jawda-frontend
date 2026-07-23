@@ -99,6 +99,8 @@ type SettingsFormData = {
   firebase_enabled?: boolean;
   prevent_backdated_entry?: boolean;
   enforce_shift_hours?: boolean;
+  require_patient_phone?: boolean;
+  show_patient_address_field?: boolean;
   whatsapp_number?: string;
   payment_cancellation_phone?: string;
   shift_summary_phone?: string;
@@ -254,6 +256,10 @@ const SettingsPage: React.FC = () => {
           (settings as any).prevent_backdated_entry ?? undefined,
         enforce_shift_hours:
           (settings as any).enforce_shift_hours ?? undefined,
+        require_patient_phone:
+          (settings as any).require_patient_phone ?? undefined,
+        show_patient_address_field:
+          (settings as any).show_patient_address_field ?? undefined,
         whatsapp_number: settings.whatsapp_number || undefined,
         payment_cancellation_phone: (settings as any).payment_cancellation_phone || undefined,
         shift_summary_phone: (settings as any).shift_summary_phone || undefined,
@@ -1295,6 +1301,44 @@ const SettingsPage: React.FC = () => {
                     <Typography variant="body2" color="text.secondary">
                       عند التفعيل، يمنع النظام تسجيل مرضى جدد إذا لم تكن الوردية
                       بتاريخ اليوم
+                    </Typography>
+                  </Box>
+                }
+              />
+
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    {...control.register("require_patient_phone")}
+                    checked={!!watchedValues.require_patient_phone}
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography variant="body1">
+                      رقم الهاتف مطلوب عند تسجيل مريض جديد
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      عند التعطيل، يمكن تسجيل مريض جديد بدون إدخال رقم هاتف
+                    </Typography>
+                  </Box>
+                }
+              />
+
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    {...control.register("show_patient_address_field")}
+                    checked={!!watchedValues.show_patient_address_field}
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography variant="body1">
+                      إظهار حقل العنوان عند تسجيل مريض جديد
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      عند التعطيل، يتم إخفاء حقل عنوان المريض من نموذج التسجيل
                     </Typography>
                   </Box>
                 }

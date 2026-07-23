@@ -164,36 +164,7 @@ const UserNavItemsDialog: React.FC<UserNavItemsDialogProps> = ({
           )}
         </Box>
 
-        {/* Default routes reference (if user has user_type) */}
-        {user?.user_type && defaultRoutes.length > 0 && (
-          <Paper
-            elevation={0}
-            sx={{
-              p: 2,
-              mb: 2,
-              bgcolor: 'action.hover',
-              borderRadius: 1,
-            }}
-          >
-            <Typography variant="body2" fontWeight="medium" sx={{ mb: 1 }}>
-              العناصر الافتراضية لنوع المستخدم ({user.user_type}):
-            </Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-              {defaultRoutes.map((route: string) => {
-                const navItem = allMainNavItems.find((item: NavItem) => item.to === route);
-                return navItem ? (
-                  <Chip
-                    key={route}
-                    label={navItem.label}
-                    size="small"
-                    variant="outlined"
-                    sx={{ fontSize: '0.75rem' }}
-                  />
-                ) : null;
-              })}
-            </Box>
-          </Paper>
-        )}
+ 
 
         {/* Nav items list */}
         <Paper

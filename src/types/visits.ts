@@ -7,6 +7,8 @@ import type { Shift } from "./shifts";
 import type { Service, RequestedServiceDeposit } from "./services"; // Assuming RequestedServiceDeposit is here
 import type { ChildTest, MainTest } from "./labTests"; // MainTest now includes childTests
 import type { Company, Subcompany, CompanyRelation } from "./companies";
+import type { VisitDiagnosis } from "./diagnosis";
+import type { MedicalAttachment } from "./attachments";
 
 // --- RequestedResult based on your latest decision to include tracking fields ---
 export interface RequestedResult {
@@ -104,6 +106,7 @@ export interface RequestedService {
   id: number;
   doctorvisits_id: number; // FK to DoctorVisit
   service_id: number;
+  tooth_id?: number | null; // Universal tooth number (1-32) this service applies to, if dental
   service?: Service; // Eager-loaded service details
   user_id: number; // User who added the service to visit
   user_name?: string;
@@ -180,8 +183,9 @@ export interface DoctorVisit {
   requested_services?: RequestedService[];
   requested_services_summary?: RequestedServiceSummary[]; // Summary of requested services
   lab_requests?: LabRequest[];
+  diagnosis?: VisitDiagnosis | null;
+  attachments?: MedicalAttachment[];
   // vitals?: Vital[];
-  // clinical_notes?: ClinicalNote[];
   // prescriptions?: Prescription[];
 
   created_at: string;

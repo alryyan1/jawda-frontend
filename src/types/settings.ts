@@ -69,6 +69,9 @@ export interface Setting {
   firebase_enabled?: boolean;
   storage_name?: string | null;
   prevent_backdated_entry?: boolean;
+  enforce_shift_hours?: boolean;
+  require_patient_phone?: boolean;
+  show_patient_address_field?: boolean;
   whatsapp_number?: string | null;
   payment_cancellation_phone?: string | null;
   shift_summary_phone?: string | null;

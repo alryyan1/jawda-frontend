@@ -22,6 +22,7 @@ export const createService = (data: ServiceFormData): Promise<{ data: Service }>
   const payload = {
     ...data,
     price: parseFloat(data.price), // Ensure price is a number
+    has_cost: Boolean(data.has_cost),
   };
   return apiClient.post<{ data: Service }>(API_URL, payload).then(res => res.data);
 };
@@ -29,7 +30,8 @@ export const createService = (data: ServiceFormData): Promise<{ data: Service }>
 export const updateService = (id: number, data: Partial<ServiceFormData>): Promise<{ data: Service }> => {
   const payload = {
     ...data,
-    ...(data.price && { price: parseFloat(data.price) }), // Ensure price is a number if present
+    ...(data.price ? { price: parseFloat(data.price) } : {}), // Ensure price is a number if present
+    ...(typeof data.has_cost === 'boolean' ? { has_cost: data.has_cost } : {}),
   };
   return apiClient.put<{ data: Service }>(`${API_URL}/${id}`, payload).then(res => res.data);
 };
@@ -38,35 +40,15 @@ export const deleteService = (id: number): Promise<void> => {
   return apiClient.delete(`${API_URL}/${id}`).then(res => res.data);
 };
 
-
-
-
-
-
-export interface BatchUpdateCondition {
-    field: 'service_group_id' | 'price' | 'name'; // Add more fields as you support them
-    operator: '=' | '!=' | '<' | '>' | '<=' | '>=' | 'LIKE';
-    value: string | number;
-}
-
-export interface BatchUpdatePayload {
-    update_mode: 'increase' | 'decrease';
-    update_type: 'percentage' | 'fixed_amount';
-    update_value: number;
-    conditions: BatchUpdateCondition[];
-}
-
-// For previewing the update
-export const previewBatchUpdateServicePrices = async (payload: BatchUpdatePayload): Promise<{ affected_count: number }> => {
-    const response = await apiClient.post('/services/batch-update-prices', { ...payload, is_preview: true });
-    return response.data;
+export const restoreService = (id: number): Promise<{ message: string; data: Service }> => {
+  return apiClient.post<{ message: string; data: Service }>(`${API_URL}/${id}/restore`).then(res => res.data);
 };
 
-// For executing the update
-export const executeBatchUpdateServicePrices = async (payload: BatchUpdatePayload): Promise<{ message: string }> => {
-    const response = await apiClient.post('/services/batch-update-prices', payload);
-    return response.data;
+export const getTrashedServices = (): Promise<{ data: Service[] }> => {
+  return apiClient.get<{ data: Service[] }>(`${API_URL}/trashed`).then(res => res.data);
 };
+
+
 
 // Activate all services
 export const activateAllServices = async (): Promise<{ message: string; affected_count?: number }> => {

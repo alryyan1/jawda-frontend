@@ -36,6 +36,7 @@ import {
   FormControl,
   InputLabel,
   Select,
+  Pagination,
 } from "@mui/material";
 import type { SelectChangeEvent } from "@mui/material";
 import {
@@ -51,6 +52,16 @@ import {
   Menu as MenuIcon,
 } from "lucide-react";
 import UserNavItemsDialog from "@/components/users/UserNavItemsDialog";
+
+// `user_type` is a free-text column (no DB enum) — these are the values
+// currently in use across the system.
+const USER_TYPE_OPTIONS = [
+  "استقبال معمل",
+  "ادخال نتائج",
+  "استقبال عياده",
+  "خزنه موحده",
+  "تامين",
+];
 
 export default function UsersListPage() {
   const queryClient = useQueryClient();
@@ -103,19 +114,24 @@ export default function UsersListPage() {
     },
   });
 
-  const handleDelete = (userToDelete: User) => {
+  const handleDelete = async (userToDelete: User) => {
     if (currentUser && currentUser.id === userToDelete.id) {
       toast.error("لا يمكنك حذف نفسك");
       return;
     }
-    if (
-      userToDelete.roles?.some((role) => role.name === "Super Admin") &&
-      paginatedData?.data.filter((u: User) =>
-        u.roles?.some((r) => r.name === "Super Admin")
-      ).length === 1
-    ) {
-      toast.error("لا يمكن حذف آخر مشرف في النظام");
-      return;
+
+    // Check the *global* Super Admin count, not just the current page's slice —
+    // otherwise every page independently sees "only 1 here" and the guard fails
+    // to stop the last admin from being deleted across pages.
+    if (userToDelete.roles?.some((role) => role.name === "Super Admin")) {
+      const { meta: superAdminMeta } = await getUsers(1, {
+        role: "Super Admin",
+        per_page: 1,
+      });
+      if (superAdminMeta.total <= 1) {
+        toast.error("لا يمكن حذف آخر مشرف في النظام");
+        return;
+      }
     }
 
     if (
@@ -154,7 +170,7 @@ export default function UsersListPage() {
     queryClient.invalidateQueries({ queryKey: ["users"] });
   };
 
-  if (isLoading && !isFetching && currentPage === 1 && !paginatedData) {
+  if (isLoading && !paginatedData) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" height={256}>
         <CircularProgress color="primary" size={40} />
@@ -203,6 +219,7 @@ export default function UsersListPage() {
                 <MenuItem value="0">غير نشط</MenuItem>
               </Select>
             </FormControl>
+      
             <FormControl size="small" sx={{ minWidth: 120 }}>
               <InputLabel id="rows-per-page-label">الصفوف</InputLabel>
               <Select
@@ -213,6 +230,7 @@ export default function UsersListPage() {
               >
                 <MenuItem value="10">10</MenuItem>
                 <MenuItem value="20">20</MenuItem>
+                <MenuItem value="40">40</MenuItem>
                 <MenuItem value="50">50</MenuItem>
                 <MenuItem value="100">100</MenuItem>
               </Select>
@@ -256,7 +274,7 @@ export default function UsersListPage() {
         <Card>
           <CardContent sx={{ p: 0 }}>
             <TableContainer sx={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
-              <Table className="text-2xl!" stickyHeader>
+              <Table stickyHeader>
                 <TableHead>
                   <TableRow>
                     <TableCell className=""  align="center" sx={{ display: { xs: 'none', sm: 'table-cell' }, width: 50 }}>م</TableCell>
@@ -392,24 +410,16 @@ export default function UsersListPage() {
       )}
 
       {meta && meta.last_page > 1 && (
-        <Box display="flex" alignItems="center" justifyContent={{ xs: 'center', sm: 'flex-end' }} gap={1} mt={3}>
-          <Button
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage === 1 || isFetching}
+        <Box display="flex" justifyContent={{ xs: 'center', sm: 'flex-end' }} mt={3}>
+          <Pagination
+            count={meta.last_page}
+            page={currentPage}
+            onChange={(_, page) => setCurrentPage(page)}
+            disabled={isFetching}
+            color="primary"
+            shape="rounded"
             size="small"
-            variant="outlined"
-          >
-            السابق
-          </Button>
-          <Typography variant="body2" color="text.secondary" sx={{ px: 1 }}>{`صفحة ${meta.current_page} من ${meta.last_page}`}</Typography>
-          <Button
-            onClick={() => setCurrentPage((p) => Math.min(meta.last_page, p + 1))}
-            disabled={currentPage === meta.last_page || isFetching}
-            size="small"
-            variant="outlined"
-          >
-            التالي
-          </Button>
+          />
         </Box>
       )}
 

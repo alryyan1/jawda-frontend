@@ -1,5 +1,5 @@
-// src/pages/services/ServicesListPage.tsx
-import React, { useState, useEffect, useRef } from "react";
+// src/components/services/ServicesListPage.tsx
+import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   useQuery,
@@ -12,47 +12,55 @@ import {
   deleteService,
   activateAllServices,
   updateService,
+  restoreService,
+  getTrashedServices,
 } from "@/services/serviceService";
-import { getServiceGroupsList } from "@/services/serviceGroupService"; // IMPORT
+import { getServiceGroupsList } from "@/services/serviceGroupService";
 import {
+  Box,
   Button,
   Card,
-  TextField,
+  Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
   FormControl,
   InputLabel,
-  Select,
+  Menu,
   MenuItem,
+  Pagination,
+  Paper,
+  Select,
+  Stack,
+  Switch,
   Table,
   TableBody,
   TableCell,
+  TableContainer,
   TableHead,
   TableRow,
-  TableContainer,
-  Paper,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Menu,
+  TextField,
+  Tooltip,
+  Typography,
 } from "@mui/material";
 import {
-  Trash2,
+  ArchiveRestore,
   Edit,
+  FilterX,
   Loader2,
-  CheckCircle2,
-  XCircle,
+  PlusCircle,
   Search,
-  SlidersHorizontal,
-} from "lucide-react"; // Added Search, FilterIcon
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
-// Replaced Shadcn AlertDialog with MUI Dialog
 import type { Service } from "@/types/services";
-import { useDebounce } from "@/hooks/useDebounce"; // IMPORT
+import { useDebounce } from "@/hooks/useDebounce";
 import {
   downloadServicesListExcel,
   downloadServicesListPdf,
 } from "@/services/reportService";
-import BatchUpdatePricesDialog from "./BatchUpdatePricesDialog";
 import AddServiceDialog from "./AddServiceDialog";
 
 interface ApiError {
@@ -66,31 +74,29 @@ interface ApiError {
 
 interface ServiceFilters {
   search: string;
-  service_group_id: string; // Keep as string for 'all' option
+  service_group_id: string;
 }
 
 export default function ServicesListPage() {
   const queryClient = useQueryClient();
   const [currentPage, setCurrentPage] = useState(1);
-
-  // Filters State
   const [filters, setFilters] = useState<ServiceFilters>({
     search: "",
     service_group_id: "all",
   });
-  const debouncedSearchTerm = useDebounce(filters.search, 500);
-  const [isExporting, setIsExporting] = useState(false); // State for export button loader
-
+  const debouncedSearchTerm = useDebounce(filters.search, 400);
+  const [isExporting, setIsExporting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [serviceToDelete, setServiceToDelete] = useState<Service | null>(null);
-  const [isExportingPdf, setIsExportingPdf] = useState(false); // State for PDF loader
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [trashedDialogOpen, setTrashedDialogOpen] = useState(false);
+  const [localPrices, setLocalPrices] = useState<Record<number, string>>({});
+  const priceRefs = useRef<Record<number, HTMLInputElement | null>>({});
 
-  // Fetch Service Groups for Filter Dropdown
-  const { data: serviceGroupsData, isLoading: isLoadingServiceGroups } =
-    useQuery({
-      queryKey: ["serviceGroupsListForFilter"],
-      queryFn: getServiceGroupsList,
-    });
+  const { data: serviceGroupsData, isLoading: isLoadingServiceGroups } = useQuery({
+    queryKey: ["serviceGroupsListForFilter"],
+    queryFn: getServiceGroupsList,
+  });
   const serviceGroups = serviceGroupsData?.data || [];
 
   const servicesQueryKey = [
@@ -99,6 +105,7 @@ export default function ServicesListPage() {
     debouncedSearchTerm,
     filters.service_group_id,
   ] as const;
+
   const {
     data: paginatedData,
     isLoading,
@@ -108,16 +115,16 @@ export default function ServicesListPage() {
     queryKey: servicesQueryKey,
     queryFn: () =>
       getServices(currentPage, {
-        search: debouncedSearchTerm,
+        search: debouncedSearchTerm || undefined,
         service_group_id:
           filters.service_group_id === "all"
             ? undefined
             : filters.service_group_id,
       }),
     placeholderData: keepPreviousData,
+    staleTime: 30_000,
   });
 
-  // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [debouncedSearchTerm, filters.service_group_id]);
@@ -140,29 +147,44 @@ export default function ServicesListPage() {
     },
   });
 
-  // --- PDF EXPORT HANDLER - OPENS IN NEW TAB ---
+  const {
+    data: trashedData,
+    isLoading: isLoadingTrashed,
+  } = useQuery({
+    queryKey: ["trashedServices"],
+    queryFn: getTrashedServices,
+    enabled: trashedDialogOpen,
+  });
+  const trashedServices = trashedData?.data || [];
+
+  const restoreMutation = useMutation({
+    mutationFn: (serviceId: number) => restoreService(serviceId),
+    onSuccess: () => {
+      toast.success("تم استرجاع الخدمة بنجاح");
+      queryClient.invalidateQueries({ queryKey: ["services"] });
+      queryClient.invalidateQueries({ queryKey: ["trashedServices"] });
+    },
+    onError: (err: ApiError) => {
+      toast.error("فشل استرجاع الخدمة", {
+        description:
+          err.message || err.response?.data?.message || "حدث خطأ غير متوقع",
+      });
+    },
+  });
+
   const handleExportPdf = async () => {
     setIsExportingPdf(true);
-
     try {
-      const blob = await downloadServicesListPdf(filters); // Pass current filters
+      const blob = await downloadServicesListPdf(filters);
       const objectUrl = URL.createObjectURL(blob);
-
-      // Open PDF in new tab
       const newWindow = window.open(objectUrl, "_blank");
       if (!newWindow) {
         toast.error("فشل التصدير", {
-          description:
-            "تم حظر النافذة المنبثقة. يرجى السماح بالنوافذ المنبثقة لهذا الموقع.",
+          description: "تم حظر النافذة المنبثقة. يرجى السماح بالنوافذ المنبثقة لهذا الموقع.",
         });
       }
-
-      // Clean up the object URL after a delay to ensure the new tab has loaded it
-      setTimeout(() => {
-        URL.revokeObjectURL(objectUrl);
-      }, 1000);
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
     } catch (error: unknown) {
-      console.error("PDF Export failed:", error);
       const errorMessage =
         error && typeof error === "object" && "response" in error
           ? (error.response as { data?: { message?: string } })?.data?.message
@@ -176,12 +198,12 @@ export default function ServicesListPage() {
       setIsExportingPdf(false);
     }
   };
-  // Handler for the export button
+
   const handleExport = async () => {
     setIsExporting(true);
     toast.info("جارٍ بدء التصدير...");
     try {
-      const blob = await downloadServicesListExcel(filters); // Pass current filters
+      const blob = await downloadServicesListExcel(filters);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -192,7 +214,6 @@ export default function ServicesListPage() {
       window.URL.revokeObjectURL(url);
       toast.success("تم التصدير بنجاح");
     } catch (error: unknown) {
-      console.error("Export failed:", error);
       const errorMessage =
         error && typeof error === "object" && "response" in error
           ? (error.response as { data?: { message?: string } })?.data?.message
@@ -206,7 +227,7 @@ export default function ServicesListPage() {
       setIsExporting(false);
     }
   };
-  // Activate all services
+
   const activateAllMutation = useMutation({
     mutationFn: () => activateAllServices(),
     onSuccess: (res) => {
@@ -219,13 +240,10 @@ export default function ServicesListPage() {
       });
     },
   });
-  // Inline price editing
-  const [localPrices, setLocalPrices] = useState<Record<number, string>>({});
-  const priceRefs = useRef<Record<number, HTMLInputElement | null>>({});
 
   const updatePriceMutation = useMutation({
     mutationFn: ({ id, price }: { id: number; price: number }) =>
-      updateService(id, { price: price as any }),
+      updateService(id, { price: String(price) as any }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["services"] }),
     onError: () => toast.error("فشل تحديث السعر"),
   });
@@ -234,15 +252,31 @@ export default function ServicesListPage() {
     const raw = localPrices[service.id];
     if (raw === undefined) return;
     const parsed = parseFloat(raw);
-    if (!isNaN(parsed) && parsed !== Number(service.price)) {
+    if (!Number.isNaN(parsed) && parsed !== Number(service.price)) {
       updatePriceMutation.mutate({ id: service.id, price: parsed });
     }
   };
 
   const toggleFieldMutation = useMutation({
-    mutationFn: ({ id, field, value }: { id: number; field: "activate" | "variable"; value: boolean }) =>
-      updateService(id, { [field]: value }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["services"] }),
+    mutationFn: ({ id, field, value }: { id: number; field: "activate" | "variable" | "has_cost"; value: boolean }) =>
+      updateService(id, { [field]: value } as any),
+    onSuccess: (_data, variables) => {
+      queryClient.setQueriesData({ queryKey: ["services"] }, (oldData: any) => {
+        if (!oldData?.data) {
+          return oldData;
+        }
+
+        return {
+          ...oldData,
+          data: oldData.data.map((service: Service) =>
+            service.id === variables.id
+              ? { ...service, [variables.field]: variables.value }
+              : service,
+          ),
+        };
+      });
+      queryClient.invalidateQueries({ queryKey: ["services"] });
+    },
     onError: () => toast.error("فشل تحديث الحقل"),
   });
 
@@ -257,23 +291,29 @@ export default function ServicesListPage() {
     }
   };
 
-  // Local component for row actions menu (MUI)
-  const ActionsMenu: React.FC<{
-    serviceId: number;
-    onEditLink: string;
-    onDelete: () => void;
-    isDeleting: boolean;
-  }> = ({ onEditLink }) => {
+  const handleFilterChange = (name: keyof ServiceFilters, value: string) => {
+    setFilters((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleResetFilters = () => {
+    setFilters({ search: "", service_group_id: "all" });
+    setCurrentPage(1);
+  };
+
+  const ActionsMenu: React.FC<{ service: Service }> = ({ service }) => {
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const open = Boolean(anchorEl);
+
     return (
       <>
         <Button
           size="small"
           variant="outlined"
-          onClick={(e) => setAnchorEl(e.currentTarget as HTMLElement)}
+          onClick={(event) => setAnchorEl(event.currentTarget as HTMLElement)}
         >
-          القائمة
+         {/* // Edit button icon  */}
+          <Edit className="ml-2 h-4 w-4" />
+
         </Button>
         <Menu
           anchorEl={anchorEl}
@@ -282,46 +322,81 @@ export default function ServicesListPage() {
           anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
           transformOrigin={{ vertical: "top", horizontal: "left" }}
         >
-          <MenuItem component={Link as any} to={onEditLink}>
+          <MenuItem component={Link as any} to={`/settings/services/${service.id}/edit`}>
             <Edit className="rtl:ml-2 ltr:mr-2 h-4 w-4" /> تعديل
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
+              setAnchorEl(null);
+              openDeleteDialog(service);
+            }}
+          >
+            <Trash2 className="rtl:ml-2 ltr:mr-2 h-4 w-4" /> حذف
           </MenuItem>
         </Menu>
       </>
     );
   };
 
-  const handleFilterChange = (name: keyof ServiceFilters, value: string) => {
-    setFilters((prev) => ({ ...prev, [name]: value }));
-  };
-
-  if (isLoading && !isFetching && currentPage === 1)
+  if (isLoading && !isFetching && currentPage === 1) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin" /> جاري تحميل الخدمات...
+      <div className="flex min-h-64 items-center justify-center gap-3 text-muted-foreground" style={{ direction: "rtl" }}>
+        <Loader2 className="h-7 w-7 animate-spin" />
+        جاري تحميل الخدمات...
       </div>
     );
-  if (error)
+  }
+
+  if (error) {
     return (
-      <p className="text-destructive p-4">
+      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700" style={{ direction: "rtl" }}>
         حدث خطأ أثناء جلب الخدمات: {(error as any).message}
-      </p>
+      </div>
     );
+  }
 
   const services = paginatedData?.data || [];
   const meta = paginatedData?.meta;
+  const activeCount = services.filter((service) => service.activate).length;
+  const variableCount = services.filter((service) => service.variable).length;
+  const hasCostCount = services.filter((service) => service.has_cost).length;
 
   return (
-    <>
-      {/* Row actions menu component using MUI */}
+    <div style={{ direction: "rtl" }} className="mx-auto max-w-7xl space-y-4 py-2">
+      <Card sx={{ p: { xs: 2, md: 3 }, borderRadius: 3 }}>
+        <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={2}>
+          <Box>
+            <Typography variant="h5" fontWeight={700}>
+              الخدمات
+            </Typography>
+            {/* <Typography variant="body2" color="text.secondary">
+              إدارة الخدمات بسرعة مع البحث السريع والتحديثات المباشرة.
+            </Typography> */}
+          </Box>
+          <Stack direction="row" spacing={1} flexWrap="wrap">
+            <Button onClick={handleExportPdf} disabled={isExportingPdf} size="small" variant="outlined">
+              تصدير PDF
+            </Button>
+            <Button onClick={handleExport} disabled={isExporting} size="small" variant="outlined">
+              تصدير Excel
+            </Button>
+            <Button
+              onClick={() => activateAllMutation.mutate()}
+              disabled={activateAllMutation.isPending}
+              size="small"
+              variant="outlined"
+              color="success"
+            >
+              {activateAllMutation.isPending && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+              تفعيل الكل
+            </Button>
+            <AddServiceDialog />
+          </Stack>
+        </Stack>
 
-      <div
-        style={{ direction: "rtl" }}
-        className="container mx-auto py-1 sm:py-1 lg:py-1"
-      >
-        <div className="flex flex-wrap items-center gap-2 mb-4">
-          <h1 className="text-xl font-bold shrink-0">الخدمات</h1>
+        <Divider sx={{ my: 2 }} />
 
-          {/* Filters inline */}
+        <Stack direction={{ xs: "column", lg: "row" }} spacing={2} alignItems={{ xs: "stretch", lg: "center" }}>
           <TextField
             id="search-service"
             type="search"
@@ -329,265 +404,284 @@ export default function ServicesListPage() {
             label="البحث بالاسم"
             placeholder="ابحث"
             value={filters.search}
-            onChange={(e) => handleFilterChange("search", e.target.value)}
-            sx={{ width: 180 }}
+            onChange={(event) => handleFilterChange("search", event.target.value)}
+            sx={{ minWidth: 220, flex: 1 }}
             slotProps={{
               input: {
-                startAdornment: (
-                  <Search className="h-4 w-4 text-muted-foreground" />
-                ) as any,
+                startAdornment: <Search className="ml-2 h-4 w-4 text-muted-foreground" />,
               },
             }}
           />
-          <FormControl size="small" sx={{ width: 160 }}>
+
+          <FormControl size="small" sx={{ minWidth: 200 }}>
             <InputLabel id="service-group-filter-label">المجموعة</InputLabel>
             <Select
               labelId="service-group-filter-label"
               value={filters.service_group_id}
               label="المجموعة"
-              onChange={(e) =>
-                handleFilterChange("service_group_id", String(e.target.value))
-              }
+              onChange={(event) => handleFilterChange("service_group_id", String(event.target.value))}
               disabled={isLoadingServiceGroups}
             >
               <MenuItem value="all">كل المجموعات</MenuItem>
-              {isLoadingServiceGroups && (
-                <MenuItem value="loading" disabled>جاري التحميل...</MenuItem>
-              )}
-              {serviceGroups.map((sg) => (
-                <MenuItem key={sg.id} value={String(sg.id)}>{sg.name}</MenuItem>
+              {isLoadingServiceGroups && <MenuItem value="loading" disabled>جاري التحميل...</MenuItem>}
+              {serviceGroups.map((group) => (
+                <MenuItem key={group.id} value={String(group.id)}>
+                  {group.name}
+                </MenuItem>
               ))}
             </Select>
           </FormControl>
 
-          {/* Spacer */}
-          <div className="flex-1" />
-
-          {/* Action buttons */}
-          <Button onClick={handleExportPdf} disabled={isExportingPdf} size="small" variant="outlined">
-            تصدير PDF
-          </Button>
-          <Button onClick={handleExport} disabled={isExporting} size="small" variant="outlined">
-            تصدير
-          </Button>
           <Button
-            onClick={() => activateAllMutation.mutate()}
-            disabled={activateAllMutation.isPending}
-            size="small"
             variant="outlined"
-            color="success"
+            size="small"
+            onClick={handleResetFilters}
+            disabled={filters.search === "" && filters.service_group_id === "all"}
+            startIcon={<FilterX size={16} />}
           >
-            {activateAllMutation.isPending && (
-              <Loader2 className="h-4 w-4 animate-spin rtl:ml-2 ltr:mr-2" />
-            )}
-            تفعيل كل الخدمات
+            مسح المرشحات
           </Button>
-          <AddServiceDialog />
-          <BatchUpdatePricesDialog>
-            <Button variant="outlined" size="small">
-              <SlidersHorizontal className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
-              تحديث جماعي للأسعار
-            </Button>
-          </BatchUpdatePricesDialog>
-        </div>
 
-        {isFetching && (
-          <div className="text-sm text-muted-foreground mb-2">
-            جاري تحديث القائمة...
-          </div>
-        )}
+          <Button
+            variant="outlined"
+            size="small"
+            color="success"
+            onClick={() => setTrashedDialogOpen(true)}
+            startIcon={<ArchiveRestore size={16} />}
+          >
+            الخدمات المحذوفة
+          </Button>
+        </Stack>
 
-        {services.length === 0 && !isLoading && !isFetching ? (
-          <div className="text-center py-10 text-muted-foreground">
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ mt: 2 }}>
+          <Chip label={`إجمالي ${meta?.total ?? services.length}`} color="default" variant="outlined" />
+          <Chip label={`نشطة ${activeCount}`} color="success" variant="outlined" />
+          <Chip label={`متغيرة ${variableCount}`} color="info" variant="outlined" />
+          <Chip label={`لها تكلفة ${hasCostCount}`} color="warning" variant="outlined" />
+        </Stack>
+      </Card>
+
+      {isFetching && (
+        <Box className="text-sm text-muted-foreground" sx={{ px: 0.5 }}>
+          جاري تحديث القائمة...
+        </Box>
+      )}
+
+      {services.length === 0 && !isLoading && !isFetching ? (
+        <Card sx={{ p: 4, textAlign: "center", borderRadius: 3 }}>
+          <Typography variant="h6" gutterBottom>
             لا توجد خدمات للعرض
-          </div>
-        ) : (
-          <Card>
-            <TableContainer component={Paper}>
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            جرّب تغيير المرشحات أو إضافة خدمة جديدة لبدء الاستخدام.
+          </Typography>
+          <Stack direction="row" spacing={1} justifyContent="center">
+            <Button variant="contained" size="small" startIcon={<PlusCircle size={16} />}>
+              إضافة خدمة
+            </Button>
+            <Button variant="outlined" size="small" onClick={handleResetFilters}>
+              إعادة تعيين
+            </Button>
+          </Stack>
+        </Card>
+      ) : (
+        <Card sx={{ borderRadius: 3 }}>
+          <TableContainer component={Paper} elevation={0}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell align="center" sx={{ fontWeight: 700 }}>المعرف</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 700 }}>الخدمة</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 700 }}>السعر</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 700 }}>نشط</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 700 }}>السعر متغير</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 700 }}>له تكلفة</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 700 }}>الإجراءات</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {services.map((service, index) => (
+                  <TableRow key={service.id} hover>
+                    <TableCell align="center">{service.id}</TableCell>
+                    <TableCell align="center">
+                      <Box>
+                        <Typography variant="body2" fontWeight={600}>
+                          {service.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {service.service_group?.name || service.service_group_name || "بدون مجموعة"}
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell align="center" sx={{ minWidth: 140 }}>
+                      <TextField
+                        size="small"
+                        type="number"
+                        onFocus={(event) => event.target.select()}
+                        value={localPrices[service.id] ?? String(Math.round(Number(service.price)))}
+                        onChange={(event) => setLocalPrices((prev) => ({ ...prev, [service.id]: event.target.value }))}
+                        onBlur={() => commitPrice(service)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            commitPrice(service);
+                            const nextService = services[index + 1];
+                            if (nextService) priceRefs.current[nextService.id]?.focus();
+                          } else if (event.key === "Escape") {
+                            setLocalPrices((prev) => {
+                              const next = { ...prev };
+                              delete next[service.id];
+                              return next;
+                            });
+                          }
+                        }}
+                        slotProps={{
+                          input: {
+                            inputRef: (element) => {
+                              priceRefs.current[service.id] = element;
+                            },
+                            sx: { textAlign: "center" },
+                          },
+                        }}
+                        sx={{ width: 120 }}
+                      />
+                    </TableCell>
+                    <TableCell align="center">
+                      <Tooltip title={service.activate ? "إيقاف التفعيل" : "تفعيل الخدمة"}>
+                        <span>
+                          <Switch
+                            checked={Boolean(service.activate)}
+                            onChange={() => toggleFieldMutation.mutate({ id: service.id, field: "activate", value: !service.activate })}
+                            disabled={toggleFieldMutation.isPending}
+                            color="success"
+                            size="small"
+                          />
+                        </span>
+                      </Tooltip>
+                    </TableCell>
+                    <TableCell align="center">
+                      <Tooltip title={service.variable ? "إلغاء التغيير المتغير" : "جعله متغيرًا"}>
+                        <span>
+                          <Switch
+                            checked={Boolean(service.variable)}
+                            onChange={() => toggleFieldMutation.mutate({ id: service.id, field: "variable", value: !service.variable })}
+                            disabled={toggleFieldMutation.isPending}
+                            color="info"
+                            size="small"
+                          />
+                        </span>
+                      </Tooltip>
+                    </TableCell>
+                    <TableCell align="center">
+                      <Tooltip title={service.has_cost ? "إزالة التكلفة" : "تعيين تكلفة"}>
+                        <span>
+                          <Switch
+                            checked={Boolean(service.has_cost)}
+                            onChange={() => toggleFieldMutation.mutate({ id: service.id, field: "has_cost", value: !service.has_cost })}
+                            disabled={toggleFieldMutation.isPending}
+                            color="warning"
+                            size="small"
+                          />
+                        </span>
+                      </Tooltip>
+                    </TableCell>
+                    <TableCell align="center">
+                      <ActionsMenu service={service} />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Card>
+      )}
+
+      {meta && meta.last_page > 1 && (
+        <Stack direction="row" justifyContent="center" sx={{ py: 1 }}>
+          <Pagination
+            count={meta.last_page}
+            page={currentPage}
+            onChange={(_, page) => setCurrentPage(page)}
+            disabled={isFetching}
+            color="primary"
+            shape="rounded"
+            size="small"
+          />
+        </Stack>
+      )}
+
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} fullWidth maxWidth="xs">
+        <DialogTitle>تأكيد الحذف</DialogTitle>
+        <DialogContent>
+          هل أنت متأكد من حذف الخدمة “{serviceToDelete?.name || ""}”؟ لا يمكن التراجع عن هذا الإجراء.
+        </DialogContent>
+        <DialogActions>
+          <Button variant="outlined" onClick={() => setDeleteDialogOpen(false)}>
+            إلغاء
+          </Button>
+          <Button color="error" onClick={confirmDelete} disabled={deleteMutation.isPending}>
+            {deleteMutation.isPending ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : null}
+            حذف
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={trashedDialogOpen} onClose={() => setTrashedDialogOpen(false)} fullWidth maxWidth="sm" dir="rtl">
+        <DialogTitle>الخدمات المحذوفة</DialogTitle>
+        <DialogContent dividers>
+          {isLoadingTrashed ? (
+            <Stack direction="row" spacing={1} justifyContent="center" alignItems="center" sx={{ py: 3 }}>
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <Typography variant="body2">جاري تحميل الخدمات المحذوفة...</Typography>
+            </Stack>
+          ) : trashedServices.length === 0 ? (
+            <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 3 }}>
+              لا توجد خدمات محذوفة
+            </Typography>
+          ) : (
+            <TableContainer>
               <Table size="small">
-                {/* TableHead and TableBody */}
                 <TableHead>
                   <TableRow>
-                    <TableCell className="w-[50px] text-center font-semibold">
-                      المعرف
-                    </TableCell>
-                    <TableCell className="text-center font-semibold">
-                      الإسم
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell text-center font-semibold">
-                      المجموعة
-                    </TableCell>
-                    <TableCell className="text-center font-semibold">
-                      السعر
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell text-center font-semibold">
-                      نشط
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell text-center font-semibold">
-                      متغير
-                    </TableCell>
-                    <TableCell className="text-center font-semibold">
-                      الإجراءات
-                    </TableCell>
+                    <TableCell align="right">الخدمة</TableCell>
+                    <TableCell align="right">المجموعة</TableCell>
+                    <TableCell align="center">تاريخ الحذف</TableCell>
+                    <TableCell align="center">استرجاع</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {services.map((service, idx) => (
-                    <TableRow
-                      key={service.id}
-                      className="hover:bg-muted transition-colors"
-                    >
-                      <TableCell className="text-center align-middle">
-                        {service.id}
+                  {trashedServices.map((service) => (
+                    <TableRow key={service.id} hover>
+                      <TableCell align="right">{service.name}</TableCell>
+                      <TableCell align="right">{service.service_group_name || "-"}</TableCell>
+                      <TableCell align="center">
+                        {service.deleted_at ? new Date(service.deleted_at).toLocaleDateString("ar-EG") : "-"}
                       </TableCell>
-                      <TableCell className="font-medium text-center align-middle">
-                        {service.name}
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell text-center align-middle">
-                        {service.service_group?.name ||
-                          service.service_group_name ||
-                          "N/A"}
-                      </TableCell>
-                      <TableCell className="text-center align-middle" sx={{ p: 0.5 }}>
-                        <TextField
-                          size="small"
-                          type="number"
-                          onFocus={
-                            (e) => e.target.select()
-                          }
-                          value={localPrices[service.id] ?? String(Math.round(Number(service.price)))}
-                          onChange={(e) =>
-                            setLocalPrices((prev) => ({ ...prev, [service.id]: e.target.value }))
-                          }
-                          onBlur={() => commitPrice(service)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              commitPrice(service);
-                              const nextService = services[idx + 1];
-                              if (nextService) priceRefs.current[nextService.id]?.focus();
-                            } else if (e.key === "Escape") {
-                              setLocalPrices((prev) => {
-                                const next = { ...prev };
-                                delete next[service.id];
-                                return next;
-                              });
-                            }
-                          }}
-                          slotProps={{
-                            input: {
-                              inputRef: (el) => { priceRefs.current[service.id] = el; },
-                              sx: { textAlign: "center" },
-                            },
-                          }}
-                          sx={{ width: 120 }}
-                        />
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell text-center align-middle">
+                      <TableCell align="center">
                         <Button
                           size="small"
-                          variant="text"
-                          onClick={() => toggleFieldMutation.mutate({ id: service.id, field: "activate", value: !service.activate })}
-                          disabled={toggleFieldMutation.isPending}
-                          sx={{ minWidth: 0, p: 0.5 }}
+                          variant="outlined"
+                          color="success"
+                          onClick={() => restoreMutation.mutate(service.id)}
+                          disabled={restoreMutation.isPending}
+                          startIcon={<ArchiveRestore size={14} />}
                         >
-                          {service.activate ? (
-                            <CheckCircle2 className="h-5 w-5 text-green-500" />
-                          ) : (
-                            <XCircle className="h-5 w-5 text-red-500" />
-                          )}
+                          استرجاع
                         </Button>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell text-center align-middle">
-                        <Button
-                          size="small"
-                          variant="text"
-                          onClick={() => toggleFieldMutation.mutate({ id: service.id, field: "variable", value: !service.variable })}
-                          disabled={toggleFieldMutation.isPending}
-                          sx={{ minWidth: 0, p: 0.5 }}
-                        >
-                          {service.variable ? (
-                            <CheckCircle2 className="h-5 w-5 text-green-500" />
-                          ) : (
-                            <XCircle className="h-5 w-5 text-red-500" />
-                          )}
-                        </Button>
-                      </TableCell>
-                      <TableCell className="text-center align-middle">
-                        {/* MUI Menu for actions */}
-                        <ActionsMenu
-                          serviceId={service.id}
-                          onEditLink={`/settings/services/${service.id}/edit`}
-                          onDelete={() => openDeleteDialog(service)}
-                          isDeleting={
-                            deleteMutation.isPending &&
-                            serviceToDelete?.id === service.id
-                          }
-                        />
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </TableContainer>
-          </Card>
-        )}
-        {/* Pagination ... */}
-        {meta && meta.last_page > 1 && (
-          <div className="flex items-center justify-center gap-2 mt-6">
-            <Button
-              size="small"
-              variant="outlined"
-              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1 || isFetching}
-            >
-              السابق
-            </Button>
-            <span className="mx-2 text-sm">
-              صفحة {currentPage} من {meta.last_page}
-            </span>
-            <Button
-              size="small"
-              variant="outlined"
-              onClick={() =>
-                setCurrentPage((prev) => Math.min(prev + 1, meta.last_page))
-              }
-              disabled={currentPage === meta.last_page || isFetching}
-            >
-              التالي
-            </Button>
-          </div>
-        )}
-      </div>
-
-      {/* Delete Confirmation Dialog ... */}
-      <Dialog
-        open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-        fullWidth
-        maxWidth="xs"
-      >
-        <DialogTitle>تأكيد الحذف</DialogTitle>
-        <DialogContent>
-          هل أنت متأكد من حذف الخدمة '{serviceToDelete?.name || ""}'؟ لا يمكن
-          التراجع عن هذا الإجراء.
+          )}
         </DialogContent>
         <DialogActions>
-          <Button variant="outlined" onClick={() => setDeleteDialogOpen(false)}>
-            إلغاء
-          </Button>
-          <Button
-            color="error"
-            onClick={confirmDelete}
-            disabled={deleteMutation.isPending}
-          >
-            {deleteMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : null}
-            حذف
+          <Button variant="outlined" onClick={() => setTrashedDialogOpen(false)}>
+            إغلاق
           </Button>
         </DialogActions>
       </Dialog>
-    </>
+    </div>
   );
 }

@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import dayjs from 'dayjs';
 import Box from '@mui/material/Box';
 import Alert from '@mui/material/Alert';
 import Typography from '@mui/material/Typography';
@@ -7,12 +8,64 @@ import { Stethoscope } from 'lucide-react';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { getActiveDoctorShifts, getActiveClinicPatients } from '@/services/clinicService';
+import realtimeService from '@/services/realtimeService';
 import type { DoctorShift } from '@/types/doctors';
-import type { ActivePatientVisit } from '@/types/patients';
+import type { ActivePatientVisit, Patient } from '@/types/patients';
 
 import DoctorPortalHeader from '@/components/doctor-portal/DoctorPortalHeader';
 import PatientQueueList from '@/components/doctor-portal/PatientQueueList';
 import PatientWorkspace from '@/components/doctor-portal/PatientWorkspace';
+
+const NEW_PATIENT_HIGHLIGHT_MS = 8_000;
+
+// The realtime `patient-registered` payload is a full PatientResource with a
+// nested DoctorVisitResource — a different (richer, but partly non-overlapping)
+// shape than the lean DoctorVisitListItemResource the queue's own query returns.
+// This maps the socket payload down to the same ActivePatientVisit shape so it
+// can be spliced straight into the query cache without a refetch. Fields the
+// socket payload doesn't carry (e.g. file_id) are left at a safe default and
+// get filled in by the next background poll.
+const buildActivePatientVisitFromRealtimePatient = (
+  patient: Patient,
+  fallbackDoctorShiftId?: number
+): ActivePatientVisit | null => {
+  const visit = patient.doctor_visit;
+  if (!visit) {
+    return null;
+  }
+
+  const fullAge = (patient as Patient & { full_age?: string }).full_age ?? '';
+
+  return {
+    id: visit.id,
+    number: visit.number,
+    queue_number: visit.queue_number ?? null,
+    status: (visit.status as ActivePatientVisit['status']) ?? 'waiting',
+    is_online: false,
+    is_new: visit.is_new ?? true,
+    only_lab: visit.only_lab ?? false,
+    balance_due: visit.balance_due ?? 0,
+    requested_services_count: visit.requested_services_count ?? 0,
+    doctor_id: visit.doctor_id,
+    doctor_shift_id: visit.doctor_shift_id ?? fallbackDoctorShiftId ?? 0,
+    file_id: null,
+    company: patient.company ? { id: patient.company.id, name: patient.company.name } : null,
+    patient: {
+      id: patient.id,
+      name: patient.name,
+      phone: patient.phone ?? null,
+      gender: patient.gender,
+      age_year: patient.age_year ?? null,
+      age_month: patient.age_month ?? null,
+      age_day: patient.age_day ?? null,
+      full_age: fullAge,
+      company_id: patient.company_id ?? null,
+      company: patient.company
+        ? { id: patient.company.id, name: patient.company.name, status: patient.company.status }
+        : null,
+    },
+  };
+};
 
 const DoctorPortalPage: React.FC = () => {
   const { user, currentClinicShift } = useAuth();
@@ -20,7 +73,7 @@ const DoctorPortalPage: React.FC = () => {
   // Guard: user must be linked to a doctor account
   if (!user?.doctor_id) {
     return (
-      <Box sx={{ p: 4, display: 'flex', justifyContent: 'center' }}>
+      <Box sx={{ minHeight: '100vh', p: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Alert severity="warning" sx={{ maxWidth: 480 }}>
           هذا الحساب غير مرتبط بطبيب. يرجى التواصل مع المسؤول لربط الحساب بملف طبيب.
         </Alert>
@@ -31,7 +84,7 @@ const DoctorPortalPage: React.FC = () => {
   // Guard: clinic shift must be open
   if (!currentClinicShift) {
     return (
-      <Box sx={{ p: 4, display: 'flex', justifyContent: 'center' }}>
+      <Box sx={{ minHeight: '100vh', p: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Alert severity="info" sx={{ maxWidth: 480 }}>
           لا توجد وردية مفتوحة. يرجى فتح وردية الاستقبال أولاً.
         </Alert>
@@ -45,8 +98,11 @@ const DoctorPortalPage: React.FC = () => {
 // Inner component — rendered only when user.doctor_id and currentClinicShift are present
 const DoctorPortalInner: React.FC = () => {
   const { user, currentClinicShift } = useAuth();
+  const queryClient = useQueryClient();
   const [selectedVisitId, setSelectedVisitId] = useState<number | null>(null);
   const [selectedVisit, setSelectedVisit] = useState<ActivePatientVisit | null>(null);
+  const [selectedDate, setSelectedDate] = useState(() => dayjs().format('YYYY-MM-DD'));
+  const isToday = selectedDate === dayjs().format('YYYY-MM-DD');
 
   // Query 1: all active doctor shifts for this clinic shift
   const { data: doctorShifts = [] } = useQuery<DoctorShift[]>({
@@ -62,13 +118,120 @@ const DoctorPortalInner: React.FC = () => {
     [doctorShifts, user?.doctor_id]
   );
 
-  // Query 2: patients in this doctor's shift
+  // Query 2: all of this doctor's patients for the selected day (default: today),
+  // across every doctor-shift session they may have opened/closed/reopened that
+  // day — not just the one currently-open shift. PatientQueueList groups them by
+  // doctor_shift_id. Only auto-refetches while looking at today (a past day's
+  // patient list won't change).
   const { data: patients = [], isLoading: isLoadingPatients } = useQuery<ActivePatientVisit[]>({
-    queryKey: ['activePatients', 'doctorPortal', myDoctorShift?.id],
-    queryFn: () => getActiveClinicPatients({ doctor_shift_id: myDoctorShift!.id }),
-    enabled: !!myDoctorShift?.id,
-    refetchInterval: 20_000,
+    queryKey: ['activePatients', 'doctorPortal', user?.doctor_id, selectedDate],
+    queryFn: () => getActiveClinicPatients({ doctor_id: user!.doctor_id!, date: selectedDate }),
+    enabled: !!user?.doctor_id,
+    refetchInterval: isToday ? 20_000 : false,
   });
+
+  // Visit ids that just got spliced into the queue via realtime — used to
+  // flash an entrance animation + a pulsing "new" dot on their card for a
+  // few seconds, then fall back to a plain list item.
+  const [newlyAddedVisitIds, setNewlyAddedVisitIds] = useState<Set<number>>(new Set());
+  const newlyAddedTimeoutsRef = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
+
+  const flagVisitAsNew = useCallback((visitId: number) => {
+    setNewlyAddedVisitIds(prev => new Set(prev).add(visitId));
+
+    const existingTimeout = newlyAddedTimeoutsRef.current.get(visitId);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+    }
+    const timeout = setTimeout(() => {
+      setNewlyAddedVisitIds(prev => {
+        const next = new Set(prev);
+        next.delete(visitId);
+        return next;
+      });
+      newlyAddedTimeoutsRef.current.delete(visitId);
+    }, NEW_PATIENT_HIGHLIGHT_MS);
+    newlyAddedTimeoutsRef.current.set(visitId, timeout);
+  }, []);
+
+  useEffect(() => {
+    const timeouts = newlyAddedTimeoutsRef.current;
+    return () => {
+      timeouts.forEach(clearTimeout);
+      timeouts.clear();
+    };
+  }, []);
+
+  const playNewPatientSound = useCallback(() => {
+    try {
+      const audio = new Audio('/new-payment.mp3');
+      audio.volume = 0.6;
+      void audio.play().catch(() => {
+        // Autoplay can be blocked until the user interacts with the page — safe to ignore.
+      });
+    } catch {
+      // Ignore environments without Audio support.
+    }
+  }, []);
+
+  // Realtime: a new patient registered for this doctor is spliced straight
+  // into the cached queue (no refetch), with a highlight + sound cue.
+  useEffect(() => {
+    const handlePatientRegistered = (patient: Patient): void => {
+      const visit = patient.doctor_visit;
+      if (!visit || visit.doctor_id !== user?.doctor_id) {
+        return;
+      }
+      // Only splice into the currently-viewed day's queue
+      if (visit.visit_date && visit.visit_date !== selectedDate) {
+        return;
+      }
+
+      const newVisit = buildActivePatientVisitFromRealtimePatient(patient, myDoctorShift?.id);
+      if (!newVisit) {
+        return;
+      }
+
+      const queryKey = ['activePatients', 'doctorPortal', user?.doctor_id, selectedDate] as const;
+      let wasAdded = false;
+      queryClient.setQueryData<ActivePatientVisit[]>(queryKey, old => {
+        if (!old) {
+          return old;
+        }
+        if (old.some(v => v.id === newVisit.id)) {
+          return old;
+        }
+        wasAdded = true;
+        return [newVisit, ...old];
+      });
+
+      if (wasAdded) {
+        flagVisitAsNew(newVisit.id);
+        playNewPatientSound();
+      }
+    };
+
+    realtimeService.onPatientRegistered(handlePatientRegistered);
+    return () => {
+      realtimeService.offPatientRegistered(handlePatientRegistered);
+    };
+  }, [queryClient, user?.doctor_id, selectedDate, myDoctorShift?.id, flagVisitAsNew, playNewPatientSound]);
+
+  // Realtime: reflect this doctor's shift being closed (e.g. by reception)
+  // right away, rather than waiting for the next 30s shift poll.
+  useEffect(() => {
+    const handleDoctorShiftClosed = (data: { doctor_shift: DoctorShift }): void => {
+      queryClient.setQueryData<DoctorShift[]>(
+        ['activeDoctorShifts', currentClinicShift?.id],
+        oldData => oldData?.filter(shift => shift.id !== data.doctor_shift.id)
+      );
+    };
+
+    realtimeService.onDoctorShiftClosed(handleDoctorShiftClosed);
+    return () => {
+      realtimeService.offDoctorShiftClosed(handleDoctorShiftClosed);
+    };
+  }, [queryClient, currentClinicShift?.id]);
 
   // Compute stats
   const stats = useMemo(() => ({
@@ -82,11 +245,25 @@ const DoctorPortalInner: React.FC = () => {
     setSelectedVisit(visit);
   };
 
-  // No active shift for this doctor
-  if (!myDoctorShift) {
+  // Selecting a visit found via the "previous visits" history search — we only
+  // have the visit id at that point, so PatientWorkspace fetches everything
+  // else itself (no initialVisit snapshot to fall back on).
+  const handleSelectVisitId = (visitId: number) => {
+    setSelectedVisitId(visitId);
+    setSelectedVisit(null);
+  };
+
+  // No active shift for this doctor — only blocks the *live* (today) queue.
+  // A closed shift has no bearing on browsing a past date's patient list.
+  if (!myDoctorShift && isToday) {
     return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <DoctorPortalHeader shift={null} stats={{ total: 0, insurance: 0, cash: 0 }} />
+      <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+        <DoctorPortalHeader
+          shift={null}
+          stats={{ total: 0, insurance: 0, cash: 0 }}
+          selectedDate={selectedDate}
+          onDateChange={setSelectedDate}
+        />
         <Box sx={{ p: 4, display: 'flex', justifyContent: 'center' }}>
           <Alert severity="info" sx={{ maxWidth: 480 }}>
             <Typography fontWeight={600} gutterBottom>لا توجد نوبة طبية نشطة</Typography>
@@ -100,23 +277,35 @@ const DoctorPortalInner: React.FC = () => {
   }
 
   return (
-    <Box sx={{ display: 'flex', height: 'calc(100vh - 44px)', mt: '-4px', overflow: 'hidden' }}>
+    <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
       {/* Patient queue (left panel) — full height, starts from top */}
       <PatientQueueList
         patients={patients}
         isLoading={isLoadingPatients}
         selectedVisitId={selectedVisitId}
         onSelectPatient={handleSelectPatient}
+        onSelectVisitId={handleSelectVisitId}
+        doctorShifts={doctorShifts}
+        activeDoctorShiftId={myDoctorShift?.id}
+        selectedDate={selectedDate}
+        onDateChange={setSelectedDate}
+        newlyAddedVisitIds={newlyAddedVisitIds}
       />
 
       {/* Right side: header + workspace stacked */}
       <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, overflow: 'hidden' }}>
-        <DoctorPortalHeader shift={myDoctorShift} stats={stats} />
+        <DoctorPortalHeader
+          shift={myDoctorShift}
+          stats={stats}
+          selectedDate={selectedDate}
+          onDateChange={setSelectedDate}
+        />
 
         {/* Workspace */}
         <Box sx={{ flex: 1, overflow: 'hidden', bgcolor: 'background.default', minHeight: 0 }}>
           {selectedVisitId ? (
             <PatientWorkspace
+              key={selectedVisitId}
               visitId={selectedVisitId}
               initialVisit={selectedVisit}
             />

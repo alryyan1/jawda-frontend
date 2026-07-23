@@ -1,7 +1,7 @@
 // src/components/clinic/PatientVisitHistoryDialog.tsx
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { format, parseISO } from 'date-fns';
+import { format, parse, parseISO } from 'date-fns';
 import { arSA, enUS } from 'date-fns/locale';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose, DialogFooter } from '@/components/ui/dialog';
@@ -71,9 +71,9 @@ const PatientVisitHistoryDialog: React.FC<PatientVisitHistoryDialogProps> = ({
                 {visitHistory.map((visit: DoctorVisit) => (
                   <TableRow key={visit.id}>
                     <TableCell className="text-center">
-                      {visit.visit_date ? format(visit.visit_date, 'P', {locale: dateLocale}) : '-'} <br/>
+                      {visit.visit_date ? format(parseISO(visit.visit_date), 'P', {locale: dateLocale}) : '-'} <br/>
                       <span className="text-muted-foreground text-[10px]">
-                        {visit.visit_time ? format(visit.visit_time, 'p', { locale: dateLocale }) : ''}
+                        {visit.visit_time ? format(parse(visit.visit_time, 'HH:mm:ss', new Date()), 'p', { locale: dateLocale }) : ''}
                       </span>
                     </TableCell>
                     <TableCell className="text-center">

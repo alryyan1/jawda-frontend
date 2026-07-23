@@ -1,10 +1,17 @@
-import React from 'react';
-import Box from '@mui/material/Box';
-import Paper from '@mui/material/Paper';
-import Typography from '@mui/material/Typography';
-import Chip from '@mui/material/Chip';
-import Divider from '@mui/material/Divider';
-import { Stethoscope, Users, Building2, Banknote } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Stethoscope, Users, ShieldCheck, Banknote, LogOut, Sun, Moon, Wifi, WifiOff } from 'lucide-react';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useAuth } from '@/contexts/AuthContext';
+import { useThemeMode } from '@/contexts/ThemeModeContext';
+import { cn } from '@/lib/utils';
+import realtimeService from '@/services/realtimeService';
 import type { DoctorShift } from '@/types/doctors';
 
 interface DoctorPortalHeaderProps {
@@ -14,136 +21,190 @@ interface DoctorPortalHeaderProps {
     insurance: number;
     cash: number;
   };
+  selectedDate: string;
+  onDateChange: (date: string) => void;
 }
 
 interface StatTileProps {
   label: string;
   value: number;
-  color: string;
-  bgColor: string;
   icon: React.ReactNode;
+  className?: string;
 }
 
-const StatTile: React.FC<StatTileProps> = ({ label, value, color, bgColor, icon }) => (
-  <Paper
-    elevation={0}
-    sx={{
-      px: 2,
-      py: 1.25,
-      borderRadius: 2,
-      bgcolor: bgColor,
-      display: 'flex',
-      alignItems: 'center',
-      gap: 1.5,
-      minWidth: 110,
-      border: '1px solid',
-      borderColor: `${color}30`,
-    }}
+const StatTile: React.FC<StatTileProps> = ({ label, value, icon, className }) => (
+  <div
+    className={cn(
+      'flex min-w-[92px] items-center gap-2.5 rounded-lg border bg-muted/40 px-3 py-2',
+      className
+    )}
   >
-    <Box sx={{ color, display: 'flex' }}>{icon}</Box>
-    <Box>
-      <Typography variant="h6" fontWeight={700} sx={{ lineHeight: 1, color }}>
-        {value}
-      </Typography>
-      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-        {label}
-      </Typography>
-    </Box>
-  </Paper>
+    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-background shadow-sm">
+      {icon}
+    </div>
+    <div className="flex flex-col leading-tight">
+      <span className="text-lg font-bold tabular-nums">{value}</span>
+      <span className="text-[0.7rem] text-muted-foreground">{label}</span>
+    </div>
+  </div>
 );
 
-const DoctorPortalHeader: React.FC<DoctorPortalHeaderProps> = ({ shift, stats }) => {
-  const isActive = shift?.status === true;
+const DoctorPortalHeader: React.FC<DoctorPortalHeaderProps> = ({
+  shift,
+  stats,
+  selectedDate,
+  onDateChange,
+}) => {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+  const { theme, toggleTheme } = useThemeMode();
+
+  const [isRealtimeEnabled, setIsRealtimeEnabled] = useState(() => realtimeService.isEnabled());
+  const [isRealtimeConnected, setIsRealtimeConnected] = useState(() => realtimeService.getConnectionStatus());
+
+  useEffect(() => {
+    const checkConnection = () => {
+      setIsRealtimeConnected(realtimeService.getConnectionStatus());
+    };
+    checkConnection();
+    const interval = setInterval(checkConnection, 2000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const toggleRealtime = (): void => {
+    const next = !realtimeService.isEnabled();
+    realtimeService.setEnabled(next);
+    setIsRealtimeEnabled(next);
+    setIsRealtimeConnected(realtimeService.getConnectionStatus());
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/doctor-portal/login', { replace: true });
+  };
 
   return (
-    <Paper
-      elevation={0}
-      square
-      sx={{
-        px: 3,
-        py: 1.5,
-        borderBottom: '1px solid',
-        borderColor: 'divider',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 3,
-        flexWrap: 'wrap',
-        bgcolor: 'background.paper',
-      }}
-    >
+    <header className="flex flex-wrap items-center justify-between gap-4 border-b bg-card px-6 py-3">
       {/* Doctor identity */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-        <Box
-          sx={{
-            width: 44,
-            height: 44,
-            borderRadius: '50%',
-            bgcolor: 'primary.main',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'white',
-            flexShrink: 0,
-          }}
-        >
-          <Stethoscope size={22} />
-        </Box>
-        <Box>
-          <Typography variant="subtitle1" fontWeight={700} sx={{ lineHeight: 1.2 }}>
-            {shift?.doctor_name ?? 'الطبيب'}
-          </Typography>
+      <div className="flex min-w-0 items-center gap-3">
+        <Avatar className="h-11 w-11 border">
+          <AvatarFallback className="bg-primary text-primary-foreground">
+            <Stethoscope className="h-5 w-5" />
+          </AvatarFallback>
+        </Avatar>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <h2 className="truncate text-base font-semibold leading-tight">
+              {shift?.doctor_name ?? '—'}
+            </h2>
+            {shift && (
+              <Badge variant="success" className="shrink-0">
+                نوبة نشطة
+              </Badge>
+            )}
+          </div>
           {shift?.doctor_specialist_name && (
-            <Typography variant="caption" color="text.secondary">
+            <p className="truncate text-xs text-muted-foreground">
               {shift.doctor_specialist_name}
-            </Typography>
+              <span className="mx-1.5 text-muted-foreground/50">•</span>
+              رقم الطبيب #{shift.doctor_id}
+              <span className="mx-1.5 text-muted-foreground/50">•</span>
+              رقم النوبة #{shift.id}
+            </p>
           )}
-        </Box>
-        <Chip
-          label={isActive ? 'نوبة نشطة' : 'لا توجد نوبة'}
-          size="small"
-          color={isActive ? 'success' : 'default'}
-          sx={{ mr: 1 }}
-        />
-      </Box>
+        </div>
+      </div>
 
-      <Divider orientation="vertical" flexItem />
+      {/* Date filter */}
+      <div className="flex flex-col gap-1">
+        <Label htmlFor="doctor-portal-date" className="text-[0.68rem] text-muted-foreground">
+          التاريخ
+        </Label>
+        <Input
+          id="doctor-portal-date"
+          type="date"
+          value={selectedDate}
+          onChange={e => onDateChange(e.target.value)}
+          className="h-9 w-[150px] text-[0.8rem]"
+        />
+      </div>
 
       {/* Stat tiles */}
-      <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+      <div className="flex items-center gap-2.5">
         <StatTile
-          label="إجمالي المرضى"
+          label="الإجمالي"
           value={stats.total}
-          color="#6366f1"
-          bgColor="rgba(99,102,241,0.08)"
-          icon={<Users size={18} />}
+          icon={<Users className="h-4 w-4 text-foreground" />}
         />
+        <Separator orientation="vertical" className="h-9" />
         <StatTile
-          label="تأمين (شركة)"
+          label="تأمين"
           value={stats.insurance}
-          color="#0ea5e9"
-          bgColor="rgba(14,165,233,0.08)"
-          icon={<Building2 size={18} />}
+          icon={<ShieldCheck className="h-4 w-4 text-blue-600 dark:text-blue-400" />}
         />
         <StatTile
           label="نقدي"
           value={stats.cash}
-          color="#22c55e"
-          bgColor="rgba(34,197,94,0.08)"
-          icon={<Banknote size={18} />}
+          icon={<Banknote className="h-4 w-4 text-green-600 dark:text-green-400" />}
         />
-      </Box>
+      </div>
 
-      {/* Shift time */}
-      {shift?.formatted_start_time && (
-        <>
-          <Divider orientation="vertical" flexItem />
-          <Box>
-            <Typography variant="caption" color="text.secondary">بدء النوبة</Typography>
-            <Typography variant="body2" fontWeight={600}>{shift.formatted_start_time}</Typography>
-          </Box>
-        </>
-      )}
-    </Paper>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={toggleRealtime}
+              aria-label="realtime-toggle"
+              className="text-muted-foreground"
+            >
+              {!isRealtimeEnabled ? (
+                <WifiOff className="h-5 w-5 text-muted-foreground" />
+              ) : isRealtimeConnected ? (
+                <Wifi className="h-5 w-5 text-green-500" />
+              ) : (
+                <Wifi className="h-5 w-5 text-red-500" />
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>
+              {!isRealtimeEnabled
+                ? 'التزامن اللحظي موقوف — اضغط للتفعيل'
+                : isRealtimeConnected
+                  ? 'التزامن اللحظي متصل — اضغط للإيقاف'
+                  : 'التزامن اللحظي غير متصل — اضغط للإيقاف'}
+            </p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        onClick={toggleTheme}
+        title={theme === 'light' ? 'التبديل إلى الوضع المظلم' : 'التبديل إلى الوضع المضيء'}
+        aria-label="تبديل المظهر"
+        className="text-muted-foreground"
+      >
+        {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+      </Button>
+
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        onClick={handleLogout}
+        title="تسجيل الخروج"
+        aria-label="تسجيل الخروج"
+        className="text-muted-foreground hover:text-destructive"
+      >
+        <LogOut className="h-5 w-5" />
+      </Button>
+    </header>
   );
 };
 

@@ -6,13 +6,14 @@ import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 import Grid from '@mui/material/Grid';
-import TextField from '@mui/material/TextField';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox from '@mui/material/Checkbox';
 import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
 import CircularProgress from '@mui/material/CircularProgress';
 import { saveMedicalHistory } from '@/services/patientMedicalHistoryService';
+import { registerManyFieldTextSuggestions } from '@/services/fieldTextSuggestionService';
+import FieldAutocompleteEditor from '@/components/common/FieldAutocompleteEditor';
 import type { PatientMedicalHistory } from '@/types/medicalHistory';
 
 interface MedicalHistorySectionProps {
@@ -22,6 +23,25 @@ interface MedicalHistorySectionProps {
 }
 
 type FormValues = Omit<PatientMedicalHistory, 'id' | 'patient_id' | 'created_at' | 'updated_at'>;
+
+const PAST_HISTORY_FIELDS: { key: keyof FormValues; label: string }[] = [
+  { key: 'allergies',             label: 'الحساسية' },
+  { key: 'drug_history',          label: 'الأدوية السابقة' },
+  { key: 'family_history',        label: 'التاريخ العائلي' },
+  { key: 'social_history',        label: 'التاريخ الاجتماعي' },
+  { key: 'past_medical_history',  label: 'أمراض سابقة' },
+  { key: 'past_surgical_history', label: 'عمليات جراحية سابقة' },
+];
+
+// Every free-text field in this section, used to grow each one's autocomplete
+// dictionary after a successful save.
+const TEXT_FIELD_KEYS: (keyof FormValues)[] = [
+  ...PAST_HISTORY_FIELDS.map(f => f.key),
+  'present_complains_summary',
+  'history_of_present_illness_summary',
+  'overall_care_plan_summary',
+  'general_prescription_notes_summary',
+];
 
 const CHRONIC_FLAGS: { key: keyof FormValues; label: string }[] = [
   { key: 'chronic_juandice',              label: 'يرقان مزمن' },
@@ -83,9 +103,18 @@ const MedicalHistorySection: React.FC<MedicalHistorySectionProps> = ({
 
   const mutation = useMutation({
     mutationFn: (data: FormValues) => saveMedicalHistory(patientId!, data),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['medicalHistory', patientId] });
       toast.success('تم حفظ السجل الطبي');
+
+      // Best-effort: grow each field's autocomplete dictionary with whatever
+      // was just typed, then refresh those suggestion lists in the cache.
+      const entries = TEXT_FIELD_KEYS.map(key => ({ fieldKey: key, text: variables[key] as string | null | undefined }));
+      registerManyFieldTextSuggestions(entries).then(updatedFieldKeys => {
+        updatedFieldKeys.forEach(fieldKey => {
+          queryClient.invalidateQueries({ queryKey: ['fieldTextSuggestions', fieldKey] });
+        });
+      });
     },
     onError: () => toast.error('حدث خطأ أثناء الحفظ'),
   });
@@ -104,29 +133,17 @@ const MedicalHistorySection: React.FC<MedicalHistorySectionProps> = ({
       <Paper elevation={0} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
         <Typography variant="subtitle2" fontWeight={700} gutterBottom>التاريخ المرضي السابق</Typography>
         <Grid container spacing={2}>
-          {[
-            { key: 'allergies' as const,           label: 'الحساسية' },
-            { key: 'drug_history' as const,        label: 'الأدوية السابقة' },
-            { key: 'family_history' as const,      label: 'التاريخ العائلي' },
-            { key: 'social_history' as const,      label: 'التاريخ الاجتماعي' },
-            { key: 'past_medical_history' as const, label: 'أمراض سابقة' },
-            { key: 'past_surgical_history' as const, label: 'عمليات جراحية سابقة' },
-          ].map(({ key, label }) => (
+          {PAST_HISTORY_FIELDS.map(({ key, label }) => (
             <Grid item xs={12} sm={6} key={key}>
               <Controller
                 name={key}
                 control={control}
                 render={({ field }) => (
-                  <TextField
-                    {...field}
-                    value={field.value ?? ''}
+                  <FieldAutocompleteEditor
+                    value={(field.value as string) ?? ''}
+                    onChange={field.onChange}
+                    fieldKey={key}
                     label={label}
-                    multiline
-                    rows={2}
-                    fullWidth
-                    size="small"
-                    InputLabelProps={{ sx: { fontSize: '0.8rem' } }}
-                    inputProps={{ style: { fontSize: '0.82rem' } }}
                   />
                 )}
               />
@@ -144,13 +161,11 @@ const MedicalHistorySection: React.FC<MedicalHistorySectionProps> = ({
               name="present_complains_summary"
               control={control}
               render={({ field }) => (
-                <TextField
-                  {...field}
-                  value={field.value ?? ''}
+                <FieldAutocompleteEditor
+                  value={(field.value as string) ?? ''}
+                  onChange={field.onChange}
+                  fieldKey="present_complains_summary"
                   label="ملخص الشكوى"
-                  multiline rows={3} fullWidth size="small"
-                  InputLabelProps={{ sx: { fontSize: '0.8rem' } }}
-                  inputProps={{ style: { fontSize: '0.82rem' } }}
                 />
               )}
             />
@@ -160,13 +175,11 @@ const MedicalHistorySection: React.FC<MedicalHistorySectionProps> = ({
               name="history_of_present_illness_summary"
               control={control}
               render={({ field }) => (
-                <TextField
-                  {...field}
-                  value={field.value ?? ''}
+                <FieldAutocompleteEditor
+                  value={(field.value as string) ?? ''}
+                  onChange={field.onChange}
+                  fieldKey="history_of_present_illness_summary"
                   label="تاريخ المرض الحالي"
-                  multiline rows={3} fullWidth size="small"
-                  InputLabelProps={{ sx: { fontSize: '0.8rem' } }}
-                  inputProps={{ style: { fontSize: '0.82rem' } }}
                 />
               )}
             />
@@ -210,13 +223,11 @@ const MedicalHistorySection: React.FC<MedicalHistorySectionProps> = ({
               name="overall_care_plan_summary"
               control={control}
               render={({ field }) => (
-                <TextField
-                  {...field}
-                  value={field.value ?? ''}
+                <FieldAutocompleteEditor
+                  value={(field.value as string) ?? ''}
+                  onChange={field.onChange}
+                  fieldKey="overall_care_plan_summary"
                   label="خطة الرعاية العامة"
-                  multiline rows={3} fullWidth size="small"
-                  InputLabelProps={{ sx: { fontSize: '0.8rem' } }}
-                  inputProps={{ style: { fontSize: '0.82rem' } }}
                 />
               )}
             />
@@ -226,13 +237,11 @@ const MedicalHistorySection: React.FC<MedicalHistorySectionProps> = ({
               name="general_prescription_notes_summary"
               control={control}
               render={({ field }) => (
-                <TextField
-                  {...field}
-                  value={field.value ?? ''}
+                <FieldAutocompleteEditor
+                  value={(field.value as string) ?? ''}
+                  onChange={field.onChange}
+                  fieldKey="general_prescription_notes_summary"
                   label="ملاحظات الوصفة العامة"
-                  multiline rows={3} fullWidth size="small"
-                  InputLabelProps={{ sx: { fontSize: '0.8rem' } }}
-                  inputProps={{ style: { fontSize: '0.82rem' } }}
                 />
               )}
             />

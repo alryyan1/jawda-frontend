@@ -1,6 +1,6 @@
 // src/components/clinic/PatientRegistrationForm.tsx
 import React, { useState, useEffect, useRef } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Box,
   TextField,
@@ -73,6 +73,13 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
   onSearchQueryChange
 }) => {
   const queryClient = useQueryClient();
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: getSettings,
+    staleTime: Infinity,
+  });
+  const isPhoneRequired = settings?.require_patient_phone ?? true;
+  const showAddressField = settings?.show_patient_address_field ?? true;
   const nameInputRef = useRef<HTMLInputElement>(null);
   const phoneInputRef = useRef<HTMLInputElement>(null);
   const insuranceNoRef = useRef<HTMLInputElement>(null);
@@ -214,7 +221,7 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
       newErrors.name = 'اسم المريض مطلوب';
     }
 
-    if (!formData.phone.trim()) {
+    if (isPhoneRequired && !formData.phone.trim()) {
       newErrors.phone = 'رقم الهاتف مطلوب';
     }
 
@@ -253,6 +260,7 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
         age_year: formData.age_year ? parseInt(formData.age_year) : undefined,
         age_month: formData.age_month ? parseInt(formData.age_month) : undefined,
         age_day: formData.age_day ? parseInt(formData.age_day) : undefined,
+        address: showAddressField ? (formData.address || undefined) : undefined,
         company_id: formData.company_id ? parseInt(formData.company_id) : undefined,
         doctor_id: activeDoctorShift.doctor_id,
         doctor_shift_id: activeDoctorShift.id,
@@ -354,6 +362,7 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
               {/* Phone Number Field */}
               <TextField
                 fullWidth
+                required={isPhoneRequired}
                 label="رقم الهاتف"
                 type="tel"
                 value={formData.phone}
@@ -430,6 +439,21 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
                   />
                 </Box>
               </Box>
+
+              {/* Address Field */}
+              {showAddressField && (
+                <TextField
+                  fullWidth
+                  label="العنوان"
+                  value={formData.address}
+                  onChange={handleInputChange('address')}
+                  error={!!errors.address}
+                  helperText={errors.address}
+                  disabled={isSubmitting}
+                  multiline
+                  minRows={2}
+                />
+              )}
 
               {/* Company Field */}
               <FormControl fullWidth error={!!errors.company_id}>

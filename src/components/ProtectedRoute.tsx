@@ -23,11 +23,13 @@ const ProtectedRoute: React.FC = () => {
 
   if (!isAuthenticated) {
     // User is not authenticated.
-    // Redirect them to the /login page.
+    // Redirect them to the login page.
     // We pass the current location in the `state` object.
-    // This allows the LoginPage to redirect the user back to the page
+    // This allows the login page to redirect the user back to the page
     // they were trying to access after successful login.
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    // Doctor portal routes get their own dedicated login page.
+    const loginPath = location.pathname.startsWith('/doctor-portal') ? '/doctor-portal/login' : '/login';
+    return <Navigate to={loginPath} state={{ from: location }} replace />;
     // `replace` prop: Replaces the current entry in the history stack instead of adding a new one.
     // This is useful because if the user clicks "back" from the login page,
     // they won't go back to the protected route (which would just redirect them again).

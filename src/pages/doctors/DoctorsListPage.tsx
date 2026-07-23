@@ -1,382 +1,462 @@
 // src/pages/doctors/DoctorsListPage.tsx
-import { useState, useRef, useCallback } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useRef, useEffect } from "react";
+import { Link } from "react-router-dom";
 import {
-  useInfiniteQuery,
+  useQuery,
   useMutation,
   useQueryClient,
+  keepPreviousData,
 } from "@tanstack/react-query";
-import { getDoctors, deleteDoctor } from "../../services/doctorService";
+import { getDoctors, deleteDoctor, updateDoctor } from "../../services/doctorService";
+import { API_BASE_URL } from "../../services/api";
 import type { Doctor } from "../../types/doctors";
 import { toast } from "sonner";
-// MUI
 import {
   Box,
   Button,
-  TextField,
-  InputAdornment,
-  IconButton,
-  CircularProgress,
+  Card,
+  Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  Menu,
+  MenuItem,
+  Pagination,
+  Paper,
+  Stack,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
-  Menu,
-  MenuItem,
-  Divider,
+  TextField,
   Typography,
 } from "@mui/material";
 import {
-  MoreHoriz as MoreHorizIcon,
-  Delete as DeleteIcon,
-  Edit as EditIcon,
-  Search as SearchIcon,
-  Checklist as ChecklistIcon,
-  Star as StarIcon,
-  PictureAsPdf as PictureAsPdfIcon,
-} from "@mui/icons-material";
+  ClipboardList,
+  Edit,
+  FileText,
+  Loader2,
+  Search,
+  Star,
+  Trash2,
+  UserPlus,
+} from "lucide-react";
 import { useDebounce } from "@/hooks/useDebounce";
 import ManageDoctorServicesDialog from "@/components/doctors/ManageDoctorServicesDialog";
+import EditDoctorDialog from "@/components/doctors/EditDoctorDialog";
 
-interface ErrorWithMessage {
-  message: string;
+interface ApiError {
+  message?: string;
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
 }
 
 export default function DoctorsListPage() {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearch = useDebounce(searchTerm, 500);
   const [isExporting, setIsExporting] = useState(false);
-  const [dialogState, setDialogState] = useState<{
-    isOpen: boolean;
-    doctor: Doctor | null;
-  }>({
-    isOpen: false,
-    doctor: null,
-  });
-  // Menu state (must be declared before any early returns)
-  const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
-  const [menuDoctor, setMenuDoctor] = useState<Doctor | null>(null);
-  const openMenu = Boolean(menuAnchorEl);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [doctorToDelete, setDoctorToDelete] = useState<Doctor | null>(null);
+  const [servicesDialogDoctor, setServicesDialogDoctor] = useState<Doctor | null>(null);
+  const [isServicesDialogOpen, setIsServicesDialogOpen] = useState(false);
+  const [editingDoctorId, setEditingDoctorId] = useState<number | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [localPhones, setLocalPhones] = useState<Record<number, string>>({});
+  const phoneRefs = useRef<Record<number, HTMLInputElement | null>>({});
 
-  const handleManageDoctorServices = (doctor: Doctor) => {
-    setDialogState({
-      isOpen: true,
-      doctor,
-    });
-  };
-
-  const handleDialogOpenChange = (open: boolean) => {
-    setDialogState((prev) => ({
-      ...prev,
-      isOpen: open,
-    }));
-
-    // If dialog is closing, clear the doctor
-    if (!open) {
-      setTimeout(() => {
-        setDialogState((prev) => ({
-          ...prev,
-          doctor: null,
-        }));
-      }, 300); // Wait for dialog animation
-    }
-  };
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch]);
 
   const {
-    data,
+    data: paginatedData,
     isLoading,
     error,
     isFetching,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useInfiniteQuery({
-    queryKey: ["doctors", "infinite", debouncedSearch],
-    queryFn: ({ pageParam = 1 }) =>
-      getDoctors(pageParam, { search: debouncedSearch }),
-    initialPageParam: 1,
-    getNextPageParam: (lastPage) => {
-      if (lastPage.meta.current_page < lastPage.meta.last_page) {
-        return lastPage.meta.current_page + 1;
-      }
-      return undefined;
-    },
+  } = useQuery({
+    queryKey: ["doctors", currentPage, debouncedSearch],
+    queryFn: () => getDoctors(currentPage, { search: debouncedSearch || undefined }),
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
   });
-
-  const observerRef = useRef<IntersectionObserver | null>(null);
-  const loadMoreRef = useCallback(
-    (node: HTMLDivElement | null) => {
-      if (isFetchingNextPage) return;
-      if (observerRef.current) observerRef.current.disconnect();
-
-      observerRef.current = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting && hasNextPage) {
-          fetchNextPage();
-        }
-      });
-
-      if (node) observerRef.current.observe(node);
-    },
-    [isFetchingNextPage, hasNextPage, fetchNextPage],
-  );
 
   const deleteMutation = useMutation({
-    mutationFn: deleteDoctor,
+    mutationFn: (doctorId: number) => deleteDoctor(doctorId),
     onSuccess: () => {
-      toast.success("تم حذف الطبيب بنجاح!");
+      toast.success("تم حذف الطبيب بنجاح");
+      queryClient.invalidateQueries({ queryKey: ["doctors"] });
+      setDeleteDialogOpen(false);
+      setDoctorToDelete(null);
+    },
+    onError: (err: ApiError) => {
+      toast.error("فشل حذف الطبيب", {
+        description:
+          err.response?.data?.message || err.message || "حدث خطأ غير متوقع",
+      });
+      setDeleteDialogOpen(false);
+      setDoctorToDelete(null);
+    },
+  });
+
+  const updatePhoneMutation = useMutation({
+    mutationFn: ({ id, phone }: { id: number; phone: string }) =>
+      updateDoctor(id, { phone }),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["doctors"] });
     },
-    onError: (err: ErrorWithMessage) => {
-      toast.error("فشل حذف الطبيب.", {
-        description: err.message || "حدث خطأ غير متوقع.",
+    onError: (err: ApiError) => {
+      toast.error("فشل تحديث رقم الهاتف", {
+        description:
+          err.response?.data?.message || err.message || "حدث خطأ غير متوقع",
       });
     },
   });
 
-  const handleDelete = (id: number) => {
-    // Use shadcn dialog for confirmation later if desired
-    if (window.confirm("هل أنت متأكد من حذف هذا الطبيب؟")) {
-      deleteMutation.mutate(id);
+  const commitPhone = (doctor: Doctor) => {
+    const raw = localPhones[doctor.id];
+    if (raw === undefined) return;
+    const trimmed = raw.trim();
+    if (trimmed && trimmed !== doctor.phone) {
+      updatePhoneMutation.mutate({ id: doctor.id, phone: trimmed });
     }
   };
 
-
-  const handleExportPdf = async () => {
+  const handleExportPdf = () => {
     try {
       setIsExporting(true);
-      const apiBase = import.meta.env.VITE_API_BASE_URL || "";
       const params = new URLSearchParams();
       if (debouncedSearch) params.set("search", debouncedSearch);
-      const url = `${apiBase}/reports/doctors-list/pdf${params.toString() ? `?${params.toString()}` : ""}`;
-      window.open(url, "_blank");
-      toast.success("فتح ملف PDF في تبويب جديد");
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "حدث خطأ غير متوقع.";
-      toast.error("فشل إنشاء ملف PDF", { description: message });
+      const url = `${API_BASE_URL}/reports/doctors-list/pdf${params.toString() ? `?${params.toString()}` : ""}`;
+      const newWindow = window.open(url, "_blank");
+      if (!newWindow) {
+        toast.error("فشل التصدير", {
+          description: "تم حظر النافذة المنبثقة. يرجى السماح بالنوافذ المنبثقة لهذا الموقع.",
+        });
+      }
     } finally {
       setIsExporting(false);
     }
   };
 
-  if (isLoading && !isFetching)
-    return (
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          height: 256,
-          gap: 1,
-        }}
-      >
-        <CircularProgress size={24} /> جارٍ تحميل الأطباء...
-      </Box>
-    );
-  if (error)
-    return (
-      <Box
-        sx={{ color: "error.main", p: 2 }}
-      >{`فشل تحميل الأطباء: ${error.message}`}</Box>
-    );
-
-  const doctors = data?.pages.flatMap((page) => page.data) || [];
-
-  const handleMenuOpen = (
-    event: React.MouseEvent<HTMLButtonElement>,
-    doctor: Doctor,
-  ) => {
-    setMenuAnchorEl(event.currentTarget);
-    setMenuDoctor(doctor);
+  const handleManageDoctorServices = (doctor: Doctor) => {
+    setServicesDialogDoctor(doctor);
+    setIsServicesDialogOpen(true);
   };
-  const handleMenuClose = () => {
-    setMenuAnchorEl(null);
+
+  const handleServicesDialogOpenChange = (open: boolean) => {
+    setIsServicesDialogOpen(open);
+    if (!open) {
+      setTimeout(() => setServicesDialogDoctor(null), 300);
+    }
   };
+
+  const ActionsMenu = ({ doctor }: { doctor: Doctor }) => {
+    const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+    const open = Boolean(anchorEl);
+
+    return (
+      <>
+        <Button
+          size="small"
+          variant="outlined"
+          onClick={(event) => setAnchorEl(event.currentTarget as HTMLElement)}
+        >
+          <Edit className="ml-2 h-4 w-4" />
+        </Button>
+        <Menu
+          anchorEl={anchorEl}
+          open={open}
+          onClose={() => setAnchorEl(null)}
+          anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+          transformOrigin={{ vertical: "top", horizontal: "left" }}
+        >
+          <MenuItem
+            onClick={() => {
+              setAnchorEl(null);
+              setEditingDoctorId(doctor.id);
+              setIsEditDialogOpen(true);
+            }}
+          >
+            <Edit className="rtl:ml-2 ltr:mr-2 h-4 w-4" /> تعديل
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
+              setAnchorEl(null);
+              handleManageDoctorServices(doctor);
+            }}
+          >
+            <ClipboardList className="rtl:ml-2 ltr:mr-2 h-4 w-4" /> إدارة الخدمات
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
+              setAnchorEl(null);
+              setDoctorToDelete(doctor);
+              setDeleteDialogOpen(true);
+            }}
+          >
+            <Trash2 className="rtl:ml-2 ltr:mr-2 h-4 w-4" /> حذف
+          </MenuItem>
+        </Menu>
+      </>
+    );
+  };
+
+  if (isLoading && !isFetching && currentPage === 1 && !debouncedSearch) {
+    return (
+      <div className="flex min-h-64 items-center justify-center gap-3 text-muted-foreground" style={{ direction: "rtl" }}>
+        <Loader2 className="h-7 w-7 animate-spin" />
+        جاري تحميل الأطباء...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700" style={{ direction: "rtl" }}>
+        حدث خطأ أثناء جلب الأطباء: {(error as Error).message}
+      </div>
+    );
+  }
+
+  const doctors = paginatedData?.data || [];
+  const meta = paginatedData?.meta;
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      {/* Compact single-line toolbar */}
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1, flexShrink: 0 }}>
-        <Typography variant="subtitle1" fontWeight={700} noWrap>
-          إدارة الأطباء
-        </Typography>
-        <TextField
-          variant="outlined"
-          size="small"
-          placeholder="ابحث بالاسم..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          slotProps={{
-            input: {
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon fontSize="small" color="action" />
-                </InputAdornment>
-              ),
-            },
-          }}
-          sx={{ width: 260, "& .MuiOutlinedInput-root": { height: 32, fontSize: "0.8rem" } }}
-        />
-        {isFetching && !isFetchingNextPage && <CircularProgress size={16} />}
-        <Box sx={{ ml: "auto", display: "flex", gap: 1 }}>
-          <Button
-            onClick={handleExportPdf}
-            variant="outlined"
-            size="small"
-            startIcon={isExporting ? <CircularProgress size={14} /> : <PictureAsPdfIcon fontSize="small" />}
-            disabled={isExporting}
-          >
-            تصدير PDF
-          </Button>
-          <Button component={Link} to="/doctors/new" variant="contained" size="small">
-            إضافة طبيب
-          </Button>
-        </Box>
-      </Box>
-
-      {doctors.length === 0 && !isLoading ? (
-        <Box sx={{ textAlign: "center", py: 5, color: "text.secondary" }}>
-          لم يتم العثور على أطباء
-        </Box>
-      ) : (
-        <TableContainer component={Paper} sx={{ flex: 1, overflow: "auto" }}>
-          <Table size="small" stickyHeader>
-            <TableHead>
-              <TableRow>
-                <TableCell align="center" sx={{ width: 48, py: 0.5 }}>
-                  #
-                </TableCell>
-                <TableCell align="center" sx={{ py: 0.5 }}>الاسم</TableCell>
-                <TableCell align="center" sx={{ py: 0.5 }}>الهاتف</TableCell>
-                <TableCell align="center" sx={{ py: 0.5 }}>الاختصاص</TableCell>
-                <TableCell align="center" sx={{ py: 0.5 }}>الاجر الثابت</TableCell>
-                <TableCell align="center" sx={{ py: 0.5 }}>نسبة النقد</TableCell>
-                <TableCell align="center" sx={{ py: 0.5 }}>نسبة الشركة</TableCell>
-                <TableCell align="center" sx={{ width: 48, py: 0.5 }}>إجراءات</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {doctors.map((doctor) => (
-                <TableRow
-                  key={doctor.id}
-                  hover
-                  onClick={() => navigate(`/doctors/${doctor.id}/edit`)}
-                  sx={{ cursor: "pointer", "& .MuiTableCell-root": { py: 0.25 } }}
-                >
-                  <TableCell align="center" sx={{ fontSize: "0.75rem", color: "text.secondary" }}>
-                    {doctor.id}
-                  </TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 500, fontSize: "0.8rem" }}>
-                    <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}>
-                      {doctor.name}
-                      {doctor.is_default && <StarIcon sx={{ color: "gold", fontSize: 14 }} />}
-                    </Box>
-                  </TableCell>
-                  <TableCell align="center" sx={{ fontSize: "0.8rem" }}>{doctor.phone}</TableCell>
-                  <TableCell align="center" sx={{ fontSize: "0.8rem" }}>
-                    {doctor.specialist?.name || doctor.specialist_name || "—"}
-                  </TableCell>
-                  <TableCell align="center" sx={{ color: "success.main", fontWeight: "bold", fontSize: "0.8rem" }}>
-                    {doctor.static_wage ? `${doctor.static_wage} SDG` : "—"}
-                  </TableCell>
-                  <TableCell align="center" sx={{ fontSize: "0.8rem" }}>
-                    {doctor.cash_percentage ? `${doctor.cash_percentage}%` : "—"}
-                  </TableCell>
-                  <TableCell align="center" sx={{ fontSize: "0.8rem" }}>
-                    {doctor.company_percentage ? `${doctor.company_percentage}%` : "—"}
-                  </TableCell>
-                  <TableCell align="center">
-                    <IconButton
-                      size="small"
-                      onClick={(e) => { e.stopPropagation(); handleMenuOpen(e, doctor); }}
-                      sx={{ p: 0.5 }}
-                    >
-                      <MoreHorizIcon fontSize="small" />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-
-          {hasNextPage && (
-            <Box ref={loadMoreRef} sx={{ display: "flex", justifyContent: "center", p: 1 }}>
-              {isFetchingNextPage ? (
-                <CircularProgress size={20} />
-              ) : (
-                <Button onClick={() => fetchNextPage()} variant="outlined" size="small">
-                  تحميل المزيد
-                </Button>
-              )}
-            </Box>
-          )}
-          {!hasNextPage && doctors.length > 0 && (
-            <Typography variant="caption" color="text.secondary" align="center" display="block" sx={{ py: 1 }}>
-              لا يوجد المزيد
+    <div style={{ direction: "rtl" }} className="mx-auto max-w-7xl space-y-4 py-2">
+      <Card sx={{ p: { xs: 2, md: 3 }, borderRadius: 3 }}>
+        <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={2}>
+          <Box>
+            <Typography variant="h5" fontWeight={700}>
+              الأطباء
             </Typography>
-          )}
-        </TableContainer>
+            
+          </Box>
+          <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
+            <Button
+              onClick={handleExportPdf}
+              disabled={isExporting}
+              size="small"
+              variant="outlined"
+              startIcon={<FileText size={16} />}
+            >
+              تصدير PDF
+            </Button>
+            <Button
+              component={Link as any}
+              to="/doctors/new"
+              size="small"
+              variant="contained"
+              startIcon={<UserPlus size={16} />}
+            >
+              إضافة طبيب
+            </Button>
+          </Stack>
+        </Stack>
+
+        <Divider sx={{ my: 2 }} />
+
+        <Stack direction={{ xs: "column", lg: "row" }} spacing={2} alignItems={{ xs: "stretch", lg: "center" }}>
+          <TextField
+            id="search-doctor"
+            type="search"
+            size="small"
+            label="البحث بالاسم أو الهاتف"
+            placeholder="ابحث"
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            sx={{ minWidth: 220, flex: 1 }}
+            slotProps={{
+              input: {
+                startAdornment: <Search className="ml-2 h-4 w-4 text-muted-foreground" />,
+              },
+            }}
+          />
+        </Stack>
+
+        {/* <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ mt: 2 }}>
+          <Chip label={`إجمالي ${meta?.total ?? doctors.length}`} color="default" variant="outlined" />
+        </Stack> */}
+      </Card>
+
+      {isFetching && (
+        <Box className="text-sm text-muted-foreground" sx={{ px: 0.5 }}>
+          جاري تحديث القائمة...
+        </Box>
       )}
 
-      <Menu
-        anchorEl={menuAnchorEl}
-        open={openMenu}
-        onClose={handleMenuClose}
-        transformOrigin={{ horizontal: "right", vertical: "top" }}
-        anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
-      >
-        <MenuItem
-          component={Link}
-          to={menuDoctor ? `/doctors/${menuDoctor.id}/edit` : "#"}
-          onClick={handleMenuClose}
-        >
-          <EditIcon fontSize="small" sx={{ ml: 1 }} /> تعديل
-        </MenuItem>
-        <Divider />
-        <MenuItem
-          onClick={() => {
-            if (menuDoctor) handleManageDoctorServices(menuDoctor);
-            handleMenuClose();
-          }}
-        >
-          <ChecklistIcon fontSize="small" sx={{ ml: 1 }} /> إدارة الخدمات
-        </MenuItem>
-        <MenuItem
-          disabled={
-            deleteMutation.isPending &&
-            !!menuDoctor &&
-            deleteMutation.variables === menuDoctor.id
-          }
-          onClick={() => {
-            if (menuDoctor) handleDelete(menuDoctor.id);
-            handleMenuClose();
-          }}
-          sx={{ color: "error.main" }}
-        >
-          {deleteMutation.isPending &&
-          !!menuDoctor &&
-          deleteMutation.variables === menuDoctor.id ? (
-            <CircularProgress size={16} sx={{ ml: 1 }} />
-          ) : (
-            <DeleteIcon fontSize="small" sx={{ ml: 1 }} />
-          )}
-          حذف
-        </MenuItem>
-      </Menu>
+      {doctors.length === 0 && !isLoading && !isFetching ? (
+        <Card sx={{ p: 4, textAlign: "center", borderRadius: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            {debouncedSearch ? "لا توجد نتائج" : "لا يوجد أطباء"}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            {debouncedSearch ? "جرّب كلمات أخرى." : "أضف أول طبيب للبدء."}
+          </Typography>
+          <Stack direction="row" spacing={1} justifyContent="center">
+            <Button
+              component={Link as any}
+              to="/doctors/new"
+              variant="contained"
+              size="small"
+              startIcon={<UserPlus size={16} />}
+            >
+              إضافة طبيب
+            </Button>
+            {debouncedSearch && (
+              <Button variant="outlined" size="small" onClick={() => setSearchTerm("")}>
+                مسح البحث
+              </Button>
+            )}
+          </Stack>
+        </Card>
+      ) : (
+        <Card sx={{ borderRadius: 3 }}>
+          <TableContainer component={Paper} elevation={0}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell align="center" sx={{ fontWeight: 700 }}>المعرف</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 700 }}>الاسم</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 700 }}>الهاتف</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 700 }}>الاختصاص</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 700 }}>الأجر الثابت</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 700 }}>نسبة النقد</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 700 }}>نسبة الشركة</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 700 }}>الإجراءات</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {doctors.map((doctor, index) => (
+                  <TableRow key={doctor.id} hover>
+                    <TableCell align="center">{doctor.id}</TableCell>
+                    <TableCell align="center">
+                      <Stack direction="row" spacing={0.5} justifyContent="center" alignItems="center">
+                        <Typography variant="body2" fontWeight={600}>
+                          {doctor.name}
+                        </Typography>
+                        {doctor.is_default && <Star size={14} fill="gold" color="gold" />}
+                      </Stack>
+                    </TableCell>
+                    <TableCell align="center" sx={{ minWidth: 160 }}>
+                      <TextField
+                        size="small"
+                        onFocus={(event) => event.target.select()}
+                        value={localPhones[doctor.id] ?? doctor.phone}
+                        onChange={(event) => setLocalPhones((prev) => ({ ...prev, [doctor.id]: event.target.value }))}
+                        onBlur={() => commitPhone(doctor)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            commitPhone(doctor);
+                            const nextDoctor = doctors[index + 1];
+                            if (nextDoctor) phoneRefs.current[nextDoctor.id]?.focus();
+                          } else if (event.key === "Escape") {
+                            setLocalPhones((prev) => {
+                              const next = { ...prev };
+                              delete next[doctor.id];
+                              return next;
+                            });
+                          }
+                        }}
+                        slotProps={{
+                          input: {
+                            inputRef: (element) => {
+                              phoneRefs.current[doctor.id] = element;
+                            },
+                            sx: { textAlign: "center" },
+                          },
+                        }}
+                        sx={{ width: 150 }}
+                      />
+                    </TableCell>
+                    <TableCell align="center">
+                      {doctor.specialist?.name || doctor.specialist_name || "—"}
+                    </TableCell>
+                    <TableCell align="center" sx={{ color: "success.main", fontWeight: 600 }}>
+                      {Number(doctor.static_wage) ? Number(doctor.static_wage).toLocaleString() : "—"}
+                    </TableCell>
+                    <TableCell align="center">
+                      {Number(doctor.cash_percentage) ? `${doctor.cash_percentage}%` : "—"}
+                    </TableCell>
+                    <TableCell align="center">
+                      {Number(doctor.company_percentage) ? `${doctor.company_percentage}%` : "—"}
+                    </TableCell>
+                    <TableCell align="center">
+                      <ActionsMenu doctor={doctor} />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Card>
+      )}
 
-      {dialogState.doctor && (
+      {meta && meta.last_page > 1 && (
+        <Stack direction="row" justifyContent="center" sx={{ py: 1 }}>
+          <Pagination
+            count={meta.last_page}
+            page={currentPage}
+            onChange={(_, page) => setCurrentPage(page)}
+            disabled={isFetching}
+            color="primary"
+            shape="rounded"
+            size="small"
+          />
+        </Stack>
+      )}
+
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} fullWidth maxWidth="xs">
+        <DialogTitle>تأكيد الحذف</DialogTitle>
+        <DialogContent>
+          هل أنت متأكد من حذف الطبيب “{doctorToDelete?.name || ""}”؟ لا يمكن التراجع عن هذا الإجراء.
+          <Typography variant="body2" color="error" fontWeight={600} sx={{ mt: 1 }}>
+            لا يمكن حذف طبيب مرتبط بمرضى أو زيارات.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button variant="outlined" onClick={() => setDeleteDialogOpen(false)}>
+            إلغاء
+          </Button>
+          <Button
+            color="error"
+            onClick={() => doctorToDelete && deleteMutation.mutate(doctorToDelete.id)}
+            disabled={deleteMutation.isPending}
+          >
+            {deleteMutation.isPending ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : null}
+            حذف
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {servicesDialogDoctor && (
         <ManageDoctorServicesDialog
-          isOpen={dialogState.isOpen}
-          onOpenChange={handleDialogOpenChange}
-          doctor={dialogState.doctor}
+          isOpen={isServicesDialogOpen}
+          onOpenChange={handleServicesDialogOpenChange}
+          doctor={servicesDialogDoctor}
           onConfigurationUpdated={() => {}}
         />
       )}
-    </Box>
+
+      <EditDoctorDialog
+        isOpen={isEditDialogOpen}
+        onOpenChange={(open) => {
+          setIsEditDialogOpen(open);
+          if (!open) {
+            setTimeout(() => setEditingDoctorId(null), 300);
+          }
+        }}
+        doctorId={editingDoctorId}
+      />
+    </div>
   );
 }

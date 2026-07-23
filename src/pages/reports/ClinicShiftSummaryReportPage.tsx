@@ -1,37 +1,35 @@
 // src/pages/reports/ClinicShiftSummaryReportPage.tsx
 import React, { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Autocomplete, TextField, CircularProgress } from "@mui/material";
 import {
+  Autocomplete,
   Box,
-  Card,
-  CardHeader,
-  CardContent,
-  Typography,
   Button,
+  Card,
+  Chip,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
   FormControl,
-  InputLabel,
-  Select as MUISelect,
-  MenuItem,
   IconButton,
+  InputLabel,
+  MenuItem,
+  Paper,
+  Select as MUISelect,
+  Stack,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Chip,
+  TextField,
+  Typography,
 } from "@mui/material";
-import {
-  Loader2,
-  Printer,
-  XCircle,
-} from "lucide-react";
+import { Loader2, Printer, XCircle } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -40,7 +38,11 @@ import dayjs from "dayjs";
 
 import type { Shift } from "@/types/shifts";
 import { getShiftsList } from "@/services/shiftService";
-import { getUsers, getUsersWithShiftTransactions, getUserShiftPatientTransactions, type PatientTransaction } from "@/services/userService";
+import {
+  getUsersWithShiftTransactions,
+  getUserShiftPatientTransactions,
+  type PatientTransaction,
+} from "@/services/userService";
 import {
   downloadClinicShiftSummaryPdf,
   downloadShiftProfitLossPdf,
@@ -64,6 +66,12 @@ interface UserWithTransactions extends User {
   net_cash?: number;
 }
 
+const formatMoney = (value?: number): string =>
+  Number(value || 0).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
 const reportFilterSchema = z.object({
   shift: z.string().min(1, "هذا الحقل مطلوب"),
   user: z.string().nullable(),
@@ -80,12 +88,24 @@ interface ApiError {
   message?: string;
 }
 
+const MONEY_COLUMNS = [
+  { key: "total_paid", label: "إجمالي المتحصلات" },
+  { key: "total_bank", label: "بنكك" },
+  { key: "total_cash", label: "نقدي" },
+  { key: "net_bank", label: "صاف بنكك" },
+  { key: "net_cash", label: "صافي النقديه" },
+] as const;
+
+type MoneyColumnKey = (typeof MONEY_COLUMNS)[number]["key"];
+
 const ClinicShiftSummaryReportPage: React.FC = () => {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfPreview, setPdfPreview] = useState<{ url: string; title: string } | null>(null);
+  const [loadingReportTitle, setLoadingReportTitle] = useState<string | null>(null);
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserWithTransactions | null>(null);
-  const [selectedColumn, setSelectedColumn] = useState<string | null>(null);
+  const [selectedColumn, setSelectedColumn] = useState<MoneyColumnKey | null>(null);
   const [patientTransactions, setPatientTransactions] = useState<PatientTransaction[]>([]);
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
@@ -99,45 +119,57 @@ const ClinicShiftSummaryReportPage: React.FC = () => {
     },
   });
 
-  // Fetch shifts for the dropdown
-  const { data: shifts, isLoading: isLoadingShifts } = useQuery<Shift[], Error>(
-    {
-      queryKey: ["shiftsListForReportFilter"],
-      queryFn: () => getShiftsList({ per_page: 0, is_closed: "" }),
-    }
-  );
+  const { data: shifts, isLoading: isLoadingShifts } = useQuery<Shift[], Error>({
+    queryKey: ["shiftsListForReportFilter"],
+    queryFn: () => getShiftsList({ per_page: 0, is_closed: "" }),
+  });
 
   const selectedShiftId = form.watch("shift");
 
-  // Fetch users for the dropdown - filter by shift if one is selected
   const { data: users, isLoading: isLoadingUsers } = useQuery<UserWithTransactions[], Error>({
-    queryKey: ["usersListForReportFilter", selectedShiftId],
-    queryFn: async () => {
-      if (selectedShiftId && selectedShiftId !== "") {
-        // Get users who have transactions in the selected shift
-        return await getUsersWithShiftTransactions(parseInt(selectedShiftId));
-      } else {
-        // Get all users when no shift is selected
-        const response = await getUsers();
-        return response.data;
-      }
-    },
-    enabled: true, // Always enabled, but will refetch when shift changes
+    queryKey: ["usersWithShiftTransactions", selectedShiftId],
+    queryFn: () => getUsersWithShiftTransactions(parseInt(selectedShiftId)),
+    enabled: !!selectedShiftId,
   });
+
+  const shiftOptions = useMemo(() => {
+    return (
+      shifts?.map((s) => ({
+        label: `مناوبة #${s.id} ${dayjs(s.created_at).format("DD/MM/YYYY")}`,
+        id: s.id,
+      })) || []
+    );
+  }, [shifts]);
+
+  useEffect(() => {
+    return () => {
+      if (pdfPreview) window.URL.revokeObjectURL(pdfPreview.url);
+    };
+  }, [pdfPreview]);
+
+  useEffect(() => {
+    if (selectedShiftId) {
+      form.setValue("user", "all");
+    }
+  }, [selectedShiftId, form]);
+
+  const showPdfPreview = (blob: Blob, title: string) => {
+    setPdfPreview((previous) => {
+      if (previous) window.URL.revokeObjectURL(previous.url);
+      return { url: window.URL.createObjectURL(blob), title };
+    });
+  };
 
   const handleGeneratePdf = async (data: ReportFilterValues) => {
     setIsGeneratingPdf(true);
-    setPdfUrl(null);
     try {
       const filters: ClinicReportPdfFilters = {
         shift: parseInt(data.shift),
         user: data.user && data.user !== "all" ? parseInt(data.user) : null,
       };
       const blob = await downloadClinicShiftSummaryPdf(filters);
-      const url = window.URL.createObjectURL(blob);
-      setPdfUrl(url);
+      showPdfPreview(blob, "ملخص مناوبة العيادة");
     } catch (error) {
-      console.error("PDF generation error:", error);
       const apiError = error as ApiError;
       toast.error("فشل توليد ملف PDF", {
         description: apiError.response?.data?.message || apiError.message || "حدث خطأ غير معروف",
@@ -146,68 +178,32 @@ const ClinicShiftSummaryReportPage: React.FC = () => {
       setIsGeneratingPdf(false);
     }
   };
-  const shiftOptions = useMemo(() => {
-    return shifts?.map(s => ({
-      label: `مناوبة #${s.id} ${dayjs(s.created_at).format('DD/MM/YYYY ')}`,
-      id: s.id,
-      originalShift: s 
-    })) || [];
-  }, [shifts]);
 
-  useEffect(() => {
-    return () => {
-      if (pdfUrl) window.URL.revokeObjectURL(pdfUrl);
-    };
-  }, [pdfUrl]);
-
-  // Reset user field when shift changes
-  useEffect(() => {
-    if (selectedShiftId) {
-      form.setValue("user", "all");
-    }
-  }, [selectedShiftId, form]);
-
-  const isLoadingDropdowns = isLoadingShifts || isLoadingUsers;
-
-  const [reportPdfUrl, setReportPdfUrl] = useState<string | null>(null);
-  const [reportTitle, setReportTitle] = useState('');
-  const [isLoadingReport, setIsLoadingReport] = useState(false);
-
-  const handleOpenReport = async (
-    fetcher: (shiftId: number) => Promise<Blob>,
-    title: string
-  ) => {
+  const handleOpenReport = async (fetcher: (shiftId: number) => Promise<Blob>, title: string) => {
     if (!selectedShiftId) return;
-    setIsLoadingReport(true);
-    setReportTitle(title);
-    if (reportPdfUrl) URL.revokeObjectURL(reportPdfUrl);
-    setReportPdfUrl(null);
+    setLoadingReportTitle(title);
     try {
       const blob = await fetcher(parseInt(selectedShiftId));
-      setReportPdfUrl(URL.createObjectURL(blob));
+      showPdfPreview(blob, title);
     } catch {
       toast.error(`فشل تحميل ${title}`);
     } finally {
-      setIsLoadingReport(false);
+      setLoadingReportTitle(null);
     }
   };
 
-  const handleCellClick = async (user: UserWithTransactions, column: string) => {
+  const handleCellClick = async (user: UserWithTransactions, column: MoneyColumnKey) => {
     if (!selectedShiftId) return;
-    
+
     setSelectedUser(user);
     setSelectedColumn(column);
     setDialogOpen(true);
     setIsLoadingTransactions(true);
-    
+
     try {
-      const transactions = await getUserShiftPatientTransactions(
-        parseInt(selectedShiftId),
-        user.id
-      );
+      const transactions = await getUserShiftPatientTransactions(parseInt(selectedShiftId), user.id);
       setPatientTransactions(transactions);
-    } catch (error) {
-      console.error("Error fetching patient transactions:", error);
+    } catch {
       toast.error("فشل تحميل تفاصيل المعاملات");
       setPatientTransactions([]);
     } finally {
@@ -215,63 +211,77 @@ const ClinicShiftSummaryReportPage: React.FC = () => {
     }
   };
 
-  const getColumnLabel = (column: string) => {
-    const labels: Record<string, string> = {
-      'total_paid': 'إجمالي المتحصلات',
-      'total_bank': 'بنكك',
-      'total_cash': 'نقدي',
-      'net_bank': 'صاف بنكك',
-      'net_cash': 'صافي النقديه',
-    };
-    return labels[column] || column;
-  };
+  const getColumnLabel = (column: MoneyColumnKey): string =>
+    MONEY_COLUMNS.find((c) => c.key === column)?.label || column;
 
   const getFilteredTransactions = () => {
     if (!selectedColumn || !patientTransactions.length) return patientTransactions;
-    
-    return patientTransactions.map(visit => {
-      const filtered = { ...visit };
-      
-      if (selectedColumn === 'total_paid') {
-        // Show all transactions
+
+    return patientTransactions
+      .map((visit) => {
+        const filtered = { ...visit };
+
+        if (selectedColumn === "total_bank" || selectedColumn === "net_bank") {
+          filtered.lab_transactions = visit.lab_transactions.filter((t) => t.is_bank);
+          filtered.service_transactions = visit.service_transactions.filter((t) => t.is_bank);
+          filtered.total_lab_paid = filtered.total_lab_bank;
+          filtered.total_service_paid = filtered.total_service_bank;
+        } else if (selectedColumn === "total_cash" || selectedColumn === "net_cash") {
+          filtered.lab_transactions = visit.lab_transactions.filter((t) => !t.is_bank);
+          filtered.service_transactions = visit.service_transactions.filter((t) => !t.is_bank);
+          filtered.total_lab_paid = filtered.total_lab_cash;
+          filtered.total_service_paid = filtered.total_service_cash;
+        }
+
         return filtered;
-      } else if (selectedColumn === 'total_bank') {
-        // Show only bank transactions
-        filtered.lab_transactions = visit.lab_transactions.filter(t => t.is_bank);
-        filtered.service_transactions = visit.service_transactions.filter(t => t.is_bank);
-        filtered.total_lab_paid = filtered.total_lab_bank;
-        filtered.total_service_paid = filtered.total_service_bank;
-      } else if (selectedColumn === 'total_cash') {
-        // Show only cash transactions
-        filtered.lab_transactions = visit.lab_transactions.filter(t => !t.is_bank);
-        filtered.service_transactions = visit.service_transactions.filter(t => !t.is_bank);
-        filtered.total_lab_paid = filtered.total_lab_cash;
-        filtered.total_service_paid = filtered.total_service_cash;
-      }
-      
-      return filtered;
-    }).filter(visit => 
-      visit.lab_transactions.length > 0 || visit.service_transactions.length > 0
-    );
+      })
+      .filter((visit) => visit.lab_transactions.length > 0 || visit.service_transactions.length > 0);
   };
 
-  const getTotalAmount = (visit: PatientTransaction) => {
-    return visit.total_lab_paid + visit.total_service_paid;
-  };
+  const getTotalAmount = (visit: PatientTransaction) => visit.total_lab_paid + visit.total_service_paid;
+
+  const columnTotals = useMemo(() => {
+    const totals: Record<MoneyColumnKey, number> = {
+      total_paid: 0,
+      total_bank: 0,
+      total_cash: 0,
+      net_bank: 0,
+      net_cash: 0,
+    };
+    (users || []).forEach((user) => {
+      MONEY_COLUMNS.forEach(({ key }) => {
+        totals[key] += Number(user[key] || 0);
+      });
+    });
+    return totals;
+  }, [users]);
+
+  const reportButtons = [
+    { label: "الأرباح والخسائر", fetcher: downloadShiftProfitLossPdf, color: "primary" },
+    { label: "الإيرادات", fetcher: downloadShiftRevenuePdf, color: "success" },
+    { label: "المصروفات", fetcher: downloadShiftExpensesPdf, color: "error" },
+    { label: "إحصائيات التأمين", fetcher: downloadShiftInsuranceStatsPdf, color: "secondary" },
+    { label: "إحصائيات التحاليل", fetcher: downloadShiftLabStatsPdf, color: "info" },
+    { label: "التخفيضات", fetcher: downloadShiftDiscountsPdf, color: "warning" },
+    { label: "أداء الأطباء - مختبر", fetcher: downloadShiftDoctorLabPdf, color: "primary" },
+  ] as const;
 
   return (
-    <div className="space-y-6">
-  
-      <Card>
-        <CardHeader>
-          <Typography variant="h6">مرشحات التقرير</Typography>
-          <Typography variant="body2" color="text.secondary">اختر المناوبة والمستخدم (اختياري) ثم اطبع التقرير</Typography>
-        </CardHeader>
-        <CardContent>
-          <form
-            onSubmit={form.handleSubmit(handleGeneratePdf)}
-            className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-end"
-          >
+    <div style={{ direction: "rtl" }} className="mx-auto max-w-6xl space-y-4 py-2">
+      <Card sx={{ p: { xs: 2, md: 3 }, borderRadius: 3 }}>
+        <Box>
+          <Typography variant="h5" fontWeight={700}>
+            التقرير العام للمناوبة
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            اختر المناوبة والمستخدم (اختياري) لعرض المتحصلات وطباعة التقارير.
+          </Typography>
+        </Box>
+
+        <Divider sx={{ my: 2 }} />
+
+        <form onSubmit={form.handleSubmit(handleGeneratePdf)}>
+          <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems={{ xs: "stretch", md: "center" }}>
             <Controller
               name="shift"
               control={form.control}
@@ -279,19 +289,19 @@ const ClinicShiftSummaryReportPage: React.FC = () => {
                 <Autocomplete
                   options={shiftOptions}
                   loading={isLoadingShifts}
-                  getOptionLabel={(option) => option.label || ''}
-                  value={shiftOptions.find(opt => String(opt.id) === field.value) || null}
-                  onChange={(event, newValue) => {
-                    field.onChange(newValue ? newValue.originalShift.id.toString() : "");
+                  getOptionLabel={(option) => option.label || ""}
+                  value={shiftOptions.find((opt) => String(opt.id) === field.value) || null}
+                  onChange={(_, newValue) => {
+                    field.onChange(newValue ? String(newValue.id) : "");
                   }}
                   isOptionEqualToValue={(option, value) => option.id === value.id}
                   disabled={isGeneratingPdf}
+                  size="small"
+                  sx={{ minWidth: 260, flex: 1 }}
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      label={"اختر المناوبة"}
-                      variant="outlined"
-                      size="small"
+                      label="اختر المناوبة"
                       error={!!form.formState.errors.shift}
                       helperText={form.formState.errors.shift?.message}
                       InputProps={{
@@ -313,21 +323,24 @@ const ClinicShiftSummaryReportPage: React.FC = () => {
               control={form.control}
               name="user"
               render={({ field }) => (
-                <FormControl size="small">
+                <FormControl size="small" sx={{ minWidth: 200 }}>
                   <InputLabel id="user-select-label">المستخدم</InputLabel>
                   <MUISelect
                     labelId="user-select-label"
                     label="المستخدم"
                     onChange={field.onChange}
                     value={field.value || "all"}
-                    defaultValue={field.value || "all"}
-                    disabled={isLoadingDropdowns || isGeneratingPdf}
+                    disabled={isGeneratingPdf || (!!selectedShiftId && isLoadingUsers)}
                   >
                     <MenuItem value="all">كل المستخدمين</MenuItem>
                     {!selectedShiftId ? (
-                      <MenuItem value="select_shift_first" disabled>اختر المناوبة أولاً</MenuItem>
+                      <MenuItem value="select_shift_first" disabled>
+                        اختر المناوبة أولاً
+                      </MenuItem>
                     ) : isLoadingUsers ? (
-                      <MenuItem value="loading_users" disabled>جارِ التحميل...</MenuItem>
+                      <MenuItem value="loading_users" disabled>
+                        جارِ التحميل...
+                      </MenuItem>
                     ) : users && users.length > 0 ? (
                       users.map((u) => (
                         <MenuItem key={u.id} value={String(u.id)}>
@@ -335,7 +348,9 @@ const ClinicShiftSummaryReportPage: React.FC = () => {
                         </MenuItem>
                       ))
                     ) : (
-                      <MenuItem value="no_users" disabled>لا يوجد مستخدمين لهذه المناوبة</MenuItem>
+                      <MenuItem value="no_users" disabled>
+                        لا يوجد مستخدمين لهذه المناوبة
+                      </MenuItem>
                     )}
                   </MUISelect>
                 </FormControl>
@@ -345,237 +360,146 @@ const ClinicShiftSummaryReportPage: React.FC = () => {
             <Button
               type="submit"
               variant="contained"
-              disabled={isLoadingDropdowns || isGeneratingPdf}
-              className="h-10 sm:mt-[26px]"
-              startIcon={!isGeneratingPdf ? <Printer className="h-4 w-4" /> : undefined}
+              disabled={isLoadingShifts || isGeneratingPdf}
+              startIcon={
+                isGeneratingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />
+              }
             >
-              {isGeneratingPdf ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                'طباعة التقرير'
-              )}
+              طباعة التقرير
             </Button>
-          </form>
-        </CardContent>
+          </Stack>
+        </form>
+
+        <Divider sx={{ my: 2 }} />
+
+        <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: "block" }}>
+          تقارير الوردية — اختر مناوبة أولاً لتفعيل الأزرار
+        </Typography>
+        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+          {reportButtons.map(({ label, fetcher, color }) => (
+            <Button
+              key={label}
+              variant="outlined"
+              size="small"
+              color={color}
+              disabled={!selectedShiftId || loadingReportTitle !== null}
+              startIcon={
+                loadingReportTitle === label ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Printer className="h-3 w-3" />
+                )
+              }
+              onClick={() => handleOpenReport(fetcher, label)}
+            >
+              {label}
+            </Button>
+          ))}
+        </Box>
       </Card>
 
-      {/* ── Report Buttons ── */}
-      <Card>
-        <CardContent sx={{ py: 1.5 }}>
-          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-            تقارير الوردية — اختر وردية أولاً لتفعيل الأزرار
-          </Typography>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-            {[
-              { label: 'الأرباح والخسائر',  fetcher: downloadShiftProfitLossPdf,     color: 'primary'   },
-              { label: 'الإيرادات',          fetcher: downloadShiftRevenuePdf,         color: 'success'   },
-              { label: 'المصروفات',          fetcher: downloadShiftExpensesPdf,         color: 'error'     },
-              { label: 'إحصائيات التأمين',  fetcher: downloadShiftInsuranceStatsPdf,  color: 'secondary' },
-              { label: 'إحصائيات التحاليل', fetcher: downloadShiftLabStatsPdf,        color: 'info'      },
-              { label: 'التخفيضات',          fetcher: downloadShiftDiscountsPdf,        color: 'warning'   },
-              { label: 'أداء الأطباء - مختبر', fetcher: downloadShiftDoctorLabPdf,      color: 'primary'   },
-            ].map(({ label, fetcher, color }) => (
-              <Button
-                key={label}
-                variant="outlined"
-                size="small"
-                color={color as 'primary' | 'success' | 'error' | 'secondary' | 'info' | 'warning'}
-                disabled={!selectedShiftId || isLoadingReport}
-                startIcon={isLoadingReport && reportTitle === label ? <Loader2 className="h-3 w-3 animate-spin" /> : <Printer className="h-3 w-3" />}
-                onClick={() => handleOpenReport(fetcher, label)}
-              >
-                {label}
-              </Button>
-            ))}
-          </Box>
-        </CardContent>
-      </Card>
-
-      {/* ── Report PDF Viewer ── */}
-      {reportPdfUrl && (
-        <Card>
-          <CardHeader
-            title={<Typography variant="subtitle1">{reportTitle}</Typography>}
-            action={
-              <IconButton size="small" onClick={() => { URL.revokeObjectURL(reportPdfUrl); setReportPdfUrl(null); }}>
-                <XCircle className="h-4 w-4" />
-              </IconButton>
-            }
-            sx={{ py: 1 }}
-          />
-          <CardContent sx={{ p: 0 }}>
-            <iframe src={reportPdfUrl} className="w-full h-[70vh] border-0" title={reportTitle} />
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Users Table - Show when shift is selected */}
+      {/* Users money summary - one row per user */}
       {selectedShiftId && (
-        <Card>
-          <CardHeader>
-            <Typography variant="h6">المستخدمين الذين لديهم معاملات في هذه المناوبة</Typography>
+        <Card sx={{ borderRadius: 3 }}>
+          <Box sx={{ p: 2, pb: 0 }}>
+            <Typography variant="h6">المتحصلات حسب المستخدم</Typography>
             <Typography variant="body2" color="text.secondary">
-              قائمة المستخدمين الذين استلموا مبالغ مالية في المناوبة المحددة
+              اضغط على أي مبلغ لعرض تفاصيل المعاملات.
             </Typography>
-          </CardHeader>
-          <CardContent>
-            {isLoadingUsers ? (
-              <Box display="flex" justifyContent="center" alignItems="center" py={4}>
-                <CircularProgress />
-                <Typography variant="body2" sx={{ ml: 2 }}>
-                  جارِ التحميل...
-                </Typography>
-              </Box>
-            ) : users && users.length > 0 ? (
-              <Box>
-                {users.map((user) => (
-                  <Box key={user.id} mb={3}>
-                    <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 'bold' }}>
-                      المستخدم: {user.name || user.username}
-                    </Typography>
-                    <TableContainer component={Paper} variant="outlined">
-                      <Table size="small">
-                        <TableHead>
-                          <TableRow sx={{ backgroundColor: 'action.hover' }}>
-                            <TableCell align="center" sx={{ fontWeight: 'bold' }}>
-                              البيان
-                            </TableCell>
-                            <TableCell align="center" sx={{ fontWeight: 'bold' }}>
-                              إجمالي المتحصلات
-                            </TableCell>
-                            <TableCell align="center" sx={{ fontWeight: 'bold' }}>
-                              بنكك
-                            </TableCell>
-                            <TableCell align="center" sx={{ fontWeight: 'bold' }}>
-                              نقدي
-                            </TableCell>
-                            <TableCell align="center" sx={{ fontWeight: 'bold' }}>
-                              صاف بنكك
-                            </TableCell>
-                            <TableCell align="center" sx={{ fontWeight: 'bold' }}>
-                              صافي النقديه
-                            </TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          <TableRow
-                            sx={{
-                              '&:hover': { backgroundColor: 'action.selected' },
-                            }}
-                          >
-                            <TableCell align="right">إجمالي الإيرادات</TableCell>
-                            <TableCell 
-                              align="center" 
-                              sx={{ 
-                                fontSize: '1.1rem', 
-                                fontWeight: 'bold',
-                                cursor: 'pointer',
-                                '&:hover': { backgroundColor: 'action.hover' }
-                              }}
-                              onClick={() => handleCellClick(user, 'total_paid')}
-                            >
-                              {user.total_paid ? Number(user.total_paid).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
-                            </TableCell>
-                            <TableCell 
-                              align="center" 
-                              sx={{ 
-                                fontSize: '1.1rem', 
-                                fontWeight: 'bold',
-                                cursor: 'pointer',
-                                '&:hover': { backgroundColor: 'action.hover' }
-                              }}
-                              onClick={() => handleCellClick(user, 'total_bank')}
-                            >
-                              {user.total_bank ? Number(user.total_bank).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
-                            </TableCell>
-                            <TableCell 
-                              align="center" 
-                              sx={{ 
-                                fontSize: '1.1rem', 
-                                fontWeight: 'bold',
-                                cursor: 'pointer',
-                                '&:hover': { backgroundColor: 'action.hover' }
-                              }}
-                              onClick={() => handleCellClick(user, 'total_cash')}
-                            >
-                              {user.total_cash ? Number(user.total_cash).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
-                            </TableCell>
-                            <TableCell 
-                              align="center" 
-                              sx={{ 
-                                fontSize: '1.1rem', 
-                                fontWeight: 'bold',
-                                cursor: 'pointer',
-                                '&:hover': { backgroundColor: 'action.hover' }
-                              }}
-                              onClick={() => handleCellClick(user, 'net_bank')}
-                            >
-                              {user.net_bank ? Number(user.net_bank).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
-                            </TableCell>
-                            <TableCell 
-                              align="center" 
-                              sx={{ 
-                                fontSize: '1.1rem', 
-                                fontWeight: 'bold',
-                                cursor: 'pointer',
-                                '&:hover': { backgroundColor: 'action.hover' }
-                              }}
-                              onClick={() => handleCellClick(user, 'net_cash')}
-                            >
-                              {user.net_cash ? Number(user.net_cash).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
-                            </TableCell>
-                          </TableRow>
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  </Box>
-                ))}
-              </Box>
-            ) : (
-              <Box py={4} textAlign="center">
-                <Typography variant="body2" color="text.secondary">
-                  لا يوجد مستخدمين لديهم معاملات في هذه المناوبة
-                </Typography>
-              </Box>
-            )}
-          </CardContent>
+          </Box>
+          {isLoadingUsers ? (
+            <Box display="flex" justifyContent="center" alignItems="center" py={4} gap={1}>
+              <CircularProgress size={22} />
+              <Typography variant="body2">جارِ التحميل...</Typography>
+            </Box>
+          ) : users && users.length > 0 ? (
+            <TableContainer component={Paper} elevation={0} sx={{ mt: 1 }}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell align="center" sx={{ fontWeight: 700 }}>المستخدم</TableCell>
+                    {MONEY_COLUMNS.map(({ key, label }) => (
+                      <TableCell key={key} align="center" sx={{ fontWeight: 700 }}>
+                        {label}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {users.map((user) => (
+                    <TableRow key={user.id} hover>
+                      <TableCell align="center" sx={{ fontWeight: 600 }}>
+                        {user.name || user.username}
+                      </TableCell>
+                      {MONEY_COLUMNS.map(({ key }) => (
+                        <TableCell
+                          key={key}
+                          align="center"
+                          sx={{
+                            cursor: "pointer",
+                            fontWeight: 600,
+                            "&:hover": { backgroundColor: "action.hover", textDecoration: "underline" },
+                          }}
+                          onClick={() => handleCellClick(user, key)}
+                        >
+                          {formatMoney(Number(user[key] || 0))}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                  <TableRow sx={{ backgroundColor: "#3498db" }}>
+                    <TableCell align="center" sx={{ fontWeight: 700, color: "white !important" }}>
+                      الإجمالي
+                    </TableCell>
+                    {MONEY_COLUMNS.map(({ key }) => (
+                      <TableCell key={key} align="center" sx={{ fontWeight: 700, color: "white !important" }}>
+                        {formatMoney(columnTotals[key])}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </TableContainer>
+          ) : (
+            <Box py={4} textAlign="center">
+              <Typography variant="body2" color="text.secondary">
+                لا يوجد مستخدمين لديهم معاملات في هذه المناوبة
+              </Typography>
+            </Box>
+          )}
         </Card>
       )}
 
-      {isGeneratingPdf && !pdfUrl && (
+      {/* Unified PDF preview */}
+      {isGeneratingPdf && !pdfPreview && (
         <div className="text-center py-10">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-2" />
-          <p className="text-muted-foreground">
-            جارِ توليد التقرير...
-          </p>
+          <p className="text-muted-foreground">جارِ توليد التقرير...</p>
         </div>
       )}
 
-      {pdfUrl && (
-        <Card className="mt-6">
-          <CardHeader className="flex flex-row justify-between items-center">
-            <Typography variant="h6">معاينة التقرير</Typography>
-            <IconButton size="small" onClick={() => setPdfUrl(null)}>
+      {pdfPreview && (
+        <Card sx={{ borderRadius: 3 }}>
+          <Box sx={{ p: 1.5, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <Typography variant="subtitle1" fontWeight={600}>
+              {pdfPreview.title}
+            </Typography>
+            <IconButton
+              size="small"
+              onClick={() => {
+                window.URL.revokeObjectURL(pdfPreview.url);
+                setPdfPreview(null);
+              }}
+            >
               <XCircle className="h-5 w-5" />
             </IconButton>
-          </CardHeader>
-          <CardContent>
-            <iframe
-              src={pdfUrl}
-              className="w-full h-[75vh] border rounded-md"
-              title={'ملخص مناوبة العيادة'}
-            ></iframe>
-          </CardContent>
+          </Box>
+          <iframe src={pdfPreview.url} className="w-full h-[75vh] border-0" title={pdfPreview.title} />
         </Card>
       )}
 
       {/* Patient Transactions Dialog */}
-      <Dialog
-        open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
-        maxWidth="lg"
-        fullWidth
-      >
+      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="lg" fullWidth dir="rtl">
         <DialogTitle>
           <Box display="flex" justifyContent="space-between" alignItems="center">
             <Typography variant="h6">
@@ -593,11 +517,9 @@ const ClinicShiftSummaryReportPage: React.FC = () => {
         </DialogTitle>
         <DialogContent>
           {isLoadingTransactions ? (
-            <Box display="flex" justifyContent="center" alignItems="center" py={4}>
-              <CircularProgress />
-              <Typography variant="body2" sx={{ ml: 2 }}>
-                جارِ التحميل...
-              </Typography>
+            <Box display="flex" justifyContent="center" alignItems="center" py={4} gap={1}>
+              <CircularProgress size={22} />
+              <Typography variant="body2">جارِ التحميل...</Typography>
             </Box>
           ) : getFilteredTransactions().length === 0 ? (
             <Box py={4} textAlign="center">
@@ -606,79 +528,62 @@ const ClinicShiftSummaryReportPage: React.FC = () => {
               </Typography>
             </Box>
           ) : (
-            <Box>
-              <TableContainer component={Paper} variant="outlined">
-                <Table size="small" sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1 } }}>
-                  <TableHead>
-                    <TableRow sx={{ backgroundColor: 'action.hover' }}>
-                      <TableCell align="center" sx={{ fontWeight: 'bold', fontSize: '0.875rem', py: 0.75 }}>رقم الزيارة</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 'bold', fontSize: '0.875rem', py: 0.75 }}>اسم المريض</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 'bold', fontSize: '0.875rem', py: 0.75 }}>اسم الطبيب</TableCell>
-                      <TableCell align="center" sx={{ fontWeight: 'bold', fontSize: '0.875rem', py: 0.75 }}>إجمالي المبلغ</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {getFilteredTransactions().map((visit) => (
-                      <TableRow 
-                        key={visit.doctor_visit_id}
+            <TableContainer component={Paper} variant="outlined">
+              <Table size="small" sx={{ "& .MuiTableCell-root": { py: 0.5, px: 1 } }}>
+                <TableHead>
+                  <TableRow sx={{ backgroundColor: "action.hover" }}>
+                    <TableCell align="center" sx={{ fontWeight: "bold" }}>رقم الزيارة</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: "bold" }}>اسم المريض</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: "bold" }}>اسم الطبيب</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: "bold" }}>إجمالي المبلغ</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {getFilteredTransactions().map((visit) => (
+                    <TableRow key={visit.doctor_visit_id} hover>
+                      <TableCell align="center">{visit.doctor_visit_id}</TableCell>
+                      <TableCell align="right">{visit.patient_name}</TableCell>
+                      <TableCell align="right">{visit.doctor_name}</TableCell>
+                      <TableCell
+                        align="center"
                         sx={{
-                          '&:hover': { backgroundColor: 'action.selected' },
+                          fontWeight: "bold",
+                          cursor: "pointer",
+                          color: "primary.main",
+                          "&:hover": { textDecoration: "underline" },
+                        }}
+                        onClick={() => {
+                          setSelectedVisit(visit);
+                          setDetailsDialogOpen(true);
                         }}
                       >
-                        <TableCell align="center" sx={{ fontSize: '0.875rem' }}>{visit.doctor_visit_id}</TableCell>
-                        <TableCell align="right" sx={{ fontSize: '0.875rem' }}>{visit.patient_name}</TableCell>
-                        <TableCell align="right" sx={{ fontSize: '0.875rem' }}>{visit.doctor_name}</TableCell>
-                        <TableCell 
-                          align="center" 
-                          sx={{ 
-                            fontWeight: 'bold',
-                            fontSize: '0.95rem',
-                            cursor: 'pointer',
-                            color: 'primary.main',
-                            '&:hover': { textDecoration: 'underline' }
-                          }}
-                          onClick={() => {
-                            setSelectedVisit(visit);
-                            setDetailsDialogOpen(true);
-                          }}
-                        >
-                          {Number(getTotalAmount(visit)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Box>
+                        {formatMoney(getTotalAmount(visit))}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>إغلاق</Button>
+          <Button variant="outlined" onClick={() => setDialogOpen(false)}>إغلاق</Button>
         </DialogActions>
       </Dialog>
 
-      {/* Details Dialog - Shows lab and service transactions */}
-      <Dialog
-        open={detailsDialogOpen}
-        onClose={() => setDetailsDialogOpen(false)}
-        maxWidth="md"
-        fullWidth
-      >
+      {/* Visit Details Dialog - lab and service transactions */}
+      <Dialog open={detailsDialogOpen} onClose={() => setDetailsDialogOpen(false)} maxWidth="md" fullWidth dir="rtl">
         <DialogTitle>
           <Box display="flex" justifyContent="space-between" alignItems="center">
-            <Typography variant="h6">
-              تفاصيل الزيارة #{selectedVisit?.doctor_visit_id}
-            </Typography>
+            <Typography variant="h6">تفاصيل الزيارة #{selectedVisit?.doctor_visit_id}</Typography>
             <IconButton size="small" onClick={() => setDetailsDialogOpen(false)}>
               <XCircle className="h-5 w-5" />
             </IconButton>
           </Box>
           {selectedVisit && (
-            <Box mt={1}>
-              <Typography variant="body2" color="text.secondary">
-                المريض: {selectedVisit.patient_name} | الطبيب: {selectedVisit.doctor_name}
-              </Typography>
-            </Box>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              المريض: {selectedVisit.patient_name} | الطبيب: {selectedVisit.doctor_name}
+            </Typography>
           )}
         </DialogTitle>
         <DialogContent>
@@ -686,91 +591,87 @@ const ClinicShiftSummaryReportPage: React.FC = () => {
             <Box>
               {selectedVisit.lab_transactions.length > 0 && (
                 <Box mb={3}>
-                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: "bold" }}>
                     معاملات المختبر
                   </Typography>
                   <TableContainer component={Paper} variant="outlined">
                     <Table size="small">
                       <TableHead>
                         <TableRow>
-                          <TableCell align="right" sx={{ fontWeight: 'bold' }}>اسم الفحص</TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 'bold' }}>المبلغ</TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 'bold' }}>النوع</TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 'bold' }}>التاريخ</TableCell>
+                          <TableCell align="right" sx={{ fontWeight: "bold" }}>اسم الفحص</TableCell>
+                          <TableCell align="center" sx={{ fontWeight: "bold" }}>المبلغ</TableCell>
+                          <TableCell align="center" sx={{ fontWeight: "bold" }}>النوع</TableCell>
+                          <TableCell align="center" sx={{ fontWeight: "bold" }}>التاريخ</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
                         {selectedVisit.lab_transactions.map((transaction, idx) => (
                           <TableRow key={idx}>
                             <TableCell align="right">{transaction.test_name}</TableCell>
-                            <TableCell align="center" sx={{ fontWeight: 'bold' }}>
-                              {Number(transaction.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            <TableCell align="center" sx={{ fontWeight: "bold" }}>
+                              {formatMoney(Number(transaction.amount))}
                             </TableCell>
                             <TableCell align="center">
-                              <Chip 
-                                label={transaction.is_bank ? 'بنكك' : 'نقدي'} 
-                                color={transaction.is_bank ? 'primary' : 'success'}
+                              <Chip
+                                label={transaction.is_bank ? "بنكك" : "نقدي"}
+                                color={transaction.is_bank ? "primary" : "success"}
                                 size="small"
                               />
                             </TableCell>
                             <TableCell align="center">
-                              {dayjs(transaction.date).format('DD/MM/YYYY HH:mm')}
+                              {dayjs(transaction.date).format("DD/MM/YYYY HH:mm")}
                             </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
                     </Table>
                   </TableContainer>
-                  <Box mt={1}>
-                    <Typography variant="body2">
-                      <strong>إجمالي المختبر:</strong> {Number(selectedVisit.total_lab_paid).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </Typography>
-                  </Box>
+                  <Typography variant="body2" sx={{ mt: 1 }}>
+                    <strong>إجمالي المختبر:</strong> {formatMoney(selectedVisit.total_lab_paid)}
+                  </Typography>
                 </Box>
               )}
 
               {selectedVisit.service_transactions.length > 0 && (
                 <Box>
-                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: "bold" }}>
                     معاملات الخدمات
                   </Typography>
                   <TableContainer component={Paper} variant="outlined">
                     <Table size="small">
                       <TableHead>
                         <TableRow>
-                          <TableCell align="right" sx={{ fontWeight: 'bold' }}>اسم الخدمة</TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 'bold' }}>المبلغ</TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 'bold' }}>النوع</TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 'bold' }}>التاريخ</TableCell>
+                          <TableCell align="right" sx={{ fontWeight: "bold" }}>اسم الخدمة</TableCell>
+                          <TableCell align="center" sx={{ fontWeight: "bold" }}>المبلغ</TableCell>
+                          <TableCell align="center" sx={{ fontWeight: "bold" }}>النوع</TableCell>
+                          <TableCell align="center" sx={{ fontWeight: "bold" }}>التاريخ</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
                         {selectedVisit.service_transactions.map((transaction, idx) => (
                           <TableRow key={idx}>
                             <TableCell align="right">{transaction.service_name}</TableCell>
-                            <TableCell align="center" sx={{ fontWeight: 'bold' }}>
-                              {Number(transaction.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            <TableCell align="center" sx={{ fontWeight: "bold" }}>
+                              {formatMoney(Number(transaction.amount))}
                             </TableCell>
                             <TableCell align="center">
-                              <Chip 
-                                label={transaction.is_bank ? 'بنكك' : 'نقدي'} 
-                                color={transaction.is_bank ? 'primary' : 'success'}
+                              <Chip
+                                label={transaction.is_bank ? "بنكك" : "نقدي"}
+                                color={transaction.is_bank ? "primary" : "success"}
                                 size="small"
                               />
                             </TableCell>
                             <TableCell align="center">
-                              {dayjs(transaction.date).format('DD/MM/YYYY HH:mm')}
+                              {dayjs(transaction.date).format("DD/MM/YYYY HH:mm")}
                             </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
                     </Table>
                   </TableContainer>
-                  <Box mt={1}>
-                    <Typography variant="body2">
-                      <strong>إجمالي الخدمات:</strong> {Number(selectedVisit.total_service_paid).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </Typography>
-                  </Box>
+                  <Typography variant="body2" sx={{ mt: 1 }}>
+                    <strong>إجمالي الخدمات:</strong> {formatMoney(selectedVisit.total_service_paid)}
+                  </Typography>
                 </Box>
               )}
 
@@ -785,7 +686,7 @@ const ClinicShiftSummaryReportPage: React.FC = () => {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDetailsDialogOpen(false)}>إغلاق</Button>
+          <Button variant="outlined" onClick={() => setDetailsDialogOpen(false)}>إغلاق</Button>
         </DialogActions>
       </Dialog>
     </div>
@@ -793,4 +694,3 @@ const ClinicShiftSummaryReportPage: React.FC = () => {
 };
 
 export default ClinicShiftSummaryReportPage;
-

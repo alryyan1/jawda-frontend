@@ -7,7 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   TextField,
   FormControlLabel,
-  Checkbox,
+  Switch,
   Button,
   Box,
   CircularProgress,
@@ -19,6 +19,7 @@ import {
   type ServiceFormData,
   type Service,
   type ServiceGroup,
+  ServiceFormMode,
 } from "@/types/services";
 import { getServiceGroupsList } from "@/services/serviceGroupService";
 import AddServiceGroupDialog from "@/components/services/AddServiceGroupDialog";
@@ -33,6 +34,7 @@ const serviceFormSchema = z.object({
     }),
   activate: z.boolean(),
   variable: z.boolean(),
+  has_cost: z.boolean(),
 });
 
 type ServiceFormValues = z.infer<typeof serviceFormSchema>;
@@ -43,6 +45,7 @@ interface ServiceFormProps {
   onCancel: () => void;
   isSubmitting: boolean;
   isLoading?: boolean;
+  mode?: ServiceFormMode;
 }
 
 const ServiceForm: React.FC<ServiceFormProps> = ({
@@ -51,6 +54,7 @@ const ServiceForm: React.FC<ServiceFormProps> = ({
   onCancel,
   isSubmitting,
   isLoading = false,
+  mode,
 }) => {
   const { data: serviceGroups, isLoading: isLoadingServiceGroups } = useQuery({
     queryKey: ["serviceGroupsList"],
@@ -71,6 +75,7 @@ const ServiceForm: React.FC<ServiceFormProps> = ({
       price: "0",
       activate: true,
       variable: false,
+      has_cost: false,
     },
   });
 
@@ -82,6 +87,7 @@ const ServiceForm: React.FC<ServiceFormProps> = ({
         price: String(initialData.price),
         activate: !!initialData.activate,
         variable: !!initialData.variable,
+        has_cost: !!initialData.has_cost,
       });
     }
   }, [initialData, reset]);
@@ -196,16 +202,17 @@ const ServiceForm: React.FC<ServiceFormProps> = ({
         )}
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
         <Controller
           name="activate"
           control={control}
           render={({ field }) => (
             <FormControlLabel
               control={
-                <Checkbox
+                <Switch
                   checked={field.value}
                   onChange={(_, v) => field.onChange(v)}
+                  color="success"
                 />
               }
               label="نشط"
@@ -218,12 +225,29 @@ const ServiceForm: React.FC<ServiceFormProps> = ({
           render={({ field }) => (
             <FormControlLabel
               control={
-                <Checkbox
+                <Switch
                   checked={field.value}
                   onChange={(_, v) => field.onChange(v)}
+                  color="info"
                 />
               }
               label="سعر متغير"
+            />
+          )}
+        />
+        <Controller
+          name="has_cost"
+          control={control}
+          render={({ field }) => (
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={field.value}
+                  onChange={(_, v) => field.onChange(v)}
+                  color="warning"
+                />
+              }
+              label="له تكلفة"
             />
           )}
         />
@@ -237,7 +261,7 @@ const ServiceForm: React.FC<ServiceFormProps> = ({
           {isSubmitting && (
             <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />
           )}
-          حفظ
+          {mode === ServiceFormMode.EDIT ? "حفظ التغييرات" : "إضافة خدمة"}
         </Button>
       </Box>
     </form>

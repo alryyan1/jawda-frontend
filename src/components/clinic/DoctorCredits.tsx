@@ -238,8 +238,8 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
           ),
         );
         // Open journal entry dialog after proofing succeeds
-        setJournalAmounts({ cash: cashAmount, bank: bankAmount, total: temp, clinicCashTotal: clinicTotals.cash, clinicBankTotal: clinicTotals.bank });
-        setShowJournalDialog(true);
+        // setJournalAmounts({ cash: cashAmount, bank: bankAmount, total: temp, clinicCashTotal: clinicTotals.cash, clinicBankTotal: clinicTotals.bank });
+        // setShowJournalDialog(true);
       })
       .catch(() => {})
       .finally(() => setIsLoading(false));

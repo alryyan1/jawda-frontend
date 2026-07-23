@@ -53,11 +53,9 @@ export interface User {
   name: string;
   username: string;
   doctor_id?: number;
-  is_nurse: boolean;
   is_supervisor?: boolean;
   doctor?: Doctor; // Eager loaded doctor relationship
   is_active?: boolean;
-  user_money_collector_type?: "lab" | "company" | "clinic" | "all";
   user_type?: string | null; // Arabic enum from backend; nullable when clearing
   nav_items?: string[] | null; // Array of route paths for navigation items
   roles?: Role[];
@@ -71,10 +69,8 @@ export interface UserFormData {
   password?: string;
   password_confirmation?: string;
   doctor_id?: string | number;
-  is_nurse: boolean;
   is_supervisor?: boolean;
   is_active?: boolean;
-  user_money_collector_type?: "lab" | "company" | "clinic" | "all";
   user_type?: string | null;
   nav_items?: string[] | null;
   roles: string[];

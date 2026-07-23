@@ -13,6 +13,10 @@ import {
   BookOpen,
   Activity,
   Scan,
+  ClipboardList,
+  Paperclip,
+  Pill,
+  Smile,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ActivePatientVisit } from '@/types/patients';
@@ -24,7 +28,11 @@ export type SectionKey =
   | 'notes'
   | 'history'
   | 'vitals'
-  | 'systems';
+  | 'systems'
+  | 'diagnosis'
+  | 'attachments'
+  | 'prescriptions'
+  | 'teeth';
 
 interface ActionDef {
   key: SectionKey;
@@ -35,12 +43,16 @@ interface ActionDef {
 
 const ACTIONS: ActionDef[] = [
   { key: 'info',          label: 'بيانات المريض',    icon: User },
+  { key: 'diagnosis',     label: 'التشخيص',           icon: ClipboardList },
+  { key: 'prescriptions', label: 'الوصفات الطبية',    icon: Pill },
   { key: 'services',      label: 'الخدمات',           icon: Stethoscope },
   { key: 'lab',           label: 'المختبر',            icon: FlaskConical },
   { key: 'notes',         label: 'ملاحظات الزيارة',   icon: FileText },
   { key: 'history',       label: 'السجل الطبي',       icon: BookOpen },
   { key: 'vitals',        label: 'العلامات الحيوية',  icon: Activity },
   { key: 'systems',       label: 'مراجعة الأجهزة',   icon: Scan },
+  { key: 'teeth',         label: 'الأسنان',            icon: Smile },
+  { key: 'attachments',   label: 'المرفقات',          icon: Paperclip },
 ];
 
 interface MedicalActionGridProps {
@@ -58,6 +70,7 @@ const MedicalActionGrid: React.FC<MedicalActionGridProps> = ({
     if (!visit) return undefined;
     if (key === 'services') return visit.requested_services_count || undefined;
     if (key === 'lab') return visit.lab_requests?.length || undefined;
+    if (key === 'attachments') return visit.attachments?.length || undefined;
     return undefined;
   };
 

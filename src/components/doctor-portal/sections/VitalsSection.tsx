@@ -1,21 +1,24 @@
 import React, { useEffect, useMemo } from 'react';
-import { useForm, Controller } from 'react-hook-form';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useForm, Controller, type Control, type FieldValues, type Path } from 'react-hook-form';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import Box from '@mui/material/Box';
-import Paper from '@mui/material/Paper';
-import Typography from '@mui/material/Typography';
-import Grid from '@mui/material/Grid';
-import TextField from '@mui/material/TextField';
-import Button from '@mui/material/Button';
-import CircularProgress from '@mui/material/CircularProgress';
-import Chip from '@mui/material/Chip';
-import { Activity } from 'lucide-react';
+import { Activity, TrendingUp, Loader2 } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
 import { saveMedicalHistory } from '@/services/patientMedicalHistoryService';
+import { recordVisitVital, getPatientVitalsTrend } from '@/services/visitVitalService';
 import type { PatientMedicalHistory } from '@/types/medicalHistory';
+import type { VisitVitalInput } from '@/types/vitals';
+import VitalsTrendChart from './VitalsTrendChart';
 
 interface VitalsSectionProps {
   patientId: number | undefined;
+  visitId?: number;
   medHistory: PatientMedicalHistory | undefined;
   isLoading: boolean;
 }
@@ -30,18 +33,113 @@ interface VitalsFormValues {
   baseline_rbs: string;
 }
 
-const VITAL_FIELDS: { key: keyof VitalsFormValues; label: string; unit: string; placeholder: string }[] = [
-  { key: 'baseline_bp',         label: 'ضغط الدم',          unit: 'mmHg',  placeholder: '120/80' },
-  { key: 'baseline_heart_rate', label: 'معدل ضربات القلب',  unit: 'bpm',   placeholder: '72' },
-  { key: 'baseline_temp',       label: 'درجة الحرارة',       unit: '°C',    placeholder: '37.0' },
-  { key: 'baseline_spo2',       label: 'تشبع الأكسجين',     unit: '%',     placeholder: '98' },
-  { key: 'baseline_weight',     label: 'الوزن',              unit: 'kg',    placeholder: '70' },
-  { key: 'baseline_height',     label: 'الطول',              unit: 'cm',    placeholder: '170' },
-  { key: 'baseline_rbs',        label: 'سكر الدم العشوائي', unit: 'mg/dL', placeholder: '100' },
+const VITAL_FIELDS: { key: keyof VitalsFormValues; label: string; unit: string }[] = [
+  { key: 'baseline_bp',         label: 'ضغط الدم',          unit: 'mmHg' },
+  { key: 'baseline_heart_rate', label: 'معدل ضربات القلب',  unit: 'bpm' },
+  { key: 'baseline_temp',       label: 'درجة الحرارة',       unit: '°C' },
+  { key: 'baseline_spo2',       label: 'تشبع الأكسجين',     unit: '%' },
+  { key: 'baseline_weight',     label: 'الوزن',              unit: 'kg' },
+  { key: 'baseline_height',     label: 'الطول',              unit: 'cm' },
+  { key: 'baseline_rbs',        label: 'سكر الدم العشوائي', unit: 'mg/dL' },
 ];
 
-const VitalsSection: React.FC<VitalsSectionProps> = ({ patientId, medHistory, isLoading }) => {
+interface VisitVitalFormValues {
+  blood_pressure_systolic: string;
+  blood_pressure_diastolic: string;
+  heart_rate: string;
+  temperature: string;
+  spo2: string;
+  weight: string;
+}
+
+const VISIT_VITAL_FIELDS: { key: keyof VisitVitalFormValues; label: string; unit: string }[] = [
+  { key: 'blood_pressure_systolic', label: 'ضغط انقباضي', unit: 'mmHg' },
+  { key: 'blood_pressure_diastolic', label: 'ضغط انبساطي', unit: 'mmHg' },
+  { key: 'heart_rate', label: 'معدل ضربات القلب', unit: 'bpm' },
+  { key: 'temperature', label: 'درجة الحرارة', unit: '°C' },
+  { key: 'spo2', label: 'تشبع الأكسجين', unit: '%' },
+  { key: 'weight', label: 'الوزن', unit: 'kg' },
+];
+
+const BMI_BADGE_CLASSES: Record<'info' | 'success' | 'warning' | 'error', string> = {
+  info: 'border-transparent bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100',
+  success: 'border-transparent bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100',
+  warning: 'border-transparent bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100',
+  error: 'border-transparent bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100',
+};
+
+/** A compact label + input row with a unit suffix, stacked vertically with its siblings. */
+function VitalInput<T extends FieldValues>({
+  name,
+  control,
+  label,
+  unit,
+}: {
+  name: Path<T>;
+  control: Control<T>;
+  label: string;
+  unit: string;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <Label htmlFor={name} className="w-28 shrink-0 text-xs text-muted-foreground">{label}</Label>
+      <Controller
+        name={name}
+        control={control}
+        render={({ field }) => (
+          <div className="relative flex-1">
+            <Input
+              {...field}
+              value={field.value ?? ''}
+              id={name}
+              className="h-8 pe-10 text-sm"
+            />
+            <span className="pointer-events-none absolute end-2.5 top-1/2 -translate-y-1/2 text-[0.65rem] text-muted-foreground">
+              {unit}
+            </span>
+          </div>
+        )}
+      />
+    </div>
+  );
+}
+
+const VitalsSection: React.FC<VitalsSectionProps> = ({ patientId, visitId, medHistory, isLoading }) => {
   const queryClient = useQueryClient();
+
+  const { control: visitVitalControl, handleSubmit: handleVisitVitalSubmit, reset: resetVisitVitalForm } =
+    useForm<VisitVitalFormValues>({
+      defaultValues: {
+        blood_pressure_systolic: '', blood_pressure_diastolic: '',
+        heart_rate: '', temperature: '', spo2: '', weight: '',
+      },
+    });
+
+  const { data: vitalsTrend = [] } = useQuery({
+    queryKey: ['vitalsTrend', patientId],
+    queryFn: () => getPatientVitalsTrend(patientId!),
+    enabled: !!patientId,
+  });
+
+  const recordVitalMutation = useMutation({
+    mutationFn: (values: VisitVitalFormValues) => {
+      const payload: VisitVitalInput = {};
+      const toNum = (v: string): number | undefined => (v.trim() === '' ? undefined : Number(v));
+      payload.blood_pressure_systolic = toNum(values.blood_pressure_systolic);
+      payload.blood_pressure_diastolic = toNum(values.blood_pressure_diastolic);
+      payload.heart_rate = toNum(values.heart_rate);
+      payload.temperature = toNum(values.temperature);
+      payload.spo2 = toNum(values.spo2);
+      payload.weight = toNum(values.weight);
+      return recordVisitVital(visitId!, payload);
+    },
+    onSuccess: () => {
+      toast.success('تم تسجيل العلامات الحيوية لهذه الزيارة');
+      queryClient.invalidateQueries({ queryKey: ['vitalsTrend', patientId] });
+      resetVisitVitalForm();
+    },
+    onError: () => toast.error('فشل تسجيل العلامات الحيوية'),
+  });
 
   const { control, handleSubmit, watch, reset } = useForm<VitalsFormValues>({
     defaultValues: {
@@ -77,10 +175,10 @@ const VitalsSection: React.FC<VitalsSectionProps> = ({ patientId, medHistory, is
   const bmiCategory = useMemo(() => {
     if (!bmi) return null;
     const b = parseFloat(bmi);
-    if (b < 18.5) return { label: 'نقص الوزن', color: 'info' as const };
-    if (b < 25)   return { label: 'طبيعي', color: 'success' as const };
-    if (b < 30)   return { label: 'زيادة الوزن', color: 'warning' as const };
-    return { label: 'سمنة', color: 'error' as const };
+    if (b < 18.5) return { label: 'نقص الوزن', tone: 'info' as const };
+    if (b < 25)   return { label: 'طبيعي', tone: 'success' as const };
+    if (b < 30)   return { label: 'زيادة الوزن', tone: 'warning' as const };
+    return { label: 'سمنة', tone: 'error' as const };
   }, [bmi]);
 
   const mutation = useMutation({
@@ -94,74 +192,88 @@ const VitalsSection: React.FC<VitalsSectionProps> = ({ patientId, medHistory, is
 
   if (isLoading) {
     return (
-      <Box sx={{ p: 4, display: 'flex', justifyContent: 'center' }}>
-        <CircularProgress size={28} />
-      </Box>
+      <div className="flex justify-center p-8">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
     );
   }
 
   return (
-    <Box component="form" onSubmit={handleSubmit(d => mutation.mutate(d))} sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <Paper elevation={0} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-          <Activity size={18} />
-          <Typography variant="subtitle2" fontWeight={700}>العلامات الحيوية الأساسية</Typography>
-        </Box>
-        <Grid container spacing={2}>
-          {VITAL_FIELDS.map(({ key, label, unit, placeholder }) => (
-            <Grid item xs={6} sm={4} md={3} key={key}>
-              <Controller
-                name={key}
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    value={field.value ?? ''}
-                    label={label}
-                    placeholder={placeholder}
-                    size="small"
-                    fullWidth
-                    InputProps={{
-                      endAdornment: (
-                        <Typography variant="caption" color="text.secondary" sx={{ ml: 0.5, whiteSpace: 'nowrap', fontSize: '0.7rem' }}>
-                          {unit}
-                        </Typography>
-                      ),
-                    }}
-                    InputLabelProps={{ sx: { fontSize: '0.8rem' } }}
-                    inputProps={{ style: { fontSize: '0.82rem' } }}
-                  />
+    <div className="flex flex-col gap-3 p-3">
+      <form onSubmit={handleSubmit(d => mutation.mutate(d))} className="flex flex-col gap-3">
+        <Card>
+          <CardContent className="p-3">
+            <div className="mb-3 flex items-center gap-2">
+              <Activity size={16} />
+              <h3 className="text-sm font-bold">العلامات الحيوية الأساسية</h3>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              {VITAL_FIELDS.map(({ key, label, unit }) => (
+                <VitalInput key={key} name={key} control={control} label={label} unit={unit} />
+              ))}
+            </div>
+
+            {/* BMI display */}
+            {bmi && (
+              <div className="mt-3 flex items-center gap-3">
+                <span className="text-sm text-muted-foreground">مؤشر كتلة الجسم (BMI):</span>
+                <span className="text-base font-bold">{bmi}</span>
+                {bmiCategory && (
+                  <Badge className={cn('text-[0.72rem]', BMI_BADGE_CLASSES[bmiCategory.tone])}>
+                    {bmiCategory.label}
+                  </Badge>
                 )}
-              />
-            </Grid>
-          ))}
-        </Grid>
-
-        {/* BMI display */}
-        {bmi && (
-          <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Typography variant="body2" color="text.secondary">
-              مؤشر كتلة الجسم (BMI):
-            </Typography>
-            <Typography variant="body1" fontWeight={700}>{bmi}</Typography>
-            {bmiCategory && (
-              <Chip label={bmiCategory.label} size="small" color={bmiCategory.color} sx={{ fontSize: '0.72rem' }} />
+              </div>
             )}
-          </Box>
-        )}
-      </Paper>
+          </CardContent>
+        </Card>
 
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <Button
-          type="submit"
-          variant="contained"
-          disabled={mutation.isPending || !patientId}
-          startIcon={mutation.isPending ? <CircularProgress size={16} color="inherit" /> : null}
-        >
-          حفظ العلامات الحيوية
-        </Button>
-      </Box>
-    </Box>
+        <div className="flex justify-end">
+          <Button type="submit" disabled={mutation.isPending || !patientId}>
+            {mutation.isPending && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
+            حفظ العلامات الحيوية
+          </Button>
+        </div>
+      </form>
+
+      {visitId && (
+        <>
+          <Separator />
+
+          <Card>
+            <CardContent className="p-3">
+              <form onSubmit={handleVisitVitalSubmit(v => recordVitalMutation.mutate(v))}>
+                <h3 className="mb-3 text-sm font-bold">تسجيل علامات حيوية لهذه الزيارة</h3>
+
+                <div className="flex flex-col gap-1.5">
+                  {VISIT_VITAL_FIELDS.map(({ key, label, unit }) => (
+                    <VitalInput key={key} name={key} control={visitVitalControl} label={label} unit={unit} />
+                  ))}
+                </div>
+
+                <div className="mt-3 flex justify-end">
+                  <Button type="submit" variant="outline" disabled={recordVitalMutation.isPending}>
+                    {recordVitalMutation.isPending && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
+                    تسجيل
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </>
+      )}
+
+      <Separator />
+
+      <div>
+        <div className="mb-3 flex items-center gap-2">
+          <TrendingUp size={18} />
+          <h3 className="text-sm font-bold">الاتجاه عبر الزيارات</h3>
+        </div>
+        <VitalsTrendChart vitals={vitalsTrend} />
+      </div>
+    </div>
   );
 };
 

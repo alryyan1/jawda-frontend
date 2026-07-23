@@ -7,6 +7,7 @@ import {
   useLocation,
 } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { useThemeMode } from "../contexts/ThemeModeContext";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetTrigger } from "@/components/ui/sheet";
 import {
@@ -51,6 +52,7 @@ import {
   BarChartBig,
   FileSpreadsheet,
   HandCoins,
+  Coins,
   LineChart,
   UsersRound,
   Eye,
@@ -283,32 +285,6 @@ const utilityNavItems: NavItem[] = [
   // Moved to dropdown menu in app bar
 ];
 
-// Theme Toggle Hook (ensure this is defined, possibly in a separate utils/hooks file)
-const useTheme = () => {
-  const [theme, setTheme] = useState<"light" | "dark">(() => {
-    if (typeof window === "undefined") return "light"; // Default for SSR or non-browser
-    const storedTheme = localStorage.getItem("theme");
-    if (storedTheme) return storedTheme as "light" | "dark";
-    return window.matchMedia("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light";
-  });
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const root = window.document.documentElement;
-    root.classList.remove("light", "dark");
-    root.classList.add(theme);
-    localStorage.setItem("theme", theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme((prevTheme) => (prevTheme === "light" ? "dark" : "light"));
-  };
-
-  return { theme, toggleTheme };
-};
-
 const AppHeaderSearch: React.FC = () => {
   const location = useLocation();
   const isClinicRoute = useMemo(
@@ -527,12 +503,15 @@ const AppHeaderSearch: React.FC = () => {
 const AppLayout: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const { theme, toggleTheme } = useTheme();
+  const { theme, toggleTheme } = useThemeMode();
 
   const [isDesktopSidebarCollapsed, setIsDesktopSidebarCollapsed] =
     useState<boolean>(getSidebarCollapsedState());
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
+  const [isRealtimeEnabled, setIsRealtimeEnabled] = useState(
+    realtimeService.isEnabled(),
+  );
   // Current general shift status for app-wide indicator
   const { data: currentOpenShift } = useQuery({
     queryKey: ["currentOpenShift"],
@@ -555,6 +534,13 @@ const AppLayout: React.FC = () => {
 
     return () => clearInterval(interval);
   }, []);
+
+  const toggleRealtime = () => {
+    const next = !realtimeService.isEnabled();
+    realtimeService.setEnabled(next);
+    setIsRealtimeEnabled(next);
+    setIsRealtimeConnected(realtimeService.getConnectionStatus());
+  };
 
   const toggleDesktopSidebar = () => {
     setIsDesktopSidebarCollapsed((prev: boolean) => {
@@ -871,25 +857,32 @@ const AppLayout: React.FC = () => {
                   </TooltipContent>
                 </Tooltip>
 
-                {/* Realtime Connection Status (Node.js) */}
+                {/* Realtime Connection Toggle (Node.js) */}
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div
-                      className="flex items-center"
-                      aria-label="realtime-status"
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={toggleRealtime}
+                      className="h-8 w-8"
+                      aria-label="realtime-toggle"
                     >
-                      {isRealtimeConnected ? (
+                      {!isRealtimeEnabled ? (
+                        <WifiOff className="h-4 w-4 text-muted-foreground" />
+                      ) : isRealtimeConnected ? (
                         <Wifi className="h-4 w-4 text-green-500" />
                       ) : (
-                        <WifiOff className="h-4 w-4 text-red-500" />
+                        <Wifi className="h-4 w-4 text-red-500" />
                       )}
-                    </div>
+                    </Button>
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>
-                      {isRealtimeConnected
-                        ? "التزامن (Node.js) مفعل"
-                        : "التزامن (Node.js) معطل"}
+                      {!isRealtimeEnabled
+                        ? "التزامن (Node.js) موقوف — اضغط للتفعيل"
+                        : isRealtimeConnected
+                          ? "التزامن (Node.js) متصل — اضغط للإيقاف"
+                          : "التزامن (Node.js) غير متصل — اضغط للإيقاف"}
                     </p>
                   </TooltipContent>
                 </Tooltip>
@@ -1131,6 +1124,11 @@ const AppLayout: React.FC = () => {
                               to="/reports/doctor-company-entitlement"
                               icon={HandCoins}
                               label="استحقاقات الأطباء للشركات"
+                            />
+                            <ReportMenuItem
+                              to="/reports/patient-service-costs"
+                              icon={Coins}
+                              label="تكاليف الخدمات للمرضى"
                             />
                             <ReportMenuItem
                               to="/reports/yearly-income-comparison"

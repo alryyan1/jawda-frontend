@@ -19,6 +19,7 @@ import ClinicPage from "./components/clinic/ClinicPage";
 import DoctorFormPage from "./pages/doctors/DoctorFormPage";
 import DoctorsListPage from "./pages/doctors/DoctorsListPage";
 import DoctorPortalPage from "./pages/doctors/DoctorPortalPage";
+import DoctorPortalLoginPage from "./pages/doctors/DoctorPortalLoginPage";
 import { DoctorFormMode } from "./services/doctorService";
 import ServiceFormPage from "./components/services/ServiceFormPage";
 import ServicesListPage from "./components/services/ServicesListPage";
@@ -66,6 +67,7 @@ import CompanyPerformanceReportPage from "./pages/reports/CompanyPerformanceRepo
 import DoctorCompanyEntitlementReportPage from "./pages/reports/DoctorCompanyEntitlementReportPage";
 import YearlyIncomeComparisonReportPage from "./pages/reports/YearlyIncomeComparisonReportPage";
 import YearlyPatientFrequencyReportPage from "./pages/reports/YearlyPatientFrequencyReportPage";
+import PatientServiceCostsReportPage from "./pages/reports/PatientServiceCostsReportPage";
 import BindingMatchingPage from "./pages/settings/BindingMatchingPage";
 import MonthlyLabIncomeReportPage from "./pages/reports/MonthlyLabIncomeReportPage";
 import ServiceGroupsPage from "./pages/settings/ServiceGroupsPage";
@@ -73,7 +75,6 @@ import SampleCollectionPage from "./pages/lab/SampleCollectionPage";
 import LabTestStatisticsReportPage from "./pages/reports/LabTestStatisticsReportPage";
 import TestResultStatisticsPage from "./pages/reports/TestResultStatisticsPage";
 import LabGeneralReportPage from "./pages/reports/LabGeneralReportPage";
-import LabGeneralReportDetailsPage from "./pages/reports/LabGeneralReportDetailsPage";
 import LabReceptionPage from "./pages/LabReceptionPage";
 import TestOffersPage from "./pages/TestOffersPage";
 import SpecialistsPage from "./pages/specialists/SpecialistsPage";
@@ -94,6 +95,10 @@ const router = createBrowserRouter([
         element: <LoginPage />,
       },
       {
+        path: "/doctor-portal/login",
+        element: <DoctorPortalLoginPage />,
+      },
+      {
         path: "/register",
         element: <RegisterPage />,
       },
@@ -106,6 +111,11 @@ const router = createBrowserRouter([
     element: <ProtectedRoute />, // This component checks auth and redirects if not authenticated
     errorElement: <ErrorPage />,
     children: [
+      // Doctor portal renders full-page, without the sidebar/header AppLayout provides
+      {
+        path: "doctor-portal",
+        element: <DoctorPortalPage />,
+      },
       // All routes inside this block will be rendered within AppLayout
       {
         element: <AppLayout />, // The main application layout (header, sidebar, etc.)
@@ -114,10 +124,6 @@ const router = createBrowserRouter([
           {
             index: true, // After login, redirect based on user_type
             element: <RedirectByUserType />,
-          },
-          {
-            path: "doctor-portal",
-            element: <DoctorPortalPage />,
           },
           {
             path: "lab-sample-collection",
@@ -267,10 +273,6 @@ const router = createBrowserRouter([
                 element: <LabGeneralReportPage />,
               },
               {
-                path: "lab-general/details",
-                element: <LabGeneralReportDetailsPage />,
-              },
-              {
                 path: "monthly-service-income",
                 element: <MonthlyServiceIncomeReportPage />,
               },
@@ -314,6 +316,10 @@ const router = createBrowserRouter([
               {
                 path: "yearly-patient-frequency",
                 element: <YearlyPatientFrequencyReportPage />,
+              },
+              {
+                path: "patient-service-costs",
+                element: <PatientServiceCostsReportPage />,
               },
 
               // Add other report routes here

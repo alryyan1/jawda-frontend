@@ -1,36 +1,23 @@
 // src/components/lab/reception/LabReceptionActionPage.tsx
-import React, { useState } from 'react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import { 
-    UserPlus, 
-    LayoutGrid, 
-    Eye,
-    Printer,
-    FileText,
-    Globe,
-    Loader2,
-    ListChecks,
-    Banknote,
-} from 'lucide-react';
-import { webUrl } from '@/pages/constants';
-import { useAuth } from '@/contexts/AuthContext';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
-import apiClient from '@/services/api';
+import React, { useState } from "react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { UserPlus, LayoutGrid, Eye, Printer, FileText, Globe, ListChecks, Banknote } from "lucide-react";
+import { Calculate } from "@mui/icons-material";
+import { Badge } from "@mui/material";
 
-// Import the dialogs that will be opened by the new buttons
-import LabUserShiftSummaryDialog from './LabUserShiftSummaryDialog';
-import OnlineLabPatientsDialog from './OnlineLabPatientsDialog';
-import { Calculate } from '@mui/icons-material';
-import { Badge } from '@mui/material';
-import { useLab2LabTodayCount } from '@/hooks/useLab2LabTodayCount';
+import { webUrl } from "@/pages/constants";
+import { useAuth } from "@/contexts/AuthContext";
+import { useLab2LabTodayCount } from "@/hooks/useLab2LabTodayCount";
+
+import LabUserShiftSummaryDialog from "./LabUserShiftSummaryDialog";
+import OnlineLabPatientsDialog from "./OnlineLabPatientsDialog";
 
 interface LabReceptionActionPageProps {
   isFormVisible: boolean;
   onToggleView: () => void;
-  onOpenDoctorFinder: () => void; // Parent (LabReceptionPage) will handle the DoctorFinderDialog visibility
+  onOpenDoctorFinder: () => void;
   onOpenPriceList: () => void;
   activeVisitId?: number | null;
   hasLabRequests?: boolean;
@@ -38,6 +25,27 @@ interface LabReceptionActionPageProps {
   activeLabRequestId?: number | null;
   activeMainTestId?: number | null;
 }
+
+interface ActionButtonProps {
+  label: string;
+  onClick: () => void;
+  children: React.ReactNode;
+  variant?: "ghost" | "secondary";
+}
+
+/** Icon button with a tooltip — the single building block of the action rail. */
+const ActionButton: React.FC<ActionButtonProps> = ({ label, onClick, children, variant = "ghost" }) => (
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <Button variant={variant} size="icon" className="h-11 w-11" onClick={onClick} aria-label={label}>
+        {children}
+      </Button>
+    </TooltipTrigger>
+    <TooltipContent side="left">
+      <p>{label}</p>
+    </TooltipContent>
+  </Tooltip>
+);
 
 const LabReceptionActionPage: React.FC<LabReceptionActionPageProps> = ({
   isFormVisible,
@@ -47,275 +55,86 @@ const LabReceptionActionPage: React.FC<LabReceptionActionPageProps> = ({
   activeVisitId,
   hasLabRequests,
   onPrintInvoice,
-  activeLabRequestId,
-  activeMainTestId,
 }) => {
   const { currentClinicShift } = useAuth();
-  const queryClient = useQueryClient();
-  
-  // State to control the visibility of the user's income summary dialog
+
   const [isIncomeDialogOpen, setIsIncomeDialogOpen] = useState(false);
-  
-  // State to control the visibility of the online lab patients dialog
   const [isOnlineLabPatientsDialogOpen, setIsOnlineLabPatientsDialogOpen] = useState(false);
 
   // Realtime count of today's lab2lab patients, shown as a badge on the Globe button
   const lab2LabTodayCount = useLab2LabTodayCount();
 
-  // CBC Populate mutation
-  const populateCbcMutation = useMutation({
-    mutationFn: async ({ labRequestId, doctorVisitId, mainTestId }: { 
-      labRequestId: number; 
-      doctorVisitId: number; 
-      mainTestId: number; 
-    }) => {
-      const response = await apiClient.post(`/labrequests/${labRequestId}/populate-cbc-from-sysmex`, {
-        doctor_visit_id_for_sysmex: doctorVisitId,
-        main_test_id: mainTestId
-      });
-      return response.data;
-    },
-    onSuccess: (data) => {
-      if (data.status) {
-        toast.success(data.message || 'تم ملء نتائج CBC بنجاح');
-        
-        // Invalidate relevant queries to refresh the data
-        queryClient.invalidateQueries({
-          queryKey: ["labRequestsForVisit", activeVisitId],
-        });
-        queryClient.invalidateQueries({
-          queryKey: ["activeVisitForLabRequests", activeVisitId],
-        });
-        queryClient.invalidateQueries({
-          queryKey: ["doctorVisit", activeVisitId],
-        });
-      } else {
-        toast.error(data.message || 'فشل في ملء نتائج CBC');
-      }
-    },
-    onError: (error: any) => {
-      const errorMessage = error.response?.data?.message || error.message || 'فشل في ملء نتائج CBC';
-      toast.error(errorMessage);
-    },
-  });
+  const openLabShiftReport = () => {
+    const params = new URLSearchParams();
+    if (currentClinicShift?.id) params.append("shift", String(currentClinicShift.id));
+    window.open(`${webUrl}reports/lab-shift/pdf?${params.toString()}`, "_blank", "noopener,noreferrer");
+  };
 
   return (
     <TooltipProvider delayDuration={200}>
       <aside
-        className="bg-card border-border p-2 flex flex-col items-center space-y-2 overflow-y-auto overflow-x-hidden h-full shadow-md border-l"
-        style={{ width: "60px" }}
+        aria-label="إجراءات الاستقبال"
+        className="flex h-full w-[60px] shrink-0 flex-col items-center gap-2 overflow-y-auto overflow-x-hidden rounded-xl border border-border bg-card p-2 shadow-sm"
       >
-        {/* Button 1: Toggle Registration Form / Queue View */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant={isFormVisible ? "secondary" : "ghost"}
-              size="icon"
-              className="w-11 h-11"
-              onClick={onToggleView}
-              aria-label={
-                isFormVisible
-                  ? 'عرض  المرضى'
-                  : 'تسجيل مريض جديد'
-              }
-            >
-              {isFormVisible ? (
-                <LayoutGrid className="h-5 w-5" />
-              ) : (
-                <UserPlus className="h-5 w-5" />
-              )}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="left">
-            <p>
-              {isFormVisible
-                ? 'عرض  المرضى'
-                : 'تسجيل مريض جديد'}
-            </p>
-          </TooltipContent>
-        </Tooltip>
+        <ActionButton
+          label={isFormVisible ? "عرض المرضى" : "تسجيل مريض جديد"}
+          onClick={onToggleView}
+          variant={isFormVisible ? "secondary" : "ghost"}
+        >
+          {isFormVisible ? <LayoutGrid className="h-5 w-5" /> : <UserPlus className="h-5 w-5" />}
+        </ActionButton>
 
-        {/* <Separator className="my-1" /> */}
-
-        {/* Button: Open Lab User Income Summary Dialog */}
         {currentClinicShift && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="w-11 h-11"
-                onClick={() => setIsIncomeDialogOpen(true)}
-                aria-label="ملخص دخل المستخدم"
-              >
-                <Calculate className="h-5 w-5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="left">
-              <p>ملخص دخل المستخدم</p>
-            </TooltipContent>
-          </Tooltip>
+          <ActionButton label="ملخص دخل المستخدم" onClick={() => setIsIncomeDialogOpen(true)}>
+            <Calculate className="h-5 w-5" />
+          </ActionButton>
         )}
 
-        {/* <Separator className="my-1" /> */}
-
-        {/* Button: Print Invoice (visible only when a patient is selected and has lab requests) */}
         {activeVisitId && hasLabRequests && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="w-11 h-11"
-                onClick={() => onPrintInvoice && onPrintInvoice()}
-                aria-label="طباعة فاتورة المختبر"
-              >
-                <Printer className="h-5 w-5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="left">
-              <p>طباعة فاتورة المختبر</p>
-            </TooltipContent>
-          </Tooltip>
+          <ActionButton label="طباعة فاتورة المختبر" onClick={() => onPrintInvoice?.()}>
+            <Printer className="h-5 w-5" />
+          </ActionButton>
         )}
 
-        {/* Button: Open Lab Shift Report PDF in new tab */}
         {currentClinicShift && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="w-11 h-11"
-                onClick={() => {
-                  const params = new URLSearchParams();
-                  if (currentClinicShift?.id) params.append('shift', String(currentClinicShift.id));
-                  const url = `${webUrl}reports/lab-shift/pdf?${params.toString()}`;
-                  window.open(url, '_blank', 'noopener,noreferrer');
-                }}
-                aria-label="تقرير وردية المختبر"
-              >
-                <FileText className="h-5 w-5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="left">
-              <p>تقرير وردية المختبر</p>
-            </TooltipContent>
-          </Tooltip>
+          <ActionButton label="تقرير وردية المختبر" onClick={openLabShiftReport}>
+            <FileText className="h-5 w-5" />
+          </ActionButton>
         )}
 
-        {/* Button: Price list of main tests */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="w-11 h-11"
-              disabled={populateCbcMutation.isPending}
-              onClick={() => {
-         
-                onOpenPriceList();
-             
-              }}
-              aria-label="CBC Populate"
-            >
-              {populateCbcMutation.isPending ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
-              ) : (
-                <ListChecks className="h-5 w-5" />
-              )}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="left">
-            <p>قائمة الاسعار</p>
-          </TooltipContent>
-        </Tooltip>
+        <ActionButton label="قائمة الاسعار" onClick={onOpenPriceList}>
+          <ListChecks className="h-5 w-5" />
+        </ActionButton>
 
-        {/* <Separator className="my-1" /> */}
+        <ActionButton label="فلترة حسب الطبيب" onClick={onOpenDoctorFinder}>
+          <Eye className="h-5 w-5" />
+        </ActionButton>
 
-        {/* Button 3 (Eye): Open Doctor Finder to filter the queue */}
-        <Tooltip>
-            <TooltipTrigger asChild>
-                <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="w-11 h-11" 
-                    onClick={() => {
-                        console.log('Eye button clicked');
-                        onOpenDoctorFinder();
-                    }} 
-                    aria-label="فلترة حسب الطبيب"
-                >
-                    <Eye className="h-5 w-5" />
-                </Button>
-            </TooltipTrigger>
-            <TooltipContent side="left">
-                <p>فلترة حسب الطبيب</p>
-            </TooltipContent>
-        </Tooltip>
-        {/* //cash reconciliation */}
-        <Tooltip>
-            <TooltipTrigger asChild>
-                <Button 
-                onClick={() => {
-                    console.log('Calculator button clicked');
-                   window.open(`./cash-reconciliation`, '_blank', 'noopener,noreferrer');
-                }}
-                    variant="ghost" 
-                    size="icon" 
-                    className="w-11 h-11" 
-                >
-                    <Banknote className="h-5 w-5" />
-                </Button>
-            </TooltipTrigger>
-            <TooltipContent side="left">
-                <p>الفئات  </p>
-            </TooltipContent>
-        </Tooltip>
+        <ActionButton
+          label="الفئات"
+          onClick={() => window.open(`./cash-reconciliation`, "_blank", "noopener,noreferrer")}
+        >
+          <Banknote className="h-5 w-5" />
+        </ActionButton>
+
         <Separator className="my-1" />
 
-        {/* Button 4 (Globe): Open Online Lab Patients Dialog */}
-         <Tooltip>
-            <TooltipTrigger asChild>
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="w-11 h-11"
-                    onClick={() => {
-                        console.log('Globe button clicked');
-                        setIsOnlineLabPatientsDialogOpen(true);
-                    }}
-                    aria-label="المرضى من المختبرات الأخرى"
-                >
-                    <Badge badgeContent={lab2LabTodayCount} color="error" max={99}>
-                        <Globe className="h-5 w-5" />
-                    </Badge>
-                </Button>
-            </TooltipTrigger>
-            <TooltipContent side="left">
-                <p>المرضى من المختبرات الأخرى</p>
-            </TooltipContent>
-        </Tooltip>
-
-        {/* <Separator className="my-1" /> */}
-
+        <ActionButton label="المرضى من المختبرات الأخرى" onClick={() => setIsOnlineLabPatientsDialogOpen(true)}>
+          <Badge badgeContent={lab2LabTodayCount} color="error" max={99}>
+            <Globe className="h-5 w-5" />
+          </Badge>
+        </ActionButton>
       </aside>
-      {/* //cash reconciliation */}
 
-
-      {/* Render the dialogs that this pane can open */}
       {currentClinicShift && (
-         <LabUserShiftSummaryDialog
-             isOpen={isIncomeDialogOpen}
-             onOpenChange={setIsIncomeDialogOpen}
-             currentClinicShiftId={currentClinicShift?.id ?? null}
-         />
+        <LabUserShiftSummaryDialog
+          isOpen={isIncomeDialogOpen}
+          onOpenChange={setIsIncomeDialogOpen}
+          currentClinicShiftId={currentClinicShift?.id ?? null}
+        />
       )}
-      
-      <OnlineLabPatientsDialog
-          isOpen={isOnlineLabPatientsDialogOpen}
-          onOpenChange={setIsOnlineLabPatientsDialogOpen}
-      />
+
+      <OnlineLabPatientsDialog isOpen={isOnlineLabPatientsDialogOpen} onOpenChange={setIsOnlineLabPatientsDialogOpen} />
     </TooltipProvider>
   );
 };

@@ -1,8 +1,6 @@
 // src/pages/settings/ServiceGroupsPage.tsx
-// Or if you prefer: src/pages/settings/service-groups/ServiceGroupsListPage.tsx
 
-import React, { useState, useEffect } from "react"; // Added useEffect
-// Removed i18n for visible labels where applicable
+import React, { useState, useEffect } from "react";
 import {
   useQuery,
   useMutation,
@@ -11,49 +9,31 @@ import {
 } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
+  Box,
+  Button,
   Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"; // Added CardDescription, CardHeader, CardTitle
-import {
+  Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  Menu,
+  MenuItem,
+  Pagination,
+  Paper,
+  Stack,
   Table,
   TableBody,
   TableCell,
+  TableContainer,
   TableHead,
-  TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Loader2,
-  Edit,
-  Trash2,
-  MoreHorizontal,
-  PlusCircle,
-  Search,
-  Layers,
-} from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  TextField,
+  Typography,
+} from "@mui/material";
+import { Edit, Loader2, PlusCircle, Search, Trash2 } from "lucide-react";
 
 import type { ServiceGroup } from "@/types/services";
 import type { PaginatedResponse } from "@/types/common";
@@ -61,25 +41,30 @@ import {
   getServiceGroupsPaginated,
   deleteServiceGroup,
 } from "@/services/serviceGroupService";
-import ManageServiceGroupDialog from "@/components/settings/service_groups/ManageServiceGroupDialog"; // Adjust path if needed
-import { useDebounce } from "@/hooks/useDebounce"; // Import useDebounce
+import ManageServiceGroupDialog from "@/components/settings/service_groups/ManageServiceGroupDialog";
+import { useDebounce } from "@/hooks/useDebounce";
+
+interface ApiError {
+  message?: string;
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
+}
 
 const ServiceGroupsPage: React.FC = () => {
-  // const { t, i18n } = useTranslation(["settings", "common"]);
   const queryClient = useQueryClient();
 
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-  const debouncedSearchTerm = useDebounce(searchTerm, 500); // Debounce search term
+  const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
   const [editingServiceGroup, setEditingServiceGroup] =
     useState<ServiceGroup | null>(null);
-  const [serviceGroupIdToDelete, setServiceGroupIdToDelete] = useState<
-    number | null
-  >(null);
+  const [groupToDelete, setGroupToDelete] = useState<ServiceGroup | null>(null);
 
-  // Reset page to 1 when debouncedSearchTerm changes
   useEffect(() => {
     setCurrentPage(1);
   }, [debouncedSearchTerm]);
@@ -101,22 +86,23 @@ const ServiceGroupsPage: React.FC = () => {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: deleteServiceGroup,
+    mutationFn: (groupId: number) => deleteServiceGroup(groupId),
     onSuccess: () => {
-      toast.success('تم حذف المجموعة بنجاح');
+      toast.success("تم حذف المجموعة بنجاح");
       queryClient.invalidateQueries({ queryKey: ["serviceGroupsPaginated"] });
-      queryClient.invalidateQueries({ queryKey: ["allServiceGroupsList"] }); // For dropdowns in other forms
-      setServiceGroupIdToDelete(null);
-      // If current page becomes empty after deletion, try to go to previous page
+      queryClient.invalidateQueries({ queryKey: ["allServiceGroupsList"] });
+      queryClient.invalidateQueries({ queryKey: ["serviceGroupsListForFilter"] });
+      setGroupToDelete(null);
       if (paginatedData?.data.length === 1 && currentPage > 1) {
         setCurrentPage(currentPage - 1);
       }
     },
-    onError: (err: any) => {
-      toast.error('فشل الحذف', {
-        description: err.response?.data?.message || err.message,
+    onError: (err: ApiError) => {
+      toast.error("فشل الحذف", {
+        description:
+          err.response?.data?.message || err.message || "حدث خطأ غير متوقع",
       });
-      setServiceGroupIdToDelete(null);
+      setGroupToDelete(null);
     },
   });
 
@@ -130,219 +116,216 @@ const ServiceGroupsPage: React.FC = () => {
     setIsManageDialogOpen(true);
   };
 
-  const handleDialogSuccess = () => {
-    // Optionally refetch the current page if a create/update happened
-    // queryClient.invalidateQueries({ queryKey });
-    // For create, it might be better to go to page 1 or last page to see new item
-    // For simplicity, current invalidation in mutation should suffice.
+  const ActionsMenu = ({ group }: { group: ServiceGroup }) => {
+    const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+    const open = Boolean(anchorEl);
+
+    return (
+      <>
+        <Button
+          size="small"
+          variant="outlined"
+          onClick={(event) => setAnchorEl(event.currentTarget as HTMLElement)}
+        >
+          <Edit className="ml-2 h-4 w-4" />
+        </Button>
+        <Menu
+          anchorEl={anchorEl}
+          open={open}
+          onClose={() => setAnchorEl(null)}
+          anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+          transformOrigin={{ vertical: "top", horizontal: "left" }}
+        >
+          <MenuItem
+            onClick={() => {
+              setAnchorEl(null);
+              handleOpenEditDialog(group);
+            }}
+          >
+            <Edit className="rtl:ml-2 ltr:mr-2 h-4 w-4" /> تعديل
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
+              setAnchorEl(null);
+              setGroupToDelete(group);
+            }}
+          >
+            <Trash2 className="rtl:ml-2 ltr:mr-2 h-4 w-4" /> حذف
+          </MenuItem>
+        </Menu>
+      </>
+    );
   };
 
-  const serviceGroups = paginatedData?.data || [];
-  const meta = paginatedData?.meta;
-
   if (isLoading && !isFetching && currentPage === 1 && !debouncedSearchTerm) {
-    // Show loader on initial full load
     return (
-      <div className="flex justify-center items-center h-64">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="ml-3 text-muted-foreground">جاري تحميل البيانات...</p>
+      <div className="flex min-h-64 items-center justify-center gap-3 text-muted-foreground" style={{ direction: "rtl" }}>
+        <Loader2 className="h-7 w-7 animate-spin" />
+        جاري تحميل مجموعات الخدمات...
       </div>
     );
   }
 
   if (error) {
     return (
-      <Card className="m-4">
-        <CardHeader>
-          <CardTitle className="text-destructive">فشل الجلب</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p>حدث خطأ أثناء جلب البيانات: {error.message}</p>
-          <Button
-            onClick={() => queryClient.refetchQueries({ queryKey })}
-            className="mt-4"
-          >
-            إعادة المحاولة
-          </Button>
-        </CardContent>
-      </Card>
+      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700" style={{ direction: "rtl" }}>
+        حدث خطأ أثناء جلب البيانات: {error.message}
+      </div>
     );
   }
 
+  const serviceGroups = paginatedData?.data || [];
+  const meta = paginatedData?.meta;
+
   return (
-    <div className="space-y-6 p-1 md:p-0">
-      
-      {/* Remove padding for page, add to container if needed */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-        <div className="flex items-center gap-3">
-          <Layers className="h-7 w-7 text-primary hidden sm:block" />
-          <div>
-            <h1 className="text-2xl font-bold">مجموعات الخدمات</h1>
-            <p className="text-sm text-muted-foreground">إدارة مجموعات الخدمات</p>
-          </div>
-        </div>
-        <div className="flex sm:flex-row flex-col w-full sm:w-auto gap-2 self-stretch sm:self-center">
-          <div className="relative flex-grow sm:flex-grow-0 sm:w-60">
-            <Input
-              type="search"
-              aria-label={'ابحث باسم المجموعة'}
-              placeholder={'ابحث'}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="ps-10 rtl:pr-10 h-9"
-            />
-            <Search className="absolute ltr:left-3 rtl:right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          </div>
-          {/* Add permission check: can('manage service_groups') */}
-          <Button onClick={handleOpenCreateDialog} size="sm" className="h-9">
-            <PlusCircle className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-            إضافة مجموعة
-          </Button>
-        </div>
-      </div>
+    <div style={{ direction: "rtl" }} className="mx-auto max-w-4xl space-y-4 py-2">
+      <Card sx={{ p: { xs: 2, md: 3 }, borderRadius: 3 }}>
+        <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={2}>
+          <Box>
+            <Typography variant="h5" fontWeight={700}>
+              مجموعات الخدمات
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              إدارة مجموعات الخدمات مع البحث السريع.
+            </Typography>
+          </Box>
+          <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
+            <Button
+              onClick={handleOpenCreateDialog}
+              size="small"
+              variant="contained"
+              startIcon={<PlusCircle size={16} />}
+            >
+              إضافة مجموعة
+            </Button>
+          </Stack>
+        </Stack>
+
+        <Divider sx={{ my: 2 }} />
+
+        <Stack direction={{ xs: "column", lg: "row" }} spacing={2} alignItems={{ xs: "stretch", lg: "center" }}>
+          <TextField
+            id="search-service-group"
+            type="search"
+            size="small"
+            label="البحث بالاسم"
+            placeholder="ابحث"
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            sx={{ minWidth: 220, flex: 1 }}
+            slotProps={{
+              input: {
+                startAdornment: <Search className="ml-2 h-4 w-4 text-muted-foreground" />,
+              },
+            }}
+          />
+        </Stack>
+
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ mt: 2 }}>
+          <Chip label={`إجمالي ${meta?.total ?? serviceGroups.length}`} color="default" variant="outlined" />
+        </Stack>
+      </Card>
+
       {isFetching && (
-        <div className="text-xs text-muted-foreground text-center py-1">جاري تحديث القائمة...</div>
+        <Box className="text-sm text-muted-foreground" sx={{ px: 0.5 }}>
+          جاري تحديث القائمة...
+        </Box>
       )}
-      {!isLoading && serviceGroups.length === 0 ? (
-        <Card className="text-center py-12 border-dashed">
-          <CardContent className="flex flex-col items-center">
-            <Layers className="mx-auto h-16 w-16 text-muted-foreground/20 mb-4" />
-            <h3 className="text-lg font-semibold mb-1">{debouncedSearchTerm ? 'لا توجد نتائج' : 'لا توجد مجموعات'}</h3>
-            <p className="text-sm text-muted-foreground mb-4">{debouncedSearchTerm ? 'جرّب كلمات أخرى' : 'أضف أول مجموعة للبدء'}</p>
-            {!debouncedSearchTerm && (
-              <Button onClick={handleOpenCreateDialog} size="sm">
-                <PlusCircle className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-                إضافة مجموعة
+
+      {serviceGroups.length === 0 && !isLoading && !isFetching ? (
+        <Card sx={{ p: 4, textAlign: "center", borderRadius: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            {debouncedSearchTerm ? "لا توجد نتائج" : "لا توجد مجموعات"}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            {debouncedSearchTerm ? "جرّب كلمات أخرى." : "أضف أول مجموعة للبدء."}
+          </Typography>
+          <Stack direction="row" spacing={1} justifyContent="center">
+            <Button variant="contained" size="small" startIcon={<PlusCircle size={16} />} onClick={handleOpenCreateDialog}>
+              إضافة مجموعة
+            </Button>
+            {debouncedSearchTerm && (
+              <Button variant="outlined" size="small" onClick={() => setSearchTerm("")}>
+                مسح البحث
               </Button>
             )}
-          </CardContent>
+          </Stack>
         </Card>
       ) : (
-        <Card className="overflow-hidden">
-          
-          {/* Add overflow-hidden if table has rounded corners */}
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[80px] text-center">المعرف</TableHead>
-                <TableHead className="text-center">الإسم</TableHead>
-                {/* Default LTR align */}
-                <TableHead className="text-center hidden sm:table-cell w-[150px]">عدد الخدمات</TableHead>
-                <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {serviceGroups.map((group) => (
-                <TableRow key={group.id} className="hover:bg-muted/50 text-center">
-                  <TableCell className="font-medium text-center">
-                    {group.id}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {group.name}
-                  </TableCell>
-                  <TableCell className="text-center hidden sm:table-cell">
-                    {group.services_count ?? 0}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          className="h-8 w-8 p-0 data-[state=open]:bg-muted"
-                        >
-                          <span className="sr-only">فتح القائمة</span>
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {/* Add permission check: can('manage service_groups') */}
-                        <DropdownMenuItem
-                          onClick={() => handleOpenEditDialog(group)}
-                          className="cursor-pointer"
-                        >
-                          <Edit className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-                          تعديل
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => setServiceGroupIdToDelete(group.id)}
-                          className="text-destructive focus:text-destructive cursor-pointer"
-                        >
-                          <Trash2 className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
-                          حذف
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+        <Card sx={{ borderRadius: 3 }}>
+          <TableContainer component={Paper} elevation={0}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell align="center" sx={{ fontWeight: 700 }}>المعرف</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 700 }}>الإسم</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 700 }}>عدد الخدمات</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 700 }}>الإجراءات</TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHead>
+              <TableBody>
+                {serviceGroups.map((group) => (
+                  <TableRow key={group.id} hover>
+                    <TableCell align="center">{group.id}</TableCell>
+                    <TableCell align="center">
+                      <Typography variant="body2" fontWeight={600}>
+                        {group.name}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="center">{group.services_count ?? 0}</TableCell>
+                    <TableCell align="center">
+                      <ActionsMenu group={group} />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
         </Card>
       )}
+
       {meta && meta.last_page > 1 && (
-        <div className="flex items-center justify-center pt-4 gap-2">
-          <Button
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage === 1 || isFetching}
-            size="sm"
-            variant="outline"
-          >
-            السابق
-          </Button>
-          <span className="text-sm text-muted-foreground">
-            صفحة {meta.current_page} من {meta.last_page}
-          </span>
-          <Button
-            onClick={() =>
-              setCurrentPage((p) => Math.min(meta.last_page, p + 1))
-            }
-            disabled={currentPage === meta.last_page || isFetching}
-            size="sm"
-            variant="outline"
-          >
-            التالي
-          </Button>
-        </div>
+        <Stack direction="row" justifyContent="center" sx={{ py: 1 }}>
+          <Pagination
+            count={meta.last_page}
+            page={currentPage}
+            onChange={(_, page) => setCurrentPage(page)}
+            disabled={isFetching}
+            color="primary"
+            shape="rounded"
+            size="small"
+          />
+        </Stack>
       )}
+
       <ManageServiceGroupDialog
         isOpen={isManageDialogOpen}
         onOpenChange={setIsManageDialogOpen}
         serviceGroup={editingServiceGroup}
-        onSuccess={handleDialogSuccess}
       />
-      <AlertDialog
-        open={!!serviceGroupIdToDelete}
-        onOpenChange={(open) => !open && setServiceGroupIdToDelete(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
-            <AlertDialogDescription>
-              هل أنت متأكد من حذف المجموعة '{serviceGroups.find((g) => g.id === serviceGroupIdToDelete)?.name || ''}'؟ هذا الإجراء لا يمكن التراجع عنه.
-              <br />
-              <span className="font-semibold text-destructive">سيتم حذف جميع الخدمات المرتبطة إن وُجدت.</span>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>إلغاء</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() =>
-                serviceGroupIdToDelete &&
-                deleteMutation.mutate(serviceGroupIdToDelete)
-              }
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={deleteMutation.isPending}
-            >
-              {deleteMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                'حذف'
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+
+      <Dialog open={!!groupToDelete} onClose={() => setGroupToDelete(null)} fullWidth maxWidth="xs">
+        <DialogTitle>تأكيد الحذف</DialogTitle>
+        <DialogContent>
+          هل أنت متأكد من حذف المجموعة “{groupToDelete?.name || ""}”؟ لا يمكن التراجع عن هذا الإجراء.
+          <Typography variant="body2" color="error" fontWeight={600} sx={{ mt: 1 }}>
+            لا يمكن حذف المجموعة إذا كانت مرتبطة بخدمات.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button variant="outlined" onClick={() => setGroupToDelete(null)}>
+            إلغاء
+          </Button>
+          <Button
+            color="error"
+            onClick={() => groupToDelete && deleteMutation.mutate(groupToDelete.id)}
+            disabled={deleteMutation.isPending}
+          >
+            {deleteMutation.isPending ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : null}
+            حذف
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };

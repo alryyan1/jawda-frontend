@@ -33,6 +33,7 @@ import { Button } from '@/components/ui/button';
 import { FileText } from 'lucide-react';
 import { useAuthorization } from '@/hooks/useAuthorization';
 import apiClient from '@/services/api';
+import { useDebounce } from '@/hooks/useDebounce';
 
 const ClinicPage: React.FC = () => {
   const { requestSelection } = useClinicSelection();
@@ -73,6 +74,7 @@ const ClinicPage: React.FC = () => {
 
   // Patient search state for history table
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
   const [searchResults, setSearchResults] = useState<PatientSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showPatientHistory, setShowPatientHistory] = useState(false);
@@ -160,16 +162,16 @@ const ClinicPage: React.FC = () => {
     }
   }, []);
 
-  // Search patients when query changes
+  // Search patients when the debounced query changes
   useEffect(() => {
-    if (searchQuery.length >= 2) {
-      searchPatients(searchQuery);
+    if (debouncedSearchQuery.length >= 2) {
+      searchPatients(debouncedSearchQuery);
       setShowPatientHistory(true);
     } else {
       setSearchResults([]);
       setShowPatientHistory(false);
     }
-  }, [searchQuery, searchPatients]);
+  }, [debouncedSearchQuery, searchPatients]);
 
   // Handle patient selection from history
   const handleSelectPatientFromHistory = useCallback(async (patientId: number, _doctorId: number, companyId?: number) => {

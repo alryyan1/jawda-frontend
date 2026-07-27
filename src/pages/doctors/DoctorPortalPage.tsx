@@ -15,8 +15,9 @@ import type { ActivePatientVisit, Patient } from '@/types/patients';
 import DoctorPortalHeader from '@/components/doctor-portal/DoctorPortalHeader';
 import PatientQueueList from '@/components/doctor-portal/PatientQueueList';
 import PatientWorkspace from '@/components/doctor-portal/PatientWorkspace';
+import PinnedVitalsPanel from '@/components/doctor-portal/PinnedVitalsPanel';
 
-const NEW_PATIENT_HIGHLIGHT_MS = 8_000;
+const NEW_PATIENT_HIGHLIGHT_MS = 30_000;
 
 // The realtime `patient-registered` payload is a full PatientResource with a
 // nested DoctorVisitResource — a different (richer, but partly non-overlapping)
@@ -46,9 +47,13 @@ const buildActivePatientVisitFromRealtimePatient = (
     only_lab: visit.only_lab ?? false,
     balance_due: visit.balance_due ?? 0,
     requested_services_count: visit.requested_services_count ?? 0,
+    lab_requests_count: 0,
+    has_lab_requests: false,
+    result_auth: false,
     doctor_id: visit.doctor_id,
     doctor_shift_id: visit.doctor_shift_id ?? fallbackDoctorShiftId ?? 0,
     file_id: null,
+    file_visits_count: 0,
     company: patient.company ? { id: patient.company.id, name: patient.company.name } : null,
     patient: {
       id: patient.id,
@@ -102,6 +107,10 @@ const DoctorPortalInner: React.FC = () => {
   const [selectedVisitId, setSelectedVisitId] = useState<number | null>(null);
   const [selectedVisit, setSelectedVisit] = useState<ActivePatientVisit | null>(null);
   const [selectedDate, setSelectedDate] = useState(() => dayjs().format('YYYY-MM-DD'));
+  // Pins the "current visit" vitals form as a side panel (opposite the queue)
+  // so it stays reachable while browsing other workspace tabs. Pinned by
+  // default — unpinning is the opt-out, not the opt-in.
+  const [isVitalsPinned, setIsVitalsPinned] = useState(true);
   const isToday = selectedDate === dayjs().format('YYYY-MM-DD');
 
   // Query 1: all active doctor shifts for this clinic shift
@@ -174,6 +183,18 @@ const DoctorPortalInner: React.FC = () => {
     }
   }, []);
 
+  const playResultsReadySound = useCallback(() => {
+    try {
+      const audio = new Audio('/new-payment.mp3');
+      audio.volume = 0.6;
+      void audio.play().catch(() => {
+        // Autoplay can be blocked until the user interacts with the page — safe to ignore.
+      });
+    } catch {
+      // Ignore environments without Audio support.
+    }
+  }, []);
+
   // Realtime: a new patient registered for this doctor is spliced straight
   // into the cached queue (no refetch), with a highlight + sound cue.
   useEffect(() => {
@@ -217,6 +238,73 @@ const DoctorPortalInner: React.FC = () => {
     };
   }, [queryClient, user?.doctor_id, selectedDate, myDoctorShift?.id, flagVisitAsNew, playNewPatientSound]);
 
+  // Realtime: the lab authorized a patient's results — flag the visit as
+  // "results ready" in the queue cache (drives the FlaskConical badge on the
+  // card) and play a sound cue, mirroring the new-patient splice pattern above.
+  useEffect(() => {
+    const handleResultsAuthenticated = (data: {
+      visit_id: number;
+      patient_id: number;
+      doctor_id: number;
+      patient_name: string;
+      file_id: number | null;
+    }): void => {
+      if (data.doctor_id !== user?.doctor_id) {
+        return;
+      }
+
+      const queryKey = ['activePatients', 'doctorPortal', user?.doctor_id, selectedDate] as const;
+      let wasUpdated = false;
+      queryClient.setQueryData<ActivePatientVisit[]>(queryKey, old => {
+        if (!old) {
+          return old;
+        }
+        return old.map(v => {
+          if (v.id !== data.visit_id) {
+            return v;
+          }
+          wasUpdated = true;
+          return { ...v, result_auth: true, has_lab_requests: true };
+        });
+      });
+
+      if (wasUpdated) {
+        flagVisitAsNew(data.visit_id);
+        playResultsReadySound();
+      }
+    };
+
+    realtimeService.onPatientResultsAuthenticated(handleResultsAuthenticated);
+    return () => {
+      realtimeService.offPatientResultsAuthenticated(handleResultsAuthenticated);
+    };
+  }, [queryClient, user?.doctor_id, selectedDate, flagVisitAsNew, playResultsReadySound]);
+
+  // Realtime: reflect this doctor's shift being opened (e.g. by reception,
+  // including reopening a previously closed one) right away, rather than
+  // waiting for the next 30s shift poll.
+  useEffect(() => {
+    const handleDoctorShiftOpened = (data: { doctor_shift: DoctorShift }): void => {
+      queryClient.setQueryData<DoctorShift[]>(
+        ['activeDoctorShifts', currentClinicShift?.id],
+        oldData => {
+          if (!oldData) {
+            return oldData;
+          }
+          if (oldData.some(shift => shift.id === data.doctor_shift.id)) {
+            return oldData.map(shift => (shift.id === data.doctor_shift.id ? data.doctor_shift : shift));
+          }
+          return [...oldData, data.doctor_shift];
+        }
+      );
+    };
+
+    realtimeService.onDoctorShiftOpened(handleDoctorShiftOpened);
+    return () => {
+      realtimeService.offDoctorShiftOpened(handleDoctorShiftOpened);
+    };
+  }, [queryClient, currentClinicShift?.id]);
+
   // Realtime: reflect this doctor's shift being closed (e.g. by reception)
   // right away, rather than waiting for the next 30s shift poll.
   useEffect(() => {
@@ -253,31 +341,8 @@ const DoctorPortalInner: React.FC = () => {
     setSelectedVisit(null);
   };
 
-  // No active shift for this doctor — only blocks the *live* (today) queue.
-  // A closed shift has no bearing on browsing a past date's patient list.
-  if (!myDoctorShift && isToday) {
-    return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-        <DoctorPortalHeader
-          shift={null}
-          stats={{ total: 0, insurance: 0, cash: 0 }}
-          selectedDate={selectedDate}
-          onDateChange={setSelectedDate}
-        />
-        <Box sx={{ p: 4, display: 'flex', justifyContent: 'center' }}>
-          <Alert severity="info" sx={{ maxWidth: 480 }}>
-            <Typography fontWeight={600} gutterBottom>لا توجد نوبة طبية نشطة</Typography>
-            <Typography variant="body2">
-              لم يتم العثور على نوبة طبية مفتوحة لك في هذه الوردية. يرجى طلب فتح نوبة من موظف الاستقبال.
-            </Typography>
-          </Alert>
-        </Box>
-      </Box>
-    );
-  }
-
   return (
-    <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+    <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden',userSelect: 'none', WebkitUserSelect: 'none' }}>
       {/* Patient queue (left panel) — full height, starts from top */}
       <PatientQueueList
         patients={patients}
@@ -308,6 +373,9 @@ const DoctorPortalInner: React.FC = () => {
               key={selectedVisitId}
               visitId={selectedVisitId}
               initialVisit={selectedVisit}
+              isVitalsPinned={isVitalsPinned}
+              onToggleVitalsPinned={() => setIsVitalsPinned(p => !p)}
+              onSelectVisit={handleSelectVisitId}
             />
           ) : (
             <Box
@@ -332,6 +400,16 @@ const DoctorPortalInner: React.FC = () => {
           )}
         </Box>
       </Box>
+
+      {/* Pinned vitals panel (opposite end from the queue) — only when pinned and a visit is open */}
+      {isVitalsPinned && selectedVisitId && (
+        <PinnedVitalsPanel
+          key={selectedVisitId}
+          visitId={selectedVisitId}
+          initialVisit={selectedVisit}
+          onUnpin={() => setIsVitalsPinned(false)}
+        />
+      )}
     </Box>
   );
 };

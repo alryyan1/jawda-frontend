@@ -2,7 +2,7 @@ import React, { useEffect, useMemo } from 'react';
 import { useForm, Controller, type Control, type FieldValues, type Path } from 'react-hook-form';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Activity, TrendingUp, Loader2 } from 'lucide-react';
+import { Activity, TrendingUp, Loader2, Pin, PinOff } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,16 +11,19 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { saveMedicalHistory } from '@/services/patientMedicalHistoryService';
-import { recordVisitVital, getPatientVitalsTrend } from '@/services/visitVitalService';
+import { getPatientVitalsTrend } from '@/services/visitVitalService';
 import type { PatientMedicalHistory } from '@/types/medicalHistory';
-import type { VisitVitalInput } from '@/types/vitals';
 import VitalsTrendChart from './VitalsTrendChart';
+import CurrentVisitVitalsForm from './CurrentVisitVitalsForm';
 
 interface VitalsSectionProps {
   patientId: number | undefined;
   visitId?: number;
   medHistory: PatientMedicalHistory | undefined;
   isLoading: boolean;
+  /** Whether the "current visit" vitals form is pinned as a side panel instead of shown inline here. */
+  isVitalsPinned?: boolean;
+  onToggleVitalsPinned?: () => void;
 }
 
 interface VitalsFormValues {
@@ -41,24 +44,6 @@ const VITAL_FIELDS: { key: keyof VitalsFormValues; label: string; unit: string }
   { key: 'baseline_weight',     label: 'الوزن',              unit: 'kg' },
   { key: 'baseline_height',     label: 'الطول',              unit: 'cm' },
   { key: 'baseline_rbs',        label: 'سكر الدم العشوائي', unit: 'mg/dL' },
-];
-
-interface VisitVitalFormValues {
-  blood_pressure_systolic: string;
-  blood_pressure_diastolic: string;
-  heart_rate: string;
-  temperature: string;
-  spo2: string;
-  weight: string;
-}
-
-const VISIT_VITAL_FIELDS: { key: keyof VisitVitalFormValues; label: string; unit: string }[] = [
-  { key: 'blood_pressure_systolic', label: 'ضغط انقباضي', unit: 'mmHg' },
-  { key: 'blood_pressure_diastolic', label: 'ضغط انبساطي', unit: 'mmHg' },
-  { key: 'heart_rate', label: 'معدل ضربات القلب', unit: 'bpm' },
-  { key: 'temperature', label: 'درجة الحرارة', unit: '°C' },
-  { key: 'spo2', label: 'تشبع الأكسجين', unit: '%' },
-  { key: 'weight', label: 'الوزن', unit: 'kg' },
 ];
 
 const BMI_BADGE_CLASSES: Record<'info' | 'success' | 'warning' | 'error', string> = {
@@ -104,41 +89,20 @@ function VitalInput<T extends FieldValues>({
   );
 }
 
-const VitalsSection: React.FC<VitalsSectionProps> = ({ patientId, visitId, medHistory, isLoading }) => {
+const VitalsSection: React.FC<VitalsSectionProps> = ({
+  patientId,
+  visitId,
+  medHistory,
+  isLoading,
+  isVitalsPinned = false,
+  onToggleVitalsPinned,
+}) => {
   const queryClient = useQueryClient();
-
-  const { control: visitVitalControl, handleSubmit: handleVisitVitalSubmit, reset: resetVisitVitalForm } =
-    useForm<VisitVitalFormValues>({
-      defaultValues: {
-        blood_pressure_systolic: '', blood_pressure_diastolic: '',
-        heart_rate: '', temperature: '', spo2: '', weight: '',
-      },
-    });
 
   const { data: vitalsTrend = [] } = useQuery({
     queryKey: ['vitalsTrend', patientId],
     queryFn: () => getPatientVitalsTrend(patientId!),
     enabled: !!patientId,
-  });
-
-  const recordVitalMutation = useMutation({
-    mutationFn: (values: VisitVitalFormValues) => {
-      const payload: VisitVitalInput = {};
-      const toNum = (v: string): number | undefined => (v.trim() === '' ? undefined : Number(v));
-      payload.blood_pressure_systolic = toNum(values.blood_pressure_systolic);
-      payload.blood_pressure_diastolic = toNum(values.blood_pressure_diastolic);
-      payload.heart_rate = toNum(values.heart_rate);
-      payload.temperature = toNum(values.temperature);
-      payload.spo2 = toNum(values.spo2);
-      payload.weight = toNum(values.weight);
-      return recordVisitVital(visitId!, payload);
-    },
-    onSuccess: () => {
-      toast.success('تم تسجيل العلامات الحيوية لهذه الزيارة');
-      queryClient.invalidateQueries({ queryKey: ['vitalsTrend', patientId] });
-      resetVisitVitalForm();
-    },
-    onError: () => toast.error('فشل تسجيل العلامات الحيوية'),
   });
 
   const { control, handleSubmit, watch, reset } = useForm<VitalsFormValues>({
@@ -187,7 +151,12 @@ const VitalsSection: React.FC<VitalsSectionProps> = ({ patientId, visitId, medHi
       queryClient.invalidateQueries({ queryKey: ['medicalHistory', patientId] });
       toast.success('تم حفظ العلامات الحيوية');
     },
-    onError: () => toast.error('حدث خطأ أثناء الحفظ'),
+    onError: (error: Error) => {
+      toast.error(
+        (error as { response?: { data?: { message?: string } } }).response?.data?.message
+          || 'حدث خطأ أثناء الحفظ'
+      );
+    },
   });
 
   if (isLoading) {
@@ -243,22 +212,29 @@ const VitalsSection: React.FC<VitalsSectionProps> = ({ patientId, visitId, medHi
 
           <Card>
             <CardContent className="p-3">
-              <form onSubmit={handleVisitVitalSubmit(v => recordVitalMutation.mutate(v))}>
-                <h3 className="mb-3 text-sm font-bold">تسجيل علامات حيوية لهذه الزيارة</h3>
-
-                <div className="flex flex-col gap-1.5">
-                  {VISIT_VITAL_FIELDS.map(({ key, label, unit }) => (
-                    <VitalInput key={key} name={key} control={visitVitalControl} label={label} unit={unit} />
-                  ))}
-                </div>
-
-                <div className="mt-3 flex justify-end">
-                  <Button type="submit" variant="outline" disabled={recordVitalMutation.isPending}>
-                    {recordVitalMutation.isPending && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-                    تسجيل
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <h3 className="text-sm font-bold">تسجيل علامات حيوية لهذه الزيارة</h3>
+                {onToggleVitalsPinned && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={onToggleVitalsPinned}
+                    title={isVitalsPinned ? 'إلغاء التثبيت والعودة إلى التبويبات' : 'تثبيت في الشريط الجانبي'}
+                  >
+                    {isVitalsPinned ? <PinOff size={15} /> : <Pin size={15} />}
                   </Button>
+                )}
+              </div>
+
+              {isVitalsPinned ? (
+                <div className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">
+                  مثبت في الشريط الجانبي — يمكنك تسجيل العلامات الحيوية من هناك أثناء تصفح باقي التبويبات.
                 </div>
-              </form>
+              ) : (
+                <CurrentVisitVitalsForm visitId={visitId} patientId={patientId} />
+              )}
             </CardContent>
           </Card>
         </>

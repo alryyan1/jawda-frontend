@@ -34,6 +34,7 @@ import { getDoctorVisitById } from "@/services/visitService";
 import { createLabVisitForExistingPatient, searchExistingPatients } from "@/services/patientService";
 import { addLabTestsToVisit } from "@/services/labRequestService";
 import apiClient from "@/services/api";
+import realtimeService from "@/services/realtimeService";
 import { getAppearanceSettings } from "@/lib/appearance-settings-store";
 
 // Types
@@ -327,6 +328,12 @@ const LabReceptionPage: React.FC = () => {
   const patientDetailsRef = useRef<PatientDetailsColumnV1Ref>(null);
   const labPatientQueueRef = useRef<LabPatientQueueRef>(null);
 
+  // Visit ids that just had lab tests sent from the Doctor Portal ("Send to
+  // Lab") — drives a pulsing dot on that patient's queue card for a while so
+  // reception notices the new request without having to watch the list.
+  const [newLabRequestVisitIds, setNewLabRequestVisitIds] = useState<Set<number>>(new Set());
+  const newLabRequestBadgeTimeoutsRef = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
+
   const focusTestSelection = useCallback((delay: number) => {
     setTimeout(() => {
       const inputElement = testSelectionAutocompleteRef.current?.querySelector("input");
@@ -397,6 +404,46 @@ const LabReceptionPage: React.FC = () => {
     return () => document.removeEventListener("keydown", handleKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeVisitId]);
+
+  /* ------------------ Realtime: doctor sent tests to the lab -------------- */
+  useEffect(() => {
+    const handleLabRequestAdded = (data: { visit: DoctorVisit; patient: Patient; labRequests: LabRequest[] }) => {
+      toast.info(`طلب فحوصات جديد من الطبيب للمريض: ${data.patient.name}`);
+
+      // Refresh the queue so the visit's test count / requests reflect the new additions.
+      labPatientQueueRef.current?.refresh();
+
+      const visitId = data.visit.id;
+      setNewLabRequestVisitIds((prev) => new Set(prev).add(visitId));
+
+      const existingTimeout = newLabRequestBadgeTimeoutsRef.current.get(visitId);
+      if (existingTimeout) {
+        clearTimeout(existingTimeout);
+      }
+      const timeout = setTimeout(() => {
+        setNewLabRequestVisitIds((prev) => {
+          const next = new Set(prev);
+          next.delete(visitId);
+          return next;
+        });
+        newLabRequestBadgeTimeoutsRef.current.delete(visitId);
+      }, 15000);
+      newLabRequestBadgeTimeoutsRef.current.set(visitId, timeout);
+    };
+
+    realtimeService.onLabRequestAdded(handleLabRequestAdded);
+    return () => {
+      realtimeService.offLabRequestAdded(handleLabRequestAdded);
+    };
+  }, []);
+
+  useEffect(() => {
+    const timeouts = newLabRequestBadgeTimeoutsRef.current;
+    return () => {
+      timeouts.forEach(clearTimeout);
+      timeouts.clear();
+    };
+  }, []);
 
   /* ------------------------------ Mutations -------------------------------- */
   const createVisitFromHistoryMutation = useMutation({
@@ -710,6 +757,7 @@ const LabReceptionPage: React.FC = () => {
                   onPatientSelect={handlePatientSelectedFromQueue}
                   selectedVisitId={activeVisitId}
                   globalSearchTerm=""
+                  newLabRequestVisitIds={newLabRequestVisitIds}
                 />
               </Card>
             </section>

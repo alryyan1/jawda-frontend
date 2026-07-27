@@ -136,6 +136,7 @@ const PatientQueueList: React.FC<PatientQueueListProps> = ({
                     visit={visit}
                     isSelected={selectedVisitId === visit.id}
                     onSelect={onSelectPatient}
+                    onSelectVisitId={onSelectVisitId}
                     isNew={newlyAddedVisitIds?.has(visit.id) ?? false}
                   />
                 ))}

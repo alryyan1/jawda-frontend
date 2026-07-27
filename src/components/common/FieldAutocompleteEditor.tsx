@@ -1,12 +1,12 @@
 import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
 import CodeMirror from '@uiw/react-codemirror';
 import { EditorView } from '@codemirror/view';
 import { autocompletion, type CompletionContext, type CompletionResult } from '@codemirror/autocomplete';
 import { getFieldTextSuggestions } from '@/services/fieldTextSuggestionService';
 import { useThemeMode } from '@/contexts/ThemeModeContext';
+import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 
 interface FieldAutocompleteEditorProps {
   value: string;
@@ -55,52 +55,28 @@ const FieldAutocompleteEditor: React.FC<FieldAutocompleteEditorProps> = ({
   );
 
   return (
-    <Box>
-      {label && (
-        <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5, fontSize: '0.75rem' }}>
-          {label}
-        </Typography>
-      )}
-      <Box
-        sx={{
-          border: '1px solid',
-          borderColor: 'divider',
-          borderRadius: 1,
-          overflow: 'hidden',
-          opacity: disabled ? 0.65 : 1,
-          fontSize: '0.82rem',
-          '&:focus-within': { borderColor: 'primary.main' },
-          '& .cm-editor': { fontFamily: 'inherit' },
-          '& .cm-content': { direction: 'rtl' },
-        }}
+    <div>
+      {label && <Label className="mb-1 block text-xs font-normal text-muted-foreground">{label}</Label>}
+      <div
+        className={cn(
+          'overflow-hidden rounded-md border border-input text-[0.82rem] focus-within:border-primary',
+          '[&_.cm-editor]:[font-family:inherit] [&_.cm-content]:[direction:ltr]',
+          disabled && 'opacity-65'
+        )}
       >
         <CodeMirror
           value={value ?? ''}
           onChange={onChange}
-          dir="rtl"
+          dir="ltr"
           theme={theme}
           minHeight={minHeight}
           editable={!disabled}
           placeholder={placeholder}
-          basicSetup={{
-            lineNumbers: false,
-            foldGutter: false,
-            highlightActiveLine: false,
-            highlightActiveLineGutter: false,
-            autocompletion: false,
-            bracketMatching: false,
-            closeBrackets: false,
-            dropCursor: false,
-            allowMultipleSelections: false,
-            rectangularSelection: false,
-            crosshairCursor: false,
-            indentOnInput: false,
-            highlightSelectionMatches: false,
-          }}
           extensions={extensions}
+        
         />
-      </Box>
-    </Box>
+      </div>
+    </div>
   );
 };
 

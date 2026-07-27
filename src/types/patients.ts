@@ -113,10 +113,17 @@ export interface ActivePatientVisit {
   only_lab: boolean;
   balance_due: number;
   requested_services_count: number;
+  lab_requests_count: number;
+  /** Whether this visit already has one or more lab requests — drives the queue card's lab-hint icon. */
+  has_lab_requests: boolean;
+  /** Patient-level flag: lab results have been authenticated/authorized and are ready to view/print. */
+  result_auth: boolean;
   doctor_id: number;
   doctor_shift_id: number;
   /** Persistent identity linking this visit to the patient's other visits, if any. */
   file_id: number | null;
+  /** Total visits (including this one) sharing this visit's File — >1 means the patient has prior visits on file. */
+  file_visits_count: number;
   /** Slim company object for card styling; null for cash patients. */
   company: { id: number; name: string } | null;
   patient: {

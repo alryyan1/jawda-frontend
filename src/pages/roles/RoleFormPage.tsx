@@ -1,21 +1,31 @@
 // src/pages/roles/RoleFormPage.tsx
-import React, { useEffect, useState, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { Loader2, Search, Settings } from 'lucide-react';
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Typography,
+  TextField,
+  Checkbox,
+  FormControlLabel,
+  Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  InputAdornment,
+  CircularProgress,
+  Paper,
+} from '@mui/material';
+import { Loader2, Search, Settings, CheckCheck } from 'lucide-react';
 import { toast } from 'sonner';
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 import type { RoleFormData, Permission } from '@/types/auth';
 import { createRole, updateRole, getRoleById, getPermissionsList } from '@/services/roleService';
@@ -37,8 +47,6 @@ const RoleFormPage: React.FC<RoleFormPageProps> = ({ mode }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isPermissionsDialogOpen, setIsPermissionsDialogOpen] = useState(false);
 
-  
-
   const { data: roleData, isLoading: isLoadingRole, isFetching: isFetchingRole } = useQuery({
     queryKey: ['role', roleId],
     queryFn: () => getRoleById(Number(roleId)).then(res => res.data),
@@ -50,14 +58,14 @@ const RoleFormPage: React.FC<RoleFormPageProps> = ({ mode }) => {
     queryFn: getPermissionsList,
   });
 
-  const form = useForm<RoleFormValues>({
+  const { control, handleSubmit, reset, watch, setValue, getValues } = useForm<RoleFormValues>({
     resolver: zodResolver(roleFormSchema),
     defaultValues: {
       name: '',
       permissions: [],
     },
   });
-  const { control, handleSubmit, reset } = form;
+  const selectedPermissions = watch('permissions') || [];
 
   useEffect(() => {
     if (isEditMode && roleData) {
@@ -69,7 +77,7 @@ const RoleFormPage: React.FC<RoleFormPageProps> = ({ mode }) => {
   }, [isEditMode, roleData, reset]);
 
   const mutation = useMutation({
-    mutationFn: (data: RoleFormData) => 
+    mutationFn: (data: RoleFormData) =>
         isEditMode && roleId ? updateRole(Number(roleId), data) : createRole(data),
     onSuccess: () => {
       toast.success('تم حفظ الدور بنجاح');
@@ -100,8 +108,9 @@ const RoleFormPage: React.FC<RoleFormPageProps> = ({ mode }) => {
 
   const formIsSubmitting = mutation.isPending;
   const dataIsLoading = isLoadingRole || isFetchingRole || isLoadingPermissions;
+
   // Group permissions by resource for better UI
-  const groupedPermissions = allPermissions?.reduce((acc, permission) => {
+  const groupedPermissions = useMemo(() => allPermissions?.reduce((acc, permission) => {
     // A more robust grouping based on the first word after common verbs
     const commonVerbs = ['list', 'view', 'create', 'edit', 'delete', 'assign', 'manage'];
     let mainResource = permission.name;
@@ -120,158 +129,289 @@ const RoleFormPage: React.FC<RoleFormPageProps> = ({ mode }) => {
     }
     acc[capitalizedResource].push(permission);
     return acc;
-  }, {} as Record<string, Permission[]>);
+  }, {} as Record<string, Permission[]>), [allPermissions]);
 
   // Filter permissions based on search term
   const filteredGroupedPermissions = useMemo(() => {
     if (!groupedPermissions || !searchTerm.trim()) return groupedPermissions;
-    
+
     const searchLower = searchTerm.toLowerCase();
     const filtered: Record<string, Permission[]> = {};
-    
+
     Object.entries(groupedPermissions).forEach(([group, permissions]) => {
       const matchingPermissions = permissions.filter(permission => {
         const permissionName = permission.name.toLowerCase();
         return permissionName.includes(searchLower);
       });
-      
+
       if (matchingPermissions.length > 0) {
         filtered[group] = matchingPermissions;
       }
     });
-    
+
     return filtered;
   }, [groupedPermissions, searchTerm]);
-  console.log(groupedPermissions);  
-  if (isEditMode && isLoadingRole) return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin" /> جاري التحميل...</div>;
 
+  const sortedGroupEntries = useMemo(
+    () => Object.entries(filteredGroupedPermissions || {}).sort(([a], [b]) => a.localeCompare(b)),
+    [filteredGroupedPermissions]
+  );
+
+  const visiblePermissionNames = useMemo(
+    () => sortedGroupEntries.flatMap(([, perms]) => perms.map(p => p.name)),
+    [sortedGroupEntries]
+  );
+  const allVisibleSelected = visiblePermissionNames.length > 0 && visiblePermissionNames.every(name => selectedPermissions.includes(name));
+
+  const togglePermissionNames = (names: string[], shouldSelect: boolean) => {
+    const current = getValues('permissions') || [];
+    const next = shouldSelect
+      ? Array.from(new Set([...current, ...names]))
+      : current.filter(name => !names.includes(name));
+    setValue('permissions', next, { shouldDirty: true });
+  };
+
+  if (isEditMode && isLoadingRole) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 256, gap: 1 }}>
+        <CircularProgress size={24} />
+        <Typography>جاري التحميل...</Typography>
+      </Box>
+    );
+  }
 
   return (
-    <Card className="max-w-4xl mx-auto">
-      <CardHeader>
-        <CardTitle>{isEditMode ? 'تعديل دور' : 'إضافة دور'}</CardTitle>
-        <CardDescription>يرجى تعبئة البيانات التالية</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            <FormField control={control} name="name" render={({ field }) => (
-              <FormItem>
-                <FormLabel>الإسم</FormLabel>
-                <FormControl><Input placeholder={'أدخل اسم الدور'} {...field} disabled={dataIsLoading || formIsSubmitting}/></FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
+    <Card sx={{ maxWidth: 700, mx: 'auto' }}>
+      <CardContent sx={{ pb: 2 }}>
+        <Typography variant="h6" component="h1">{isEditMode ? 'تعديل دور' : 'إضافة دور'}</Typography>
+        <Typography variant="caption" color="text.secondary">يرجى تعبئة البيانات التالية</Typography>
 
-            <FormField
-              control={control} name="permissions"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>الصلاحيات</FormLabel>
-                  <FormDescription>قم بتعيين الصلاحيات المناسبة لهذا الدور</FormDescription>
-                  <div className="flex items-center gap-3">
+        <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Controller
+            control={control}
+            name="name"
+            render={({ field, fieldState: { error } }) => (
+              <TextField
+                {...field}
+                size="small"
+                label="الإسم"
+                placeholder="أدخل اسم الدور"
+                fullWidth
+                disabled={dataIsLoading || formIsSubmitting}
+                error={!!error}
+                helperText={error?.message}
+              />
+            )}
+          />
+
+          <Controller
+            control={control}
+            name="permissions"
+            render={({ field }) => (
+              <Box>
+                <Typography variant="body2" sx={{ mb: 0.5 }}>الصلاحيات</Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Button
+                    type="button"
+                    variant="outlined"
+                    size="small"
+                    onClick={() => setIsPermissionsDialogOpen(true)}
+                    disabled={dataIsLoading || formIsSubmitting}
+                    startIcon={<Settings className="h-3.5 w-3.5" />}
+                  >
+                    إدارة الصلاحيات
+                  </Button>
+                  <Chip
+                    size="small"
+                    color={field.value?.length ? 'secondary' : 'default'}
+                    variant={field.value?.length ? 'filled' : 'outlined'}
+                    label={`${field.value?.length || 0} / ${allPermissions?.length || 0}`}
+                  />
+                </Box>
+              </Box>
+            )}
+          />
+
+          <Dialog
+            open={isPermissionsDialogOpen}
+            onClose={() => setIsPermissionsDialogOpen(false)}
+            maxWidth="md"
+            fullWidth
+            PaperProps={{ sx: { maxHeight: '80vh', display: 'flex', flexDirection: 'column' } }}
+            dir="rtl"
+          >
+            <DialogTitle sx={{ pb: 0.5 }}>
+              <Typography variant="subtitle1">إدارة الصلاحيات</Typography>
+              <Typography variant="caption" color="text.secondary" display="block">
+                قم بتحديد الصلاحيات المناسبة لهذا الدور
+              </Typography>
+            </DialogTitle>
+            <DialogContent dividers sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 1.5, p: 2 }}>
+              {isLoadingPermissions ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                  <CircularProgress size={24} />
+                </Box>
+              ) : !groupedPermissions || Object.keys(groupedPermissions).length === 0 ? (
+                <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 2 }}>
+                  لا توجد صلاحيات متاحة
+                </Typography>
+              ) : (
+                <>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <TextField
+                      size="small"
+                      placeholder="ابحث عن صلاحية"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      fullWidth
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <Search className="h-3.5 w-3.5" />
+                          </InputAdornment>
+                        ),
+                      }}
+                    />
                     <Button
                       type="button"
-                      variant="outline"
-                      onClick={() => setIsPermissionsDialogOpen(true)}
-                      disabled={dataIsLoading || formIsSubmitting}
-                      className="flex items-center gap-2"
+                      variant="outlined"
+                      size="small"
+                      disabled={visiblePermissionNames.length === 0}
+                      onClick={() => togglePermissionNames(visiblePermissionNames, !allVisibleSelected)}
+                      startIcon={<CheckCheck className="h-3.5 w-3.5" />}
+                      sx={{ flexShrink: 0, whiteSpace: 'nowrap' }}
                     >
-                      <Settings className="h-4 w-4" />
-                      إدارة الصلاحيات
+                      {allVisibleSelected ? 'إلغاء تحديد الكل' : 'تحديد الكل'}
                     </Button>
-                    {field.value && field.value.length > 0 && (
-                      <Badge variant="secondary" className="text-sm">
-                        {field.value.length} صلاحية محددة
-                      </Badge>
-                    )}
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <Dialog open={isPermissionsDialogOpen} onOpenChange={setIsPermissionsDialogOpen}>
-              <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
-                <DialogHeader>
-                  <DialogTitle>إدارة الصلاحيات</DialogTitle>
-                  <DialogDescription>قم بتحديد الصلاحيات المناسبة لهذا الدور</DialogDescription>
-                </DialogHeader>
-                <div className="flex-1 overflow-hidden flex flex-col">
-                  {isLoadingPermissions ? (
-                    <div className="flex justify-center items-center py-8">
-                      <Loader2 className="animate-spin h-6 w-6" />
-                    </div>
-                  ) : !groupedPermissions || Object.keys(groupedPermissions).length === 0 ? (
-                    <p className="text-sm text-muted-foreground py-4 text-center">لا توجد صلاحيات متاحة</p>
-                  ) : (
-                    <>
-                      <div className="relative mb-4">
-                        <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          placeholder={'ابحث عن صلاحية'}
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                          className="pl-8"
-                        />
-                      </div>
-                      <ScrollArea className="h-[calc(85vh-280px)] min-h-[300px] w-full rounded-md border p-4">
-                        <div className="space-y-4">
-                          {Object.entries(filteredGroupedPermissions || {}).sort(([groupA], [groupB]) => groupA.localeCompare(groupB)).map(([groupName, perms]) => (
-                            <div key={groupName}>
-                              <h4 className="mb-2 font-medium text-md text-primary border-b pb-1">
-                                {groupName}
-                              </h4>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2">
-                                {perms.sort((a,b) => a.name.localeCompare(b.name)).map((permission) => (
-                                  <FormField
-                                    key={permission.id} control={control} name="permissions"
-                                    render={({ field: permissionArrayField }) => (
-                                      <FormItem className="flex flex-row items-center space-x-2 space-y-0 rtl:space-x-reverse">
-                                        <FormControl>
+                    <Chip
+                      size="small"
+                      color="secondary"
+                      label={`${selectedPermissions.length} / ${allPermissions?.length || 0}`}
+                      sx={{ flexShrink: 0 }}
+                    />
+                  </Box>
+                  <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto', border: 1, borderColor: 'divider', borderRadius: 1 }}>
+                    <Box sx={{ p: 1.25, display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+                      {sortedGroupEntries.map(([groupName, perms]) => {
+                        const groupNames = perms.map(p => p.name);
+                        const groupAllSelected = groupNames.every(name => selectedPermissions.includes(name));
+                        const groupSomeSelected = !groupAllSelected && groupNames.some(name => selectedPermissions.includes(name));
+                        return (
+                          <Paper key={groupName} variant="outlined" sx={{ bgcolor: 'action.hover' }}>
+                            <Box
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1,
+                                px: 1.25,
+                                py: 0.75,
+                                borderBottom: 1,
+                                borderColor: 'divider',
+                                cursor: 'pointer',
+                                userSelect: 'none',
+                                '&:hover': { bgcolor: 'action.selected' },
+                              }}
+                              onClick={() => togglePermissionNames(groupNames, !groupAllSelected)}
+                            >
+                              <Checkbox
+                                size="small"
+                                checked={groupAllSelected}
+                                indeterminate={groupSomeSelected}
+                                onChange={(e) => togglePermissionNames(groupNames, e.target.checked)}
+                                onClick={(e) => e.stopPropagation()}
+                                sx={{ p: 0 }}
+                              />
+                              <Typography variant="caption" color="primary" fontWeight={600}>{groupName}</Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                ({groupNames.filter(n => selectedPermissions.includes(n)).length}/{groupNames.length})
+                              </Typography>
+                            </Box>
+                            <Box
+                              sx={{
+                                display: 'grid',
+                                gridTemplateColumns: {
+                                  xs: 'repeat(2, 1fr)',
+                                  sm: 'repeat(3, 1fr)',
+                                  lg: 'repeat(4, 1fr)',
+                                },
+                                columnGap: 1,
+                                p: 1,
+                              }}
+                            >
+                              {perms.sort((a, b) => a.name.localeCompare(b.name)).map((permission) => (
+                                <Controller
+                                  key={permission.id}
+                                  control={control}
+                                  name="permissions"
+                                  render={({ field: permissionArrayField }) => {
+                                    const current = permissionArrayField.value || [];
+                                    const checked = current.includes(permission.name);
+                                    return (
+                                      <FormControlLabel
+                                        onClick={() => {
+                                          permissionArrayField.onChange(
+                                            checked
+                                              ? current.filter((name: string) => name !== permission.name)
+                                              : [...current, permission.name]
+                                          );
+                                        }}
+                                        control={
                                           <Checkbox
-                                            checked={permissionArrayField.value?.includes(permission.name)}
+                                            size="small"
+                                            checked={checked}
                                             disabled={dataIsLoading || formIsSubmitting}
-                                            onCheckedChange={(checked) => {
-                                              const currentPermissions = permissionArrayField.value || [];
-                                              return checked
-                                                ? permissionArrayField.onChange([...currentPermissions, permission.name])
-                                                : permissionArrayField.onChange(currentPermissions.filter((name) => name !== permission.name));
+                                            onClick={(e) => e.stopPropagation()}
+                                            onChange={(e) => {
+                                              permissionArrayField.onChange(
+                                                e.target.checked
+                                                  ? [...current, permission.name]
+                                                  : current.filter((name: string) => name !== permission.name)
+                                              );
                                             }}
                                           />
-                                        </FormControl>
-                                        <FormLabel title={permission.name} className="font-normal text-sm whitespace-nowrap cursor-pointer">
-                                          {permission.name}
-                                        </FormLabel>
-                                      </FormItem>
-                                    )}
-                                  />
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </ScrollArea>
-                    </>
-                  )}
-                </div>
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setIsPermissionsDialogOpen(false)}>
-                    إغلاق
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-            
-            <div className="flex justify-end gap-2 pt-4">
-              <Button type="button" variant="outline" onClick={() => navigate('/roles')} disabled={formIsSubmitting}>إلغاء</Button>
-              <Button type="submit" disabled={dataIsLoading || formIsSubmitting}>
-                {formIsSubmitting && <Loader2 className="ltr:mr-2 rtl:ml-2 h-4 w-4 animate-spin" />}
-                حفظ
+                                        }
+                                        label={
+                                          <Typography variant="caption" noWrap title={permission.name}>
+                                            {permission.name}
+                                          </Typography>
+                                        }
+                                        sx={{ m: 0, borderRadius: 1, px: 0.5, '&:hover': { bgcolor: 'action.hover' } }}
+                                      />
+                                    );
+                                  }}
+                                />
+                              ))}
+                            </Box>
+                          </Paper>
+                        );
+                      })}
+                    </Box>
+                  </Box>
+                </>
+              )}
+            </DialogContent>
+            <DialogActions sx={{ pt: 1.5 }}>
+              <Button type="button" variant="outlined" size="small" onClick={() => setIsPermissionsDialogOpen(false)}>
+                إغلاق
               </Button>
-            </div>
-          </form>
-        </Form>
+            </DialogActions>
+          </Dialog>
+
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, pt: 1 }}>
+            <Button type="button" variant="outlined" size="small" onClick={() => navigate('/roles')} disabled={formIsSubmitting}>
+              إلغاء
+            </Button>
+            <Button
+              type="submit"
+              variant="contained"
+              size="small"
+              disabled={dataIsLoading || formIsSubmitting}
+              startIcon={formIsSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            >
+              حفظ
+            </Button>
+          </Box>
+        </Box>
       </CardContent>
     </Card>
   );

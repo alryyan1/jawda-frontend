@@ -29,25 +29,22 @@ import DiagnosisSection from './sections/DiagnosisSection';
 import AttachmentsSection from './sections/AttachmentsSection';
 import PrescriptionsSection from './sections/PrescriptionsSection';
 import TeethSection from './sections/TeethSection';
+import FileVisitsSection from './sections/FileVisitsSection';
 import LabReportPdfPreviewDialog from '@/components/common/LabReportPdfPreviewDialog';
 
 interface PatientWorkspaceProps {
   visitId: number;
   initialVisit: ActivePatientVisit | null;
+  /** Whether the "current visit" vitals form is pinned as a side panel instead of shown inline in the vitals tab. */
+  isVitalsPinned?: boolean;
+  onToggleVitalsPinned?: () => void;
+  /** Switches the workspace to another visit — used by the "same file" list to jump between a patient's registrations. */
+  onSelectVisit?: (visitId: number) => void;
 }
 
-const STATUS_LABELS: Record<string, { label: string; color: 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' }> = {
-  waiting:         { label: 'انتظار',      color: 'info' },
-  with_doctor:     { label: 'مع الطبيب',  color: 'warning' },
-  lab_pending:     { label: 'مختبر',       color: 'secondary' },
-  imaging_pending: { label: 'تصوير',       color: 'secondary' },
-  payment_pending: { label: 'دفع',         color: 'warning' },
-  completed:       { label: 'مكتملة',      color: 'success' },
-  cancelled:       { label: 'ملغاة',       color: 'error' },
-  no_show:         { label: 'غائب',        color: 'error' },
-};
 
-const PatientWorkspace: React.FC<PatientWorkspaceProps> = ({ visitId, initialVisit }) => {
+
+const PatientWorkspace: React.FC<PatientWorkspaceProps> = ({ visitId, initialVisit, isVitalsPinned, onToggleVitalsPinned, onSelectVisit }) => {
   const [activeSection, setActiveSection] = useState<SectionKey>('info');
   const [summaryPdfUrl, setSummaryPdfUrl] = useState<string | null>(null);
   const [isSummaryPdfOpen, setIsSummaryPdfOpen] = useState(false);
@@ -87,7 +84,6 @@ const PatientWorkspace: React.FC<PatientWorkspaceProps> = ({ visitId, initialVis
   // Use initialVisit patient while visit data loads, for the identity bar
   const patient = visit?.patient ?? initialVisit?.patient;
   const visitStatus = visit?.status ?? initialVisit?.status;
-  const statusCfg = STATUS_LABELS[visitStatus ?? ''] ?? { label: visitStatus ?? '', color: 'default' as const };
 
   // Combined loading check for visit
   if (isLoadingVisit && !initialVisit) {
@@ -135,22 +131,12 @@ const PatientWorkspace: React.FC<PatientWorkspaceProps> = ({ visitId, initialVis
         <Typography variant="body2" color="text.secondary">
           {patient?.full_age ?? (patient?.age_year ? `${patient.age_year} سنة` : '—')}
         </Typography>
+        <Divider orientation="vertical" flexItem />
 
-        {/* Visit number */}
-        <Chip
-          label={`زيارة #${visit?.number ?? initialVisit?.number ?? '—'}`}
-          size="small"
-          variant="outlined"
-          sx={{ fontSize: '0.72rem', height: 22 }}
-        />
-
-        {/* Status */}
-        <Chip
-          label={statusCfg.label}
-          size="small"
-          color={statusCfg.color}
-          sx={{ fontSize: '0.72rem', height: 22 }}
-        />
+        {/* File number + visit id */}
+        <Typography variant="body2" color="text.secondary">
+          ملف #{visit?.file_id ?? initialVisit?.file_id ?? '—'} — زيارة #{visitId}
+        </Typography>
 
         {/* Company */}
         {patient?.company_id && (
@@ -195,7 +181,14 @@ const PatientWorkspace: React.FC<PatientWorkspaceProps> = ({ visitId, initialVis
       {/* Section content */}
       <Box sx={{ flex: 1, overflowY: 'auto' }}>
         {activeSection === 'info' && (
-          <PatientInfoSection visit={visit} />
+          <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+            <Box sx={{ flex: '0 0 33.33%', minWidth: 0 }}>
+              <PatientInfoSection visit={visit} />
+            </Box>
+            <Box sx={{ flex: '0 0 66.67%', minWidth: 0 }}>
+              <FileVisitsSection visit={visit} onSelectVisit={onSelectVisit} />
+            </Box>
+          </Box>
         )}
         {activeSection === 'diagnosis' && (
           <DiagnosisSection visit={visit} />
@@ -228,6 +221,8 @@ const PatientWorkspace: React.FC<PatientWorkspaceProps> = ({ visitId, initialVis
             visitId={visit?.id}
             medHistory={medHistory}
             isLoading={isLoadingMedHistory}
+            isVitalsPinned={isVitalsPinned}
+            onToggleVitalsPinned={onToggleVitalsPinned}
           />
         )}
         {activeSection === 'systems' && (

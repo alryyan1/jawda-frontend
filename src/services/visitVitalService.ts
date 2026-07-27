@@ -11,6 +11,19 @@ export const recordVisitVital = async (visitId: number, payload: VisitVitalInput
   return response.data.data;
 };
 
+export const updateVisitVital = async (
+  visitId: number,
+  vitalId: number,
+  payload: VisitVitalInput
+): Promise<VisitVital> => {
+  const response = await apiClient.put<{ data: VisitVital }>(`/doctor-visits/${visitId}/vitals/${vitalId}`, payload);
+  return response.data.data;
+};
+
+export const deleteVisitVital = async (visitId: number, vitalId: number): Promise<void> => {
+  await apiClient.delete(`/doctor-visits/${visitId}/vitals/${vitalId}`);
+};
+
 export const getPatientVitalsTrend = async (patientId: number): Promise<VisitVital[]> => {
   const response = await apiClient.get<{ data: VisitVital[] }>(`/patients/${patientId}/vitals-trend`);
   return response.data.data;

@@ -148,6 +148,55 @@ class RealtimeService {
     }
   }
 
+  // Subscribe to lab-request-added events — doctor sent tests to the lab reception queue
+  public onLabRequestAdded(callback: (data: { visit: DoctorVisit; patient: Patient; labRequests: LabRequest[] }) => void): void {
+    if (this.socket) {
+      this.socket.on('lab-request-added', (data: { visit: DoctorVisit; patient: Patient; labRequests: LabRequest[] }) => {
+        console.log('Received lab-request-added event:', data);
+        callback(data);
+      });
+    }
+  }
+
+  // Unsubscribe from lab-request-added events
+  public offLabRequestAdded(callback?: (data: { visit: DoctorVisit; patient: Patient; labRequests: LabRequest[] }) => void): void {
+    if (this.socket) {
+      if (callback) {
+        this.socket.off('lab-request-added', callback);
+      } else {
+        this.socket.off('lab-request-added');
+      }
+    }
+  }
+
+  // Subscribe to patient-results-authenticated events — lab authorized results, notify the doctor
+  public onPatientResultsAuthenticated(
+    callback: (data: { visit_id: number; patient_id: number; doctor_id: number; patient_name: string; file_id: number | null }) => void
+  ): void {
+    if (this.socket) {
+      this.socket.on(
+        'patient-results-authenticated',
+        (data: { visit_id: number; patient_id: number; doctor_id: number; patient_name: string; file_id: number | null }) => {
+          console.log('Received patient-results-authenticated event:', data);
+          callback(data);
+        }
+      );
+    }
+  }
+
+  // Unsubscribe from patient-results-authenticated events
+  public offPatientResultsAuthenticated(
+    callback?: (data: { visit_id: number; patient_id: number; doctor_id: number; patient_name: string; file_id: number | null }) => void
+  ): void {
+    if (this.socket) {
+      if (callback) {
+        this.socket.off('patient-results-authenticated', callback);
+      } else {
+        this.socket.off('patient-results-authenticated');
+      }
+    }
+  }
+
   // Subscribe to general shift open event
   public onOpenGeneralShift(callback: (data: { user_id?: number; user_name?: string; opened_at?: string }) => void): void {
     if (this.socket) {
@@ -228,6 +277,27 @@ class RealtimeService {
         this.socket.off('lab-queue-item-updated', callback);
       } else {
         this.socket.off('lab-queue-item-updated');
+      }
+    }
+  }
+
+  // Subscribe to doctor-shift-opened events
+  public onDoctorShiftOpened(callback: (data: { doctor_shift: any }) => void): void {
+    if (this.socket) {
+      this.socket.on('doctor-shift-opened', (data: { doctor_shift: any }) => {
+        console.log('Received doctor-shift-opened event:', data);
+        callback(data);
+      });
+    }
+  }
+
+  // Unsubscribe from doctor-shift-opened events
+  public offDoctorShiftOpened(callback?: (data: { doctor_shift: any }) => void): void {
+    if (this.socket) {
+      if (callback) {
+        this.socket.off('doctor-shift-opened', callback);
+      } else {
+        this.socket.off('doctor-shift-opened');
       }
     }
   }

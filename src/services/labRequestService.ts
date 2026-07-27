@@ -16,6 +16,16 @@ export const getAvailableLabTestsForVisit = async (
   return response.data.data;
 };
 
+export const getTopRequestedLabTestsForVisit = async (
+  visitId: number
+): Promise<MainTestStripped[]> => {
+  // Backend LabRequestController@topRequestedTestsForVisit returns MainTestStrippedResource::collection
+  const response = await apiClient.get<{ data: MainTestStripped[] }>(
+    `${VISIT_BASE_URL}/${visitId}/top-requested-lab-tests`
+  );
+  return response.data.data;
+};
+
 export const addLabTestsToVisit = async (params: {
   visitId: number;
   main_test_ids: number[];
@@ -32,6 +42,14 @@ export const addLabTestsToVisit = async (params: {
     }
   );
   return response.data.data;
+};
+
+/** Doctor-triggered "Send to Lab" — fires a realtime notification to the lab reception queue. */
+export const notifyLabReceptionOfVisit = async (visitId: number): Promise<{ message: string }> => {
+  const response = await apiClient.post<{ message: string }>(
+    `${VISIT_BASE_URL}/${visitId}/lab-requests/notify-lab`
+  );
+  return response.data;
 };
 // src/services/labRequestService.ts
 // ... (existing functions like clearPendingLabRequestsForVisit) ...

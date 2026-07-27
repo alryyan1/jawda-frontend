@@ -2,81 +2,100 @@ import React from 'react';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { useTheme } from 'next-themes';
 
+// index.css defines design tokens as full color functions (e.g. `oklch(...)`),
+// not raw component triplets, so they must be used as `var(--x)` directly —
+// never wrapped in `hsl(...)`, which produces invalid CSS like `hsl(oklch(...))`.
+// MUI's palette also needs concrete rgb/hex values (not var() refs) for colors
+// it runs through its own lighten/darken math (primary, secondary, error, etc.),
+// so those are resolved via canvas, which can parse any CSS color the browser supports.
+let resolveCanvasCtx: CanvasRenderingContext2D | null | undefined;
+const resolveCssVar = (name: string, fallback: string): string => {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  if (!raw) return fallback;
+  if (resolveCanvasCtx === undefined) {
+    resolveCanvasCtx = document.createElement('canvas').getContext('2d');
+  }
+  if (!resolveCanvasCtx) return fallback;
+  try {
+    resolveCanvasCtx.fillStyle = '#000000';
+    resolveCanvasCtx.fillStyle = raw;
+    return resolveCanvasCtx.fillStyle;
+  } catch {
+    return fallback;
+  }
+};
+
 // Create a comprehensive dark theme compatible MUI theme
 const createUnifiedMuiTheme = (isDark: boolean) => createTheme({
   palette: {
     mode: isDark ? 'dark' : 'light',
     primary: {
-      main: 'hsl(var(--primary))',
-      contrastText: 'hsl(var(--primary-foreground))',
+      main: resolveCssVar('--primary', isDark ? '#ebebeb' : '#1a1a1a'),
+      contrastText: resolveCssVar('--primary-foreground', isDark ? '#1a1a1a' : '#fafafa'),
     },
     secondary: {
-      main: 'hsl(var(--secondary))',
-      contrastText: 'hsl(var(--secondary-foreground))',
+      main: resolveCssVar('--secondary', isDark ? '#444444' : '#f5f5f5'),
+      contrastText: resolveCssVar('--secondary-foreground', isDark ? '#fafafa' : '#1a1a1a'),
     },
     background: {
-      default: isDark ? 'hsl(var(--background))' : 'hsl(var(--background))',
-      paper: isDark ? 'hsl(var(--card))' : 'hsl(var(--card))',
+      default: 'var(--background)',
+      paper: 'var(--card)',
     },
     text: {
-      primary: isDark ? 'hsl(var(--foreground))' : 'hsl(var(--foreground))',
-      secondary: isDark ? 'hsl(var(--muted-foreground))' : 'hsl(var(--muted-foreground))',
+      primary: 'var(--foreground)',
+      secondary: 'var(--muted-foreground)',
     },
     error: {
-      main: 'hsl(var(--destructive))',
-      contrastText: 'hsl(var(--destructive-foreground))',
+      main: resolveCssVar('--destructive', '#e53e3e'),
     },
     warning: {
-      main: 'hsl(var(--warning))',
-      contrastText: 'hsl(var(--warning-foreground))',
+      main: resolveCssVar('--warning', '#dd6b20'),
     },
     info: {
-      main: 'hsl(var(--info))',
-      contrastText: 'hsl(var(--info-foreground))',
+      main: resolveCssVar('--info', '#3182ce'),
     },
     success: {
-      main: 'hsl(var(--success))',
-      contrastText: 'hsl(var(--success-foreground))',
+      main: resolveCssVar('--success', '#38a169'),
     },
-    divider: isDark ? 'hsl(var(--border))' : 'hsl(var(--border))',
+    divider: 'var(--border)',
   },
   components: {
     MuiTextField: {
       styleOverrides: {
         root: {
           '& .MuiOutlinedInput-root': {
-            backgroundColor: isDark ? 'hsl(var(--background))' : 'hsl(var(--background))',
-            color: isDark ? 'hsl(var(--foreground))' : 'hsl(var(--foreground))',
-            borderColor: isDark ? 'hsl(var(--border))' : 'hsl(var(--border))',
+            backgroundColor: 'var(--background)',
+            color: 'var(--foreground)',
+            borderColor: 'var(--border)',
             '&:hover .MuiOutlinedInput-notchedOutline': {
-              borderColor: isDark ? 'hsl(var(--border))' : 'hsl(var(--border))',
+              borderColor: 'var(--border)',
             },
             '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-              borderColor: 'hsl(var(--primary))',
+              borderColor: 'var(--primary)',
             },
             '&.Mui-error .MuiOutlinedInput-notchedOutline': {
-              borderColor: 'hsl(var(--destructive))',
+              borderColor: 'var(--destructive)',
             },
           },
           '& .MuiInputLabel-root': {
-            color: isDark ? 'hsl(var(--muted-foreground))' : 'hsl(var(--muted-foreground))',
+            color: 'var(--muted-foreground)',
             '&.Mui-focused': {
-              color: 'hsl(var(--primary))',
+              color: 'var(--primary)',
             },
             '&.Mui-error': {
-              color: 'hsl(var(--destructive))',
+              color: 'var(--destructive)',
             },
           },
           '& .MuiFormHelperText-root': {
-            color: isDark ? 'hsl(var(--muted-foreground))' : 'hsl(var(--muted-foreground))',
+            color: 'var(--muted-foreground)',
             '&.Mui-error': {
-              color: 'hsl(var(--destructive))',
+              color: 'var(--destructive)',
             },
           },
           '& .MuiInputBase-input': {
-            color: isDark ? 'hsl(var(--foreground))' : 'hsl(var(--foreground))',
+            color: 'var(--foreground)',
             '&::placeholder': {
-              color: isDark ? 'hsl(var(--muted-foreground))' : 'hsl(var(--muted-foreground))',
+              color: 'var(--muted-foreground)',
               opacity: 1,
             },
           },
@@ -87,72 +106,70 @@ const createUnifiedMuiTheme = (isDark: boolean) => createTheme({
       styleOverrides: {
         root: {
           '& .MuiOutlinedInput-root': {
-            backgroundColor: isDark ? 'hsl(var(--background))' : 'hsl(var(--background))',
-            color: isDark ? 'hsl(var(--foreground))' : 'hsl(var(--foreground))',
-            borderColor: isDark ? 'hsl(var(--border))' : 'hsl(var(--border))',
+            backgroundColor: 'var(--background)',
+            color: 'var(--foreground)',
+            borderColor: 'var(--border)',
             '&:hover .MuiOutlinedInput-notchedOutline': {
-              borderColor: isDark ? 'hsl(var(--border))' : 'hsl(var(--border))',
+              borderColor: 'var(--border)',
             },
             '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-              borderColor: 'hsl(var(--primary))',
+              borderColor: 'var(--primary)',
             },
             '&.Mui-error .MuiOutlinedInput-notchedOutline': {
-              borderColor: 'hsl(var(--destructive))',
+              borderColor: 'var(--destructive)',
             },
           },
           '& .MuiInputLabel-root': {
-            color: isDark ? 'hsl(var(--muted-foreground))' : 'hsl(var(--muted-foreground))',
+            color: 'var(--muted-foreground)',
             '&.Mui-focused': {
-              color: 'hsl(var(--primary))',
+              color: 'var(--primary)',
             },
             '&.Mui-error': {
-              color: 'hsl(var(--destructive))',
+              color: 'var(--destructive)',
             },
           },
           '& .MuiFormHelperText-root': {
-            color: isDark ? 'hsl(var(--muted-foreground))' : 'hsl(var(--muted-foreground))',
+            color: 'var(--muted-foreground)',
             '&.Mui-error': {
-              color: 'hsl(var(--destructive))',
+              color: 'var(--destructive)',
             },
           },
           '& .MuiInputBase-input': {
-            color: isDark ? 'hsl(var(--foreground))' : 'hsl(var(--foreground))',
+            color: 'var(--foreground)',
             '&::placeholder': {
-              color: isDark ? 'hsl(var(--muted-foreground))' : 'hsl(var(--muted-foreground))',
+              color: 'var(--muted-foreground)',
               opacity: 1,
             },
           },
         },
         paper: {
-          backgroundColor: isDark ? 'hsl(var(--card))' : 'hsl(var(--card))',
-          color: isDark ? 'hsl(var(--foreground))' : 'hsl(var(--foreground))',
-          border: `1px solid ${isDark ? 'hsl(var(--border))' : 'hsl(var(--border))'}`,
-          boxShadow: isDark 
-            ? '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
-            : '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+          backgroundColor: 'var(--card)',
+          color: 'var(--foreground)',
+          border: '1px solid var(--border)',
+          boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
         },
         option: {
           '&:hover': {
-            backgroundColor: isDark ? 'hsl(var(--accent))' : 'hsl(var(--accent))',
+            backgroundColor: 'var(--accent)',
           },
           '&[data-focus="true"]': {
-            backgroundColor: isDark ? 'hsl(var(--accent))' : 'hsl(var(--accent))',
+            backgroundColor: 'var(--accent)',
           },
           '&[aria-selected="true"]': {
-            backgroundColor: isDark ? 'hsl(var(--primary))' : 'hsl(var(--primary))',
-            color: isDark ? 'hsl(var(--primary-foreground))' : 'hsl(var(--primary-foreground))',
+            backgroundColor: 'var(--primary)',
+            color: 'var(--primary-foreground)',
           },
         },
         clearIndicator: {
-          color: isDark ? 'hsl(var(--muted-foreground))' : 'hsl(var(--muted-foreground))',
+          color: 'var(--muted-foreground)',
           '&:hover': {
-            color: isDark ? 'hsl(var(--foreground))' : 'hsl(var(--foreground))',
+            color: 'var(--foreground)',
           },
         },
         popupIndicator: {
-          color: isDark ? 'hsl(var(--muted-foreground))' : 'hsl(var(--muted-foreground))',
+          color: 'var(--muted-foreground)',
           '&:hover': {
-            color: isDark ? 'hsl(var(--foreground))' : 'hsl(var(--foreground))',
+            color: 'var(--foreground)',
           },
         },
       },
@@ -178,8 +195,8 @@ const createUnifiedMuiTheme = (isDark: boolean) => createTheme({
     MuiSelect: {
       styleOverrides: {
         root: {
-          backgroundColor: isDark ? 'hsl(var(--background))' : 'hsl(var(--background))',
-          color: isDark ? 'hsl(var(--foreground))' : 'hsl(var(--foreground))',
+          backgroundColor: 'var(--background)',
+          color: 'var(--foreground)',
         },
       },
     },
@@ -187,11 +204,11 @@ const createUnifiedMuiTheme = (isDark: boolean) => createTheme({
       styleOverrides: {
         root: {
           '&:hover': {
-            backgroundColor: isDark ? 'hsl(var(--accent))' : 'hsl(var(--accent))',
+            backgroundColor: 'var(--accent)',
           },
           '&.Mui-selected': {
-            backgroundColor: isDark ? 'hsl(var(--primary))' : 'hsl(var(--primary))',
-            color: isDark ? 'hsl(var(--primary-foreground))' : 'hsl(var(--primary-foreground))',
+            backgroundColor: 'var(--primary)',
+            color: 'var(--primary-foreground)',
           },
         },
       },

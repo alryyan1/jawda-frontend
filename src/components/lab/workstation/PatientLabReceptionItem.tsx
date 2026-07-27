@@ -22,6 +22,8 @@ interface PatientLabReceptionItemProps {
   isReadyForPrint?: boolean;
   appearanceSettings: LabAppearanceSettings;
   showNewPaymentBadge?: boolean;
+  /** A doctor just sent lab tests for this visit ("Send to Lab") — shows a pulsing dot for a while. */
+  showNewLabRequestBadge?: boolean;
 }
 
 const PatientLabReceptionItem: React.FC<PatientLabReceptionItemProps> = ({
@@ -33,6 +35,7 @@ const PatientLabReceptionItem: React.FC<PatientLabReceptionItemProps> = ({
   isLastResultPending,
   isReadyForPrint,
   showNewPaymentBadge = false,
+  showNewLabRequestBadge = false,
 }) => {
   // Debounce click handler to prevent rapid successive clicks
   const [isClicking, setIsClicking] = React.useState(false);
@@ -106,6 +109,7 @@ const paymentStatusBadgeStyle = useMemo(() => {
         isLastResultPending &&   "animate-heartbeat",
         isLastResultPending  && "animate__animated animate__heartBeat animate__infinite animate__slow",
         isReadyForPrint  && "animate__animated animate__bounce animate__infinite animate__slow",
+        showNewLabRequestBadge && "ring-2 ring-purple-500 ring-offset-1 animate-pulse",
         isClicking && "opacity-50 cursor-not-allowed", // Visual feedback when clicking
 
         // Use CSS variables for dynamic styling
@@ -156,6 +160,13 @@ const paymentStatusBadgeStyle = useMemo(() => {
         <div className="absolute -top-1 -left-1 h-4 w-4 bg-green-500 rounded-full shadow-lg border-2 border-white animate-pulse">
           <div className="h-full w-full bg-green-500 rounded-full animate-ping opacity-75"></div>
         </div>
+      )}
+
+      {showNewLabRequestBadge && (
+        <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 flex h-2.5 w-2.5" title="طلب فحوصات جديد من الطبيب">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-purple-400 opacity-75" />
+          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-purple-500" />
+        </span>
       )}
 
       {/* Progress Bar */}

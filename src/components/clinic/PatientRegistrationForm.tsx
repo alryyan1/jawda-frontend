@@ -450,8 +450,7 @@ const PatientRegistrationForm: React.FC<PatientRegistrationFormProps> = ({
                   error={!!errors.address}
                   helperText={errors.address}
                   disabled={isSubmitting}
-                  multiline
-                  minRows={2}
+                  
                 />
               )}
 

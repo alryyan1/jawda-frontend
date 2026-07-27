@@ -6,8 +6,10 @@ import { getRequestedServicesForVisit } from "@/services/visitService";
 import type { RequestedService } from "@/types/services";
 import PatientCompanyDetails from "../lab/reception/PatientCompanyDetails";
 import PdfPreviewDialog from "../common/PdfPreviewDialog";
+import FileVisitsDialog from "../doctor-portal/FileVisitsDialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, DollarSign, FileText, Printer, Phone, CalendarDays, Copy, Stethoscope, User } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, DollarSign, FileText, Printer, Phone, CalendarDays, Copy, Stethoscope, User, FolderOpen, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import realtimeService from "@/services/realtimeService";
@@ -20,6 +22,8 @@ export interface PatientDetailsColumnClinicProps {
   onPrintReceipt?: () => void;
   currentClinicShiftId?: number | null;
   activeTab?: 'services' | 'lab';
+  /** Switches the workspace to a visit picked from the "same file" history dialog. */
+  onSelectVisitId?: (visitId: number) => void;
 }
 
 export interface PatientDetailsColumnClinicRef {
@@ -46,11 +50,13 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
   onPrintReceipt,
   currentClinicShiftId,
   activeTab = 'services',
+  onSelectVisitId,
 }, ref) => {
   const queryClient = useQueryClient();
   const { user, currentClinicShift } = useAuth();
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isPdfDialogOpen, setIsPdfDialogOpen] = useState(false);
+  const [isFileVisitsOpen, setIsFileVisitsOpen] = useState(false);
   const { can } = useAuthorization();
 
   const { data: visit, isLoading: isLoadingVisit } = useQuery({
@@ -253,6 +259,19 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
         <div className="grid grid-cols-1 gap-x-3 border-b border-border pb-2">
           <InfoCell icon={<Stethoscope size={11} />} label="الطبيب" value={visit.doctor?.name} />
           <Divider/>
+          <div className="flex items-center gap-1.5 min-w-0 py-0.5">
+            <InfoCell icon={<FolderOpen size={11} />} label="رقم الملف" value={visit.file_id?.toString()} />
+            {!!visit.file_visits_count && visit.file_visits_count > 1 && (
+              <Badge
+                onClick={() => setIsFileVisitsOpen(true)}
+                className="h-4 px-1.5 gap-0.5 text-[0.62rem] font-medium cursor-pointer"
+              >
+                <History size={9} />
+                {visit.file_visits_count}
+              </Badge>
+            )}
+          </div>
+          <Divider/>
           <InfoCell icon={<Phone size={11} />} label="الهاتف" value={visit.patient?.phone} />
           <Divider/>
 
@@ -334,6 +353,16 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
         fileName={`clinic-invoice-${visitId}.pdf`}
         isLoading={generatePdfMutation.isPending}
       />
+
+      {!!visit.file_visits_count && visit.file_visits_count > 1 && (
+        <FileVisitsDialog
+          isOpen={isFileVisitsOpen}
+          onOpenChange={setIsFileVisitsOpen}
+          visitId={visit.id}
+          currentVisitId={visit.id}
+          onSelectVisit={id => onSelectVisitId?.(id)}
+        />
+      )}
     </>
   );
 });

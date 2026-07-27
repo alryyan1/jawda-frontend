@@ -206,6 +206,18 @@ export const markRequestedServiceDone = async (
   await apiClient.put(`/requested-services/${requestedServiceId}`, { done });
 };
 
+/**
+ * All visits sharing this visit's File — every separate registration
+ * record for the same real person (each visit gets its own Patient row,
+ * but they share doctorvisits.file_id).
+ */
+export const getSameFileVisits = async (visitId: number): Promise<DoctorVisit[]> => {
+  const response = await apiClient.get<{ data: DoctorVisit[] }>(
+    `${VISIT_API_URL_BASE}/${visitId}/same-file`,
+  );
+  return response.data.data;
+};
+
 export const reassignDoctorVisitToShift = async (
   visitId: number,
   targetDoctorShiftId: number,

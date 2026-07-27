@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Stethoscope, Users, ShieldCheck, Banknote, LogOut, Sun, Moon, Wifi, WifiOff } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useThemeMode } from '@/contexts/ThemeModeContext';
 import { cn } from '@/lib/utils';
 import realtimeService from '@/services/realtimeService';
+import { getDoctorById } from '@/services/doctorService';
 import type { DoctorShift } from '@/types/doctors';
 
 interface DoctorPortalHeaderProps {
@@ -35,7 +37,7 @@ interface StatTileProps {
 const StatTile: React.FC<StatTileProps> = ({ label, value, icon, className }) => (
   <div
     className={cn(
-      'flex min-w-[92px] items-center gap-2.5 rounded-lg border bg-muted/40 px-3 py-2',
+      'flex min-w-[82px] items-center gap-2.5 rounded-lg border bg-muted/40 px-3 py-2',
       className
     )}
   >
@@ -55,9 +57,17 @@ const DoctorPortalHeader: React.FC<DoctorPortalHeaderProps> = ({
   selectedDate,
   onDateChange,
 }) => {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { theme, toggleTheme } = useThemeMode();
+
+  const { data: doctor } = useQuery({
+    queryKey: ['doctor', user?.doctor_id],
+    queryFn: () => getDoctorById(user!.doctor_id!).then(res => res.data),
+    enabled: !!user?.doctor_id,
+  });
+
+  const doctorName = shift?.doctor_name ?? doctor?.name ?? '—';
 
   const [isRealtimeEnabled, setIsRealtimeEnabled] = useState(() => realtimeService.isEnabled());
   const [isRealtimeConnected, setIsRealtimeConnected] = useState(() => realtimeService.getConnectionStatus());
@@ -84,18 +94,31 @@ const DoctorPortalHeader: React.FC<DoctorPortalHeaderProps> = ({
   };
 
   return (
-    <header className="flex flex-wrap items-center justify-between gap-4 border-b bg-card px-6 py-3">
+    <header className="flex flex-wrap items-center justify-between gap-1 border-b bg-card px-6 py-3">
       {/* Doctor identity */}
-      <div className="flex min-w-0 items-center gap-3">
-        <Avatar className="h-11 w-11 border">
-          <AvatarFallback className="bg-primary text-primary-foreground">
-            <Stethoscope className="h-5 w-5" />
-          </AvatarFallback>
-        </Avatar>
+      <div style={{ borderRadius: '15px' }} className={cn("flex min-w-0 items-center  p-2 gap-1",shift ? 'bg-[#00a63e3d]' : 'bg-red-200')}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="relative shrink-0">
+              <Avatar className="h-11 w-11 border">
+                <AvatarFallback className="bg-primary text-primary-foreground">
+                  <Stethoscope className="h-5 w-5" />
+                </AvatarFallback>
+              </Avatar>
+              <span
+                className={cn(
+                  'absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-card',
+                  shift ? 'bg-green-500' : 'bg-red-500'
+                )}
+              />
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>{shift ? 'النوبة مفتوحة' : 'النوبة مغلقة'}</TooltipContent>
+        </Tooltip>
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <h2 className="truncate text-base font-semibold leading-tight">
-              {shift?.doctor_name ?? '—'}
+            <h2 className="truncate  font-semibold leading-tight">
+              {doctorName}
             </h2>
             {shift && (
               <Badge variant="success" className="shrink-0">
@@ -104,11 +127,11 @@ const DoctorPortalHeader: React.FC<DoctorPortalHeaderProps> = ({
             )}
           </div>
           {shift?.doctor_specialist_name && (
-            <p className="truncate text-xs text-muted-foreground">
+            <p className="truncate text-xs ">
               {shift.doctor_specialist_name}
-              <span className="mx-1.5 text-muted-foreground/50">•</span>
+              <span className="mx-1.5 text-black">•</span>
               رقم الطبيب #{shift.doctor_id}
-              <span className="mx-1.5 text-muted-foreground/50">•</span>
+              <span className="mx-1.5 text-black">•</span>
               رقم النوبة #{shift.id}
             </p>
           )}
@@ -130,23 +153,24 @@ const DoctorPortalHeader: React.FC<DoctorPortalHeaderProps> = ({
       </div>
 
       {/* Stat tiles */}
-      <div className="flex items-center gap-2.5">
+      <div className="flex items-center gap-1">
         <StatTile
           label="الإجمالي"
           value={stats.total}
           icon={<Users className="h-4 w-4 text-foreground" />}
         />
         <Separator orientation="vertical" className="h-9" />
+            <StatTile
+          label="نقدي"
+          value={stats.cash}
+          icon={<Banknote className="h-4 w-4 text-green-600 dark:text-green-400" />}
+        />
         <StatTile
           label="تأمين"
           value={stats.insurance}
           icon={<ShieldCheck className="h-4 w-4 text-blue-600 dark:text-blue-400" />}
         />
-        <StatTile
-          label="نقدي"
-          value={stats.cash}
-          icon={<Banknote className="h-4 w-4 text-green-600 dark:text-green-400" />}
-        />
+    
       </div>
 
       <TooltipProvider>

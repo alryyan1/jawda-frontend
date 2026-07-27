@@ -334,6 +334,36 @@ const SampleCollectionPage: React.FC = () => {
     };
   }, []); // Empty dependency array - only run once on mount
 
+  // Real-time event subscription: a doctor sent lab tests to this queue ("Send to Lab")
+  useEffect(() => {
+    const eventManager = GlobalEventManager.getInstance();
+    const handlerId = 'SampleCollectionPage-LabRequestAdded';
+
+    if (!eventManager.canRegisterHandler(handlerId)) {
+      console.log('SampleCollectionPage: lab-request-added handler already registered globally, skipping');
+      return;
+    }
+
+    const handleLabRequestAdded = (data: { visit: DoctorVisit; patient: Patient; labRequests: LabRequest[] }) => {
+      const eventId = `lab-request-added-${data.visit.id}-${data.labRequests.length}`;
+      if (!eventManager.canProcessEvent(eventId)) {
+        console.log('SampleCollectionPage: Duplicate lab-request-added event ignored for visit:', data.visit.id);
+        return;
+      }
+
+      console.log('lab-request-added event received in SampleCollectionPage:', data);
+      toast.info(`طلب فحوصات جديد من الطبيب للمريض: ${data.patient.name}`);
+      debouncedRefreshRef.current();
+    };
+
+    realtimeService.onLabRequestAdded(handleLabRequestAdded);
+
+    return () => {
+      eventManager.unregisterHandler(handlerId);
+      realtimeService.offLabRequestAdded(handleLabRequestAdded);
+    };
+  }, []); // Empty dependency array - only run once on mount
+
   // Dialog states
   const [whatsAppTextData, setWhatsAppTextData] = useState<{
     isOpen: boolean;

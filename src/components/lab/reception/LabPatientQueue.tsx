@@ -20,6 +20,8 @@ interface LabPatientQueueProps {
   labFilters?: LabQueueFilters;
   filters?: LabQueueFilters; // Alternative prop name kept for compatibility
   appearanceSettings: LabAppearanceSettings;
+  /** Visit ids that just had lab tests sent from the Doctor Portal — shows a pulsing "new request" dot. */
+  newLabRequestVisitIds?: Set<number>;
 }
 
 export interface LabPatientQueueRef {
@@ -65,7 +67,17 @@ const QueueEmptyState: React.FC<{ hasSearchTerm: boolean }> = ({ hasSearchTerm }
 
 const LabPatientQueue = React.forwardRef<LabPatientQueueRef, LabPatientQueueProps>(
   (
-    { appearanceSettings, currentShift, onShiftChange, onPatientSelect, selectedVisitId, globalSearchTerm, labFilters, filters },
+    {
+      appearanceSettings,
+      currentShift,
+      onShiftChange,
+      onPatientSelect,
+      selectedVisitId,
+      globalSearchTerm,
+      labFilters,
+      filters,
+      newLabRequestVisitIds,
+    },
     ref
   ) => {
     const [currentPage, setCurrentPage] = useState(1);
@@ -163,6 +175,7 @@ const LabPatientQueue = React.forwardRef<LabPatientQueueRef, LabPatientQueueProp
                       isSelected={selectedVisitId === item.visit_id}
                       onSelect={() => onPatientSelect(item)}
                       allRequestsPaid={item.all_requests_paid || false}
+                      showNewLabRequestBadge={newLabRequestVisitIds?.has(item.visit_id) ?? false}
                       onSendWhatsAppText={() => {}}
                       onSendPdfToPatient={() => {}}
                       onSendPdfToCustomNumber={() => {}}

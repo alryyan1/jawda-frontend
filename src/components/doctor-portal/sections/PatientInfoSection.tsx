@@ -55,14 +55,14 @@ const PatientInfoSection: React.FC<PatientInfoSectionProps> = ({ visit }) => {
       {/* Demographics */}
       <Card className="p-4 gap-0 rounded-2xl shadow-none">
         <h3 className="text-sm font-bold mb-3">البيانات الشخصية</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        <div className="flex flex-col gap-2">
           <InfoRow label="الاسم" value={p.name} />
           <InfoRow label="رقم الهاتف" value={p.phone} />
           <InfoRow label="الجنس" value={GENDER_MAP[p.gender] ?? p.gender} />
           <InfoRow label="العمر" value={p.full_age ?? (p.age_year ? `${p.age_year} سنة` : null)} />
-          <InfoRow label="الرقم الوطني" value={p.gov_id} />
-          <InfoRow label="الحالة الاجتماعية" value={p.social_status ? SOCIAL_STATUS_MAP[p.social_status] : null} />
-          {p.address && <InfoRow label="العنوان" value={p.address} className="col-span-2 sm:col-span-3" />}
+          {/* <InfoRow label="الرقم الوطني" value={p.gov_id} /> */}
+          {/* <InfoRow label="الحالة الاجتماعية" value={p.social_status ? SOCIAL_STATUS_MAP[p.social_status] : null} /> */}
+          {p.address && <InfoRow label="العنوان" value={p.address} />}
           {p.email && <InfoRow label="البريد الإلكتروني" value={p.email} />}
           {p.nationality && <InfoRow label="الجنسية" value={p.nationality} />}
           {p.dob && <InfoRow label="تاريخ الميلاد" value={p.dob} />}
@@ -78,7 +78,7 @@ const PatientInfoSection: React.FC<PatientInfoSectionProps> = ({ visit }) => {
               {(p.company as any)?.name ?? 'شركة'}
             </Badge>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          <div className="flex flex-col gap-2">
             <InfoRow label="رقم التأمين" value={p.insurance_no} />
             <InfoRow label="الكفيل" value={p.guarantor} />
             <InfoRow label="تاريخ الانتهاء" value={p.expire_date} />
@@ -91,12 +91,12 @@ const PatientInfoSection: React.FC<PatientInfoSectionProps> = ({ visit }) => {
       {/* Visit info */}
       <Card className="p-4 gap-0 rounded-2xl shadow-none">
         <h3 className="text-sm font-bold mb-3">بيانات الزيارة</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        <div className="flex flex-col gap-2">
           <InfoRow label="رقم الملف" value={visit.file_id} />
           <InfoRow label="رقم الزيارة" value={visit.number} />
           <InfoRow label="تاريخ الزيارة" value={visit.visit_date} />
           <InfoRow label="وقت الزيارة" value={visit.visit_time_formatted} />
-          <InfoRow label="نوع الزيارة" value={visit.visit_type ?? (visit.is_new ? 'جديد' : 'متابعة')} />
+          {/* <InfoRow label="نوع الزيارة" value={visit.visit_type ?? (visit.is_new ? 'جديد' : 'متابعة')} /> */}
         </div>
       </Card>
     </div>

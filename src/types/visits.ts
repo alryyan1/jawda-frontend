@@ -160,6 +160,7 @@ export interface DoctorVisit {
   doctor_shift?: DoctorShift; // Eager loaded DoctorShift details
 
   file_id?: number | null; // Medical file number/ID for this encounter sequence
+  file_visits_count?: number; // How many visits (including this one) share this file
 
   visit_date: string; // YYYY-MM-DD
   visit_time?: string | null; // HH:MM:SS

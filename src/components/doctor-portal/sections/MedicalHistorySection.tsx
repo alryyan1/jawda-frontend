@@ -5,7 +5,6 @@ import { toast } from 'sonner';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
-import Grid from '@mui/material/Grid';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox from '@mui/material/Checkbox';
 import Button from '@mui/material/Button';
@@ -132,9 +131,9 @@ const MedicalHistorySection: React.FC<MedicalHistorySectionProps> = ({
       {/* Past history */}
       <Paper elevation={0} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
         <Typography variant="subtitle2" fontWeight={700} gutterBottom>التاريخ المرضي السابق</Typography>
-        <Grid container spacing={2}>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
           {PAST_HISTORY_FIELDS.map(({ key, label }) => (
-            <Grid item xs={12} sm={6} key={key}>
+            <Box key={key} sx={{ flexBasis: { xs: '100%', sm: 'calc(50% - 8px)' }, minWidth: 0 }}>
               <Controller
                 name={key}
                 control={control}
@@ -147,16 +146,16 @@ const MedicalHistorySection: React.FC<MedicalHistorySectionProps> = ({
                   />
                 )}
               />
-            </Grid>
+            </Box>
           ))}
-        </Grid>
+        </Box>
       </Paper>
 
       {/* Present illness */}
       <Paper elevation={0} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
         <Typography variant="subtitle2" fontWeight={700} gutterBottom>الشكوى الحالية</Typography>
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+          <Box sx={{ flexBasis: { xs: '100%', sm: 'calc(50% - 8px)' }, minWidth: 0 }}>
             <Controller
               name="present_complains_summary"
               control={control}
@@ -169,8 +168,8 @@ const MedicalHistorySection: React.FC<MedicalHistorySectionProps> = ({
                 />
               )}
             />
-          </Grid>
-          <Grid item xs={12} sm={6}>
+          </Box>
+          <Box sx={{ flexBasis: { xs: '100%', sm: 'calc(50% - 8px)' }, minWidth: 0 }}>
             <Controller
               name="history_of_present_illness_summary"
               control={control}
@@ -183,16 +182,16 @@ const MedicalHistorySection: React.FC<MedicalHistorySectionProps> = ({
                 />
               )}
             />
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
       </Paper>
 
       {/* Chronic findings */}
       <Paper elevation={0} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
         <Typography variant="subtitle2" fontWeight={700} gutterBottom>الموجودات المزمنة</Typography>
-        <Grid container>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap' }}>
           {CHRONIC_FLAGS.map(({ key, label }) => (
-            <Grid item xs={6} sm={4} key={key}>
+            <Box key={key} sx={{ flexBasis: { xs: '50%', sm: '33.3333%' }, minWidth: 0 }}>
               <Controller
                 name={key}
                 control={control}
@@ -209,16 +208,16 @@ const MedicalHistorySection: React.FC<MedicalHistorySectionProps> = ({
                   />
                 )}
               />
-            </Grid>
+            </Box>
           ))}
-        </Grid>
+        </Box>
       </Paper>
 
       {/* Care plan */}
       <Paper elevation={0} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
         <Typography variant="subtitle2" fontWeight={700} gutterBottom>خطة الرعاية</Typography>
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+          <Box sx={{ flexBasis: { xs: '100%', sm: 'calc(50% - 8px)' }, minWidth: 0 }}>
             <Controller
               name="overall_care_plan_summary"
               control={control}
@@ -231,8 +230,8 @@ const MedicalHistorySection: React.FC<MedicalHistorySectionProps> = ({
                 />
               )}
             />
-          </Grid>
-          <Grid item xs={12} sm={6}>
+          </Box>
+          <Box sx={{ flexBasis: { xs: '100%', sm: 'calc(50% - 8px)' }, minWidth: 0 }}>
             <Controller
               name="general_prescription_notes_summary"
               control={control}
@@ -245,8 +244,8 @@ const MedicalHistorySection: React.FC<MedicalHistorySectionProps> = ({
                 />
               )}
             />
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
       </Paper>
 
       <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>

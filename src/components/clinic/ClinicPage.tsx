@@ -209,6 +209,24 @@ const ClinicPage: React.FC = () => {
     setShowRegistrationForm(false); // Hide registration form when a patient is selected
   }, []);
 
+  // Selecting a visit from the "same file" history dialog — we only have the
+  // visit id at that point, so fetch the visit to recover its patient before
+  // switching the workspace over to it.
+  const handleSelectVisitId = useCallback(async (visitId: number) => {
+    try {
+      const { getDoctorVisitById } = await import('@/services/visitService');
+      const visit = await getDoctorVisitById(visitId);
+      if (!visit.patient) {
+        toast.error('تعذر تحميل بيانات الزيارة');
+        return;
+      }
+      setSelectedPatientVisit({ patient: visit.patient, visitId });
+      setShowRegistrationForm(false);
+    } catch {
+      toast.error('تعذر تحميل بيانات الزيارة');
+    }
+  }, []);
+
   const toggleRegistrationForm = () => {
     if (isUnifiedCashier) return; // Prevent showing for unified cashier users
     setShowRegistrationForm(prev => !prev);
@@ -494,6 +512,7 @@ const ClinicPage: React.FC = () => {
               visitId={selectedPatientVisit?.visitId || null}
               currentClinicShiftId={activeDoctorShift?.id || null}
               activeTab={activeWorkspaceTab}
+              onSelectVisitId={handleSelectVisitId}
               onPrintReceipt={() => {
                 // Print receipt functionality
               }}
@@ -579,6 +598,7 @@ const ClinicPage: React.FC = () => {
               visitId={selectedPatientVisit?.visitId || null}
               currentClinicShiftId={activeDoctorShift?.id || null}
               activeTab={activeWorkspaceTab}
+              onSelectVisitId={handleSelectVisitId}
               onPrintReceipt={() => {
                 // Print receipt functionality
               }}

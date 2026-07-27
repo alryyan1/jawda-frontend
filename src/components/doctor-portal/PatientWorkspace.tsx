@@ -8,11 +8,17 @@ import Paper from '@mui/material/Paper';
 import Divider from '@mui/material/Divider';
 import Button from '@mui/material/Button';
 import { Male, Female } from '@mui/icons-material';
-import { Printer } from 'lucide-react';
+import { ClipboardList, FlaskConical, HeartPulse, Pill, Printer } from 'lucide-react';
 import { toast } from 'sonner';
 import { getDoctorVisitById } from '@/services/visitService';
 import { getMedicalHistory } from '@/services/patientMedicalHistoryService';
 import { getVisitSummaryPdfUrl } from '@/services/visitSummaryService';
+import {
+  getVisitVitalsPdfUrl,
+  getVisitPrescriptionsPdfUrl,
+  getPatientMedicalHistoryPdfUrl,
+  getVisitLabReportPdfUrl,
+} from '@/services/visitDocumentsService';
 import type { DoctorVisit } from '@/types/visits';
 import type { ActivePatientVisit } from '@/types/patients';
 import type { PatientMedicalHistory } from '@/types/medicalHistory';
@@ -46,21 +52,22 @@ interface PatientWorkspaceProps {
 
 const PatientWorkspace: React.FC<PatientWorkspaceProps> = ({ visitId, initialVisit, isVitalsPinned, onToggleVitalsPinned, onSelectVisit }) => {
   const [activeSection, setActiveSection] = useState<SectionKey>('info');
-  const [summaryPdfUrl, setSummaryPdfUrl] = useState<string | null>(null);
-  const [isSummaryPdfOpen, setIsSummaryPdfOpen] = useState(false);
-  const [isSummaryPdfLoading, setIsSummaryPdfLoading] = useState(false);
+  const [printDialog, setPrintDialog] = useState<{
+    open: boolean;
+    loading: boolean;
+    url: string | null;
+    title: string;
+    fileName: string;
+  }>({ open: false, loading: false, url: null, title: '', fileName: '' });
 
-  const handlePrintSummary = async () => {
-    setIsSummaryPdfOpen(true);
-    setIsSummaryPdfLoading(true);
+  const printDocument = async (title: string, fileName: string, fetchUrl: () => Promise<string>, errorMessage: string) => {
+    setPrintDialog({ open: true, loading: true, url: null, title, fileName });
     try {
-      const url = await getVisitSummaryPdfUrl(visitId);
-      setSummaryPdfUrl(url);
+      const url = await fetchUrl();
+      setPrintDialog(prev => ({ ...prev, url, loading: false }));
     } catch {
-      toast.error('فشل إنشاء ملخص الزيارة');
-      setIsSummaryPdfOpen(false);
-    } finally {
-      setIsSummaryPdfLoading(false);
+      toast.error(errorMessage);
+      setPrintDialog(prev => ({ ...prev, open: false, loading: false }));
     }
   };
 
@@ -107,7 +114,7 @@ const PatientWorkspace: React.FC<PatientWorkspaceProps> = ({ visitId, initialVis
           borderColor: 'divider',
           display: 'flex',
           alignItems: 'center',
-          gap: 2,
+          gap: 1,
           flexWrap: 'wrap',
           bgcolor: 'background.paper',
           flexShrink: 0,
@@ -164,10 +171,74 @@ const PatientWorkspace: React.FC<PatientWorkspaceProps> = ({ visitId, initialVis
         <Button
           size="small"
           variant="outlined"
-          startIcon={<Printer size={16} />}
-          onClick={handlePrintSummary}
+          onClick={() =>
+            printDocument(
+              'الوصفات الطبية',
+              `visit-prescriptions-${visitId}.pdf`,
+              () => getVisitPrescriptionsPdfUrl(visitId),
+              'فشل إنشاء ملف الوصفات الطبية'
+            )
+          }
         >
-          طباعة ملخص الزيارة
+          الوصفات
+        </Button>
+        <Button
+          size="small"
+          variant="outlined"
+          onClick={() =>
+            printDocument(
+              'نتائج المختبر',
+              `visit-lab-report-${visitId}.pdf`,
+              () => getVisitLabReportPdfUrl(visitId),
+              'فشل إنشاء تقرير المختبر'
+            )
+          }
+        >
+          المختبر
+        </Button>
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<HeartPulse size={16} />}
+          onClick={() =>
+            printDocument(
+              'العلامات الحيوية',
+              `visit-vitals-${visitId}.pdf`,
+              () => getVisitVitalsPdfUrl(visitId),
+              'فشل إنشاء ملف العلامات الحيوية'
+            )
+          }
+        >
+          العلامات الحيوية
+        </Button>
+        <Button
+          size="small"
+          variant="outlined"
+          disabled={!patientId}
+          onClick={() =>
+            printDocument(
+              'التاريخ المرضي',
+              `medical-history-${patientId}.pdf`,
+              () => getPatientMedicalHistoryPdfUrl(patientId!),
+              'فشل إنشاء ملف التاريخ المرضي'
+            )
+          }
+        >
+          التاريخ المرضي
+        </Button>
+        <Button
+          size="small"
+          variant="outlined"
+          onClick={() =>
+            printDocument(
+              'ملخص الزيارة',
+              `visit-summary-${visitId}.pdf`,
+              () => getVisitSummaryPdfUrl(visitId),
+              'فشل إنشاء ملخص الزيارة'
+            )
+          }
+        >
+          الملخص 
         </Button>
       </Paper>
 
@@ -238,15 +309,14 @@ const PatientWorkspace: React.FC<PatientWorkspaceProps> = ({ visitId, initialVis
       </Box>
 
       <LabReportPdfPreviewDialog
-        isOpen={isSummaryPdfOpen}
+        isOpen={printDialog.open}
         onOpenChange={(open) => {
-          setIsSummaryPdfOpen(open);
-          if (!open) setSummaryPdfUrl(null);
+          setPrintDialog(prev => ({ ...prev, open, url: open ? prev.url : null }));
         }}
-        pdfUrl={summaryPdfUrl}
-        title="ملخص الزيارة"
-        fileName={`visit-summary-${visitId}.pdf`}
-        isLoading={isSummaryPdfLoading}
+        pdfUrl={printDialog.url}
+        title={printDialog.title}
+        fileName={printDialog.fileName}
+        isLoading={printDialog.loading}
       />
     </Box>
   );

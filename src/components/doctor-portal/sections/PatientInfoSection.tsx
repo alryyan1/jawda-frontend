@@ -15,11 +15,11 @@ interface InfoRowProps {
 }
 
 const InfoRow: React.FC<InfoRowProps> = ({ label, value, className }) => (
-  <div className={cn('mb-1', className)}>
-    <span className="block text-[0.68rem] text-muted-foreground mb-0.5">
-      {label}
+  <div className={cn('flex items-baseline gap-1.5 min-w-0', className)}>
+    <span className="shrink-0 text-[0.68rem] text-muted-foreground">
+      {label}:
     </span>
-    <span className="block text-[0.8rem] font-medium">
+    <span className="truncate text-[0.8rem] font-medium">
       {value ?? '—'}
     </span>
   </div>
@@ -51,11 +51,11 @@ const PatientInfoSection: React.FC<PatientInfoSectionProps> = ({ visit }) => {
   const hasInsurance = !!p.company_id;
 
   return (
-    <div className="p-4 flex flex-col gap-4">
+    <div className="p-3 flex flex-col gap-2">
       {/* Demographics */}
-      <Card className="p-4 gap-0 rounded-2xl shadow-none">
-        <h3 className="text-sm font-bold mb-3">البيانات الشخصية</h3>
-        <div className="flex flex-col gap-2">
+      <Card className="p-3 gap-0 rounded-xl shadow-none">
+        <h3 className="text-xs font-bold mb-1.5">البيانات الشخصية</h3>
+        <div className="grid grid-cols-2 gap-x-3 gap-y-1">
           <InfoRow label="الاسم" value={p.name} />
           <InfoRow label="رقم الهاتف" value={p.phone} />
           <InfoRow label="الجنس" value={GENDER_MAP[p.gender] ?? p.gender} />
@@ -71,14 +71,14 @@ const PatientInfoSection: React.FC<PatientInfoSectionProps> = ({ visit }) => {
 
       {/* Insurance */}
       {hasInsurance && (
-        <Card className="p-4 gap-0 rounded-2xl shadow-none">
-          <div className="flex items-center gap-2 mb-3">
-            <h3 className="text-sm font-bold">التأمين والشركة</h3>
+        <Card className="p-3 gap-0 rounded-xl shadow-none">
+          <div className="flex items-center gap-2 mb-1.5">
+            <h3 className="text-xs font-bold">التأمين والشركة</h3>
             <Badge className="bg-pink-500/10 text-pink-700 dark:text-pink-300 border-pink-500/30">
               {(p.company as any)?.name ?? 'شركة'}
             </Badge>
           </div>
-          <div className="flex flex-col gap-2">
+          <div className="grid grid-cols-2 gap-x-3 gap-y-1">
             <InfoRow label="رقم التأمين" value={p.insurance_no} />
             <InfoRow label="الكفيل" value={p.guarantor} />
             <InfoRow label="تاريخ الانتهاء" value={p.expire_date} />
@@ -89,9 +89,9 @@ const PatientInfoSection: React.FC<PatientInfoSectionProps> = ({ visit }) => {
       )}
 
       {/* Visit info */}
-      <Card className="p-4 gap-0 rounded-2xl shadow-none">
-        <h3 className="text-sm font-bold mb-3">بيانات الزيارة</h3>
-        <div className="flex flex-col gap-2">
+      <Card className="p-3 gap-0 rounded-xl shadow-none">
+        <h3 className="text-xs font-bold mb-1.5">بيانات الزيارة</h3>
+        <div className="grid grid-cols-2 gap-x-3 gap-y-1">
           <InfoRow label="رقم الملف" value={visit.file_id} />
           <InfoRow label="رقم الزيارة" value={visit.number} />
           <InfoRow label="تاريخ الزيارة" value={visit.visit_date} />

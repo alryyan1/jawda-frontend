@@ -18,6 +18,8 @@ import TableRow from '@mui/material/TableRow';
 import CircularProgress from '@mui/material/CircularProgress';
 import Divider from '@mui/material/Divider';
 import Drawer from '@mui/material/Drawer';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
+import ToggleButton from '@mui/material/ToggleButton';
 import { alpha } from '@mui/material/styles';
 import {
   ChevronUp,
@@ -31,8 +33,8 @@ import {
   X,
 } from 'lucide-react';
 
-import apiClient from '@/services/api';
 import { getLabRequestForEntry } from '@/services/labWorkflowService';
+import { getVisitLabReportPdfUrl } from '@/services/visitDocumentsService';
 import {
   getAvailableLabTestsForVisit,
   getTopRequestedLabTestsForVisit,
@@ -50,11 +52,14 @@ import VitalsSection from './VitalsSection';
 
 const GENDER_LABELS: Record<string, string> = { male: 'ذكر', female: 'أنثى', other: 'آخر' };
 
+const VIEWER_COLUMNS_STORAGE_KEY = 'labResultsViewerColumnCount';
+const VIEWER_COLUMN_OPTIONS = [1, 2, 3, 4] as const;
+
 interface LabResultsSectionProps {
   visit: DoctorVisit | undefined;
 }
 
-/** One lab request's summary row — fetches its results (for the "complete" badge) and opens the viewer on click. */
+/** One lab request's summary row — fetches its results and shows a progress bar as they're entered, opens the viewer on click. */
 const LabRequestRow: React.FC<{ labRequest: LabRequest; onView: () => void }> = ({ labRequest, onView }) => {
   const testName = labRequest.main_test?.main_test_name ?? `طلب #${labRequest.id}`;
 
@@ -64,13 +69,18 @@ const LabRequestRow: React.FC<{ labRequest: LabRequest; onView: () => void }> = 
   });
 
   const childTests = data?.child_tests_with_results ?? [];
-  const isComplete = childTests.length > 0 && childTests.every(ct => !isValueEmpty(ct.result_value));
+  const totalCount = childTests.length;
+  const completedCount = childTests.filter(ct => !isValueEmpty(ct.result_value)).length;
+  const fillPercentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+  const isComplete = totalCount > 0 && completedCount === totalCount;
 
   return (
     <Paper
       onClick={onView}
       elevation={0}
       sx={{
+        position: 'relative',
+        overflow: 'hidden',
         display: 'flex',
         alignItems: 'center',
         gap: 1,
@@ -87,10 +97,27 @@ const LabRequestRow: React.FC<{ labRequest: LabRequest; onView: () => void }> = 
       <Typography variant="body2" fontWeight={600} sx={{ flex: 1 }}>
         {testName}
       </Typography>
+      {totalCount > 0 && !isComplete && (
+        <Typography variant="caption" color="text.secondary">
+          {completedCount}/{totalCount}
+        </Typography>
+      )}
       {isComplete && (
         <Chip label="مكتمل" size="small" color="success" sx={{ height: 18, fontSize: '0.65rem' }} />
       )}
-   
+
+      {totalCount > 0 && (
+        <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 3, bgcolor: 'action.hover' }}>
+          <Box
+            sx={{
+              height: '100%',
+              width: `${fillPercentage}%`,
+              bgcolor: isComplete ? 'success.main' : 'primary.main',
+              transition: 'width 0.3s ease-out',
+            }}
+          />
+        </Box>
+      )}
     </Paper>
   );
 };
@@ -184,17 +211,36 @@ const LabResultViewerDrawer: React.FC<{
   medHistory: PatientMedicalHistory | undefined;
   isLoadingMedHistory: boolean;
   canPrint: boolean;
+  columnsCount: number;
+  onColumnsCountChange: (count: number) => void;
   onClose: () => void;
   onNavigate: (direction: 'up' | 'down') => void;
   onJumpTo: (index: number) => void;
   onPrintReport: () => void;
-}> = ({ visit, labRequests, index, medHistory, isLoadingMedHistory, canPrint, onClose, onNavigate, onJumpTo, onPrintReport }) => {
+}> = ({
+  visit,
+  labRequests,
+  index,
+  medHistory,
+  isLoadingMedHistory,
+  canPrint,
+  columnsCount,
+  onColumnsCountChange,
+  onClose,
+  onNavigate,
+  onJumpTo,
+  onPrintReport,
+}) => {
   const open = index !== null;
   const canGoUp = index !== null && index > 0;
   const canGoDown = index !== null && index < labRequests.length - 1;
-  // Sliding window of two: the request at `index` and the one right after it.
-  const firstRequest = index !== null ? labRequests[index] : undefined;
-  const secondRequest = index !== null ? labRequests[index + 1] : undefined;
+  // Sliding window of `columnsCount`: the request at `index` and the ones right after it.
+  const visibleRequests = useMemo(
+    () => Array.from({ length: columnsCount }, (_, i) => (index !== null ? labRequests[index + i] : undefined)),
+    [index, labRequests, columnsCount]
+  );
+  const lastVisibleIndex =
+    index !== null ? Math.min(index + columnsCount - 1, labRequests.length - 1) : null;
 
   const p = visit.patient;
 
@@ -249,29 +295,43 @@ const LabResultViewerDrawer: React.FC<{
           {index !== null && (
             <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
               {index + 1}
-              {secondRequest ? `-${index + 2}` : ''} / {labRequests.length} — use ↑ / ↓ to move quickly between lab requests
+              {lastVisibleIndex !== null && lastVisibleIndex > index ? `-${lastVisibleIndex + 1}` : ''} / {labRequests.length} — use ↑ / ↓ to move quickly between lab requests
             </Typography>
           )}
 
-          {canPrint && (
+          <ToggleButtonGroup
+            size="small"
+            exclusive
+            value={columnsCount}
+            onChange={(_, value) => {
+              if (value !== null) onColumnsCountChange(value);
+            }}
+          >
+            {VIEWER_COLUMN_OPTIONS.map(count => (
+              <ToggleButton key={count} value={count} sx={{ px: 1, py: 0.25, fontSize: '0.7rem' }}>
+                {count}
+              </ToggleButton>
+            ))}
+          </ToggleButtonGroup>
+
+
             <Tooltip title="معاينة/طباعة تقرير المختبر">
               <IconButton size="small" onClick={onPrintReport}>
                 <Printer size={20} />
               </IconButton>
             </Tooltip>
-          )}
 
-          <Tooltip title="Close">
-            <IconButton size="small" onClick={onClose}>
+
+            <Button variant="outlined" size="small" onClick={onClose}>
               <X size={20} />
-            </IconButton>
-          </Tooltip>
+            خروج
+            </Button>
         </Box>
 
         {/* Requested lab tests — click one to jump straight to its results */}
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, px: 2, pb: 1.25 }} dir="rtl">
           {labRequests.map((req, i) => {
-            const isShown = i === index || i === (index ?? -1) + 1;
+            const isShown = index !== null && i >= index && i < index + columnsCount;
             return (
               <Chip
                 key={req.id}
@@ -289,18 +349,12 @@ const LabResultViewerDrawer: React.FC<{
 
         {/* Vitals (left) + two lab request result panes, expanded to fill the freed-up space */}
         <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'row' }} dir="ltr">
-          <Box sx={{ width: 320, flexShrink: 0, height: '100%', overflowY: 'auto', borderInlineEnd: '1px solid', borderColor: 'divider' }} dir="rtl">
-            <VitalsSection
-              patientId={visit.patient_id}
-              visitId={visit.id}
-              medHistory={medHistory}
-              isLoading={isLoadingMedHistory}
-            />
-          </Box>
-
-          <LabResultPane labRequest={firstRequest} />
-          <Divider orientation="vertical" flexItem />
-          <LabResultPane labRequest={secondRequest} />
+          {visibleRequests.map((req, i) => (
+            <React.Fragment key={req?.id ?? `empty-${i}`}>
+              {i > 0 && <Divider orientation="vertical" flexItem />}
+              <LabResultPane labRequest={req} />
+            </React.Fragment>
+          ))}
         </Box>
       </Box>
     </Drawer>
@@ -314,7 +368,16 @@ const LabResultsSection: React.FC<LabResultsSectionProps> = ({ visit }) => {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isPdfLoading, setIsPdfLoading] = useState(false);
   const [viewIndex, setViewIndex] = useState<number | null>(null);
+  const [columnsCount, setColumnsCount] = useState<number>(() => {
+    const stored = Number(localStorage.getItem(VIEWER_COLUMNS_STORAGE_KEY));
+    return VIEWER_COLUMN_OPTIONS.includes(stored as (typeof VIEWER_COLUMN_OPTIONS)[number]) ? stored : 2;
+  });
   const testSelectionAutocompleteRef = useRef<HTMLDivElement>(null);
+
+  const handleColumnsCountChange = useCallback((count: number) => {
+    setColumnsCount(count);
+    localStorage.setItem(VIEWER_COLUMNS_STORAGE_KEY, String(count));
+  }, []);
 
   const visitId = visit?.id;
   const patientId = visit?.patient_id;
@@ -381,10 +444,8 @@ const LabResultsSection: React.FC<LabResultsSectionProps> = ({ visit }) => {
     setPdfUrl(null);
     setIsPdfOpen(true);
     try {
-      const response = await apiClient.get(`/visits/${visit.id}/lab-report/pdf`, { responseType: 'blob' });
-      const objectUrl = URL.createObjectURL(response.data as Blob);
+      const objectUrl = await getVisitLabReportPdfUrl(visit.id);
       setPdfUrl(objectUrl);
-      apiClient.post(`/visits/${visit.id}/lab-report/mark-printed`).catch(() => undefined);
     } catch {
       toast.error('فشل إنشاء تقرير المختبر');
       setIsPdfOpen(false);
@@ -521,6 +582,8 @@ const LabResultsSection: React.FC<LabResultsSectionProps> = ({ visit }) => {
         medHistory={medHistory}
         isLoadingMedHistory={isLoadingMedHistory}
         canPrint={resultsReady}
+        columnsCount={columnsCount}
+        onColumnsCountChange={handleColumnsCountChange}
         onClose={() => setViewIndex(null)}
         onNavigate={handleNavigate}
         onJumpTo={setViewIndex}

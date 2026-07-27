@@ -1,4 +1,22 @@
-import React from 'react';
+import React, { useState } from 'react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { restrictToWindowEdges } from '@dnd-kit/modifiers';
 import Grid from '@mui/material/Grid';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
@@ -17,9 +35,11 @@ import {
   Paperclip,
   Pill,
   Smile,
+  GripVertical,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ActivePatientVisit } from '@/types/patients';
+import { getActionGridOrder, saveActionGridOrder } from '@/lib/medical-action-grid-store';
 
 export type SectionKey =
   | 'info'
@@ -51,8 +71,9 @@ const ACTIONS: ActionDef[] = [
   { key: 'vitals',        label: 'العلامات الحيوية',  icon: Activity },
   { key: 'systems',       label: 'مراجعة الأجهزة',   icon: Scan },
   { key: 'teeth',         label: 'الأسنان',            icon: Smile },
-  { key: 'attachments',   label: 'المرفقات',          icon: Paperclip },
 ];
+
+const DEFAULT_ORDER: SectionKey[] = ACTIONS.map(action => action.key);
 
 interface MedicalActionGridProps {
   activeSection: SectionKey;
@@ -60,11 +81,141 @@ interface MedicalActionGridProps {
   visit: ActivePatientVisit | null;
 }
 
+interface SortableActionCardProps {
+  action: ActionDef;
+  isActive: boolean;
+  badgeCount: number | undefined;
+  onSectionChange: (section: SectionKey) => void;
+}
+
+const SortableActionCard: React.FC<SortableActionCardProps> = ({
+  action,
+  isActive,
+  badgeCount,
+  onSectionChange,
+}) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: action.key,
+  });
+
+  const Icon = action.icon;
+
+  const card = (
+    <Paper
+      ref={setNodeRef}
+      onClick={() => onSectionChange(action.key)}
+      elevation={isActive ? 3 : 0}
+      sx={{
+        position: 'relative',
+        p: 1,
+        width: '100%',
+        boxSizing: 'border-box',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 0.5,
+        cursor: isDragging ? 'grabbing' : 'pointer',
+        borderRadius: 2,
+        border: '1px solid',
+        transform: CSS.Transform.toString(transform),
+        transition: [transition, 'background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease']
+          .filter(Boolean)
+          .join(', '),
+        zIndex: isDragging ? 10 : 'auto',
+        opacity: isDragging ? 0.5 : action.placeholder ? 0.6 : 1,
+        borderColor: isActive ? 'primary.main' : 'divider',
+        bgcolor: isActive
+          ? 'primary.main'
+          : action.placeholder
+            ? 'action.disabledBackground'
+            : 'background.paper',
+        '&:hover': {
+          borderColor: isActive ? 'primary.main' : 'primary.light',
+          bgcolor: isActive ? 'primary.dark' : 'primary.50',
+          boxShadow: action.placeholder ? 'none' : 2,
+        },
+        '&:hover .action-grip-handle': {
+          opacity: 0.6,
+        },
+      }}
+    >
+      <Box
+        {...attributes}
+        {...listeners}
+        className="action-grip-handle"
+        onClick={event => event.stopPropagation()}
+        sx={{
+          position: 'absolute',
+          top: 2,
+          insetInlineEnd: 2,
+          display: 'flex',
+          p: 0.25,
+          borderRadius: 0.5,
+          touchAction: 'none',
+          cursor: isDragging ? 'grabbing' : 'grab',
+          opacity: isDragging ? 0.6 : 0.35,
+          transition: 'opacity 0.15s ease',
+          color: isActive ? 'white' : 'text.disabled',
+        }}
+      >
+        <GripVertical size={12} />
+      </Box>
+      <Icon
+        size={20}
+        className={cn(isActive ? 'text-white' : action.placeholder ? 'text-gray-400' : 'text-primary')}
+      />
+      <Typography
+        variant="caption"
+        textAlign="center"
+        sx={{
+          fontSize: '0.65rem',
+          lineHeight: 1.2,
+          fontWeight: isActive ? 600 : 400,
+          color: isActive ? 'white' : action.placeholder ? 'text.disabled' : 'text.primary',
+        }}
+      >
+        {action.label}
+      </Typography>
+    </Paper>
+  );
+
+  return (
+    <Grid size={1}>
+      <Tooltip title={action.placeholder ? 'قريباً' : action.label} placement="top">
+        <Box sx={{ width: '100%' }}>
+          {badgeCount ? (
+            <Badge badgeContent={badgeCount} color="error" sx={{ width: '100%' }}>
+              {card}
+            </Badge>
+          ) : (
+            card
+          )}
+        </Box>
+      </Tooltip>
+    </Grid>
+  );
+};
+
 const MedicalActionGrid: React.FC<MedicalActionGridProps> = ({
   activeSection,
   onSectionChange,
   visit,
 }) => {
+  const [orderedKeys, setOrderedKeys] = useState<SectionKey[]>(() => getActionGridOrder(DEFAULT_ORDER));
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+        tolerance: 5,
+        delay: 0,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
   const getBadgeCount = (key: SectionKey): number | undefined => {
     if (!visit) return undefined;
     if (key === 'services') return visit.requested_services_count || undefined;
@@ -72,6 +223,24 @@ const MedicalActionGrid: React.FC<MedicalActionGridProps> = ({
     if (key === 'attachments') return visit.attachments?.length || undefined;
     return undefined;
   };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    setOrderedKeys(current => {
+      const oldIndex = current.indexOf(active.id as SectionKey);
+      const newIndex = current.indexOf(over.id as SectionKey);
+      if (oldIndex === -1 || newIndex === -1) return current;
+      const newOrder = arrayMove(current, oldIndex, newIndex);
+      saveActionGridOrder(newOrder);
+      return newOrder;
+    });
+  };
+
+  const orderedActions = orderedKeys
+    .map(key => ACTIONS.find(action => action.key === key))
+    .filter((action): action is ActionDef => Boolean(action));
 
   return (
     <Box
@@ -83,79 +252,26 @@ const MedicalActionGrid: React.FC<MedicalActionGridProps> = ({
         bgcolor: 'background.default',
       }}
     >
-      <Grid container spacing={1} columns={8}>
-        {ACTIONS.map(action => {
-          const Icon = action.icon;
-          const isActive = activeSection === action.key;
-          const badgeCount = getBadgeCount(action.key);
-
-          const card = (
-            <Paper
-              onClick={() => onSectionChange(action.key)}
-              elevation={isActive ? 3 : 0}
-              sx={{
-                p: 1,
-                width: '100%',
-                boxSizing: 'border-box',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 0.5,
-                cursor: 'pointer',
-                borderRadius: 2,
-                border: '1px solid',
-                transition: 'all 0.15s ease',
-                borderColor: isActive ? 'primary.main' : 'divider',
-                bgcolor: isActive
-                  ? 'primary.main'
-                  : action.placeholder
-                    ? 'action.disabledBackground'
-                    : 'background.paper',
-                opacity: action.placeholder ? 0.6 : 1,
-                '&:hover': {
-                  borderColor: isActive ? 'primary.main' : 'primary.light',
-                  bgcolor: isActive ? 'primary.dark' : 'primary.50',
-                  transform: action.placeholder ? 'none' : 'translateY(-1px)',
-                  boxShadow: action.placeholder ? 'none' : 2,
-                },
-              }}
-            >
-              <Icon
-                size={20}
-                className={cn(isActive ? 'text-white' : action.placeholder ? 'text-gray-400' : 'text-primary')}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+        modifiers={[restrictToWindowEdges]}
+      >
+        <SortableContext items={orderedKeys} strategy={rectSortingStrategy}>
+          <Grid container spacing={1} columns={9}>
+            {orderedActions.map(action => (
+              <SortableActionCard
+                key={action.key}
+                action={action}
+                isActive={activeSection === action.key}
+                badgeCount={getBadgeCount(action.key)}
+                onSectionChange={onSectionChange}
               />
-              <Typography
-                variant="caption"
-                textAlign="center"
-                sx={{
-                  fontSize: '0.65rem',
-                  lineHeight: 1.2,
-                  fontWeight: isActive ? 600 : 400,
-                  color: isActive ? 'white' : action.placeholder ? 'text.disabled' : 'text.primary',
-                }}
-              >
-                {action.label}
-              </Typography>
-            </Paper>
-          );
-
-          return (
-            <Grid item xs={1} key={action.key}>
-              <Tooltip title={action.placeholder ? 'قريباً' : action.label} placement="top">
-                <Box sx={{ width: '100%' }}>
-                  {badgeCount ? (
-                    <Badge badgeContent={badgeCount} color="error" sx={{ width: '100%' }}>
-                      {card}
-                    </Badge>
-                  ) : (
-                    card
-                  )}
-                </Box>
-              </Tooltip>
-            </Grid>
-          );
-        })}
-      </Grid>
+            ))}
+          </Grid>
+        </SortableContext>
+      </DndContext>
     </Box>
   );
 };

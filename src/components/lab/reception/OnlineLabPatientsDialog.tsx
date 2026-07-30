@@ -206,10 +206,14 @@ const OnlineLabPatientsDialog: React.FC<OnlineLabPatientsDialogProps> = ({
   // Manual refresh: useful to pick up lab_request subcollection changes that
   // don't touch the parent patient document and so won't retrigger the listener below.
   const refreshPatients = async () => {
+    if (!labToLabDb) {
+      setError('خدمة المختبرات الأخرى غير مفعلة');
+      return;
+    }
     setIsLoading(true);
     setError(null);
     try {
-      const patientsRef = collection(labToLabDb!, 'labToLap', 'global', 'patients');
+      const patientsRef = collection(labToLabDb, 'labToLap', 'global', 'patients');
       const q = query(patientsRef, ...buildQueryConditions(searchName, searchDate));
       const querySnapshot = await getDocs(q);
       setPatients(await buildPatientsData(querySnapshot, searchName));
@@ -223,8 +227,10 @@ const OnlineLabPatientsDialog: React.FC<OnlineLabPatientsDialogProps> = ({
   };
   // showJsonDialog(labToLap)
   useEffect(() => {
+    if (!isOpen || !labToLabDb) return;
+
     const fetchLabToLap = async () => {
-     const querySnapshot = await getDocs(collection(labToLabDb!,'labToLap'))
+     const querySnapshot = await getDocs(collection(labToLabDb, 'labToLap'))
      const labToLap: any[] = []
      querySnapshot.forEach(async (doc) => {
       const data = doc.data()
@@ -271,11 +277,15 @@ const OnlineLabPatientsDialog: React.FC<OnlineLabPatientsDialogProps> = ({
   // Realtime subscription: reflects new/updated/deleted patient documents as they happen in Firestore
   useEffect(() => {
     if (!isOpen) return;
+    if (!labToLabDb) {
+      setError('خدمة المختبرات الأخرى غير مفعلة');
+      return;
+    }
 
     setIsLoading(true);
     setError(null);
 
-    const patientsRef = collection(labToLabDb!, 'labToLap', 'global', 'patients');
+    const patientsRef = collection(labToLabDb, 'labToLap', 'global', 'patients');
     const q = query(patientsRef, ...buildQueryConditions(debouncedSearchName, debouncedSearchDate));
 
     const unsubscribe = onSnapshot(

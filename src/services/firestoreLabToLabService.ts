@@ -45,13 +45,13 @@ export const testFirestoreConnection = async (): Promise<void> => {
 };
 
 export const fetchFirestoreLabToLab = async (): Promise<FirestoreLabToLab[]> => {
-  if (!db) {
-    console.warn('Firebase is disabled. Cannot fetch lab-to-lab companies.');
+  if (!labToLabDb) {
+    console.warn('Lab-to-Lab Firebase is disabled. Cannot fetch lab-to-lab companies.');
     return [];
   }
   try {
     // Reference to the labToLap collection
-    const labToLabRef = collection(labToLabDb!, 'labToLap');
+    const labToLabRef = collection(labToLabDb, 'labToLap');
     
     // Query to get all lab-to-lab companies, ordered by name
     console.log('Attempting to fetch from labToLap collection...');

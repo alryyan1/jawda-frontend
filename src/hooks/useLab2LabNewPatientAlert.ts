@@ -11,13 +11,18 @@ export function useLab2LabNewPatientAlert(onNewPatient: (patientName: string) =>
   callbackRef.current = onNewPatient;
 
   useEffect(() => {
+    if (!labToLabDb) {
+      console.warn('Lab-to-Lab Firebase is disabled. Skipping new patient alert listener.');
+      return;
+    }
+
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
 
     const endOfDay = new Date();
     endOfDay.setHours(23, 59, 59, 999);
 
-    const patientsRef = collection(labToLabDb!, 'labToLap', 'global', 'patients');
+    const patientsRef = collection(labToLabDb, 'labToLap', 'global', 'patients');
     const q = query(
       patientsRef,
       where('createdAt', '>=', Timestamp.fromDate(startOfDay)),

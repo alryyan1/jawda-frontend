@@ -113,7 +113,7 @@ const DoctorPortalHeader: React.FC<DoctorPortalHeaderProps> = ({
               />
             </div>
           </TooltipTrigger>
-          <TooltipContent>{shift ? 'النوبة مفتوحة' : 'النوبة مغلقة'}</TooltipContent>
+          <TooltipContent>{shift ? 'الورديه مفتوحة' : 'الورديه مغلقة'}</TooltipContent>
         </Tooltip>
         <div className="min-w-0">
           <div className="flex items-center gap-2">
@@ -122,7 +122,7 @@ const DoctorPortalHeader: React.FC<DoctorPortalHeaderProps> = ({
             </h2>
             {shift && (
               <Badge variant="success" className="shrink-0">
-                نوبة نشطة
+                ورديه نشطة
               </Badge>
             )}
           </div>
@@ -132,7 +132,7 @@ const DoctorPortalHeader: React.FC<DoctorPortalHeaderProps> = ({
               <span className="mx-1.5 text-black">•</span>
               رقم الطبيب #{shift.doctor_id}
               <span className="mx-1.5 text-black">•</span>
-              رقم النوبة #{shift.id}
+              رقم الورديه #{shift.id}
             </p>
           )}
         </div>

@@ -67,20 +67,16 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ visit }) => {
             <TableHead>
               <TableRow>
                 <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>الخدمة</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>المجموعة</TableCell>
                 <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.75rem' }}>العدد</TableCell>
                 <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.75rem' }}>السعر</TableCell>
                 <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.75rem' }}>الدفع</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem' }}>ملاحظة الطبيب</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {services.map(svc => (
                 <TableRow key={svc.id} hover>
                   <TableCell sx={{ fontSize: '0.8rem' }}>{svc.service?.name ?? '—'}</TableCell>
-                  <TableCell sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
-                    {svc.service?.service_group_name ?? svc.service?.service_group?.name ?? '—'}
-                  </TableCell>
+           
                   <TableCell align="center" sx={{ fontSize: '0.8rem' }}>{svc.count}</TableCell>
                   <TableCell align="center" sx={{ fontSize: '0.8rem' }}>{svc.price}</TableCell>
                 
@@ -92,11 +88,7 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ visit }) => {
                       sx={{ fontSize: '0.65rem', height: 18 }}
                     />
                   </TableCell>
-                  <TableCell sx={{ fontSize: '0.75rem', color: 'text.secondary', maxWidth: 150 }}>
-                    <Typography noWrap variant="caption" title={svc.doctor_note}>
-                      {svc.doctor_note || '—'}
-                    </Typography>
-                  </TableCell>
+              
                 </TableRow>
               ))}
             </TableBody>

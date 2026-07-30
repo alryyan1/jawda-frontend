@@ -20,23 +20,32 @@ interface VisitVitalFormValues {
   blood_pressure_systolic: string;
   blood_pressure_diastolic: string;
   heart_rate: string;
+  respiratory_rate: string;
   temperature: string;
   spo2: string;
   weight: string;
+  height: string;
+  pain_scale: string;
+  rbs: string;
 }
 
 const EMPTY_FORM_VALUES: VisitVitalFormValues = {
   blood_pressure_systolic: '', blood_pressure_diastolic: '',
-  heart_rate: '', temperature: '', spo2: '', weight: '',
+  heart_rate: '', respiratory_rate: '', temperature: '', spo2: '', weight: '', height: '',
+  pain_scale: '', rbs: '',
 };
 
 const VISIT_VITAL_FIELDS: { key: keyof VisitVitalFormValues; label: string; unit: string }[] = [
   { key: 'blood_pressure_systolic', label: 'ضغط انقباضي', unit: 'mmHg' },
   { key: 'blood_pressure_diastolic', label: 'ضغط انبساطي', unit: 'mmHg' },
   { key: 'heart_rate', label: 'معدل ضربات القلب', unit: 'bpm' },
+  { key: 'respiratory_rate', label: 'معدل التنفس', unit: '/min' },
   { key: 'temperature', label: 'درجة الحرارة', unit: '°C' },
   { key: 'spo2', label: 'تشبع الأكسجين', unit: '%' },
   { key: 'weight', label: 'الوزن', unit: 'kg' },
+  { key: 'height', label: 'الطول', unit: 'cm' },
+  { key: 'pain_scale', label: 'درجة الألم', unit: '/10' },
+  { key: 'rbs', label: 'سكر الدم العشوائي', unit: 'mg/dL' },
 ];
 
 const formatTime = (iso: string) =>
@@ -49,9 +58,13 @@ const summarizeReadingParts = (v: VisitVital): string[] => {
     parts.push(`ضغط ${v.blood_pressure_systolic ?? '—'}/${v.blood_pressure_diastolic ?? '—'}`);
   }
   if (v.heart_rate != null) parts.push(`نبض ${v.heart_rate}`);
+  if (v.respiratory_rate != null) parts.push(`تنفس ${v.respiratory_rate}`);
   if (v.temperature != null) parts.push(`حرارة ${v.temperature}°`);
   if (v.spo2 != null) parts.push(`تشبع ${v.spo2}%`);
   if (v.weight != null) parts.push(`وزن ${v.weight}كجم`);
+  if (v.height != null) parts.push(`طول ${v.height}سم`);
+  if (v.pain_scale != null) parts.push(`ألم ${v.pain_scale}/10`);
+  if (v.rbs != null) parts.push(`سكر ${v.rbs}`);
   return parts.length > 0 ? parts : ['—'];
 };
 
@@ -60,9 +73,13 @@ const toFormValues = (v: VisitVital): VisitVitalFormValues => ({
   blood_pressure_systolic: v.blood_pressure_systolic?.toString() ?? '',
   blood_pressure_diastolic: v.blood_pressure_diastolic?.toString() ?? '',
   heart_rate: v.heart_rate?.toString() ?? '',
+  respiratory_rate: v.respiratory_rate?.toString() ?? '',
   temperature: v.temperature?.toString() ?? '',
   spo2: v.spo2?.toString() ?? '',
   weight: v.weight?.toString() ?? '',
+  height: v.height?.toString() ?? '',
+  pain_scale: v.pain_scale?.toString() ?? '',
+  rbs: v.rbs?.toString() ?? '',
 });
 
 /** Builds a single-field payload — a blank string clears the field (`null`) rather than being omitted. */

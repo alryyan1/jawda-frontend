@@ -43,6 +43,10 @@ const TEXT_FIELD_KEYS: (keyof FormValues)[] = [
 ];
 
 const CHRONIC_FLAGS: { key: keyof FormValues; label: string }[] = [
+  { key: 'chronic_hypertension',          label: 'ضغط الدم' },
+  { key: 'chronic_diabetes',              label: 'السكري' },
+  { key: 'chronic_heart_disease',         label: 'أمراض القلب' },
+  { key: 'chronic_ibs',                   label: 'القولون العصبي' },
   { key: 'chronic_juandice',              label: 'يرقان مزمن' },
   { key: 'chronic_pallor',                label: 'شحوب مزمن' },
   { key: 'chronic_clubbing',              label: 'تضخم أصابع' },
@@ -71,6 +75,8 @@ const MedicalHistorySection: React.FC<MedicalHistorySectionProps> = ({
       chronic_cyanosis: false, chronic_edema_feet: false, chronic_dehydration_tendency: false,
       chronic_lymphadenopathy: false, chronic_peripheral_pulses_issue: false,
       chronic_feet_ulcer_history: false,
+      chronic_hypertension: false, chronic_diabetes: false,
+      chronic_heart_disease: false, chronic_ibs: false,
     },
   });
 
@@ -96,6 +102,10 @@ const MedicalHistorySection: React.FC<MedicalHistorySectionProps> = ({
         chronic_lymphadenopathy: medHistory.chronic_lymphadenopathy ?? false,
         chronic_peripheral_pulses_issue: medHistory.chronic_peripheral_pulses_issue ?? false,
         chronic_feet_ulcer_history: medHistory.chronic_feet_ulcer_history ?? false,
+        chronic_hypertension: medHistory.chronic_hypertension ?? false,
+        chronic_diabetes: medHistory.chronic_diabetes ?? false,
+        chronic_heart_disease: medHistory.chronic_heart_disease ?? false,
+        chronic_ibs: medHistory.chronic_ibs ?? false,
       });
     }
   }, [medHistory, reset]);
@@ -128,30 +138,7 @@ const MedicalHistorySection: React.FC<MedicalHistorySectionProps> = ({
 
   return (
     <Box component="form" onSubmit={handleSubmit(d => mutation.mutate(d))} sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-      {/* Past history */}
-      <Paper elevation={0} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-        <Typography variant="subtitle2" fontWeight={700} gutterBottom>التاريخ المرضي السابق</Typography>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-          {PAST_HISTORY_FIELDS.map(({ key, label }) => (
-            <Box key={key} sx={{ flexBasis: { xs: '100%', sm: 'calc(50% - 8px)' }, minWidth: 0 }}>
-              <Controller
-                name={key}
-                control={control}
-                render={({ field }) => (
-                  <FieldAutocompleteEditor
-                    value={(field.value as string) ?? ''}
-                    onChange={field.onChange}
-                    fieldKey={key}
-                    label={label}
-                  />
-                )}
-              />
-            </Box>
-          ))}
-        </Box>
-      </Paper>
-
-      {/* Present illness */}
+       {/* Present illness */}
       <Paper elevation={0} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
         <Typography variant="subtitle2" fontWeight={700} gutterBottom>الشكوى الحالية</Typography>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
@@ -185,6 +172,30 @@ const MedicalHistorySection: React.FC<MedicalHistorySectionProps> = ({
           </Box>
         </Box>
       </Paper>
+      {/* Past history */}
+      <Paper elevation={0} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+        <Typography variant="subtitle2" fontWeight={700} gutterBottom>التاريخ المرضي السابق</Typography>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+          {PAST_HISTORY_FIELDS.map(({ key, label }) => (
+            <Box key={key} sx={{ flexBasis: { xs: '100%', sm: 'calc(50% - 8px)' }, minWidth: 0 }}>
+              <Controller
+                name={key}
+                control={control}
+                render={({ field }) => (
+                  <FieldAutocompleteEditor
+                    value={(field.value as string) ?? ''}
+                    onChange={field.onChange}
+                    fieldKey={key}
+                    label={label}
+                  />
+                )}
+              />
+            </Box>
+          ))}
+        </Box>
+      </Paper>
+
+     
 
       {/* Chronic findings */}
       <Paper elevation={0} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>

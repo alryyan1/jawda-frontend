@@ -67,8 +67,10 @@ const VitalsTrendChart: React.FC<VitalsTrendChartProps> = ({ vitals }) => {
     diastolic: v.blood_pressure_diastolic,
   }));
   const hrData = vitals.map((v) => ({ date: formatDate(v.recorded_at), value: v.heart_rate }));
+  const respiratoryData = vitals.map((v) => ({ date: formatDate(v.recorded_at), value: v.respiratory_rate }));
   const tempData = vitals.map((v) => ({ date: formatDate(v.recorded_at), value: v.temperature }));
   const weightData = vitals.map((v) => ({ date: formatDate(v.recorded_at), value: v.weight }));
+  const painData = vitals.map((v) => ({ date: formatDate(v.recorded_at), value: v.pain_scale }));
 
   return (
     <div className="flex flex-col gap-4">
@@ -93,8 +95,10 @@ const VitalsTrendChart: React.FC<VitalsTrendChartProps> = ({ vitals }) => {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <MiniLineChart title="معدل ضربات القلب" data={hrData} unit="bpm" />
+        <MiniLineChart title="معدل التنفس" data={respiratoryData} unit="/min" />
         <MiniLineChart title="درجة الحرارة" data={tempData} unit="°C" />
         <MiniLineChart title="الوزن" data={weightData} unit="kg" />
+        <MiniLineChart title="درجة الألم" data={painData} unit="/10" />
       </div>
     </div>
   );

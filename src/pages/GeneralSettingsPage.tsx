@@ -47,12 +47,6 @@ type SettingsFormData = {
   cr?: string;
   storage_name?: string;
 
-  // Ultramsg WhatsApp Settings
-  ultramsg_instance_id?: string;
-  ultramsg_token?: string;
-  ultramsg_base_url?: string;
-  ultramsg_default_country_code?: string;
-
   // Lab Workflow Settings
   send_result_after_auth?: boolean;
   send_result_after_result?: boolean;
@@ -158,12 +152,6 @@ const SettingsPage: React.FC = () => {
       whatsapp_result_template_name: undefined,
       whatsapp_result_language_code: undefined,
 
-      // Ultramsg WhatsApp Settings
-      ultramsg_instance_id: undefined,
-      ultramsg_token: undefined,
-      ultramsg_base_url: undefined,
-      ultramsg_default_country_code: undefined,
-
       enforce_shift_hours: undefined,
 
       // Lab Workflow Settings
@@ -267,13 +255,6 @@ const SettingsPage: React.FC = () => {
         discount_request_phone: (settings as any).discount_request_phone || undefined,
         whatsapp_result_template_name: settings.whatsapp_result_template_name || undefined,
         whatsapp_result_language_code: settings.whatsapp_result_language_code || undefined,
-
-        // Ultramsg WhatsApp Settings
-        ultramsg_instance_id: settings.ultramsg_instance_id || undefined,
-        ultramsg_token: settings.ultramsg_token || undefined,
-        ultramsg_base_url: settings.ultramsg_base_url || undefined,
-        ultramsg_default_country_code:
-          settings.ultramsg_default_country_code || undefined,
 
         // Lab Workflow Settings
         send_result_after_auth: settings.send_result_after_auth || undefined,
@@ -1118,39 +1099,6 @@ const SettingsPage: React.FC = () => {
             </Typography>
 
             <Stack spacing={3}>
-              <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
-                <TextField
-                  {...control.register("ultramsg_instance_id")}
-                  label="instance id"
-                  placeholder="instance140877"
-                  fullWidth
-                  variant="outlined"
-                />
-                <TextField
-                  {...control.register("ultramsg_token")}
-                  label="token"
-                  type="password"
-                  placeholder="df2r46jz82otkegg"
-                  fullWidth
-                  variant="outlined"
-                />
-              </Stack>
-              <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
-                <TextField
-                  {...control.register("ultramsg_base_url")}
-                  label="رابط الخدمة"
-                  placeholder="https://api.ultramsg.com"
-                  fullWidth
-                  variant="outlined"
-                />
-                <TextField
-                  {...control.register("ultramsg_default_country_code")}
-                  label="رمز الدولة الافتراضي"
-                  placeholder="249"
-                  fullWidth
-                  variant="outlined"
-                />
-              </Stack>
               <TextField
                 {...control.register("whatsapp_number")}
                 label="رقم الواتساب للمشاركة"

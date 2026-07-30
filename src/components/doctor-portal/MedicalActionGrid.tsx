@@ -35,6 +35,7 @@ import {
   Paperclip,
   Pill,
   Smile,
+  CalendarClock,
   GripVertical,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -52,6 +53,8 @@ export type SectionKey =
   | 'diagnosis'
   | 'attachments'
   | 'prescriptions'
+  | 'report'
+  | 'appointments'
   | 'teeth';
 
 interface ActionDef {
@@ -64,12 +67,14 @@ interface ActionDef {
 const ACTIONS: ActionDef[] = [
   { key: 'info',          label: 'بيانات المريض وزياراته', icon: User },
   { key: 'diagnosis',     label: 'التشخيص',           icon: ClipboardList },
+  { key: 'report',        label: 'التقرير الطبي',     icon: FileText },
   { key: 'prescriptions', label: 'الوصفات الطبية',    icon: Pill },
   { key: 'services',      label: 'الخدمات',           icon: Stethoscope },
   { key: 'lab',           label: 'المختبر',            icon: FlaskConical },
   { key: 'history',       label: 'السجل الطبي',       icon: BookOpen },
   { key: 'vitals',        label: 'العلامات الحيوية',  icon: Activity },
   { key: 'systems',       label: 'مراجعة الأجهزة',   icon: Scan },
+  { key: 'appointments',  label: 'المواعيد',           icon: CalendarClock },
   { key: 'teeth',         label: 'الأسنان',            icon: Smile },
 ];
 
@@ -259,7 +264,7 @@ const MedicalActionGrid: React.FC<MedicalActionGridProps> = ({
         modifiers={[restrictToWindowEdges]}
       >
         <SortableContext items={orderedKeys} strategy={rectSortingStrategy}>
-          <Grid container spacing={1} columns={9}>
+          <Grid container spacing={1} columns={11}>
             {orderedActions.map(action => (
               <SortableActionCard
                 key={action.key}

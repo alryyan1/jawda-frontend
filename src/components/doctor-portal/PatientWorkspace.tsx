@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
@@ -7,8 +7,12 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Paper from '@mui/material/Paper';
 import Divider from '@mui/material/Divider';
 import Button from '@mui/material/Button';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
 import { Male, Female } from '@mui/icons-material';
-import { ClipboardList, FlaskConical, HeartPulse, Pill, Printer } from 'lucide-react';
+import { ClipboardList, FileText, FlaskConical, HeartPulse, Pill, Printer, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { getDoctorVisitById } from '@/services/visitService';
 import { getMedicalHistory } from '@/services/patientMedicalHistoryService';
@@ -18,7 +22,9 @@ import {
   getVisitPrescriptionsPdfUrl,
   getPatientMedicalHistoryPdfUrl,
   getVisitLabReportPdfUrl,
+  sendVisitDocumentsWhatsAppMenu,
 } from '@/services/visitDocumentsService';
+import { startVisitMedicalReport, getVisitMedicalReportPdfUrl } from '@/services/visitMedicalReportService';
 import type { DoctorVisit } from '@/types/visits';
 import type { ActivePatientVisit } from '@/types/patients';
 import type { PatientMedicalHistory } from '@/types/medicalHistory';
@@ -32,6 +38,8 @@ import MedicalHistorySection from './sections/MedicalHistorySection';
 import VitalsSection from './sections/VitalsSection';
 import SystemsReviewSection from './sections/SystemsReviewSection';
 import DiagnosisSection from './sections/DiagnosisSection';
+import MedicalReportSection from './sections/MedicalReportSection';
+import AppointmentSection from './sections/AppointmentSection';
 import AttachmentsSection from './sections/AttachmentsSection';
 import PrescriptionsSection from './sections/PrescriptionsSection';
 import TeethSection from './sections/TeethSection';
@@ -52,6 +60,7 @@ interface PatientWorkspaceProps {
 
 const PatientWorkspace: React.FC<PatientWorkspaceProps> = ({ visitId, initialVisit, isVitalsPinned, onToggleVitalsPinned, onSelectVisit }) => {
   const [activeSection, setActiveSection] = useState<SectionKey>('info');
+  const [printMenuAnchor, setPrintMenuAnchor] = useState<null | HTMLElement>(null);
   const [printDialog, setPrintDialog] = useState<{
     open: boolean;
     loading: boolean;
@@ -92,6 +101,22 @@ const PatientWorkspace: React.FC<PatientWorkspaceProps> = ({ visitId, initialVis
   const patient = visit?.patient ?? initialVisit?.patient;
   const visitStatus = visit?.status ?? initialVisit?.status;
 
+  // Sends the "visit_documents_menu" WhatsApp template (medical report /
+  // diagnosis / prescription quick-reply buttons) to this visit's patient.
+  const sendDocumentsMenuMutation = useMutation({
+    mutationFn: () => sendVisitDocumentsWhatsAppMenu(visitId),
+    onSuccess: result => {
+      if (result.success) {
+        toast.success('تم إرسال قائمة المستندات عبر واتساب');
+      } else {
+        toast.error(result.error || 'فشل إرسال قائمة المستندات');
+      }
+    },
+    onError: (error: { response?: { data?: { error?: string } } }) => {
+      toast.error(error.response?.data?.error || 'فشل إرسال قائمة المستندات');
+    },
+  });
+
   // Combined loading check for visit
   if (isLoadingVisit && !initialVisit) {
     return (
@@ -122,11 +147,7 @@ const PatientWorkspace: React.FC<PatientWorkspaceProps> = ({ visitId, initialVis
       >
         {/* Gender icon + Name */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-          {patient?.gender === 'male' ? (
-            <Male sx={{ color: 'info.main', fontSize: 20 }} />
-          ) : (
-            <Female sx={{ color: 'error.light', fontSize: 20 }} />
-          )}
+       
           <Typography variant="subtitle1" fontWeight={700} sx={{ fontSize: '1rem' }}>
             {patient?.name ?? '—'}
           </Typography>
@@ -144,7 +165,12 @@ const PatientWorkspace: React.FC<PatientWorkspaceProps> = ({ visitId, initialVis
         <Typography variant="body2" color="text.secondary">
           ملف #{visit?.file_id ?? initialVisit?.file_id ?? '—'} — زيارة #{visitId}
         </Typography>
-
+          {/* visit date */}
+        {visit?.created_at && (
+          <Typography variant="body2" color="text.secondary">
+            {new Date(visit.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+          </Typography>
+        )}
         {/* Company */}
         {patient?.company_id && (
           <Chip
@@ -171,75 +197,135 @@ const PatientWorkspace: React.FC<PatientWorkspaceProps> = ({ visitId, initialVis
         <Button
           size="small"
           variant="outlined"
-          onClick={() =>
-            printDocument(
-              'الوصفات الطبية',
-              `visit-prescriptions-${visitId}.pdf`,
-              () => getVisitPrescriptionsPdfUrl(visitId),
-              'فشل إنشاء ملف الوصفات الطبية'
-            )
-          }
+          startIcon={<Printer size={16} />}
+          onClick={(e) => setPrintMenuAnchor(e.currentTarget)}
         >
-          الوصفات
+          طباعة
         </Button>
         <Button
           size="small"
           variant="outlined"
-          onClick={() =>
-            printDocument(
-              'نتائج المختبر',
-              `visit-lab-report-${visitId}.pdf`,
-              () => getVisitLabReportPdfUrl(visitId),
-              'فشل إنشاء تقرير المختبر'
+          color="success"
+          startIcon={
+            sendDocumentsMenuMutation.isPending ? (
+              <CircularProgress size={14} color="inherit" />
+            ) : (
+              <Send size={16} />
             )
           }
+          disabled={sendDocumentsMenuMutation.isPending}
+          onClick={() => sendDocumentsMenuMutation.mutate()}
         >
-          المختبر
+          إرسال المستندات عبر واتساب
         </Button>
-        <Button
-          size="small"
-          variant="outlined"
-          startIcon={<HeartPulse size={16} />}
-          onClick={() =>
-            printDocument(
-              'العلامات الحيوية',
-              `visit-vitals-${visitId}.pdf`,
-              () => getVisitVitalsPdfUrl(visitId),
-              'فشل إنشاء ملف العلامات الحيوية'
-            )
-          }
+        <Menu
+          anchorEl={printMenuAnchor}
+          open={Boolean(printMenuAnchor)}
+          onClose={() => setPrintMenuAnchor(null)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'right' }}
         >
-          العلامات الحيوية
-        </Button>
-        <Button
-          size="small"
-          variant="outlined"
-          disabled={!patientId}
-          onClick={() =>
-            printDocument(
-              'التاريخ المرضي',
-              `medical-history-${patientId}.pdf`,
-              () => getPatientMedicalHistoryPdfUrl(patientId!),
-              'فشل إنشاء ملف التاريخ المرضي'
-            )
-          }
-        >
-          التاريخ المرضي
-        </Button>
-        <Button
-          size="small"
-          variant="outlined"
-          onClick={() =>
-            printDocument(
-              'ملخص الزيارة',
-              `visit-summary-${visitId}.pdf`,
-              () => getVisitSummaryPdfUrl(visitId),
-              'فشل إنشاء ملخص الزيارة'
-            )
-          }
-        >
-          الملخص 
-        </Button>
+          <MenuItem
+            onClick={() => {
+              setPrintMenuAnchor(null);
+              printDocument(
+                'الوصفات الطبية',
+                `visit-prescriptions-${visitId}.pdf`,
+                () => getVisitPrescriptionsPdfUrl(visitId),
+                'فشل إنشاء ملف الوصفات الطبية'
+              );
+            }}
+          >
+            <ListItemIcon>
+              <Pill size={16} />
+            </ListItemIcon>
+            <ListItemText>الوصفات</ListItemText>
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
+              setPrintMenuAnchor(null);
+              printDocument(
+                'نتائج المختبر',
+                `visit-lab-report-${visitId}.pdf`,
+                () => getVisitLabReportPdfUrl(visitId),
+                'فشل إنشاء تقرير المختبر'
+              );
+            }}
+          >
+            <ListItemIcon>
+              <FlaskConical size={16} />
+            </ListItemIcon>
+            <ListItemText>المختبر</ListItemText>
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
+              setPrintMenuAnchor(null);
+              printDocument(
+                'العلامات الحيوية',
+                `visit-vitals-${visitId}.pdf`,
+                () => getVisitVitalsPdfUrl(visitId),
+                'فشل إنشاء ملف العلامات الحيوية'
+              );
+            }}
+          >
+            <ListItemIcon>
+              <HeartPulse size={16} />
+            </ListItemIcon>
+            <ListItemText>العلامات الحيوية</ListItemText>
+          </MenuItem>
+          <MenuItem
+            disabled={!patientId}
+            onClick={() => {
+              setPrintMenuAnchor(null);
+              printDocument(
+                'التاريخ المرضي',
+                `medical-history-${patientId}.pdf`,
+                () => getPatientMedicalHistoryPdfUrl(patientId!),
+                'فشل إنشاء ملف التاريخ المرضي'
+              );
+            }}
+          >
+            <ListItemIcon>
+              <ClipboardList size={16} />
+            </ListItemIcon>
+            <ListItemText>التاريخ المرضي</ListItemText>
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
+              setPrintMenuAnchor(null);
+              printDocument(
+                'ملخص الزيارة',
+                `visit-summary-${visitId}.pdf`,
+                () => getVisitSummaryPdfUrl(visitId),
+                'فشل إنشاء ملخص الزيارة'
+              );
+            }}
+          >
+            <ListItemIcon>
+              <Printer size={16} />
+            </ListItemIcon>
+            <ListItemText>الملخص</ListItemText>
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
+              setPrintMenuAnchor(null);
+              printDocument(
+                'التقرير الطبي',
+                `visit-medical-report-${visitId}.pdf`,
+                async () => {
+                  const report = await startVisitMedicalReport(visitId);
+                  return getVisitMedicalReportPdfUrl(report.id);
+                },
+                'فشل إنشاء التقرير الطبي'
+              );
+            }}
+          >
+            <ListItemIcon>
+              <FileText size={16} />
+            </ListItemIcon>
+            <ListItemText>التقرير الطبي</ListItemText>
+          </MenuItem>
+        </Menu>
       </Paper>
 
       {/* Medical action grid */}
@@ -263,6 +349,12 @@ const PatientWorkspace: React.FC<PatientWorkspaceProps> = ({ visitId, initialVis
         )}
         {activeSection === 'diagnosis' && (
           <DiagnosisSection visit={visit} />
+        )}
+        {activeSection === 'report' && (
+          <MedicalReportSection visit={visit} />
+        )}
+        {activeSection === 'appointments' && (
+          <AppointmentSection patientId={patientId} defaultDoctorId={visit?.doctor_id} />
         )}
         {activeSection === 'attachments' && (
           <AttachmentsSection visit={visit} />

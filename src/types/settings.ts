@@ -27,10 +27,6 @@ export interface Setting {
   cr?: string | null;
   email: string;
   address?: string | null;
-  ultramsg_instance_id?: string | null; // Ultramsg WhatsApp instance
-  ultramsg_token?: string | null; // Ultramsg WhatsApp token (handle with care)
-  ultramsg_base_url?: string | null; // Ultramsg base URL
-  ultramsg_default_country_code?: string | null; // Ultramsg default country code
   send_result_after_auth: boolean;
   send_result_after_result: boolean;
   edit_result_after_auth: boolean;

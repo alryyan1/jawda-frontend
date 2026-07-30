@@ -7,6 +7,7 @@ export interface VisitVital {
   temperature: number | null;
   heart_rate: number | null;
   respiratory_rate: number | null;
+  pain_scale: number | null;
   spo2: number | null;
   weight: number | null;
   height: number | null;
@@ -20,6 +21,7 @@ export interface VisitVitalInput {
   temperature?: number | null;
   heart_rate?: number | null;
   respiratory_rate?: number | null;
+  pain_scale?: number | null;
   spo2?: number | null;
   weight?: number | null;
   height?: number | null;

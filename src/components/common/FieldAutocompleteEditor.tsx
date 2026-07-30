@@ -38,7 +38,7 @@ const FieldAutocompleteEditor: React.FC<FieldAutocompleteEditorProps> = ({
   fieldKey,
   label,
   placeholder,
-  minHeight = '64px',
+  minHeight = '120px',
   disabled = false,
 }) => {
   const { theme } = useThemeMode();
@@ -73,6 +73,7 @@ const FieldAutocompleteEditor: React.FC<FieldAutocompleteEditorProps> = ({
           editable={!disabled}
           placeholder={placeholder}
           extensions={extensions}
+          height="120px"
         
         />
       </div>

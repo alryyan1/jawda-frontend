@@ -46,6 +46,10 @@ export interface PatientMedicalHistory {
   chronic_lymphadenopathy?: boolean | null;
   chronic_peripheral_pulses_issue?: boolean | null;
   chronic_feet_ulcer_history?: boolean | null;
+  chronic_hypertension?: boolean | null;
+  chronic_diabetes?: boolean | null;
+  chronic_heart_disease?: boolean | null;
+  chronic_ibs?: boolean | null;
 
   // Care plan
   overall_care_plan_summary?: string | null;

@@ -80,7 +80,7 @@ import type { Specialist } from "@/types/doctors";
 import { getDoctorsList } from "@/services/doctorService";
 import { getServices } from "@/services/serviceService";
 import { getSpecialistsList } from "@/services/doctorService";
-import { sendUltramsgText, type UltramsgTextPayload } from "@/services/ultramsgService";
+import { sendWhatsAppCloudText, type WhatsAppCloudTextPayload } from "@/services/whatsappCloudApiService";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Setting } from "@/types/settings";
 import { getSettings } from "@/services/settingService";
@@ -194,11 +194,11 @@ const BulkWhatsAppPage: React.FC = () => {
 
   const sendTextMutation = useMutation({
     mutationFn: async (payload: { patientId: number; message: string; phone: string }) => {
-      const ultramsgPayload: UltramsgTextPayload = {
+      const cloudApiPayload: WhatsAppCloudTextPayload = {
         to: payload.phone,
-        body: payload.message,
+        text: payload.message,
       };
-      return sendUltramsgText(ultramsgPayload);
+      return sendWhatsAppCloudText(cloudApiPayload);
     },
     // onSuccess and onError will be handled per-patient in the sending loop
   });
@@ -235,7 +235,7 @@ const BulkWhatsAppPage: React.FC = () => {
         specialist_id: data.specialist_id || null,
         unique_phones_only: data.unique_phones_only,
       };
-      // TODO: Implement new patient fetching endpoint for Ultramsg
+      // TODO: Implement a patient-fetching endpoint for this filter set
       // const result = await fetchPatientsForBulkMessage(filters);
       // setFetchedPatients(
       //   result.map((p) => ({ ...p, isSelected: true, sendStatus: "idle" }))

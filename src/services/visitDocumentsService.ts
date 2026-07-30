@@ -23,3 +23,17 @@ export const getVisitLabReportPdfUrl = async (visitId: number): Promise<string> 
   apiClient.post(`/visits/${visitId}/lab-report/mark-printed`).catch(() => undefined);
   return blobToPdfUrl(response.data);
 };
+
+/**
+ * Sends the "visit_documents_menu" WhatsApp template to the visit's patient —
+ * three quick-reply buttons (medical report / diagnosis / prescription) that,
+ * when tapped, have the patient receive the matching PDF as a WhatsApp document.
+ */
+export const sendVisitDocumentsWhatsAppMenu = async (
+  visitId: number
+): Promise<{ success: boolean; error?: string }> => {
+  const response = await apiClient.post<{ success: boolean; error?: string }>(
+    `/doctor-visits/${visitId}/send-documents-whatsapp`
+  );
+  return response.data;
+};

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import dayjs from 'dayjs';
 import { toast } from 'sonner';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
@@ -7,6 +8,8 @@ import Paper from '@mui/material/Paper';
 import Chip from '@mui/material/Chip';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
 import Tooltip from '@mui/material/Tooltip';
 import TextField from '@mui/material/TextField';
 import Autocomplete from '@mui/material/Autocomplete';
@@ -30,6 +33,7 @@ import {
   Printer,
   Send,
   Star,
+  Trash2,
   X,
 } from 'lucide-react';
 
@@ -40,8 +44,10 @@ import {
   getTopRequestedLabTestsForVisit,
   addLabTestsToVisit,
   notifyLabReceptionOfVisit,
+  cancelLabRequest,
 } from '@/services/labRequestService';
 import { getMedicalHistory } from '@/services/patientMedicalHistoryService';
+import { getSameFileVisits } from '@/services/visitService';
 import { isChildTestResultAbnormal, isValueEmpty } from '@/utils/labResultFlags';
 import type { DoctorVisit, LabRequest } from '@/types/visits';
 import type { MainTestWithChildrenResults } from '@/types/labWorkflow';
@@ -55,12 +61,27 @@ const GENDER_LABELS: Record<string, string> = { male: 'ذكر', female: 'أنث�
 const VIEWER_COLUMNS_STORAGE_KEY = 'labResultsViewerColumnCount';
 const VIEWER_COLUMN_OPTIONS = [1, 2, 3, 4] as const;
 
+interface ApiError {
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
+}
+
+const getApiErrorMessage = (error: ApiError, fallback: string): string => error.response?.data?.message || fallback;
+
 interface LabResultsSectionProps {
   visit: DoctorVisit | undefined;
 }
 
 /** One lab request's summary row — fetches its results and shows a progress bar as they're entered, opens the viewer on click. */
-const LabRequestRow: React.FC<{ labRequest: LabRequest; onView: () => void }> = ({ labRequest, onView }) => {
+const LabRequestRow: React.FC<{
+  labRequest: LabRequest;
+  onView: () => void;
+  onCancel: () => void;
+  isCancelling: boolean;
+}> = ({ labRequest, onView, onCancel, isCancelling }) => {
   const testName = labRequest.main_test?.main_test_name ?? `طلب #${labRequest.id}`;
 
   const { data } = useQuery<MainTestWithChildrenResults>({
@@ -73,6 +94,7 @@ const LabRequestRow: React.FC<{ labRequest: LabRequest; onView: () => void }> = 
   const completedCount = childTests.filter(ct => !isValueEmpty(ct.result_value)).length;
   const fillPercentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
   const isComplete = totalCount > 0 && completedCount === totalCount;
+  const canCancel = !labRequest.is_paid;
 
   return (
     <Paper
@@ -104,6 +126,24 @@ const LabRequestRow: React.FC<{ labRequest: LabRequest; onView: () => void }> = 
       )}
       {isComplete && (
         <Chip label="مكتمل" size="small" color="success" sx={{ height: 18, fontSize: '0.65rem' }} />
+      )}
+      {canCancel && (
+        <Tooltip title="إلغاء الفحص">
+          <span>
+            <IconButton
+              size="small"
+              disabled={isCancelling}
+              onClick={e => {
+                e.stopPropagation();
+                if (window.confirm(`هل أنت متأكد من إلغاء فحص "${testName}"؟`)) {
+                  onCancel();
+                }
+              }}
+            >
+              {isCancelling ? <CircularProgress size={14} /> : <Trash2 size={14} />}
+            </IconButton>
+          </span>
+        </Tooltip>
       )}
 
       {totalCount > 0 && (
@@ -231,88 +271,88 @@ const LabResultViewerDrawer: React.FC<{
   onJumpTo,
   onPrintReport,
 }) => {
-  const open = index !== null;
-  const canGoUp = index !== null && index > 0;
-  const canGoDown = index !== null && index < labRequests.length - 1;
-  // Sliding window of `columnsCount`: the request at `index` and the ones right after it.
-  const visibleRequests = useMemo(
-    () => Array.from({ length: columnsCount }, (_, i) => (index !== null ? labRequests[index + i] : undefined)),
-    [index, labRequests, columnsCount]
-  );
-  const lastVisibleIndex =
-    index !== null ? Math.min(index + columnsCount - 1, labRequests.length - 1) : null;
+    const open = index !== null;
+    const canGoUp = index !== null && index > 0;
+    const canGoDown = index !== null && index < labRequests.length - 1;
+    // Sliding window of `columnsCount`: the request at `index` and the ones right after it.
+    const visibleRequests = useMemo(
+      () => Array.from({ length: columnsCount }, (_, i) => (index !== null ? labRequests[index + i] : undefined)),
+      [index, labRequests, columnsCount]
+    );
+    const lastVisibleIndex =
+      index !== null ? Math.min(index + columnsCount - 1, labRequests.length - 1) : null;
 
-  const p = visit.patient;
+    const p = visit.patient;
 
-  // Keyboard navigation while the viewer is open: ArrowUp/ArrowDown move the window by one.
-  useEffect(() => {
-    if (!open) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        if (canGoUp) onNavigate('up');
-      } else if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        if (canGoDown) onNavigate('down');
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [open, canGoUp, canGoDown, onNavigate]);
+    // Keyboard navigation while the viewer is open: ArrowUp/ArrowDown move the window by one.
+    useEffect(() => {
+      if (!open) return;
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          if (canGoUp) onNavigate('up');
+        } else if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          if (canGoDown) onNavigate('down');
+        }
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [open, canGoUp, canGoDown, onNavigate]);
 
-  return (
-    <Drawer anchor="right" open={open} onClose={onClose} slotProps={{ paper: { sx: { width: '100vw', maxWidth: '100vw' } } }}>
-      <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
-        {/* Top bar: condensed patient info, one line, plus navigation + close */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 2, py: 1.25 }} dir="rtl">
-          <Typography sx={{ fontSize: '1.05rem' }}>
-            <Box component="span" sx={{ fontWeight: 700 }}>
-              {p?.name}
-            </Box>
-            {' • '}
-            {p?.age_year ? `${p.age_year} سنة` : '—'}
-            {' • '}
-            {p ? GENDER_LABELS[p.gender] ?? p.gender : ''}
-            {p?.address ? ` • ${p.address}` : ''}
-          </Typography>
-
-          <Box sx={{ flex: 1 }} />
-
-          <Tooltip title="Previous lab request (↑ arrow key)">
-            <span>
-              <IconButton size="small" onClick={() => onNavigate('up')} disabled={!canGoUp}>
-                <ChevronUp size={20} />
-              </IconButton>
-            </span>
-          </Tooltip>
-          <Tooltip title="Next lab request (↓ arrow key)">
-            <span>
-              <IconButton size="small" onClick={() => onNavigate('down')} disabled={!canGoDown}>
-                <ChevronDown size={20} />
-              </IconButton>
-            </span>
-          </Tooltip>
-          {index !== null && (
-            <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
-              {index + 1}
-              {lastVisibleIndex !== null && lastVisibleIndex > index ? `-${lastVisibleIndex + 1}` : ''} / {labRequests.length} — use ↑ / ↓ to move quickly between lab requests
+    return (
+      <Drawer anchor="right" open={open} onClose={onClose} slotProps={{ paper: { sx: { width: '100vw', maxWidth: '100vw' } } }}>
+        <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+          {/* Top bar: condensed patient info, one line, plus navigation + close */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 2, py: 1.25 }} dir="rtl">
+            <Typography sx={{ fontSize: '1.05rem' }}>
+              <Box component="span" sx={{ fontWeight: 700, fontSize: '2.05rem' }}>
+                {p?.name}
+              </Box>
+              {' • '}
+              {p?.age_year ? `${p.age_year} سنة` : '—'}
+              {' • '}
+              {p ? GENDER_LABELS[p.gender] ?? p.gender : ''}
+              {p?.address ? ` • ${p.address}` : ''}
             </Typography>
-          )}
 
-          <ToggleButtonGroup
-            size="small"
-            exclusive
-            value={columnsCount}
-            onChange={(_, value) => {
-              if (value !== null) onColumnsCountChange(value);
-            }}
-          >
-            {VIEWER_COLUMN_OPTIONS.map(count => (
-              <ToggleButton key={count} value={count} sx={{ px: 1, py: 0.25, fontSize: '0.7rem' }}>
-                {count}
-              </ToggleButton>
-            ))}
-          </ToggleButtonGroup>
+            <Box sx={{ flex: 1 }} />
+
+            <Tooltip title="Previous lab request (↑ arrow key)">
+              <span>
+                <IconButton size="small" onClick={() => onNavigate('up')} disabled={!canGoUp}>
+                  <ChevronUp size={20} />
+                </IconButton>
+              </span>
+            </Tooltip>
+            <Tooltip title="Next lab request (↓ arrow key)">
+              <span>
+                <IconButton size="small" onClick={() => onNavigate('down')} disabled={!canGoDown}>
+                  <ChevronDown size={20} />
+                </IconButton>
+              </span>
+            </Tooltip>
+            {index !== null && (
+              <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+                {index + 1}
+                {lastVisibleIndex !== null && lastVisibleIndex > index ? `-${lastVisibleIndex + 1}` : ''} / {labRequests.length} — use ↑ / ↓ to move quickly between lab requests
+              </Typography>
+            )}
+
+            <ToggleButtonGroup
+              size="small"
+              exclusive
+              value={columnsCount}
+              onChange={(_, value) => {
+                if (value !== null) onColumnsCountChange(value);
+              }}
+            >
+              {VIEWER_COLUMN_OPTIONS.map(count => (
+                <ToggleButton key={count} value={count} sx={{ px: 1, py: 0.25, fontSize: '0.7rem' }}>
+                  {count}
+                </ToggleButton>
+              ))}
+            </ToggleButtonGroup>
 
 
             <Tooltip title="معاينة/طباعة تقرير المختبر">
@@ -324,42 +364,42 @@ const LabResultViewerDrawer: React.FC<{
 
             <Button variant="outlined" size="small" onClick={onClose}>
               <X size={20} />
-            خروج
+              خروج
             </Button>
-        </Box>
+          </Box>
 
-        {/* Requested lab tests — click one to jump straight to its results */}
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, px: 2, pb: 1.25 }} dir="rtl">
-          {labRequests.map((req, i) => {
-            const isShown = index !== null && i >= index && i < index + columnsCount;
-            return (
-              <Chip
-                key={req.id}
-                label={req.main_test?.main_test_name ?? `طلب #${req.id}`}
-                size="small"
-                clickable
-                onClick={() => onJumpTo(i)}
-                color={isShown ? 'primary' : 'default'}
-                variant={isShown ? 'filled' : 'outlined'}
-              />
-            );
-          })}
-        </Box>
-        <Divider />
+          {/* Requested lab tests — click one to jump straight to its results */}
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, px: 2, pb: 1.25 }} dir="rtl">
+            {labRequests.map((req, i) => {
+              const isShown = index !== null && i >= index && i < index + columnsCount;
+              return (
+                <Chip
+                  key={req.id}
+                  label={req.main_test?.main_test_name ?? `طلب #${req.id}`}
+                  size="small"
+                  clickable
+                  onClick={() => onJumpTo(i)}
+                  color={isShown ? 'primary' : 'default'}
+                  variant={isShown ? 'filled' : 'outlined'}
+                />
+              );
+            })}
+          </Box>
+          <Divider />
 
-        {/* Vitals (left) + two lab request result panes, expanded to fill the freed-up space */}
-        <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'row' }} dir="ltr">
-          {visibleRequests.map((req, i) => (
-            <React.Fragment key={req?.id ?? `empty-${i}`}>
-              {i > 0 && <Divider orientation="vertical" flexItem />}
-              <LabResultPane labRequest={req} />
-            </React.Fragment>
-          ))}
+          {/* Vitals (left) + two lab request result panes, expanded to fill the freed-up space */}
+          <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'row' }} dir="ltr">
+            {visibleRequests.map((req, i) => (
+              <React.Fragment key={req?.id ?? `empty-${i}`}>
+                {i > 0 && <Divider orientation="vertical" flexItem />}
+                <LabResultPane labRequest={req} />
+              </React.Fragment>
+            ))}
+          </Box>
         </Box>
-      </Box>
-    </Drawer>
-  );
-};
+      </Drawer>
+    );
+  };
 
 const LabResultsSection: React.FC<LabResultsSectionProps> = ({ visit }) => {
   const queryClient = useQueryClient();
@@ -404,6 +444,19 @@ const LabResultsSection: React.FC<LabResultsSectionProps> = ({ visit }) => {
     enabled: !!patientId,
   });
 
+  // Shares the same cache entry as FileVisitsSection — other visits under this patient's
+  // file, used to list their own lab result reports for the "previous reports" dropdown.
+  const { data: fileVisits = [] } = useQuery<DoctorVisit[]>({
+    queryKey: ['sameFileVisits', visitId],
+    queryFn: () => getSameFileVisits(visitId!),
+    enabled: !!visitId,
+  });
+  const previousReportVisits = useMemo(
+    () => fileVisits.filter(v => v.id !== visitId && (v.lab_requests?.length ?? 0) > 0),
+    [fileVisits, visitId]
+  );
+  const [reportsMenuAnchor, setReportsMenuAnchor] = useState<null | HTMLElement>(null);
+
   const availableTests = useMemo(() => [...rawAvailableTests].sort((a, b) => a.id - b.id), [rawAvailableTests]);
   const selectedIds = useMemo(() => new Set(selectedTests.map(t => t.id)), [selectedTests]);
 
@@ -415,13 +468,27 @@ const LabResultsSection: React.FC<LabResultsSectionProps> = ({ visit }) => {
       queryClient.invalidateQueries({ queryKey: ['availableLabTests', visitId] });
       setSelectedTests([]);
     },
-    onError: () => toast.error('حدث خطأ أثناء إضافة الفحوصات'),
+    onError: (error: ApiError) => toast.error(getApiErrorMessage(error, 'حدث خطأ أثناء إضافة الفحوصات')),
   });
 
   const notifyMutation = useMutation({
     mutationFn: () => notifyLabReceptionOfVisit(visitId!),
     onSuccess: () => toast.success('تم إرسال الطلب إلى المختبر'),
-    onError: () => toast.error('فشل إرسال الطلب إلى المختبر'),
+    onError: (error: ApiError) => toast.error(getApiErrorMessage(error, 'فشل إرسال الطلب إلى المختبر')),
+  });
+
+  const [cancellingLabRequestId, setCancellingLabRequestId] = useState<number | null>(null);
+  const cancelLabRequestMutation = useMutation({
+    mutationFn: (labRequestId: number) => cancelLabRequest(labRequestId),
+    onMutate: labRequestId => setCancellingLabRequestId(labRequestId),
+    onSuccess: () => {
+      toast.success('تم إلغاء الفحص بنجاح');
+      queryClient.invalidateQueries({ queryKey: ['doctorVisit', visitId] });
+      queryClient.invalidateQueries({ queryKey: ['availableLabTests', visitId] });
+      queryClient.invalidateQueries({ queryKey: ['topRequestedLabTests', visitId] });
+    },
+    onError: (error: ApiError) => toast.error(getApiErrorMessage(error, 'فشل إلغاء الفحص')),
+    onSettled: () => setCancellingLabRequestId(null),
   });
 
   const [addingTopTestId, setAddingTopTestId] = useState<number | null>(null);
@@ -434,17 +501,16 @@ const LabResultsSection: React.FC<LabResultsSectionProps> = ({ visit }) => {
       queryClient.invalidateQueries({ queryKey: ['availableLabTests', visitId] });
       queryClient.invalidateQueries({ queryKey: ['topRequestedLabTests', visitId] });
     },
-    onError: () => toast.error('حدث خطأ أثناء إضافة الفحص'),
+
     onSettled: () => setAddingTopTestId(null),
   });
 
-  const handlePrintReport = useCallback(async () => {
-    if (!visit) return;
+  const handlePrintReportForVisit = useCallback(async (targetVisitId: number) => {
     setIsPdfLoading(true);
     setPdfUrl(null);
     setIsPdfOpen(true);
     try {
-      const objectUrl = await getVisitLabReportPdfUrl(visit.id);
+      const objectUrl = await getVisitLabReportPdfUrl(targetVisitId);
       setPdfUrl(objectUrl);
     } catch {
       toast.error('فشل إنشاء تقرير المختبر');
@@ -452,7 +518,12 @@ const LabResultsSection: React.FC<LabResultsSectionProps> = ({ visit }) => {
     } finally {
       setIsPdfLoading(false);
     }
-  }, [visit]);
+  }, []);
+
+  const handlePrintReport = useCallback(() => {
+    if (!visit) return;
+    handlePrintReportForVisit(visit.id);
+  }, [visit, handlePrintReportForVisit]);
 
   const handleNavigate = useCallback(
     (direction: 'up' | 'down') => {
@@ -476,206 +547,252 @@ const LabResultsSection: React.FC<LabResultsSectionProps> = ({ visit }) => {
   return (
     <Box sx={{ p: 2 }}>
       <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, overflow: 'hidden' }}>
-      {/* Header */}
-      <Box sx={{ px: 2, py: 1.25, borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'background.default', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
-        <Typography variant="subtitle2" fontWeight={700}>
-          طلبات المختبر ({labRequests.length})
-        </Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          {resultsReady && (
-            <Button
-              size="small"
-              variant="outlined"
-              startIcon={<Printer size={14} />}
-              onClick={handlePrintReport}
-              sx={{ fontSize: '0.75rem', py: 0.5 }}
-            >
-              طباعة التقرير
-            </Button>
-          )}
-          {labRequests.length > 0 && (
-            <Button
-              size="small"
-              variant="outlined"
-              startIcon={notifyMutation.isPending ? <CircularProgress size={14} /> : <Send size={14} />}
-              disabled={notifyMutation.isPending}
-              onClick={() => notifyMutation.mutate()}
-              sx={{ fontSize: '0.75rem', py: 0.5 }}
-            >
-              إرسال إلى المختبر
-            </Button>
-          )}
-        </Box>
-      </Box>
+        {/* Header */}
+        <Box sx={{ px: 2, py: 1.25, borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'background.default', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
+          <Typography variant="subtitle2" fontWeight={700}>
+            طلبات المختبر ({labRequests.length})
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {/* {resultsReady && visit.auth_date && (
+              <Typography variant="caption" color="success.main" fontWeight={600}>
+                تم التحقيق الساعة {dayjs(visit.auth_date).format('hh:mm A')}
+              </Typography>
+            )} */}
+            {/* {resultsReady && (
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<Printer size={14} />}
+                onClick={handlePrintReport}
+                sx={{ fontSize: '0.75rem', py: 0.5 }}
+              >
+                طباعة التقرير
+              </Button>
+            )} */}
+            {previousReportVisits.length > 0 && (
+              <>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<Printer size={14} />}
+                  endIcon={<ChevronDown size={14} />}
+                  onClick={e => setReportsMenuAnchor(e.currentTarget)}
+                  sx={{ fontSize: '0.75rem', py: 0.5 }}
+                >
+                  نتائج مختبر سابقه
+                </Button>
+                <Menu
+                  anchorEl={reportsMenuAnchor}
+                  open={Boolean(reportsMenuAnchor)}
+                  onClose={() => setReportsMenuAnchor(null)}
+                >
+                  {previousReportVisits.map(v => (
+                    
+                    <MenuItem
+                      key={v.id}
+                      onClick={() => {
+                        setReportsMenuAnchor(null);
+                        handlePrintReportForVisit(v.id);
+                      }}
+                    > 
+                      {v.visit_date || '—'}
+                      {v.lab_requests?.length ? ` — ${v.lab_requests.length} فحص` : ''}
+                    </MenuItem>
+                  ))}
+                </Menu>
+              </>
+            )}
+            {labRequests.length > 0 && !resultsReady && (
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={notifyMutation.isPending ? <CircularProgress size={14} /> : <Send size={14} />}
+                disabled={notifyMutation.isPending}
+                onClick={() => notifyMutation.mutate()}
+                sx={{ fontSize: '0.75rem', py: 0.5 }}
+              >
+                إرسال إلى المختبر
+              </Button>
+            )}
+            {!resultsReady && (   <>
+                <Autocomplete
+                  ref={testSelectionAutocompleteRef}
+                  multiple
+                  options={availableTests}
+                  value={selectedTests}
+                  onChange={(_, newValue) => setSelectedTests(newValue)}
+                  getOptionKey={option => option.id}
+                  getOptionLabel={option => option.main_test_name}
+                  isOptionEqualToValue={(option, value) => option.id === value.id}
+                  loading={isLoadingTests}
+                  size="small"
+                  sx={{ width: 320 }}
+                  renderInput={params => (
+                    <TextField
+                      {...params}
+                      label="اختر الفحوصات لإضافتها"
+                      variant="outlined"
+                      placeholder="ابحث واختر الفحوصات..."
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          const enteredId = (e.target as HTMLInputElement).value;
+                          const foundTest = availableTests.find(test => test.id === parseInt(enteredId, 10));
+                          if (foundTest && !selectedIds.has(foundTest.id)) {
+                            setSelectedTests([...selectedTests, foundTest]);
+                          }
+                        } else if (e.key === '+' || e.key === '=') {
+                          e.preventDefault();
+                          if (selectedTests.length > 0 && !addTestsMutation.isPending) {
+                            addTestsMutation.mutate();
+                            (e.target as HTMLInputElement).blur();
+                          }
+                        }
+                      }}
+                    />
+                  )}
+                  noOptionsText="لا توجد نتائج"
+                  loadingText="جاري التحميل"
+                />
 
-      {/* Always-visible test picker — same pattern as the Lab Reception page */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1.5, flexWrap: 'wrap', bgcolor: 'action.hover', borderBottom: '1px solid', borderColor: 'divider' }}>
-        <Autocomplete
-          ref={testSelectionAutocompleteRef}
-          multiple
-          options={availableTests}
-          value={selectedTests}
-          onChange={(_, newValue) => setSelectedTests(newValue)}
-          getOptionKey={option => option.id}
-          getOptionLabel={option => option.main_test_name}
-          isOptionEqualToValue={(option, value) => option.id === value.id}
-          loading={isLoadingTests}
-          size="small"
-          sx={{ width: 320 }}
-          renderInput={params => (
-            <TextField
-              {...params}
-              label="اختر الفحوصات لإضافتها"
-              variant="outlined"
-              placeholder="ابحث واختر الفحوصات..."
-              onKeyDown={e => {
-                if (e.key === 'Enter') {
-                  const enteredId = (e.target as HTMLInputElement).value;
-                  const foundTest = availableTests.find(test => test.id === parseInt(enteredId, 10));
-                  if (foundTest && !selectedIds.has(foundTest.id)) {
-                    setSelectedTests([...selectedTests, foundTest]);
-                  }
-                } else if (e.key === '+' || e.key === '=') {
-                  e.preventDefault();
-                  if (selectedTests.length > 0 && !addTestsMutation.isPending) {
-                    addTestsMutation.mutate();
-                    (e.target as HTMLInputElement).blur();
-                  }
-                }
-              }}
-            />
-          )}
-          noOptionsText="لا توجد نتائج"
-          loadingText="جاري التحميل"
+                <Button
+                  onClick={() => addTestsMutation.mutate()}
+                  disabled={selectedTests.length === 0 || addTestsMutation.isPending}
+                  variant="contained"
+                  size="small"
+                  startIcon={addTestsMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                >
+                  إضافة فحص {selectedTests.length > 0 && `(${selectedTests.length})`}
+                </Button>
+              </>)}
+       
+          </Box>
+
+        </Box>
+
+
+
+        <LabReportPdfPreviewDialog
+          isOpen={isPdfOpen}
+          onOpenChange={open => {
+            setIsPdfOpen(open);
+            if (!open) {
+              if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+              setPdfUrl(null);
+            }
+          }}
+          pdfUrl={pdfUrl}
+          title="تقرير نتائج المختبر"
+          fileName={`lab-report-${visit.id}.pdf`}
+          isLoading={isPdfLoading}
         />
 
-        <Button
-          onClick={() => addTestsMutation.mutate()}
-          disabled={selectedTests.length === 0 || addTestsMutation.isPending}
-          variant="contained"
-          size="small"
-          startIcon={addTestsMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
-        >
-          إضافة فحص {selectedTests.length > 0 && `(${selectedTests.length})`}
-        </Button>
-      </Box>
-
-      <LabReportPdfPreviewDialog
-        isOpen={isPdfOpen}
-        onOpenChange={open => {
-          setIsPdfOpen(open);
-          if (!open) {
-            if (pdfUrl) URL.revokeObjectURL(pdfUrl);
-            setPdfUrl(null);
-          }
-        }}
-        pdfUrl={pdfUrl}
-        title="تقرير نتائج المختبر"
-        fileName={`lab-report-${visit.id}.pdf`}
-        isLoading={isPdfLoading}
-      />
-
-      <LabResultViewerDrawer
-        visit={visit}
-        labRequests={labRequests}
-        index={viewIndex}
-        medHistory={medHistory}
-        isLoadingMedHistory={isLoadingMedHistory}
-        canPrint={resultsReady}
-        columnsCount={columnsCount}
-        onColumnsCountChange={handleColumnsCountChange}
-        onClose={() => setViewIndex(null)}
-        onNavigate={handleNavigate}
-        onJumpTo={setViewIndex}
-        onPrintReport={handlePrintReport}
-      />
+        <LabResultViewerDrawer
+          visit={visit}
+          labRequests={labRequests}
+          index={viewIndex}
+          medHistory={medHistory}
+          isLoadingMedHistory={isLoadingMedHistory}
+          canPrint={resultsReady}
+          columnsCount={columnsCount}
+          onColumnsCountChange={handleColumnsCountChange}
+          onClose={() => setViewIndex(null)}
+          onNavigate={handleNavigate}
+          onJumpTo={setViewIndex}
+          onPrintReport={handlePrintReport}
+        />
 
 
-      <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', p: 2, bgcolor: 'background.paper' }}>
-        {labRequests.length > 0 && (
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 1,
-              width: '220px',
-              p: 1.5,
-              borderRadius: 2,
-              border: '1px solid',
-              borderColor: 'divider',
-              bgcolor: 'background.default',
-            }}
-          >
-            <Typography variant="caption" fontWeight={700} color="text.secondary">
-              الفحوصات المطلوبة ({labRequests.length})
-            </Typography>
-            {labRequests.map((req, i) => (
-              <LabRequestRow key={req.id} labRequest={req} onView={() => setViewIndex(i)} />
-            ))}
-          </Box>
-        )}
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', p: 2, bgcolor: 'background.paper' }}>
+          {labRequests.length > 0 && (
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 1,
+                width: '220px',
+                p: 1.5,
+                borderRadius: 2,
+                border: '1px solid',
+                borderColor: 'divider',
+                bgcolor: 'background.default',
+              }}
+            >
+              <Typography variant="caption" fontWeight={700} color="text.secondary">
+                الفحوصات المطلوبة ({labRequests.length})
+              </Typography>
+              {labRequests.map((req, i) => (
+                <LabRequestRow
+                  key={req.id}
+                  labRequest={req}
+                  onView={() => setViewIndex(i)}
+                  onCancel={() => cancelLabRequestMutation.mutate(req.id)}
+                  isCancelling={cancellingLabRequestId === req.id}
+                />
+              ))}
+            </Box>
+          )}
 
-        {(isLoadingTopTests || topRequestedTests.length > 0) && (
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 1,
-              width: '220px',
-              marginInlineStart: 'auto',
-              p: 1.5,
-              borderRadius: 2,
-              border: '1px solid',
-              borderColor: theme => alpha(theme.palette.warning.main, 0.3),
-              bgcolor: theme => alpha(theme.palette.warning.main, 0.06),
-            }}
-          >
-            <Typography variant="caption" fontWeight={700} color="warning.dark" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <Star size={12} /> الأكثر طلبًا
-            </Typography>
-            {isLoadingTopTests ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-                <CircularProgress size={20} />
-              </Box>
-            ) : (
-              topRequestedTests.map(test => (
-                <Paper
-                  key={test.id}
-                  onClick={() => {
-                    if (!addTopTestMutation.isPending) addTopTestMutation.mutate(test);
-                  }}
-                  elevation={0}
-                  sx={{
-                    bgcolor: 'background.paper',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1,
-                    px: 1.5,
-                    py: 1,
-                    cursor: addTopTestMutation.isPending ? 'default' : 'pointer',
-                    opacity: addingTopTestId === test.id ? 0.6 : 1,
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    borderRadius: 2,
-                    transition: 'all 0.12s',
-                    '&:hover': addTopTestMutation.isPending ? undefined : { borderColor: 'warning.main', bgcolor: 'action.hover' },
-                  }}
-                >
-                  <Typography  variant="body2" sx={{ flex: 1 }}>
-                    {test.main_test_name}
-                  </Typography>
-                  {addingTopTestId === test.id ? (
-                    <Loader2 size={14} className="animate-spin" />
-                  ) : (
-                    <Plus size={14} />
-                  )}
-                </Paper>
-              ))
-            )}
-          </Box>
-        )}
-      </Box>
-    </Paper>
+          {(isLoadingTopTests || topRequestedTests.length > 0) && (
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 1,
+                width: '220px',
+                marginInlineStart: 'auto',
+                p: 1.5,
+                borderRadius: 2,
+                border: '1px solid',
+                borderColor: theme => alpha(theme.palette.warning.main, 0.3),
+                bgcolor: theme => alpha(theme.palette.warning.main, 0.06),
+              }}
+            >
+              <Typography variant="caption" fontWeight={700} color="warning.dark" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Star size={12} /> الأكثر طلبًا
+              </Typography>
+              {isLoadingTopTests ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                  <CircularProgress size={20} />
+                </Box>
+              ) : (
+                topRequestedTests.map(test => (
+                  <Paper
+                    key={test.id}
+                    onClick={() => {
+                      if (!addTopTestMutation.isPending) addTopTestMutation.mutate(test);
+                    }}
+                    elevation={0}
+                    sx={{
+                      bgcolor: 'background.paper',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.3,
+                      px: 1.5,
+                      py: 0.5,
+                      cursor: addTopTestMutation.isPending ? 'default' : 'pointer',
+                      opacity: addingTopTestId === test.id ? 0.6 : 1,
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      borderRadius: 2,
+                      transition: 'all 0.12s',
+                      '&:hover': addTopTestMutation.isPending ? undefined : { borderColor: 'warning.main', bgcolor: 'action.hover' },
+                    }}
+                  >
+                    <Typography variant="body2" sx={{ flex: 1 }}>
+                      {test.main_test_name}
+                    </Typography>
+                    {addingTopTestId === test.id ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <Plus size={14} />
+                    )}
+                  </Paper>
+                ))
+              )}
+            </Box>
+          )}
+        </Box>
+      </Paper>
     </Box>
   );
 };

@@ -344,7 +344,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({ activeVisitId, vi
   return (
     <div className="flex h-full flex-col">
       {/* Toolbar */}
-      <div className="flex flex-col items-start justify-between gap-2 border-b border-border bg-muted/40 p-1.5 sm:flex-row sm:items-center">
+      <div className="flex flex-col items-start justify-between gap-2 border-b border-border  p-1.5 sm:flex-row sm:items-center">
         <div className="flex items-center gap-2">
           <Button onClick={onPrintReceipt} variant="outline" size="sm" disabled={labRequests.length === 0}>
             <PrinterIcon className="mr-2 h-4 w-4" />

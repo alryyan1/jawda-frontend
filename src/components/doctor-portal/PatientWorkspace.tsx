@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import React, { useEffect, useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
@@ -59,6 +59,7 @@ interface PatientWorkspaceProps {
 
 
 const PatientWorkspace: React.FC<PatientWorkspaceProps> = ({ visitId, initialVisit, isVitalsPinned, onToggleVitalsPinned, onSelectVisit }) => {
+  const queryClient = useQueryClient();
   const [activeSection, setActiveSection] = useState<SectionKey>('info');
   const [printMenuAnchor, setPrintMenuAnchor] = useState<null | HTMLElement>(null);
   const [printDialog, setPrintDialog] = useState<{
@@ -90,6 +91,14 @@ const PatientWorkspace: React.FC<PatientWorkspaceProps> = ({ visitId, initialVis
   // Resolve patient id from either the fetched visit or the initial snapshot
   const patientId = visit?.patient_id ?? initialVisit?.patient_id;
 
+  // Refresh lab data every time the doctor opens the lab tab, so newly entered results/requests show up immediately.
+  useEffect(() => {
+    if (activeSection === 'lab' && visitId) {
+      queryClient.invalidateQueries({ queryKey: ['doctorVisit', visitId] });
+      queryClient.invalidateQueries({ queryKey: ['labRequestForEntry'] });
+    }
+  }, [activeSection, visitId, queryClient]);
+
   // Medical history (vitals, history, systems)
   const { data: medHistory, isLoading: isLoadingMedHistory } = useQuery<PatientMedicalHistory>({
     queryKey: ['medicalHistory', patientId],
@@ -102,7 +111,7 @@ const PatientWorkspace: React.FC<PatientWorkspaceProps> = ({ visitId, initialVis
   const visitStatus = visit?.status ?? initialVisit?.status;
 
   // Sends the "visit_documents_menu" WhatsApp template (medical report /
-  // diagnosis / prescription quick-reply buttons) to this visit's patient.
+  // diagnosis / prescription / lab result quick-reply buttons) to this visit's patient.
   const sendDocumentsMenuMutation = useMutation({
     mutationFn: () => sendVisitDocumentsWhatsAppMenu(visitId),
     onSuccess: result => {
@@ -200,7 +209,7 @@ const PatientWorkspace: React.FC<PatientWorkspaceProps> = ({ visitId, initialVis
           startIcon={<Printer size={16} />}
           onClick={(e) => setPrintMenuAnchor(e.currentTarget)}
         >
-          طباعة
+          المستندات
         </Button>
         <Button
           size="small"

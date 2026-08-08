@@ -61,6 +61,7 @@ import {
 } from "@/services/labRequestService";
 import { getSinglePatientLabQueueItem } from "@/services/labWorkflowService";
 import { getSettings } from "@/services/settingService";
+import realtimeService from "@/services/realtimeService";
 import apiClient from "@/services/api";
 import LabQueueFilterDialog, {
   type LabQueueFilters,
@@ -580,6 +581,23 @@ const LabWorkstationPage: React.FC = () => {
     },
     [selectedQueueItem],
   );
+
+  // Realtime: another workstation (or the doctor portal) authenticated a
+  // patient's results — the backend emits this same "lab-queue-item-updated"
+  // event on authenticateResults(), carrying the full updated queue item, so
+  // we can reuse handleItemUpdated to refresh the queue/selected item here too.
+  useEffect(() => {
+    const handleLabQueueItemUpdated = (data: { queueItem: PatientLabQueueItem }): void => {
+      if (data.queueItem) {
+        handleItemUpdated(data.queueItem);
+      }
+    };
+
+    realtimeService.onLabQueueItemUpdated(handleLabQueueItemUpdated);
+    return () => {
+      realtimeService.offLabQueueItemUpdated(handleLabQueueItemUpdated);
+    };
+  }, [handleItemUpdated]);
 
   const handleSearchByVisitIdEnter = (
     event: React.KeyboardEvent<HTMLInputElement>,

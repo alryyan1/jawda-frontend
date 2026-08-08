@@ -1,5 +1,5 @@
 import React from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, Controller, type Control } from 'react-hook-form';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import Dialog from '@mui/material/Dialog';
@@ -8,14 +8,65 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
+import Autocomplete from '@mui/material/Autocomplete';
 import Box from '@mui/material/Box';
-import Grid from '@mui/material/Grid';
 import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
 import CircularProgress from '@mui/material/CircularProgress';
 import { Pill, Plus, Trash2 } from 'lucide-react';
 import { addVisitPrescription } from '@/services/visitPrescriptionService';
 import type { VisitPrescriptionItemInput } from '@/types/prescriptions';
+
+const DOSAGE_OPTIONS = [
+  '5 مجم',
+  '10 مجم',
+  '25 مجم',
+  '50 مجم',
+  '100 مجم',
+  '250 مجم',
+  '500 مجم',
+  '1 مجم',
+  'قرص واحد',
+  'نصف قرص',
+  'قرصان',
+  '5 مل',
+  '10 مل',
+];
+
+const FREQUENCY_OPTIONS = [
+  'مرة يوميًا',
+  'مرتين يوميًا',
+  'ثلاث مرات يوميًا',
+  'أربع مرات يوميًا',
+  'كل 6 ساعات',
+  'كل 8 ساعات',
+  'كل 12 ساعة',
+  'عند اللزوم',
+  'قبل النوم',
+];
+
+const DURATION_OPTIONS = ['3 أيام', '5 أيام', '7 أيام', '10 أيام', 'أسبوعين', 'شهر', 'مستمر', 'حسب الحاجة'];
+
+const ROUTE_OPTIONS = [
+  'عن طريق الفم',
+  'حقن عضلي',
+  'حقن وريدي',
+  'موضعي',
+  'تحت اللسان',
+  'شرجي',
+  'استنشاق',
+  'قطرة عين',
+  'قطرة أذن',
+];
+
+const INSTRUCTIONS_OPTIONS = [
+  'بعد الأكل',
+  'قبل الأكل',
+  'مع الطعام',
+  'على معدة فارغة',
+  'يفضل مع كوب ماء كامل',
+  'تجنب مع منتجات الألبان',
+];
 
 interface AddPrescriptionDialogProps {
   open: boolean;
@@ -27,6 +78,31 @@ interface FormValues {
   notes: string;
   items: VisitPrescriptionItemInput[];
 }
+
+interface PresetAutocompleteFieldProps {
+  control: Control<FormValues>;
+  name: `items.${number}.${'dosage' | 'frequency' | 'duration' | 'route' | 'instructions'}`;
+  label: string;
+  options: string[];
+}
+
+const PresetAutocompleteField: React.FC<PresetAutocompleteFieldProps> = ({ control, name, label, options }) => (
+  <Controller
+    control={control}
+    name={name}
+    render={({ field: { onChange, value, ...field } }) => (
+      <Autocomplete
+        {...field}
+        freeSolo
+        options={options}
+        value={value || ''}
+        onChange={(_, newValue) => onChange(newValue || '')}
+        onInputChange={(_, newValue) => onChange(newValue)}
+        renderInput={(params) => <TextField {...params} size="small" label={label} fullWidth />}
+      />
+    )}
+  />
+);
 
 const EMPTY_ITEM: VisitPrescriptionItemInput = {
   medication_name: '',
@@ -81,8 +157,8 @@ const AddPrescriptionDialog: React.FC<AddPrescriptionDialogProps> = ({ open, onC
             key={field.id}
             sx={{ p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, position: 'relative' }}
           >
-            <Grid container spacing={1.5}>
-              <Grid item xs={12} sm={4}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+              <Box sx={{ flex: '1 1 240px' }}>
                 <TextField
                   size="small"
                   fullWidth
@@ -90,28 +166,48 @@ const AddPrescriptionDialog: React.FC<AddPrescriptionDialogProps> = ({ open, onC
                   required
                   {...register(`items.${index}.medication_name` as const)}
                 />
-              </Grid>
-              <Grid item xs={6} sm={2}>
-                <TextField size="small" fullWidth label="الجرعة" {...register(`items.${index}.dosage` as const)} />
-              </Grid>
-              <Grid item xs={6} sm={2}>
-                <TextField size="small" fullWidth label="التكرار" {...register(`items.${index}.frequency` as const)} />
-              </Grid>
-              <Grid item xs={6} sm={2}>
-                <TextField size="small" fullWidth label="المدة" {...register(`items.${index}.duration` as const)} />
-              </Grid>
-              <Grid item xs={6} sm={2}>
-                <TextField size="small" fullWidth label="طريقة الاستخدام" {...register(`items.${index}.route` as const)} />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  size="small"
-                  fullWidth
-                  label="تعليمات إضافية"
-                  {...register(`items.${index}.instructions` as const)}
+              </Box>
+              <Box sx={{ flex: '1 1 140px' }}>
+                <PresetAutocompleteField
+                  control={control}
+                  name={`items.${index}.dosage` as const}
+                  label="الجرعة"
+                  options={DOSAGE_OPTIONS}
                 />
-              </Grid>
-            </Grid>
+              </Box>
+              <Box sx={{ flex: '1 1 140px' }}>
+                <PresetAutocompleteField
+                  control={control}
+                  name={`items.${index}.frequency` as const}
+                  label="التكرار"
+                  options={FREQUENCY_OPTIONS}
+                />
+              </Box>
+              <Box sx={{ flex: '1 1 140px' }}>
+                <PresetAutocompleteField
+                  control={control}
+                  name={`items.${index}.duration` as const}
+                  label="المدة"
+                  options={DURATION_OPTIONS}
+                />
+              </Box>
+              <Box sx={{ flex: '1 1 140px' }}>
+                <PresetAutocompleteField
+                  control={control}
+                  name={`items.${index}.route` as const}
+                  label="طريقة الاستخدام"
+                  options={ROUTE_OPTIONS}
+                />
+              </Box>
+              <Box sx={{ flex: '1 1 100%' }}>
+                <PresetAutocompleteField
+                  control={control}
+                  name={`items.${index}.instructions` as const}
+                  label="تعليمات إضافية"
+                  options={INSTRUCTIONS_OPTIONS}
+                />
+              </Box>
+            </Box>
             {fields.length > 1 && (
               <IconButton
                 size="small"

@@ -61,7 +61,7 @@ const FileVisitsDialog: React.FC<FileVisitsDialogProps> = ({
                 <TableCell align="center">رقم الزيارة</TableCell>
                 <TableCell align="center">تاريخ الزيارة</TableCell>
                 <TableCell align="center">الطبيب</TableCell>
-                <TableCell align="right">اسم المريض</TableCell>
+                <TableCell align="center">اسم المريض</TableCell>
                 <TableCell align="center">وقت الزيارة</TableCell>
               </TableRow>
             </TableHead>

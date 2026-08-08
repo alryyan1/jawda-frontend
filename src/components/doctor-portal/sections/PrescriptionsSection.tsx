@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import Box from '@mui/material/Box';
@@ -15,19 +15,131 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import IconButton from '@mui/material/IconButton';
 import Chip from '@mui/material/Chip';
-import { ChevronDown, Pill, Plus, Printer, Trash2 } from 'lucide-react';
+import Divider from '@mui/material/Divider';
+import { ChevronDown, History, Pill, Plus, Printer, Trash2 } from 'lucide-react';
 
 import {
   getVisitPrescriptions,
   deleteVisitPrescription,
   openVisitPrescriptionPdf,
 } from '@/services/visitPrescriptionService';
+import { getSameFileVisits } from '@/services/visitService';
 import AddPrescriptionDialog from '../AddPrescriptionDialog';
 import type { DoctorVisit } from '@/types/visits';
+import type { VisitPrescription } from '@/types/prescriptions';
 
 interface PrescriptionsSectionProps {
   visit: DoctorVisit | undefined;
 }
+
+/** One prescription's accordion — used for both the current visit's list and previous visits' read-only history. */
+const PrescriptionAccordion: React.FC<{
+  prescription: VisitPrescription;
+  defaultExpanded?: boolean;
+  onDelete?: (id: number) => void;
+}> = ({ prescription: rx, defaultExpanded, onDelete }) => (
+  <Accordion defaultExpanded={defaultExpanded}>
+    <AccordionSummary expandIcon={<ChevronDown size={18} />}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%', flexWrap: 'wrap' }}>
+        <Pill size={16} />
+        <Typography variant="body2" fontWeight={600}>
+          وصفة #{rx.id} — {new Date(rx.created_at).toLocaleString('ar-EG')}
+        </Typography>
+        {rx.user?.name && (
+          <Typography variant="caption" color="text.secondary">
+            بواسطة {rx.user.name}
+          </Typography>
+        )}
+        <Chip label={`${rx.items.length} دواء`} size="small" sx={{ ml: 1 }} />
+        <Box sx={{ flex: 1 }} />
+        <IconButton
+          size="small"
+          onClick={(e) => {
+            e.stopPropagation();
+            openVisitPrescriptionPdf(rx.id);
+          }}
+        >
+          <Printer size={16} />
+        </IconButton>
+        {onDelete && (
+          <IconButton
+            size="small"
+            color="error"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(rx.id);
+            }}
+          >
+            <Trash2 size={16} />
+          </IconButton>
+        )}
+      </Box>
+    </AccordionSummary>
+    <AccordionDetails>
+      <Table size="small">
+        <TableHead>
+          <TableRow>
+            <TableCell>الدواء</TableCell>
+            <TableCell>الجرعة</TableCell>
+            <TableCell>التكرار</TableCell>
+            <TableCell>المدة</TableCell>
+            <TableCell>تعليمات</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {rx.items.map((item) => (
+            <TableRow key={item.id}>
+              <TableCell>{item.medication_name}</TableCell>
+              <TableCell>{item.dosage ?? '—'}</TableCell>
+              <TableCell>{item.frequency ?? '—'}</TableCell>
+              <TableCell>{item.duration ?? '—'}</TableCell>
+              <TableCell>{item.instructions ?? '—'}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      {rx.notes && (
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
+          ملاحظات: {rx.notes}
+        </Typography>
+      )}
+    </AccordionDetails>
+  </Accordion>
+);
+
+/** One previous visit's prescriptions, fetched on its own — collapsed until the doctor wants to check it. Hidden once loaded if that visit had none. */
+const PreviousVisitPrescriptions: React.FC<{ visit: DoctorVisit }> = ({ visit }) => {
+  const { data: prescriptions = [], isLoading } = useQuery({
+    queryKey: ['visitPrescriptions', visit.id],
+    queryFn: () => getVisitPrescriptions(visit.id),
+  });
+
+  if (!isLoading && prescriptions.length === 0) {
+    return null;
+  }
+
+  return (
+    <Accordion>
+      <AccordionSummary expandIcon={<ChevronDown size={18} />}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+          <Typography variant="body2" fontWeight={600}>
+            {visit.visit_date || '—'} — {visit.doctor?.name ?? visit.doctor_name ?? 'غير محدد'}
+          </Typography>
+          {isLoading ? (
+            <CircularProgress size={14} sx={{ ml: 1 }} />
+          ) : (
+            <Chip label={`${prescriptions.length} وصفة`} size="small" sx={{ ml: 1 }} />
+          )}
+        </Box>
+      </AccordionSummary>
+      <AccordionDetails sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+        {prescriptions.map((rx) => (
+          <PrescriptionAccordion key={rx.id} prescription={rx} />
+        ))}
+      </AccordionDetails>
+    </Accordion>
+  );
+};
 
 const PrescriptionsSection: React.FC<PrescriptionsSectionProps> = ({ visit }) => {
   const queryClient = useQueryClient();
@@ -39,6 +151,15 @@ const PrescriptionsSection: React.FC<PrescriptionsSectionProps> = ({ visit }) =>
     queryFn: () => getVisitPrescriptions(visitId!),
     enabled: !!visitId,
   });
+
+  // Shares the same cache entry as FileVisitsSection/LabResultsSection — other visits under
+  // this patient's file, used to list their own prescriptions further down this section.
+  const { data: fileVisits = [] } = useQuery<DoctorVisit[]>({
+    queryKey: ['sameFileVisits', visitId],
+    queryFn: () => getSameFileVisits(visitId!),
+    enabled: !!visitId,
+  });
+  const previousVisits = useMemo(() => fileVisits.filter(v => v.id !== visitId), [fileVisits, visitId]);
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => deleteVisitPrescription(id),
@@ -78,67 +199,23 @@ const PrescriptionsSection: React.FC<PrescriptionsSectionProps> = ({ visit }) =>
         </Box>
       ) : (
         prescriptions.map((rx) => (
-          <Accordion key={rx.id} defaultExpanded>
-            <AccordionSummary expandIcon={<ChevronDown size={18} />}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
-                <Pill size={16} />
-                <Typography variant="body2" fontWeight={600}>
-                  وصفة #{rx.id} — {new Date(rx.created_at).toLocaleString('ar-EG')}
-                </Typography>
-                <Chip label={`${rx.items.length} دواء`} size="small" sx={{ ml: 1 }} />
-                <Box sx={{ flex: 1 }} />
-                <IconButton
-                  size="small"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openVisitPrescriptionPdf(rx.id);
-                  }}
-                >
-                  <Printer size={16} />
-                </IconButton>
-                <IconButton
-                  size="small"
-                  color="error"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    deleteMutation.mutate(rx.id);
-                  }}
-                >
-                  <Trash2 size={16} />
-                </IconButton>
-              </Box>
-            </AccordionSummary>
-            <AccordionDetails>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>الدواء</TableCell>
-                    <TableCell>الجرعة</TableCell>
-                    <TableCell>التكرار</TableCell>
-                    <TableCell>المدة</TableCell>
-                    <TableCell>تعليمات</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {rx.items.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>{item.medication_name}</TableCell>
-                      <TableCell>{item.dosage ?? '—'}</TableCell>
-                      <TableCell>{item.frequency ?? '—'}</TableCell>
-                      <TableCell>{item.duration ?? '—'}</TableCell>
-                      <TableCell>{item.instructions ?? '—'}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              {rx.notes && (
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
-                  ملاحظات: {rx.notes}
-                </Typography>
-              )}
-            </AccordionDetails>
-          </Accordion>
+          <PrescriptionAccordion key={rx.id} prescription={rx} defaultExpanded onDelete={id => deleteMutation.mutate(id)} />
         ))
+      )}
+
+      {previousVisits.length > 0 && (
+        <>
+          <Divider sx={{ mt: 1 }} />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <History size={16} />
+            <Typography variant="subtitle2" fontWeight={700} color="text.secondary">
+              وصفات الزيارات السابقة
+            </Typography>
+          </Box>
+          {previousVisits.map(v => (
+            <PreviousVisitPrescriptions key={v.id} visit={v} />
+          ))}
+        </>
       )}
 
       <AddPrescriptionDialog open={addOpen} onClose={() => setAddOpen(false)} visitId={visit.id} />

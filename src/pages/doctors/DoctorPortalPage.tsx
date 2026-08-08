@@ -4,6 +4,7 @@ import dayjs from 'dayjs';
 import Box from '@mui/material/Box';
 import Alert from '@mui/material/Alert';
 import Typography from '@mui/material/Typography';
+import { Toaster } from 'sonner';
 import { Stethoscope } from 'lucide-react';
 
 import { useAuth } from '@/contexts/AuthContext';
@@ -272,6 +273,10 @@ const DoctorPortalInner: React.FC = () => {
         flagVisitAsNew(data.visit_id);
         playResultsReadySound();
       }
+
+      // Refresh the visit itself too, so if this visit is the one currently open in
+      // the workspace, LabResultsSection picks up result_auth/auth_date immediately.
+      queryClient.invalidateQueries({ queryKey: ['doctorVisit', data.visit_id] });
     };
 
     realtimeService.onPatientResultsAuthenticated(handleResultsAuthenticated);
@@ -343,6 +348,7 @@ const DoctorPortalInner: React.FC = () => {
 
   return (
     <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden',userSelect: 'none', WebkitUserSelect: 'none' }}>
+      <Toaster richColors position="top-right" />
       {/* Patient queue (left panel) — full height, starts from top */}
       <PatientQueueList
         patients={patients}

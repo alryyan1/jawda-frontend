@@ -89,9 +89,8 @@ const LoginPage: React.FC = () => {
       {/* Login Card */}
       <div className="relative w-full max-w-md">
         {/* Medical glowing background effect */}
-        <div className="absolute -inset-1 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-3xl blur opacity-20 dark:opacity-30 animate-pulse"></div>
         
-        <div className="relative bg-white dark:bg-slate-800 backdrop-blur-xl border border-teal-200 dark:border-slate-700 rounded-3xl p-8 transition-all duration-300">
+        <div className="relative bg-white dark:bg-slate-800 backdrop-blur-xl border border-teal-200 dark:border-slate-700 rounded-xl p-8 transition-all duration-300">
           {/* Header */}
           <div className="text-center mb-8">
             {/* System Logo */}

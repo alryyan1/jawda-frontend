@@ -89,19 +89,13 @@ const PatientQueueCard: React.FC<PatientQueueCardProps> = ({ visit, isSelected, 
       </div>
 
       {/* Main content */}
-      <div className="flex-1 min-w-0 py-2 pe-3 flex flex-col gap-1">
+      <div className="flex-1 min-w-0 py-2 pe-3 flex flex-colc items-center gap-1 min-h-[70px] ">
         {/* Name row */}
-        <div className="flex items-center gap-1.5">
-          {visit.patient.gender === 'male' ? (
-            <Mars size={13} className="text-blue-500 shrink-0" />
-          ) : (
-            <Venus size={13} className="text-rose-400 shrink-0" />
-          )}
-          <span className="flex-1 min-w-0 text-[0.82rem] font-semibold leading-tight truncate" title={visit.patient.name}>
+       
+          <span className="flex-1 min-w-0 text-[0.92rem] font-semibold leading-tight truncate" title={visit.patient.name}>
             {visit.patient.name}
           </span>
 
-        </div>
 
         {/* Meta row: age, phone, file id */}
         <div className="flex items-center justify-between gap-1 text-[0.68rem] text-muted-foreground">
@@ -112,7 +106,7 @@ const PatientQueueCard: React.FC<PatientQueueCardProps> = ({ visit, isSelected, 
               {visit.patient.phone}
             </span>
           )} */}
-          {visit.file_id != null && (
+          {/* {visit.file_id != null && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <span className="flex items-center gap-0.5">
@@ -122,25 +116,9 @@ const PatientQueueCard: React.FC<PatientQueueCardProps> = ({ visit, isSelected, 
               </TooltipTrigger>
               <TooltipContent>رقم الملف</TooltipContent>
             </Tooltip>
-          )}
+          )} */}
 
-          {visit.file_visits_count > 1 && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Badge
-                  onClick={e => {
-                    e.stopPropagation();
-                    setIsFileVisitsOpen(true);
-                  }}
-                  className="h-4 px-1.5 gap-0.5 text-[0.62rem] font-medium cursor-pointer border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300"
-                >
-                  <Users size={9} className="shrink-0" />
-                  {visit.file_visits_count}
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent>للمريض {visit.file_visits_count} زيارات بنفس الملف — اضغط للعرض</TooltipContent>
-            </Tooltip>
-          )}
+    
           {/* Badge row: status, insurance, services, balance */}
 
 
@@ -180,7 +158,23 @@ const PatientQueueCard: React.FC<PatientQueueCardProps> = ({ visit, isSelected, 
               <TooltipContent>{visit.result_auth ? 'نتائج المختبر جاهزة' : 'لديه طلبات مختبر'}</TooltipContent>
             </Tooltip>
           )}
-
+      {visit.file_visits_count > 1 && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge
+                  onClick={e => {
+                    e.stopPropagation();
+                    setIsFileVisitsOpen(true);
+                  }}
+                  className="h-4 px-1.5 gap-0.5 text-[0.62rem] font-medium cursor-pointer border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300"
+                >
+                  <Users size={9} className="shrink-0" />
+                  {visit.file_visits_count}
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>للمريض {visit.file_visits_count} زيارات بنفس الملف — اضغط للعرض</TooltipContent>
+            </Tooltip>
+          )}
           {visit.requested_services_count > 0 && (
             <Tooltip>
               <TooltipTrigger asChild>

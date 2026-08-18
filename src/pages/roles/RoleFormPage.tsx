@@ -111,23 +111,33 @@ const RoleFormPage: React.FC<RoleFormPageProps> = ({ mode }) => {
 
   // Group permissions by resource for better UI
   const groupedPermissions = useMemo(() => allPermissions?.reduce((acc, permission) => {
-    // A more robust grouping based on the first word after common verbs
-    const commonVerbs = ['list', 'view', 'create', 'edit', 'delete', 'assign', 'manage'];
-    let mainResource = permission.name;
-    for (const verb of commonVerbs) {
-        if (permission.name.startsWith(verb + ' ')) {
-            mainResource = permission.name.substring(verb.length + 1).split(' ')[0].replace('_', ' ');
-            break;
-        }
-    }
-    if (mainResource.includes(' ')) mainResource = mainResource.split(' ')[0]; // take first word if complex
+    let groupName: string;
 
-    const capitalizedResource = mainResource.charAt(0).toUpperCase() + mainResource.slice(1);
+    // Reports and settings menu-item permissions each get their own group,
+    // rather than being lumped together under the generic "عرض" bucket.
+    if (permission.name.includes('تقرير') || permission.name.includes('تقارير')) {
+      groupName = 'التقارير';
+    } else if (permission.name.includes('اعدادات')) {
+      groupName = 'الاعدادات';
+    } else {
+      // A more robust grouping based on the first word after common verbs
+      const commonVerbs = ['list', 'view', 'create', 'edit', 'delete', 'assign', 'manage'];
+      let mainResource = permission.name;
+      for (const verb of commonVerbs) {
+          if (permission.name.startsWith(verb + ' ')) {
+              mainResource = permission.name.substring(verb.length + 1).split(' ')[0].replace('_', ' ');
+              break;
+          }
+      }
+      if (mainResource.includes(' ')) mainResource = mainResource.split(' ')[0]; // take first word if complex
 
-    if (!acc[capitalizedResource]) {
-      acc[capitalizedResource] = [];
+      groupName = mainResource.charAt(0).toUpperCase() + mainResource.slice(1);
     }
-    acc[capitalizedResource].push(permission);
+
+    if (!acc[groupName]) {
+      acc[groupName] = [];
+    }
+    acc[groupName].push(permission);
     return acc;
   }, {} as Record<string, Permission[]>), [allPermissions]);
 
@@ -235,7 +245,7 @@ const RoleFormPage: React.FC<RoleFormPageProps> = ({ mode }) => {
           <Dialog
             open={isPermissionsDialogOpen}
             onClose={() => setIsPermissionsDialogOpen(false)}
-            maxWidth="md"
+            maxWidth="xl"
             fullWidth
             PaperProps={{ sx: { maxHeight: '80vh', display: 'flex', flexDirection: 'column' } }}
             dir="rtl"
@@ -333,6 +343,7 @@ const RoleFormPage: React.FC<RoleFormPageProps> = ({ mode }) => {
                                   xs: 'repeat(2, 1fr)',
                                   sm: 'repeat(3, 1fr)',
                                   lg: 'repeat(4, 1fr)',
+                                  xl: 'repeat(5, 1fr)',
                                 },
                                 columnGap: 1,
                                 p: 1,

@@ -97,6 +97,7 @@ import { getActiveDoctorShifts } from "@/services/clinicService";
 import type { DoctorShift } from "@/types/doctors";
 import { toast } from "sonner";
 import { useAuthorization } from "@/hooks/useAuthorization";
+import type { PermissionName } from "@/hooks/useAuthorization";
 import { clearAllCaches } from "@/hooks/useCachedData";
 import { firebaseProjectId, getLabToLabFirebaseSource } from "@/lib/firebase";
 import FavoriteServiceGroupsDialog from "@/components/clinic/FavoriteServiceGroupsDialog";
@@ -109,33 +110,47 @@ export interface NavItem {
   children?: NavItem[];
 }
 
-// Reusable report dropdown item
+// Reusable report dropdown item. Hidden unless the user holds `permission`.
 const ReportMenuItem: React.FC<{
   to: string;
   icon: React.ElementType;
   label: string;
-}> = ({ to, icon: Icon, label }) => (
-  <DropdownMenuItem asChild>
-    <Link to={to} className="w-full flex items-center">
-      <Icon className="mr-2 h-4 w-4" />
-      {label}
-    </Link>
-  </DropdownMenuItem>
-);
+  permission: PermissionName;
+}> = ({ to, icon: Icon, label, permission }) => {
+  const { can } = useAuthorization();
+  if (!can(permission)) {
+    return null;
+  }
+  return (
+    <DropdownMenuItem asChild>
+      <Link to={to} className="w-full flex items-center">
+        <Icon className="mr-2 h-4 w-4" />
+        {label}
+      </Link>
+    </DropdownMenuItem>
+  );
+};
 
-// Reusable settings dropdown item
+// Reusable settings dropdown item. Hidden unless the user holds `permission`.
 const SettingsMenuItem: React.FC<{
   to: string;
   icon: React.ElementType;
   label: string;
-}> = ({ to, icon: Icon, label }) => (
-  <DropdownMenuItem asChild>
-    <Link to={to} className="w-full flex items-center">
-      <Icon className="mr-2 h-4 w-4" />
-      {label}
-    </Link>
-  </DropdownMenuItem>
-);
+  permission: PermissionName;
+}> = ({ to, icon: Icon, label, permission }) => {
+  const { can } = useAuthorization();
+  if (!can(permission)) {
+    return null;
+  }
+  return (
+    <DropdownMenuItem asChild>
+      <Link to={to} className="w-full flex items-center">
+        <Icon className="mr-2 h-4 w-4" />
+        {label}
+      </Link>
+    </DropdownMenuItem>
+  );
+};
 
 // Main Navigation Items - All available items
 export const allMainNavItems: NavItem[] = [
@@ -1079,81 +1094,97 @@ const AppLayout: React.FC = () => {
                               to="/reports/lab-general"
                               icon={BarChartBig}
                               label="المختبر"
+                              permission="عرض تقرير المختبر"
                             />
                             <ReportMenuItem
                               to="/reports/doctor-shifts"
                               icon={FileBarChart2}
                               label="عيادات اليوم"
+                              permission="عرض تقرير عيادات اليوم"
                             />
                             <ReportMenuItem
                               to="/reports/clinic-shift-summary"
                               icon={FileSpreadsheet}
                               label="التقرير العام"
+                              permission="عرض التقرير العام"
                             />
                             <ReportMenuItem
                               to="/reports/costs"
                               icon={FileSpreadsheet}
                               label="المصروفات"
+                              permission="عرض تقرير المصروفات"
                             />
                             <ReportMenuItem
                               to="/reports/daily-costs"
                               icon={FileSpreadsheet}
                               label="المصروفات اليومية"
+                              permission="عرض تقرير المصروفات اليومية"
                             />
                             <ReportMenuItem
                               to="/reports/monthly-shifts"
                               icon={FileBarChart2}
                               label="تقرير الورديات الشهري"
+                              permission="عرض تقرير الورديات الشهري"
                             />
                             <ReportMenuItem
                               to="/reports/monthly-lab-income"
                               icon={BarChartBig}
                               label="دخل المختبر الشهري"
+                              permission="عرض تقرير دخل المختبر الشهري"
                             />
                             <ReportMenuItem
                               to="/reports/monthly-service-income"
                               icon={BarChartBig}
                               label="دخل الخدمات الشهري"
+                              permission="عرض تقرير دخل الخدمات الشهري"
                             />
                             <ReportMenuItem
                               to="/reports/company-performance"
                               icon={BarChartBig}
                               label="أداء الشركات"
+                              permission="عرض تقرير أداء الشركات"
                             />
                             <ReportMenuItem
                               to="/reports/doctor-company-entitlement"
                               icon={HandCoins}
                               label="استحقاقات الأطباء للشركات"
+                              permission="عرض تقرير استحقاقات الأطباء للشركات"
                             />
                             <ReportMenuItem
                               to="/reports/patient-service-costs"
                               icon={Coins}
                               label="تكاليف الخدمات للمرضى"
+                              permission="عرض تقرير تكاليف الخدمات للمرضى"
                             />
                             <ReportMenuItem
                               to="/reports/yearly-income-comparison"
                               icon={LineChart}
                               label="مقارنة الدخل السنوية"
+                              permission="عرض تقرير مقارنة الدخل السنوية"
                             />
                             <ReportMenuItem
                               to="/reports/yearly-patient-frequency"
                               icon={UsersRound}
                               label="تردد المرضى"
+                              permission="عرض تقرير تردد المرضى"
                             />
                             <ReportMenuItem
                               to="/reports/doctor-statistics"
                               icon={BarChartBig}
                               label="إحصائيات الأطباء"
+                              permission="عرض تقرير إحصائيات الأطباء"
                             />
                             <ReportMenuItem
                               to="/reports/service-statistics"
                               icon={FileBarChart2}
                               label="إحصائيات الخدمات"
+                              permission="عرض تقرير إحصائيات الخدمات"
                             />
                             <ReportMenuItem
                               to="/reports/lab-test-statistics"
                               icon={BarChartBig}
                               label="إحصائيات تحاليل المختبر"
+                              permission="عرض تقرير إحصائيات تحاليل المختبر"
                             />
                           </DropdownMenuSubContent>
                         </DropdownMenuSub>
@@ -1171,66 +1202,79 @@ const AppLayout: React.FC = () => {
                               to="/settings/general"
                               icon={Settings}
                               label="عام"
+                              permission="عرض اعدادات عام"
                             />
                             <SettingsMenuItem
                               to="/settings/companies"
                               icon={Building}
                               label="الشركات"
+                              permission="عرض اعدادات الشركات"
                             />
                             <SettingsMenuItem
                               to="/settings/parties"
                               icon={Handshake}
                               label="الجهات"
+                              permission="عرض اعدادات الجهات"
                             />
                             <SettingsMenuItem
                               to="/settings/laboratory"
                               icon={FlaskConical}
                               label="المختبر"
+                              permission="عرض اعدادات المختبر"
                             />
                             <SettingsMenuItem
                               to="/settings/laboratory/binding-matching"
                               icon={Link2}
                               label="جداول الربط"
+                              permission="عرض اعدادات جداول الربط"
                             />
                             <SettingsMenuItem
                               to="/settings/service-groups"
                               icon={Layers}
                               label="مجموعات الخدمات"
+                              permission="عرض اعدادات مجموعات الخدمات"
                             />
                             <SettingsMenuItem
                               to="/settings/operations"
                               icon={Syringe}
                               label="العمليات الجراحية"
+                              permission="عرض اعدادات العمليات الجراحية"
                             />
                             <SettingsMenuItem
                               to="/settings/services"
                               icon={ListOrdered}
                               label="إعدادات الخدمات"
+                              permission="عرض اعدادات الخدمات"
                             />
                             <SettingsMenuItem
                               to="/settings/offers"
                               icon={Tag}
                               label="العروض"
+                              permission="عرض اعدادات العروض"
                             />
                             <SettingsMenuItem
                               to="/settings/doctors"
                               icon={Stethoscope}
                               label="الأطباء"
+                              permission="عرض اعدادات الأطباء"
                             />
                             <SettingsMenuItem
                               to="/settings/specialists"
                               icon={Users}
                               label="التخصصات الطبية"
+                              permission="عرض اعدادات التخصصات الطبية"
                             />
                             <SettingsMenuItem
                               to="/settings/users"
                               icon={User}
+                              permission="عرض اعدادات المستخدمين"
                               label="المستخدمين"
                             />
                             <SettingsMenuItem
                               to="/settings/roles"
                               icon={ShieldCheck}
                               label="الأدوار"
+                              permission="عرض اعدادات الأدوار"
                             />
                           </DropdownMenuSubContent>
                         </DropdownMenuSub>

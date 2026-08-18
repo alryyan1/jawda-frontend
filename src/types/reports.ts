@@ -108,6 +108,7 @@ export interface DoctorShiftFinancialSummary {
   total_cash: number;
   total_bank: number;
   total_insurance_services: number;
+  has_unpaid_services: boolean;
   patients_breakdown: PatientVisitFinancialBreakdown[];
 }
 export interface DailyServiceIncomeData {

@@ -219,6 +219,7 @@ console.log(doctorsList,'doctorsList');
                         <TableCell className='text-2xl' align="center" sx={{ fontSize: '1.1rem' }}>
                           {doc.specialist_name || '-'}
                         </TableCell>
+                        
                  
                         <TableCell className='text-2xl' align="center">
                           {doc.is_on_shift && doc.current_doctor_shift_id ? (

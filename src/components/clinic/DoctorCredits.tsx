@@ -92,6 +92,7 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
   const [journalAmounts, setJournalAmounts] = useState({ cash: 0, bank: 0, total: 0, clinicCashTotal: 0, clinicBankTotal: 0 });
   const [clinicTotals, setClinicTotals] = useState({ cash: 0, bank: 0 });
   const [clinicTotalsLoading, setClinicTotalsLoading] = useState(false);
+  const [hasUnpaidServices, setHasUnpaidServices] = useState(false);
   const [update, setUpdate] = useState(0);
   const [selectedDoctorShift, setSelectedDoctorShift] =
     useState<DoctorShiftItem | null>(null);
@@ -177,6 +178,7 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
   useEffect(() => {
     setCashAmount(0);
     setBankAmount(0);
+    setHasUnpaidServices(false);
     if (!selectedDoctorShift) return;
 
     setClinicTotalsLoading(true);
@@ -195,6 +197,7 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
       const total = doctorSummary?.total_doctor_share || 0;
       setCashAmount(total);
       setTemp(total);
+      setHasUnpaidServices(Boolean(doctorSummary?.has_unpaid_services));
 
       const shiftSummary: UserShiftIncomeSummary | null = shiftRes ? (shiftRes.data?.data ?? shiftRes.data) : null;
       setClinicTotals({
@@ -204,7 +207,21 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
     }).finally(() => setClinicTotalsLoading(false));
   }, [selectedDoctorShift, currentClinicShift?.id]);
 
+  // Guard: blocks the cash-reclaim process while any requested service in this
+  // doctor shift still carries an unpaid balance.
+  const guardAgainstUnpaidServices = (): boolean => {
+    if (hasUnpaidServices) {
+      alert("لا يمكن اثبات الاستحقاق لوجود خدمات مطلوبة غير مسددة بالكامل في هذه المناوبة.");
+      return false;
+    }
+    return true;
+  };
+
   const prooveCashReclaim = (setIsLoading: (loading: boolean) => void) => {
+    if (!guardAgainstUnpaidServices()) {
+      return;
+    }
+
     const r = confirm("هل انت متاكد من اثبات استحقاق الطبيب");
     if (!r) {
       setIsLoading(false);
@@ -241,7 +258,9 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
         // setJournalAmounts({ cash: cashAmount, bank: bankAmount, total: temp, clinicCashTotal: clinicTotals.cash, clinicBankTotal: clinicTotals.bank });
         // setShowJournalDialog(true);
       })
-      .catch(() => {})
+      .catch((error) => {
+        alert(error?.response?.data?.message || "فشل اثبات الاستحقاق");
+      })
       .finally(() => setIsLoading(false));
   };
   const openJournalDirectly = async (shift: DoctorShiftItem) => {
@@ -480,12 +499,18 @@ function DoctorCredits({ setAllMoneyUpdatedLab }: DoctorsCreditsProps) {
               disabled={
                 clinicTotalsLoading ||
                 isAddingCost ||
+                hasUnpaidServices ||
                 cashAmount > clinicTotals.cash ||
                 bankAmount > clinicTotals.bank
               }
             >
               {isAddingCost ? "جاري المعالجة..." : "خصم  الاستحقاق النقدي"}
             </Button>
+            {!clinicTotalsLoading && hasUnpaidServices && (
+              <Typography variant="caption" color="error">
+                يوجد خدمات مطلوبة غير مسددة بالكامل في ورديه الطبيب يجب حذفها  وعدم ترك خدمات غير مدفوعه  .
+              </Typography>
+            )}
           </Stack>
         </DialogContent>
       </Dialog></>

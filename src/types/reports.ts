@@ -389,3 +389,28 @@ export interface PatientServiceCostReportResponse {
     to: string;
   };
 }
+
+// Patient Lab-Request Discounts Report Types
+export interface LabRequestDiscountItem {
+  lab_request_id: number;
+  patient_id: number | null;
+  patient_name: string | null;
+  visit_date: string | null;
+  doctor_name: string | null;
+  test_name: string | null;
+  price: number;
+  count: number;
+  discount_per: number;
+  discount_amount: number;
+  endurance: number;
+  comment: string | null;
+}
+
+export interface LabRequestDiscountReportResponse {
+  data: LabRequestDiscountItem[];
+  total_discount: number;
+  report_period: {
+    from: string;
+    to: string;
+  };
+}

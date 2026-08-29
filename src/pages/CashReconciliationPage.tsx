@@ -99,6 +99,19 @@ const CashReconciliationPage: React.FC = () => {
 
   const costs = useMemo(() => costsData?.data || [], [costsData?.data]);
 
+  // Fetch the user's income summary to know how much cash/bank is available to spend
+  const { data: incomeSummaryData } = useQuery<{ data: { net_cash: number; net_bank: number } }, Error>({
+    queryKey: ['userIncomeSummary', Number(selectedShiftId)],
+    queryFn: async () => {
+      const response = await apiClient.get(`/user/current-shift-income-summary?shift_id=${selectedShiftId}&user_id=${user?.id}`);
+      return response.data;
+    },
+    enabled: !!selectedShiftId && !!user?.id,
+  });
+
+  const availableCash = incomeSummaryData?.data?.net_cash ?? null;
+  const availableBank = incomeSummaryData?.data?.net_bank ?? null;
+
   // Calculate total costs
   const totalCosts = useMemo(() => {
     return costs.reduce((total, cost) => total + cost.amount + cost.amount_bankak, 0);
@@ -124,7 +137,7 @@ const CashReconciliationPage: React.FC = () => {
       setCostForm({ description: '', amount_cash: '', amount_bank: '' });
       setCostDialogOpen(false);
       // Invalidate income summary and costs to refresh the data
-      queryClient.invalidateQueries({ queryKey: ['userIncomeSummary', selectedShiftId] });
+      queryClient.invalidateQueries({ queryKey: ['userIncomeSummary'] });
       queryClient.invalidateQueries({ queryKey: ['shiftCosts', selectedShiftId] });
     },
     onError: (error: any) => {
@@ -138,8 +151,9 @@ const CashReconciliationPage: React.FC = () => {
     mutationFn: (costId: number) => deleteCost(costId),
     onSuccess: () => {
       toast.success('تم حذف المصروف بنجاح');
-      // Invalidate costs to refresh the data
+      // Invalidate costs and income summary to refresh the data
       queryClient.invalidateQueries({ queryKey: ['shiftCosts', selectedShiftId] });
+      queryClient.invalidateQueries({ queryKey: ['userIncomeSummary'] });
     },
     onError: (error: any) => {
       const errorMessage = error?.response?.data?.message || 'فشل في حذف المصروف';
@@ -252,6 +266,16 @@ const CashReconciliationPage: React.FC = () => {
 
     if (cashAmount === 0 && bankAmount === 0) {
       toast.error('يرجى إدخال مبلغ نقدي أو بنكي');
+      return;
+    }
+
+    if (availableCash !== null && cashAmount > availableCash + 0.01) {
+      toast.error(`المبلغ النقدي يتجاوز الرصيد النقدي المتاح (${formatNumber(availableCash, 0)})`);
+      return;
+    }
+
+    if (availableBank !== null && bankAmount > availableBank + 0.01) {
+      toast.error(`المبلغ البنكي يتجاوز الرصيد البنكي المتاح (${formatNumber(availableBank, 0)})`);
       return;
     }
 
@@ -464,7 +488,9 @@ const CashReconciliationPage: React.FC = () => {
                     placeholder="0.00"
                     fullWidth
                     size="small"
-                    inputProps={{ min: 0, step: 0.01 }}
+                    inputProps={{ min: 0, step: 0.01, max: availableCash ?? undefined }}
+                    error={availableCash !== null && parseFloat(costForm.amount_cash || '0') > availableCash + 0.01}
+                    helperText={availableCash !== null ? `المتاح: ${formatNumber(availableCash, 0)}` : ' '}
                   />
                   <TextField
                     label="المبلغ البنكي"
@@ -474,7 +500,9 @@ const CashReconciliationPage: React.FC = () => {
                     placeholder="0.00"
                     fullWidth
                     size="small"
-                    inputProps={{ min: 0, step: 0.01 }}
+                    inputProps={{ min: 0, step: 0.01, max: availableBank ?? undefined }}
+                    error={availableBank !== null && parseFloat(costForm.amount_bank || '0') > availableBank + 0.01}
+                    helperText={availableBank !== null ? `المتاح: ${formatNumber(availableBank, 0)}` : ' '}
                   />
                 </Stack>
               </DialogContent>

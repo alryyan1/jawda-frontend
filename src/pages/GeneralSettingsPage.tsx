@@ -93,6 +93,7 @@ type SettingsFormData = {
   firebase_enabled?: boolean;
   prevent_backdated_entry?: boolean;
   enforce_shift_hours?: boolean;
+  enforce_unpaid_services_guard?: boolean;
   require_patient_phone?: boolean;
   show_patient_address_field?: boolean;
   whatsapp_number?: string;
@@ -153,6 +154,7 @@ const SettingsPage: React.FC = () => {
       whatsapp_result_language_code: undefined,
 
       enforce_shift_hours: undefined,
+      enforce_unpaid_services_guard: undefined,
 
       // Lab Workflow Settings
       send_result_after_auth: undefined,
@@ -244,6 +246,8 @@ const SettingsPage: React.FC = () => {
           (settings as any).prevent_backdated_entry ?? undefined,
         enforce_shift_hours:
           (settings as any).enforce_shift_hours ?? undefined,
+        enforce_unpaid_services_guard:
+          (settings as any).enforce_unpaid_services_guard ?? undefined,
         require_patient_phone:
           (settings as any).require_patient_phone ?? undefined,
         show_patient_address_field:
@@ -1308,6 +1312,27 @@ const SettingsPage: React.FC = () => {
                       عند التفعيل، لا يمكن فتح وردية جديدة إلا بعد مرور 6 ساعات
                       على إغلاق الوردية السابقة، ولا يمكن إغلاق الوردية إلا بعد
                       مرور 6 ساعات من فتحها. المسؤول (admin) مستثنى دائماً.
+                    </Typography>
+                  </Box>
+                }
+              />
+
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    {...control.register("enforce_unpaid_services_guard")}
+                    checked={!!watchedValues.enforce_unpaid_services_guard}
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography variant="body1">
+                      منع اثبات استحقاق الطبيب عند وجود خدمات غير مسددة
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      عند التفعيل، لا يمكن اثبات الاستحقاق النقدي للطبيب طالما
+                      توجد خدمة مطلوبة واحدة على الأقل غير مسددة بالكامل ضمن
+                      مناوبته.
                     </Typography>
                   </Box>
                 }

@@ -60,6 +60,7 @@ import {
   RefreshCw,
   Star,
   MessageSquare,
+  Percent,
 } from "lucide-react";
 import { Toaster } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -1155,6 +1156,12 @@ const AppLayout: React.FC = () => {
                               icon={Coins}
                               label="تكاليف الخدمات للمرضى"
                               permission="عرض تقرير تكاليف الخدمات للمرضى"
+                            />
+                            <ReportMenuItem
+                              to="/reports/lab-request-discounts"
+                              icon={Percent}
+                              label="خصومات المختبر للمرضى"
+                              permission="عرض تقرير خصومات المختبر للمرضى"
                             />
                             <ReportMenuItem
                               to="/reports/yearly-income-comparison"

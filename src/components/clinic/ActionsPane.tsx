@@ -228,7 +228,7 @@ const ActionsPane: React.FC<ActionsPaneProps> = ({
       )}
 
       {/* Doctor Credits Dialog (MUI) */}
-      <Dialog open={isDoctorCreditsOpen} onClose={() => setIsDoctorCreditsOpen(false)} fullWidth maxWidth="lg">
+      <Dialog open={isDoctorCreditsOpen} onClose={() => setIsDoctorCreditsOpen(false)} fullWidth maxWidth="700">
         <DialogTitle>استحقاقات الأطباء</DialogTitle>
         <DialogContent dividers>
           <DoctorCredits

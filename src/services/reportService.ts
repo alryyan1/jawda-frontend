@@ -1,7 +1,7 @@
 // src/services/reportService.ts
 import type { PaginatedResponse } from '@/types/common';
 import apiClient from './api';
-import type { DoctorShiftFinancialSummary, DoctorShiftReportItem, MonthlyServiceIncomeReportResponse, ServiceStatisticItem, YearlyPatientFrequencyReportResponse, MonthlyLabIncomeReportResponse, LabTestStatisticItem, LabGeneralReportItem, LabGeneralReportFilters, LabGeneralReportWithUserRevenue, PatientServiceCostReportResponse } from '@/types/reports';
+import type { DoctorShiftFinancialSummary, DoctorShiftReportItem, MonthlyServiceIncomeReportResponse, ServiceStatisticItem, YearlyPatientFrequencyReportResponse, MonthlyLabIncomeReportResponse, LabTestStatisticItem, LabGeneralReportItem, LabGeneralReportFilters, LabGeneralReportWithUserRevenue, PatientServiceCostReportResponse, LabRequestDiscountReportResponse } from '@/types/reports';
 
 export interface DoctorShiftReportFilters {
   page?: number;
@@ -541,6 +541,41 @@ export const getPatientServiceCostsReport = async (
 
 export const downloadPatientServiceCostsPdf = async (filters: PatientServiceCostFilters): Promise<Blob> => {
   const response = await apiClient.get<Blob>('/reports/patient-service-costs/pdf', {
+    params: filters,
+    responseType: 'blob',
+  });
+  return response.data;
+};
+
+export interface LabRequestDiscountFilters {
+  date_from: string;
+  date_to: string;
+  doctor_id?: string | null;
+  min_discount_per?: string | null;
+  comment?: string | null;
+  patient_name?: string | null;
+}
+
+export const getLabRequestDiscountsReport = async (
+  filters: LabRequestDiscountFilters
+): Promise<LabRequestDiscountReportResponse> => {
+  const response = await apiClient.get<LabRequestDiscountReportResponse>(
+    '/reports/lab-request-discounts',
+    { params: filters }
+  );
+  return response.data;
+};
+
+export const downloadLabRequestDiscountsPdf = async (filters: LabRequestDiscountFilters): Promise<Blob> => {
+  const response = await apiClient.get<Blob>('/reports/lab-request-discounts/pdf', {
+    params: filters,
+    responseType: 'blob',
+  });
+  return response.data;
+};
+
+export const downloadLabRequestDiscountsExcel = async (filters: LabRequestDiscountFilters): Promise<Blob> => {
+  const response = await apiClient.get<Blob>('/reports/lab-request-discounts/excel', {
     params: filters,
     responseType: 'blob',
   });

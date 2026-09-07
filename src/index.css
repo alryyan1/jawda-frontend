@@ -1,5 +1,9 @@
 @import './fonts.css';
 
+/* Declare `antd` as the lowest-priority layer so antd's CSS-in-JS (emitted via
+   <StyleProvider layer> in main.tsx) never overrides Tailwind utilities. */
+@layer antd, theme, base, components, utilities;
+
 @plugin 'tailwindcss-animate';
 @import "tailwindcss";
 @import "tw-animate-css";

@@ -9,6 +9,8 @@ import { ThemeModeProvider, useThemeMode } from './contexts/ThemeModeContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'; // Import
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'; // Optional: for dev tools
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
+import { ConfigProvider, theme as antdTheme } from 'antd';
+import { StyleProvider } from '@ant-design/cssinjs';
 import { CacheProvider } from '@emotion/react';
 import createCache from '@emotion/cache';
 import { prefixer } from 'stylis';
@@ -69,6 +71,27 @@ const AppMuiThemeProvider = ({ children }: { children: ReactNode }): JSX.Element
   );
 };
 
+// Antd ConfigProvider wired to the same RTL direction and light/dark toggle as
+// the rest of the app. StyleProvider `layer` puts antd's CSS-in-JS into the
+// low-priority `antd` CSS layer so Tailwind utilities keep winning (see index.css).
+const AppAntdConfigProvider = ({ children }: { children: ReactNode }): JSX.Element => {
+  const { theme: mode } = useThemeMode();
+
+  return (
+    <StyleProvider layer>
+      <ConfigProvider
+        direction="rtl"
+        theme={{
+          algorithm: mode === 'dark' ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
+          token: { fontFamily: "'Tajawal', 'Cairo', sans-serif" },
+        }}
+      >
+        {children}
+      </ConfigProvider>
+    </StyleProvider>
+  );
+};
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   // Temporarily disabled StrictMode to prevent double execution in development
   // <React.StrictMode>
@@ -77,9 +100,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <CacheProvider value={rtlCache}>
           <ThemeModeProvider>
             <AppMuiThemeProvider>
-              <AuthProvider>
-                <RouterProvider router={router} />
-              </AuthProvider>
+              <AppAntdConfigProvider>
+                <AuthProvider>
+                  <RouterProvider router={router} />
+                </AuthProvider>
+              </AppAntdConfigProvider>
             </AppMuiThemeProvider>
           </ThemeModeProvider>
         </CacheProvider>

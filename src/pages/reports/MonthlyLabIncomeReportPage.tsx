@@ -1,66 +1,55 @@
 // src/pages/reports/MonthlyLabIncomeReportPage.tsx
 import React, { useState } from 'react';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
+
+import {
+  Alert,
+  Button,
+  Card,
+  Col,
+  Empty,
+  Flex,
+  Form,
+  Modal,
+  Row,
+  Select,
+  Space,
+  Spin,
+  Statistic,
+  Table,
+  theme,
+  Typography,
+} from 'antd';
+import type { ColumnsType } from 'antd/es/table';
+import {
+  DownloadOutlined,
+  FileTextOutlined,
+  PrinterOutlined,
+} from '@ant-design/icons';
 
 import type { MonthlyLabIncomeFilters } from '@/services/reportService';
 import { getMonthlyLabIncome, downloadMonthlyLabIncomeReportPdf } from '@/services/reportService';
 import type { MonthlyLabIncomeReportResponse, DailyLabIncomeData } from '@/types/reports';
 import { formatNumber } from '@/lib/utils';
 
-// MUI imports
-import {
-  Card,
-  CardHeader,
-  CardContent,
-  Typography,
-  Button,
-  FormControl,
-  InputLabel,
-  Select as MUISelect,
-  MenuItem,
-  Table as MUITable,
-  TableHead as MUITableHead,
-  TableBody as MUITableBody,
-  TableRow as MUITableRow,
-  TableCell as MUITableCell,
-  TableFooter as MUITableFooter,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Box,
-  Alert,
-} from '@mui/material';
-import { Loader2, FileBarChart2, Printer, AlertTriangle } from 'lucide-react';
-
-// Zod schema for filter form
-const getFilterSchema = () => z.object({
-  month: z.string().min(1, 'الشهر مطلوب'),
-  year: z.string().min(4, 'السنة مطلوبة'),
-});
-type FilterFormValues = z.infer<ReturnType<typeof getFilterSchema>>;
+const { Title, Text } = Typography;
 
 const currentYear = new Date().getFullYear();
 const years = Array.from({ length: 10 }, (_, i) => String(currentYear - 5 + i));
 const months = Array.from({ length: 12 }, (_, i) => ({
   value: String(i + 1),
-  label: ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'][i]
+  label: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'][i],
 }));
 
-const MonthlyLabIncomeReportPage: React.FC = () => {
-  const filterForm = useForm<FilterFormValues>({
-    resolver: zodResolver(getFilterSchema()),
-    defaultValues: {
-      month: String(new Date().getMonth() + 1),
-      year: String(currentYear),
-    },
-  });
+interface FilterFormValues {
+  month: string;
+  year: string;
+}
 
+const MonthlyLabIncomeReportPage: React.FC = () => {
+  const { token } = theme.useToken();
   const [appliedFilters, setAppliedFilters] = useState<MonthlyLabIncomeFilters>({
     month: new Date().getMonth() + 1,
     year: currentYear,
@@ -78,10 +67,10 @@ const MonthlyLabIncomeReportPage: React.FC = () => {
     placeholderData: keepPreviousData,
   });
 
-  const handleFilterSubmit = (data: FilterFormValues) => {
+  const handleFilterSubmit = (values: FilterFormValues) => {
     setAppliedFilters({
-      month: parseInt(data.month),
-      year: parseInt(data.year),
+      month: parseInt(values.month, 10),
+      year: parseInt(values.year, 10),
     });
   };
 
@@ -104,137 +93,197 @@ const MonthlyLabIncomeReportPage: React.FC = () => {
       setIsGeneratingPdf(false);
     }
   };
-  
-  const dailyData = reportData?.daily_data || [];
+
+  const dailyData = reportData?.daily_data ?? [];
   const summary = reportData?.summary;
 
-  return (
-    <div className="space-y-6 p-1 md:p-2 lg:p-4">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex items-center gap-2">
-          <FileBarChart2 className="h-7 w-7 text-primary" />
-          <h1 className="text-2xl sm:text-3xl font-bold">دخل المختبر الشهري</h1>
-        </div>
-        <Button onClick={handleGeneratePdf} disabled={isGeneratingPdf || isLoading || dailyData.length === 0} size="small" variant="contained">
-          {isGeneratingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
-          <span className="ltr:ml-2 rtl:mr-2">توليد PDF</span>
-        </Button>
-      </div>
+  const columns: ColumnsType<DailyLabIncomeData> = [
+    {
+      title: 'التاريخ',
+      dataIndex: 'date',
+      key: 'date',
+      align: 'center',
+      render: (value: string) => format(parseISO(value), 'EEEE, MMM d, yyyy'),
+    },
+    {
+      title: 'إجمالي المدفوع للمختبر',
+      dataIndex: 'total_lab_income_paid',
+      key: 'total_lab_income_paid',
+      align: 'right',
+      render: (value: number) => <Text strong>{formatNumber(value)}</Text>,
+    },
+    {
+      title: 'نقداً',
+      dataIndex: 'total_lab_cash_paid',
+      key: 'total_lab_cash_paid',
+      align: 'right',
+      render: (value: number) => formatNumber(value),
+    },
+    {
+      title: 'شبكة/بنك',
+      dataIndex: 'total_lab_bank_paid',
+      key: 'total_lab_bank_paid',
+      align: 'right',
+      render: (value: number) => formatNumber(value),
+    },
+  ];
 
-      <Card>
-        <CardHeader>
-          <Typography variant="h6">مرشحات التقرير</Typography>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={filterForm.handleSubmit(handleFilterSubmit)} className="flex flex-col sm:flex-row gap-3 items-end">
-            <Controller control={filterForm.control} name="month" render={({ field }) => (
-              <FormControl size="small" className="w-full sm:w-[180px]">
-                <InputLabel id="month-label">الشهر</InputLabel>
-                <MUISelect labelId="month-label" label="الشهر" value={field.value} onChange={field.onChange} disabled={isFetching}>
-                  {months.map(m => <MenuItem key={m.value} value={m.value}>{m.label}</MenuItem>)}
-                </MUISelect>
-              </FormControl>
-            )} />
-            <Controller control={filterForm.control} name="year" render={({ field }) => (
-              <FormControl size="small" className="w-full sm:w-[150px]">
-                <InputLabel id="year-label">السنة</InputLabel>
-                <MUISelect labelId="year-label" label="السنة" value={field.value} onChange={field.onChange} disabled={isFetching}>
-                  {years.map(y => <MenuItem key={y} value={y}>{y}</MenuItem>)}
-                </MUISelect>
-              </FormControl>
-            )} />
-            <Button type="submit" variant="contained" className="h-9 mt-2 sm:mt-0 w-full sm:w-auto" disabled={isFetching}>
-              {isFetching ? <Loader2 className="h-4 w-4 animate-spin" /> : 'تطبيق المرشحات'}
+  return (
+    <Flex vertical gap="large" style={{ padding: 16 }}>
+      <Flex justify="space-between" align="center" gap="middle" wrap="wrap">
+        <Space align="center">
+          <FileTextOutlined style={{ fontSize: 24, color: token.colorPrimary }} />
+          <Title level={3} style={{ margin: 0 }}>
+            دخل المختبر الشهري
+          </Title>
+        </Space>
+        <Button
+          type="primary"
+          icon={<PrinterOutlined />}
+          loading={isGeneratingPdf}
+          disabled={isLoading || dailyData.length === 0}
+          onClick={handleGeneratePdf}
+        >
+          توليد PDF
+        </Button>
+      </Flex>
+
+      <Card title="مرشحات التقرير" size="small">
+        <Form
+          layout="inline"
+          initialValues={{
+            month: String(new Date().getMonth() + 1),
+            year: String(currentYear),
+          }}
+          onFinish={handleFilterSubmit}
+        >
+          <Form.Item name="month" label="الشهر" rules={[{ required: true, message: 'الشهر مطلوب' }]}>
+            <Select style={{ width: 160 }} options={months} disabled={isFetching} />
+          </Form.Item>
+          <Form.Item name="year" label="السنة" rules={[{ required: true, message: 'السنة مطلوبة' }]}>
+            <Select
+              style={{ width: 120 }}
+              options={years.map((y) => ({ value: y, label: y }))}
+              disabled={isFetching}
+            />
+          </Form.Item>
+          <Form.Item>
+            <Button type="primary" htmlType="submit" loading={isFetching}>
+              تطبيق المرشحات
             </Button>
-          </form>
-        </CardContent>
+          </Form.Item>
+        </Form>
       </Card>
 
-      {isLoading && !isFetching && <div className="text-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}
-      {isFetching && <div className="text-sm text-muted-foreground mb-2 text-center">جاري تحديث القائمة</div>}
-      
       {error && (
-        <Alert severity="error" icon={<AlertTriangle />}>
-          <Typography>فشل جلب البيانات: دخل المختبر الشهري</Typography>
-          <Typography variant="body2" color="text.secondary">{error.message}</Typography>
-        </Alert>
+        <Alert
+          type="error"
+          showIcon
+          title="فشل جلب البيانات: دخل المختبر الشهري"
+          description={error.message}
+        />
       )}
 
-      {!isLoading && !error && dailyData.length === 0 && !isFetching && (
-        <Card className="text-center py-10 text-muted-foreground"><CardContent>لا توجد بيانات لهذه الفترة</CardContent></Card>
+      {summary && dailyData.length > 0 && (
+        <Row gutter={16}>
+          <Col xs={24} sm={8}>
+            <Card size="small">
+              <Statistic title="إجمالي المدفوع للشهر" value={formatNumber(summary.total_lab_income_paid)} />
+            </Card>
+          </Col>
+          <Col xs={24} sm={8}>
+            <Card size="small">
+              <Statistic title="نقداً" value={formatNumber(summary.total_lab_cash_paid)} />
+            </Card>
+          </Col>
+          <Col xs={24} sm={8}>
+            <Card size="small">
+              <Statistic title="شبكة/بنك" value={formatNumber(summary.total_lab_bank_paid)} />
+            </Card>
+          </Col>
+        </Row>
       )}
 
-      {dailyData.length > 0 && (
-        <Card>
-          <CardHeader>
-            <Typography variant="h6">
-              تفصيل يومي لشهر {reportData?.report_period.month_name || ''}
-            </Typography>
-          </CardHeader>
-          <CardContent className="px-0 sm:px-2 md:px-4">
-            <MUITable size="small">
-              <MUITableHead>
-                <MUITableRow>
-                  <MUITableCell align="center">التاريخ</MUITableCell>
-                  <MUITableCell align="right">إجمالي المدفوع للمختبر</MUITableCell>
-                  <MUITableCell align="right">نقداً</MUITableCell>
-                  <MUITableCell align="right">شبكة/بنك</MUITableCell>
-                </MUITableRow>
-              </MUITableHead>
-              <MUITableBody>
-                {dailyData.map((day: DailyLabIncomeData) => (
-                  <MUITableRow key={day.date}>
-                    <MUITableCell align="center">
-                      {format(parseISO(day.date), 'EEEE, MMM d, yyyy')}
-                    </MUITableCell>
-                    <MUITableCell align="right" className="font-semibold">{formatNumber(day.total_lab_income_paid)}</MUITableCell>
-                    <MUITableCell align="right">{formatNumber(day.total_lab_cash_paid)}</MUITableCell>
-                    <MUITableCell align="right">{formatNumber(day.total_lab_bank_paid)}</MUITableCell>
-                  </MUITableRow>
-                ))}
-              </MUITableBody>
-              {summary && (
-                <MUITableFooter>
-                  <MUITableRow>
-                    <MUITableCell align="center">إجمالي المدفوع للشهر</MUITableCell>
-                    <MUITableCell align="right" className="font-bold text-primary">{formatNumber(summary.total_lab_income_paid)}</MUITableCell>
-                    <MUITableCell align="right">{formatNumber(summary.total_lab_cash_paid)}</MUITableCell>
-                    <MUITableCell align="right">{formatNumber(summary.total_lab_bank_paid)}</MUITableCell>
-                  </MUITableRow>
-                </MUITableFooter>
-              )}
-            </MUITable>
-          </CardContent>
-        </Card>
-      )}
+      <Card
+        title={`تفصيل يومي لشهر ${reportData?.report_period.month_name ?? ''}`}
+        size="small"
+      >
+        <Spin spinning={isLoading || isFetching}>
+          <Table<DailyLabIncomeData>
+            rowKey="date"
+            size="small"
+            columns={columns}
+            dataSource={dailyData}
+            pagination={false}
+            scroll={{ x: 'max-content' }}
+            locale={{ emptyText: <Empty description="لا توجد بيانات لهذه الفترة" /> }}
+            summary={() =>
+              summary && dailyData.length > 0 ? (
+                <Table.Summary fixed>
+                  <Table.Summary.Row>
+                    <Table.Summary.Cell index={0} align="center">
+                      <Text strong>إجمالي المدفوع للشهر</Text>
+                    </Table.Summary.Cell>
+                    <Table.Summary.Cell index={1} align="right">
+                      <Text strong type="success">
+                        {formatNumber(summary.total_lab_income_paid)}
+                      </Text>
+                    </Table.Summary.Cell>
+                    <Table.Summary.Cell index={2} align="right">
+                      {formatNumber(summary.total_lab_cash_paid)}
+                    </Table.Summary.Cell>
+                    <Table.Summary.Cell index={3} align="right">
+                      {formatNumber(summary.total_lab_bank_paid)}
+                    </Table.Summary.Cell>
+                  </Table.Summary.Row>
+                </Table.Summary>
+              ) : null
+            }
+          />
+        </Spin>
+      </Card>
 
-      <Dialog open={isPdfPreviewOpen} onClose={() => setIsPdfPreviewOpen(false)} fullWidth maxWidth="lg">
-        <DialogTitle>دخل المختبر الشهري - {reportData?.report_period.month_name || ''}</DialogTitle>
-        <DialogContent dividers>
-          {(!pdfUrl || isGeneratingPdf) ? (
-            <Box className="flex items-center justify-center py-10">
-              <Loader2 className="h-8 w-8 animate-spin" />
-            </Box>
-          ) : (
-            <Box className="h-[75vh]">
-              <iframe src={pdfUrl || ''} title="monthly-lab-income" style={{ width: '100%', height: '100%', border: 'none' }} />
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => {
-            if (!pdfUrl) return;
-            const a = document.createElement('a');
-            a.href = pdfUrl;
-            a.download = pdfFileName;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-          }} variant="outlined">تنزيل</Button>
-          <Button onClick={() => setIsPdfPreviewOpen(false)} variant="contained">إغلاق</Button>
-        </DialogActions>
-      </Dialog>
-    </div>
+      <Modal
+        open={isPdfPreviewOpen}
+        onCancel={() => setIsPdfPreviewOpen(false)}
+        width="80%"
+        title={`دخل المختبر الشهري - ${reportData?.report_period.month_name ?? ''}`}
+        footer={[
+          <Button
+            key="download"
+            icon={<DownloadOutlined />}
+            disabled={!pdfUrl}
+            onClick={() => {
+              if (!pdfUrl) return;
+              const a = document.createElement('a');
+              a.href = pdfUrl;
+              a.download = pdfFileName;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+            }}
+          >
+            تنزيل
+          </Button>,
+          <Button key="close" type="primary" onClick={() => setIsPdfPreviewOpen(false)}>
+            إغلاق
+          </Button>,
+        ]}
+      >
+        {!pdfUrl || isGeneratingPdf ? (
+          <Flex align="center" justify="center" style={{ height: '75vh' }}>
+            <Spin size="large" />
+          </Flex>
+        ) : (
+          <iframe
+            src={pdfUrl}
+            title="monthly-lab-income"
+            style={{ width: '100%', height: '75vh', border: 'none' }}
+          />
+        )}
+      </Modal>
+    </Flex>
   );
 };
+
 export default MonthlyLabIncomeReportPage;

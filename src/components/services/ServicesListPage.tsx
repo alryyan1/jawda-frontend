@@ -14,6 +14,8 @@ import {
   updateService,
   restoreService,
   getTrashedServices,
+  exportServicePricesExcel,
+  importServicePricesExcel,
 } from "@/services/serviceService";
 import { getServiceGroupsList } from "@/services/serviceGroupService";
 import {
@@ -48,6 +50,8 @@ import {
 import {
   ArchiveRestore,
   Edit,
+  FileDown,
+  FileUp,
   FilterX,
   Loader2,
   PlusCircle,
@@ -89,6 +93,9 @@ export default function ServicesListPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [serviceToDelete, setServiceToDelete] = useState<Service | null>(null);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [isExportingPrices, setIsExportingPrices] = useState(false);
+  const [isImportingPrices, setIsImportingPrices] = useState(false);
+  const priceImportInputRef = useRef<HTMLInputElement>(null);
   const [trashedDialogOpen, setTrashedDialogOpen] = useState(false);
   const [localPrices, setLocalPrices] = useState<Record<number, string>>({});
   const priceRefs = useRef<Record<number, HTMLInputElement | null>>({});
@@ -196,6 +203,44 @@ export default function ServicesListPage() {
       });
     } finally {
       setIsExportingPdf(false);
+    }
+  };
+
+  const handleExportPrices = async () => {
+    setIsExportingPrices(true);
+    try {
+      await exportServicePricesExcel(filters);
+      toast.success("تم تصدير قائمة الأسعار بنجاح");
+    } catch (error) {
+      console.error("Price export error:", error);
+      toast.error("فشل تصدير قائمة الأسعار");
+    } finally {
+      setIsExportingPrices(false);
+    }
+  };
+
+  const handleImportPricesChange = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setIsImportingPrices(true);
+    try {
+      const result = await importServicePricesExcel(file);
+      toast.success(result.message);
+      if (result.errors?.length) {
+        toast.warning(result.errors.slice(0, 5).join(" | "), { duration: 10000 });
+      }
+      queryClient.invalidateQueries({ queryKey: ["services"] });
+    } catch (error: unknown) {
+      const err = error as ApiError;
+      console.error("Price import error:", error);
+      toast.error("فشل استيراد الأسعار", {
+        description: err.response?.data?.message || err.message,
+      });
+    } finally {
+      setIsImportingPrices(false);
     }
   };
 
@@ -380,6 +425,32 @@ export default function ServicesListPage() {
             <Button onClick={handleExport} disabled={isExporting} size="small" variant="outlined">
               تصدير Excel
             </Button>
+            <Button
+              onClick={handleExportPrices}
+              disabled={isExportingPrices}
+              size="small"
+              variant="outlined"
+              color="success"
+              startIcon={<FileDown size={16} />}
+            >
+              {isExportingPrices ? "جارٍ التصدير..." : "تصدير الأسعار"}
+            </Button>
+            <Button
+              onClick={() => priceImportInputRef.current?.click()}
+              disabled={isImportingPrices}
+              size="small"
+              variant="outlined"
+              startIcon={<FileUp size={16} />}
+            >
+              {isImportingPrices ? "جارٍ الاستيراد..." : "استيراد الأسعار"}
+            </Button>
+            <input
+              ref={priceImportInputRef}
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              hidden
+              onChange={handleImportPricesChange}
+            />
             <Button
               onClick={() => activateAllMutation.mutate()}
               disabled={activateAllMutation.isPending}

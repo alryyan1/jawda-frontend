@@ -1,5 +1,5 @@
 // src/pages/companies/CompanyMainTestContractsPage.tsx
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useForm, useFieldArray, Controller } from 'react-hook-form'; // Import RHF hooks
@@ -42,6 +42,8 @@ import {
   Print as Printer,
   FileUpload as ImportIcon,
   ContentCopy as CopyIcon,
+  FileDownload as ExcelDownloadIcon,
+  UploadFile as ExcelUploadIcon,
 } from '@mui/icons-material';
 
 // Services & Types
@@ -54,6 +56,8 @@ import {
   importAllMainTestsToCompanyContract,
   copyMainTestContractsFromCompany,
   getCompaniesList,
+  exportCompanyMainTestContractsExcel,
+  importCompanyMainTestContractsExcel,
   // ... other service imports
 } from '@/services/companyService';
 import type { Company, CompanyMainTestFormData, PaginatedCompanyMainTestContractsResponse } from '@/types/companies';
@@ -89,6 +93,9 @@ const CompanyMainTestContractsPage: React.FC = () => {
   const [isPrinting, setIsPrinting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [isCopying, setIsCopying] = useState(false);
+  const [isExportingExcel, setIsExportingExcel] = useState(false);
+  const [isImportingExcel, setIsImportingExcel] = useState(false);
+  const excelImportInputRef = useRef<HTMLInputElement>(null);
   const [isCopyDialogOpen, setIsCopyDialogOpen] = useState(false);
   const [selectedSourceCompanyId, setSelectedSourceCompanyId] = useState<number | ''>('');
   // const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -257,6 +264,44 @@ const CompanyMainTestContractsPage: React.FC = () => {
     }
   };
 
+  // Excel price export / import
+  const handleExportExcel = async () => {
+    if (!companyId) return;
+    setIsExportingExcel(true);
+    try {
+      await exportCompanyMainTestContractsExcel(Number(companyId), searchTerm);
+      toast.success('تم تصدير العقود إلى Excel');
+    } catch (error) {
+      console.error('Excel export error:', error);
+      toast.error('فشل في تصدير العقود');
+    } finally {
+      setIsExportingExcel(false);
+    }
+  };
+
+  const handleImportExcelChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file || !companyId) return;
+    setIsImportingExcel(true);
+    try {
+      const result = await importCompanyMainTestContractsExcel(Number(companyId), file);
+      toast.success(result.message);
+      if (result.errors?.length) {
+        toast.warning(result.errors.slice(0, 5).join(' | '), { duration: 10000 });
+      }
+      queryClient.invalidateQueries({ queryKey: contractsQueryKey });
+    } catch (error) {
+      console.error('Excel import error:', error);
+      const errorMessage =
+        (error as Error & { response?: { data?: { message?: string } } }).response?.data?.message ||
+        'فشل في استيراد العقود';
+      toast.error(errorMessage);
+    } finally {
+      setIsImportingExcel(false);
+    }
+  };
+
   // Copy contract function
   const handleCopyContract = () => {
     setIsCopyDialogOpen(true);
@@ -343,6 +388,32 @@ const CompanyMainTestContractsPage: React.FC = () => {
           >
             استيراد الفحوصات
           </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            color="success"
+            onClick={handleExportExcel}
+            disabled={isExportingExcel || isLoading}
+            startIcon={isExportingExcel ? <CircularProgress size={16} /> : <ExcelDownloadIcon />}
+          >
+            تصدير الأسعار Excel
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={() => excelImportInputRef.current?.click()}
+            disabled={isImportingExcel || isLoading}
+            startIcon={isImportingExcel ? <CircularProgress size={16} /> : <ExcelUploadIcon />}
+          >
+            استيراد الأسعار Excel
+          </Button>
+          <input
+            ref={excelImportInputRef}
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            hidden
+            onChange={handleImportExcelChange}
+          />
           <Button
             size="small"
             variant="outlined"

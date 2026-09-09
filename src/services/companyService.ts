@@ -247,6 +247,38 @@ export const copyMainTestContractsFromCompany = async (
   return response.data;
 };
 
+export const exportCompanyMainTestContractsExcel = async (
+  companyId: number,
+  search?: string
+): Promise<void> => {
+  const response = await apiClient.get(`${API_URL}/${companyId}/contracted-main-tests/export-excel`, {
+    params: search ? { search } : {},
+    responseType: 'blob',
+  });
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `company-${companyId}-test-contracts-${new Date().toISOString().split('T')[0]}.xlsx`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+};
+
+export const importCompanyMainTestContractsExcel = async (
+  companyId: number,
+  file: File
+): Promise<{ message: string; updated_count: number; errors: string[] }> => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await apiClient.post<{ message: string; updated_count: number; errors: string[] }>(
+    `${API_URL}/${companyId}/contracted-main-tests/import-excel`,
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' } }
+  );
+  return response.data;
+};
+
 export const createSubcompany = async (data: SubcompanyCreateData): Promise<Subcompany> => {
   const response = await apiClient.post<{ data: Subcompany }>(`${API_URL}/${data.company_id}/subcompanies`, data);
   return response.data.data;

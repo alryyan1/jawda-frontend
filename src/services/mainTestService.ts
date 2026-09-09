@@ -46,6 +46,34 @@ export const batchDeleteMainTests = async (ids: number[]): Promise<{ message: st
   const response = await apiClient.post<{ message: string; deleted_count: number; errors: string[] }>('/main-tests/batch-delete', { ids });
   return response.data;
 };
+
+export const exportMainTestPricesExcel = async (search?: string): Promise<void> => {
+  const response = await apiClient.get('/main-tests/export-prices-excel', {
+    params: search ? { search } : {},
+    responseType: 'blob',
+  });
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `main-tests-prices-${new Date().toISOString().split('T')[0]}.xlsx`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+};
+
+export const importMainTestPricesExcel = async (
+  file: File
+): Promise<{ message: string; updated_count: number; errors: string[] }> => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await apiClient.post<{ message: string; updated_count: number; errors: string[] }>(
+    '/main-tests/import-prices-excel',
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' } }
+  );
+  return response.data;
+};
 export interface MainTestFormData {
   main_test_name: string;
   container_id?: number | null;

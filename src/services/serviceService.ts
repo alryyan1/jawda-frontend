@@ -55,3 +55,38 @@ export const activateAllServices = async (): Promise<{ message: string; affected
     const response = await apiClient.post('/services/activate-all');
     return response.data;
 };
+
+export const exportServicePricesExcel = async (
+  filters: { search?: string; service_group_id?: string } = {}
+): Promise<void> => {
+  const params: Record<string, string> = {};
+  if (filters.search) params.search = filters.search;
+  if (filters.service_group_id && filters.service_group_id !== 'all') {
+    params.service_group_id = filters.service_group_id;
+  }
+  const response = await apiClient.get(`${API_URL}/export-prices-excel`, {
+    params,
+    responseType: 'blob',
+  });
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `services-prices-${new Date().toISOString().split('T')[0]}.xlsx`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+};
+
+export const importServicePricesExcel = async (
+  file: File
+): Promise<{ message: string; updated_count: number; errors: string[] }> => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await apiClient.post<{ message: string; updated_count: number; errors: string[] }>(
+    `${API_URL}/import-prices-excel`,
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' } }
+  );
+  return response.data;
+};

@@ -1,5 +1,5 @@
 // src/pages/lab/MainTestsListPage.tsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, keepPreviousData, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -24,6 +24,7 @@ import {
   CircularProgress,
   Stack,
   Container,
+  Tooltip,
   InputAdornment,
   Pagination,
   Dialog,
@@ -42,10 +43,12 @@ import {
   Add,
   PictureAsPdf,
   CloudUpload,
-  Delete
+  Delete,
+  FileDownload,
+  FileUpload
 } from '@mui/icons-material';
 
-import { getMainTests, updateMainTest, deleteMainTest, getAllActiveMainTestsForPriceList } from '@/services/mainTestService';
+import { getMainTests, updateMainTest, deleteMainTest, getAllActiveMainTestsForPriceList, exportMainTestPricesExcel, importMainTestPricesExcel } from '@/services/mainTestService';
 import { updateTestAvailabilityAcrossAllLabs } from '@/services/firestoreTestService';
 import apiClient from '@/services/api';
 // import { useAuthorization } from '@/hooks/useAuthorization';
@@ -70,6 +73,9 @@ export default function MainTestsListPage() {
   const canCreateTests = true; // Placeholder: can('create lab_tests');
 
   const [isUploading, setIsUploading] = useState(false)
+  const [isExportingPrices, setIsExportingPrices] = useState(false);
+  const [isImportingPrices, setIsImportingPrices] = useState(false);
+  const importInputRef = useRef<HTMLInputElement>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
@@ -221,6 +227,40 @@ export default function MainTestsListPage() {
     }
   };
 
+  const handleExportPrices = async () => {
+    setIsExportingPrices(true);
+    try {
+      await exportMainTestPricesExcel();
+      toast.success('تم تصدير قائمة الأسعار بنجاح');
+    } catch (error) {
+      console.error('Price export error:', error);
+      toast.error('خطأ في تصدير قائمة الأسعار');
+    } finally {
+      setIsExportingPrices(false);
+    }
+  };
+
+  const handleImportPricesChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setIsImportingPrices(true);
+    try {
+      const result = await importMainTestPricesExcel(file);
+      toast.success(result.message);
+      if (result.errors?.length) {
+        toast.warning(result.errors.slice(0, 5).join(' | '), { duration: 10000 });
+      }
+      queryClient.invalidateQueries({ queryKey: ['mainTests'] });
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } }; message?: string };
+      console.error('Price import error:', error);
+      toast.error('خطأ في استيراد الأسعار', { description: err.response?.data?.message || err.message });
+    } finally {
+      setIsImportingPrices(false);
+    }
+  };
+
   const handleGeneratePDF = async () => {
     try {
       const response = await apiClient.get('/reports/price-list-pdf', {
@@ -311,25 +351,27 @@ export default function MainTestsListPage() {
   // console.log(getLabToLabFirebaseSource())
 
   return (
-    <Container className="text-2xl! p-2 max-w-2xl mx-auto" sx={{ py: { xs: 2, sm: 3, md: 4 } }}>
-      <p className="text-sm!  animate-bounce">
-        اضغط <kbd>Enter</kbd> <span style={{ fontSize: '1.1em' }}>⏎</span> لتحديث السعر
-      </p>
-      <Stack spacing={3}>
+    <Container className="max-w-2xl mx-auto" sx={{ py: { xs: 1, sm: 1.5 } }}>
+      <Typography variant="caption" color="text.secondary" display="block" mb={1}>
+        اضغط <kbd>Enter</kbd> ⏎ لتحديث السعر
+      </Typography>
+      <Stack spacing={1.5}>
         <Stack
           direction={{ xs: 'column', sm: 'row' }}
           justifyContent="space-between"
           alignItems={{ xs: 'flex-start', sm: 'center' }}
-          spacing={2}
+          spacing={1}
         >
           <Stack direction="row" alignItems="center" spacing={1}>
-            <Science color="primary" sx={{ fontSize: 28 }} />
-            <Typography variant="h4" component="h1" fontWeight="bold">
-              قائمة التحاليل الرئيسية
-            </Typography>
-            <Button onClick={handleUploadLabPrices} disabled={isUploading}>
-              {isUploading ? 'جاري الرفع...' : 'رفع الاسعار الي فايربيس'}
-            </Button>
+            <Science color="primary" sx={{ fontSize: 20 }} />
+          
+            <Tooltip title="رفع الاسعار الي فايربيس">
+              <span>
+                <IconButton onClick={handleUploadLabPrices} disabled={isUploading} size="small" color="primary">
+                  {isUploading ? <CircularProgress size={18} /> : <CloudUpload fontSize="small" />}
+                </IconButton>
+              </span>
+            </Tooltip>
           </Stack>
 
           <Stack
@@ -343,7 +385,6 @@ export default function MainTestsListPage() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               size="small"
-              sx={{ minWidth: { xs: '100%', sm: 256 } }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -362,6 +403,32 @@ export default function MainTestsListPage() {
               >
                 قائمة الأسعار PDF
               </Button>
+              <Button
+                onClick={handleExportPrices}
+                variant="outlined"
+                size="small"
+                startIcon={<FileDownload />}
+                color="success"
+                disabled={isExportingPrices}
+              >
+                {isExportingPrices ? 'جاري التصدير...' : 'تصدير الأسعار Excel'}
+              </Button>
+              <Button
+                onClick={() => importInputRef.current?.click()}
+                variant="outlined"
+                size="small"
+                startIcon={<FileUpload />}
+                disabled={isImportingPrices}
+              >
+                {isImportingPrices ? 'جاري الاستيراد...' : 'استيراد الأسعار Excel'}
+              </Button>
+              <input
+                ref={importInputRef}
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                hidden
+                onChange={handleImportPricesChange}
+              />
               {/* <Button
                 onClick={handleUploadCashPriceList}
                 variant="contained"
@@ -394,8 +461,8 @@ export default function MainTestsListPage() {
 
         {!isLoading && tests.length === 0 ? (
           <Card>
-            <CardContent sx={{ textAlign: 'center', py: 8 }}>
-              <Science sx={{ fontSize: 48, color: 'text.secondary', opacity: 0.3, mb: 2 }} />
+            <CardContent sx={{ textAlign: 'center', py: 4 }}>
+              <Science sx={{ fontSize: 32, color: 'text.secondary', opacity: 0.3, mb: 1 }} />
               <Typography variant="h6" color="text.secondary" gutterBottom>
                 {searchTerm ? 'لم يتم العثور على نتائج' : 'لا توجد اختبارات'}
               </Typography>
@@ -415,19 +482,19 @@ export default function MainTestsListPage() {
           </Card>
         ) : (
           <Card>
-            <Table>
+            <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell className="text-2xl!" align="center">الكود</TableCell>
-                  <TableCell className="text-2xl!" align="center">اسم </TableCell>
-                  <TableCell className="text-2xl!" align="center" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
+                  <TableCell align="center">الكود</TableCell>
+                  <TableCell align="center">اسم </TableCell>
+                  <TableCell align="center" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
                     الوعاء
                   </TableCell>
-                  <TableCell className="text-2xl!" align="center" sx={{ display: { xs: 'none', md: 'table-cell' } }}>
+                  <TableCell align="center" sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                     السعر
                   </TableCell>
-                  <TableCell className="text-2xl!" align="center">متاح</TableCell>
-                  <TableCell className="text-2xl!" align="right">الإجراءات</TableCell>
+                  <TableCell align="center">متاح</TableCell>
+                  <TableCell align="right">الإجراءات</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -436,19 +503,18 @@ export default function MainTestsListPage() {
                     key={test.id}
                     hover
                     onClick={() => navigate(`/settings/laboratory/${test.id}/edit`)}
-                    sx={{ cursor: 'pointer' }}
+                    sx={{ cursor: 'pointer', '& td': { py: 0.25 } }}
                   >
-                    <TableCell className="text-2xl!" align="center" sx={{ fontWeight: 'medium' }}>
+                    <TableCell align="center" sx={{ fontWeight: 'medium' }}>
                       {test.id}
                     </TableCell>
-                    <TableCell className="text-2xl!" align="center" sx={{ fontWeight: 'medium' }}>
+                    <TableCell align="center" sx={{ fontWeight: 'medium' }}>
                       {test.main_test_name}
                     </TableCell>
-                    <TableCell className="text-2xl!" align="center" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
+                    <TableCell align="center" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
                       {test.container?.container_name || test.container_name || '-'}
                     </TableCell>
                     <TableCell
-                      className="text-2xl!"
                       align="center"
                       sx={{ display: { xs: 'none', md: 'table-cell' } }}
                       onClick={(e) => e.stopPropagation()}
@@ -463,44 +529,38 @@ export default function MainTestsListPage() {
                         inputProps={{
                           step: "0.01",
                           min: "0",
-                          style: { textAlign: 'center', fontSize: '1.25rem' },
+                          style: { textAlign: 'center' },
                           'data-price-index': index,
                         }}
                         sx={{
-                          width: 100,
-                          '& .MuiInputBase-input': {
-                            textAlign: 'center',
-                            fontSize: '1.25rem'
-                          }
+                          width: 120,
+                          '& .MuiInputBase-input': { textAlign: 'center', py: 0.5 },
                         }}
                       />
                     </TableCell>
                     <TableCell
-                      className="text-2xl!"
                       align="center"
                       onClick={(e) => { e.stopPropagation(); handleToggleAvailable(test.id, test.available); }}
                       sx={{
                         cursor: 'pointer',
-                        '&:hover': {
-                          backgroundColor: 'action.hover',
-                        },
+                        '&:hover': { backgroundColor: 'action.hover' },
                         position: 'relative'
                       }}
                     >
                       {updatingAvailable[test.id] ? (
-                        <CircularProgress size={20} />
+                        <CircularProgress size={16} />
                       ) : test.available ? (
-                        <CheckCircle color="success" />
+                        <CheckCircle color="success" fontSize="small" />
                       ) : (
-                        <Cancel color="error" />
+                        <Cancel color="error" fontSize="small" />
                       )}
                     </TableCell>
-                    <TableCell className="text-2xl!" align="right">
+                    <TableCell align="right">
                       <IconButton
                         onClick={(e) => { e.stopPropagation(); handleMenuOpen(e, test.id); }}
                         size="small"
                       >
-                        <MoreVert />
+                        <MoreVert fontSize="small" />
                       </IconButton>
                     </TableCell>
                   </TableRow>
@@ -510,13 +570,14 @@ export default function MainTestsListPage() {
           </Card>
         )}
         {meta && meta.last_page > 1 && (
-          <Box display="flex" justifyContent="center" mt={2}>
+          <Box display="flex" justifyContent="center" mt={1}>
             <Pagination
               count={meta.last_page}
               page={currentPage}
               onChange={(_, page) => setCurrentPage(page)}
               disabled={isLoading}
               color="primary"
+              size="small"
               showFirstButton
               showLastButton
             />

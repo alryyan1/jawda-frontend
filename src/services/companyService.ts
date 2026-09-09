@@ -247,18 +247,35 @@ export const copyMainTestContractsFromCompany = async (
   return response.data;
 };
 
+const filenameFromContentDisposition = (header?: string): string | null => {
+  if (!header) return null;
+  const utf8Match = header.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match) {
+    try {
+      return decodeURIComponent(utf8Match[1]);
+    } catch {
+      return utf8Match[1];
+    }
+  }
+  const asciiMatch = header.match(/filename="?([^";]+)"?/i);
+  return asciiMatch ? asciiMatch[1] : null;
+};
+
 export const exportCompanyMainTestContractsExcel = async (
   companyId: number,
-  search?: string
+  search?: string,
+  companyName?: string
 ): Promise<void> => {
   const response = await apiClient.get(`${API_URL}/${companyId}/contracted-main-tests/export-excel`, {
     params: search ? { search } : {},
     responseType: 'blob',
   });
+  const serverName = filenameFromContentDisposition(response.headers?.['content-disposition']);
+  const fallbackName = companyName ? `${companyName}.xlsx` : `company-${companyId}.xlsx`;
   const url = window.URL.createObjectURL(new Blob([response.data]));
   const link = document.createElement('a');
   link.href = url;
-  link.download = `company-${companyId}-test-contracts-${new Date().toISOString().split('T')[0]}.xlsx`;
+  link.download = serverName || fallbackName;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

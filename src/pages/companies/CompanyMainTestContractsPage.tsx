@@ -269,7 +269,7 @@ const CompanyMainTestContractsPage: React.FC = () => {
     if (!companyId) return;
     setIsExportingExcel(true);
     try {
-      await exportCompanyMainTestContractsExcel(Number(companyId), searchTerm);
+      await exportCompanyMainTestContractsExcel(Number(companyId), searchTerm, company?.name);
       toast.success('تم تصدير العقود إلى Excel');
     } catch (error) {
       console.error('Excel export error:', error);

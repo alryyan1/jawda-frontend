@@ -30,7 +30,8 @@ import {
 import { CloudUpload } from "@mui/icons-material";
 
 import type { Setting } from "@/types/settings";
-import { getSettings, updateSettings } from "@/services/settingService";
+import { getSettings, updateSettings, invalidateFirestoreFacilityIdCache } from "@/services/settingService";
+import { fetchMedicalFacilities } from "@/services/firestoreSpecialistService";
 import apiClient from "@/services/api";
 import { webUrl } from "./constants";
 import { setFirebaseEnabled, checkFirebaseEnabled, setFirebaseUploadTarget, getFirebaseUploadTarget, setLabToLabFirebaseSource, getLabToLabFirebaseSource } from "@/lib/firebase";
@@ -46,6 +47,7 @@ type SettingsFormData = {
   vatin?: string;
   cr?: string;
   storage_name?: string;
+  firestore_facility_id?: string;
 
   // Lab Workflow Settings
   send_result_after_auth?: boolean;
@@ -226,6 +228,11 @@ const SettingsPage: React.FC = () => {
     checkFirebaseEnabled()
   );
 
+  const { data: medicalFacilities = [] } = useQuery({
+    queryKey: ["medicalFacilities"],
+    queryFn: fetchMedicalFacilities,
+  });
+
   // Watch form values for immediate updates
   const watchedValues = watch();
   // showJsonDialog(watchedValues);
@@ -242,6 +249,7 @@ const SettingsPage: React.FC = () => {
         vatin: settings.vatin || undefined,
         cr: settings.cr || undefined,
         storage_name: (settings as any).storage_name || undefined,
+        firestore_facility_id: (settings as any).firestore_facility_id || undefined,
         prevent_backdated_entry:
           (settings as any).prevent_backdated_entry ?? undefined,
         enforce_shift_hours:
@@ -359,7 +367,8 @@ const SettingsPage: React.FC = () => {
     onSuccess: (updatedSettings) => {
       toast.success("تم حفظ الإعدادات بنجاح");
       queryClient.setQueryData(["settings"], updatedSettings);
-      
+      invalidateFirestoreFacilityIdCache();
+
       // Sync Firebase target to localStorage
       const target = (updatedSettings as any).firebase_upload_target;
       if (target) {
@@ -615,6 +624,37 @@ const SettingsPage: React.FC = () => {
                   fullWidth
                   variant="outlined"
                   helperText="اسم المجلد المستخدم لتخزين ملفات النتائج في Firebase Storage"
+                />
+
+                <Controller
+                  name="firestore_facility_id"
+                  control={control}
+                  render={({ field }) => (
+                    <FormControl fullWidth variant="outlined">
+                      <InputLabel id="firestore-facility-id-label">
+                        المنشأة الطبية (Firestore)
+                      </InputLabel>
+                      <Select
+                        {...field}
+                        value={field.value ?? ""}
+                        labelId="firestore-facility-id-label"
+                        label="المنشأة الطبية (Firestore)"
+                      >
+                        {medicalFacilities.map((facility) => (
+                          <MenuItem key={facility.id} value={facility.id}>
+                            {facility.name}
+                          </MenuItem>
+                        ))}
+                        {field.value &&
+                          !medicalFacilities.some((facility) => facility.id === field.value) && (
+                            <MenuItem value={field.value}>{field.value}</MenuItem>
+                          )}
+                      </Select>
+                      <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+                        المنشأة المستخدمة لجلب الأطباء والتخصصات والمواعيد من Firestore
+                      </Typography>
+                    </FormControl>
+                  )}
                 />
 
                 <Stack spacing={3}>

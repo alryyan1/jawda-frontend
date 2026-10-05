@@ -1,5 +1,6 @@
 import { collection, getDocs, query, orderBy, doc, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getFirestoreFacilityId } from '@/services/settingService';
 import type { OnlineAppointment } from '@/types/doctors';
 import { firestoreDb } from '@/lib/firebase_hospital';
 
@@ -29,16 +30,15 @@ export interface FirestoreDoctor {
   };
 }
 
-const FACILITY_ID = 'KyKrjLBHMBGHtLzU3RS3';
-
 export const fetchFirestoreDoctors = async (specializationId: string): Promise<FirestoreDoctor[]> => {
   try {
+    const facilityId = await getFirestoreFacilityId();
     if (!specializationId) {
       return [];
     }
 
     // Reference to the parent document path: medicalFacilities/{facilityId}/specializations/{specializationId}/doctors
-    const specializationDocRef = doc(db, 'medicalFacilities', FACILITY_ID, 'specializations', specializationId);
+    const specializationDocRef = doc(db, 'medicalFacilities', facilityId, 'specializations', specializationId);
     const doctorsRef = collection(specializationDocRef, 'doctors');
     
     // Query to get only active doctors, ordered by docName
@@ -67,12 +67,13 @@ export const fetchFirestoreDoctors = async (specializationId: string): Promise<F
 
 export const fetchAllFirestoreDoctors = async (specializationId: string): Promise<FirestoreDoctor[]> => {
   try {
+    const facilityId = await getFirestoreFacilityId();
     if (!specializationId) {
       return [];
     }
 
     // Reference to the parent document path: medicalFacilities/{facilityId}/specializations/{specializationId}/doctors
-    const specializationDocRef = doc(db, 'medicalFacilities', FACILITY_ID, 'specializations', specializationId);
+    const specializationDocRef = doc(db, 'medicalFacilities', facilityId, 'specializations', specializationId);
     const doctorsRef = collection(specializationDocRef, 'doctors');
     
     // Query to get all doctors, ordered by docName
@@ -121,12 +122,13 @@ export const fetchDoctorAppointments = async (
   date?: string
 ): Promise<FacilityAppointment[]> => {
   try {
+    const facilityId = await getFirestoreFacilityId();
     if (!doctorId) {
       return [];
     }
 
     // Reference to the facility-level appointments collection: medicalFacilities/{facilityId}/appointments
-    const facilityDocRef = doc(firestoreDb, 'medicalFacilities', FACILITY_ID);
+    const facilityDocRef = doc(firestoreDb, 'medicalFacilities', facilityId);
     const appointmentsRef = collection(facilityDocRef, 'appointments');
     
     // Build query constraints
@@ -157,7 +159,7 @@ export const fetchDoctorAppointments = async (
         date: data.date,
         doctorId: data.doctorId,
         doctorName: data.doctorName || '',
-        facilityId: data.facilityId || FACILITY_ID,
+        facilityId: data.facilityId || facilityId,
         isConfirmed: data.isConfirmed ?? false,
         patientId: data.patientId || '',
         patientName: data.patientName || '',

@@ -4,6 +4,27 @@ import type { Setting, SettingsFormData } from '../types/settings';
 
 const API_URL = '/settings';
 
+export const DEFAULT_FIRESTORE_FACILITY_ID = 'KyKrjLBHMBGHtLzU3RS3';
+
+let _firestoreFacilityId: string | null = null;
+
+// Cached Firestore medicalFacilities document ID from General Settings.
+export const getFirestoreFacilityId = async (): Promise<string> => {
+  if (_firestoreFacilityId) return _firestoreFacilityId;
+  try {
+    const settings = await getSettings();
+    _firestoreFacilityId = settings?.firestore_facility_id?.trim() || DEFAULT_FIRESTORE_FACILITY_ID;
+  } catch {
+    return DEFAULT_FIRESTORE_FACILITY_ID;
+  }
+  return _firestoreFacilityId;
+};
+
+// Call this after saving settings so the next Firestore call uses the new facility.
+export const invalidateFirestoreFacilityIdCache = (): void => {
+  _firestoreFacilityId = null;
+};
+
 export const getSettings = async (): Promise<Setting | null> => {
   try {
      // Backend SettingResource wraps in 'data'

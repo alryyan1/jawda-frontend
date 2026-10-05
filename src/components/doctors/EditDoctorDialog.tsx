@@ -92,7 +92,7 @@ const EditDoctorDialog: React.FC<EditDoctorDialogProps> = ({ isOpen, onOpenChang
     staleTime: 5 * 60 * 1000,
     enabled: isOpen,
   });
-
+  // alert(hospitalDoctors.length);
   const { control, handleSubmit, reset, setValue, formState } = useForm<DoctorFormValues>({
     defaultValues: {
       name: "",
@@ -250,7 +250,7 @@ const EditDoctorDialog: React.FC<EditDoctorDialogProps> = ({ isOpen, onOpenChang
               </Box>
             )} />
 
-            {/* <Box>
+            <Box>
               <Typography variant="subtitle2" sx={{ mb: 1 }}>ربط بطبيب (مع المنصه)</Typography>
               <Autocomplete
                 options={hospitalDoctors}
@@ -273,7 +273,7 @@ const EditDoctorDialog: React.FC<EditDoctorDialogProps> = ({ isOpen, onOpenChang
                   />
                 )}
               />
-            </Box> */}
+            </Box>
 
             <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr 1fr 1fr" }, gap: 2 }}>
               <Controller name="cash_percentage" control={control} render={({ field }) => (

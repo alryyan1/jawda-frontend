@@ -64,6 +64,7 @@ export interface Setting {
   default_lab_report_template?: string | null;
   firebase_enabled?: boolean;
   storage_name?: string | null;
+  firestore_facility_id?: string | null;
   prevent_backdated_entry?: boolean;
   enforce_shift_hours?: boolean;
   enforce_unpaid_services_guard?: boolean;

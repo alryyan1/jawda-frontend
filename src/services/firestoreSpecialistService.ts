@@ -1,5 +1,31 @@
 import { collection, getDocs, query, where, orderBy, doc, addDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { firestoreDb } from '@/lib/firebase_hospital';
+import { getFirestoreFacilityId } from '@/services/settingService';
+
+export interface MedicalFacilityOption {
+  id: string;
+  name: string;
+  order: number;
+}
+
+export const fetchMedicalFacilities = async (): Promise<MedicalFacilityOption[]> => {
+  try {
+    const querySnapshot = await getDocs(collection(firestoreDb, 'medicalFacilities'));
+    const facilities: MedicalFacilityOption[] = querySnapshot.docs.map((facilityDoc) => {
+      const data = facilityDoc.data();
+      return {
+        id: facilityDoc.id,
+        name: data.name || facilityDoc.id,
+        order: typeof data.order === 'number' ? data.order : Number.MAX_SAFE_INTEGER,
+      };
+    });
+    return facilities.sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
+  } catch (error) {
+    console.error('Error fetching medical facilities:', error);
+    throw new Error('Failed to fetch medical facilities from Firestore');
+  }
+};
 
 export interface FirestoreSpecialist {
   id: string;
@@ -28,12 +54,12 @@ export interface AllDoctor {
 }
 
 // Firestore path structure: medicalFacilities/{facilityId}/specializations
-const FACILITY_ID = 'KyKrjLBHMBGHtLzU3RS3';
 
 export const fetchFirestoreSpecialists = async (): Promise<FirestoreSpecialist[]> => {
   try {
+    const facilityId = await getFirestoreFacilityId();
     // Reference to the parent document
-    const facilityDocRef = doc(db, 'medicalFacilities', FACILITY_ID);
+    const facilityDocRef = doc(db, 'medicalFacilities', facilityId);
     // Reference to the subcollection
     const specialistsRef = collection(facilityDocRef, 'specializations');
     
@@ -63,8 +89,9 @@ export const fetchFirestoreSpecialists = async (): Promise<FirestoreSpecialist[]
 
 export const fetchAllFirestoreSpecialists = async (): Promise<FirestoreSpecialist[]> => {
   try {
+    const facilityId = await getFirestoreFacilityId();
     // Reference to the parent document
-    const facilityDocRef = doc(db, 'medicalFacilities', FACILITY_ID);
+    const facilityDocRef = doc(db, 'medicalFacilities', facilityId);
     // Reference to the subcollection
     const specialistsRef = collection(facilityDocRef, 'specializations');
     
@@ -123,8 +150,9 @@ export interface FirestoreDoctor {
 
 export const fetchDoctorsBySpecialist = async (specialistId: string): Promise<FirestoreDoctor[]> => {
   try {
+    const facilityId = await getFirestoreFacilityId();
     // Reference to the specialist document
-    const specialistDocRef = doc(db, 'medicalFacilities', FACILITY_ID, 'specializations', specialistId);
+    const specialistDocRef = doc(db, 'medicalFacilities', facilityId, 'specializations', specialistId);
     // Reference to the doctors subcollection
     const doctorsRef = collection(specialistDocRef, 'doctors');
     
@@ -154,8 +182,9 @@ export const fetchDoctorsBySpecialist = async (specialistId: string): Promise<Fi
 
 export const fetchAllDoctorsBySpecialist = async (specialistId: string): Promise<FirestoreDoctor[]> => {
   try {
+    const facilityId = await getFirestoreFacilityId();
     // Reference to the specialist document
-    const specialistDocRef = doc(db, 'medicalFacilities', FACILITY_ID, 'specializations', specialistId);
+    const specialistDocRef = doc(db, 'medicalFacilities', facilityId, 'specializations', specialistId);
     // Reference to the doctors subcollection
     const doctorsRef = collection(specialistDocRef, 'doctors');
     
@@ -212,11 +241,12 @@ export const fetchAppointmentsByDoctor = async (
   date?: string
 ): Promise<FirestoreAppointment[]> => {
   try {
+    const facilityId = await getFirestoreFacilityId();
     // Reference to the doctor document
     const doctorDocRef = doc(
       db,
       'medicalFacilities',
-      FACILITY_ID,
+      facilityId,
       'specializations',
       specialistId,
       'doctors',
@@ -284,6 +314,7 @@ export const createFacilityAppointment = async (
   appointmentData: CreateFacilityAppointmentData
 ): Promise<string> => {
   try {
+    const facilityId = await getFirestoreFacilityId();
     // Validate required fields
     if (!appointmentData.centralSpecialtyId) {
       throw new Error("centralSpecialtyId is required");
@@ -308,7 +339,7 @@ export const createFacilityAppointment = async (
     }
     
     // Reference to the facility document
-    const facilityDocRef = doc(db, 'medicalFacilities', FACILITY_ID);
+    const facilityDocRef = doc(db, 'medicalFacilities', facilityId);
     // Reference to the appointments collection
     const appointmentsRef = collection(facilityDocRef, 'appointments');
     
@@ -325,7 +356,7 @@ export const createFacilityAppointment = async (
       date: appointmentData.date,
       doctorId: appointmentData.doctorId,
       doctorName: appointmentData.doctorName,
-      facilityId: FACILITY_ID,
+      facilityId: facilityId,
       isConfirmed: appointmentData.isConfirmed ?? false,
       patientId: patientId,
       patientName: appointmentData.patientName,
@@ -349,11 +380,12 @@ export const createAppointment = async (
   appointmentData: CreateAppointmentData
 ): Promise<string> => {
   try {
+    const facilityId = await getFirestoreFacilityId();
     // Reference to the doctor document
     const doctorDocRef = doc(
       db,
       'medicalFacilities',
-      FACILITY_ID,
+      facilityId,
       'specializations',
       specialistId,
       'doctors',
@@ -397,11 +429,12 @@ export const updateDoctor = async (
   doctorData: UpdateDoctorData
 ): Promise<void> => {
   try {
+    const facilityId = await getFirestoreFacilityId();
     // Reference to the doctor document
     const doctorDocRef = doc(
       db,
       'medicalFacilities',
-      FACILITY_ID,
+      facilityId,
       'specializations',
       specialistId,
       'doctors',
@@ -429,8 +462,9 @@ export interface AppointmentWithDoctor extends FirestoreAppointment {
 // Fetch all appointments from the facility-level appointments collection
 export const fetchAllFacilityAppointments = async (): Promise<FacilityAppointment[]> => {
   try {
+    const facilityId = await getFirestoreFacilityId();
     // Reference to the facility document
-    const facilityDocRef = doc(db, 'medicalFacilities', FACILITY_ID);
+    const facilityDocRef = doc(db, 'medicalFacilities', facilityId);
     // Reference to the appointments collection
     const appointmentsRef = collection(facilityDocRef, 'appointments');
     
@@ -464,8 +498,9 @@ export const fetchFacilityAppointmentsByDoctor = async (
   date?: string
 ): Promise<FacilityAppointment[]> => {
   try {
+    const facilityId = await getFirestoreFacilityId();
     // Reference to the facility document
-    const facilityDocRef = doc(db, 'medicalFacilities', FACILITY_ID);
+    const facilityDocRef = doc(db, 'medicalFacilities', facilityId);
     // Reference to the appointments collection
     const appointmentsRef = collection(facilityDocRef, 'appointments');
     
@@ -612,8 +647,9 @@ export const fetchAllAppointments = async (): Promise<AppointmentWithDoctor[]> =
 };
 
 // Fetch specializations from Firestore
-export const fetchSpecializationsFromApi = async (facilityId: string = 'KyKrjLBHMBGHtLzU3RS3'): Promise<ApiSpecialization[]> => {
+export const fetchSpecializationsFromApi = async (facilityIdOverride?: string): Promise<ApiSpecialization[]> => {
   try {
+    const facilityId = facilityIdOverride || await getFirestoreFacilityId();
     // Reference to the parent document
     const facilityDocRef = doc(db, 'medicalFacilities', facilityId);
     // Reference to the subcollection

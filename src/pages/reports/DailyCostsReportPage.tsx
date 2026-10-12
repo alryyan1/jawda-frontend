@@ -10,7 +10,6 @@ import { formatNumber } from '@/lib/utils';
 // MUI imports
 import {
   Card,
-  CardHeader,
   CardContent,
   Typography,
   Button,
@@ -24,16 +23,13 @@ import {
   TableRow as MUITableRow,
   TableCell as MUITableCell,
   TableFooter as MUITableFooter,
-  Box,
   Alert,
-  Paper,
-  TableContainer,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
 } from '@mui/material';
-import { Loader2, FileBarChart2, Calendar, Download, FileSpreadsheet } from 'lucide-react';
+import { Loader2, Calendar, AlertTriangle, FileText, FileSpreadsheet, Download } from 'lucide-react';
 import apiClient from '@/services/api';
 
 // Types
@@ -65,13 +61,13 @@ const currentYear = new Date().getFullYear();
 const years = Array.from({ length: 10 }, (_, i) => String(currentYear - 5 + i));
 const months = Array.from({ length: 12 }, (_, i) => ({
   value: String(i + 1),
-  label: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'][i]
+  label: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'][i],
 }));
 
 // API functions
 const getDailyCosts = async (month: number, year: number): Promise<DailyCostsResponse> => {
   const response = await apiClient.get<DailyCostsResponse>('/reports/costs-by-day', {
-    params: { month, year }
+    params: { month, year },
   });
   return response.data;
 };
@@ -112,25 +108,19 @@ const DailyCostsReportPage: React.FC = () => {
     placeholderData: keepPreviousData,
   });
 
+  const dailyData = reportData?.data || [];
+  const summary = reportData?.summary;
+
   const formatDateArabic = (dateString: string) => {
     try {
-      const date = new Date(dateString);
-      return format(date, 'EEEE d MMMM', { locale: arSA });
+      return format(new Date(dateString), 'yyyy-MM-dd (EEEE)', { locale: arSA });
     } catch {
       return dateString;
     }
   };
 
-  const getDayNumber = (dateString: string) => {
-    try {
-      return new Date(dateString).getDate();
-    } catch {
-      return '-';
-    }
-  };
-
   const handleDownloadPdf = async () => {
-    if (!reportData?.data.length) {
+    if (!dailyData.length) {
       toast.info('لا توجد بيانات للتصدير');
       return;
     }
@@ -149,7 +139,7 @@ const DailyCostsReportPage: React.FC = () => {
   };
 
   const handleDownloadExcel = async () => {
-    if (!reportData?.data.length) {
+    if (!dailyData.length) {
       toast.info('لا توجد بيانات للتصدير');
       return;
     }
@@ -192,52 +182,44 @@ const DailyCostsReportPage: React.FC = () => {
   };
 
   return (
-    <Box className="container mx-auto py-4 space-y-6" dir="rtl">
-      {/* Header */}
-      <Box className="flex items-center justify-between gap-3 mb-6">
-        <Box className="flex items-center gap-3">
-          <Calendar className="h-8 w-8 text-primary" />
-          <Typography variant="h4" component="h1" className="font-bold">
-            تقرير المصروفات اليومية
-          </Typography>
-        </Box>
-        <Box className="flex gap-2">
+    <div className="container mx-auto py-3 sm:py-4 space-y-3 text-sm">
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
+        <div className="flex items-center gap-2">
+          <Calendar className="h-5 w-5 text-primary" />
+          <h1 className="text-lg sm:text-xl font-bold">تقرير المصروفات اليومية</h1>
+        </div>
+        <div className="flex items-center gap-2">
           <Button
-            variant="outlined"
-            size="small"
-            onClick={handleDownloadPdf}
-            disabled={isGeneratingPdf || isLoading || !reportData?.data.length}
-            startIcon={isGeneratingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-          >
-            PDF
-          </Button>
-          <Button
-            variant="outlined"
-            size="small"
             onClick={handleDownloadExcel}
-            disabled={isGeneratingExcel || isLoading || !reportData?.data.length}
-            startIcon={isGeneratingExcel ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />}
+            disabled={isGeneratingExcel || isLoading || dailyData.length === 0}
+            size="small"
+            variant="outlined"
+            startIcon={!isGeneratingExcel ? <FileSpreadsheet className="h-4 w-4" /> : undefined}
           >
-            Excel
+            {isGeneratingExcel ? <Loader2 className="h-4 w-4 animate-spin" /> : 'تصدير Excel'}
           </Button>
-        </Box>
-      </Box>
+          <Button
+            onClick={handleDownloadPdf}
+            disabled={isGeneratingPdf || isLoading || dailyData.length === 0}
+            size="small"
+            variant="contained"
+            startIcon={!isGeneratingPdf ? <FileText className="h-4 w-4" /> : undefined}
+          >
+            {isGeneratingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : 'طباعة PDF'}
+          </Button>
+        </div>
+      </div>
 
-      {/* Filters Card */}
-      <Card elevation={2}>
-        <CardHeader 
-          title={<Typography variant="h6">فلترة التقرير</Typography>}
-          avatar={<FileBarChart2 className="h-5 w-5" />}
-        />
-        <CardContent>
-          <Box className="flex flex-wrap gap-4 items-end">
-            {/* Month Select */}
-            <FormControl size="small" sx={{ minWidth: 150 }}>
-              <InputLabel id="month-label">الشهر</InputLabel>
+      <Card>
+        <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 items-end !py-2">
+          <div className="flex flex-col gap-1">
+            <Typography className="text-xs">الشهر</Typography>
+            <FormControl size="small">
+              <InputLabel id="month-select-label">الشهر</InputLabel>
               <MUISelect
                 value={selectedMonth}
-                onChange={(e) => setSelectedMonth(e.target.value)}
-                labelId="month-label"
+                onChange={(e) => setSelectedMonth(String(e.target.value))}
+                labelId="month-select-label"
                 label="الشهر"
               >
                 {months.map(m => (
@@ -245,14 +227,15 @@ const DailyCostsReportPage: React.FC = () => {
                 ))}
               </MUISelect>
             </FormControl>
-
-            {/* Year Select */}
-            <FormControl size="small" sx={{ minWidth: 120 }}>
-              <InputLabel id="year-label">السنة</InputLabel>
+          </div>
+          <div className="flex flex-col gap-1">
+            <Typography className="text-xs">السنة</Typography>
+            <FormControl size="small">
+              <InputLabel id="year-select-label">السنة</InputLabel>
               <MUISelect
                 value={selectedYear}
-                onChange={(e) => setSelectedYear(e.target.value)}
-                labelId="year-label"
+                onChange={(e) => setSelectedYear(String(e.target.value))}
+                labelId="year-select-label"
                 label="السنة"
               >
                 {years.map(y => (
@@ -260,140 +243,108 @@ const DailyCostsReportPage: React.FC = () => {
                 ))}
               </MUISelect>
             </FormControl>
-
-            {/* Loading indicator */}
-            {isFetching && <Loader2 className="h-5 w-5 animate-spin text-primary" />}
-          </Box>
+          </div>
+          {isFetching && (
+            <div className="flex items-center">
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Error Display */}
+      {isLoading && (
+        <div className="text-center py-6">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </div>
+      )}
       {error && (
-        <Alert severity="error" className="mb-4">
-          فشل تحميل التقرير: {error.message}
+        <Alert severity="error" icon={<AlertTriangle />} sx={{ py: 0.5 }}>
+          <Typography variant="body2">فشل تحميل التقرير</Typography>
+          <Typography variant="caption" color="text.secondary">{error.message}</Typography>
         </Alert>
       )}
 
-      {/* Loading State */}
-      {isLoading && (
-        <Box className="flex justify-center items-center py-20">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        </Box>
-      )}
-
-      {/* Report Table */}
       {!isLoading && reportData && (
-        <Card elevation={2}>
-          <CardHeader 
-            title={
-              <Typography variant="h6">
-                مصروفات شهر {months.find(m => m.value === String(appliedFilters.month))?.label} {appliedFilters.year}
-              </Typography>
-            }
-          />
-          <CardContent>
-            {reportData.data.length === 0 ? (
-              <Alert severity="info">لا توجد مصروفات مسجلة في هذا الشهر</Alert>
+        <>
+          <Typography className="text-center text-xs text-muted-foreground">
+            مصروفات شهر {months.find(m => m.value === String(appliedFilters.month))?.label} {appliedFilters.year}
+          </Typography>
+          <Card>
+            {dailyData.length === 0 ? (
+              <Alert severity="info" sx={{ m: 1 }}>لا توجد مصروفات مسجلة في هذا الشهر</Alert>
             ) : (
-              <TableContainer component={Paper} elevation={0}>
-                <MUITable size="small">
-                  <MUITableHead>
-                    <MUITableRow sx={{ backgroundColor: 'primary.main' }}>
-                      <MUITableCell sx={{ color: 'white', fontWeight: 'bold', textAlign: 'center' }}>اليوم</MUITableCell>
-                      <MUITableCell sx={{ color: 'white', fontWeight: 'bold', textAlign: 'center' }}>التاريخ</MUITableCell>
-                      <MUITableCell sx={{ color: 'white', fontWeight: 'bold', textAlign: 'center' }}>إجمالي المصروفات</MUITableCell>
-                      <MUITableCell sx={{ color: 'white', fontWeight: 'bold', textAlign: 'center' }}>كاش</MUITableCell>
-                      <MUITableCell sx={{ color: 'white', fontWeight: 'bold', textAlign: 'center' }}>بنك</MUITableCell>
-                      <MUITableCell sx={{ color: 'white', fontWeight: 'bold', textAlign: 'center' }}>عدد العمليات</MUITableCell>
+              <MUITable
+                size="small"
+                sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1, fontSize: '0.8125rem' } }}
+              >
+                <MUITableHead>
+                  <MUITableRow>
+                    <MUITableCell align="center">التاريخ</MUITableCell>
+                    <MUITableCell align="center">إجمالي المصروفات</MUITableCell>
+                    <MUITableCell align="center">كاش</MUITableCell>
+                    <MUITableCell align="center">بنك</MUITableCell>
+                    <MUITableCell align="center">عدد العمليات</MUITableCell>
+                  </MUITableRow>
+                </MUITableHead>
+                <MUITableBody>
+                  {dailyData.map((day) => (
+                    <MUITableRow key={day.date}>
+                      <MUITableCell align="center">{formatDateArabic(day.date)}</MUITableCell>
+                      <MUITableCell align="center" className="font-semibold text-red-600 dark:text-red-400">
+                        {formatNumber(day.total_cost)}
+                      </MUITableCell>
+                      <MUITableCell align="center">{formatNumber(day.total_cash)}</MUITableCell>
+                      <MUITableCell align="center">{formatNumber(day.total_bank)}</MUITableCell>
+                      <MUITableCell align="center">{day.transactions_count}</MUITableCell>
                     </MUITableRow>
-                  </MUITableHead>
-                  <MUITableBody>
-                    {reportData.data.map((day, index) => (
-                      <MUITableRow 
-                        key={day.date}
-                        sx={{ 
-                          backgroundColor: index % 2 === 0 ? 'grey.50' : 'white',
-                          '&:hover': { backgroundColor: 'action.hover' }
-                        }}
-                      >
-                        <MUITableCell sx={{ textAlign: 'center', fontWeight: 'bold' }}>
-                          {getDayNumber(day.date)}
-                        </MUITableCell>
-                        <MUITableCell sx={{ textAlign: 'center' }}>
-                          {formatDateArabic(day.date)}
-                        </MUITableCell>
-                        <MUITableCell sx={{ textAlign: 'center', fontWeight: 'bold', color: 'error.main' }}>
-                          {formatNumber(day.total_cost)}
-                        </MUITableCell>
-                        <MUITableCell sx={{ textAlign: 'center', color: 'success.main' }}>
-                          {formatNumber(day.total_cash)}
-                        </MUITableCell>
-                        <MUITableCell sx={{ textAlign: 'center', color: 'info.main' }}>
-                          {formatNumber(day.total_bank)}
-                        </MUITableCell>
-                        <MUITableCell sx={{ textAlign: 'center' }}>
-                          {day.transactions_count}
-                        </MUITableCell>
-                      </MUITableRow>
-                    ))}
-                  </MUITableBody>
+                  ))}
+                </MUITableBody>
+                {summary && (
                   <MUITableFooter>
-                    <MUITableRow sx={{ backgroundColor: 'grey.200' }}>
-                      <MUITableCell colSpan={2} sx={{ fontWeight: 'bold', textAlign: 'center', fontSize: '1rem' }}>
-                        الإجمالي
+                    <MUITableRow>
+                      <MUITableCell align="center">الإجمالي</MUITableCell>
+                      <MUITableCell align="center" className="font-bold text-red-600 dark:text-red-400">
+                        {formatNumber(summary.total_cost)}
                       </MUITableCell>
-                      <MUITableCell sx={{ fontWeight: 'bold', textAlign: 'center', fontSize: '1rem', color: 'error.main' }}>
-                        {formatNumber(reportData.summary.total_cost)}
-                      </MUITableCell>
-                      <MUITableCell sx={{ fontWeight: 'bold', textAlign: 'center', fontSize: '1rem', color: 'success.main' }}>
-                        {formatNumber(reportData.summary.total_cash)}
-                      </MUITableCell>
-                      <MUITableCell sx={{ fontWeight: 'bold', textAlign: 'center', fontSize: '1rem', color: 'info.main' }}>
-                        {formatNumber(reportData.summary.total_bank)}
-                      </MUITableCell>
-                      <MUITableCell sx={{ fontWeight: 'bold', textAlign: 'center', fontSize: '1rem' }}>
-                        {reportData.summary.transactions_count}
-                      </MUITableCell>
+                      <MUITableCell align="center">{formatNumber(summary.total_cash)}</MUITableCell>
+                      <MUITableCell align="center">{formatNumber(summary.total_bank)}</MUITableCell>
+                      <MUITableCell align="center">{summary.transactions_count}</MUITableCell>
                     </MUITableRow>
                   </MUITableFooter>
-                </MUITable>
-              </TableContainer>
+                )}
+              </MUITable>
             )}
-          </CardContent>
-        </Card>
+          </Card>
+        </>
       )}
 
       {/* PDF Preview Dialog */}
-      <Dialog
-        open={isPdfPreviewOpen}
-        onClose={handleClosePdfDialog}
-        fullWidth
-        maxWidth="lg"
-      >
+      <Dialog open={isPdfPreviewOpen} onClose={handleClosePdfDialog} fullWidth maxWidth="lg">
         <DialogTitle>معاينة تقرير المصروفات اليومية</DialogTitle>
         <DialogContent dividers>
           {pdfPreviewUrl ? (
-            <Box className="h-[70vh]">
+            <div className="h-[70vh]">
               <iframe
                 title="pdf-preview"
                 src={pdfPreviewUrl}
                 style={{ width: '100%', height: '100%', border: 'none' }}
               />
-            </Box>
+            </div>
           ) : (
-            <Box className="flex items-center justify-center py-10">
+            <div className="flex items-center justify-center py-10">
               <Loader2 className="h-8 w-8 animate-spin" />
-            </Box>
+            </div>
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleDownloadFromDialog} variant="outlined">تنزيل</Button>
-          <Button onClick={handleClosePdfDialog} variant="contained">إغلاق</Button>
+          <Button onClick={handleDownloadFromDialog} variant="outlined" size="small" startIcon={<Download className="h-4 w-4" />}>
+            تنزيل
+          </Button>
+          <Button onClick={handleClosePdfDialog} variant="contained" size="small">إغلاق</Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </div>
   );
 };
 
 export default DailyCostsReportPage;
-

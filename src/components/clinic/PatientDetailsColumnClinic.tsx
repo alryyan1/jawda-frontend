@@ -33,8 +33,8 @@ export interface PatientDetailsColumnClinicRef {
 const InfoCell = ({ icon, label, value }: { icon: React.ReactNode; label: string; value?: string | null }) => (
   <div className="flex items-center gap-1 min-w-0 py-0.5">
     <span className="text-muted-foreground shrink-0">{icon}</span>
-    <span className="text-xs text-muted-foreground shrink-0">{label}:</span>
-    <span className="text-xs font-medium truncate text-foreground">{value ?? "-"}</span>
+    <span className=" text-muted-foreground shrink-0">{label}:</span>
+    <span className=" font-medium truncate text-foreground">{value ?? "-"}</span>
   </div>
 );
 
@@ -241,11 +241,8 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
 
         {/* Patient Header */}
         <div className="flex items-center gap-2 pb-2 border-b border-border">
-          <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
-            <User size={14} className="text-primary" />
-          </div>
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sm leading-tight truncate text-foreground">{patientName}</p>
+            <p className="font-semibold text-center leading-tight truncate text-foreground">{patientName}</p>
             <div className="flex items-center gap-1 mt-0.5">
               <span className="text-[11px] text-muted-foreground">#{serial}</span>
               <button onClick={handleCopySerial} className="p-0.5 hover:bg-muted rounded transition-colors" title="نسخ المتسلسل">

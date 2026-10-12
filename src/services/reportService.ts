@@ -199,6 +199,7 @@ export const downloadCompanyTestContractPdf = async (companyId: number, filters:
 export interface MonthlyServiceIncomeFilters {
   month: number; // 1-12
   year: number;  // e.g., 2023
+  service_group_id?: number | null;
   // user_id?: number; // Optional filter by user
 }
 

@@ -158,34 +158,31 @@ const ManageDoctorShiftsDialog: React.FC<ManageDoctorShiftsDialogProps> = ({ tri
     const reportUrl = `${webUrl}reports/clinic-report-old/pdf?doctor_shift_id=${doctorShiftId}`;
     window.open(reportUrl, '_blank');
   };
-console.log(doctorsList,'doctorsList');
+
   return (
     <>
       <Box onClick={() => setIsOpen(true)}>
         {triggerButton}
       </Box>
-      <Dialog 
-        open={isOpen} 
+      <Dialog
+        open={isOpen}
         onClose={() => setIsOpen(false)}
-        maxWidth="lg"
+        maxWidth="md"
         fullWidth
       >
-        <DialogTitle sx={{ fontSize: '1.5rem', fontWeight: 'bold' }}>أطبائي</DialogTitle>
-        <DialogContent>
-          <Box sx={{ mb: 2 }}>
+        <DialogTitle className="!text-base !font-bold">أطبائي</DialogTitle>
+        <DialogContent className="!pt-2">
+          <Box sx={{ mb: 1.5 }}>
             <TextField
               fullWidth
+              size="small"
               placeholder="البحث عن الأطباء المفضلين..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              sx={{ 
-                '& .MuiInputBase-input': { fontSize: '1.1rem' },
-                '& .MuiInputBase-input::placeholder': { fontSize: '1.1rem' }
-              }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <SearchIcon sx={{ fontSize: '1.2rem' }} />
+                    <SearchIcon fontSize="small" />
                   </InputAdornment>
                 ),
               }}
@@ -193,64 +190,53 @@ console.log(doctorsList,'doctorsList');
           </Box>
 
           {(isLoading || isFetching) && !doctorsList && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-              <CircularProgress />
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+              <CircularProgress size={28} />
             </Box>
           )}
           {(!isLoading || doctorsList) && (
-            <TableContainer  component={Paper} sx={{ maxHeight: 400 }}>
+            <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 400 }}>
               {doctorsList && doctorsList.length > 0 ? (
-                <Table>
+                <Table size="small" sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1, fontSize: '0.8125rem' } }}>
                   <TableHead>
                     <TableRow>
-                      <TableCell className='text-2xl' align="center" sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>الاسم</TableCell>
-                      <TableCell className='text-2xl' align="center" sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>التخصص</TableCell>
-                      <TableCell className='text-2xl' align="center" sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>الإجراءات</TableCell>
-                      <TableCell className='text-2xl' align="center" sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>التقرير</TableCell>
+                      <TableCell align="center">الاسم</TableCell>
+                      <TableCell align="center">التخصص</TableCell>
+                      <TableCell align="center">الإجراءات</TableCell>
+                      <TableCell align="center">التقرير</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {doctorsList?.map((doc) => (
-  // {console.log(doc)}
+                    {doctorsList.map((doc) => (
                       <TableRow key={doc.id}>
-                        <TableCell className='text-2xl' align="center" sx={{ fontWeight: 'medium', fontSize: '1.1rem' }}>
-                          {doc.name}
-                        </TableCell>
-                        <TableCell className='text-2xl' align="center" sx={{ fontSize: '1.1rem' }}>
-                          {doc.specialist_name || '-'}
-                        </TableCell>
-                        
-                 
-                        <TableCell className='text-2xl' align="center">
+                        <TableCell align="center" className="font-medium">{doc.name}</TableCell>
+                        <TableCell align="center">{doc.specialist_name || '-'}</TableCell>
+                        <TableCell align="center">
                           {doc.is_on_shift && doc.current_doctor_shift_id ? (
                             <Button
-                              size="medium"
+                              size="small"
                               color="error"
                               variant="contained"
                               onClick={() => handleCloseShift(doc.current_doctor_shift_id!)}
                               disabled={closeShiftMutation.isPending && closeShiftMutation.variables === doc.current_doctor_shift_id}
-                              className='text-2xl'
-                              sx={{ fontSize: '1rem' }}
                               startIcon={
-                                closeShiftMutation.isPending && closeShiftMutation.variables === doc.current_doctor_shift_id 
-                                  ? <CircularProgress size={16} />
-                                  : <LogOutIcon />
+                                closeShiftMutation.isPending && closeShiftMutation.variables === doc.current_doctor_shift_id
+                                  ? <CircularProgress size={14} />
+                                  : <LogOutIcon fontSize="small" />
                               }
                             >
                               إغلاق الورديه
                             </Button>
                           ) : (
                             <Button
-                              size="medium"
+                              size="small"
                               variant="contained"
                               onClick={() => handleOpenShift(doc.id)}
                               disabled={openShiftMutation.isPending && openShiftMutation.variables === doc.id}
-                              className='text-2xl'
-                              sx={{ fontSize: '1rem' }}
                               startIcon={
-                                openShiftMutation.isPending && openShiftMutation.variables === doc.id 
-                                  ? <CircularProgress size={16} />
-                                  : <LogInIcon />
+                                openShiftMutation.isPending && openShiftMutation.variables === doc.id
+                                  ? <CircularProgress size={14} />
+                                  : <LogInIcon fontSize="small" />
                               }
                             >
                               فتح الورديه
@@ -259,18 +245,18 @@ console.log(doctorsList,'doctorsList');
                         </TableCell>
                         <TableCell align="center">
                           <Tooltip title="عرض تقرير الطبيب في تبويب جديد">
-                            <Button
-                              size="medium"
-                              variant="outlined"
-                              color="primary"
-                              disabled={doc.current_doctor_shift_id == null}
-                              onClick={() => handleViewReport(doc.current_doctor_shift_id!)}
-                              className='text-2xl'
-                              sx={{ fontSize: '1rem' }}
-                              startIcon={<PdfIcon />}
-                            >
-                              عرض التقرير
-                            </Button>
+                            <span>
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                color="primary"
+                                disabled={doc.current_doctor_shift_id == null}
+                                onClick={() => handleViewReport(doc.current_doctor_shift_id!)}
+                                startIcon={<PdfIcon fontSize="small" />}
+                              >
+                                عرض التقرير
+                              </Button>
+                            </span>
                           </Tooltip>
                         </TableCell>
                       </TableRow>
@@ -278,13 +264,13 @@ console.log(doctorsList,'doctorsList');
                   </TableBody>
                 </Table>
               ) : (
-                <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
+                <Box sx={{ textAlign: 'center', py: 3 }} className="text-sm text-muted-foreground">
                   {searchTerm ? (
-                    <Box sx={{ fontSize: '1.2rem' }}>لا توجد نتائج</Box>
+                    <Box>لا توجد نتائج</Box>
                   ) : (
-                    <Box>
-                      <Box sx={{ mb: 2, fontSize: '1.2rem' }}>لا يوجد أطباء مفضلين</Box>
-                      <Box sx={{ fontSize: '1rem', color: 'text.secondary' }}>
+                    <Box className="space-y-1">
+                      <Box>لا يوجد أطباء مفضلين</Box>
+                      <Box className="text-xs">
                         استخدم زر "الأطباء المفضلين" لإضافة أطباء إلى قائمة المفضلة
                       </Box>
                     </Box>
@@ -303,16 +289,17 @@ console.log(doctorsList,'doctorsList');
             }}
             triggerButton={
               <Button
+                size="small"
                 variant="outlined"
                 color="error"
                 startIcon={<FontAwesomeIcon icon={faHeart} />}
-                sx={{ mr: 1, fontSize: '1rem' }}
+                sx={{ mr: 1 }}
               >
                 الأطباء المفضلين
               </Button>
             }
           />
-          <Button onClick={() => setIsOpen(false)} variant="outlined" sx={{ fontSize: '1rem' }}>
+          <Button onClick={() => setIsOpen(false)} variant="outlined" size="small">
             إغلاق
           </Button>
         </DialogActions>

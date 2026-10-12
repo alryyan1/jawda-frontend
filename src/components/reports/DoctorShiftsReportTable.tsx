@@ -37,14 +37,14 @@ const COLUMNS = [
   { key: "index",             label: "#",                   defaultVisible: true },
   { key: "status",            label: "الحالة",             defaultVisible: true },
   { key: "date",              label: "تاريخ",              defaultVisible: true },
-  { key: "specialty",         label: "التخصص",             defaultVisible: true },
+  { key: "specialty",         label: "التخصص",             defaultVisible: false },
   { key: "doctor",            label: "الطبيب",             defaultVisible: true },
   { key: "income",            label: "الإيراد المدفوع",   defaultVisible: true },
-  { key: "deduction",         label: "التحمل",             defaultVisible: true },
-  { key: "ins_revenue",       label: "إيراد التأمين",     defaultVisible: true },
+  { key: "deduction",         label: "التحمل",             defaultVisible: false },
+  { key: "ins_revenue",       label: "إيراد التأمين",     defaultVisible: false },
   { key: "patients",          label: "عدد المرضى",         defaultVisible: true },
-  { key: "cash_pct",          label: "% كاش",             defaultVisible: true },
-  { key: "ins_pct",           label: "% تأمين",           defaultVisible: true },
+  { key: "cash_pct",          label: "% كاش",             defaultVisible: false },
+  { key: "ins_pct",           label: "% تأمين",           defaultVisible: false },
   { key: "cash_entitlement",  label: "استحقاق (كاش)",      defaultVisible: true },
   { key: "ins_entitlement",   label: "استحقاق (تأمين)",    defaultVisible: true },
   { key: "total_entitlement", label: "إجمالي الاستحقاق",  defaultVisible: true },
@@ -283,9 +283,9 @@ function DoctorShiftsReportTable({
             )}
             {vis("index")             && <TableCell align="center" sx={{ width: 36 }}>#</TableCell>}
             {vis("status")            && <TableCell align="center">الحالة</TableCell>}
-            {vis("date")              && <TableCell align="center">تاريخ</TableCell>}
-            {vis("specialty")         && <TableCell align="center">التخصص</TableCell>}
             {vis("doctor")            && <TableCell align="center">الطبيب</TableCell>}
+            {vis("specialty")         && <TableCell align="center">التخصص</TableCell>}
+            {vis("date")              && <TableCell align="center">التاريخ</TableCell>}
             {vis("income")            && <TableCell align="center">الإيراد المدفوع</TableCell>}
             {vis("deduction")         && <TableCell align="center">التحمل</TableCell>}
             {vis("ins_revenue")       && <TableCell align="center">إيراد التأمين</TableCell>}
@@ -307,16 +307,7 @@ function DoctorShiftsReportTable({
 
             return (
               <React.Fragment key={date}>
-                {/* ── Day header ── */}
-                <TableRow sx={{ bgcolor: "#1565C0" }}>
-                  <TableCell
-                    colSpan={visibleColCount}
-                    align="center"
-                    sx={{ color: "#fff", fontWeight: 700, py: 0.75, fontSize: 13, letterSpacing: 0.5 }}
-                  >
-                    {dateLabel}
-                  </TableCell>
-                </TableRow>
+             
 
                 {/* ── Day rows ── */}
                 {dayShifts.map((shift, index) => {
@@ -346,7 +337,7 @@ function DoctorShiftsReportTable({
                         </TableCell>
                       )}
                       {vis("index") && (
-                        <TableCell align="center" sx={{ color: "text.secondary", fontSize: 11, fontWeight: 600 }}>{index + 1}</TableCell>
+                        <TableCell align="center" sx={{ color: "text.secondary", fontSize: 11, fontWeight: 600 }}>{shift.id}</TableCell>
                       )}
                       {vis("status") && (
                         <TableCell align="center" onClick={(e) => e.stopPropagation()}>
@@ -364,15 +355,16 @@ function DoctorShiftsReportTable({
                           </Box>
                         </TableCell>
                       )}
-                      {vis("date")              && <TableCell align="center">{shift.created_at ? dayjs(shift.created_at).locale("ar").format("hh:mm A") : "-"}</TableCell>}
-                      {vis("specialty")         && <TableCell align="center">{shift.doctor_specialist_name || "-"}</TableCell>}
-                      {vis("doctor")            && (
+                                            {vis("doctor")            && (
                         <TableCell align="center">
                           <Link component="button" onClick={(e) => handleDoctorNameClick(shift, e)} sx={{ color: "primary.main", textDecoration: "none", cursor: "pointer", "&:hover": { textDecoration: "underline" }, fontWeight: "medium" }}>
                             {shift.doctor_name || "N/A"}
                           </Link>
                         </TableCell>
                       )}
+                      {vis("date")              && <TableCell align="center">{shift.created_at ? dayjs(shift.created_at).locale("ar").format(" DD MMMM YYYY - hh:mm A") : "-"}</TableCell>}
+                      {vis("specialty")         && <TableCell align="center">{shift.doctor_specialist_name || "-"}</TableCell>}
+
                       {vis("income")            && <TableCell align="center" sx={{ fontWeight: "bold", color: "success.main" }}>{formatNumber(shift.total_income || 0)}</TableCell>}
                       {vis("deduction")         && <TableCell align="center" sx={{ fontWeight: "bold", color: "error.main" }}>{formatNumber(shift.clinic_enurance || 0)}</TableCell>}
                       {vis("ins_revenue")       && <TableCell align="center" sx={{ color: "warning.dark" }}>{formatNumber(Number(shift.snap_total_insurance_revenue) || 0)}</TableCell>}
@@ -398,26 +390,6 @@ function DoctorShiftsReportTable({
                   );
                 })}
 
-                {/* ── Day totals ── */}
-                <TableRow sx={{ bgcolor: "#E3F2FD", "& .MuiTableCell-root": { fontWeight: 700, py: 0.5, fontSize: 12 } }}>
-                  {selectable            && <TableCell />}
-                  {vis("index")          && <TableCell />}
-                  {vis("status")         && <TableCell />}
-                  {vis("date")           && <TableCell align="center" sx={{ color: "primary.dark" }}>مجموع اليوم</TableCell>}
-                  {vis("specialty")      && <TableCell />}
-                  {vis("doctor")         && <TableCell />}
-                  {vis("income")         && <TableCell align="center" sx={{ color: "success.dark" }}>{formatNumber(dayTotals.total_income)}</TableCell>}
-                  {vis("deduction")      && <TableCell align="center" sx={{ color: "error.dark" }}>{formatNumber(dayTotals.clinic_enurance)}</TableCell>}
-                  {vis("ins_revenue")    && <TableCell align="center" sx={{ color: "warning.dark" }}>{formatNumber(dayTotals.snap_total_insurance_revenue)}</TableCell>}
-                  {vis("patients")       && <TableCell align="center">{dayTotals.snap_patients_count}</TableCell>}
-                  {vis("cash_pct")       && <TableCell />}
-                  {vis("ins_pct")        && <TableCell />}
-                  {vis("cash_entitlement")  && <TableCell align="center">{formatNumber(dayTotals.cash_entitlement)}</TableCell>}
-                  {vis("ins_entitlement")   && <TableCell align="center">{formatNumber(dayTotals.insurance_entitlement)}</TableCell>}
-                  {vis("total_entitlement") && <TableCell align="center">{formatNumber(dayTotals.total_doctor_entitlement)}</TableCell>}
-                  {vis("journal")        && <TableCell />}
-                  {vis("user")           && <TableCell />}
-                </TableRow>
               </React.Fragment>
             );
           })}

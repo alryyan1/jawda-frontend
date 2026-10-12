@@ -27,7 +27,8 @@ export const addCost = async (data: CostFormData): Promise<Cost> => {
 export interface CostFilters { // Same as ServiceStatisticsFilters
   page?: number; per_page?: number; date_from?: string; date_to?: string;
   cost_category_id?: number | string | null; user_cost_id?: number | string | null;
-  shift_id?: number | string | null; payment_method?: 'cash' | 'bank' | 'all' | null;
+  shift_id?: number | string | null; doctor_shift_id?: number | string | null;
+  payment_method?: 'cash' | 'bank' | 'all' | null;
   search_description?: string; sort_by?: string; sort_direction?: string;
 }
 
@@ -54,5 +55,19 @@ export const deleteCost = async (costId: number): Promise<void> => {
 
 export const updateCostDoctorShift = async (costId: number, doctorShiftId: number | null): Promise<Cost> => {
   const response = await apiClient.put<{ data: Cost }>(`${API_URL}/${costId}`, { doctor_shift_id: doctorShiftId });
+  return response.data.data;
+};
+
+export interface UpdateCostPayload {
+  description?: string;
+  comment?: string | null;
+  cost_category_id?: number | null;
+  amount?: number; // Cash portion
+  amount_bankak?: number; // Bank portion
+  doctor_shift_id?: number | null;
+}
+
+export const updateCost = async (costId: number, data: UpdateCostPayload): Promise<Cost> => {
+  const response = await apiClient.put<{ data: Cost }>(`${API_URL}/${costId}`, data);
   return response.data.data;
 };

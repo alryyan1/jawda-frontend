@@ -140,6 +140,11 @@ const DoctorShiftsReportPage: React.FC = () => {
   const [debouncedSearchDoctorName, setDebouncedSearchDoctorName] =
     useState(searchParams.get("searchDoctorName") ?? "");
 
+  // A specific general shift pins down the exact time window already, so the
+  // date range filter is redundant and would otherwise AND-combine with it
+  // (e.g. a shift from last month would return nothing under "this month").
+  const isSpecificShiftSelected = filters.generalShiftId !== "all";
+
   const buildUrlParams = (f: Filters, page: number, perPage: number): Record<string, string> => {
     const params: Record<string, string> = { dateFrom: f.dateFrom, dateTo: f.dateTo };
     if (f.userIdOpened && f.userIdOpened !== "")         params.userIdOpened     = f.userIdOpened;
@@ -241,8 +246,8 @@ const DoctorShiftsReportPage: React.FC = () => {
       getDoctorShiftsReport({
         page: currentPage,
         per_page: rowsPerPage,
-        date_from: filters.dateFrom,
-        date_to: filters.dateTo,
+        date_from: isSpecificShiftSelected ? undefined : filters.dateFrom,
+        date_to: isSpecificShiftSelected ? undefined : filters.dateTo,
         doctor_id: filters.doctorId === "all" || filters.doctorId === "" ? undefined : parseInt(filters.doctorId),
         status:
           filters.status === "all"
@@ -311,8 +316,8 @@ const DoctorShiftsReportPage: React.FC = () => {
     setIsGeneratingListPdf(true);
     generatePdf(
       () => downloadDoctorShiftsReportPdf({
-        date_from: filters.dateFrom,
-        date_to: filters.dateTo,
+        date_from: isSpecificShiftSelected ? undefined : filters.dateFrom,
+        date_to: isSpecificShiftSelected ? undefined : filters.dateTo,
         doctor_id: filters.doctorId === "all" || filters.doctorId === "" ? undefined : parseInt(filters.doctorId),
         status: filters.status === "all" ? undefined : filters.status === "open" ? "1" : "0",
         shift_id: filters.generalShiftId === "all" ? undefined : parseInt(filters.generalShiftId),
@@ -334,8 +339,8 @@ const DoctorShiftsReportPage: React.FC = () => {
     
     try {
       const blob = await downloadDoctorShiftsReportExcel({
-        date_from: filters.dateFrom,
-        date_to: filters.dateTo,
+        date_from: isSpecificShiftSelected ? undefined : filters.dateFrom,
+        date_to: isSpecificShiftSelected ? undefined : filters.dateTo,
         doctor_id: filters.doctorId === "all" || filters.doctorId === "" ? undefined : parseInt(filters.doctorId),
         status: filters.status === "all" ? undefined : filters.status === "open" ? "1" : "0",
         shift_id: filters.generalShiftId === "all" ? undefined : parseInt(filters.generalShiftId),
@@ -402,16 +407,18 @@ const DoctorShiftsReportPage: React.FC = () => {
           <TextField
             type="date" label="من تاريخ" value={filters.dateFrom}
             onChange={(e) => handleFilterChange("dateFrom", e.target.value)}
-            size="small" disabled={isFetching} InputLabelProps={{ shrink: true }}
+            size="small" disabled={isFetching || isSpecificShiftSelected} InputLabelProps={{ shrink: true }}
             sx={{ width: 150 }}
+            helperText={isSpecificShiftSelected ? "متجاهَل مع مناوبة محددة" : undefined}
           />
 
           {/* ── Date To ── */}
           <TextField
             type="date" label="إلى تاريخ" value={filters.dateTo}
             onChange={(e) => handleFilterChange("dateTo", e.target.value)}
-            size="small" disabled={isFetching} InputLabelProps={{ shrink: true }}
+            size="small" disabled={isFetching || isSpecificShiftSelected} InputLabelProps={{ shrink: true }}
             sx={{ width: 150 }}
+            helperText={isSpecificShiftSelected ? "متجاهَل مع مناوبة محددة" : undefined}
           />
 
           {/* ── General Shift ── */}

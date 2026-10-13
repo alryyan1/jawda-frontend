@@ -339,32 +339,32 @@ const ClinicPage: React.FC = () => {
   }, [selectedPatientVisit, showRegistrationForm, can]);
 
   // Subscribe to realtime patient-registered events
-  useEffect(() => {
-    const handleRealtimePatientRegistered = (patient: Patient) => {
-      console.log('Realtime patient registered:', patient);
+  // useEffect(() => {
+  //   const handleRealtimePatientRegistered = (patient: Patient) => {
+  //     console.log('Realtime patient registered:', patient);
 
-      // Check if the patient belongs to the current doctor shift
-      if (activeDoctorShift && patient.doctor_visit?.doctor_shift_id === activeDoctorShift.id) {
-        // Refresh the active patients list
-        queryClient.invalidateQueries({ queryKey: ['activePatients'] });
+  //     // Check if the patient belongs to the current doctor shift
+  //     if (activeDoctorShift && patient.doctor_visit?.doctor_shift_id === activeDoctorShift.id) {
+  //       // Refresh the active patients list
+  //       queryClient.invalidateQueries({ queryKey: ['activePatients'] });
 
-        // Optionally auto-select the new patient
-        const visitId = patient.doctor_visit?.id;
-        if (visitId) {
-          setSelectedPatientVisit({ patient, visitId });
-          setShowRegistrationForm(false);
-        }
-      }
-    };
+  //       // Optionally auto-select the new patient
+  //       const visitId = patient.doctor_visit?.id;
+  //       if (visitId) {
+  //         setSelectedPatientVisit({ patient, visitId });
+  //         setShowRegistrationForm(false);
+  //       }
+  //     }
+  //   };
 
-    // Subscribe to the event
-    realtimeService.onPatientRegistered(handleRealtimePatientRegistered);
+  //   // Subscribe to the event
+  //   realtimeService.onPatientRegistered(handleRealtimePatientRegistered);
 
-    // Cleanup on unmount
-    return () => {
-      realtimeService.offPatientRegistered(handleRealtimePatientRegistered);
-    };
-  }, [activeDoctorShift, queryClient]);
+  //   // Cleanup on unmount
+  //   return () => {
+  //     realtimeService.offPatientRegistered(handleRealtimePatientRegistered);
+  //   };
+  // }, [activeDoctorShift, queryClient]);
 
 
   const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<'services' | 'lab'>('services');

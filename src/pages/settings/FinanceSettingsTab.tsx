@@ -12,7 +12,7 @@ import {
   DEFAULT_GLOBAL, DEFAULT_USER,
   loadConnection, saveConnection,
   isGlobalComplete, isUserAccountsComplete,
-  importAccountsFromFinanceApi, ImportSourceChangedError,
+  importAccountsFromFinanceApi, ImportSourceChangedError, clearFinanceAccountsData,
   fetchFinanceAccounts,
   fetchGlobalJournalSettings, saveGlobalJournalSettings,
   fetchUserJournalAccounts, saveUserJournalAccounts,
@@ -81,6 +81,7 @@ export default function FinanceSettingsTab() {
   // ── Tab 0: import ─────────────────────────────────────────────────────────
   const [conn,          setConn]          = useState<FinanceConnection>(loadConnection)
   const [importingAccs, setImportingAccs] = useState(false)
+  const [clearingAccs,  setClearingAccs]  = useState(false)
   const [importedAccsCount, setImportedAccsCount] = useState<number | null>(null)
 
   const handleSaveConnection = () => {
@@ -111,6 +112,24 @@ export default function FinanceSettingsTab() {
     } catch (e: unknown) {
       toast.error(`فشل استيراد الحسابات — ${(e as Error).message}`)
     } finally { setImportingAccs(false) }
+  }
+
+  const handleClearFirestoreData = async () => {
+    const ok = window.confirm(
+      'سيتم حذف جميع الحسابات، وإعدادات ربط الحسابات الرئيسية وحسابات كل مستخدم، نهائياً من Firebase.\n' +
+      'هذا الإجراء لا يمكن التراجع عنه.\n\n' +
+      'هل تريد المتابعة؟'
+    )
+    if (!ok) return
+    setClearingAccs(true)
+    try {
+      await clearFinanceAccountsData()
+      setImportedAccsCount(null)
+      toast.success('تم حذف بيانات Firebase')
+      loadSharedData()
+    } catch (e: unknown) {
+      toast.error(`فشل حذف البيانات — ${(e as Error).message}`)
+    } finally { setClearingAccs(false) }
   }
 
   // ── Tab 1: key accounts ───────────────────────────────────────────────────
@@ -244,7 +263,7 @@ export default function FinanceSettingsTab() {
                   حفظ بيانات الاتصال
                 </Button>
               </Box>
-              <Box>
+              <Stack direction="row" spacing={1.5}>
                 <Button
                   variant="outlined"
                   disabled={!conn.baseUrl.trim() || !conn.token.trim() || importingAccs}
@@ -253,7 +272,15 @@ export default function FinanceSettingsTab() {
                 >
                   {importingAccs ? 'جاري الاستيراد...' : 'استيراد الحسابات'}
                 </Button>
-              </Box>
+                <Button
+                  variant="outlined" color="error"
+                  disabled={clearingAccs || accounts.length === 0}
+                  onClick={handleClearFirestoreData}
+                  startIcon={clearingAccs ? <CircularProgress size={14} color="inherit" /> : undefined}
+                >
+                  {clearingAccs ? 'جاري الحذف...' : 'مسح بيانات Firebase'}
+                </Button>
+              </Stack>
               {importedAccsCount != null && (
                 <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                   <Chip label={`✓ ${importedAccsCount} حساب`} color="success" size="small" />

@@ -1,6 +1,6 @@
 import axios from 'axios'
 import {
-  collection, doc, getDoc, getDocs, setDoc, addDoc, writeBatch,
+  collection, doc, getDoc, getDocs, setDoc, addDoc, deleteDoc, writeBatch,
   query, where, limit,
   type Firestore, type DocumentReference, type DocumentData,
 } from 'firebase/firestore'
@@ -250,6 +250,23 @@ export async function importAccountsFromFinanceApi(conn: FinanceConnection, forc
     },
   })))
   return raw.length
+}
+
+/**
+ * Permanently deletes every imported account, the global/per-user account
+ * linking settings (see clearAccountLinkingSettings), and the recorded import
+ * source — a full manual reset of this hospital's Firestore finance data,
+ * without needing a working finance-api connection. The next import (from any
+ * connection) is then treated as a first-time import, since nothing is left
+ * to compare against.
+ */
+export async function clearFinanceAccountsData(): Promise<void> {
+  const [database, hospital] = [getDb(), await getHospitalName()]
+
+  const existing = await getDocs(col(database, hospital, 'accounts'))
+  await batchDelete(database, existing.docs.map(d => d.ref))
+  await clearAccountLinkingSettings(database, hospital)
+  await deleteDoc(docRef(database, hospital, 'config', 'importSource'))
 }
 
 // ── accounts ───────────────────────────────────────────────────────────────────

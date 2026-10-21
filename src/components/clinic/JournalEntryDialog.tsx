@@ -1,21 +1,20 @@
 import { useEffect, useState } from 'react'
 import {
-  Alert, Autocomplete, Box, Button, Chip, CircularProgress,
-  Dialog, DialogContent, DialogTitle, Divider,
-  IconButton, Stack, TextField, Typography,
+  Alert, Box, Button, Chip, CircularProgress,
+  Dialog, DialogContent, DialogTitle,
+  IconButton, Stack, Typography,
 } from '@mui/material'
 import CheckCircleIcon    from '@mui/icons-material/CheckCircle'
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance'
 import ContentCopyIcon    from '@mui/icons-material/ContentCopy'
 import {
-  type FinanceAccount, type FinanceParty,
+  type FinanceAccount,
   type FinanceGlobalAccounts, type FinanceUserAccounts,
   DEFAULT_GLOBAL, DEFAULT_USER,
-  createJournalEntry,
-  fetchDoctorPartyMappings, fetchFinanceAccounts, fetchFinanceParties,
+  createJournalEntry, externalDoctorPartyId,
+  fetchFinanceAccounts,
   fetchGlobalJournalSettings, fetchUserJournalAccounts,
   isGlobalComplete, isUserAccountsComplete,
-  saveDoctorPartyMapping,
 } from '@/services/financeFirebaseService'
 import { useAuth } from '@/contexts/AuthContext'
 import apiClient from '@/services/api'
@@ -24,7 +23,7 @@ import type { DoctorShiftFinancialSummary } from '@/types/reports'
 
 // ── journal preview table ─────────────────────────────────────────────────────
 
-interface JLine { label: string; account: FinanceAccount | null; party?: FinanceParty | null; debit: number; credit: number }
+interface JLine { label: string; account: FinanceAccount | null; partyLabel?: string | null; debit: number; credit: number }
 
 function EntryTable({ lines, title }: { lines: JLine[]; title: string }) {
   const dr  = lines.reduce((s, l) => s + l.debit, 0)
@@ -46,7 +45,7 @@ function EntryTable({ lines, title }: { lines: JLine[]; title: string }) {
             <Box component="tr" key={i} sx={{ bgcolor: i % 2 ? '#f9f9f9' : '#fff', '& td': { p: '4px 8px', border: '1px solid #ddd', textAlign: 'center' } }}>
               <Box component="td" sx={{ textAlign: 'center !important', fontSize: 12 }}>
                 {l.account
-                  ? <><strong>{l.account.code} — {l.account.name}</strong>{l.party && <Box component="span" sx={{ color: 'red', fontSize: 10, mr: 0.5 }}> [{l.party.name}]</Box>}</>
+                  ? <><strong>{l.account.code} — {l.account.name}</strong>{l.partyLabel && <Box component="span" sx={{ color: 'red', fontSize: 10, mr: 0.5 }}> [{l.partyLabel}]</Box>}</>
                   : <Box component="em" sx={{ color: 'error.main' }}>{l.label} (غير محدد)</Box>}
               </Box>
               <Box component="td" sx={{ direction: 'ltr', color: l.debit  > 0 ? '#1565C0' : '#bbb', fontWeight: l.debit  > 0 ? 600 : 400 }}>{l.debit  > 0 ? fmt(l.debit)  : '—'}</Box>
@@ -104,10 +103,12 @@ export default function JournalEntryDialog({
 
   // ── data ──────────────────────────────────────────────────────────────────
   const [accounts,    setAccounts]    = useState<FinanceAccount[]>([])
-  const [parties,     setParties]     = useState<FinanceParty[]>([])
-  const [doctorParty, setDoctorParty] = useState<FinanceParty | null>(null)
   const [loadingData, setLoadingData] = useState(false)
   const [dataError,   setDataError]   = useState<string | null>(null)
+
+  // Opaque external reference auto-resolved (and auto-created, as a "doctor"
+  // Party) by finance-api on import — see externalDoctorPartyId().
+  const doctorPartyId = externalDoctorPartyId(doctorId)
 
   const [usersList,      setUsersList]      = useState<{ id: number; name: string }[]>([])
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null)
@@ -217,18 +218,14 @@ setAmountsFromShift(true)
 
     Promise.all([
       fetchFinanceAccounts(),
-      fetchFinanceParties(),
       fetchGlobalJournalSettings(),
       fetchUserJournalAccounts(user.id),
-      fetchDoctorPartyMappings(),
       getUsersList(),
     ])
-      .then(([accs, parts, g, u, partyMap, users]) => {
-        setAccounts(accs); setParties(parts)
+      .then(([accs, g, u, users]) => {
+        setAccounts(accs)
         setGlobal(g); setUserAccs(u)
         setUsersList(users)
-        const savedPartyId = partyMap[doctorId] ?? null
-        if (savedPartyId) setDoctorParty(parts.find(p => p.id === savedPartyId) ?? null)
       })
       .catch(() => setDataError('تعذّر تحميل البيانات من Firebase. تحقق من إعداد Firestore وإعدادات الحسابات الرئيسية.'))
       .finally(() => setLoadingData(false))
@@ -307,19 +304,19 @@ const receivablesAcc   = findAcc(global.doctorReceivablesAccountId)
           ...(clinicBank > 0 ? [{ label: 'بنك / شبكة',  account: bankAcc,   debit: clinicBank, credit: 0 }] : []),
         ]
     ),
-    { label: 'إيرادات العيادة', account: revenueAcc, party: doctorParty, debit: 0, credit: regularRevTotal },
+    { label: 'إيرادات العيادة', account: revenueAcc, partyLabel: doctorName, debit: 0, credit: regularRevTotal },
   ]
 
   const entry0BLines: JLine[] = [
     ...buildInsPayerLines(insurancePayers),
-    { label: 'إيرادات التأمين (التحملات)', account: insRevAcc, party: doctorParty, debit: 0, credit: insRevTotal },
+    { label: 'إيرادات التأمين (التحملات)', account: insRevAcc, partyLabel: doctorName, debit: 0, credit: insRevTotal },
   ]
   const entry1Lines: JLine[] = [
     { label: 'مصروف أتعاب', account: feeAcc,          debit: totalAmount, credit: 0 },
-    { label: 'ذمم الأطباء', account: receivablesAcc,   party: doctorParty, debit: 0, credit: totalAmount },
+    { label: 'ذمم الأطباء', account: receivablesAcc,   partyLabel: doctorName, debit: 0, credit: totalAmount },
   ]
   const entry2Lines: JLine[] = [
-    { label: 'ذمم الأطباء', account: receivablesAcc, party: doctorParty, debit: totalAmount, credit: 0 },
+    { label: 'ذمم الأطباء', account: receivablesAcc, partyLabel: doctorName, debit: totalAmount, credit: 0 },
     ...(payersList.length > 0
       ? payersList.flatMap(u => {
           const a = payersAccsMap[u.id]
@@ -350,7 +347,7 @@ const receivablesAcc   = findAcc(global.doctorReceivablesAccountId)
         return (!Number(u.total_cash) || !!a?.cashBoxAccountId) && (!Number(u.total_bank) || !!a?.bankAccountId)
       })
 
-  const canSubmit = settingsReady && !!doctorParty && payUsersReady &&
+  const canSubmit = settingsReady && payUsersReady &&
     (!hasRevEntry || (!!revenueAcc && revUsersReady))
 
   // ── submit ────────────────────────────────────────────────────────────────
@@ -374,10 +371,10 @@ const receivablesAcc   = findAcc(global.doctorReceivablesAccountId)
       const buildSubmitPayerLines = (payers: UserPayment[], accsMap: Record<number, UserAccsEntry>) =>
         payers.flatMap(u => {
           const a = accsMap[u.id]
-          const ls: { account_id: string; description: string; debit: number; credit: number }[] = []
+          const ls: { account_id: string; debit: number; credit: number }[] = []
           const cash = Number(u.total_cash); const bank = Number(u.total_bank)
-          if (cash > 0 && a?.cashBoxAccountId) ls.push({ account_id: a.cashBoxAccountId, description: `كاش — ${u.name}`,  debit: cash, credit: 0 })
-          if (bank > 0 && a?.bankAccountId)    ls.push({ account_id: a.bankAccountId,    description: `شبكة — ${u.name}`, debit: bank, credit: 0 })
+          if (cash > 0 && a?.cashBoxAccountId) ls.push({ account_id: a.cashBoxAccountId, debit: cash, credit: 0 })
+          if (bank > 0 && a?.bankAccountId)    ls.push({ account_id: a.bankAccountId,    debit: bank, credit: 0 })
           return ls
         })
 
@@ -385,15 +382,15 @@ const receivablesAcc   = findAcc(global.doctorReceivablesAccountId)
         const regularDebitLines = usersPayment.length > 0
           ? buildSubmitPayerLines(regularPayersNet, userAccsMap)
           : [
-              ...(clinicCash > 0 ? [{ account_id: userAccs.cashBoxAccountId!, description: 'كاش من المرضى',  debit: clinicCash,  credit: 0 }] : []),
-              ...(clinicBank > 0 ? [{ account_id: userAccs.bankAccountId!,    description: 'شبكة من المرضى', debit: clinicBank,  credit: 0 }] : []),
+              ...(clinicCash > 0 ? [{ account_id: userAccs.cashBoxAccountId!, debit: clinicCash,  credit: 0 }] : []),
+              ...(clinicBank > 0 ? [{ account_id: userAccs.bankAccountId!,    debit: clinicBank,  credit: 0 }] : []),
             ]
         reqs.push(createJournalEntry({
           date, reference: ref,
           description: `إثبات إيراد العيادة | د. ${doctorName}${sfx}`,
           lines: [
             ...regularDebitLines,
-            { account_id: global.clinicRevenueAccountId!, party_id: doctorParty!.id, description: 'إيراد العيادة', debit: 0, credit: regularRevTotal },
+            { account_id: global.clinicRevenueAccountId!, party_id: doctorPartyId, party_name: doctorName, debit: 0, credit: regularRevTotal },
           ],
         }))
       }
@@ -404,7 +401,7 @@ const receivablesAcc   = findAcc(global.doctorReceivablesAccountId)
           description: `إثبات إيراد التأمين (تحملات) | د. ${doctorName}${sfx}`,
           lines: [
             ...buildSubmitPayerLines(insurancePayers, insurancePayersMap),
-            { account_id: global.insuranceCopaymentRevenueAccountId!, party_id: doctorParty!.id, description: 'إيراد التأمين (التحملات)', debit: 0, credit: insRevTotal },
+            { account_id: global.insuranceCopaymentRevenueAccountId!, party_id: doctorPartyId, party_name: doctorName, debit: 0, credit: insRevTotal },
           ],
         }))
       }
@@ -412,29 +409,29 @@ const receivablesAcc   = findAcc(global.doctorReceivablesAccountId)
       reqs.push(createJournalEntry({
         date, reference: ref, description: desc1,
         lines: [
-          { account_id: global.doctorFeesExpenseAccountId!, description: desc1, debit: totalAmount, credit: 0 },
-          { account_id: global.doctorReceivablesAccountId!, party_id: doctorParty!.id, description: desc1, debit: 0, credit: totalAmount },
+          { account_id: global.doctorFeesExpenseAccountId!, debit: totalAmount, credit: 0 },
+          { account_id: global.doctorReceivablesAccountId!, party_id: doctorPartyId, party_name: doctorName, debit: 0, credit: totalAmount },
         ],
       }))
 
       const payDebitLines = payersList.length > 0
         ? payersList.flatMap(u => {
             const a = payersAccsMap[u.id]
-            const ls: { account_id: string; description: string; debit: number; credit: number }[] = []
+            const ls: { account_id: string; debit: number; credit: number }[] = []
             const cash = Number(u.total_cash); const bank = Number(u.total_bank)
-            if (cash > 0 && a?.cashBoxAccountId) ls.push({ account_id: a.cashBoxAccountId, description: `صندوق — ${u.name}`, debit: 0, credit: cash })
-            if (bank > 0 && a?.bankAccountId)    ls.push({ account_id: a.bankAccountId,    description: `بنك — ${u.name}`,   debit: 0, credit: bank })
+            if (cash > 0 && a?.cashBoxAccountId) ls.push({ account_id: a.cashBoxAccountId, debit: 0, credit: cash })
+            if (bank > 0 && a?.bankAccountId)    ls.push({ account_id: a.bankAccountId,    debit: 0, credit: bank })
             return ls
           })
         : [
-            ...(cashAmount > 0 ? [{ account_id: userAccs.cashBoxAccountId!, description: 'صندوق', debit: 0, credit: cashAmount }] : []),
-            ...(bankAmount > 0 ? [{ account_id: userAccs.bankAccountId!,    description: 'بنك',   debit: 0, credit: bankAmount  }] : []),
+            ...(cashAmount > 0 ? [{ account_id: userAccs.cashBoxAccountId!, debit: 0, credit: cashAmount }] : []),
+            ...(bankAmount > 0 ? [{ account_id: userAccs.bankAccountId!,    debit: 0, credit: bankAmount  }] : []),
           ]
 
       reqs.push(createJournalEntry({
         date, reference: ref, description: desc2,
         lines: [
-          { account_id: global.doctorReceivablesAccountId!, party_id: doctorParty!.id, description: desc2, debit: totalAmount, credit: 0 },
+          { account_id: global.doctorReceivablesAccountId!, party_id: doctorPartyId, party_name: doctorName, debit: totalAmount, credit: 0 },
           ...payDebitLines,
         ],
       }))
@@ -545,7 +542,7 @@ const receivablesAcc   = findAcc(global.doctorReceivablesAccountId)
                 {doctorShiftId && payersList.length > 0 && (
                   <Box sx={{ border: '1px dashed', borderColor: 'warning.light', borderRadius: 1, bgcolor: '#FFFDE7', overflow: 'hidden' }}>
                     <Typography variant="caption" sx={{ fontWeight: 700, color: 'warning.dark', display: 'block', px: 1, pt: 0.5 }}>
-                      دفعات الطبيب {doctorName}
+                     المصروف الذي تم دفعه الي {doctorName}
                     </Typography>
                     {usersPaymentLoading ? (
                       <Box sx={{ display: 'flex', justifyContent: 'center', py: 0.5 }}><CircularProgress size={16} /></Box>

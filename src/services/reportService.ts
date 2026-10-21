@@ -1,7 +1,7 @@
 // src/services/reportService.ts
 import type { PaginatedResponse } from '@/types/common';
 import apiClient from './api';
-import type { DoctorShiftFinancialSummary, DoctorShiftReportItem, MonthlyServiceIncomeReportResponse, ServiceStatisticItem, YearlyPatientFrequencyReportResponse, MonthlyLabIncomeReportResponse, LabTestStatisticItem, LabGeneralReportItem, LabGeneralReportFilters, LabGeneralReportWithUserRevenue, PatientServiceCostReportResponse, LabRequestDiscountReportResponse } from '@/types/reports';
+import type { DoctorShiftFinancialSummary, DoctorShiftReportItem, MonthlyServiceIncomeReportResponse, ServiceStatisticItem, YearlyPatientFrequencyReportResponse, MonthlyLabIncomeReportResponse, LabTestStatisticItem, LabGeneralReportItem, LabGeneralReportFilters, LabGeneralReportWithUserRevenue, PatientServiceCostReportResponse, LabRequestDiscountReportResponse, PatientPhoneReportResponse } from '@/types/reports';
 
 export interface DoctorShiftReportFilters {
   page?: number;
@@ -578,6 +578,38 @@ export const downloadLabRequestDiscountsPdf = async (filters: LabRequestDiscount
 export const downloadLabRequestDiscountsExcel = async (filters: LabRequestDiscountFilters): Promise<Blob> => {
   const response = await apiClient.get<Blob>('/reports/lab-request-discounts/excel', {
     params: filters,
+    responseType: 'blob',
+  });
+  return response.data;
+};
+
+export interface PatientPhoneReportFilters {
+  date_from: string;
+  date_to: string;
+  gender?: string | null;
+  name?: string | null;
+  phone?: string | null;
+  company_id?: string | null;
+  columns: string[];
+}
+
+const serializePatientPhoneFilters = (filters: PatientPhoneReportFilters) => ({
+  ...filters,
+  columns: filters.columns.join(','),
+});
+
+export const getPatientPhonesReport = async (
+  filters: PatientPhoneReportFilters
+): Promise<PatientPhoneReportResponse> => {
+  const response = await apiClient.get<PatientPhoneReportResponse>('/reports/patient-phones', {
+    params: serializePatientPhoneFilters(filters),
+  });
+  return response.data;
+};
+
+export const downloadPatientPhonesExcel = async (filters: PatientPhoneReportFilters): Promise<Blob> => {
+  const response = await apiClient.get<Blob>('/reports/patient-phones/excel', {
+    params: serializePatientPhoneFilters(filters),
     responseType: 'blob',
   });
   return response.data;

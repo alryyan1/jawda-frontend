@@ -414,3 +414,36 @@ export interface LabRequestDiscountReportResponse {
     to: string;
   };
 }
+
+// Patient Phones Report Types
+export const PATIENT_PHONE_REPORT_COLUMNS = [
+  { key: "id", label: "رقم المريض" },
+  { key: "name", label: "اسم المريض" },
+  { key: "phone", label: "رقم الهاتف" },
+  { key: "gender", label: "النوع" },
+  { key: "age", label: "العمر" },
+  { key: "address", label: "العنوان" },
+  { key: "gov_id", label: "الرقم الوطني" },
+  { key: "insurance_no", label: "رقم التأمين" },
+  { key: "company_name", label: "الشركة" },
+  { key: "doctor_name", label: "الطبيب" },
+  { key: "created_at", label: "تاريخ التسجيل" },
+  { key: "visit_date", label: "تاريخ الزيارة" },
+] as const;
+
+export type PatientPhoneReportColumnKey = (typeof PATIENT_PHONE_REPORT_COLUMNS)[number]["key"];
+
+export interface PatientPhoneReportItem {
+  id: number;
+  [key: string]: string | number | null;
+}
+
+export interface PatientPhoneReportResponse {
+  data: PatientPhoneReportItem[];
+  columns: { key: string; label: string }[];
+  total: number;
+  report_period: {
+    from: string;
+    to: string;
+  };
+}

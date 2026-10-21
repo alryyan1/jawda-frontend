@@ -69,6 +69,7 @@ import YearlyIncomeComparisonReportPage from "./pages/reports/YearlyIncomeCompar
 import YearlyPatientFrequencyReportPage from "./pages/reports/YearlyPatientFrequencyReportPage";
 import PatientServiceCostsReportPage from "./pages/reports/PatientServiceCostsReportPage";
 import LabRequestDiscountsReportPage from "./pages/reports/LabRequestDiscountsReportPage";
+import PatientPhonesReportPage from "./pages/reports/PatientPhonesReportPage";
 import BindingMatchingPage from "./pages/settings/BindingMatchingPage";
 import MonthlyLabIncomeReportPage from "./pages/reports/MonthlyLabIncomeReportPage";
 import ServiceGroupsPage from "./pages/settings/ServiceGroupsPage";
@@ -325,6 +326,10 @@ const router = createBrowserRouter([
               {
                 path: "lab-request-discounts",
                 element: <LabRequestDiscountsReportPage />,
+              },
+              {
+                path: "patient-phones",
+                element: <PatientPhonesReportPage />,
               },
 
               // Add other report routes here

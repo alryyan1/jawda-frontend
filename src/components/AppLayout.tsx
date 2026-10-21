@@ -61,6 +61,7 @@ import {
   Star,
   MessageSquare,
   Percent,
+  Phone,
 } from "lucide-react";
 import { Toaster } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -129,6 +130,39 @@ const ReportMenuItem: React.FC<{
         {label}
       </Link>
     </DropdownMenuItem>
+  );
+};
+
+interface ReportDef {
+  to: string;
+  icon: React.ElementType;
+  label: string;
+  permission: PermissionName;
+}
+
+// Grouped reports submenu. Hidden unless at least one of its items is permitted.
+const ReportCategory: React.FC<{
+  label: string;
+  icon: React.ElementType;
+  items: ReportDef[];
+}> = ({ label, icon: Icon, items }) => {
+  const { can } = useAuthorization();
+  const visibleItems = items.filter((item) => can(item.permission));
+  if (visibleItems.length === 0) {
+    return null;
+  }
+  return (
+    <DropdownMenuSub>
+      <DropdownMenuSubTrigger className="flex items-center">
+        <Icon className="mr-2 h-4 w-4" />
+        {label}
+      </DropdownMenuSubTrigger>
+      <DropdownMenuSubContent>
+        {visibleItems.map((item) => (
+          <ReportMenuItem key={item.to} {...item} />
+        ))}
+      </DropdownMenuSubContent>
+    </DropdownMenuSub>
   );
 };
 
@@ -1091,107 +1125,59 @@ const AppLayout: React.FC = () => {
                             التقارير
                           </DropdownMenuSubTrigger>
                           <DropdownMenuSubContent>
-                            <ReportMenuItem
-                              to="/reports/lab-general"
+                            <ReportCategory
+                              label="تقارير المختبر"
+                              icon={FlaskConical}
+                              items={[
+                                { to: "/reports/lab-general", icon: BarChartBig, label: "المختبر", permission: "عرض تقرير المختبر" },
+                                { to: "/reports/monthly-lab-income", icon: BarChartBig, label: "دخل المختبر الشهري", permission: "عرض تقرير دخل المختبر الشهري" },
+                                { to: "/reports/lab-request-discounts", icon: Percent, label: "خصومات المختبر للمرضى", permission: "عرض تقرير خصومات المختبر للمرضى" },
+                              ]}
+                            />
+                            <ReportCategory
+                              label="تقارير العيادات والورديات"
+                              icon={Stethoscope}
+                              items={[
+                                { to: "/reports/doctor-shifts", icon: FileBarChart2, label: "عيادات اليوم", permission: "عرض تقرير عيادات اليوم" },
+                                { to: "/reports/clinic-shift-summary", icon: FileSpreadsheet, label: "التقرير العام", permission: "عرض التقرير العام" },
+                                { to: "/reports/monthly-shifts", icon: FileBarChart2, label: "تقرير الورديات الشهري", permission: "عرض تقرير الورديات الشهري" },
+                              ]}
+                            />
+                            <ReportCategory
+                              label="التقارير المالية"
+                              icon={CreditCard}
+                              items={[
+                                { to: "/reports/costs", icon: FileSpreadsheet, label: "المصروفات", permission: "عرض تقرير المصروفات" },
+                                { to: "/reports/daily-costs", icon: FileSpreadsheet, label: "المصروفات اليومية", permission: "عرض تقرير المصروفات اليومية" },
+                                { to: "/reports/monthly-service-income", icon: BarChartBig, label: "دخل الخدمات الشهري", permission: "عرض تقرير دخل الخدمات الشهري" },
+                                { to: "/reports/patient-service-costs", icon: Coins, label: "تكاليف الخدمات للمرضى", permission: "عرض تقرير تكاليف الخدمات للمرضى" },
+                                { to: "/reports/yearly-income-comparison", icon: LineChart, label: "مقارنة الدخل السنوية", permission: "عرض تقرير مقارنة الدخل السنوية" },
+                              ]}
+                            />
+                            <ReportCategory
+                              label="تقارير الشركات والأطباء"
+                              icon={Building}
+                              items={[
+                                { to: "/reports/company-performance", icon: BarChartBig, label: "أداء الشركات", permission: "عرض تقرير أداء الشركات" },
+                                { to: "/reports/doctor-company-entitlement", icon: HandCoins, label: "استحقاقات الأطباء للشركات", permission: "عرض تقرير استحقاقات الأطباء للشركات" },
+                              ]}
+                            />
+                            <ReportCategory
+                              label="تقارير المرضى"
+                              icon={Users}
+                              items={[
+                                { to: "/reports/patient-phones", icon: Phone, label: "أرقام هواتف المرضى", permission: "عرض تقرير أرقام هواتف المرضى" },
+                                { to: "/reports/yearly-patient-frequency", icon: UsersRound, label: "تردد المرضى", permission: "عرض تقرير تردد المرضى" },
+                              ]}
+                            />
+                            <ReportCategory
+                              label="الإحصائيات"
                               icon={BarChartBig}
-                              label="المختبر"
-                              permission="عرض تقرير المختبر"
-                            />
-                            <ReportMenuItem
-                              to="/reports/doctor-shifts"
-                              icon={FileBarChart2}
-                              label="عيادات اليوم"
-                              permission="عرض تقرير عيادات اليوم"
-                            />
-                            <ReportMenuItem
-                              to="/reports/clinic-shift-summary"
-                              icon={FileSpreadsheet}
-                              label="التقرير العام"
-                              permission="عرض التقرير العام"
-                            />
-                            <ReportMenuItem
-                              to="/reports/costs"
-                              icon={FileSpreadsheet}
-                              label="المصروفات"
-                              permission="عرض تقرير المصروفات"
-                            />
-                            <ReportMenuItem
-                              to="/reports/daily-costs"
-                              icon={FileSpreadsheet}
-                              label="المصروفات اليومية"
-                              permission="عرض تقرير المصروفات اليومية"
-                            />
-                            <ReportMenuItem
-                              to="/reports/monthly-shifts"
-                              icon={FileBarChart2}
-                              label="تقرير الورديات الشهري"
-                              permission="عرض تقرير الورديات الشهري"
-                            />
-                            <ReportMenuItem
-                              to="/reports/monthly-lab-income"
-                              icon={BarChartBig}
-                              label="دخل المختبر الشهري"
-                              permission="عرض تقرير دخل المختبر الشهري"
-                            />
-                            <ReportMenuItem
-                              to="/reports/monthly-service-income"
-                              icon={BarChartBig}
-                              label="دخل الخدمات الشهري"
-                              permission="عرض تقرير دخل الخدمات الشهري"
-                            />
-                            <ReportMenuItem
-                              to="/reports/company-performance"
-                              icon={BarChartBig}
-                              label="أداء الشركات"
-                              permission="عرض تقرير أداء الشركات"
-                            />
-                            <ReportMenuItem
-                              to="/reports/doctor-company-entitlement"
-                              icon={HandCoins}
-                              label="استحقاقات الأطباء للشركات"
-                              permission="عرض تقرير استحقاقات الأطباء للشركات"
-                            />
-                            <ReportMenuItem
-                              to="/reports/patient-service-costs"
-                              icon={Coins}
-                              label="تكاليف الخدمات للمرضى"
-                              permission="عرض تقرير تكاليف الخدمات للمرضى"
-                            />
-                            <ReportMenuItem
-                              to="/reports/lab-request-discounts"
-                              icon={Percent}
-                              label="خصومات المختبر للمرضى"
-                              permission="عرض تقرير خصومات المختبر للمرضى"
-                            />
-                            <ReportMenuItem
-                              to="/reports/yearly-income-comparison"
-                              icon={LineChart}
-                              label="مقارنة الدخل السنوية"
-                              permission="عرض تقرير مقارنة الدخل السنوية"
-                            />
-                            <ReportMenuItem
-                              to="/reports/yearly-patient-frequency"
-                              icon={UsersRound}
-                              label="تردد المرضى"
-                              permission="عرض تقرير تردد المرضى"
-                            />
-                            <ReportMenuItem
-                              to="/reports/doctor-statistics"
-                              icon={BarChartBig}
-                              label="إحصائيات الأطباء"
-                              permission="عرض تقرير إحصائيات الأطباء"
-                            />
-                            <ReportMenuItem
-                              to="/reports/service-statistics"
-                              icon={FileBarChart2}
-                              label="إحصائيات الخدمات"
-                              permission="عرض تقرير إحصائيات الخدمات"
-                            />
-                            <ReportMenuItem
-                              to="/reports/lab-test-statistics"
-                              icon={BarChartBig}
-                              label="إحصائيات تحاليل المختبر"
-                              permission="عرض تقرير إحصائيات تحاليل المختبر"
+                              items={[
+                                { to: "/reports/doctor-statistics", icon: BarChartBig, label: "إحصائيات الأطباء", permission: "عرض تقرير إحصائيات الأطباء" },
+                                { to: "/reports/service-statistics", icon: FileBarChart2, label: "إحصائيات الخدمات", permission: "عرض تقرير إحصائيات الخدمات" },
+                                { to: "/reports/lab-test-statistics", icon: BarChartBig, label: "إحصائيات تحاليل المختبر", permission: "عرض تقرير إحصائيات تحاليل المختبر" },
+                              ]}
                             />
                           </DropdownMenuSubContent>
                         </DropdownMenuSub>

@@ -1,12 +1,12 @@
 import axios from 'axios'
 import {
   collection, doc, getDoc, getDocs, setDoc, addDoc, writeBatch,
+  query, where, limit,
   type Firestore, type DocumentReference, type DocumentData,
 } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { projectFolder } from '@/pages/constants'
 import { getSettings } from '@/services/settingService'
-import type { DoctorStripped } from '@/types/doctors'
 
 // ── hospital namespace ────────────────────────────────────────────────────────
 // All finance data lives under finance/{storage_name}/ (from General Settings).
@@ -62,18 +62,13 @@ export interface FinanceAccount {
   parent_id: string | null
 }
 
-export interface FinanceParty {
-  id:   string
-  name: string
-  type: string
-}
-
 export interface FinanceGlobalAccounts {
   clinicRevenueAccountId:              string | null
   doctorReceivablesAccountId:          string | null
   doctorFeesExpenseAccountId:          string | null
   insuranceCopaymentRevenueAccountId:  string | null
   insuranceReceivableAccountId:        string | null
+  labRevenueAccountId:                 string | null
 }
 
 export const DEFAULT_GLOBAL: FinanceGlobalAccounts = {
@@ -82,6 +77,7 @@ export const DEFAULT_GLOBAL: FinanceGlobalAccounts = {
   doctorFeesExpenseAccountId:          null,
   insuranceCopaymentRevenueAccountId:  null,
   insuranceReceivableAccountId:        null,
+  labRevenueAccountId:                 null,
 }
 
 export function isGlobalComplete(a: FinanceGlobalAccounts) {
@@ -108,11 +104,27 @@ export interface JournalEntryPayload {
   description: string
   lines: {
     account_id:   string
+    /** External party reference, e.g. "jawda_doctor_5" — see externalDoctorPartyId(). */
     party_id?:    string | null
+    /** Used only to auto-create the Party in finance-api on first sight. */
+    party_name?:  string | null
+    party_phone?: string | null
+    party_email?: string | null
     description?: string | null
     debit:        number
     credit:       number
   }[]
+}
+
+/**
+ * Builds the opaque external party reference for a Jawda doctor, in the same
+ * "{system}_{type}_{id}" form sales-api uses for its clients
+ * ("sales-api_client_{id}") — finance-api's import resolves it and
+ * auto-creates the matching Party (type: "doctor") on first sight, so Jawda
+ * never needs to pre-sync doctors as Firestore parties or manually link them.
+ */
+export function externalDoctorPartyId(doctorId: number): string {
+  return `jawda_doctor_${doctorId}`
 }
 
 // ── Firestore helpers ─────────────────────────────────────────────────────────
@@ -135,6 +147,15 @@ async function batchSet(
   }
 }
 
+async function batchDelete(database: Firestore, refs: DocumentReference<DocumentData>[]) {
+  const CHUNK = 490
+  for (let i = 0; i < refs.length; i += CHUNK) {
+    const batch = writeBatch(database)
+    for (const ref of refs.slice(i, i + CHUNK)) batch.delete(ref)
+    await batch.commit()
+  }
+}
+
 // ── one-time import from finance-api ─────────────────────────────────────────
 
 function importClient(conn: FinanceConnection) {
@@ -145,12 +166,79 @@ function importClient(conn: FinanceConnection) {
   })
 }
 
-export async function importAccountsFromFinanceApi(conn: FinanceConnection): Promise<number> {
+/**
+ * Thrown by importAccountsFromFinanceApi when `conn` points at a different
+ * finance-api project than the one last imported from. Account IDs are
+ * finance-api auto-increment integers reused across unrelated projects —
+ * re-importing from a different source without wiping the previous one first
+ * would silently overwrite existing account docs with unrelated data under
+ * the same IDs, corrupting every saved reference (global/per-user account
+ * links, pending journal entries) without any error. Callers should confirm
+ * with the user, then retry passing `force: true` to proceed (this wipes the
+ * previously imported accounts and their linking settings).
+ */
+export class ImportSourceChangedError extends Error {
+  readonly previousBaseUrl: string
+  readonly newBaseUrl: string
+
+  constructor(previousBaseUrl: string, newBaseUrl: string) {
+    super(`Import source changed: ${previousBaseUrl} → ${newBaseUrl}`)
+    this.previousBaseUrl = previousBaseUrl
+    this.newBaseUrl = newBaseUrl
+  }
+}
+
+interface ImportSourceDoc {
+  accountsBaseUrl?: string
+}
+
+/**
+ * Deletes the global journal accounts (config/global) and every per-user
+ * journal accounts doc (config/user_{id}) — the "account linking" settings
+ * shown in the "ربط الحسابات الرئيسية" tab. These store raw account IDs, so
+ * once the accounts they point to are wiped and re-imported there is no way
+ * to tell whether an old ID still refers to the same account; they must be
+ * re-linked from scratch rather than silently keep pointing at stale IDs.
+ * config/importSource is left untouched — it isn't an account link.
+ */
+async function clearAccountLinkingSettings(database: Firestore, hospital: string): Promise<void> {
+  const snap = await getDocs(col(database, hospital, 'config'))
+  const refs = snap.docs
+    .filter(d => d.id === 'global' || d.id.startsWith('user_'))
+    .map(d => d.ref)
+  await batchDelete(database, refs)
+}
+
+/**
+ * Imports accounts from `conn` into Firestore. When `conn.baseUrl` matches the
+ * source last imported from (or nothing was imported yet), this is a plain
+ * upsert — existing accounts are kept and merely refreshed/added to. Only when
+ * `conn.baseUrl` differs from the last recorded source does this wipe the
+ * existing `accounts` collection (and the global/per-user account-linking
+ * settings that referenced those IDs — see clearAccountLinkingSettings)
+ * before re-importing, since finance-api account IDs are meaningless across
+ * unrelated projects. That wipe requires `force: true` (see
+ * ImportSourceChangedError) so the caller can confirm with the user first.
+ */
+export async function importAccountsFromFinanceApi(conn: FinanceConnection, force = false): Promise<number> {
+  const [database, hospital] = [getDb(), await getHospitalName()]
+
+  const sourceRef  = docRef(database, hospital, 'config', 'importSource')
+  const sourceSnap = await getDoc(sourceRef)
+  const priorBaseUrl = sourceSnap.exists() ? (sourceSnap.data() as ImportSourceDoc).accountsBaseUrl : undefined
+
+  if (priorBaseUrl && priorBaseUrl !== conn.baseUrl) {
+    if (!force) throw new ImportSourceChangedError(priorBaseUrl, conn.baseUrl)
+    const existing = await getDocs(col(database, hospital, 'accounts'))
+    await batchDelete(database, existing.docs.map(d => d.ref))
+    await clearAccountLinkingSettings(database, hospital)
+  }
+  await setDoc(sourceRef, { accountsBaseUrl: conn.baseUrl }, { merge: true })
+
   const { data } = await importClient(conn).get('/accounts')
   const raw: { id: number; code: string; name: string; type: string; parent_id: number | null }[] =
     Array.isArray(data) ? data : (data?.data ?? [])
 
-  const [database, hospital] = [getDb(), await getHospitalName()]
   await batchSet(database, raw.map(a => ({
     ref: docRef(database, hospital, 'accounts', String(a.id)),
     data: {
@@ -164,56 +252,43 @@ export async function importAccountsFromFinanceApi(conn: FinanceConnection): Pro
   return raw.length
 }
 
-export async function importPartiesFromFinanceApi(conn: FinanceConnection): Promise<number> {
-  const { data } = await importClient(conn).get('/parties')
-  const raw: { id: number; name: string; type: string }[] =
-    Array.isArray(data) ? data : (data?.data ?? [])
+// ── accounts ───────────────────────────────────────────────────────────────────
 
-  const [database, hospital] = [getDb(), await getHospitalName()]
-  await batchSet(database, raw.map(p => ({
-    ref: docRef(database, hospital, 'parties', String(p.id)),
-    data: { id: String(p.id), name: p.name ?? '', type: p.type ?? '' },
-  })))
-  return raw.length
-}
-
-// Uses "doctor_{id}" as doc ID to avoid collision with imported finance-api party IDs.
-export async function syncDoctorsAsParties(doctors: DoctorStripped[]): Promise<number> {
-  const [database, hospital] = [getDb(), await getHospitalName()]
-  await batchSet(database, doctors.map(d => ({
-    ref: docRef(database, hospital, 'parties', `doctor_${d.id}`),
-    data: { id: `doctor_${d.id}`, name: d.name, type: 'doctor' },
-  })))
-  return doctors.length
-}
-
-// ── accounts & parties ────────────────────────────────────────────────────────
-
+/**
+ * Sorted by code, same as finance-api's own Account::orderBy('code') — a plain
+ * string comparison, not numeric. Account codes are hierarchical prefix codes
+ * (e.g. "1", "11", "111", "1111", "111101", "1112", "2", ...), a scheme
+ * deliberately designed so plain lexicographic order already walks the tree
+ * parent-before-children, sibling-by-sibling. Firestore itself returns these
+ * documents in an unrelated order (by doc id, which is finance-api's own
+ * unrelated numeric account id), so every caller needs this applied here
+ * rather than sorting ad hoc after fetching.
+ */
 export async function fetchFinanceAccounts(): Promise<FinanceAccount[]> {
   const [database, hospital] = [getDb(), await getHospitalName()]
   const snap = await getDocs(col(database, hospital, 'accounts'))
-  return snap.docs.map(d => d.data() as FinanceAccount)
-}
-
-export async function fetchFinanceParties(): Promise<FinanceParty[]> {
-  const [database, hospital] = [getDb(), await getHospitalName()]
-  const snap = await getDocs(col(database, hospital, 'parties'))
-  return snap.docs.map(d => d.data() as FinanceParty)
+  return snap.docs
+    .map(d => d.data() as FinanceAccount)
+    .sort((a, b) => a.code < b.code ? -1 : a.code > b.code ? 1 : 0)
 }
 
 // ── global journal settings ───────────────────────────────────────────────────
 
 export async function fetchGlobalJournalSettings(): Promise<FinanceGlobalAccounts> {
   const [database, hospital] = [getDb(), await getHospitalName()]
+  // alert('s')
+  // console.log('fetchGlobalJournalSettings', database, hospital)
   const snap = await getDoc(docRef(database, hospital, 'config', 'global'))
   if (!snap.exists()) return { ...DEFAULT_GLOBAL }
   const d = snap.data()
+  console.log('fetchGlobalJournalSettings', d)
   return {
     clinicRevenueAccountId:             d.clinicRevenueAccountId             ?? null,
     doctorReceivablesAccountId:         d.doctorReceivablesAccountId         ?? null,
     doctorFeesExpenseAccountId:         d.doctorFeesExpenseAccountId         ?? null,
     insuranceCopaymentRevenueAccountId: d.insuranceCopaymentRevenueAccountId ?? null,
     insuranceReceivableAccountId:       d.insuranceReceivableAccountId       ?? null,
+    labRevenueAccountId:                d.labRevenueAccountId                ?? null,
   }
 }
 
@@ -240,21 +315,6 @@ export async function saveUserJournalAccounts(userId: number, data: FinanceUserA
   await setDoc(docRef(database, hospital, 'config', `user_${userId}`), data)
 }
 
-// ── doctor → party mappings ───────────────────────────────────────────────────
-
-export async function fetchDoctorPartyMappings(): Promise<Record<number, string>> {
-  const [database, hospital] = [getDb(), await getHospitalName()]
-  const snap = await getDocs(col(database, hospital, 'doctor_mappings'))
-  const result: Record<number, string> = {}
-  for (const d of snap.docs) result[Number(d.id)] = d.data().partyId as string
-  return result
-}
-
-export async function saveDoctorPartyMapping(jawdaDoctorId: number, partyId: string): Promise<void> {
-  const [database, hospital] = [getDb(), await getHospitalName()]
-  await setDoc(docRef(database, hospital, 'doctor_mappings', String(jawdaDoctorId)), { partyId })
-}
-
 // ── journal entries ───────────────────────────────────────────────────────────
 
 export async function createJournalEntry(payload: JournalEntryPayload): Promise<string> {
@@ -264,4 +324,16 @@ export async function createJournalEntry(payload: JournalEntryPayload): Promise<
     createdAt: new Date().toISOString(),
   })
   return ref.id
+}
+
+/** Find a previously exported journal entry by its `reference` (e.g. "lab_shift_123"). */
+export async function findJournalEntryByReference(
+  reference: string,
+): Promise<{ id: string; createdAt: string } | null> {
+  const [database, hospital] = [getDb(), await getHospitalName()]
+  const q = query(col(database, hospital, 'journal_entries'), where('reference', '==', reference), limit(1))
+  const snap = await getDocs(q)
+  if (snap.empty) return null
+  const d = snap.docs[0]
+  return { id: d.id, createdAt: d.data().createdAt as string }
 }

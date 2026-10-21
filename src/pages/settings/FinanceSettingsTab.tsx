@@ -1,30 +1,23 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   Alert, Autocomplete, Box, Button, Chip, CircularProgress,
-  FormControlLabel, Checkbox,
   InputAdornment, Paper, Stack, Tab, Tabs, TextField, Typography,
 } from '@mui/material'
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
-import CloudUploadIcon        from '@mui/icons-material/CloudUpload'
-import LinkOffIcon            from '@mui/icons-material/LinkOff'
-import LocalHospitalIcon      from '@mui/icons-material/LocalHospital'
-import SettingsIcon           from '@mui/icons-material/Settings'
+import CloudUploadIcon from '@mui/icons-material/CloudUpload'
+import SettingsIcon    from '@mui/icons-material/Settings'
 import { toast } from 'sonner'
 import {
-  type FinanceAccount, type FinanceConnection, type FinanceParty,
+  type FinanceAccount, type FinanceConnection,
   type FinanceGlobalAccounts, type FinanceUserAccounts,
-  DEFAULT_GLOBAL,
+  DEFAULT_GLOBAL, DEFAULT_USER,
   loadConnection, saveConnection,
   isGlobalComplete, isUserAccountsComplete,
-  importAccountsFromFinanceApi, importPartiesFromFinanceApi, syncDoctorsAsParties,
-  fetchFinanceAccounts, fetchFinanceParties,
+  importAccountsFromFinanceApi, ImportSourceChangedError,
+  fetchFinanceAccounts,
   fetchGlobalJournalSettings, saveGlobalJournalSettings,
   fetchUserJournalAccounts, saveUserJournalAccounts,
-  fetchDoctorPartyMappings, saveDoctorPartyMapping,
 } from '@/services/financeFirebaseService'
-import apiClient from '@/services/api'
 import { getUsersList } from '@/services/userService'
-import type { DoctorStripped } from '@/types/doctors'
 
 
 // ── account depth colours ─────────────────────────────────────────────────────
@@ -64,39 +57,21 @@ function AccountOption(
   )
 }
 
-// ── helpers ───────────────────────────────────────────────────────────────────
-
-async function fetchAllDoctors(): Promise<DoctorStripped[]> {
-  const all: DoctorStripped[] = []
-  let page = 1
-  while (true) {
-    const res = await apiClient.get<{ data: DoctorStripped[]; meta: { current_page: number; last_page: number } }>(
-      '/doctors', { params: { page }, skipAuthRedirect: true, suppressToast: true } as any,
-    )
-    all.push(...(res.data?.data ?? []))
-    if (page >= (res.data?.meta?.last_page ?? 1)) break
-    page++
-  }
-  return all
-}
-
 // ── component ─────────────────────────────────────────────────────────────────
 
 export default function FinanceSettingsTab() {
   const [activeTab, setActiveTab] = useState(0)
 
-  // ── shared data (accounts + parties loaded from Firestore) ────────────────
+  // ── shared data (accounts loaded from Firestore) ───────────────────────────
   const [accounts, setAccounts] = useState<FinanceAccount[]>([])
-  const [parties,  setParties]  = useState<FinanceParty[]>([])
   const [dataLoading, setDataLoading] = useState(false)
 
   const loadSharedData = async () => {
     setDataLoading(true)
     try {
-      const [accs, parts] = await Promise.all([fetchFinanceAccounts(), fetchFinanceParties()])
+      const accs = await fetchFinanceAccounts()
+      console.log('loaded accounts from Firebase', accs)
       setAccounts(accs)
-      // exclude auto-synced doctor_X entries — only show imported finance-api parties
-      setParties(parts.filter(p => /^\d+$/.test(p.id)))
     } catch { /* Firebase may not be configured yet */ }
     finally { setDataLoading(false) }
   }
@@ -104,13 +79,9 @@ export default function FinanceSettingsTab() {
   useEffect(() => { loadSharedData() }, [])
 
   // ── Tab 0: import ─────────────────────────────────────────────────────────
-  const [conn,            setConn]            = useState<FinanceConnection>(loadConnection)
-  const [importingAccs,   setImportingAccs]   = useState(false)
-  const [importingParties, setImportingParties] = useState(false)
-  const [syncingDoctors,  setSyncingDoctors]  = useState(false)
-  const [importedAccsCount,   setImportedAccsCount]   = useState<number | null>(null)
-  const [importedPartiesCount, setImportedPartiesCount] = useState<number | null>(null)
-  const [syncedDoctorsCount,  setSyncedDoctorsCount]  = useState<number | null>(null)
+  const [conn,          setConn]          = useState<FinanceConnection>(loadConnection)
+  const [importingAccs, setImportingAccs] = useState(false)
+  const [importedAccsCount, setImportedAccsCount] = useState<number | null>(null)
 
   const handleSaveConnection = () => {
     saveConnection(conn)
@@ -120,38 +91,26 @@ export default function FinanceSettingsTab() {
   const handleImportAccounts = async () => {
     setImportingAccs(true)
     try {
-      const n = await importAccountsFromFinanceApi(conn)
+      let n: number
+      try {
+        n = await importAccountsFromFinanceApi(conn)
+      } catch (e: unknown) {
+        if (!(e instanceof ImportSourceChangedError)) throw e
+        const ok = window.confirm(
+          `تم استيراد الحسابات سابقاً من مشروع finance-api مختلف (${e.previousBaseUrl}).\n` +
+          `الاستمرار سيحذف كل الحسابات المستوردة سابقاً وإعدادات ربط الحسابات الرئيسية وحسابات كل مستخدم، ` +
+          `ثم يستوردها من جديد من (${e.newBaseUrl}). ستحتاج لإعادة ضبط الربط بعد ذلك.\n\n` +
+          `هل تريد المتابعة؟`
+        )
+        if (!ok) return
+        n = await importAccountsFromFinanceApi(conn, true)
+      }
       setImportedAccsCount(n)
       toast.success(`تم استيراد ${n} حساب إلى Firebase`)
       loadSharedData()
     } catch (e: unknown) {
       toast.error(`فشل استيراد الحسابات — ${(e as Error).message}`)
     } finally { setImportingAccs(false) }
-  }
-
-  const handleImportParties = async () => {
-    setImportingParties(true)
-    try {
-      const n = await importPartiesFromFinanceApi(conn)
-      setImportedPartiesCount(n)
-      toast.success(`تم استيراد ${n} طرف إلى Firebase`)
-      loadSharedData()
-    } catch (e: unknown) {
-      toast.error(`فشل استيراد الأطراف — ${(e as Error).message}`)
-    } finally { setImportingParties(false) }
-  }
-
-  const handleSyncDoctors = async () => {
-    setSyncingDoctors(true)
-    try {
-      const doctors = await fetchAllDoctors()
-      const n = await syncDoctorsAsParties(doctors)
-      setSyncedDoctorsCount(n)
-      toast.success(`تم مزامنة ${n} طبيب كأطراف في Firebase`)
-      loadSharedData()
-    } catch (e: unknown) {
-      toast.error(`فشل مزامنة الأطباء — ${(e as Error).message}`)
-    } finally { setSyncingDoctors(false) }
   }
 
   // ── Tab 1: key accounts ───────────────────────────────────────────────────
@@ -186,62 +145,31 @@ export default function FinanceSettingsTab() {
       .finally(() => setTab1Loading(false))
   }, [activeTab])
 
-  const handleSaveGlobal = async () => {
+  // Firestore's setDoc overwrites the whole document, so every autosave must
+  // send the complete merged object — not just the field that changed — or it
+  // would wipe out the other already-saved accounts.
+  const updateGlobalAcc = async (patch: Partial<FinanceGlobalAccounts>) => {
+    const next = { ...globalAccs, ...patch }
+    setGlobalAccs(next)
     setSavingGlobal(true)
     try {
-      await saveGlobalJournalSettings(globalAccs)
-      toast.success('تم حفظ الحسابات الرئيسية')
-    } catch { toast.error('فشل الحفظ') }
+      await saveGlobalJournalSettings(next)
+    } catch { toast.error('فشل حفظ الحسابات الرئيسية') }
     finally { setSavingGlobal(false) }
   }
 
-  const handleSaveUserAccs = async (userId: number) => {
-    const accs = allUserAccs[userId]
-    if (!accs) return
+  const updateUserAcc = async (userId: number, patch: Partial<FinanceUserAccounts>) => {
+    const next = { ...(allUserAccs[userId] ?? DEFAULT_USER), ...patch }
+    setAllUserAccs(m => ({ ...m, [userId]: next }))
     setSavingUserId(userId)
     try {
-      await saveUserJournalAccounts(userId, accs)
-      toast.success('تم الحفظ')
-    } catch { toast.error('فشل الحفظ') }
+      await saveUserJournalAccounts(userId, next)
+    } catch { toast.error('فشل حفظ حسابات المستخدم') }
     finally { setSavingUserId(null) }
   }
 
-  const setUserAccs = (userId: number, patch: Partial<FinanceUserAccounts>) =>
-    setAllUserAccs(m => ({ ...m, [userId]: { ...m[userId], ...patch } }))
-
-  // ── Tab 2: doctor linking ─────────────────────────────────────────────────
-  const [partyMap,   setPartyMap]   = useState<Record<number, string>>({})
-  const [tab2Loading, setTab2Loading] = useState(false)
-  const [savingLink, setSavingLink] = useState<number | null>(null)
-
-  useEffect(() => {
-    if (activeTab !== 2) return
-    setTab2Loading(true)
-    fetchDoctorPartyMappings()
-      .then(m => setPartyMap(m))
-      .catch(() => {})
-      .finally(() => setTab2Loading(false))
-  }, [activeTab])
-
-  const [localDoctors,   setLocalDoctors]   = useState<DoctorStripped[]>([])
-  const [doctorsSearch,  setDoctorsSearch]  = useState('')
-  useEffect(() => {
-    if (activeTab !== 2) return
-    fetchAllDoctors().then(setLocalDoctors).catch(() => {})
-  }, [activeTab])
-
-  const handleLinkDoctor = async (doctorId: number, party: FinanceParty | null) => {
-    if (!party) return
-    setSavingLink(doctorId)
-    try {
-      await saveDoctorPartyMapping(doctorId, party.id)
-      setPartyMap(m => ({ ...m, [doctorId]: party.id }))
-      toast.success('تم ربط الطبيب بالطرف')
-    } catch { toast.error('فشل ربط الطبيب') }
-    finally { setSavingLink(null) }
-  }
-
   // ── shared account picker ─────────────────────────────────────────────────
+  // accounts is already sorted by code (see fetchFinanceAccounts).
   const depthMap        = useMemo(() => buildDepthMap(accounts), [accounts])
   const renderAccOption = (props: React.HTMLAttributes<HTMLLIElement> & { key?: React.Key }, acc: FinanceAccount) =>
     AccountOption(props, acc, depthMap)
@@ -267,9 +195,8 @@ export default function FinanceSettingsTab() {
     <Stack spacing={3}>
       <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
         <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)}>
-          <Tab icon={<CloudUploadIcon fontSize="small" />}   iconPosition="start" label="استيراد البيانات" />
-          <Tab icon={<SettingsIcon fontSize="small" />}      iconPosition="start" label="الحسابات الرئيسية" />
-          <Tab icon={<LocalHospitalIcon fontSize="small" />} iconPosition="start" label="ربط الأطباء" />
+          <Tab icon={<CloudUploadIcon fontSize="small" />} iconPosition="start" label="استيراد البيانات" />
+          <Tab icon={<SettingsIcon fontSize="small" />}    iconPosition="start" label="الحسابات الرئيسية" />
         </Tabs>
       </Box>
 
@@ -277,17 +204,16 @@ export default function FinanceSettingsTab() {
       {activeTab === 0 && (
         <Stack spacing={3}>
           {/* Firestore status chips */}
-          {(accounts.length > 0 || parties.length > 0) && (
+          {accounts.length > 0 && (
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-              {accounts.length > 0 && <Chip label={`${accounts.length} حساب في Firebase`} color="success" size="small" />}
-              {parties.length  > 0 && <Chip label={`${parties.length} طرف في Firebase`}   color="success" size="small" />}
+              <Chip label={`${accounts.length} حساب في Firebase`} color="success" size="small" />
             </Box>
           )}
 
           <Paper elevation={2} sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>استيراد من Finance API (مرة واحدة)</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              أدخل بيانات الاتصال بـ Finance API لاستيراد الحسابات والأطراف إلى Firebase. بعد الاستيراد لن تحتاج لهذا الاتصال مجدداً.
+              أدخل بيانات الاتصال بـ Finance API لاستيراد الحسابات إلى Firebase. بعد الاستيراد لن تحتاج لهذا الاتصال مجدداً.
             </Typography>
             <Stack spacing={2}>
               <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
@@ -318,7 +244,7 @@ export default function FinanceSettingsTab() {
                   حفظ بيانات الاتصال
                 </Button>
               </Box>
-              <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
+              <Box>
                 <Button
                   variant="outlined"
                   disabled={!conn.baseUrl.trim() || !conn.token.trim() || importingAccs}
@@ -327,38 +253,11 @@ export default function FinanceSettingsTab() {
                 >
                   {importingAccs ? 'جاري الاستيراد...' : 'استيراد الحسابات'}
                 </Button>
-                <Button
-                  variant="outlined"
-                  disabled={!conn.baseUrl.trim() || !conn.token.trim() || importingParties}
-                  onClick={handleImportParties}
-                  startIcon={importingParties ? <CircularProgress size={14} color="inherit" /> : undefined}
-                >
-                  {importingParties ? 'جاري الاستيراد...' : 'استيراد الأطراف'}
-                </Button>
-              </Stack>
-              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                {importedAccsCount   != null && <Chip label={`✓ ${importedAccsCount} حساب`}   color="success" size="small" />}
-                {importedPartiesCount != null && <Chip label={`✓ ${importedPartiesCount} طرف`} color="success" size="small" />}
               </Box>
-            </Stack>
-          </Paper>
-
-          <Paper elevation={2} sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>مزامنة الأطباء كأطراف</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              يُنشئ طرفاً في Firebase لكل طبيب مسجّل في جودة — يمكن تكرار هذه العملية عند إضافة أطباء جدد.
-            </Typography>
-            <Stack direction="row" spacing={1.5} alignItems="center">
-              <Button
-                variant="outlined"
-                disabled={syncingDoctors}
-                onClick={handleSyncDoctors}
-                startIcon={syncingDoctors ? <CircularProgress size={14} color="inherit" /> : undefined}
-              >
-                {syncingDoctors ? 'جاري المزامنة...' : 'مزامنة الأطباء'}
-              </Button>
-              {syncedDoctorsCount != null && (
-                <Chip label={`✓ ${syncedDoctorsCount} طبيب`} color="success" size="small" />
+              {importedAccsCount != null && (
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  <Chip label={`✓ ${importedAccsCount} حساب`} color="success" size="small" />
+                </Box>
               )}
             </Stack>
           </Paper>
@@ -379,53 +278,56 @@ export default function FinanceSettingsTab() {
           {accounts.length > 0 && (
             <>
               <Paper elevation={2} sx={{ p: 3 }}>
-                <Typography variant="h6" gutterBottom>الحسابات الرئيسية للعيادة</Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                  <Typography variant="h6" gutterBottom sx={{ mb: 0 }}> ربط الحسابات الرئيسية </Typography>
+                  {savingGlobal && <CircularProgress size={14} />}
+                </Box>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  تُستخدم في جميع قيود الأطباء تلقائياً
+                  تُستخدم في جميع قيود الأطباء تلقائياً — يُحفظ تلقائياً عند كل اختيار
                 </Typography>
+                {!isGlobalComplete(globalAccs) && (
+                  <Alert severity="warning" sx={{ mb: 2 }}>
+                    بعض الحسابات المطلوبة (*) غير محددة بعد.
+                  </Alert>
+                )}
                 <Stack spacing={2}>
                   <AccPicker
                     label="حساب إيرادات العيادة *"
                     value={findAcc(globalAccs.clinicRevenueAccountId)}
-                    onChange={v => setGlobalAccs(g => ({ ...g, clinicRevenueAccountId: v?.id ?? null }))}
+                    onChange={v => updateGlobalAcc({ clinicRevenueAccountId: v?.id ?? null })}
                   />
                   <AccPicker
                     label="حساب ذمم الأطباء (الدائنون) *"
                     value={findAcc(globalAccs.doctorReceivablesAccountId)}
-                    onChange={v => setGlobalAccs(g => ({ ...g, doctorReceivablesAccountId: v?.id ?? null }))}
+                    onChange={v => updateGlobalAcc({ doctorReceivablesAccountId: v?.id ?? null })}
                   />
                   <AccPicker
                     label="حساب مصروف أتعاب الأطباء *"
                     value={findAcc(globalAccs.doctorFeesExpenseAccountId)}
-                    onChange={v => setGlobalAccs(g => ({ ...g, doctorFeesExpenseAccountId: v?.id ?? null }))}
+                    onChange={v => updateGlobalAcc({ doctorFeesExpenseAccountId: v?.id ?? null })}
                   />
                   <AccPicker
                     label="حساب إيرادات التأمين (التحملات)"
                     value={findAcc(globalAccs.insuranceCopaymentRevenueAccountId)}
-                    onChange={v => setGlobalAccs(g => ({ ...g, insuranceCopaymentRevenueAccountId: v?.id ?? null }))}
+                    onChange={v => updateGlobalAcc({ insuranceCopaymentRevenueAccountId: v?.id ?? null })}
                   />
                   <AccPicker
                     label="حساب ذمم التأمين (المستحق من الشركات)"
                     value={findAcc(globalAccs.insuranceReceivableAccountId)}
-                    onChange={v => setGlobalAccs(g => ({ ...g, insuranceReceivableAccountId: v?.id ?? null }))}
+                    onChange={v => updateGlobalAcc({ insuranceReceivableAccountId: v?.id ?? null })}
                   />
-                  <Box>
-                    <Button
-                      variant="contained"
-                      disabled={!isGlobalComplete(globalAccs) || savingGlobal}
-                      onClick={handleSaveGlobal}
-                      startIcon={savingGlobal ? <CircularProgress size={16} color="inherit" /> : undefined}
-                    >
-                      {savingGlobal ? 'جاري الحفظ...' : 'حفظ الحسابات الرئيسية'}
-                    </Button>
-                  </Box>
+                  <AccPicker
+                    label="حساب إيرادات المختبر"
+                    value={findAcc(globalAccs.labRevenueAccountId)}
+                    onChange={v => updateGlobalAcc({ labRevenueAccountId: v?.id ?? null })}
+                  />
                 </Stack>
               </Paper>
 
               <Paper elevation={2} sx={{ p: 3 }}>
                 <Typography variant="h6" gutterBottom>حسابات الصندوق والبنك لكل مستخدم</Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  حدد حساب الصندوق والبنك لكل مستخدم — تُستخدم في قيود تحصيل الإيرادات وصرف حقوق الأطباء
+                  حدد حساب الصندوق والبنك لكل مستخدم — تُستخدم في قيود تحصيل الإيرادات وصرف حقوق الأطباء، يُحفظ تلقائياً عند كل اختيار
                 </Typography>
                 <TextField
                   size="small" fullWidth placeholder="بحث باسم المستخدم..."
@@ -439,43 +341,29 @@ export default function FinanceSettingsTab() {
                     const isSaving = savingUserId === u.id
                     return (
                       <Box key={u.id} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                        <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 700 }}>
-                          {u.name}
-                          <Box component="span" sx={{ fontWeight: 400, color: 'text.secondary', fontSize: 12, ml: 1 }}>
-                            @{u.username} · #{u.id}
-                          </Box>
-                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                            {u.name}
+                            <Box component="span" sx={{ fontWeight: 400, color: 'text.secondary', fontSize: 12, ml: 1 }}>
+                              @{u.username} · #{u.id}
+                            </Box>
+                          </Typography>
+                          {isSaving && <CircularProgress size={14} />}
+                          {!isSaving && isUserAccountsComplete(accs) && (
+                            <Typography variant="caption" color="success.main">✓ مكتمل</Typography>
+                          )}
+                        </Box>
                         <Stack spacing={1.5}>
                           <AccPicker
                             label="حساب الصندوق (كاش)"
                             value={findAcc(accs.cashBoxAccountId)}
-                            onChange={v => setUserAccs(u.id, { cashBoxAccountId: v?.id ?? null })}
+                            onChange={v => updateUserAcc(u.id, { cashBoxAccountId: v?.id ?? null })}
                           />
                           <AccPicker
                             label="حساب البنك / الشبكة"
                             value={findAcc(accs.bankAccountId)}
-                            onChange={v => setUserAccs(u.id, { bankAccountId: v?.id ?? null })}
+                            onChange={v => updateUserAcc(u.id, { bankAccountId: v?.id ?? null })}
                           />
-                          <FormControlLabel
-                            control={
-                              <Checkbox
-                                size="small"
-                                checked={!!accs.isInsuranceCollector}
-                                onChange={e => setUserAccs(u.id, { isInsuranceCollector: e.target.checked })}
-                              />
-                            }
-                            label="متحصل تأمين (تحملات)"
-                          />
-                          <Box>
-                            <Button
-                              size="small" variant="contained"
-                              disabled={!isUserAccountsComplete(accs) || isSaving}
-                              onClick={() => handleSaveUserAccs(u.id)}
-                              startIcon={isSaving ? <CircularProgress size={14} color="inherit" /> : undefined}
-                            >
-                              {isSaving ? 'جاري الحفظ...' : 'حفظ'}
-                            </Button>
-                          </Box>
                         </Stack>
                       </Box>
                     )
@@ -489,75 +377,6 @@ export default function FinanceSettingsTab() {
                 </Stack>
               </Paper>
             </>
-          )}
-        </Stack>
-      )}
-
-      {/* ── Tab 2: Doctor Linking ───────────────────────────────────────── */}
-      {activeTab === 2 && (
-        <Stack spacing={3}>
-          {(tab2Loading || dataLoading) && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}><CircularProgress /></Box>
-          )}
-
-          {parties.length === 0 && !tab2Loading && !dataLoading && (
-            <Alert severity="warning">
-              لا توجد أطراف في Firebase — يرجى استيراد الأطراف أو مزامنة الأطباء من تبويب "استيراد البيانات".
-            </Alert>
-          )}
-
-          {parties.length > 0 && (
-            <Paper elevation={2} sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>ربط الأطباء بالأطراف في نظام المحاسبة</Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                حدد الطرف المقابل لكل طبيب — يُحفظ تلقائياً عند الاختيار
-              </Typography>
-              <TextField
-                size="small" fullWidth placeholder="بحث باسم الطبيب..."
-                value={doctorsSearch}
-                onChange={e => setDoctorsSearch(e.target.value)}
-                sx={{ mb: 1 }}
-              />
-              <Stack spacing={1.5}>
-                {localDoctors.filter(d => d.name.toLowerCase().includes(doctorsSearch.toLowerCase())).map(doc => {
-                  const linkedPartyId = partyMap[doc.id] ?? null
-                  const linkedParty   = parties.find(p => p.id === linkedPartyId) ?? null
-                  const isSaving      = savingLink === doc.id
-                  return (
-                    <Box key={doc.id} sx={{ display: 'grid', gridTemplateColumns: '1fr 2fr auto', gap: 1.5, alignItems: 'center' }}>
-                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                        {doc.name}
-                        {doc.specialist_name && (
-                          <Typography component="span" variant="caption" color="text.secondary" sx={{ mr: 0.5 }}>
-                            {' '}— {doc.specialist_name}
-                          </Typography>
-                        )}
-                      </Typography>
-                      <Autocomplete
-                        options={parties}
-                        value={linkedParty}
-                        onChange={(_, v) => handleLinkDoctor(doc.id, v)}
-                        getOptionLabel={p => p.name}
-                        isOptionEqualToValue={(a, b) => a.id === b.id}
-                        size="small"
-                        disabled={isSaving}
-                        renderInput={p => <TextField {...p} placeholder="اختر الطرف..." size="small" />}
-                      />
-                      <Box sx={{ width: 24, display: 'flex', justifyContent: 'center' }}>
-                        {isSaving
-                          ? <CircularProgress size={18} />
-                          : linkedParty
-                            ? <CheckCircleOutlineIcon fontSize="small" color="success" />
-                            : <LinkOffIcon fontSize="small" sx={{ color: 'text.disabled' }} />}
-                      </Box>
-                    </Box>
-                  )
-                })}
-                {localDoctors.length === 0 && !tab2Loading && (
-                  <Typography variant="body2" color="text.secondary">لا يوجد أطباء مسجّلون.</Typography>
-                )}
-              </Stack>
-            </Paper>
           )}
         </Stack>
       )}

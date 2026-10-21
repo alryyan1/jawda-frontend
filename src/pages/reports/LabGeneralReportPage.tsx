@@ -4,7 +4,8 @@ import { useForm, Controller } from 'react-hook-form';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { format } from 'date-fns';
 
-import { Loader2, Eye } from 'lucide-react';
+import { Loader2, Eye, Landmark } from 'lucide-react';
+import LabJournalEntryDialog from '@/components/finance/LabJournalEntryDialog';
 
 // Helper function to format numbers with thousand separators
 const formatNumber = (num: number | string): string => {
@@ -71,6 +72,7 @@ const LabGeneralReportPage: React.FC = () => {
     date_to: defaultDateTo,
   });
   const [currentPage, setCurrentPage] = useState(1);
+  const [journalDialogOpen, setJournalDialogOpen] = useState(false);
 
   // Fetch data for filters
 
@@ -145,6 +147,9 @@ const LabGeneralReportPage: React.FC = () => {
   const dateTimeDisabled = isFetching || isLoadingDropdowns || shiftSelected;
 
   const shiftIdNum = shiftSelected ? parseInt(watchedShiftId!) : null;
+  const selectedShift = shiftIdNum != null ? (shifts || []).find(s => s.id === shiftIdNum) : null;
+  const selectedShiftLabel = selectedShift ? `#${selectedShift.id} — ${format(new Date(selectedShift.created_at), 'yyyy-MM-dd')}` : '';
+  const selectedShiftDate = selectedShift ? format(new Date(selectedShift.created_at), 'yyyy-MM-dd') : defaultDateTo;
 
   const { data: shiftUsers, isLoading: isLoadingShiftUsers } = useQuery({
     queryKey: ['usersForShiftLabDeposits', shiftIdNum],
@@ -320,6 +325,18 @@ const LabGeneralReportPage: React.FC = () => {
               </Button>
             )}
 
+            {shiftSelected && userRevenues.length > 0 && (
+              <Button
+                type="button"
+                variant="outlined"
+                color="success"
+                startIcon={<Landmark className="h-4 w-4" />}
+                onClick={() => setJournalDialogOpen(true)}
+              >
+                تصدير القيد المحاسبي
+              </Button>
+            )}
+
             {isFetching && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
           </div>
         </form>
@@ -482,6 +499,17 @@ const LabGeneralReportPage: React.FC = () => {
             )}
           </CardContent>
         </Card>
+      )}
+
+      {shiftSelected && shiftIdNum != null && (
+        <LabJournalEntryDialog
+          open={journalDialogOpen}
+          onClose={() => setJournalDialogOpen(false)}
+          shiftId={shiftIdNum}
+          shiftLabel={selectedShiftLabel}
+          date={selectedShiftDate}
+          userRevenues={userRevenues}
+        />
       )}
 
     </div>

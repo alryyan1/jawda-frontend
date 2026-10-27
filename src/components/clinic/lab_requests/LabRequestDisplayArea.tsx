@@ -9,11 +9,12 @@ import type { Patient } from "@/types/patients";
 // import RequestedLabTestsTable from "../RequestedLabTestsTable"; // Adjusted path
 import type { UseMutationResult } from "@tanstack/react-query";
 import { toast } from "sonner"; // For toasts if needed for local actions
+import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 
 type DirectPayItemMutationType = UseMutationResult<
   LabRequest,
   Error,
-  { labRequestId: number; is_bankak: boolean; shift_id: number },
+  { labRequestId: number; payment_method_id: number; shift_id: number },
   unknown
 >;
 type RemoveAllPendingMutationType = UseMutationResult<
@@ -61,6 +62,7 @@ const LabRequestDisplayArea: React.FC<LabRequestDisplayAreaProps> = ({
   unpayLabRequestMutation,
 }) => {
   const { t } = useTranslation(["labTests", "common", "payments"]);
+  const { defaultPaymentMethodId } = usePaymentMethods();
   const isCompanyPatient = !!currentPatient?.company_id;
 
   // calculateItemBalance and other handlers that use mutations are passed down
@@ -83,7 +85,10 @@ const LabRequestDisplayArea: React.FC<LabRequestDisplayAreaProps> = ({
       toast.error(t("payments:error.noActiveShiftForPayment"));
       return;
     }
-    const isBankakForThisPayment = !!labReq.is_bankak;
+    if (!defaultPaymentMethodId) {
+      return;
+    }
+    const paymentMethodId = labReq.payment_method_id ?? defaultPaymentMethodId;
     const balance = calculateItemBalance(labReq);
 
     if (balance <= 0.09) {
@@ -101,7 +106,7 @@ const LabRequestDisplayArea: React.FC<LabRequestDisplayAreaProps> = ({
     ) {
       directPayItemMutation.mutate({
         labRequestId: labReq.id,
-        is_bankak: isBankakForThisPayment,
+        payment_method_id: paymentMethodId,
         shift_id: currentClinicShift.id,
       });
     }

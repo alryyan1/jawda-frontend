@@ -7,7 +7,6 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -37,6 +36,7 @@ import { unpayLabRequest, recordDirectLabRequestPayment, updateAllLabRequestsBan
 import { updatePatient } from "@/services/patientService";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAuthorization } from "@/hooks/useAuthorization";
+import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 import apiClient from "@/services/api";
 import type { DoctorVisit } from "@/types/visits";
 import DiscountCommentDialog from "./DiscountCommentDialog";
@@ -98,6 +98,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({ activeVisitId, vi
   const queryClient = useQueryClient();
   const { currentClinicShift, user } = useAuth();
   const { can } = useAuthorization();
+  const { paymentMethods, defaultPaymentMethodId } = usePaymentMethods();
 
   const [showDiscountCommentDialog, setShowDiscountCommentDialog] = useState(false);
   const [selectedLabRequestForComment, setSelectedLabRequestForComment] = useState<number | null>(null);
@@ -137,8 +138,8 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({ activeVisitId, vi
   });
 
   const toggleBankakMutation = useMutation({
-    mutationFn: async ({ requestId, isBankak }: { requestId: number; isBankak: boolean }) => {
-      const response = await apiClient.patch(`/labrequests/${requestId}/toggle-bankak`, { is_bankak: isBankak });
+    mutationFn: async ({ requestId, paymentMethodId }: { requestId: number; paymentMethodId: number }) => {
+      const response = await apiClient.patch(`/labrequests/${requestId}/toggle-bankak`, { payment_method_id: paymentMethodId });
       return response.data;
     },
     onSuccess: () => {
@@ -170,8 +171,8 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({ activeVisitId, vi
   });
 
   const directPayItemMutation = useMutation({
-    mutationFn: (params: { labRequestId: number; is_bankak: boolean; shift_id: number }) =>
-      recordDirectLabRequestPayment(params.labRequestId, { is_bankak: params.is_bankak }),
+    mutationFn: (params: { labRequestId: number; payment_method_id: number; shift_id: number }) =>
+      recordDirectLabRequestPayment(params.labRequestId, { payment_method_id: params.payment_method_id }),
     onSuccess: () => {
       toast.success("تم تسجيل الدفع بنجاح");
       invalidateVisitQueries({ includeDashboard: true });
@@ -180,9 +181,9 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({ activeVisitId, vi
   });
 
   const updateAllBankakMutation = useMutation({
-    mutationFn: (isBankak: boolean) => updateAllLabRequestsBankak(activeVisitId!, isBankak),
+    mutationFn: (paymentMethodId: number) => updateAllLabRequestsBankak(activeVisitId!, paymentMethodId),
     onSuccess: () => {
-      toast.success("تم تعيين جميع الطلبات بنكك");
+      toast.success("تم تحديث طريقة الدفع لجميع الطلبات");
       invalidateVisitQueries();
     },
     onError: mutationErrorToast("فشل الطلب"),
@@ -200,8 +201,8 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({ activeVisitId, vi
     }
   };
 
-  const handleToggleBankak = (requestId: number, isBankak: boolean) => {
-    toggleBankakMutation.mutate({ requestId, isBankak });
+  const handleToggleBankak = (requestId: number, paymentMethodId: number) => {
+    toggleBankakMutation.mutate({ requestId, paymentMethodId });
   };
 
   const handleDeleteRequest = (requestId: number) => {
@@ -212,20 +213,20 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({ activeVisitId, vi
     unpayLabRequestMutation.mutate(requestId);
   };
 
-  const handleDirectPayItem = (requestId: number, isBankak: boolean) => {
+  const handleDirectPayItem = (requestId: number, paymentMethodId: number) => {
     if (!currentClinicShift) {
       toast.error("لا توجد وردية فعّالة");
       return;
     }
     directPayItemMutation.mutate({
       labRequestId: requestId,
-      is_bankak: isBankak,
+      payment_method_id: paymentMethodId,
       shift_id: currentClinicShift.id,
     });
   };
 
-  const handleUpdateAllBankak = () => {
-    updateAllBankakMutation.mutate(true);
+  const handleUpdateAllBankak = (paymentMethodId: number) => {
+    updateAllBankakMutation.mutate(paymentMethodId);
   };
 
   const handleOpenCommentDialog = (requestId: number) => {
@@ -361,15 +362,22 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({ activeVisitId, vi
           </Button>
         </div>
 
-        <Button
-          onClick={handleUpdateAllBankak}
-          variant="outline"
-          size="sm"
+        <Select
+          onValueChange={(value) => handleUpdateAllBankak(Number(value))}
           disabled={updateAllBankakMutation.isPending || labRequests.length === 0}
         >
-          {updateAllBankakMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          <span className="hidden sm:inline">بنكك</span>
-        </Button>
+          <SelectTrigger className="h-8 w-auto gap-1 text-xs">
+            {updateAllBankakMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+            <span className="hidden sm:inline">تعيين طريقة الدفع للكل</span>
+          </SelectTrigger>
+          <SelectContent>
+            {paymentMethods.map((method) => (
+              <SelectItem key={method.id} value={method.id.toString()}>
+                {method.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Requests table */}
@@ -517,8 +525,8 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({ activeVisitId, vi
                               variant="ghost"
                               size="sm"
                               className="h-8 w-8 border-2 border-green-200 p-0 text-green-600 hover:bg-green-50 hover:text-green-800"
-                              onClick={() => handleDirectPayItem(request.id, false)}
-                              disabled={directPayItemMutation.isPending || !can("سداد فحص")}
+                              onClick={() => defaultPaymentMethodId && handleDirectPayItem(request.id, defaultPaymentMethodId)}
+                              disabled={directPayItemMutation.isPending || !can("سداد فحص") || !defaultPaymentMethodId}
                               title="دفع نقدي"
                             >
                               {directPayItemMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "دفع"}
@@ -546,20 +554,29 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({ activeVisitId, vi
                           )}
 
                           {request.amount_paid > 0 && (
-                            <div className="flex items-center gap-1" title={request.is_bankak ? "إلغاء بنكك" : "تعيين بنكك"}>
+                            <div className="flex items-center gap-1" title="طريقة الدفع">
                               {toggleBankakMutation.isPending ? (
                                 <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
                               ) : (
-                                <Checkbox
-                                  checked={!!request.is_bankak}
-                                  onCheckedChange={(checked) => handleToggleBankak(request.id, !!checked)}
+                                <Select
+                                  value={request.payment_method_id ? request.payment_method_id.toString() : undefined}
+                                  onValueChange={(value) => handleToggleBankak(request.id, Number(value))}
                                   disabled={
                                     toggleBankakMutation.isPending || !request.is_paid || user?.id != request.user_deposited
                                   }
-                                  className="data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600"
-                                />
+                                >
+                                  <SelectTrigger className="h-7 w-20 text-xs">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {paymentMethods.map((method) => (
+                                      <SelectItem key={method.id} value={method.id.toString()}>
+                                        {method.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                               )}
-                              <span className="text-xs text-muted-foreground">بنكك</span>
                             </div>
                           )}
 
@@ -632,23 +649,34 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({ activeVisitId, vi
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-sm">بنكك</span>
-                <Checkbox
-                  checked={!!selectedRequestForRowDialog.is_bankak}
-                  onCheckedChange={() =>
-                    handleToggleBankak(selectedRequestForRowDialog.id, !selectedRequestForRowDialog.is_bankak)
-                  }
+                <span className="text-sm">طريقة الدفع</span>
+                <Select
+                  value={selectedRequestForRowDialog.payment_method_id ? selectedRequestForRowDialog.payment_method_id.toString() : undefined}
+                  onValueChange={(value) => handleToggleBankak(selectedRequestForRowDialog.id, Number(value))}
                   disabled={toggleBankakMutation.isPending}
-                />
+                >
+                  <SelectTrigger className="h-8 w-28 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {paymentMethods.map((method) => (
+                      <SelectItem key={method.id} value={method.id.toString()}>
+                        {method.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {!selectedRequestForRowDialog.is_paid && (
                 <Button
                   onClick={() => {
-                    handleDirectPayItem(selectedRequestForRowDialog.id, false);
+                    if (defaultPaymentMethodId) {
+                      handleDirectPayItem(selectedRequestForRowDialog.id, defaultPaymentMethodId);
+                    }
                     setRowActionsDialogOpen(false);
                   }}
-                  disabled={directPayItemMutation.isPending}
+                  disabled={directPayItemMutation.isPending || !defaultPaymentMethodId}
                   className="w-full"
                 >
                   {directPayItemMutation.isPending ? (

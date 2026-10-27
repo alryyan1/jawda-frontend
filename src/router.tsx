@@ -70,6 +70,7 @@ import YearlyPatientFrequencyReportPage from "./pages/reports/YearlyPatientFrequ
 import PatientServiceCostsReportPage from "./pages/reports/PatientServiceCostsReportPage";
 import LabRequestDiscountsReportPage from "./pages/reports/LabRequestDiscountsReportPage";
 import PatientPhonesReportPage from "./pages/reports/PatientPhonesReportPage";
+import UserPatientActivityReportPage from "./pages/reports/UserPatientActivityReportPage";
 import BindingMatchingPage from "./pages/settings/BindingMatchingPage";
 import MonthlyLabIncomeReportPage from "./pages/reports/MonthlyLabIncomeReportPage";
 import ServiceGroupsPage from "./pages/settings/ServiceGroupsPage";
@@ -330,6 +331,10 @@ const router = createBrowserRouter([
               {
                 path: "patient-phones",
                 element: <PatientPhonesReportPage />,
+              },
+              {
+                path: "user-patient-activity",
+                element: <UserPatientActivityReportPage />,
               },
 
               // Add other report routes here

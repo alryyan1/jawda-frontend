@@ -14,6 +14,13 @@ const API_URL = "/users";
 const ROLES_API_URL = "/roles-list"; // Route to get all roles
 // ... existing types
 
+export interface LabUserShiftIncomeSummaryPaymentMethod {
+  id: number;
+  code: string;
+  name: string;
+  total: number;
+}
+
 export interface LabUserShiftIncomeSummary {
   user_id: number;
   user_name: string;
@@ -21,6 +28,7 @@ export interface LabUserShiftIncomeSummary {
   total_lab_income: number;
   total_cash: number;
   total_bank: number;
+  payment_methods: LabUserShiftIncomeSummaryPaymentMethod[];
 }
 export const getUsersList = (): Promise<{ id: number; name: string; username: string }[]> =>
   apiClient.get<{ data: { id: number; name: string; username: string }[] }>('/users-list').then(res => res.data.data);

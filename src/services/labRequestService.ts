@@ -56,7 +56,7 @@ export const notifyLabReceptionOfVisit = async (visitId: number): Promise<{ mess
 
 interface BatchPayPayload {
   total_payment_amount: number;
-  is_bankak: boolean;
+  payment_method_id: number;
   shift_id: number;
   payment_notes?: string;
 }
@@ -70,7 +70,7 @@ export const batchPayLabRequestsForVisit = async (visitId: number, payload: Batc
 // ... (existing functions)
 interface UpdateLabRequestPayload {
   discount_per?: number;
-  is_bankak?: boolean; // If this is saved before payment
+  payment_method_id?: number; // If this is saved before payment
   endurance?: number;
   count?: number; // If count is editable
   comment?: string; // Add comment field
@@ -89,7 +89,7 @@ export const getFullLabRequestDetails = async (labRequestId: number): Promise<La
 
 // recordLabRequestPayment payload might simplify if amount is always full balance
 interface RecordDirectLabPaymentPayload {
-  is_bankak: boolean;
+  payment_method_id: number;
 }
 export const recordDirectLabRequestPayment = async (labRequestId: number, payload: RecordDirectLabPaymentPayload): Promise<LabRequest> => {
   const response = await apiClient.post<{ data: LabRequest }>(`${LABREQUEST_BASE_URL}/${labRequestId}/pay`, payload);
@@ -119,17 +119,17 @@ export const unpayLabRequest = async (labRequestId: number): Promise<void> => {
   await apiClient.post(`${LABREQUEST_BASE_URL}/${labRequestId}/unpay`);
 };
 
-export const updateAllLabRequestsBankak = async (visitId: number, isBankak: boolean): Promise<DoctorVisit> => {
+export const updateAllLabRequestsBankak = async (visitId: number, paymentMethodId: number): Promise<DoctorVisit> => {
   const response = await apiClient.patch<{ data: DoctorVisit }>(
     `/doctor-visits/${visitId}/update-all-lab-requests-bankak`,
-    { is_bankak: isBankak }
+    { payment_method_id: paymentMethodId }
   );
   return response.data.data;
 };
 
 interface RecordLabPaymentPayload {
   amount_to_pay: number;
-  is_bankak: boolean; // Or generic is_bank
+  payment_method_id: number;
   shift_id: number;
 }
 export const recordLabRequestPayment = async (

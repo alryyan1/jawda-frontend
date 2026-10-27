@@ -33,6 +33,7 @@ import type { DoctorVisit, LabRequest } from "@/types/visits"; // For the succes
 import type { Patient } from "@/types/patients"; // Needed for company check for endurance
 
 import { batchPayLabRequestsForVisit } from "@/services/labRequestService";
+import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 
 interface BatchLabPaymentDialogProps {
   isOpen: boolean;
@@ -47,7 +48,7 @@ interface BatchLabPaymentDialogProps {
 // Form values interface
 interface BatchPaymentFormValues {
   total_payment_amount: string;
-  is_bankak: string;
+  payment_method_id: string;
   payment_notes?: string | null;
 }
 
@@ -61,6 +62,7 @@ const BatchLabPaymentDialog: React.FC<BatchLabPaymentDialogProps> = ({
   onBatchPaymentSuccess,
 }) => {
   const isCompanyPatient = !!currentPatient?.company_id;
+  const { paymentMethods, defaultPaymentMethodId } = usePaymentMethods();
 
   const calculateItemNetPayable = (lr: LabRequest): number => {
     const price = Number(lr.price) || 0;
@@ -104,7 +106,7 @@ const BatchLabPaymentDialog: React.FC<BatchLabPaymentDialogProps> = ({
         summary.totalBalanceDue > 0
           ? summary.totalBalanceDue.toFixed(1)
           : "0.00",
-      is_bankak: "0",
+      payment_method_id: "",
       payment_notes: "",
     },
   });
@@ -118,18 +120,18 @@ const BatchLabPaymentDialog: React.FC<BatchLabPaymentDialogProps> = ({
           : "0.00";
       form.reset({
         total_payment_amount: defaultAmount,
-        is_bankak: "0",
+        payment_method_id: defaultPaymentMethodId ? defaultPaymentMethodId.toString() : "",
         payment_notes: "",
       });
       // For display, keep it as string
       form.setValue("total_payment_amount", defaultAmount);
     }
-  }, [isOpen, summary.totalBalanceDue, form]);
+  }, [isOpen, summary.totalBalanceDue, form, defaultPaymentMethodId]);
 
   const mutation = useMutation({
     mutationFn: (data: {
       total_payment_amount: number;
-      is_bankak: boolean;
+      payment_method_id: number;
       payment_notes?: string;
     }) =>
       batchPayLabRequestsForVisit(visitId, data),
@@ -157,20 +159,20 @@ const BatchLabPaymentDialog: React.FC<BatchLabPaymentDialogProps> = ({
       return;
     }
     
-    if (!data.is_bankak) {
+    if (!data.payment_method_id) {
       toast.error("طريقة الدفع مطلوبة");
       return;
     }
-    
+
     if (summary.totalBalanceDue <= 0) {
       toast.info("جميع طلبات المختبر مدفوعة أو لا يوجد رصيد مستحق");
       onOpenChange(false);
       return;
     }
-    
+
     mutation.mutate({
       total_payment_amount: amount,
-      is_bankak: data.is_bankak === "1",
+      payment_method_id: Number(data.payment_method_id),
       payment_notes: data.payment_notes,
     });
   };
@@ -238,7 +240,7 @@ const BatchLabPaymentDialog: React.FC<BatchLabPaymentDialogProps> = ({
               />
               <FormField
                 control={form.control}
-                name="is_bankak"
+                name="payment_method_id"
                 render={({ field }) => (
                   <FormItem className="space-y-1.5">
                     <FormLabel className="text-sm">
@@ -247,27 +249,21 @@ const BatchLabPaymentDialog: React.FC<BatchLabPaymentDialogProps> = ({
                     <FormControl>
                       <RadioGroup
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
+                        value={field.value}
                         className="flex gap-4"
                         dir={true}
                         disabled={mutation.isPending}
                       >
-                        <FormItem className="flex items-center space-x-2 rtl:space-x-reverse">
-                          <FormControl>
-                            <RadioGroupItem value="0" />
-                          </FormControl>
-                          <FormLabel className="font-normal text-sm">
-                            {"cash"}
-                          </FormLabel>
-                        </FormItem>
-                        <FormItem className="flex items-center space-x-2 rtl:space-x-reverse">
-                          <FormControl>
-                            <RadioGroupItem value="1" />
-                          </FormControl>
-                          <FormLabel className="font-normal text-sm">
-                            {"paymentMethodBankak"}
-                          </FormLabel>
-                        </FormItem>
+                        {paymentMethods.map((method) => (
+                          <FormItem key={method.id} className="flex items-center space-x-2 rtl:space-x-reverse">
+                            <FormControl>
+                              <RadioGroupItem value={method.id.toString()} />
+                            </FormControl>
+                            <FormLabel className="font-normal text-sm">
+                              {method.name}
+                            </FormLabel>
+                          </FormItem>
+                        ))}
                       </RadioGroup>
                     </FormControl>
                     <FormMessage />

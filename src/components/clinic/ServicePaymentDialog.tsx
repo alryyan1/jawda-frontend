@@ -4,7 +4,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
-import { 
+import {
   Dialog as MUIDialog,
   DialogTitle,
   DialogContent as MUIDialogContent,
@@ -26,6 +26,7 @@ import { formatNumber } from '@/lib/utils'; // Assuming you have this
 import type { DoctorVisit } from '@/types/visits';
 import { useAuth } from '@/contexts/AuthContext';
 import realtimeService from '@/services/realtimeService';
+import { usePaymentMethods } from '@/hooks/usePaymentMethods';
 
 interface ServicePaymentDialogProps {
   visit?: DoctorVisit;
@@ -40,7 +41,7 @@ interface ServicePaymentDialogProps {
 
 interface PaymentFormValues {
   amount: string;
-  is_bank: string;
+  payment_method_id: string;
 }
 
 const ServicePaymentDialog: React.FC<ServicePaymentDialogProps> = ({ 
@@ -50,6 +51,7 @@ const ServicePaymentDialog: React.FC<ServicePaymentDialogProps> = ({
 }) => {
     const queryClient = useQueryClient();
     const { user } = useAuth();
+    const { paymentMethods, defaultPaymentMethodId } = usePaymentMethods();
   // const { data: patient, isLoading: isLoadingPatient } = useQuery<Patient, Error>({
   //   queryKey: ['patientDetailsForPaymentDialog', visitId],
   //   queryFn: () => getPatientById(visitId),
@@ -101,9 +103,9 @@ const ServicePaymentDialog: React.FC<ServicePaymentDialogProps> = ({
   }, [requestedService, isCompanyPatient]); 
 
   const form = useForm<PaymentFormValues>({
-    defaultValues: { 
-        amount: calculatedPaymentDefault > 0 ? calculatedPaymentDefault.toFixed(1) : '0.00', 
-        is_bank: '0' 
+    defaultValues: {
+        amount: calculatedPaymentDefault > 0 ? calculatedPaymentDefault.toFixed(1) : '0.00',
+        payment_method_id: ''
     }
   });
 
@@ -114,15 +116,18 @@ const ServicePaymentDialog: React.FC<ServicePaymentDialogProps> = ({
         const defaultAmount = calculatedPaymentDefault > 0 ? calculatedPaymentDefault.toFixed(1) : '0.00';
         form.reset();
         setValue("amount", defaultAmount);
+        if (defaultPaymentMethodId) {
+          setValue("payment_method_id", defaultPaymentMethodId.toString());
+        }
     }
-  }, [isOpen, requestedService, calculatedPaymentDefault, form, setValue]);
+  }, [isOpen, requestedService, calculatedPaymentDefault, form, setValue, defaultPaymentMethodId]);
 
   const mutation = useMutation({
-    mutationFn: (data: PaymentFormValues) => 
+    mutationFn: (data: PaymentFormValues) =>
         recordServicePayment({
             requested_service_id: requestedService.id,
             amount: parseFloat(data.amount),
-            is_bank: data.is_bank === "1",
+            payment_method_id: Number(data.payment_method_id),
             shift_id: currentClinicShiftId
         }),
     onSuccess: async () => {
@@ -233,14 +238,15 @@ const ServicePaymentDialog: React.FC<ServicePaymentDialogProps> = ({
           />
 
           <Controller
-            name="is_bank"
+            name="payment_method_id"
             control={control}
             render={({ field }) => (
               <MUIFormControl disabled={mutation.isPending || (displayBalance <= 0 && parseFloat(getValues('amount')) <= 0)}>
                 <MUIFormLabel>طريقة الدفع</MUIFormLabel>
                 <MUIRadioGroup row value={field.value} onChange={(_e, val) => field.onChange(val)}>
-                  <FormControlLabel value="0" control={<Radio />} label="نقدي" />
-                  <FormControlLabel value="1" control={<Radio />} label="بنكي" />
+                  {paymentMethods.map((method) => (
+                    <FormControlLabel key={method.id} value={method.id.toString()} control={<Radio />} label={method.name} />
+                  ))}
                 </MUIRadioGroup>
               </MUIFormControl>
             )}

@@ -9,6 +9,7 @@ import type { ChildTest, MainTest } from "./labTests"; // MainTest now includes 
 import type { Company, Subcompany, CompanyRelation } from "./companies";
 import type { VisitDiagnosis } from "./diagnosis";
 import type { MedicalAttachment } from "./attachments";
+import type { PaymentMethod } from "./paymentMethods";
 
 // --- RequestedResult based on your latest decision to include tracking fields ---
 export interface RequestedResult {
@@ -58,7 +59,9 @@ export interface LabRequest {
   count: number; // Number of times this test is requested (usually 1 for lab)
   amount_paid: number;
   discount_per: number; // Percentage
-  is_bankak: boolean; // Payment method for this request
+  is_bankak: boolean; // Legacy payment method flag (true = non-cash), kept for backward compatibility
+  payment_method_id?: number | null;
+  payment_method?: PaymentMethod | null;
   comment?: string | null; // Overall comment for this lab request
   image_url?: string | null;
 
@@ -122,7 +125,9 @@ export interface RequestedService {
   is_paid: boolean;
   discount: number; // Fixed discount amount
   discount_per: number; // Percentage discount
-  bank: boolean; // If the primary/last payment for this service was bank
+  bank: boolean; // Legacy payment method flag (true = non-cash), kept for backward compatibility
+  payment_method_id?: number | null;
+  payment_method?: PaymentMethod | null;
 
   doctor_note: string | null;
   nurse_note: string | null;

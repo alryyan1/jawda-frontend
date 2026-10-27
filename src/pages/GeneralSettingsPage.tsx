@@ -3,8 +3,9 @@ import { useForm, Controller } from "react-hook-form";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { Building2, MessageSquare, Settings, Database, Landmark } from "lucide-react";
+import { Building2, MessageSquare, Settings, Database, Landmark, Wallet } from "lucide-react";
 import FinanceSettingsTab from "./settings/FinanceSettingsTab";
+import PaymentMethodsSettingsTab from "./settings/PaymentMethodsSettingsTab";
 import {
   Box,
   Paper,
@@ -556,6 +557,15 @@ const SettingsPage: React.FC = () => {
                 <Stack direction="row" spacing={1} alignItems="center">
                   <Landmark size={16} />
                   <span>المحاسبة</span>
+                </Stack>
+              }
+            />
+            <Tab
+              value="payment_methods"
+              label={
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Wallet size={16} />
+                  <span>طرق الدفع</span>
                 </Stack>
               }
             />
@@ -1480,6 +1490,9 @@ const SettingsPage: React.FC = () => {
 
         {/* Finance Settings Tab — outside the Jawda form, self-contained */}
         {activeTab === "finance" && <FinanceSettingsTab />}
+
+        {/* Payment Methods Settings Tab — outside the Jawda form, self-contained */}
+        {activeTab === "payment_methods" && <PaymentMethodsSettingsTab />}
 
         <Box display="flex" justifyContent="flex-end" pt={3}>
           <Button

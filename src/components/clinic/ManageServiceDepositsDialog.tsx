@@ -10,8 +10,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Checkbox,
-  FormControlLabel,
   Table,
   TableBody,
   TableCell,
@@ -25,6 +23,10 @@ import {
   IconButton,
   Tooltip,
   TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from "@mui/material";
 import { PlusCircle, Trash2, Save, Info } from "lucide-react";
 
@@ -43,12 +45,14 @@ import {
 } from "@/services/requestedServiceDepositService";
 import dayjs from "dayjs";
 import { useAuthorization } from "@/hooks/useAuthorization";
+import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 
 // Form interfaces
 interface DepositItemFormValues {
   id?: number;
   amount: string;
-  is_bank: boolean;
+  payment_method_id: number;
+  payment_method_name?: string;
   user_name?: string;
   created_at?: string;
   user_id: number;
@@ -74,6 +78,7 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
 }) => {
   const queryClient = useQueryClient();
   const { currentClinicShift } = useAuth();
+  const { paymentMethods, defaultPaymentMethodId } = usePaymentMethods();
 
   const depositsQueryKey = useMemo(() => 
     ["depositsForRequestedService", requestedService.id] as const,
@@ -90,7 +95,7 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
   // State for add deposit dialog
   const [isAddDepositDialogOpen, setIsAddDepositDialogOpen] = useState(false);
   const [newDepositAmount, setNewDepositAmount] = useState("");
-  const [newDepositIsBank, setNewDepositIsBank] = useState(false);
+  const [newDepositPaymentMethodId, setNewDepositPaymentMethodId] = useState<number | "">("");
   const {can, hasRole} = useAuthorization();
   // Query for deposits
   const { data: existingDeposits = [], isLoading: isLoadingDeposits } = useQuery<RequestedServiceDeposit[], Error>({
@@ -114,12 +119,13 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
       requested_service: dep.requested_service,
       id: dep.id,
       amount: String(dep.amount),
-      is_bank: dep.is_bank,
+      payment_method_id: dep.payment_method_id ?? defaultPaymentMethodId ?? 0,
+      payment_method_name: dep.payment_method?.name,
       user_name: dep.user?.name || "غير معروف",
       created_at: dep.created_at
-      
+
     }));
-  }, [existingDeposits]);
+  }, [existingDeposits, defaultPaymentMethodId]);
 
   // Handle deposits state when dialog opens/closes or deposits change
   useEffect(() => {
@@ -152,7 +158,7 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
       toast.success("تم إضافة الدفعة بنجاح");
       setIsAddDepositDialogOpen(false);
       setNewDepositAmount("");
-      setNewDepositIsBank(false);
+      setNewDepositPaymentMethodId("");
       handleQueryInvalidation();
     },
     onError: (err) => toast.error(err.response?.data?.message || "فشل إنشاء الدفعة"),
@@ -190,7 +196,7 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
     const payload: RequestedServiceDepositFormData = {
       id: rowData.id,
       amount: rowData.amount,
-      is_bank: rowData.is_bank,
+      payment_method_id: rowData.payment_method_id,
     };
 
     updateMutation.mutate(payload);
@@ -198,8 +204,9 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
 
   const handleOpenAddDepositDialog = useCallback(() => {
     if (!isOpen) return;
+    setNewDepositPaymentMethodId(defaultPaymentMethodId ?? "");
     setIsAddDepositDialogOpen(true);
-  }, [isOpen]);
+  }, [isOpen, defaultPaymentMethodId]);
 
   const handleSubmitAddDeposit = useCallback(() => {
     // Validation
@@ -213,13 +220,18 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
       return;
     }
 
+    if (!newDepositPaymentMethodId) {
+      toast.error("يرجى اختيار طريقة الدفع");
+      return;
+    }
+
     const payload: Omit<RequestedServiceDepositFormData, "id"> = {
       amount: newDepositAmount,
-      is_bank: newDepositIsBank,
+      payment_method_id: newDepositPaymentMethodId,
     };
 
     createMutation.mutate(payload);
-  }, [newDepositAmount, newDepositIsBank, currentClinicShift?.id, createMutation]);
+  }, [newDepositAmount, newDepositPaymentMethodId, currentClinicShift?.id, createMutation]);
 
   const handleDelete = useCallback((deposit: DepositItemFormValues) => {
     if (!isOpen) return;
@@ -229,7 +241,7 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
     }
   }, [deleteMutation, isOpen]);
 
-  const updateDeposit = useCallback((index: number, field: keyof DepositItemFormValues, value: string | boolean) => {
+  const updateDeposit = useCallback((index: number, field: keyof DepositItemFormValues, value: string | number) => {
     setDeposits(prev => prev.map((deposit, i) => 
       i === index ? { ...deposit, [field]: value } : deposit
     ));
@@ -296,21 +308,18 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
                             </Typography>
                           </TableCell>
                           <TableCell align="center">
-                            <FormControlLabel
-                              control={
-                                <Checkbox
-                                  checked={deposit.is_bank}
-                                  onChange={(e) => updateDeposit(index, 'is_bank', e.target.checked)}
-                                  size="small"
-                                />
-                              }
-                              label={
-                                <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '1rem' }}>
-                                  {deposit.is_bank ? "بنكك" : "كاش"}
-                                </Typography>
-                              }
-                              sx={{ margin: 0, justifyContent: 'center' }}
-                            />
+                            <Select
+                              value={deposit.payment_method_id || ""}
+                              onChange={(e) => updateDeposit(index, 'payment_method_id', Number(e.target.value))}
+                              size="small"
+                              sx={{ minWidth: 100, fontSize: '1rem', fontWeight: 600 }}
+                            >
+                              {paymentMethods.map((method) => (
+                                <MenuItem key={method.id} value={method.id}>
+                                  {method.name}
+                                </MenuItem>
+                              ))}
+                            </Select>
                           </TableCell>
                           <TableCell align="center" sx={{ display: { xs: 'none', sm: 'table-cell' }, fontSize: '1rem', fontWeight: 600 }}>
                             <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '1rem' }}>
@@ -387,7 +396,7 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
       onClose={() => {
         setIsAddDepositDialogOpen(false);
         setNewDepositAmount("");
-        setNewDepositIsBank(false);
+        setNewDepositPaymentMethodId("");
       }}
       maxWidth="sm"
       fullWidth
@@ -409,28 +418,30 @@ const ManageServiceDepositsDialog: React.FC<ManageServiceDepositsDialogProps> = 
             InputLabelProps={{ sx: { fontSize: '1rem' } }}
             InputProps={{ sx: { fontSize: '1rem', fontWeight: 600 } }}
           />
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={newDepositIsBank}
-                onChange={(e) => setNewDepositIsBank(e.target.checked)}
-              />
-            }
-            label={
-              <Typography variant="body1" sx={{ fontSize: '1rem', fontWeight: 600 }}>
-                {newDepositIsBank ? "بنك" : "كاش"}
-              </Typography>
-            }
-          />
+          <FormControl fullWidth>
+            <InputLabel id="new-deposit-payment-method-label">طريقة الدفع</InputLabel>
+            <Select
+              labelId="new-deposit-payment-method-label"
+              label="طريقة الدفع"
+              value={newDepositPaymentMethodId}
+              onChange={(e) => setNewDepositPaymentMethodId(Number(e.target.value))}
+            >
+              {paymentMethods.map((method) => (
+                <MenuItem key={method.id} value={method.id}>
+                  {method.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button 
+        <Button
           onClick={() => {
             setIsAddDepositDialogOpen(false);
             setNewDepositAmount("");
-            setNewDepositIsBank(false);
-          }} 
+            setNewDepositPaymentMethodId("");
+          }}
           variant="outlined"
         >
           إلغاء

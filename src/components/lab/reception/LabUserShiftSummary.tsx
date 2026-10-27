@@ -1,6 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Loader2, TrendingUp, Coins, Landmark, DollarSign } from 'lucide-react';
+import { Loader2, TrendingUp, Coins, Landmark, DollarSign, Wallet, Smartphone } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchCurrentUserLabIncomeSummary, type LabUserShiftIncomeSummary } from '@/services/userService';
 import { formatNumber } from '@/lib/utils';
@@ -9,6 +9,14 @@ interface LabUserShiftSummaryProps {
   /** When true, renders only the numbers block without the header/card container */
   compact?: boolean;
 }
+
+const METHOD_STYLES: Record<string, { icon: React.ElementType; textClass: string; iconClass: string }> = {
+  cash: { icon: Coins, textClass: 'text-green-700', iconClass: 'text-green-600' },
+  bank: { icon: Landmark, textClass: 'text-purple-700', iconClass: 'text-purple-600' },
+  fawry: { icon: Smartphone, textClass: 'text-orange-700', iconClass: 'text-orange-600' },
+  ocash: { icon: Smartphone, textClass: 'text-amber-700', iconClass: 'text-amber-600' },
+};
+const DEFAULT_METHOD_STYLE = { icon: Wallet, textClass: 'text-gray-700', iconClass: 'text-gray-600' };
 
 const LabUserShiftSummary: React.FC<LabUserShiftSummaryProps> = ({ compact = false }) => {
   const { user, currentClinicShift } = useAuth();
@@ -23,25 +31,21 @@ const LabUserShiftSummary: React.FC<LabUserShiftSummaryProps> = ({ compact = fal
     <>
       {labShiftSummary ? (
         <div className="space-y-2">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-1">
-              <Coins className="h-3 w-3 text-green-600" />
-              <span className="text-2xl text-gray-600">كاش</span>
-            </div>
-            <span className="text-2xl font-medium text-green-700">
-              {formatNumber(labShiftSummary.total_cash)}
-            </span>
-          </div>
-
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-1">
-              <Landmark className="h-3 w-3 text-purple-600" />
-              <span className="text-2xl text-gray-600">بنكك</span>
-            </div>
-            <span className="text-2xl font-medium text-purple-700">
-              {formatNumber(labShiftSummary.total_bank)}
-            </span>
-          </div>
+          {labShiftSummary.payment_methods.map((method) => {
+            const style = METHOD_STYLES[method.code] ?? DEFAULT_METHOD_STYLE;
+            const Icon = style.icon;
+            return (
+              <div key={method.id} className="flex justify-between items-center">
+                <div className="flex items-center gap-1">
+                  <Icon className={`h-3 w-3 ${style.iconClass}`} />
+                  <span className="text-2xl text-gray-600">{method.name}</span>
+                </div>
+                <span className={`text-2xl font-medium ${style.textClass}`}>
+                  {formatNumber(method.total)}
+                </span>
+              </div>
+            );
+          })}
 
           <div className="border-t border-blue-200 pt-2">
             <div className="flex justify-between items-center">
@@ -97,5 +101,3 @@ const LabUserShiftSummary: React.FC<LabUserShiftSummaryProps> = ({ compact = fal
 };
 
 export default LabUserShiftSummary;
-
-

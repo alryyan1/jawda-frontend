@@ -172,10 +172,10 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
 	const directPayItemMutation = useMutation({
 		mutationFn: (params: {
 			labRequestId: number;
-			is_bankak: boolean;
+			payment_method_id: number;
 			shift_id: number;
 		}) =>
-			recordDirectLabRequestPayment(params.labRequestId, { is_bankak: params.is_bankak }),
+			recordDirectLabRequestPayment(params.labRequestId, { payment_method_id: params.payment_method_id }),
 		onSuccess: (updatedLabRequest) => {
 			toast.success("تم تسجيل الدفع بنجاح");
 			queryClient.setQueryData(
@@ -440,7 +440,7 @@ const LabRequestComponent: React.FC<LabRequestComponentProps> = ({
 							directPayItemMutation as UseMutationResult<
 								LabRequest,
 								Error,
-								{ labRequestId: number; is_bankak: boolean; shift_id: number },
+								{ labRequestId: number; payment_method_id: number; shift_id: number },
 								unknown
 							>
 						}

@@ -1,5 +1,6 @@
 // src/types/services.ts
 import type { User } from './auth'; // Assuming User type
+import type { PaymentMethod } from './paymentMethods';
 
 export interface ServiceGroup {
   id: number;
@@ -27,6 +28,8 @@ export interface RequestedService {
   discount: number;
   discount_per: number;
   bank: boolean;
+  payment_method_id?: number | null;
+  payment_method?: PaymentMethod | null;
   count: number;
   doctor_note: string;
   nurse_note: string;
@@ -72,6 +75,8 @@ export interface RequestedServiceDeposit {
   user_id: number;
   user?: Pick<User, 'id' | 'name'>; // Optional loaded user
   is_bank: boolean;
+  payment_method_id?: number | null;
+  payment_method?: PaymentMethod | null;
   is_claimed: boolean; // For reconciliation later
   shift_id: number;
   created_at: string;
@@ -90,6 +95,8 @@ export interface RequestedServiceDeposit {
   user_id: number; // User who processed this specific deposit
   user?: { id: number; name: string }; // Optional loaded user
   is_bank: boolean;
+  payment_method_id?: number | null;
+  payment_method?: PaymentMethod | null;
   is_claimed: boolean; // For reconciliation
   shift_id: number;
   created_at: string;
@@ -99,7 +106,7 @@ export interface RequestedServiceDeposit {
 export interface RequestedServiceDepositFormData {
   id?: number; // For updates
   amount: string; // Input as string
-  is_bank: boolean;
+  payment_method_id: number;
   // shift_id and user_id will usually be set by the backend or from context
 }
 

@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import realtimeService from "@/services/realtimeService";
 import { useAuthorization } from "@/hooks/useAuthorization";
+import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 import apiClient from "@/services/api";
 import { Divider } from "@mui/material";
 
@@ -58,6 +59,7 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
   const [isPdfDialogOpen, setIsPdfDialogOpen] = useState(false);
   const [isFileVisitsOpen, setIsFileVisitsOpen] = useState(false);
   const { can } = useAuthorization();
+  const { defaultPaymentMethodId } = usePaymentMethods();
 
   const { data: visit, isLoading: isLoadingVisit } = useQuery({
     queryKey: ["doctorVisit", visitId],
@@ -93,12 +95,13 @@ const PatientDetailsColumnClinic = forwardRef<PatientDetailsColumnClinicRef, Pat
       } else {
         const unpaidServices = requestedServices.filter(service => calculateItemBalance(service) > 0.009);
         if (unpaidServices.length === 0) throw new Error("لا توجد خدمات غير مدفوعة");
+        if (!defaultPaymentMethodId) throw new Error("لم يتم تحميل طرق الدفع بعد");
         await Promise.all(
           unpaidServices.map(service =>
             recordServicePayment({
               requested_service_id: service.id,
               amount: calculateItemBalance(service),
-              is_bank: false,
+              payment_method_id: defaultPaymentMethodId,
               shift_id: currentClinicShiftId,
             })
           )

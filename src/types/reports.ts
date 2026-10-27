@@ -447,3 +447,71 @@ export interface PatientPhoneReportResponse {
     to: string;
   };
 }
+
+// User Patient-Registration Activity Audit Report Types
+export interface UserPatientActivityFilters {
+  user_id: string | number;
+  date_from: string;
+  date_to: string;
+  company_id?: string | number | null;
+  discounted_only?: boolean;
+}
+
+export interface UserPatientActivityItem {
+  patient_id: number;
+  patient_name: string | null;
+  phone: string | null;
+  company_name: string | null;
+  registered_at: string | null;
+  registered_time: string | null;
+  visit_id: number | null;
+  visit_date: string | null;
+  doctor_name: string | null;
+  items_count: number;
+  gross_total: number;
+  amount_paid: number;
+  discount_total: number;
+  net_total: number;
+  discount_percent: number;
+  has_full_discount: boolean;
+  is_high_risk: boolean;
+}
+
+export interface UserPatientActivitySummary {
+  total_patients: number;
+  discounted_patients_count: number;
+  discount_rate_percent: number;
+  total_gross: number;
+  total_discount: number;
+  total_net: number;
+  full_discount_count: number;
+}
+
+export interface UserPatientActivityCompanyBreakdown {
+  company_name: string;
+  patients_count: number;
+  discount_total: number;
+}
+
+export interface UserPatientActivityRepeatPatient {
+  patient_name: string;
+  phone: string | null;
+  times: number;
+  total_discount: number;
+}
+
+export interface UserPatientActivityReportResponse {
+  data: UserPatientActivityItem[];
+  summary: UserPatientActivitySummary;
+  by_company: UserPatientActivityCompanyBreakdown[];
+  repeat_patients: UserPatientActivityRepeatPatient[];
+  user: { id: number; name: string; username: string };
+  report_period: {
+    from: string;
+    to: string;
+  };
+  filters: {
+    company_name: string | null;
+    discounted_only: boolean;
+  };
+}

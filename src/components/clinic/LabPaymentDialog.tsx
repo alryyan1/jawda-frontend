@@ -29,6 +29,7 @@ import { Loader2 } from "lucide-react";
 
 import type { LabRequest } from "@/types/visits";
 import { recordLabRequestPayment } from "@/services/labRequestService";
+import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 
 interface LabPaymentDialogProps {
   isOpen: boolean;
@@ -41,7 +42,7 @@ interface LabPaymentDialogProps {
 // Define the form schema type
 type PaymentFormValues = {
   amount_to_pay: string;
-  is_bankak: string;
+  payment_method_id: string;
 };
 
 // Removed Zod schema - using manual validation
@@ -54,6 +55,7 @@ const LabPaymentDialog: React.FC<LabPaymentDialogProps> = ({
   currentClinicShiftId,
 }) => {
   // Translation hook removed since we're not using translations
+  const { paymentMethods, defaultPaymentMethodId } = usePaymentMethods();
 
   const netPayable = useMemo(() => {
     if (!labRequest) return 0;
@@ -72,7 +74,7 @@ const LabPaymentDialog: React.FC<LabPaymentDialogProps> = ({
   const form = useForm<PaymentFormValues>({
     defaultValues: {
       amount_to_pay: balanceDue > 0 ? balanceDue.toFixed(1) : "0.0",
-      is_bankak: "0",
+      payment_method_id: "",
     },
   });
 
@@ -81,13 +83,13 @@ const LabPaymentDialog: React.FC<LabPaymentDialogProps> = ({
       const defaultAmount = balanceDue > 0 ? balanceDue.toFixed(1) : "0.0";
       form.reset({
         amount_to_pay: defaultAmount,
-        is_bankak: "0",
+        payment_method_id: defaultPaymentMethodId ? defaultPaymentMethodId.toString() : "",
       });
     }
-  }, [isOpen, labRequest, balanceDue, form]);
+  }, [isOpen, labRequest, balanceDue, form, defaultPaymentMethodId]);
 
   const recordPaymentMutation = useMutation({
-    mutationFn: (data: { amount_to_pay: number; is_bankak: boolean }) => {
+    mutationFn: (data: { amount_to_pay: number; payment_method_id: number }) => {
       if (!labRequest) throw new Error("Lab request is missing for payment.");
       if (!currentClinicShiftId)
         throw new Error("Active clinic shift ID is missing.");
@@ -121,19 +123,19 @@ const LabPaymentDialog: React.FC<LabPaymentDialogProps> = ({
       return;
     }
     
-    if (!data.is_bankak) {
+    if (!data.payment_method_id) {
       toast.error("طريقة الدفع مطلوبة");
       return;
     }
-    
+
     if (balanceDue <= 0) {
       toast.info("الطلب مدفوع بالفعل أو لا يوجد رصيد مستحق");
       return;
     }
-    
+
     recordPaymentMutation.mutate({
       amount_to_pay: amount,
-      is_bankak: data.is_bankak === "1",
+      payment_method_id: Number(data.payment_method_id),
     });
   };
 
@@ -185,47 +187,35 @@ const LabPaymentDialog: React.FC<LabPaymentDialogProps> = ({
             />
             <FormField
               control={form.control}
-              name="is_bankak"
+              name="payment_method_id"
               render={({ field }) => (
                 <FormItem className="space-y-2">
                   <FormLabel>{"paymentMethod"}</FormLabel>
                   <FormControl>
                     <RadioGroup
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={field.value}
                       className="flex space-x-4 rtl:space-x-reverse"
                       disabled={
                         recordPaymentMutation.isPending || balanceDue <= 0
                       }
                     >
-                      <FormItem className="flex items-center space-x-2 rtl:space-x-reverse">
-                        <FormControl>
-                          <RadioGroupItem
-                            value="0"
-                            id={`cash-lab-${labRequest.id}`}
-                          />
-                        </FormControl>
-                        <FormLabel
-                          htmlFor={`cash-lab-${labRequest.id}`}
-                          className="font-normal"
-                        >
-                          {"cash"}
-                        </FormLabel>
-                      </FormItem>
-                      <FormItem className="flex items-center space-x-2 rtl:space-x-reverse">
-                        <FormControl>
-                          <RadioGroupItem
-                            value="1"
-                            id={`bank-lab-${labRequest.id}`}
-                          />
-                        </FormControl>
-                        <FormLabel
-                          htmlFor={`bank-lab-${labRequest.id}`}
-                          className="font-normal"
-                        >
-                          {"paymentMethodBankak"}
-                        </FormLabel>
-                      </FormItem>
+                      {paymentMethods.map((method) => (
+                        <FormItem key={method.id} className="flex items-center space-x-2 rtl:space-x-reverse">
+                          <FormControl>
+                            <RadioGroupItem
+                              value={method.id.toString()}
+                              id={`payment-method-lab-${labRequest.id}-${method.id}`}
+                            />
+                          </FormControl>
+                          <FormLabel
+                            htmlFor={`payment-method-lab-${labRequest.id}-${method.id}`}
+                            className="font-normal"
+                          >
+                            {method.name}
+                          </FormLabel>
+                        </FormItem>
+                      ))}
                     </RadioGroup>
                   </FormControl>
                   <FormMessage />

@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 
 import type { RequestedService } from "@/types/services";
 import type { DoctorVisit } from "@/types/visits";
+import type { PaymentMethod } from "@/types/paymentMethods";
 import {
   Autocomplete,
   Box,
@@ -76,6 +77,7 @@ import PdfPreviewDialog from "../common/PdfPreviewDialog";
 import { usePdfPreviewVisibility } from "@/contexts/PdfPreviewVisibilityContext";
 import realtimeService from "@/services/realtimeService";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 import type { User } from "@/types/auth";
 
 interface RequestedServicesTableProps {
@@ -98,21 +100,23 @@ interface RowEditData {
   price?: number;
 }
 
-// Component to toggle deposits bank/cash state
+// Component to set the payment method for all deposits of a requested service at once
 interface ToggleDepositsButtonProps {
   requestedServiceId: number;
   updatingServiceId: number | null;
-  onToggle: (serviceId: number) => void;
+  onSelectPaymentMethod: (serviceId: number, paymentMethodId: number) => void;
   requestedService: RequestedService;
   user: User | null;
+  paymentMethods: PaymentMethod[];
 }
 
 const ToggleDepositsButton: React.FC<ToggleDepositsButtonProps> = ({
   requestedServiceId,
   updatingServiceId,
   user,
-  onToggle,
+  onSelectPaymentMethod,
   requestedService,
+  paymentMethods,
 }) => {
   const { data: deposits = [] } = useQuery({
     queryKey: ["depositsForRequestedService", requestedServiceId],
@@ -120,46 +124,48 @@ const ToggleDepositsButton: React.FC<ToggleDepositsButtonProps> = ({
     enabled: !!requestedServiceId,
   });
 
-  // Determine if all deposits are bank
-  const allAreBank =
-    deposits.length > 0 &&
-    deposits.every((deposit) => deposit.is_bank === true);
   const isUpdating = updatingServiceId === requestedServiceId;
+  const canEdit = requestedService.user_deposited == user?.id;
 
-  const tooltipTitle = allAreBank
-    ? "تغيير جميع الدفعات إلى كاش"
-    : deposits.length > 0
-      ? "تغيير جميع الدفعات إلى بنك"
-      : "لا توجد دفعات";
+  // Only show a definite selection when every deposit shares the same method
+  const firstMethodId = deposits[0]?.payment_method_id ?? null;
+  const currentPaymentMethodId =
+    deposits.length > 0 && deposits.every((d) => d.payment_method_id === firstMethodId)
+      ? firstMethodId
+      : null;
 
-  const buttonColor = allAreBank ? "primary" : "default";
-  console.log("user", user);
-  console.log(
-    "requestedService.user_deposited_id",
-    requestedService.user_deposited_id,
-  );
+  if (isUpdating) {
+    return <Loader2 className="h-4 w-4 animate-spin" />;
+  }
+
+  if (!canEdit) {
+    return null;
+  }
+
   return (
-    <Tooltip title={tooltipTitle}>
-      <IconButton
-        size="small"
-        onClick={(e) => {
-          e.stopPropagation();
-          onToggle(requestedServiceId);
-        }}
-        disabled={isUpdating || !requestedServiceId || deposits.length === 0}
-        color={buttonColor as "primary" | "default"}
-      >
-        {isUpdating ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : requestedService.user_deposited == user?.id ? (
-          <Checkbox
-            disabled={requestedService.user_deposited != user?.id}
-            checked={allAreBank}
-            size="small"
-            sx={{ p: 0 }}
-          />
-        ) : null}
-      </IconButton>
+    <Tooltip title={deposits.length === 0 ? "لا توجد دفعات" : "طريقة دفع جميع الدفعات"}>
+      <span>
+        <Select
+          size="small"
+          value={currentPaymentMethodId ?? ""}
+          displayEmpty
+          disabled={deposits.length === 0}
+          onChange={(e) => {
+            onSelectPaymentMethod(requestedServiceId, Number(e.target.value));
+          }}
+          onClick={(e) => e.stopPropagation()}
+          sx={{ minWidth: 90, fontSize: "0.8rem" }}
+        >
+          <MenuItem value="" disabled>
+            مختلطة
+          </MenuItem>
+          {paymentMethods.map((method) => (
+            <MenuItem key={method.id} value={method.id}>
+              {method.name}
+            </MenuItem>
+          ))}
+        </Select>
+      </span>
     </Tooltip>
   );
 };
@@ -401,6 +407,7 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
     number | null
   >(null);
   const { user } = useAuth();
+  const { paymentMethods, defaultPaymentMethodId } = usePaymentMethods();
   // Removed expandable rows; using dialog instead
   // Row options dialog
   const [isRowOptionsDialogOpen, setIsRowOptionsDialogOpen] = useState(false);
@@ -479,11 +486,14 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
       if (paymentAmount <= 0) {
         throw new Error("لا يوجد مبلغ للدفع");
       }
+      if (!defaultPaymentMethodId) {
+        throw new Error("لم يتم تحميل طرق الدفع بعد");
+      }
 
       return await recordServicePayment({
         requested_service_id: rs.id,
         amount: paymentAmount,
-        is_bank: false, // Default to cash
+        payment_method_id: defaultPaymentMethodId, // Default to cash
         shift_id: currentClinicShiftId,
       });
     },
@@ -626,42 +636,38 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
   const [updatingServiceId, setUpdatingServiceId] = useState<number | null>(
     null,
   );
-  // Mutation to toggle all deposits is_bank
-  const setAllDepositsBankMutation = useMutation({
-    mutationFn: async (requestedServiceId: number) => {
+  // Mutation to set the payment method of every deposit of a requested service
+  const setAllDepositsPaymentMethodMutation = useMutation({
+    mutationFn: async ({
+      requestedServiceId,
+      paymentMethodId,
+    }: {
+      requestedServiceId: number;
+      paymentMethodId: number;
+    }) => {
       setUpdatingServiceId(requestedServiceId);
       // Get all deposits for the requested service
       const deposits = await getDepositsForRequestedService(requestedServiceId);
 
       if (deposits.length === 0) {
         toast.warning("لا توجد دفعات للخدمة");
-        return { count: 0, serviceId: requestedServiceId, newState: false };
+        return { count: 0 };
       }
-
-      // Check if all deposits are bank (is_bank = true)
-      const allAreBank = deposits.every((deposit) => deposit.is_bank === true);
-
-      // Toggle: if all are bank, set to cash (false), otherwise set to bank (true)
-      const newBankState = !allAreBank;
 
       // Update each deposit
       const updatePromises = deposits.map((deposit) =>
         updateRequestedServiceDeposit(deposit.id, {
           amount: String(deposit.amount),
-          is_bank: newBankState,
+          payment_method_id: paymentMethodId,
         }),
       );
 
       await Promise.all(updatePromises);
-      return {
-        count: deposits.length,
-        serviceId: requestedServiceId,
-        newState: newBankState,
-      };
+      return { count: deposits.length };
     },
-    onSuccess: ({ count, newState }) => {
+    onSuccess: ({ count }) => {
       if (count > 0) {
-        toast.success(`تم تحديث ${count} دفعة إلى ${newState ? "بنك" : "كاش"}`);
+        toast.success(`تم تحديث ${count} دفعة`);
       }
       queryClient.invalidateQueries({
         queryKey: ["requestedServicesForVisit", visitId],
@@ -941,10 +947,12 @@ const RequestedServicesTable: React.FC<RequestedServicesTableProps> = ({
                                     requestedServiceId={rs.id}
                                     requestedService={rs}
                                     updatingServiceId={updatingServiceId}
-                                    onToggle={(serviceId) => {
-                                      setAllDepositsBankMutation.mutate(
-                                        serviceId,
-                                      );
+                                    paymentMethods={paymentMethods}
+                                    onSelectPaymentMethod={(serviceId, paymentMethodId) => {
+                                      setAllDepositsPaymentMethodMutation.mutate({
+                                        requestedServiceId: serviceId,
+                                        paymentMethodId,
+                                      });
                                     }}
                                   />
                                 ) : (

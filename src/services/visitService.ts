@@ -130,7 +130,7 @@ export const updateDoctorVisitStatus = async (
 interface CreateDepositPayload {
   requested_service_id: number;
   amount: number;
-  is_bank: boolean;
+  payment_method_id: number;
   shift_id: number; // Current clinic shift ID
 }
 

@@ -62,6 +62,7 @@ import {
   MessageSquare,
   Percent,
   Phone,
+  ShieldAlert,
 } from "lucide-react";
 import { Toaster } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -1168,6 +1169,7 @@ const AppLayout: React.FC = () => {
                               items={[
                                 { to: "/reports/patient-phones", icon: Phone, label: "أرقام هواتف المرضى", permission: "عرض تقرير أرقام هواتف المرضى" },
                                 { to: "/reports/yearly-patient-frequency", icon: UsersRound, label: "تردد المرضى", permission: "عرض تقرير تردد المرضى" },
+                                { to: "/reports/user-patient-activity", icon: ShieldAlert, label: "نشاط تسجيل المرضى للمستخدم", permission: "عرض تقرير نشاط تسجيل المرضى للمستخدم" },
                               ]}
                             />
                             <ReportCategory

@@ -1,5 +1,6 @@
 import type { PatientStripped } from "./patients";
 import type { UserStripped } from "./auth";
+import type { PaymentMethod } from "./paymentMethods";
 
 export interface MainTestStripped {
   id: number;
@@ -67,6 +68,8 @@ export interface LabRequest {
   amount_paid: number;
   discount_per: number;
   is_bankak: boolean;
+  payment_method_id?: number | null;
+  payment_method?: PaymentMethod | null;
   comment?: string | null;
 
   user_requested?: number | null;

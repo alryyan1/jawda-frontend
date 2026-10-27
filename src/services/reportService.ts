@@ -614,3 +614,23 @@ export const downloadPatientPhonesExcel = async (filters: PatientPhoneReportFilt
   });
   return response.data;
 };
+
+import type { UserPatientActivityFilters, UserPatientActivityReportResponse } from '@/types/reports';
+
+export const getUserPatientActivityReport = async (
+  filters: UserPatientActivityFilters
+): Promise<UserPatientActivityReportResponse> => {
+  const response = await apiClient.get<UserPatientActivityReportResponse>(
+    '/reports/user-patient-activity',
+    { params: filters }
+  );
+  return response.data;
+};
+
+export const downloadUserPatientActivityPdf = async (filters: UserPatientActivityFilters): Promise<Blob> => {
+  const response = await apiClient.get<Blob>('/reports/user-patient-activity/pdf', {
+    params: filters,
+    responseType: 'blob',
+  });
+  return response.data;
+};

@@ -4,12 +4,18 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 // MUI
-import { Box, Card, CardContent, CardHeader, Typography, FormControl, InputLabel, Select, MenuItem, TextField, CircularProgress, Button, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, Autocomplete, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+import { Box, Card, CardContent, CardHeader, Typography, FormControl, InputLabel, Select, MenuItem, TextField, CircularProgress, Button, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, Autocomplete, createFilterOptions, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import { PictureAsPdf as PdfIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
 
 import { formatNumber } from '@/lib/utils';
 import { getDenominationsForShift, saveDenominationCounts } from '@/services/cashReconciliationService';
-import { deleteCost } from '@/services/costService';
+import { deleteCost, getCostCategoriesList, createCostCategory } from '@/services/costService';
+import type { CostCategory } from '@/types/finance';
+
+// Option shown in the "الجهة" autocomplete; the synthetic "add new" entry carries isNew + inputValue
+type CostCategoryOption = CostCategory | { id?: undefined; name: string; inputValue: string; isNew: true };
+
+const costCategoryFilter = createFilterOptions<CostCategoryOption>();
 import type { Denomination } from '@/types/cash';
 import { getShiftsList } from '@/services/shiftService';
 import type { Shift } from '@/types/shifts';
@@ -28,6 +34,8 @@ interface Cost {
   created_at: string;
   user_cost_name?: string;
   comment?: string;
+  cost_category_id?: number | null;
+  cost_category_name?: string | null;
 }
 
 const CashReconciliationPage: React.FC = () => {
@@ -44,7 +52,30 @@ const CashReconciliationPage: React.FC = () => {
     amount_cash: '',
     amount_bank: '',
   });
+  const [selectedCostCategory, setSelectedCostCategory] = useState<CostCategory | null>(null);
   const [costDialogOpen, setCostDialogOpen] = useState(false);
+
+  // Fetch cost categories (الجهات) for the cost creation dialog
+  const { data: costCategories, isLoading: isLoadingCostCategories } = useQuery<CostCategory[], Error>({
+    queryKey: ['costCategoriesList'],
+    queryFn: getCostCategoriesList,
+    enabled: costDialogOpen,
+  });
+
+  // Create a new cost category on the fly from the "الجهة" autocomplete
+  const createCostCategoryMutation = useMutation({
+    mutationFn: createCostCategory,
+    onSuccess: (newCategory) => {
+      queryClient.setQueryData<CostCategory[]>(['costCategoriesList'], (old) =>
+        old ? [...old, newCategory] : [newCategory]
+      );
+      setSelectedCostCategory(newCategory);
+      toast.success('تم إضافة الجهة بنجاح');
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || 'فشل في إضافة الجهة');
+    }
+  });
 
   // Fetch all shifts for the dropdown
   const { data: shiftsList, isLoading: isLoadingShifts } = useQuery<Shift[], Error>({
@@ -128,13 +159,14 @@ const CashReconciliationPage: React.FC = () => {
 
   // Cost creation mutation
   const createCostMutation = useMutation({
-    mutationFn: async (costData: { description: string; amount_cash_input: number; amount_bank_input: number; shift_id: number }) => {
+    mutationFn: async (costData: { description: string; amount_cash_input: number; amount_bank_input: number; shift_id: number; cost_category_id?: number | null }) => {
       const response = await apiClient.post('/costs', costData);
       return response.data;
     },
     onSuccess: () => {
       toast.success('تم إضافة المصروف بنجاح');
       setCostForm({ description: '', amount_cash: '', amount_bank: '' });
+      setSelectedCostCategory(null);
       setCostDialogOpen(false);
       // Invalidate income summary and costs to refresh the data
       queryClient.invalidateQueries({ queryKey: ['userIncomeSummary'] });
@@ -290,6 +322,7 @@ const CashReconciliationPage: React.FC = () => {
       amount_cash_input: cashAmount,
       amount_bank_input: bankAmount,
       shift_id: Number(selectedShiftId),
+      cost_category_id: selectedCostCategory?.id ?? null,
     };
 
     createCostMutation.mutate(costData);
@@ -480,6 +513,62 @@ const CashReconciliationPage: React.FC = () => {
                     fullWidth
                     size="small"
                   />
+                  <Autocomplete
+                    value={selectedCostCategory}
+                    onChange={(_, newValue) => {
+                      if (newValue && typeof newValue !== 'string' && 'isNew' in newValue && newValue.isNew) {
+                        createCostCategoryMutation.mutate(newValue.inputValue);
+                      } else {
+                        setSelectedCostCategory(newValue as CostCategory | null);
+                      }
+                    }}
+                    filterOptions={(options, params) => {
+                      const filtered = costCategoryFilter(options, params);
+                      const { inputValue } = params;
+                      const alreadyExists = options.some((option) => inputValue.trim().toLowerCase() === option.name.toLowerCase());
+                      if (inputValue.trim() !== '' && !alreadyExists) {
+                        filtered.push({ inputValue: inputValue.trim(), name: `إضافة "${inputValue.trim()}"`, isNew: true });
+                      }
+                      return filtered;
+                    }}
+                    options={costCategories || []}
+                    getOptionLabel={(option) => (typeof option === 'string' ? option : option.name)}
+                    isOptionEqualToValue={(option, value) => option.id === value?.id}
+                    renderOption={(props, option) => (
+                      <Box component="li" {...props} key={'isNew' in option && option.isNew ? option.inputValue : option.id}>
+                        {'isNew' in option && option.isNew ? (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'primary.main', fontWeight: 600 }}>
+                            <AddIcon fontSize="small" />
+                            {option.name}
+                          </Box>
+                        ) : (
+                          option.name
+                        )}
+                      </Box>
+                    )}
+                    selectOnFocus
+                    clearOnBlur
+                    handleHomeEndKeys
+                    loading={isLoadingCostCategories || createCostCategoryMutation.isPending}
+                    disabled={createCostCategoryMutation.isPending}
+                    size="small"
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="الجهة"
+                        placeholder="ابحث أو أضف جهة جديدة..."
+                        InputProps={{
+                          ...params.InputProps,
+                          endAdornment: (
+                            <>
+                              {(isLoadingCostCategories || createCostCategoryMutation.isPending) && <CircularProgress size={16} />}
+                              {params.InputProps.endAdornment}
+                            </>
+                          ),
+                        }}
+                      />
+                    )}
+                  />
                   <TextField
                     label="المبلغ النقدي"
                     type="number"
@@ -542,6 +631,7 @@ const CashReconciliationPage: React.FC = () => {
                         <TableHead>
                           <TableRow>
                             <TableCell>الوصف</TableCell>
+                            <TableCell align="center">الجهة</TableCell>
                             <TableCell align="center">النقدي</TableCell>
                             <TableCell align="center">البنكي</TableCell>
                             <TableCell align="center">المجموع</TableCell>
@@ -554,6 +644,11 @@ const CashReconciliationPage: React.FC = () => {
                               <TableCell>
                                 <Typography variant="body2">
                                   {cost.description}
+                                </Typography>
+                              </TableCell>
+                              <TableCell align="center">
+                                <Typography variant="body2" color="text.secondary">
+                                  {cost.cost_category_name || '-'}
                                 </Typography>
                               </TableCell>
                               <TableCell align="center">

@@ -11,6 +11,11 @@ export const getCostCategoriesList = async (): Promise<CostCategory[]> => {
   return response.data.data;
 };
 
+export const createCostCategory = async (name: string): Promise<CostCategory> => {
+  const response = await apiClient.post<{ data: CostCategory }>('/cost-categories', { name });
+  return response.data.data;
+};
+
 export const addCost = async (data: CostFormData): Promise<Cost> => {
   const payload = {
     ...data,

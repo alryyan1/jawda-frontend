@@ -10,7 +10,7 @@ import {
   Box,
   CircularProgress
 } from '@mui/material';
-import { Brain } from 'lucide-react';
+import { Brain, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import CodeEditor from './CodeEditor';
 import geminiService from '@/services/geminiService';
@@ -25,6 +25,7 @@ interface MainCommentDialogProps {
   setActivePatient?: (patient: Record<string, unknown>) => void; // Add setActivePatient prop
   labRequestId?: number; // Add labRequestId for saving comments
   testResults?: any; // Add test results for AI analysis
+  defaultComment?: string | null; // MainTest.default_comment, imported on demand via button
 }
 
 const MainCommentDialog: React.FC<MainCommentDialogProps> = ({
@@ -36,7 +37,8 @@ const MainCommentDialog: React.FC<MainCommentDialogProps> = ({
   patient,
   setActivePatient,
   labRequestId,
-  testResults
+  testResults,
+  defaultComment
 }) => {
   const { setValue } = useForm<{ comment: string }>({
     defaultValues: { comment: currentComment || '' },
@@ -72,6 +74,18 @@ const MainCommentDialog: React.FC<MainCommentDialogProps> = ({
     // Reset AI state when dialog closes
     setAiApplied(false);
   }
+
+  const handleImportDefaultComment = () => {
+    if (!defaultComment) {
+      toast.error('لا توجد ملاحظة افتراضية لهذا التحليل');
+      return;
+    }
+    const newValue = currentValue
+      ? `${currentValue}\n${defaultComment}`
+      : defaultComment;
+    setCurrentValue(newValue);
+    setValue('comment', newValue);
+  };
 
   const handleGenerateAIInterpretation = async () => {
     if (!testResults) {
@@ -125,30 +139,45 @@ const MainCommentDialog: React.FC<MainCommentDialogProps> = ({
       </DialogTitle>
       <DialogContent>
         <Box sx={{ py: 2 }}>
-          {/* AI Interpretation Section */}
-          {testResults && (
-            <Box sx={{ mb: 3 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                <Button
-                  variant="outlined"
-                  startIcon={isGeneratingAI ? <CircularProgress size={16} /> : <Brain size={16} />}
-                  onClick={handleGenerateAIInterpretation}
-                  disabled={isGeneratingAI}
-                  sx={{ 
-                    borderColor: '#3b82f6',
-                    color: '#3b82f6',
-                    '&:hover': {
-                      borderColor: '#2563eb',
-                      backgroundColor: '#eff6ff'
-                    }
-                  }}
-                >
-                  {isGeneratingAI ? 'جاري التحليل...' : 'تفسير ذكي للنتائج'}
-                </Button>
-              </Box>
+          {/* Quick actions: import default comment, AI interpretation */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, flexWrap: 'wrap' }}>
+            {defaultComment && (
+              <Button
+                variant="outlined"
+                startIcon={<FileText size={16} />}
+                onClick={handleImportDefaultComment}
+                sx={{
+                  borderColor: '#6b7280',
+                  color: '#374151',
+                  '&:hover': {
+                    borderColor: '#4b5563',
+                    backgroundColor: '#f3f4f6'
+                  }
+                }}
+              >
+                استيراد الملاحظة الافتراضية
+              </Button>
+            )}
 
-            </Box>
-          )}
+            {testResults && (
+              <Button
+                variant="outlined"
+                startIcon={isGeneratingAI ? <CircularProgress size={16} /> : <Brain size={16} />}
+                onClick={handleGenerateAIInterpretation}
+                disabled={isGeneratingAI}
+                sx={{
+                  borderColor: '#3b82f6',
+                  color: '#3b82f6',
+                  '&:hover': {
+                    borderColor: '#2563eb',
+                    backgroundColor: '#eff6ff'
+                  }
+                }}
+              >
+                {isGeneratingAI ? 'جاري التحليل...' : 'تفسير ذكي للنتائج'}
+              </Button>
+            )}
+          </Box>
 
 {/* alert(currentValue); */}
           <CodeEditor

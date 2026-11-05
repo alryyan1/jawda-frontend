@@ -1224,6 +1224,13 @@ const LabWorkstationPage: React.FC = () => {
         }
         onSave={handleSaveComment}
         testResults={currentTestResults}
+        defaultComment={
+          selectedLabRequestForComment
+            ? labRequestsForComment?.find(
+                (lr) => lr.id === selectedLabRequestForComment,
+              )?.main_test?.default_comment
+            : null
+        }
       />
     </div>
   );

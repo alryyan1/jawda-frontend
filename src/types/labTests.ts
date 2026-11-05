@@ -37,6 +37,7 @@ export interface Container {
     child_tests?: ChildTest[];
     conditions?: string;
     timer?: number;
+    default_comment?: string | null;
 
     // created_at?: string; // If timestamps are enabled
     // updated_at?: string;

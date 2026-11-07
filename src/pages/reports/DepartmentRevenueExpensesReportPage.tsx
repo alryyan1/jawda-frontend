@@ -14,6 +14,7 @@ import {
   getDepartmentRevenueExpensesReport,
   getCostCategoriesList,
   updateCostCategory,
+  downloadDepartmentRevenueExpensesPdf,
 } from "@/services/costService";
 import { getAllServiceGroupsList } from "@/services/serviceGroupService";
 import { formatNumber } from "@/lib/utils";
@@ -45,6 +46,7 @@ import {
 } from "@mui/material";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import LinkIcon from "@mui/icons-material/Link";
+import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 
 const NetAmount: React.FC<{ value: number }> = ({ value }) => (
   <Typography component="span" fontWeight="bold" color={value >= 0 ? "success.main" : "error.main"}>
@@ -63,6 +65,9 @@ const DepartmentRevenueExpensesReportPage: React.FC = () => {
     date_to: defaultDateTo,
   });
   const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -94,6 +99,25 @@ const DepartmentRevenueExpensesReportPage: React.FC = () => {
 
   const handleApplyFilters = () => {
     setAppliedFilters({ date_from: dateFromInput, date_to: dateToInput });
+  };
+
+  const handleGeneratePdf = async () => {
+    setIsGeneratingPdf(true);
+    setPdfUrl(null);
+    setIsPdfPreviewOpen(true);
+
+    try {
+      const blob = await downloadDepartmentRevenueExpensesPdf(appliedFilters);
+      const objectUrl = URL.createObjectURL(blob);
+      setPdfUrl(objectUrl);
+    } catch (err: unknown) {
+      console.error("Failed to generate PDF:", err);
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
+      toast.error("فشل توليد ملف PDF", { description: errorMessage });
+      setIsPdfPreviewOpen(false);
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
 
   const rows = report?.data ?? [];
@@ -138,6 +162,15 @@ const DepartmentRevenueExpensesReportPage: React.FC = () => {
           تطبيق
         </Button>
         <Box sx={{ flex: 1 }} />
+        <Button
+          variant="contained"
+          color="secondary"
+          startIcon={<PictureAsPdfIcon />}
+          onClick={handleGeneratePdf}
+          disabled={isGeneratingPdf || isLoading || rows.length === 0}
+        >
+          PDF
+        </Button>
         <Button variant="outlined" startIcon={<LinkIcon />} onClick={() => setIsLinkDialogOpen(true)}>
           ربط فئات المصروفات بالأقسام
         </Button>
@@ -289,6 +322,41 @@ const DepartmentRevenueExpensesReportPage: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setIsLinkDialogOpen(false)}>إغلاق</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={isPdfPreviewOpen} onClose={() => setIsPdfPreviewOpen(false)} fullWidth maxWidth="lg">
+        <DialogTitle>تقرير إيرادات ومصروفات الأقسام</DialogTitle>
+        <DialogContent dividers>
+          {(!pdfUrl || isGeneratingPdf) ? (
+            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", py: 10 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <Box sx={{ height: "75vh" }}>
+              <iframe src={pdfUrl} title="department-revenue-expenses-report" style={{ width: "100%", height: "100%", border: "none" }} />
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            disabled={!pdfUrl}
+            onClick={() => {
+              if (!pdfUrl) return;
+              const a = document.createElement("a");
+              a.href = pdfUrl;
+              a.download = `department_revenue_expenses_${appliedFilters.date_from}_to_${appliedFilters.date_to}.pdf`;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+            }}
+            variant="outlined"
+          >
+            تنزيل
+          </Button>
+          <Button onClick={() => setIsPdfPreviewOpen(false)} variant="contained">
+            إغلاق
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

@@ -97,3 +97,13 @@ export const getDepartmentRevenueExpensesReport = async (
 ): Promise<DepartmentRevenueExpenseResponse> => {
   return apiClient.get<DepartmentRevenueExpenseResponse>('/reports/department-revenue-expenses', { params: filters }).then(res => res.data);
 };
+
+export const downloadDepartmentRevenueExpensesPdf = async (
+  filters: DepartmentRevenueExpenseFilters
+): Promise<Blob> => {
+  const response = await apiClient.get('/reports/department-revenue-expenses/pdf', {
+    params: filters,
+    responseType: 'blob',
+  });
+  return response.data;
+};

@@ -8,6 +8,7 @@ interface UserMoneySummaryProps {
   shiftId: number;
   totalDenominations: number;
   userId: number;
+  isDenominationCalculatorEnabled?: boolean;
 }
 
 interface IncomeSummaryData {
@@ -42,7 +43,8 @@ interface IncomeSummaryData {
 const UserMoneySummary: React.FC<UserMoneySummaryProps> = ({
   shiftId,
   totalDenominations,
-  userId
+  userId,
+  isDenominationCalculatorEnabled = true
 }) => {
   // Fetch income summary data from API
   const { data: responseData, isLoading, error } = useQuery<{ data: IncomeSummaryData }, Error>({
@@ -83,9 +85,8 @@ const UserMoneySummary: React.FC<UserMoneySummaryProps> = ({
   const cashBalance = incomeData.net_cash;
   const bankBalance = incomeData.net_bank;
   
-  // Calculate difference (only for cash)
-  const cashDifference = cashBalance - totalDenominations;
-  console.log(incomeData,'incomeData');
+  // Calculate difference (only for cash) - only meaningful when the denomination calculator is enabled
+  const cashDifference = isDenominationCalculatorEnabled ? cashBalance - totalDenominations : 0;
   const rows = [
     {
       label: 'المتحصل',
@@ -102,16 +103,18 @@ const UserMoneySummary: React.FC<UserMoneySummaryProps> = ({
       cash: cashBalance,
       bank: bankBalance
     },
-    {
-      label: 'الفئات',
-      cash: totalDenominations,
-      bank: null
-    },
-    {
-      label: 'الفرق',
-      cash: cashDifference,
-      bank: null
-    }
+    ...(isDenominationCalculatorEnabled ? [
+      {
+        label: 'الفئات',
+        cash: totalDenominations,
+        bank: null
+      },
+      {
+        label: 'الفرق',
+        cash: cashDifference,
+        bank: null
+      }
+    ] : [])
   ];
 
   return (
@@ -173,7 +176,7 @@ const UserMoneySummary: React.FC<UserMoneySummaryProps> = ({
       ))}
 
       {/* Highlight line under the difference if it's zero */}
-      {cashDifference === 0 && (
+      {isDenominationCalculatorEnabled && cashDifference === 0 && (
         <Box 
           sx={{ 
             height: '2px', 

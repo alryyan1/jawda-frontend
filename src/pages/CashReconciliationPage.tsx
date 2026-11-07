@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 // MUI
-import { Box, Card, CardContent, CardHeader, Typography, FormControl, InputLabel, Select, MenuItem, TextField, CircularProgress, Button, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, Autocomplete, createFilterOptions, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+import { Box, Card, CardContent, CardHeader, Typography, FormControl, InputLabel, Select, MenuItem, TextField, CircularProgress, Button, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, Autocomplete, createFilterOptions, Dialog, DialogTitle, DialogContent, DialogActions, Switch } from '@mui/material';
 import { PictureAsPdf as PdfIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
 
 import { formatNumber } from '@/lib/utils';
@@ -44,6 +44,13 @@ const CashReconciliationPage: React.FC = () => {
     const { user } = useAuth();
   const [selectedShiftId, setSelectedShiftId] = useState<string | null>(currentClinicShift?.id.toString() || null);
   const [denominations, setDenominations] = useState<Denomination[]>([]);
+  const [isDenominationCalculatorEnabled, setIsDenominationCalculatorEnabled] = useState(() => {
+    try {
+      return localStorage.getItem('cashReconciliation.denominationCalculatorEnabled') === 'true';
+    } catch {
+      return false;
+    }
+  });
   const inputRefs = useRef<{ [key: number]: HTMLInputElement | null }>({});
   
   // Cost creation form state
@@ -117,6 +124,15 @@ const CashReconciliationPage: React.FC = () => {
       setDenominations(fetchedDenominations);
     }
   }, [fetchedDenominations]);
+
+  // Persist the denomination calculator toggle across page refreshes
+  useEffect(() => {
+    try {
+      localStorage.setItem('cashReconciliation.denominationCalculatorEnabled', String(isDenominationCalculatorEnabled));
+    } catch {
+      // ignore storage errors (e.g. private browsing)
+    }
+  }, [isDenominationCalculatorEnabled]);
 
   // Fetch costs for the selected shift
   const { data: costsData, isLoading: isLoadingCosts } = useQuery<{ data: Cost[] }, Error>({
@@ -332,8 +348,14 @@ const CashReconciliationPage: React.FC = () => {
 
   return (
     <Box sx={{ maxWidth: 1200, mx: 'auto', py: 1 }}>
-      <Typography variant="h5" fontWeight={700} sx={{ mb: 1 }}>الفئات </Typography>
-      
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+        <Typography variant="h5" fontWeight={700}>الفئات</Typography>
+        <Switch
+          checked={isDenominationCalculatorEnabled}
+          onChange={(e) => setIsDenominationCalculatorEnabled(e.target.checked)}
+        />
+      </Box>
+
       <Box sx={{ mb: 2, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
         <Box sx={{ maxWidth: 360, flex: 1, minWidth: 200 }}>
           <FormControl fullWidth size="small">
@@ -440,66 +462,115 @@ const CashReconciliationPage: React.FC = () => {
       ) : !selectedShiftId ? (
         <Card sx={{ p: 4, textAlign: 'center', color: 'text.secondary' }}>يرجى اختيار وردية</Card>
       ) : (
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 1 ,overflow:'auto' ,height:window.innerHeight - 200 }}>
-          {/* Left Column: Calculator and Summary */}
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr' }, gap: 1 ,overflow:'auto' ,height:window.innerHeight - 200 }}>
+          {/* Left Column: Costs */}
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            {/* Denomination Calculator */}
+            {/* Costs Table */}
             <Card>
+              {/* <CardHeader title="المصروفات المسجلة" /> */}
               <CardContent>
-                <Box sx={{ display: 'grid', gap: 1 }}>
-                  {/* Headers */}
-                  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 1, px: 1, fontWeight: 600, fontSize: 10, color: 'text.secondary' }}>
-                    <Box textAlign="center">الفئة</Box>
-                    <Box textAlign="center">الإضافة</Box>
-                    <Box textAlign="center">الإجمالي الحالي</Box>
-                    <Box textAlign="center">المجموع</Box>
+                {isLoadingCosts ? (
+                  <Box display="flex" justifyContent="center" p={1}>
+                    <CircularProgress />
                   </Box>
-                  {/* Denomination Rows */}
-                  {denominations.map(deno => (
-                    <Box key={deno.id} sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 2, alignItems: 'center' }}>
-                      <Box sx={{ p: 1, bgcolor: 'primary.light', color: 'primary.contrastText', textAlign: 'center', borderRadius: 1, fontWeight: 700 }}>
-                        {deno.name}
-                      </Box>
-                      <TextField
-                        type="number"
-                        defaultValue=""
-                        inputRef={(el) => {
-                          inputRefs.current[deno.id] = el;
-                        }}
-                        onKeyPress={e => handleCountKeyPress(deno.id, (e.target as HTMLInputElement).value, e as React.KeyboardEvent<HTMLInputElement>)}
-                        placeholder="  "
-                        size="small"
-                      />
-                      <TextField 
-                        value={deno.count} 
-                        onChange={(e) => handleSumChange(deno.id, e.target.value)}
-                        onBlur={(e) => handleSumChange(deno.id, e.target.value)}
-                        onKeyPress={(e) => {
-                          if (e.key === 'Enter') {
-                            handleSumChange(deno.id, (e.target as HTMLInputElement).value);
-                            (e.target as HTMLInputElement).blur();
-                          }
-                        }}
-                        size="small"
-                        inputProps={{ min: 0 }}
-                      />
-                      <TextField value={formatNumber(deno.name * deno.count, 0)} size="small" InputProps={{ readOnly: true }} />
+                ) : costs.length === 0 ? (
+                  <Typography variant="body2" color="text.secondary" textAlign="center" p={1}>
+                    لا توجد مصروفات مسجلة لهذه الوردية
+                  </Typography>
+                ) : (
+                  <>
+                    <TableContainer component={Paper} variant="outlined">
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell>الوصف</TableCell>
+                            <TableCell align="center">الجهة</TableCell>
+                            <TableCell align="center">النقدي</TableCell>
+                            <TableCell align="center">البنكي</TableCell>
+                            <TableCell align="center">المجموع</TableCell>
+                            <TableCell align="center">الإجراءات</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {costs.map((cost) => (
+                            <TableRow key={cost.id}>
+                              <TableCell>
+                                <Typography variant="body2">
+                                  {cost.description}
+                                </Typography>
+                              </TableCell>
+                              <TableCell align="center">
+                                <Typography variant="body2" color="text.secondary">
+                                  {cost.cost_category_name || '-'}
+                                </Typography>
+                              </TableCell>
+                              <TableCell align="center">
+                                {cost.amount > 0 ? (
+                                  <Chip
+                                    label={formatNumber(cost.amount)}
+                                    color="success"
+                                    size="small"
+                                    variant="outlined"
+                                  />
+                                ) : (
+                                  <Typography variant="body2" color="text.secondary">
+                                    -
+                                  </Typography>
+                                )}
+                              </TableCell>
+                              <TableCell align="center">
+                                {cost.amount_bankak > 0 ? (
+                                  <Chip
+                                    label={formatNumber(cost.amount_bankak)}
+                                    color="info"
+                                    size="small"
+                                    variant="outlined"
+                                  />
+                                ) : (
+                                  <Typography variant="body2" color="text.secondary">
+                                    -
+                                  </Typography>
+                                )}
+                              </TableCell>
+                              <TableCell align="center">
+                                <Typography variant="body2" fontWeight="bold">
+                                  {formatNumber(cost.amount + cost.amount_bankak)}
+                                </Typography>
+                              </TableCell>
+
+                              <TableCell align="center">
+                                <Button
+                                  variant="outlined"
+                                  color="error"
+                                  size="small"
+                                  startIcon={<DeleteIcon />}
+                                  onClick={() => deleteCostMutation.mutate(cost.id)}
+                                  disabled={deleteCostMutation.isPending}
+                                >
+                                  حذف
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+
+                    {/* Total Cost Display */}
+                    <Box sx={{ mt: 2, p: 2, bgcolor: 'primary.light', borderRadius: 1 }}>
+                      <Typography variant="h6" textAlign="center" color="primary.contrastText" fontWeight="bold">
+                        إجمالي المصروفات: {formatNumber(totalCosts)}
+                      </Typography>
                     </Box>
-                  ))}
-                </Box>
-                
-                {/* Clear Button */}
-            
+                  </>
+                )}
               </CardContent>
             </Card>
-            
-            {/* Financial Summary - Below the calculator */}
-        
           </Box>
 
-          {/* Right Column: Costs */}
+          {/* Right Column: Summary and Calculator */}
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-         
+
 
             <Dialog open={costDialogOpen} onClose={() => setCostDialogOpen(false)} fullWidth maxWidth="xs">
               <DialogTitle>إضافة مصروف</DialogTitle>
@@ -611,108 +682,56 @@ const CashReconciliationPage: React.FC = () => {
               userId={user?.id}
               shiftId={Number(selectedShiftId)}
               totalDenominations={totalCalculated}
+              isDenominationCalculatorEnabled={isDenominationCalculatorEnabled}
             />
-            {/* Costs Table */}
-            <Card>
-              {/* <CardHeader title="المصروفات المسجلة" /> */}
-              <CardContent>
-                {isLoadingCosts ? (
-                  <Box display="flex" justifyContent="center" p={1}>
-                    <CircularProgress />
-                  </Box>
-                ) : costs.length === 0 ? (
-                  <Typography variant="body2" color="text.secondary" textAlign="center" p={1}>
-                    لا توجد مصروفات مسجلة لهذه الوردية
-                  </Typography>
-                ) : (
-                  <>
-                    <TableContainer component={Paper} variant="outlined">
-                      <Table size="small">
-                        <TableHead>
-                          <TableRow>
-                            <TableCell>الوصف</TableCell>
-                            <TableCell align="center">الجهة</TableCell>
-                            <TableCell align="center">النقدي</TableCell>
-                            <TableCell align="center">البنكي</TableCell>
-                            <TableCell align="center">المجموع</TableCell>
-                            <TableCell align="center">الإجراءات</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {costs.map((cost) => (
-                            <TableRow key={cost.id}>
-                              <TableCell>
-                                <Typography variant="body2">
-                                  {cost.description}
-                                </Typography>
-                              </TableCell>
-                              <TableCell align="center">
-                                <Typography variant="body2" color="text.secondary">
-                                  {cost.cost_category_name || '-'}
-                                </Typography>
-                              </TableCell>
-                              <TableCell align="center">
-                                {cost.amount > 0 ? (
-                                  <Chip 
-                                    label={formatNumber(cost.amount)} 
-                                    color="success" 
-                                    size="small" 
-                                    variant="outlined"
-                                  />
-                                ) : (
-                                  <Typography variant="body2" color="text.secondary">
-                                    -
-                                  </Typography>
-                                )}
-                              </TableCell>
-                              <TableCell align="center">
-                                {cost.amount_bankak > 0 ? (
-                                  <Chip 
-                                    label={formatNumber(cost.amount_bankak)} 
-                                    color="info" 
-                                    size="small" 
-                                    variant="outlined"
-                                  />
-                                ) : (
-                                  <Typography variant="body2" color="text.secondary">
-                                    -
-                                  </Typography>
-                                )}
-                              </TableCell>
-                              <TableCell align="center">
-                                <Typography variant="body2" fontWeight="bold">
-                                  {formatNumber(cost.amount + cost.amount_bankak)}
-                                </Typography>
-                              </TableCell>
-                          
-                              <TableCell align="center">
-                                <Button
-                                  variant="outlined"
-                                  color="error"
-                                  size="small"
-                                  startIcon={<DeleteIcon />}
-                                  onClick={() => deleteCostMutation.mutate(cost.id)}
-                                  disabled={deleteCostMutation.isPending}
-                                >
-                                  حذف
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                    
-                    {/* Total Cost Display */}
-                    <Box sx={{ mt: 2, p: 2, bgcolor: 'primary.light', borderRadius: 1 }}>
-                      <Typography variant="h6" textAlign="center" color="primary.contrastText" fontWeight="bold">
-                        إجمالي المصروفات: {formatNumber(totalCosts)}
-                      </Typography>
+            {/* Denomination Calculator */}
+            {isDenominationCalculatorEnabled && (
+              <Card>
+                <CardContent>
+                  <Box sx={{ display: 'grid', gap: 1 }}>
+                    {/* Headers */}
+                    <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 1, px: 1, fontWeight: 600, fontSize: 10, color: 'text.secondary' }}>
+                      <Box textAlign="center">الفئة</Box>
+                      <Box textAlign="center">الإضافة</Box>
+                      <Box textAlign="center">الإجمالي الحالي</Box>
+                      <Box textAlign="center">المجموع</Box>
                     </Box>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+                    {/* Denomination Rows */}
+                    {denominations.map(deno => (
+                      <Box key={deno.id} sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 2, alignItems: 'center' }}>
+                        <Box sx={{ p: 1, bgcolor: 'primary.light', color: 'primary.contrastText', textAlign: 'center', borderRadius: 1, fontWeight: 700 }}>
+                          {deno.name}
+                        </Box>
+                        <TextField
+                          type="number"
+                          defaultValue=""
+                          inputRef={(el) => {
+                            inputRefs.current[deno.id] = el;
+                          }}
+                          onKeyPress={e => handleCountKeyPress(deno.id, (e.target as HTMLInputElement).value, e as React.KeyboardEvent<HTMLInputElement>)}
+                          placeholder="  "
+                          size="small"
+                        />
+                        <TextField
+                          value={deno.count}
+                          onChange={(e) => handleSumChange(deno.id, e.target.value)}
+                          onBlur={(e) => handleSumChange(deno.id, e.target.value)}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              handleSumChange(deno.id, (e.target as HTMLInputElement).value);
+                              (e.target as HTMLInputElement).blur();
+                            }
+                          }}
+                          size="small"
+                          inputProps={{ min: 0 }}
+                        />
+                        <TextField value={formatNumber(deno.name * deno.count, 0)} size="small" InputProps={{ readOnly: true }} />
+                      </Box>
+                    ))}
+                  </Box>
+                </CardContent>
+              </Card>
+            )}
           </Box>
         </Box>
       )}

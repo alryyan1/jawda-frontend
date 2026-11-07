@@ -1,6 +1,6 @@
 // src/services/costService.ts
 import apiClient from './api';
-import type { Cost, CostFormData, CostCategory, PaginatedCostsResponse } from '@/types/finance';
+import type { Cost, CostFormData, CostCategory, PaginatedCostsResponse, DepartmentRevenueExpenseResponse } from '@/types/finance';
 
 const API_URL = '/costs';
 const CATEGORIES_API_URL = '/cost-categories-list';
@@ -75,4 +75,25 @@ export interface UpdateCostPayload {
 export const updateCost = async (costId: number, data: UpdateCostPayload): Promise<Cost> => {
   const response = await apiClient.put<{ data: Cost }>(`${API_URL}/${costId}`, data);
   return response.data.data;
+};
+
+export interface UpdateCostCategoryPayload {
+  name?: string;
+  service_group_id?: number | null;
+}
+
+export const updateCostCategory = async (costCategoryId: number, data: UpdateCostCategoryPayload): Promise<CostCategory> => {
+  const response = await apiClient.put<{ data: CostCategory }>(`/cost-categories/${costCategoryId}`, data);
+  return response.data.data;
+};
+
+export interface DepartmentRevenueExpenseFilters {
+  date_from: string;
+  date_to: string;
+}
+
+export const getDepartmentRevenueExpensesReport = async (
+  filters: DepartmentRevenueExpenseFilters
+): Promise<DepartmentRevenueExpenseResponse> => {
+  return apiClient.get<DepartmentRevenueExpenseResponse>('/reports/department-revenue-expenses', { params: filters }).then(res => res.data);
 };

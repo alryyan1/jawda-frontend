@@ -71,6 +71,7 @@ import PatientServiceCostsReportPage from "./pages/reports/PatientServiceCostsRe
 import LabRequestDiscountsReportPage from "./pages/reports/LabRequestDiscountsReportPage";
 import PatientPhonesReportPage from "./pages/reports/PatientPhonesReportPage";
 import UserPatientActivityReportPage from "./pages/reports/UserPatientActivityReportPage";
+import DepartmentRevenueExpensesReportPage from "./pages/reports/DepartmentRevenueExpensesReportPage";
 import BindingMatchingPage from "./pages/settings/BindingMatchingPage";
 import MonthlyLabIncomeReportPage from "./pages/reports/MonthlyLabIncomeReportPage";
 import ServiceGroupsPage from "./pages/settings/ServiceGroupsPage";
@@ -335,6 +336,10 @@ const router = createBrowserRouter([
               {
                 path: "user-patient-activity",
                 element: <UserPatientActivityReportPage />,
+              },
+              {
+                path: "department-revenue-expenses",
+                element: <DepartmentRevenueExpensesReportPage />,
               },
 
               // Add other report routes here

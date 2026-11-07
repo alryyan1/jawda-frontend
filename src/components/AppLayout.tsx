@@ -1153,6 +1153,7 @@ const AppLayout: React.FC = () => {
                                 { to: "/reports/monthly-service-income", icon: BarChartBig, label: "دخل الخدمات الشهري", permission: "عرض تقرير دخل الخدمات الشهري" },
                                 { to: "/reports/patient-service-costs", icon: Coins, label: "تكاليف الخدمات للمرضى", permission: "عرض تقرير تكاليف الخدمات للمرضى" },
                                 { to: "/reports/yearly-income-comparison", icon: LineChart, label: "مقارنة الدخل السنوية", permission: "عرض تقرير مقارنة الدخل السنوية" },
+                                { to: "/reports/department-revenue-expenses", icon: FileSpreadsheet, label: "إيرادات ومصروفات الأقسام", permission: "عرض تقرير إيرادات ومصروفات الأقسام" },
                               ]}
                             />
                             <ReportCategory

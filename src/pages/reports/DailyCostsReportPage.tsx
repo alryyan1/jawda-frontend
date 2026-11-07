@@ -283,7 +283,7 @@ const DailyCostsReportPage: React.FC = () => {
                     <MUITableCell align="center">إجمالي المصروفات</MUITableCell>
                     <MUITableCell align="center">كاش</MUITableCell>
                     <MUITableCell align="center">بنك</MUITableCell>
-                    <MUITableCell align="center">عدد العمليات</MUITableCell>
+                    <MUITableCell align="center">عدد </MUITableCell>
                   </MUITableRow>
                 </MUITableHead>
                 <MUITableBody>

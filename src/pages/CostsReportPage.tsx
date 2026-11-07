@@ -1,13 +1,14 @@
 // src/pages/reports/CostsReportPage.tsx
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { format, parseISO, startOfMonth, endOfMonth } from "date-fns";
+import dayjs from "dayjs";
 import { toast } from "sonner";
 
-import type { CostFilters, CostCategory, PaginatedCostsResponse, Cost } from "@/types/finance";
+import type { CostFilters, CostCategory, CostCategoryBreakdownItem, PaginatedCostsResponse, Cost } from "@/types/finance";
 import type { DoctorShiftReportItem } from "@/types/reports";
 import type { User } from "@/types/users";
 import type { Shift } from "@/types/shifts";
@@ -18,35 +19,32 @@ import { getShiftsList } from "@/services/shiftService";
 import { formatNumber } from "@/lib/utils";
 import type { PaginatedResponse } from "@/types/common";
 
-// MUI components
+// Ant Design components
 import {
-  Box,
-  Card,
-  Typography,
-  Button,
-  TextField,
-  Autocomplete,
-  Table as MUITable,
-  TableHead as MUITableHead,
-  TableBody as MUITableBody,
-  TableRow as MUITableRow,
-  TableCell as MUITableCell,
-  TableFooter as MUITableFooter,
-  TableContainer,
-  Paper,
-  Chip,
   Alert,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Popover,
-  Stack,
-  IconButton,
   Badge,
-  Pagination,
-} from "@mui/material";
-import { Loader2, Filter, Printer, AlertTriangle, FileSpreadsheet } from "lucide-react";
+  Button,
+  Card,
+  DatePicker,
+  Flex,
+  Input,
+  Modal,
+  Popover,
+  Select,
+  Space,
+  Table,
+  Tag,
+  Typography,
+} from "antd";
+import type { ColumnsType } from "antd/es/table";
+import {
+  DownloadOutlined,
+  FileExcelOutlined,
+  FilterOutlined,
+  PrinterOutlined,
+} from "@ant-design/icons";
+
+const { Text, Title } = Typography;
 
 const getCostReportFilterSchema = () =>
   z.object({
@@ -62,11 +60,6 @@ const getCostReportFilterSchema = () =>
 type CostReportFilterFormValues = z.infer<ReturnType<typeof getCostReportFilterSchema>>;
 
 type HasData<T> = { data: T[] };
-
-interface AutocompleteOption {
-  id: string;
-  name: string;
-}
 
 const CostsReportPage: React.FC = () => {
   const defaultDateFrom = startOfMonth(new Date());
@@ -96,6 +89,7 @@ const CostsReportPage: React.FC = () => {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false);
   const [pdfFileName, setPdfFileName] = useState('costs_report.pdf');
+  const [isFilterPopoverOpen, setIsFilterPopoverOpen] = useState(false);
 
   const { data: costCategories, isLoading: isLoadingCategories } = useQuery<CostCategory[], Error>({
     queryKey: ["costCategoriesListForReport"],
@@ -217,17 +211,16 @@ const CostsReportPage: React.FC = () => {
   const costs = reportData?.data || [];
   const meta = reportData?.meta;
   const summary = reportData?.meta?.summary;
+  const byCategory = reportData?.meta?.by_category ?? [];
   const isLoadingDropdowns = isLoadingCategories || isLoadingUsers || isLoadingShifts;
 
-  // Filter popover
-  const [filterAnchor, setFilterAnchor] = useState<HTMLElement | null>(null);
   const activeFilterCount = [
     appliedFilters.cost_category_id, appliedFilters.user_cost_id,
     appliedFilters.shift_id, appliedFilters.payment_method,
     appliedFilters.search_description,
   ].filter(Boolean).length;
 
-  // Doctor shifts for inline autocomplete (unassigned costs)
+  // Doctor shifts for inline select (unassigned costs)
   const { data: doctorShiftsData } = useQuery<PaginatedResponse<DoctorShiftReportItem>, Error>({
     queryKey: ["doctorShiftsForCostAssign", appliedFilters.date_from, appliedFilters.date_to],
     queryFn: () => getDoctorShiftsReport({
@@ -240,7 +233,7 @@ const CostsReportPage: React.FC = () => {
   });
   const doctorShiftOptions = useMemo(() =>
     (doctorShiftsData?.data ?? []).map(ds => ({
-      id: ds.id,
+      value: ds.id,
       label: `#${ds.id} — ${ds.doctor_name} (${ds.formatted_start_time})`,
     })), [doctorShiftsData]);
 
@@ -264,246 +257,347 @@ const CostsReportPage: React.FC = () => {
     return "-";
   };
 
+  const paymentMethodTagColor = (pm: string): string => {
+    if (pm === 'مختلط') return 'blue';
+    if (pm === 'بنكي') return 'purple';
+    if (pm === 'نقدي') return 'default';
+    return 'default';
+  };
+
+  const categoryFilterOptions = [
+    { value: "all", label: "كل الفئات" },
+    ...(costCategories?.map(c => ({ value: String(c.id), label: c.name })) ?? []),
+  ];
+  const userFilterOptions = [
+    { value: "all", label: "كل المستخدمين" },
+    ...usersList.map(u => ({ value: String(u.id), label: u.name })),
+  ];
+  const shiftFilterOptions = [
+    { value: "all", label: "كل المناوبات" },
+    ...(shiftsList?.map(s => ({ value: String(s.id), label: s.name || `#${s.id} (${format(parseISO(s.created_at!), "P")})` })) ?? []),
+  ];
+  const paymentMethodFilterOptions = [
+    { value: "all", label: "كل الطرق" },
+    { value: "cash", label: "نقدي" },
+    { value: "bank", label: "بنكي" },
+    { value: "mixed", label: "مختلط" },
+  ];
+
+  const columns: ColumnsType<Cost> = [
+    {
+      title: "التاريخ",
+      dataIndex: "created_at",
+      key: "created_at",
+      align: "center",
+      width: 110,
+      render: (value: string) => value ? format(parseISO(value), "MM-dd HH:mm") : "-",
+    },
+    {
+      title: "الوصف",
+      dataIndex: "description",
+      key: "description",
+      ellipsis: true,
+      render: (value: string) => <Text strong style={{ fontSize: 12 }}>{value}</Text>,
+    },
+    {
+      title: "ملاحظة",
+      dataIndex: "comment",
+      key: "comment",
+      align: "center",
+      ellipsis: true,
+      render: (value: string | null) => (
+        <Text type="secondary" italic={!value} style={{ fontSize: 12 }}>{value || "—"}</Text>
+      ),
+    },
+    {
+      title: "المستخدم",
+      dataIndex: "user_cost_name",
+      key: "user_cost_name",
+      align: "center",
+      render: (value: string | undefined) => value || "-",
+    },
+    {
+      title: "وردية الطبيب",
+      key: "doctor_shift",
+      align: "center",
+      width: 220,
+      render: (_, cost) => {
+        const unassigned = !cost.doctor_shift_id;
+        if (!unassigned) {
+          return (
+            <Text type="success" strong style={{ fontSize: 12 }}>
+              #{cost.doctor_shift_id} — {cost.doctor_shift_doctor_name || ""}
+            </Text>
+          );
+        }
+        return (
+          <Select
+            options={doctorShiftOptions}
+            placeholder="اختر وردية طبيب"
+            size="small"
+            showSearch
+            style={{ width: 200 }}
+            loading={assignMutation.isPending}
+            optionFilterProp="label"
+            onChange={(value) => assignMutation.mutate({ costId: cost.id, doctorShiftId: value })}
+          />
+        );
+      },
+    },
+    {
+      title: "الدفع",
+      key: "payment_method",
+      align: "center",
+      width: 80,
+      render: (_, cost) => {
+        const pm = getPaymentMethodForDisplay(cost);
+        return <Tag color={paymentMethodTagColor(pm)}>{pm}</Tag>;
+      },
+    },
+    {
+      title: "نقدًا",
+      dataIndex: "amount",
+      key: "amount",
+      align: "center",
+      render: (value: number) => formatNumber(value),
+    },
+    {
+      title: "بنكي",
+      dataIndex: "amount_bankak",
+      key: "amount_bankak",
+      align: "center",
+      render: (value: number) => formatNumber(value),
+    },
+    {
+      title: "الإجمالي",
+      key: "total",
+      align: "center",
+      render: (_, cost) => <Text strong>{formatNumber(cost.amount + cost.amount_bankak)}</Text>,
+    },
+  ];
+
+  const byCategoryColumns: ColumnsType<CostCategoryBreakdownItem> = [
+    {
+      title: "الجهة",
+      dataIndex: "cost_category_name",
+      key: "cost_category_name",
+      render: (value: string) => <Text strong style={{ fontSize: 12 }}>{value}</Text>,
+    },
+    {
+      title: "عدد العناصر",
+      dataIndex: "items_count",
+      key: "items_count",
+      align: "center",
+      width: 110,
+    },
+    {
+      title: "نقدًا",
+      dataIndex: "total_cash",
+      key: "total_cash",
+      align: "center",
+      render: (value: number) => formatNumber(value),
+    },
+    {
+      title: "بنكي",
+      dataIndex: "total_bank",
+      key: "total_bank",
+      align: "center",
+      render: (value: number) => formatNumber(value),
+    },
+    {
+      title: "الإجمالي",
+      dataIndex: "total",
+      key: "total",
+      align: "center",
+      render: (value: number) => <Text strong>{formatNumber(value)}</Text>,
+    },
+  ];
+
   if (error && !isLoading) {
     return (
-      <Alert severity="error" icon={<AlertTriangle />} sx={{ m: 2 }}>
-        <Typography>حدث خطأ أثناء الجلب: {error.message}</Typography>
-      </Alert>
+      <Alert
+        type="error"
+        showIcon
+        message="حدث خطأ"
+        description={`حدث خطأ أثناء الجلب: ${error.message}`}
+        style={{ margin: 16 }}
+      />
     );
   }
 
   return (
-    <div className="container mx-auto">
-
+    <div style={{ padding: 16 }}>
       {/* ── Toolbar ── */}
-      <div className="flex items-center gap-2 mb-2">
-        {/* Filter button */}
-        <IconButton
-          size="small"
-          onClick={(e) => setFilterAnchor(e.currentTarget)}
-          sx={{ border: '1px solid', borderColor: activeFilterCount ? 'primary.main' : 'divider', borderRadius: 1, px: 1.5, py: 0.75 }}
+      <Flex align="center" gap={8} wrap="wrap" style={{ marginBottom: 12 }}>
+        <Popover
+          open={isFilterPopoverOpen}
+          onOpenChange={setIsFilterPopoverOpen}
+          trigger="click"
+          placement="bottomLeft"
+          content={
+            <form onSubmit={filterForm.handleSubmit((data) => { handleFilterFormSubmit(data); setIsFilterPopoverOpen(false); })}>
+              <Space direction="vertical" size={10} style={{ width: 260, paddingTop: 4 }}>
+                <Text type="secondary" strong style={{ fontSize: 12 }}>فلترة إضافية</Text>
+                <Controller control={filterForm.control} name="cost_category_id" render={({ field }) => (
+                  <Select
+                    options={categoryFilterOptions}
+                    value={field.value || "all"}
+                    onChange={field.onChange}
+                    disabled={isLoadingDropdowns}
+                    showSearch
+                    optionFilterProp="label"
+                    style={{ width: "100%" }}
+                    placeholder="الفئة"
+                  />
+                )} />
+                <Controller control={filterForm.control} name="user_cost_id" render={({ field }) => (
+                  <Select
+                    options={userFilterOptions}
+                    value={field.value || "all"}
+                    onChange={field.onChange}
+                    disabled={isLoadingDropdowns}
+                    showSearch
+                    optionFilterProp="label"
+                    style={{ width: "100%" }}
+                    placeholder="المستخدم"
+                  />
+                )} />
+                <Controller control={filterForm.control} name="shift_id" render={({ field }) => (
+                  <Select
+                    options={shiftFilterOptions}
+                    value={field.value || "all"}
+                    onChange={field.onChange}
+                    disabled={isLoadingDropdowns}
+                    showSearch
+                    optionFilterProp="label"
+                    style={{ width: "100%" }}
+                    placeholder="المناوبة"
+                  />
+                )} />
+                <Controller control={filterForm.control} name="payment_method" render={({ field }) => (
+                  <Select
+                    options={paymentMethodFilterOptions}
+                    value={field.value || "all"}
+                    onChange={field.onChange}
+                    style={{ width: "100%" }}
+                    placeholder="طريقة الدفع"
+                  />
+                )} />
+                <Controller control={filterForm.control} name="search_description" render={({ field }) => (
+                  <Input placeholder="بحث بالوصف" allowClear {...field} />
+                )} />
+                <Button type="primary" htmlType="submit" block size="small">تطبيق</Button>
+              </Space>
+            </form>
+          }
         >
-          <Badge badgeContent={activeFilterCount} color="primary">
-            <Filter size={16} />
+          <Badge count={activeFilterCount} size="small">
+            <Button icon={<FilterOutlined />} />
           </Badge>
-        </IconButton>
+        </Popover>
 
         {/* Date range always visible */}
         <form onSubmit={filterForm.handleSubmit(handleFilterFormSubmit)} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <Controller control={filterForm.control} name="date_from" render={({ field }) => (
-            <TextField label="من" type="date" size="small" value={field.value || ''} onChange={field.onChange}
-              disabled={isFetching} InputLabelProps={{ shrink: true }} sx={{ width: 135 }} />
+            <DatePicker
+              placeholder="من"
+              format="YYYY-MM-DD"
+              value={field.value ? dayjs(field.value) : undefined}
+              onChange={(_, dateString) => field.onChange((dateString as string) || undefined)}
+              disabled={isFetching}
+              style={{ width: 135 }}
+            />
           )} />
           <Controller control={filterForm.control} name="date_to" render={({ field }) => (
-            <TextField label="إلى" type="date" size="small" value={field.value || ''} onChange={field.onChange}
-              disabled={isFetching} InputLabelProps={{ shrink: true }} sx={{ width: 135 }} />
+            <DatePicker
+              placeholder="إلى"
+              format="YYYY-MM-DD"
+              value={field.value ? dayjs(field.value) : undefined}
+              onChange={(_, dateString) => field.onChange((dateString as string) || undefined)}
+              disabled={isFetching}
+              style={{ width: 135 }}
+            />
           )} />
-          <Button type="submit" size="small" variant="contained" disabled={isFetching || isLoadingDropdowns}
-            startIcon={isFetching ? <Loader2 className="h-3 w-3 animate-spin" /> : <Filter size={13} />}>
-            {isFetching ? '' : 'تطبيق'}
+          <Button type="primary" htmlType="submit" icon={<FilterOutlined />} loading={isFetching} disabled={isLoadingDropdowns}>
+            تطبيق
           </Button>
         </form>
 
-        <Box sx={{ flex: 1 }} />
-        <Button onClick={handleDownloadExcel} disabled={isGeneratingExcel || isLoading || costs.length === 0}
-          size="small" variant="outlined" startIcon={isGeneratingExcel ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileSpreadsheet size={13} />}>
+        <div style={{ flex: 1 }} />
+
+        <Button onClick={handleDownloadExcel} disabled={isLoading || costs.length === 0} loading={isGeneratingExcel} icon={<FileExcelOutlined />}>
           Excel
         </Button>
-        <Button onClick={handleGeneratePdf} disabled={isGeneratingPdf || isLoading || costs.length === 0}
-          size="small" variant="contained" color="secondary" startIcon={isGeneratingPdf ? <Loader2 className="h-3 w-3 animate-spin" /> : <Printer size={13} />}>
+        <Button onClick={handleGeneratePdf} disabled={isLoading || costs.length === 0} loading={isGeneratingPdf} type="primary" danger icon={<PrinterOutlined />}>
           PDF
         </Button>
-      </div>
+      </Flex>
 
-      {/* ── Filter popover (vertical stack) ── */}
-      <Popover
-        open={Boolean(filterAnchor)}
-        anchorEl={filterAnchor}
-        onClose={() => setFilterAnchor(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-      >
-        <form onSubmit={filterForm.handleSubmit((data) => { handleFilterFormSubmit(data); setFilterAnchor(null); })}>
-          <Stack spacing={1.5} sx={{ p: 2, width: 260 }}>
-            <Typography variant="caption" fontWeight={700} color="text.secondary">فلترة إضافية</Typography>
-            <Controller control={filterForm.control} name="cost_category_id" render={({ field }) => (
-              <Autocomplete<AutocompleteOption>
-                options={[{ id: "all", name: "كل الفئات" }, ...(costCategories?.map(c => ({ id: String(c.id), name: c.name })) || [])]}
-                getOptionLabel={o => o.name}
-                isOptionEqualToValue={(a, b) => a.id === b.id}
-                value={costCategories?.find(c => String(c.id) === field.value) ? { id: field.value!, name: costCategories.find(c => String(c.id) === field.value)!.name } : { id: "all", name: "كل الفئات" }}
-                onChange={(_, v) => field.onChange(v?.id || "all")}
-                disabled={isLoadingDropdowns}
-                size="small"
-                renderInput={params => <TextField {...params} label="الفئة" />}
-              />
-            )} />
-            <Controller control={filterForm.control} name="user_cost_id" render={({ field }) => (
-              <Autocomplete<AutocompleteOption>
-                options={[{ id: "all", name: "كل المستخدمين" }, ...(usersList.map(u => ({ id: String(u.id), name: u.name })))]}
-                getOptionLabel={o => o.name}
-                isOptionEqualToValue={(a, b) => a.id === b.id}
-                value={usersList.find(u => String(u.id) === field.value) ? { id: field.value!, name: usersList.find(u => String(u.id) === field.value)!.name } : { id: "all", name: "كل المستخدمين" }}
-                onChange={(_, v) => field.onChange(v?.id || "all")}
-                disabled={isLoadingDropdowns}
-                size="small"
-                renderInput={params => <TextField {...params} label="المستخدم" />}
-              />
-            )} />
-            <Controller control={filterForm.control} name="shift_id" render={({ field }) => (
-              <Autocomplete<AutocompleteOption>
-                options={[{ id: "all", name: "كل المناوبات" }, ...(shiftsList?.map(s => ({ id: String(s.id), name: s.name || `#${s.id} (${format(parseISO(s.created_at!), "P")})` })) || [])]}
-                getOptionLabel={o => o.name}
-                isOptionEqualToValue={(a, b) => a.id === b.id}
-                value={shiftsList?.find(s => String(s.id) === field.value) ? { id: field.value!, name: shiftsList.find(s => String(s.id) === field.value)!.name || `#${field.value}` } : { id: "all", name: "كل المناوبات" }}
-                onChange={(_, v) => field.onChange(v?.id || "all")}
-                disabled={isLoadingDropdowns}
-                size="small"
-                renderInput={params => <TextField {...params} label="المناوبة" />}
-              />
-            )} />
-            <Controller control={filterForm.control} name="payment_method" render={({ field }) => (
-              <Autocomplete<AutocompleteOption>
-                options={[{ id: "all", name: "كل الطرق" }, { id: "cash", name: "نقدي" }, { id: "bank", name: "بنكي" }, { id: "mixed", name: "مختلط" }]}
-                getOptionLabel={o => o.name}
-                isOptionEqualToValue={(a, b) => a.id === b.id}
-                value={[{ id: "all", name: "كل الطرق" }, { id: "cash", name: "نقدي" }, { id: "bank", name: "بنكي" }, { id: "mixed", name: "مختلط" }].find(o => o.id === (field.value || "all")) ?? { id: "all", name: "كل الطرق" }}
-                onChange={(_, v) => field.onChange(v?.id || "all")}
-                size="small"
-                renderInput={params => <TextField {...params} label="طريقة الدفع" />}
-              />
-            )} />
-            <Controller control={filterForm.control} name="search_description" render={({ field }) => (
-              <TextField label="بحث بالوصف" type="search" size="small" {...field} />
-            )} />
-            <Button type="submit" variant="contained" size="small" fullWidth>تطبيق</Button>
-          </Stack>
-        </form>
-      </Popover>
-
-      {/* ── Status ── */}
-      {isFetching && <div className="text-xs text-muted-foreground py-1"><Loader2 className="inline h-3 w-3 animate-spin" /> جاري التحديث...</div>}
-      {isLoading && costs.length === 0 && <div className="text-center py-6"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>}
-      {!isLoading && !isFetching && costs.length === 0 && <div className="text-center py-6 text-muted-foreground text-sm">لا توجد بيانات</div>}
-
-      {/* ── Table ── */}
-      {costs.length > 0 && (
-        <Card className="overflow-hidden">
-          <TableContainer component={Paper} sx={{ maxHeight: 560 }}>
-            <MUITable size="small" stickyHeader>
-              <MUITableHead>
-                <MUITableRow sx={{ '& th': { fontWeight: 700, fontSize: 11, py: 0.5, px: 1, whiteSpace: 'nowrap', bgcolor: '#1565C0', color: '#fff' } }}>
-                  <MUITableCell align="center" sx={{ color: '#fff !important' }}>التاريخ</MUITableCell>
-                  <MUITableCell sx={{ color: '#fff !important' }}>الوصف</MUITableCell>
-                  <MUITableCell align="center" sx={{ color: '#fff !important' }}>ملاحظة</MUITableCell>
-                  <MUITableCell align="center" sx={{ color: '#fff !important' }}>المستخدم</MUITableCell>
-                  <MUITableCell align="center" sx={{ color: '#fff !important', minWidth: 200 }}>وردية الطبيب</MUITableCell>
-                  <MUITableCell align="center" sx={{ color: '#fff !important' }}>الدفع</MUITableCell>
-                  <MUITableCell align="center" sx={{ color: '#fff !important' }}>نقدًا</MUITableCell>
-                  <MUITableCell align="center" sx={{ color: '#fff !important' }}>بنكي</MUITableCell>
-                  <MUITableCell align="center" sx={{ color: '#fff !important' }}>الإجمالي</MUITableCell>
-                </MUITableRow>
-              </MUITableHead>
-              <MUITableBody>
-                {costs.map((cost: Cost) => {
-                  const unassigned = !cost.doctor_shift_id;
-                  const total = cost.amount + cost.amount_bankak;
-                  const pm = getPaymentMethodForDisplay(cost);
-                  return (
-                    <MUITableRow key={cost.id} sx={{
-                      bgcolor: unassigned ? '#FFF8E1' : 'inherit',
-                      '&:hover': { bgcolor: unassigned ? '#FFF3CD' : '#f5f5f5' },
-                      '& td': { fontSize: 11, py: 0.4, px: 1 },
-                    }}>
-                      <MUITableCell align="center" sx={{ whiteSpace: 'nowrap', color: 'text.secondary' }}>
-                        {cost.created_at ? format(parseISO(cost.created_at), "MM-dd HH:mm") : "-"}
-                      </MUITableCell>
-                      <MUITableCell sx={{ fontWeight: 500, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cost.description}</MUITableCell>
-                      <MUITableCell align="center" sx={{ color: 'text.secondary', fontStyle: cost.comment ? 'normal' : 'italic', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {cost.comment || "—"}
-                      </MUITableCell>
-                      <MUITableCell align="center" sx={{ whiteSpace: 'nowrap' }}>{cost.user_cost_name || "-"}</MUITableCell>
-                      <MUITableCell align="center">
-                        {unassigned ? (
-                          <Autocomplete
-                            options={doctorShiftOptions}
-                            getOptionLabel={o => o.label}
-                            size="small"
-                            sx={{ minWidth: 200 }}
-                            loading={assignMutation.isPending}
-                            onChange={(_, v) => {
-                              if (v) assignMutation.mutate({ costId: cost.id, doctorShiftId: v.id });
-                            }}
-                            renderInput={params => (
-                              <TextField {...params} placeholder="اختر وردية طبيب" size="small"
-                                sx={{ '& .MuiInputBase-root': { fontSize: 11, py: 0 } }} />
-                            )}
-                          />
-                        ) : (
-                          <Typography variant="caption" color="primary.main" sx={{ fontWeight: 600 }}>
-                            #{cost.doctor_shift_id} — {cost.doctor_shift_doctor_name || ""}
-                          </Typography>
-                        )}
-                      </MUITableCell>
-                      <MUITableCell align="center">
-                        <Chip label={pm} size="small" variant={pm === 'بنكي' ? 'outlined' : 'filled'}
-                          color={pm === 'مختلط' ? 'info' : pm === 'نقدي' ? 'default' : 'secondary'}
-                          sx={{ fontSize: 10, height: 18 }} />
-                      </MUITableCell>
-                      <MUITableCell align="center">{formatNumber(cost.amount)}</MUITableCell>
-                      <MUITableCell align="center">{formatNumber(cost.amount_bankak)}</MUITableCell>
-                      <MUITableCell align="center" sx={{ fontWeight: 600 }}>{formatNumber(total)}</MUITableCell>
-                    </MUITableRow>
-                  );
-                })}
-              </MUITableBody>
-              {summary && (
-                <MUITableFooter>
-                  <MUITableRow sx={{ '& td': { fontWeight: 700, fontSize: 12, bgcolor: '#E3F2FD' } }}>
-                    <MUITableCell align="center" colSpan={6}>الإجمالي</MUITableCell>
-                    <MUITableCell align="center">{formatNumber(summary.total_cash_paid)}</MUITableCell>
-                    <MUITableCell align="center">{formatNumber(summary.total_bank_paid)}</MUITableCell>
-                    <MUITableCell align="center">{formatNumber(summary.grand_total_paid)}</MUITableCell>
-                  </MUITableRow>
-                </MUITableFooter>
-              )}
-            </MUITable>
-          </TableContainer>
+      {/* ── Cost by category ── */}
+      {byCategory.length > 0 && (
+        <Card size="small" title="التكلفة حسب الجهة" style={{ marginBottom: 12 }} styles={{ body: { padding: 0 } }}>
+          <Table<CostCategoryBreakdownItem>
+            rowKey="cost_category_id"
+            size="small"
+            columns={byCategoryColumns}
+            dataSource={byCategory}
+            loading={isLoading || isFetching}
+            pagination={false}
+          />
         </Card>
       )}
 
-      {meta && meta.last_page > 1 && (
-        <div className="mt-2 flex justify-center">
-          <Pagination
-            count={meta.last_page}
-            page={currentPage}
-            onChange={(_, page) => setCurrentPage(page)}
-            disabled={isFetching}
-            size="small"
-            color="primary"
-            showFirstButton
-            showLastButton
-          />
-        </div>
-      )}
+      {/* ── Table ── */}
+      <Card size="small" styles={{ body: { padding: 0 } }}>
+        <Table<Cost>
+          rowKey="id"
+          size="small"
+          columns={columns}
+          dataSource={costs}
+          loading={isLoading || isFetching}
+          scroll={{ x: 'max-content', y: 520 }}
+          sticky
+          locale={{ emptyText: 'لا توجد بيانات' }}
+          onRow={(record) => ({
+            style: !record.doctor_shift_id ? { backgroundColor: '#FFF8E1' } : undefined,
+          })}
+          pagination={{
+            current: currentPage,
+            pageSize: 20,
+            total: meta?.total ?? 0,
+            showSizeChanger: false,
+            onChange: (page) => setCurrentPage(page),
+          }}
+          summary={() =>
+            summary && costs.length > 0 ? (
+              <Table.Summary fixed>
+                <Table.Summary.Row>
+                  <Table.Summary.Cell index={0} colSpan={6} align="center">
+                    <Text strong>الإجمالي</Text>
+                  </Table.Summary.Cell>
+                  <Table.Summary.Cell index={1} align="center">
+                    <Text strong>{formatNumber(summary.total_cash_paid)}</Text>
+                  </Table.Summary.Cell>
+                  <Table.Summary.Cell index={2} align="center">
+                    <Text strong>{formatNumber(summary.total_bank_paid)}</Text>
+                  </Table.Summary.Cell>
+                  <Table.Summary.Cell index={3} align="center">
+                    <Text strong>{formatNumber(summary.grand_total_paid)}</Text>
+                  </Table.Summary.Cell>
+                </Table.Summary.Row>
+              </Table.Summary>
+            ) : null
+          }
+        />
+      </Card>
 
-     
-
-      <Dialog open={isPdfPreviewOpen} onClose={() => setIsPdfPreviewOpen(false)} fullWidth maxWidth="lg">
-        <DialogTitle>تقرير التكاليف</DialogTitle>
-        <DialogContent dividers>
-          {(!pdfUrl || isGeneratingPdf) ? (
-            <Box className="flex items-center justify-center py-10">
-              <Loader2 className="h-8 w-8 animate-spin" />
-            </Box>
-          ) : (
-            <Box className="h-[75vh]">
-              <iframe src={pdfUrl || ''} title="costs-report" style={{ width: '100%', height: '100%', border: 'none' }} />
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => {
+      <Modal
+        open={isPdfPreviewOpen}
+        onCancel={() => setIsPdfPreviewOpen(false)}
+        width="80%"
+        title="تقرير التكاليف"
+        footer={[
+          <Button key="download" icon={<DownloadOutlined />} disabled={!pdfUrl} onClick={() => {
             if (!pdfUrl) return;
             const a = document.createElement('a');
             a.href = pdfUrl;
@@ -511,10 +605,22 @@ const CostsReportPage: React.FC = () => {
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
-          }} variant="outlined">تنزيل</Button>
-          <Button onClick={() => setIsPdfPreviewOpen(false)} variant="contained">إغلاق</Button>
-        </DialogActions>
-      </Dialog>
+          }}>
+            تنزيل
+          </Button>,
+          <Button key="close" type="primary" onClick={() => setIsPdfPreviewOpen(false)}>
+            إغلاق
+          </Button>,
+        ]}
+      >
+        {(!pdfUrl || isGeneratingPdf) ? (
+          <Flex align="center" justify="center" style={{ height: '75vh' }}>
+            <Title level={5} type="secondary">جاري التوليد...</Title>
+          </Flex>
+        ) : (
+          <iframe src={pdfUrl} title="costs-report" style={{ width: '100%', height: '75vh', border: 'none' }} />
+        )}
+      </Modal>
     </div>
   );
 };

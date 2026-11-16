@@ -3,6 +3,7 @@ import React, {
   useContext,
   useState,
   useEffect,
+  useRef,
   type ReactNode,
   useCallback,
   useMemo,
@@ -135,9 +136,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       .finally(() => setIsAuthLoading(false));
   }, []);
 
-  // Sync settings (Firebase target) from backend
+  // Sync settings (Firebase target) from backend once per login session, not on
+  // every `user` object refresh (e.g. the /user re-fetch on mount creates a new
+  // object reference, which previously re-triggered this effect and duplicated
+  // the /settings request).
+  const settingsSyncedTokenRef = useRef<string | null>(null);
   useEffect  (() => {
-    if (token && user) {
+    if (!token) {
+      settingsSyncedTokenRef.current = null;
+      return;
+    }
+    if (token && user && settingsSyncedTokenRef.current !== token) {
+      settingsSyncedTokenRef.current = token;
       getSettings().then((settings) => {
         if (settings && (settings as any).firebase_upload_target) {
           const target = (settings as any).firebase_upload_target;

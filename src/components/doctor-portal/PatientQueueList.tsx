@@ -91,7 +91,7 @@ const PatientQueueList: React.FC<PatientQueueListProps> = ({
   };
 
   return (
-    <div className="w-[300px] shrink-0 flex flex-col border-l bg-background h-full overflow-hidden">
+    <div className="w-[390px] shrink-0 flex flex-col border-l bg-background h-full overflow-hidden">
       {/* Search */}
       <div className="p-2 border-b flex flex-col gap-2">
         <div className="relative">

@@ -25,6 +25,7 @@ import OffersDialog from "@/components/lab/reception/OffersDialog";
 // Hooks & services
 import { useDebounce } from "@/hooks/useDebounce";
 import { useAuth } from "@/contexts/AuthContext";
+import { useShiftSelection } from "@/contexts/ShiftSelectionContext";
 import { useAuthorization } from "@/hooks/useAuthorization";
 import { useCachedMainTestsList } from "@/hooks/useCachedData";
 import { usePdfPreviewVisibility } from "@/contexts/PdfPreviewVisibilityContext";
@@ -282,6 +283,10 @@ const usePdfPreview = () => {
 const LabReceptionPage: React.FC = () => {
   const queryClient = useQueryClient();
   const { currentClinicShift } = useAuth();
+  // Header shift picker (in AppLayout) lets the user browse a shift other
+  // than the currently open one; fall back to the open shift otherwise.
+  const { selectedShift } = useShiftSelection();
+  const currentShiftForQueue = selectedShift ?? currentClinicShift;
   const { can } = useAuthorization();
   const { isVisible: isPdfPreviewVisible } = usePdfPreviewVisibility();
   const pdfPreview = usePdfPreview();
@@ -371,6 +376,14 @@ const LabReceptionPage: React.FC = () => {
     enabled: !!activeVisitId,
     staleTime: 30 * 1000,
   });
+
+  // Lab-request actions (add/discount/payment/delete/bankak) are only allowed
+  // while the visit's shift is both the latest shift and still open — also
+  // enforced server-side (see LabRequestController::shiftLockResponse).
+  const generalShift = activeVisit?.general_shift_details;
+  const isActiveShiftLocked = Boolean(
+    generalShift && (generalShift.is_closed || generalShift.is_last_shift === false)
+  );
 
   const { data: availableTests = [], isLoading: isLoadingTests } = useCachedMainTestsList(activeVisitId);
 
@@ -570,12 +583,16 @@ const LabReceptionPage: React.FC = () => {
   }, []);
 
   const handleAddTests = useCallback(() => {
+    if (isActiveShiftLocked) {
+      toast.error("لا يمكن إضافة فحوصات — الوردية الخاصة بهذه الزيارة ليست الحالية أو مغلقة");
+      return;
+    }
     if (selectedTests.length > 0 && activeVisitId) {
       addTestsMutation.mutate(selectedTests.map((test) => test.id));
     } else {
       toast.error("يرجى اختيار فحص ومريض أولاً");
     }
-  }, [selectedTests, activeVisitId, addTestsMutation]);
+  }, [selectedTests, activeVisitId, addTestsMutation, isActiveShiftLocked]);
 
   const handleSearchByVisitIdEnter = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -667,6 +684,7 @@ const LabReceptionPage: React.FC = () => {
           activeVisitId={activeVisitId}
           addTestsMutation={addTestsMutation}
           testSelectionAutocompleteRef={testSelectionAutocompleteRef}
+          isActiveShiftLocked={isActiveShiftLocked}
           recentVisitsData={recentVisitsData}
           isLoadingRecentVisits={isLoadingRecentVisits}
           selectedVisitFromAutocomplete={selectedVisitFromAutocomplete}
@@ -716,43 +734,50 @@ const LabReceptionPage: React.FC = () => {
 
           {/* Patient history overlay */}
           {showPatientHistory && (
-            <div
-              ref={patientHistoryRef}
-              className="absolute left-4 top-4 z-50 max-h-[600px] w-1/2 overflow-hidden rounded-xl border border-border bg-card shadow-2xl"
-              role="dialog"
-              aria-label="سجل المرضى المطابق"
-            >
-              <div className="flex items-center justify-between border-b border-border bg-muted/40 px-3 py-1.5">
-                <span className="text-sm font-semibold text-foreground">سجل المرضى المطابق</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowPatientHistory(false)}
-                  className="h-7 w-7 p-0"
-                  aria-label="إغلاق"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-              <PatientHistoryTable
-                searchResults={combinedSearchResults}
-                isLoading={isLoadingSearchResults || isLoadingNameSearchResults}
-                onSelectPatient={handlePatientSelectedFromHistory}
-                referringDoctor={selectedDoctorForNewVisit}
+            <>
+              <div
+                className="animate-in fade-in-0 absolute inset-0 z-40 bg-black/20 duration-200"
+                onClick={() => setShowPatientHistory(false)}
+                aria-hidden="true"
               />
-            </div>
+              <div
+                ref={patientHistoryRef}
+                className="animate-in fade-in-0 zoom-in-95 absolute left-4 top-4 z-50 max-h-[600px] w-1/2 overflow-hidden rounded-xl border border-border bg-card shadow-2xl duration-200"
+                role="dialog"
+                aria-label="سجل المرضى المطابق"
+              >
+                <div className="flex items-center justify-between border-b border-border bg-muted/40 px-3 py-1.5">
+                  <span className="text-sm font-semibold text-foreground">سجل المرضى المطابق</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowPatientHistory(false)}
+                    className="h-7 w-7 p-0"
+                    aria-label="إغلاق"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <PatientHistoryTable
+                  searchResults={combinedSearchResults}
+                  isLoading={isLoadingSearchResults || isLoadingNameSearchResults}
+                  onSelectPatient={handlePatientSelectedFromHistory}
+                  referringDoctor={selectedDoctorForNewVisit}
+                />
+              </div>
+            </>
           )}
 
           {/* Workspace grid */}
           <div className="grid min-h-0 flex-1 grid-cols-4 gap-2">
             {/* Patient queue */}
             <section aria-label="قائمة المرضى" className={activeVisitId ? "col-span-1 min-h-0" : "col-span-2 min-h-0"}>
-              <Card className="h-full overflow-hidden rounded-xl border-border bg-card shadow-sm transition-shadow duration-300 hover:shadow-md">
+              <Card className="h-full gap-0 overflow-hidden rounded-xl border-border bg-card p-0 shadow-sm transition-shadow duration-300 hover:shadow-md">
                 <LabPatientQueue
                   ref={labPatientQueueRef}
                   appearanceSettings={getAppearanceSettings()}
                   labFilters={filters}
-                  currentShift={currentClinicShift}
+                  currentShift={currentShiftForQueue}
                   onShiftChange={() => toast.info("الميزة غير متاحة حالياً")}
                   onPatientSelect={handlePatientSelectedFromQueue}
                   selectedVisitId={activeVisitId}
@@ -764,7 +789,7 @@ const LabReceptionPage: React.FC = () => {
 
             {/* Lab requests */}
             <section aria-label="طلبات المختبر" className="col-span-2 min-h-0">
-              <Card className="h-full overflow-hidden rounded-xl border-border bg-card shadow-sm transition-shadow duration-300 hover:shadow-md">
+              <Card className="h-full gap-0 overflow-hidden rounded-xl border-border bg-card p-0 shadow-sm transition-shadow duration-300 hover:shadow-md">
                 <LabRequestsColumn
                   activeVisitId={activeVisitId}
                   visit={activeVisit}

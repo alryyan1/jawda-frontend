@@ -23,6 +23,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Menu,
   Home,
   Users,
@@ -83,7 +90,12 @@ import {
   PdfPreviewVisibilityProvider,
   usePdfPreviewVisibility,
 } from "../contexts/PdfPreviewVisibilityContext";
-import { getCurrentOpenShift } from "@/services/shiftService";
+import { getCurrentOpenShift, getShiftsList } from "@/services/shiftService";
+import dayjs from "dayjs";
+import {
+  ShiftSelectionProvider,
+  useShiftSelection,
+} from "@/contexts/ShiftSelectionContext";
 import realtimeService from "@/services/realtimeService";
 import {
   ClinicSelectionProvider,
@@ -708,6 +720,23 @@ const AppLayout: React.FC = () => {
       setIsFavoriteServiceGroupsDialogOpen,
     ] = useState(false);
 
+    // Header shift picker — lets the lab reception queue show a shift other
+    // than the currently open one (see ShiftSelectionContext).
+    const { selectedShift, setSelectedShift } = useShiftSelection();
+    const { data: recentShifts } = useQuery({
+      queryKey: ["recentShiftsForHeaderSelect"],
+      queryFn: () =>
+        getShiftsList({
+          per_page: 0,
+          date_from: dayjs().subtract(30, "day").format("YYYY-MM-DD"),
+        }),
+      staleTime: 5 * 60 * 1000,
+    });
+    const handleHeaderShiftChange = (value: string) => {
+      const shift = (recentShifts || []).find((s) => String(s.id) === value) ?? null;
+      setSelectedShift(shift);
+    };
+
     const { data: waPhoneData } = useQuery({
       queryKey: ["whatsappCloudPhoneNumbers"],
       queryFn: () => getWhatsAppCloudPhoneNumbers(undefined, true).catch(() => null),
@@ -754,28 +783,11 @@ const AppLayout: React.FC = () => {
             )}
           >
             <div
-              className={cn(
-                "flex items-center flex-shrink-0 h-16 px-4 border-b border-border",
-                isDesktopSidebarCollapsed && "justify-center px-2",
-              )}
+        
             >
-              <Link
-                to="/dashboard"
-                className={cn(
-                  "flex items-center gap-2 font-bold text-primary truncate",
-                  isDesktopSidebarCollapsed ? "text-xl" : "text-lg",
-                )}
-              >
-                <img
-                  src="/logo.png"
-                  alt="شعار النظام"
-                  className={cn(
-                    "rounded-md",
-                    isDesktopSidebarCollapsed ? "h-8 w-8" : "h-7 w-7",
-                  )}
-                />
-                {!isDesktopSidebarCollapsed && <span>نظام جودة الطبي</span>}
-              </Link>
+        
+             
+                {!isDesktopSidebarCollapsed && <span >نظام جودة الطبي</span>}
             </div>
             <SidebarContent />
             <div className="p-2 border-t border-border mt-auto">
@@ -810,27 +822,7 @@ const AppLayout: React.FC = () => {
             </div>
           </aside>
 
-          {/* Mobile Sidebar (Sheet) */}
-          {/* <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
-            <SheetTrigger asChild className="md:hidden ml-2">
-                <Button variant="ghost" size="icon"><Menu className="h-6 w-6" /></Button>
-            </SheetTrigger>
-            <SheetContent 
-                side="right" 
-                className="w-60 p-0 bg-card border-border md:hidden h-full"
-            >
-                <SheetHeader className="h-16 px-4 border-b border-border flex flex-row items-center justify-between">
-                    <SheetTitle>
-                        <Link to="/" onClick={() => setMobileNavOpen(false)} className="flex items-center gap-2 text-lg font-bold text-primary">
-                            <img src="/logo.png" alt="شعار النظام" className="h-7 w-7 rounded-md" />
-                            <span>نظام جودة الطبي</span>
-                        </Link>
-                    </SheetTitle>
-                </SheetHeader>
-                <SidebarContent isMobile={true}/>
-            </SheetContent>
-        </Sheet> */}
-
+  
           {/* Main Content Area */}
           <div className="flex flex-col flex-1 min-w-0 overflow-hidden transition-all duration-300 ease-in-out">
             {/* Header */}
@@ -908,6 +900,24 @@ const AppLayout: React.FC = () => {
                   </TooltipContent>
                 </Tooltip>
 
+                {/* Recent Shifts Picker — overrides which shift's queue the lab
+                    reception page displays (see ShiftSelectionContext). */}
+                <Select
+                  value={selectedShift ? String(selectedShift.id) : ""}
+                  onValueChange={handleHeaderShiftChange}
+                >
+                  <SelectTrigger size="sm" className="h-8 w-[150px] text-xs" aria-label="اختر وردية">
+                    <SelectValue placeholder="الورديات الأخيرة" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(recentShifts || []).map((shift) => (
+                      <SelectItem key={shift.id} value={String(shift.id)}>
+                        {`#${shift.id} — ${dayjs(shift.created_at).format("YYYY-MM-DD")}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
                 {/* Realtime Connection Toggle (Node.js) */}
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -939,7 +949,7 @@ const AppLayout: React.FC = () => {
                 </Tooltip>
 
             
-                    <p>lab2lab source: <span className="font-mono font-bold">{lab2labsource}</span></p>
+                    {/* <p>lab2lab source: <span className="font-mono font-bold">{lab2labsource}</span></p> */}
                  
 
                 {/* WhatsApp Cloud Phone Number Badge */}
@@ -1310,7 +1320,9 @@ const AppLayout: React.FC = () => {
   return (
     <ClinicSelectionProvider>
       <PdfPreviewVisibilityProvider>
-        <AppLayoutContent />
+        <ShiftSelectionProvider>
+          <AppLayoutContent />
+        </ShiftSelectionProvider>
       </PdfPreviewVisibilityProvider>
     </ClinicSelectionProvider>
   );

@@ -1,20 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Stethoscope, Users, ShieldCheck, Banknote, LogOut, Sun, Moon, Wifi, WifiOff } from 'lucide-react';
+import { Stethoscope } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/contexts/AuthContext';
 import { useThemeMode } from '@/contexts/ThemeModeContext';
 import { cn } from '@/lib/utils';
 import realtimeService from '@/services/realtimeService';
 import { getDoctorById } from '@/services/doctorService';
 import type { DoctorShift } from '@/types/doctors';
+import DoctorPortalControlsDialog from './DoctorPortalControlsDialog';
 
 interface DoctorPortalHeaderProps {
   shift: DoctorShift | null;
@@ -26,30 +23,6 @@ interface DoctorPortalHeaderProps {
   selectedDate: string;
   onDateChange: (date: string) => void;
 }
-
-interface StatTileProps {
-  label: string;
-  value: number;
-  icon: React.ReactNode;
-  className?: string;
-}
-
-const StatTile: React.FC<StatTileProps> = ({ label, value, icon, className }) => (
-  <div
-    className={cn(
-      'flex min-w-[82px] items-center gap-2.5 rounded-lg border bg-muted/40 px-3 py-2',
-      className
-    )}
-  >
-    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-background shadow-sm">
-      {icon}
-    </div>
-    <div className="flex flex-col leading-tight">
-      <span className="text-lg font-bold tabular-nums">{value}</span>
-      <span className="text-[0.7rem] text-muted-foreground">{label}</span>
-    </div>
-  </div>
-);
 
 const DoctorPortalHeader: React.FC<DoctorPortalHeaderProps> = ({
   shift,
@@ -92,6 +65,20 @@ const DoctorPortalHeader: React.FC<DoctorPortalHeaderProps> = ({
     await logout();
     navigate('/doctor-portal/login', { replace: true });
   };
+
+  // F9 opens the controls dialog (date filter, stats, realtime/theme/logout)
+  // instead of keeping them permanently visible in the header.
+  const [isControlsDialogOpen, setIsControlsDialogOpen] = useState(false);
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'F9') {
+        e.preventDefault();
+        setIsControlsDialogOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
     <header className="flex flex-wrap items-center justify-between gap-1 border-b bg-card px-6 py-3">
@@ -138,96 +125,29 @@ const DoctorPortalHeader: React.FC<DoctorPortalHeaderProps> = ({
         </div>
       </div>
 
-      {/* Date filter */}
-      <div className="flex flex-col gap-1">
-        <Label htmlFor="doctor-portal-date" className="text-[0.68rem] text-muted-foreground">
-          التاريخ
-        </Label>
-        <Input
-          id="doctor-portal-date"
-          type="date"
-          value={selectedDate}
-          onChange={e => onDateChange(e.target.value)}
-          className="h-9 w-[150px] text-[0.8rem]"
-        />
-      </div>
-
-      {/* Stat tiles */}
-      <div className="flex items-center gap-1">
-        <StatTile
-          label="الإجمالي"
-          value={stats.total}
-          icon={<Users className="h-4 w-4 text-foreground" />}
-        />
-        <Separator orientation="vertical" className="h-9" />
-            <StatTile
-          label="نقدي"
-          value={stats.cash}
-          icon={<Banknote className="h-4 w-4 text-green-600 dark:text-green-400" />}
-        />
-        <StatTile
-          label="تأمين"
-          value={stats.insurance}
-          icon={<ShieldCheck className="h-4 w-4 text-blue-600 dark:text-blue-400" />}
-        />
-    
-      </div>
-
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={toggleRealtime}
-              aria-label="realtime-toggle"
-              className="text-muted-foreground"
-            >
-              {!isRealtimeEnabled ? (
-                <WifiOff className="h-5 w-5 text-muted-foreground" />
-              ) : isRealtimeConnected ? (
-                <Wifi className="h-5 w-5 text-green-500" />
-              ) : (
-                <Wifi className="h-5 w-5 text-red-500" />
-              )}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>
-              {!isRealtimeEnabled
-                ? 'التزامن اللحظي موقوف — اضغط للتفعيل'
-                : isRealtimeConnected
-                  ? 'التزامن اللحظي متصل — اضغط للإيقاف'
-                  : 'التزامن اللحظي غير متصل — اضغط للإيقاف'}
-            </p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-
-      <Button
+      {/* Date, stats, realtime/theme/logout moved into the F9 controls dialog */}
+      <button
         type="button"
-        variant="ghost"
-        size="icon"
-        onClick={toggleTheme}
-        title={theme === 'light' ? 'التبديل إلى الوضع المظلم' : 'التبديل إلى الوضع المضيء'}
-        aria-label="تبديل المظهر"
-        className="text-muted-foreground"
+        onClick={() => setIsControlsDialogOpen(true)}
+        className="rounded-md border border-dashed px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted/60"
+        title="عناصر التحكم (F9)"
       >
-        {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-      </Button>
+        F9
+      </button>
 
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        onClick={handleLogout}
-        title="تسجيل الخروج"
-        aria-label="تسجيل الخروج"
-        className="text-muted-foreground hover:text-destructive"
-      >
-        <LogOut className="h-5 w-5" />
-      </Button>
+      <DoctorPortalControlsDialog
+        open={isControlsDialogOpen}
+        onOpenChange={setIsControlsDialogOpen}
+        stats={stats}
+        selectedDate={selectedDate}
+        onDateChange={onDateChange}
+        isRealtimeEnabled={isRealtimeEnabled}
+        isRealtimeConnected={isRealtimeConnected}
+        onToggleRealtime={toggleRealtime}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        onLogout={handleLogout}
+      />
     </header>
   );
 };

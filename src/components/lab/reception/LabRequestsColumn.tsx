@@ -100,6 +100,14 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({ activeVisitId, vi
   const { can } = useAuthorization();
   const { paymentMethods, defaultPaymentMethodId } = usePaymentMethods();
 
+  // Discount/payment/delete actions are only allowed while the visit's shift
+  // is both the latest shift and still open (also enforced server-side —
+  // see LabRequestController::shiftLockResponse).
+  const generalShift = visit?.general_shift_details;
+  const isShiftLocked = Boolean(
+    generalShift && (generalShift.is_closed || generalShift.is_last_shift === false)
+  );
+
   const [showDiscountCommentDialog, setShowDiscountCommentDialog] = useState(false);
   const [selectedLabRequestForComment, setSelectedLabRequestForComment] = useState<number | null>(null);
   const [isSavingPatientDiscountComment, setIsSavingPatientDiscountComment] = useState(false);
@@ -364,7 +372,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({ activeVisitId, vi
 
         <Select
           onValueChange={(value) => handleUpdateAllBankak(Number(value))}
-          disabled={updateAllBankakMutation.isPending || labRequests.length === 0}
+          disabled={updateAllBankakMutation.isPending || labRequests.length === 0 || isShiftLocked}
         >
           <SelectTrigger className="h-8 w-auto gap-1 text-xs">
             {updateAllBankakMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -379,6 +387,12 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({ activeVisitId, vi
           </SelectContent>
         </Select>
       </div>
+
+      {isShiftLocked && (
+        <div className="border-b border-border bg-amber-50 px-3 py-1.5 text-xs text-amber-800 dark:bg-amber-900/20 dark:text-amber-400">
+          لا يمكن تعديل طلبات المختبر — الوردية الخاصة بهذه الزيارة ليست الحالية أو مغلقة
+        </div>
+      )}
 
       {/* Requests table */}
       <div className="min-h-0 flex-1 overflow-hidden">
@@ -482,7 +496,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({ activeVisitId, vi
                           <Select
                             value={request.discount_per.toString()}
                             onValueChange={(value) => handleDiscountChange(request.id, value)}
-                            disabled={updateDiscountMutation.isPending || request.is_paid || !can("تخفيض فحص")}
+                            disabled={updateDiscountMutation.isPending || request.is_paid || !can("تخفيض فحص") || isShiftLocked}
                           >
                             <SelectTrigger className="w-full">
                               <SelectValue />
@@ -526,7 +540,9 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({ activeVisitId, vi
                               size="sm"
                               className="h-8 w-8 border-2 border-green-200 p-0 text-green-600 hover:bg-green-50 hover:text-green-800"
                               onClick={() => defaultPaymentMethodId && handleDirectPayItem(request.id, defaultPaymentMethodId)}
-                              disabled={directPayItemMutation.isPending || !can("سداد فحص") || !defaultPaymentMethodId}
+                              disabled={
+                                directPayItemMutation.isPending || !can("سداد فحص") || !defaultPaymentMethodId || isShiftLocked
+                              }
                               title="دفع نقدي"
                             >
                               {directPayItemMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "دفع"}
@@ -541,7 +557,8 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({ activeVisitId, vi
                                 unpayLabRequestMutation.isPending ||
                                 visit?.patient?.result_print_date != null ||
                                 !can("الغاء سداد فحص") ||
-                                visit?.result_auth == true
+                                visit?.result_auth == true ||
+                                isShiftLocked
                               }
                               title="إلغاء السداد"
                             >
@@ -562,7 +579,10 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({ activeVisitId, vi
                                   value={request.payment_method_id ? request.payment_method_id.toString() : undefined}
                                   onValueChange={(value) => handleToggleBankak(request.id, Number(value))}
                                   disabled={
-                                    toggleBankakMutation.isPending || !request.is_paid || user?.id != request.user_deposited
+                                    toggleBankakMutation.isPending ||
+                                    !request.is_paid ||
+                                    user?.id != request.user_deposited ||
+                                    isShiftLocked
                                   }
                                 >
                                   <SelectTrigger className="h-7 w-20 text-xs">
@@ -590,7 +610,8 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({ activeVisitId, vi
                               visit?.patient?.result_print_date != null ||
                               !can("حذف فحص مضاف") ||
                               visit?.result_auth == true ||
-                              (user?.id != request.user_deposited && request.user_deposited != null)
+                              (user?.id != request.user_deposited && request.user_deposited != null) ||
+                              isShiftLocked
                             }
                             title="حذف"
                           >
@@ -653,7 +674,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({ activeVisitId, vi
                 <Select
                   value={selectedRequestForRowDialog.payment_method_id ? selectedRequestForRowDialog.payment_method_id.toString() : undefined}
                   onValueChange={(value) => handleToggleBankak(selectedRequestForRowDialog.id, Number(value))}
-                  disabled={toggleBankakMutation.isPending}
+                  disabled={toggleBankakMutation.isPending || isShiftLocked}
                 >
                   <SelectTrigger className="h-8 w-28 text-xs">
                     <SelectValue />
@@ -676,7 +697,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({ activeVisitId, vi
                     }
                     setRowActionsDialogOpen(false);
                   }}
-                  disabled={directPayItemMutation.isPending || !defaultPaymentMethodId}
+                  disabled={directPayItemMutation.isPending || !defaultPaymentMethodId || isShiftLocked}
                   className="w-full"
                 >
                   {directPayItemMutation.isPending ? (
@@ -695,7 +716,7 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({ activeVisitId, vi
                     handleUnpayLabRequest(selectedRequestForRowDialog.id);
                     setRowActionsDialogOpen(false);
                   }}
-                  disabled={unpayLabRequestMutation.isPending || visit?.patient?.result_print_date != null}
+                  disabled={unpayLabRequestMutation.isPending || visit?.patient?.result_print_date != null || isShiftLocked}
                   className="w-full text-yellow-700"
                 >
                   <AlertCircle className="mr-2 h-4 w-4" /> إلغاء الدفع
@@ -711,7 +732,8 @@ const LabRequestsColumn: React.FC<LabRequestsColumnProps> = ({ activeVisitId, vi
                 disabled={
                   deleteRequestMutation.isPending ||
                   visit?.patient?.result_print_date != null ||
-                  !can("حذف فحص مضاف")
+                  !can("حذف فحص مضاف") ||
+                  isShiftLocked
                 }
                 className="w-full"
               >

@@ -32,9 +32,9 @@ export const DEFAULT_APPEARANCE_SETTINGS: LabAppearanceSettings = {
     isBold: false,
   },
   selected: {
-    backgroundColor: '#EFF6FF', // blue-50
-    borderColor: '#3B82F6', // blue-500
-    textColor: '#1E40AF', // blue-800
+    backgroundColor: '#FEF9C3', // yellow-100
+    borderColor: '#EAB308', // yellow-500
+    textColor: '#854D0E', // yellow-800
     badgeBackgroundColor: '#F97316', // orange-500
     badgeTextColor: '#FFFFFF',
     isBold: true,

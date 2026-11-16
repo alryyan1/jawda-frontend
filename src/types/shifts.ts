@@ -10,6 +10,8 @@ export interface Shift {
   net_cash?: number | string; // From accessor
   touched: boolean;
   is_closed: boolean;
+  /** True when this is the most recently opened shift (see ShiftResource). */
+  is_last_shift?: boolean;
   closed_at?: string | null;
   pharmacy_entry?: boolean | null;
   created_at: string;

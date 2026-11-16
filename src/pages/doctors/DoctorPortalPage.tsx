@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import Box from '@mui/material/Box';
@@ -105,6 +106,14 @@ const DoctorPortalPage: React.FC = () => {
 const DoctorPortalInner: React.FC = () => {
   const { user, currentClinicShift } = useAuth();
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
+  // Deep link from the inpatient admission system (?from_admission=true&patient_id=123):
+  // shows every admission-origin patient system-wide (not just this doctor's
+  // own queue) and auto-focuses the one named by patient_id.
+  const showAdmissionPatients = searchParams.get('from_admission') === 'true';
+  const focusPatientIdParam = searchParams.get('patient_id');
+  const focusPatientId = focusPatientIdParam ? Number(focusPatientIdParam) : null;
+  const hasFocusedRef = useRef(false);
   const [selectedVisitId, setSelectedVisitId] = useState<number | null>(null);
   const [selectedVisit, setSelectedVisit] = useState<ActivePatientVisit | null>(null);
   const [selectedDate, setSelectedDate] = useState(() => dayjs().format('YYYY-MM-DD'));
@@ -133,12 +142,37 @@ const DoctorPortalInner: React.FC = () => {
   // day — not just the one currently-open shift. PatientQueueList groups them by
   // doctor_shift_id. Only auto-refetches while looking at today (a past day's
   // patient list won't change).
+  //
+  // When opened via the admission-system deep link (?from_admission=true), this
+  // scoping is bypassed entirely in favor of every admission-origin patient
+  // system-wide, so the linked patient — in all likelihood not assigned to the
+  // viewing doctor nor registered today — can still be found and focused.
   const { data: patients = [], isLoading: isLoadingPatients } = useQuery<ActivePatientVisit[]>({
-    queryKey: ['activePatients', 'doctorPortal', user?.doctor_id, selectedDate],
-    queryFn: () => getActiveClinicPatients({ doctor_id: user!.doctor_id!, date: selectedDate }),
-    enabled: !!user?.doctor_id,
-    refetchInterval: isToday ? 20_000 : false,
+    queryKey: showAdmissionPatients
+      ? ['activePatients', 'doctorPortal', 'fromAdmission']
+      : ['activePatients', 'doctorPortal', user?.doctor_id, selectedDate],
+    queryFn: () =>
+      showAdmissionPatients
+        ? getActiveClinicPatients({ from_admission: true })
+        : getActiveClinicPatients({ doctor_id: user!.doctor_id!, date: selectedDate }),
+    enabled: showAdmissionPatients || !!user?.doctor_id,
+    refetchInterval: !showAdmissionPatients && isToday ? 20_000 : false,
   });
+
+  // Auto-focus the admission patient named by ?patient_id= once the list has
+  // loaded, so the deep link lands directly on their workspace. Only runs once
+  // per page load (hasFocusedRef) so it doesn't fight a later manual selection.
+  useEffect(() => {
+    if (!showAdmissionPatients || !focusPatientId || hasFocusedRef.current || patients.length === 0) {
+      return;
+    }
+    const match = patients.find(v => v.patient.id === focusPatientId);
+    if (match) {
+      hasFocusedRef.current = true;
+      setSelectedVisitId(match.id);
+      setSelectedVisit(match);
+    }
+  }, [showAdmissionPatients, focusPatientId, patients]);
 
   // Visit ids that just got spliced into the queue via realtime — used to
   // flash an entrance animation + a pulsing "new" dot on their card for a
@@ -365,12 +399,14 @@ const DoctorPortalInner: React.FC = () => {
 
       {/* Right side: header + workspace stacked */}
       <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, overflow: 'hidden' }}>
-        <DoctorPortalHeader
-          shift={myDoctorShift}
-          stats={stats}
-          selectedDate={selectedDate}
-          onDateChange={setSelectedDate}
-        />
+        {!showAdmissionPatients && (
+          <DoctorPortalHeader
+            shift={myDoctorShift}
+            stats={stats}
+            selectedDate={selectedDate}
+            onDateChange={setSelectedDate}
+          />
+        )}
 
         {/* Workspace */}
         <Box sx={{ flex: 1, overflow: 'hidden', bgcolor: 'background.default', minHeight: 0 }}>

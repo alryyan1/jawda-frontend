@@ -69,6 +69,7 @@ export interface PatientLabQueueItem { // For the leftmost list
   total_result_count: number; // Total number of results for this patient
   pending_result_count: number; // Number of pending results
   lab_to_lab_object_id?: string | null; // Present if this patient came from lab-to-lab integration
+  from_admission?: boolean; // True if this patient was created from the inpatient admission system
   // status_summary?: string; // e.g. "3 Pending, 1 Complete"
 }
 

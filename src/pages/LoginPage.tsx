@@ -103,9 +103,7 @@ const LoginPage: React.FC = () => {
               />
             </div>
             
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-teal-700 to-cyan-600 dark:from-teal-300 dark:to-cyan-300 bg-clip-text text-transparent">
-              بوابة الرعاية الصحية
-            </h1>
+            
        
           </div>
 
@@ -197,7 +195,7 @@ const LoginPage: React.FC = () => {
                 <Loader2 className="w-5 h-5 animate-spin" />
               )}
               <span>
-                {currentIsLoading ? "جاري المصادقة..." : "دخول البوابة"}
+                {currentIsLoading ? "جاري المصادقة..." : " تسجيل الدخول"}
               </span>
             </button>
 

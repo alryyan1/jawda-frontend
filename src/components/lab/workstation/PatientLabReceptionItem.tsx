@@ -7,6 +7,7 @@ import {
   Heart,
   Globe,
   Shield,
+  BedDouble,
 } from "lucide-react";
 import type { PatientLabQueueItem } from "@/types/labWorkflow";
 
@@ -82,103 +83,106 @@ const PatientLabReceptionItem: React.FC<PatientLabReceptionItemProps> = ({
 
   // console.log(item,'item');
 //  console.log(isLastResultPending,'isLastResultPending',isSelected,'isSelected',isReadyForPrint,'isReadyForPrint')
-const paymentStatusBadgeStyle = useMemo(() => {
-    if (allRequestsPaid === undefined) return { backgroundColor: appearanceSettings.default.badgeBackgroundColor, color: appearanceSettings.default.badgeTextColor };
-    return allRequestsPaid
-      ? { backgroundColor: '#10B981', color: '#FFFFFF' } // Hardcode Green for paid
-      : { backgroundColor: '#EF4444', color: '#FFFFFF' }; // Hardcode Red for unpaid
-  }, [allRequestsPaid, appearanceSettings]);
+  const paymentBadgeColor = allRequestsPaid === undefined
+    ? appearanceSettings.default.badgeBackgroundColor
+    : allRequestsPaid ? '#10B981' /* emerald-500 */ : '#EF4444'; /* red-500 */
+
+  // Small status icons (lock / insurance auth / company) are grouped into one
+  // tray under the tile instead of fighting over the same corners, so any
+  // combination of them can show at once without overlapping each other.
+  const statusIcons: React.ReactNode[] = [];
+  if (item.is_result_locked) {
+    statusIcons.push(
+      <Lock key="locked" className="h-2.5 w-2.5" style={{ color: lockIconColor }} />
+    );
+  }
+  if (item.result_auth != false) {
+    statusIcons.push(
+      <Shield key="auth" className="h-2.5 w-2.5" style={{ color: '#10B981' }} />
+    );
+  }
+  if (item.company) {
+    statusIcons.push(
+      <Heart key="company" className="h-2.5 w-2.5 text-red-500 fill-red-500" />
+    );
+  }
+  if (item.from_admission) {
+    statusIcons.push(
+      <BedDouble key="admission" className="h-2.5 w-2.5 text-purple-500" />
+    );
+  }
+
   return (
     <div
       onClick={handleClick}
       role="button"
       tabIndex={0}
-      // APPLY STYLES DYNAMICALLY USING CSS VARIABLES
+      // Dynamic colors come from the user's appearance settings (Settings → المختبر)
       style={{
-        '--bg-color': '#f0f5f7',
+        '--tile-bg': currentStyle.backgroundColor,
         '--border-color': currentStyle.borderColor,
         '--text-color': currentStyle.textColor,
       } as React.CSSProperties}
       className={cn(
-        "w-[50px] h-[45px] border-1 border-black font-bold duration-2500! flex-shrink-0 rounded-md cursor-pointer transition-all duration-200 ease-out",
-        "flex flex-col items-center justify-center relative group border",
-        // "hover:scale-105 f focus:ring-2 focus:ring-offset-2 bg-[#f0f5f7]",
-        item.is_printed && "bg-[#01b9ff] text-black! font-bold",
-        isSelected && "bg-[#fee685]",
-        "active:scale-95 transform-gpu",
-        isLastResultPending &&   "animate-heartbeat",
-        isLastResultPending  && "animate__animated animate__heartBeat animate__infinite animate__slow",
-        isReadyForPrint  && "animate__animated animate__bounce animate__infinite animate__slow",
+        "relative flex h-14 w-14 flex-shrink-0 flex-col items-center justify-center gap-0.5",
+        "rounded-xl border cursor-pointer select-none",
+        "bg-[var(--tile-bg)] border-[var(--border-color)] text-[var(--text-color)]",
+        "shadow-sm transition-all duration-200 ease-out",
+        "hover:-translate-y-0.5 hover:shadow-md hover:z-10",
+        "active:translate-y-0 active:scale-95",
+        currentStyle.isBold && "font-bold",
+        isLastResultPending && "animate__animated animate__heartBeat animate__infinite animate__slow",
+        isReadyForPrint && "animate__animated animate__bounce animate__infinite animate__slow",
         showNewLabRequestBadge && "ring-2 ring-purple-500 ring-offset-1 animate-pulse",
-        isClicking && "opacity-50 cursor-not-allowed", // Visual feedback when clicking
-
-        // Use CSS variables for dynamic styling
-        " text-[var(--text-color)]",
-        // isSelected && 'ring-1 ring-[var(--border-color)] shadow-lg'
+        isClicking && "opacity-50 cursor-not-allowed",
       )}
       title={`${item.patient_name}\nID: ${item.patient_id}`}
     >
-      <span className="text-lg leading-tight text-center px-1">
+      <span className="px-1 text-center text-sm leading-tight">
         {labIdentifier.length > 6 ? labIdentifier.substring(0, 5) + "…" : labIdentifier}
       </span>
-      
+
       {item.test_count > 0 && (
         <div
-          style={{
-            backgroundColor: allRequestsPaid ? '#10B981' : 'red',
-            color: paymentStatusBadgeStyle.color,
-          }}
-          className="absolute -top-1.5 -right-1.5 h-5 min-w-[20px] px-1.5 text-[10px] font-bold leading-tight rounded-full shadow-sm border-2 border-[var(--bg-color)] flex items-center justify-center"
+          style={{ backgroundColor: paymentBadgeColor }}
+          className={cn(
+            "absolute -top-1.5 -right-1.5 flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5",
+            "text-[10px] font-bold leading-tight text-white shadow-sm border-2 border-[var(--tile-bg)]",
+            showNewPaymentBadge && "ring-2 ring-green-400 ring-offset-1 ring-offset-[var(--tile-bg)] animate-pulse"
+          )}
         >
           {item.test_count}
         </div>
       )}
-    {item.result_auth != false && (
-      <div className="absolute -bottom-1 -right-1 p-0.5 bg-[var(--bg-color)] rounded-full shadow-sm border border-[var(--border-color)]">
-        <Shield className="h-3 w-3" style={{ color: '#10B981' }} />
-      </div>
-    )}
-      {item.is_result_locked && (
-        <div className="absolute -bottom-1 -left-1 p-0.5 bg-[var(--bg-color)] rounded-full shadow-sm border border-[var(--border-color)]">
-          <Lock className="h-3 w-3" style={{ color: lockIconColor }} />
-        </div>
-      )}
-
-      {Boolean(item.company) && (
-        <div className="absolute -bottom-1 -right-1 p-0.5 bg-[var(--bg-color)] rounded-full shadow-sm border border-[var(--border-color)]">
-          <Heart className="h-3 w-3 text-red-500 fill-red-500" />
-        </div>
-      )}
 
       {item.lab_to_lab_object_id && (
-        <div className="absolute -top-1 -left-1 p-0.5 bg-[var(--bg-color)] rounded-full shadow-sm border border-[var(--border-color)]">
-          <Globe className="h-3 w-3 text-blue-500" />
-        </div>
-      )}
-
-      {showNewPaymentBadge && (
-        <div className="absolute -top-1 -left-1 h-4 w-4 bg-green-500 rounded-full shadow-lg border-2 border-white animate-pulse">
-          <div className="h-full w-full bg-green-500 rounded-full animate-ping opacity-75"></div>
+        <div className="absolute -top-1 -left-1 rounded-full border border-[var(--border-color)] bg-[var(--tile-bg)] p-0.5 shadow-sm">
+          <Globe className="h-2.5 w-2.5 text-blue-500" />
         </div>
       )}
 
       {showNewLabRequestBadge && (
-        <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 flex h-2.5 w-2.5" title="طلب فحوصات جديد من الطبيب">
+        <span className="absolute -top-1.5 left-1/2 flex h-2.5 w-2.5 -translate-x-1/2" title="طلب فحوصات جديد من الطبيب">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-purple-400 opacity-75" />
           <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-purple-500" />
         </span>
       )}
 
+      {statusIcons.length > 0 && (
+        <div className="absolute -bottom-1.5 left-1/2 flex -translate-x-1/2 items-center gap-0.5 rounded-full border border-[var(--border-color)] bg-[var(--tile-bg)] px-1 py-0.5 shadow-sm">
+          {statusIcons}
+        </div>
+      )}
+
       {/* Progress Bar */}
       {item.total_result_count > 0 && (
-        <div className="absolute bottom-[-5px] left-0 right-0 h-0.5 bg-gray-200 overflow-hidden">
-          <div 
-            className="h-full bg-gradient-to-r from-blue-500 to-blue-500 transition-all duration-300 ease-out"
+        <div className="absolute inset-x-1 bottom-0.5 h-0.5 overflow-hidden rounded-full bg-black/10">
+          <div
+            className="h-full rounded-full bg-blue-500 transition-all duration-300 ease-out"
             style={{ width: `${progressPercentage}%` }}
           />
         </div>
       )}
-    
     </div>
   );
 };

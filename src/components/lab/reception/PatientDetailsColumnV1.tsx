@@ -75,6 +75,13 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
 
     const [isEditPatientInfoDialogOpen, setIsEditPatientInfoDialogOpen] = useState(false);
 
+    // "Pay all" is only allowed while the visit's shift is both the latest
+    // shift and still open (also enforced server-side in payAllLabRequests).
+    const generalShift = visit?.general_shift_details;
+    const isShiftLocked = Boolean(
+      generalShift && (generalShift.is_closed || generalShift.is_last_shift === false)
+    );
+
     // PDF preview state
     const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false);
     const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -158,7 +165,7 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
 
     useImperativeHandle(ref, () => ({
       triggerPayment: () => {
-        if (activeVisitId && balance !== 0 && !payAllMutation.isPending) {
+        if (activeVisitId && balance !== 0 && !payAllMutation.isPending && !isShiftLocked) {
           payAllMutation.mutate();
         }
       },
@@ -274,6 +281,7 @@ const PatientDetailsColumnV1 = forwardRef<PatientDetailsColumnV1Ref, PatientDeta
               onClick={() => payAllMutation.mutate()}
               disabled={
                 !can("سداد فحص") ||
+                isShiftLocked ||
                 (!visit?.patient.company && balance == 0 && visit?.lab_requests?.every((req) => req.is_paid))
               }
             >

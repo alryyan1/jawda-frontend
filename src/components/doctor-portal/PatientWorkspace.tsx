@@ -211,7 +211,7 @@ const PatientWorkspace: React.FC<PatientWorkspaceProps> = ({ visitId, initialVis
         >
           المستندات
         </Button>
-        <Button
+        {/* <Button
           size="small"
           variant="outlined"
           color="success"
@@ -226,7 +226,7 @@ const PatientWorkspace: React.FC<PatientWorkspaceProps> = ({ visitId, initialVis
           onClick={() => sendDocumentsMenuMutation.mutate()}
         >
           إرسال المستندات عبر واتساب
-        </Button>
+        </Button> */}
         <Menu
           anchorEl={printMenuAnchor}
           open={Boolean(printMenuAnchor)}

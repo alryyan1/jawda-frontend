@@ -18,6 +18,7 @@ import { useAuthorization } from "@/hooks/useAuthorization";
 export interface AutocompleteVisitOption {
   visit_id: number;
   patient_id: number;
+  patient_name: string;
   autocomplete_label: string;
 }
 
@@ -30,6 +31,8 @@ interface LabReceptionHeaderProps {
   activeVisitId: number | null;
   addTestsMutation: { isPending: boolean };
   testSelectionAutocompleteRef: React.RefObject<HTMLDivElement | null>;
+  /** True when the active visit's shift isn't the latest shift, or is closed — lab-request actions aren't allowed then. */
+  isActiveShiftLocked?: boolean;
 
   // Visit search
   recentVisitsData: AutocompleteVisitOption[] | undefined;
@@ -52,24 +55,9 @@ interface LabReceptionHeaderProps {
 /** Page identity block (icon + title) shown at the start of the toolbar. */
 const HeaderBrand: React.FC = () => (
   <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexShrink: 0 }}>
-    <Box
-      sx={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        width: 34,
-        height: 34,
-        borderRadius: 1.5,
-        bgcolor: "primary.main",
-        color: "primary.contrastText",
-      }}
-    >
-      <Microscope size={19} />
-    </Box>
+
     <Box sx={{ display: { xs: "none", md: "block" } }}>
-      <Box component="span" sx={{ fontWeight: 700, fontSize: 15, color: "text.primary", display: "block", lineHeight: 1.2 }}>
-        استقبال المختبر
-      </Box>
+  
     </Box>
   </Box>
 );
@@ -101,7 +89,7 @@ const VisitSearchControls: React.FC<
   fetchVisitDetailsMutation,
   onSearchByVisitIdEnter,
 }) => (
-  <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, flex: 1, justifyContent: "center" }}>
+  <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, flex: 1, justifyContent: "START" }}>
     <Autocomplete
       options={recentVisitsData || []}
       value={selectedVisitFromAutocomplete}
@@ -115,10 +103,15 @@ const VisitSearchControls: React.FC<
       inputValue={autocompleteInputValue}
       onInputChange={(_, newInputValue) => setAutocompleteInputValue(newInputValue)}
       getOptionLabel={(option) => option.autocomplete_label}
+      renderOption={(props, option) => (
+        <li {...props} key={option.visit_id}>
+          {option.patient_name}
+        </li>
+      )}
       isOptionEqualToValue={(option, value) => option.visit_id === value.visit_id}
       loading={isLoadingRecentVisits}
       size="small"
-      sx={{ width: 250 }}
+      sx={{ width: 300 }}
       renderInput={(params) => (
         <TextField
           {...params}
@@ -172,6 +165,7 @@ const TestSelectionControls: React.FC<
     | "testSelectionAutocompleteRef"
     | "onAddTests"
     | "onOpenOffers"
+    | "isActiveShiftLocked"
   >
 > = ({
   availableTests,
@@ -183,13 +177,26 @@ const TestSelectionControls: React.FC<
   testSelectionAutocompleteRef,
   onAddTests,
   onOpenOffers,
+  isActiveShiftLocked = false,
 }) => {
   const { can } = useAuthorization();
+  const addDisabled =
+    selectedTests.length === 0 ||
+    !activeVisitId ||
+    addTestsMutation.isPending ||
+    !can("اضافه فحص") ||
+    isActiveShiftLocked;
 
   return (
     <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, flexShrink: 0 }}>
       {Boolean(activeVisitId) && (
-        <Button size="small" variant="contained" color="secondary" onClick={onOpenOffers}>
+        <Button
+          size="small"
+          variant="contained"
+          color="secondary"
+          onClick={onOpenOffers}
+          disabled={isActiveShiftLocked}
+        >
           العروض
         </Button>
       )}
@@ -197,6 +204,7 @@ const TestSelectionControls: React.FC<
       <Autocomplete
         ref={testSelectionAutocompleteRef}
         multiple
+        disabled={isActiveShiftLocked}
         options={availableTests || []}
         value={selectedTests}
         onChange={(_, newValue) => setSelectedTests(newValue)}
@@ -205,14 +213,19 @@ const TestSelectionControls: React.FC<
         isOptionEqualToValue={(option, value) => option.id === value.id}
         loading={isLoadingTests}
         size="small"
-        sx={{ width: 320 }}
+        sx={{ width: 390 }}
         renderInput={(params) => (
           <TextField
             {...params}
             label="اختر الفحوصات لإضافتها"
             variant="outlined"
             placeholder="ابحث واختر الفحوصات..."
+            error={isActiveShiftLocked}
+            helperText={
+              isActiveShiftLocked ? "لا يمكن إضافة فحوصات — الوردية  مغلقة" : undefined
+            }
             onKeyDown={(e) => {
+              if (isActiveShiftLocked) return;
               if (e.key === "Enter") {
                 // Typing a numeric test id then Enter selects that test directly
                 const enteredId = (e.target as HTMLInputElement).value;
@@ -237,7 +250,7 @@ const TestSelectionControls: React.FC<
 
       <Button
         onClick={onAddTests}
-        disabled={selectedTests.length === 0 || !activeVisitId || addTestsMutation.isPending || !can("اضافه فحص")}
+        disabled={addDisabled}
         variant="contained"
         size="small"
         startIcon={addTestsMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
@@ -256,20 +269,19 @@ const LabReceptionHeader: React.FC<LabReceptionHeaderProps> = (props) => {
         borderBottom: 1,
         borderColor: "divider",
         bgcolor: "background.paper",
-        px: 1.5,
+        px: 1,
         py: 1,
       }}
     >
       <Box
         sx={{
           display: "flex",
-          flexWrap: "wrap",
           alignItems: "center",
           justifyContent: "space-between",
           gap: 1,
         }}
       >
-        <HeaderBrand />
+        {/* <HeaderBrand /> */}
         <VisitSearchControls {...props} />
         <TestSelectionControls {...props} />
       </Box>

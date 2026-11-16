@@ -85,9 +85,7 @@ const DoctorPortalLoginPage: React.FC = () => {
 
       <div className="relative w-full max-w-sm rounded-2xl border bg-card/95 p-8 shadow-xl ring-1 ring-black/5 backdrop-blur-sm dark:ring-white/10">
         <div className="mb-6 flex flex-col items-center text-center">
-          <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground">
-            <Stethoscope className="h-7 w-7" />
-          </div>
+        
           <h1 className="text-xl font-semibold">بوابة الطبيب</h1>
           <p className="mt-1 text-sm text-muted-foreground">سجّل الدخول لعرض قائمة مرضاك</p>
         </div>

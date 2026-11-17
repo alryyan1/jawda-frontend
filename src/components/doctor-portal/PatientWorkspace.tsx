@@ -42,6 +42,7 @@ import MedicalReportSection from './sections/MedicalReportSection';
 import AppointmentSection from './sections/AppointmentSection';
 import AttachmentsSection from './sections/AttachmentsSection';
 import PrescriptionsSection from './sections/PrescriptionsSection';
+import DosesSection from './sections/DosesSection';
 import TeethSection from './sections/TeethSection';
 import FileVisitsSection from './sections/FileVisitsSection';
 import LabReportPdfPreviewDialog from '@/components/common/LabReportPdfPreviewDialog';
@@ -370,6 +371,9 @@ const PatientWorkspace: React.FC<PatientWorkspaceProps> = ({ visitId, initialVis
         )}
         {activeSection === 'prescriptions' && (
           <PrescriptionsSection visit={visit} />
+        )}
+        {activeSection === 'doses' && (
+          <DosesSection visit={visit} />
         )}
         {activeSection === 'services' && (
           <ServicesSection visit={visit} />

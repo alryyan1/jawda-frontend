@@ -37,6 +37,7 @@ import {
   Smile,
   CalendarClock,
   GripVertical,
+  Syringe,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ActivePatientVisit } from '@/types/patients';
@@ -53,6 +54,7 @@ export type SectionKey =
   | 'diagnosis'
   | 'attachments'
   | 'prescriptions'
+  | 'doses'
   | 'report'
   | 'appointments'
   | 'teeth';
@@ -69,6 +71,7 @@ const ACTIONS: ActionDef[] = [
   { key: 'diagnosis',     label: 'التشخيص',           icon: ClipboardList },
   { key: 'report',        label: 'التقرير ',     icon: FileText },
   { key: 'prescriptions', label: 'الوصفات ',    icon: Pill },
+  { key: 'doses',         label: 'الجرعات',           icon: Syringe },
   { key: 'services',      label: 'الخدمات',           icon: Stethoscope },
   { key: 'lab',           label: 'المختبر',            icon: FlaskConical },
   { key: 'history',       label: 'السجل ',       icon: BookOpen },

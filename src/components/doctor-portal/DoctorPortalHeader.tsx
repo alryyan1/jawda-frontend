@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Stethoscope } from 'lucide-react';
+import { Stethoscope, BedDouble } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -11,7 +11,9 @@ import { cn } from '@/lib/utils';
 import realtimeService from '@/services/realtimeService';
 import { getDoctorById } from '@/services/doctorService';
 import type { DoctorShift } from '@/types/doctors';
+import type { ActivePatientVisit } from '@/types/patients';
 import DoctorPortalControlsDialog from './DoctorPortalControlsDialog';
+import AdmittedPatientsDialog from './AdmittedPatientsDialog';
 
 interface DoctorPortalHeaderProps {
   shift: DoctorShift | null;
@@ -22,6 +24,8 @@ interface DoctorPortalHeaderProps {
   };
   selectedDate: string;
   onDateChange: (date: string) => void;
+  /** Called when a patient is picked from the "admitted patients" dialog — makes it the active patient. */
+  onSelectAdmittedVisit: (visit: ActivePatientVisit) => void;
 }
 
 const DoctorPortalHeader: React.FC<DoctorPortalHeaderProps> = ({
@@ -29,6 +33,7 @@ const DoctorPortalHeader: React.FC<DoctorPortalHeaderProps> = ({
   stats,
   selectedDate,
   onDateChange,
+  onSelectAdmittedVisit,
 }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -69,6 +74,7 @@ const DoctorPortalHeader: React.FC<DoctorPortalHeaderProps> = ({
   // F9 opens the controls dialog (date filter, stats, realtime/theme/logout)
   // instead of keeping them permanently visible in the header.
   const [isControlsDialogOpen, setIsControlsDialogOpen] = useState(false);
+  const [isAdmittedPatientsDialogOpen, setIsAdmittedPatientsDialogOpen] = useState(false);
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'F9') {
@@ -126,14 +132,31 @@ const DoctorPortalHeader: React.FC<DoctorPortalHeaderProps> = ({
       </div>
 
       {/* Date, stats, realtime/theme/logout moved into the F9 controls dialog */}
-      <button
-        type="button"
-        onClick={() => setIsControlsDialogOpen(true)}
-        className="rounded-md border border-dashed px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted/60"
-        title="عناصر التحكم (F9)"
-      >
-        F9
-      </button>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setIsAdmittedPatientsDialogOpen(true)}
+          className="flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted/60"
+          title="مرضى التنويم"
+        >
+          <BedDouble className="h-3.5 w-3.5" />
+          مرضى التنويم
+        </button>
+        <button
+          type="button"
+          onClick={() => setIsControlsDialogOpen(true)}
+          className="rounded-md border border-dashed px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted/60"
+          title="عناصر التحكم (F9)"
+        >
+          F9
+        </button>
+      </div>
+
+      <AdmittedPatientsDialog
+        open={isAdmittedPatientsDialogOpen}
+        onClose={() => setIsAdmittedPatientsDialogOpen(false)}
+        onSelectVisit={onSelectAdmittedVisit}
+      />
 
       <DoctorPortalControlsDialog
         open={isControlsDialogOpen}

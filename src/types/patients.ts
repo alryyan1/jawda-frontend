@@ -124,6 +124,8 @@ export interface ActivePatientVisit {
   file_id: number | null;
   /** Total visits (including this one) sharing this visit's File — >1 means the patient has prior visits on file. */
   file_visits_count: number;
+  /** ISO 8601 timestamp the visit was created. */
+  created_at?: string | null;
   /** Slim company object for card styling; null for cash patients. */
   company: { id: number; name: string } | null;
   patient: {

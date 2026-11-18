@@ -18,6 +18,8 @@ interface ActivePatientFilters {
     date?: string;                   // YYYY-MM-DD, only used with doctor_id (default: today)
     search?: string;
     from_admission?: boolean;        // All admission-origin patients, regardless of doctor/date
+    date_from?: string;               // YYYY-MM-DD, narrows the from_admission scope
+    date_to?: string;                 // YYYY-MM-DD, narrows the from_admission scope
 }
 
 export const getActiveClinicPatients = async (filters: ActivePatientFilters): Promise<ActivePatientVisit[]> => {

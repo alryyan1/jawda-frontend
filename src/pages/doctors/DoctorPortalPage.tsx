@@ -405,6 +405,7 @@ const DoctorPortalInner: React.FC = () => {
             stats={stats}
             selectedDate={selectedDate}
             onDateChange={setSelectedDate}
+            onSelectAdmittedVisit={handleSelectPatient}
           />
         )}
 

@@ -50,8 +50,45 @@ const QueueHeader: React.FC<QueueHeaderProps> = ({
           )}
         </div>
         <div className="flex items-center gap-0.5 sm:gap-1">
-        
-          <IconButton 
+          <IconButton
+            size="small"
+            className="h-7 w-7 sm:h-8 sm:w-8"
+            onClick={() => onShiftChange('prev')}
+            disabled={isLoading || currentShift?.is_last_shift}
+            sx={{
+              backgroundColor: 'primary.main',
+              color: 'primary.contrastText',
+              '&:hover': {
+                backgroundColor: 'primary.dark',
+              },
+              '&.Mui-disabled': {
+                backgroundColor: 'action.disabledBackground',
+                color: 'action.disabled',
+              }
+            }}
+          >
+            {isLoading ? <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" /> : <PrevIcon className="h-4 w-4 sm:h-5 sm:w-5" />}
+          </IconButton>
+          <IconButton
+            size="small"
+            className="h-7 w-7 sm:h-8 sm:w-8"
+            onClick={() => onShiftChange('next')}
+            disabled={isLoading}
+            sx={{
+              backgroundColor: 'primary.main',
+              color: 'primary.contrastText',
+              '&:hover': {
+                backgroundColor: 'primary.dark',
+              },
+              '&.Mui-disabled': {
+                backgroundColor: 'action.disabledBackground',
+                color: 'action.disabled',
+              }
+            }}
+          >
+            {isLoading ? <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" /> : <NextIcon className="h-4 w-4 sm:h-5 sm:w-5" />}
+          </IconButton>
+          <IconButton
             size="small" 
             className="h-7 w-7 sm:h-8 sm:w-8" 
             onClick={onRefreshQueue} 

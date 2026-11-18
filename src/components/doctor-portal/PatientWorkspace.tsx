@@ -172,9 +172,7 @@ const PatientWorkspace: React.FC<PatientWorkspaceProps> = ({ visitId, initialVis
         <Divider orientation="vertical" flexItem />
 
         {/* File number + visit id */}
-        <Typography variant="body2" color="text.secondary">
-          ملف #{visit?.file_id ?? initialVisit?.file_id ?? '—'} — زيارة #{visitId}
-        </Typography>
+   
           {/* visit date */}
         {visit?.created_at && (
           <Typography variant="body2" color="text.secondary">
@@ -349,11 +347,11 @@ const PatientWorkspace: React.FC<PatientWorkspaceProps> = ({ visitId, initialVis
       <Box sx={{ flex: 1, overflowY: 'auto' }}>
         {activeSection === 'info' && (
           <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
-            <Box sx={{ flex: '0 0 33.33%', minWidth: 0 }}>
+            <Box >
               <PatientInfoSection visit={visit} />
             </Box>
-            <Box sx={{ flex: '0 0 66.67%', minWidth: 0 }}>
-              <FileVisitsSection visit={visit} onSelectVisit={onSelectVisit} />
+            <Box >
+              {/* <FileVisitsSection visit={visit} onSelectVisit={onSelectVisit} /> */}
             </Box>
           </Box>
         )}

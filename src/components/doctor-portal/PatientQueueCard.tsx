@@ -89,10 +89,10 @@ const PatientQueueCard: React.FC<PatientQueueCardProps> = ({ visit, isSelected, 
       </div>
 
       {/* Main content */}
-      <div className="flex-1 min-w-0 py-2 pe-3 flex flex-colc items-center gap-1 min-h-[70px] ">
+      <div className="flex-1 min-w-0 py-2 pe-3 flex flex-colc items-center gap-1 min-h-[50px] ">
         {/* Name row */}
        
-          <span className="flex-1 min-w-0 text-[0.92rem] font-semibold leading-tight truncate" title={visit.patient.name}>
+          <span className="flex-1 min-w-0 text-[0.92rem]  leading-tight truncate" title={visit.patient.name}>
             {visit.patient.name}
           </span>
 

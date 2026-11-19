@@ -7,8 +7,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import type { ThemeMode } from '@/contexts/ThemeModeContext';
@@ -48,8 +46,6 @@ interface DoctorPortalControlsDialogProps {
     insurance: number;
     cash: number;
   };
-  selectedDate: string;
-  onDateChange: (date: string) => void;
   isRealtimeEnabled: boolean;
   isRealtimeConnected: boolean;
   onToggleRealtime: () => void;
@@ -65,8 +61,6 @@ const DoctorPortalControlsDialog: React.FC<DoctorPortalControlsDialogProps> = ({
   open,
   onOpenChange,
   stats,
-  selectedDate,
-  onDateChange,
   isRealtimeEnabled,
   isRealtimeConnected,
   onToggleRealtime,
@@ -82,20 +76,6 @@ const DoctorPortalControlsDialog: React.FC<DoctorPortalControlsDialogProps> = ({
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
-          {/* Date filter */}
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="doctor-portal-date" className="text-[0.68rem] text-muted-foreground">
-              التاريخ
-            </Label>
-            <Input
-              id="doctor-portal-date"
-              type="date"
-              value={selectedDate}
-              onChange={e => onDateChange(e.target.value)}
-              className="h-9 w-[150px] text-[0.8rem]"
-            />
-          </div>
-
           {/* Stat tiles */}
           <div className="group flex w-fit items-center rounded-lg border bg-muted/40 transition-colors duration-300 hover:bg-muted/60">
             <StatTile

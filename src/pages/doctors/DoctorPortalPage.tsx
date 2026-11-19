@@ -118,9 +118,9 @@ const DoctorPortalInner: React.FC = () => {
   const [selectedVisit, setSelectedVisit] = useState<ActivePatientVisit | null>(null);
   const [selectedDate, setSelectedDate] = useState(() => dayjs().format('YYYY-MM-DD'));
   // Pins the "current visit" vitals form as a side panel (opposite the queue)
-  // so it stays reachable while browsing other workspace tabs. Pinned by
-  // default — unpinning is the opt-out, not the opt-in.
-  const [isVitalsPinned, setIsVitalsPinned] = useState(true);
+  // so it stays reachable while browsing other workspace tabs. Unpinned by
+  // default — pinning is opt-in.
+  const [isVitalsPinned, setIsVitalsPinned] = useState(false);
   const isToday = selectedDate === dayjs().format('YYYY-MM-DD');
 
   // Query 1: all active doctor shifts for this clinic shift

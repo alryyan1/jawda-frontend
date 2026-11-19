@@ -6,3 +6,10 @@ export const getVisitSummaryPdfUrl = async (visitId: number): Promise<string> =>
   });
   return URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
 };
+
+export const getVisitShortStayAdmissionPdfUrl = async (visitId: number): Promise<string> => {
+  const response = await apiClient.get(`/doctor-visits/${visitId}/short-stay-admission-pdf`, {
+    responseType: 'blob',
+  });
+  return URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+};

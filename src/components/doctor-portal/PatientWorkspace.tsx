@@ -12,11 +12,12 @@ import MenuItem from '@mui/material/MenuItem';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import { Male, Female } from '@mui/icons-material';
-import { ClipboardList, FileText, FlaskConical, HeartPulse, Pill, Printer, Send } from 'lucide-react';
+import { BedDouble, ClipboardList, FileText, FlaskConical, HeartPulse, Pill, Printer, Send } from 'lucide-react';
 import { toast } from 'sonner';
-import { getDoctorVisitById } from '@/services/visitService';
+import dayjs from 'dayjs';
+import { getDoctorVisitById, getSameFileVisits } from '@/services/visitService';
 import { getMedicalHistory } from '@/services/patientMedicalHistoryService';
-import { getVisitSummaryPdfUrl } from '@/services/visitSummaryService';
+import { getVisitSummaryPdfUrl, getVisitShortStayAdmissionPdfUrl } from '@/services/visitSummaryService';
 import {
   getVisitVitalsPdfUrl,
   getVisitPrescriptionsPdfUrl,
@@ -43,6 +44,7 @@ import AppointmentSection from './sections/AppointmentSection';
 import AttachmentsSection from './sections/AttachmentsSection';
 import PrescriptionsSection from './sections/PrescriptionsSection';
 import DosesSection from './sections/DosesSection';
+import IntakeOutputSection from './sections/IntakeOutputSection';
 import TeethSection from './sections/TeethSection';
 import FileVisitsSection from './sections/FileVisitsSection';
 import LabReportPdfPreviewDialog from '@/components/common/LabReportPdfPreviewDialog';
@@ -59,7 +61,13 @@ interface PatientWorkspaceProps {
 
 
 
-const PatientWorkspace: React.FC<PatientWorkspaceProps> = ({ visitId, initialVisit, isVitalsPinned, onToggleVitalsPinned, onSelectVisit }) => {
+const PatientWorkspace: React.FC<PatientWorkspaceProps> = ({
+  visitId,
+  initialVisit,
+  isVitalsPinned,
+  onToggleVitalsPinned,
+  onSelectVisit,
+}) => {
   const queryClient = useQueryClient();
   const [activeSection, setActiveSection] = useState<SectionKey>('info');
   const [printMenuAnchor, setPrintMenuAnchor] = useState<null | HTMLElement>(null);
@@ -88,6 +96,24 @@ const PatientWorkspace: React.FC<PatientWorkspaceProps> = ({ visitId, initialVis
     queryFn: () => getDoctorVisitById(visitId),
     enabled: !!visitId,
   });
+
+  // Other visits sharing this visit's File — used only to flag how many days
+  // old this visit is relative to the file's most recent one.
+  const { data: sameFileVisits = [] } = useQuery<DoctorVisit[]>({
+    queryKey: ['sameFileVisits', visitId],
+    queryFn: () => getSameFileVisits(visitId),
+    enabled: !!visit?.file_id,
+  });
+
+  const daysSinceLastVisit = (() => {
+    if (!visit?.visit_date || sameFileVisits.length < 2) return null;
+    const latestVisitDate = sameFileVisits.reduce(
+      (latest, v) => (v.visit_date > latest ? v.visit_date : latest),
+      sameFileVisits[0].visit_date
+    );
+    const diffDays = dayjs(latestVisitDate).diff(dayjs(visit.visit_date), 'day');
+    return diffDays > 0 ? diffDays : null;
+  })();
 
   // Resolve patient id from either the fetched visit or the initial snapshot
   const patientId = visit?.patient_id ?? initialVisit?.patient_id;
@@ -178,6 +204,15 @@ const PatientWorkspace: React.FC<PatientWorkspaceProps> = ({ visitId, initialVis
           <Typography variant="body2" color="text.secondary">
             {new Date(visit.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
           </Typography>
+        )}
+        {daysSinceLastVisit != null && (
+          <Chip
+            label={`منذ ${daysSinceLastVisit} ${daysSinceLastVisit === 1 ? 'يوم' : 'أيام'} من آخر زيارة`}
+            size="small"
+            color="warning"
+            variant="outlined"
+            sx={{ fontSize: '0.72rem', height: 22 }}
+          />
         )}
         {/* Company */}
         {patient?.company_id && (
@@ -333,6 +368,22 @@ const PatientWorkspace: React.FC<PatientWorkspaceProps> = ({ visitId, initialVis
             </ListItemIcon>
             <ListItemText>التقرير الطبي</ListItemText>
           </MenuItem>
+          <MenuItem
+            onClick={() => {
+              setPrintMenuAnchor(null);
+              printDocument(
+                'General Admission Report',
+                `general-admission-report-${visitId}.pdf`,
+                () => getVisitShortStayAdmissionPdfUrl(visitId),
+                'فشل إنشاء تقرير الإقامة العام'
+              );
+            }}
+          >
+            <ListItemIcon>
+              <BedDouble size={16} />
+            </ListItemIcon>
+            <ListItemText>General Admission Report</ListItemText>
+          </MenuItem>
         </Menu>
       </Paper>
 
@@ -359,7 +410,7 @@ const PatientWorkspace: React.FC<PatientWorkspaceProps> = ({ visitId, initialVis
           <DiagnosisSection visit={visit} />
         )}
         {activeSection === 'report' && (
-          <MedicalReportSection visit={visit} />
+          <MedicalReportSection visit={visit} onSelectVisit={onSelectVisit} />
         )}
         {activeSection === 'appointments' && (
           <AppointmentSection patientId={patientId} defaultDoctorId={visit?.doctor_id} />
@@ -372,6 +423,9 @@ const PatientWorkspace: React.FC<PatientWorkspaceProps> = ({ visitId, initialVis
         )}
         {activeSection === 'doses' && (
           <DosesSection visit={visit} />
+        )}
+        {activeSection === 'intake_output' && (
+          <IntakeOutputSection visit={visit} />
         )}
         {activeSection === 'services' && (
           <ServicesSection visit={visit} />

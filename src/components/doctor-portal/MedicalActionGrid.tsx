@@ -38,6 +38,7 @@ import {
   CalendarClock,
   GripVertical,
   Syringe,
+  Droplets,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ActivePatientVisit } from '@/types/patients';
@@ -55,6 +56,7 @@ export type SectionKey =
   | 'attachments'
   | 'prescriptions'
   | 'doses'
+  | 'intake_output'
   | 'report'
   | 'appointments'
   | 'teeth';
@@ -72,13 +74,14 @@ const ACTIONS: ActionDef[] = [
   { key: 'report',        label: 'التقرير ',     icon: FileText },
   { key: 'prescriptions', label: 'الوصفات ',    icon: Pill },
   { key: 'doses',         label: 'الجرعات',           icon: Syringe },
+  { key: 'intake_output', label: 'الدخول والخروج',    icon: Droplets },
   { key: 'services',      label: 'الخدمات',           icon: Stethoscope },
   { key: 'lab',           label: 'المختبر',            icon: FlaskConical },
   { key: 'history',       label: 'السجل ',       icon: BookOpen },
   { key: 'vitals',        label: 'العلامات ',  icon: Activity },
   { key: 'systems',       label: ' الأجهزة',   icon: Scan },
-  { key: 'appointments',  label: 'المواعيد',           icon: CalendarClock },
-  { key: 'teeth',         label: 'الأسنان',            icon: Smile },
+  // { key: 'appointments',  label: 'المواعيد',           icon: CalendarClock },
+  // { key: 'teeth',         label: 'الأسنان',            icon: Smile },
 ];
 
 const DEFAULT_ORDER: SectionKey[] = ACTIONS.map(action => action.key);

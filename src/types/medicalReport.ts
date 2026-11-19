@@ -1,6 +1,11 @@
 export interface VisitMedicalReport {
   id: number;
   doctor_visit_id: number;
+  doctor_visit?: {
+    id: number;
+    visit_date: string | null;
+    doctor?: { id: number; name: string } | null;
+  } | null;
   user_id: number;
   user?: { id: number; name: string } | null;
   content: string | null;

@@ -26,6 +26,15 @@ export const updateVisitMedicalReport = async (
   return response.data.data;
 };
 
+// All medical reports across every visit sharing this visit's File (same real
+// person's separate registration days) — drives the "past reports" panel.
+export const getSameFileMedicalReports = async (visitId: number): Promise<VisitMedicalReport[]> => {
+  const response = await apiClient.get<{ data: VisitMedicalReport[] }>(
+    `/doctor-visits/${visitId}/medical-reports`
+  );
+  return response.data.data;
+};
+
 export const getVisitMedicalReportPdfUrl = async (reportId: number): Promise<string> => {
   const response = await apiClient.get(`/visit-medical-reports/${reportId}/pdf`, {
     responseType: 'blob',

@@ -26,3 +26,16 @@ export const getActiveClinicPatients = async (filters: ActivePatientFilters): Pr
   const response = await apiClient.get<{ data: ActivePatientVisit[] }>('/clinic-active-patients', { params: filters });
   return response.data.data; // Return the array from the data property
 };
+
+// Map of 'YYYY-MM-DD' -> patient count, for a doctor's patients across a date range.
+// Drives the day-badge calendar in the Doctor Portal's date picker.
+export const getDoctorPatientCountsByDay = async (
+  doctorId: number,
+  dateFrom: string,
+  dateTo: string
+): Promise<Record<string, number>> => {
+  const response = await apiClient.get<{ data: Record<string, number> }>('/clinic-active-patients/counts-by-day', {
+    params: { doctor_id: doctorId, date_from: dateFrom, date_to: dateTo },
+  });
+  return response.data.data;
+};

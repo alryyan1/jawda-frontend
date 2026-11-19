@@ -27,6 +27,35 @@ interface FileVisitsDialogProps {
   onSelectVisit: (visitId: number) => void;
 }
 
+const normalizeName = (name: string): string => name.replace(/\s+/g, '');
+
+// Highlights the words in `name` that differ from the reference name at the
+// same position — flags typos/variants between registrations of the same file.
+// Names that only differ in spacing (e.g. "عبد المنعم" vs "عبدالمنعم") are
+// treated as a full match and left unhighlighted.
+const renderNameWithDiff = (name: string | null | undefined, referenceName: string, referenceWords: string[]): React.ReactNode => {
+  if (!name) return '—';
+  if (referenceWords.length === 0) return name;
+  if (normalizeName(name) === normalizeName(referenceName)) return name;
+
+  const words = name.trim().split(/\s+/);
+  return words.map((word, i) => (
+    <React.Fragment key={i}>
+      <Box
+        component="span"
+        sx={
+          word !== referenceWords[i]
+            ? { color: 'error.main', fontWeight: 700, textDecoration: 'line-through' }
+            : undefined
+        }
+      >
+        {word}
+      </Box>
+      {i < words.length - 1 ? ' ' : ''}
+    </React.Fragment>
+  ));
+};
+
 const FileVisitsDialog: React.FC<FileVisitsDialogProps> = ({
   isOpen, onOpenChange, visitId, currentVisitId, onSelectVisit,
 }) => {
@@ -36,7 +65,14 @@ const FileVisitsDialog: React.FC<FileVisitsDialogProps> = ({
     enabled: isOpen && !!visitId,
   });
 
-  const handleRowClick = (id: number) => {
+  const referenceName = visits.find(v => v.id === currentVisitId)?.patient?.name ?? visits[0]?.patient?.name ?? '';
+  const referenceWords = referenceName.trim().split(/\s+/).filter(Boolean);
+
+  const handleRowClick = (e: React.MouseEvent, id: number) => {
+    // MUI's Dialog portals to document.body, but React still bubbles this
+    // click through the *React* tree — straight into whatever card/row
+    // opened the dialog (e.g. a queue card's own onClick) — so stop it here.
+    e.stopPropagation();
     if (id === currentVisitId) return;
     onSelectVisit(id);
     onOpenChange(false);
@@ -59,9 +95,9 @@ const FileVisitsDialog: React.FC<FileVisitsDialogProps> = ({
             <TableHead>
               <TableRow>
                 <TableCell align="center">رقم الزيارة</TableCell>
-                <TableCell align="center">تاريخ الزيارة</TableCell>
-                <TableCell align="center">الطبيب</TableCell>
                 <TableCell align="center">اسم المريض</TableCell>
+                <TableCell align="center">الطبيب</TableCell>
+                <TableCell align="center">تاريخ الزيارة</TableCell>
                 <TableCell align="center">وقت الزيارة</TableCell>
               </TableRow>
             </TableHead>
@@ -72,7 +108,7 @@ const FileVisitsDialog: React.FC<FileVisitsDialogProps> = ({
                   <TableRow
                     key={v.id}
                     hover={!isCurrent}
-                    onClick={() => handleRowClick(v.id)}
+                    onClick={e => handleRowClick(e, v.id)}
                     sx={
                       isCurrent
                         ? { bgcolor: 'primary.50', fontWeight: 600, borderInlineStart: 4, borderColor: 'primary.main' }
@@ -80,6 +116,8 @@ const FileVisitsDialog: React.FC<FileVisitsDialogProps> = ({
                     }
                   >
                     <TableCell align="center">{v.id}</TableCell>
+                      <TableCell>{renderNameWithDiff(v.patient?.name, referenceName, referenceWords)}</TableCell>
+                      <TableCell align="center">{v.doctor?.name ?? v.doctor_name ?? 'غير محدد'}</TableCell>
                     <TableCell align="center">
                       {v.visit_date ?? '—'}
                       {isCurrent && (
@@ -88,8 +126,6 @@ const FileVisitsDialog: React.FC<FileVisitsDialogProps> = ({
                         </Typography>
                       )}
                     </TableCell>
-                    <TableCell align="center">{v.doctor?.name ?? v.doctor_name ?? 'غير محدد'}</TableCell>
-                    <TableCell>{v.patient?.name ?? '—'}</TableCell>
                     <TableCell align="center">{v.visit_time_formatted ?? '—'}</TableCell>
                   </TableRow>
                 );
@@ -99,7 +135,15 @@ const FileVisitsDialog: React.FC<FileVisitsDialogProps> = ({
         )}
       </DialogContent>
       <DialogActions>
-        <Button variant="outlined" onClick={() => onOpenChange(false)}>إغلاق</Button>
+        <Button
+          variant="outlined"
+          onClick={e => {
+            e.stopPropagation();
+            onOpenChange(false);
+          }}
+        >
+          إغلاق
+        </Button>
       </DialogActions>
     </Dialog>
   );

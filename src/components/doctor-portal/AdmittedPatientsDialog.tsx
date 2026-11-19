@@ -150,7 +150,7 @@ const AdmittedPatientsDialog: React.FC<AdmittedPatientsDialogProps> = ({ open, o
                   <TableCell sx={{ fontWeight: 700 }}>العمر</TableCell>
                   <TableCell sx={{ fontWeight: 700 }}>الفئة</TableCell>
                   <TableCell sx={{ fontWeight: 700 }}>تاريخ التسجيل</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>الحالة</TableCell>
+                  {/* <TableCell sx={{ fontWeight: 700 }}>الحالة</TableCell> */}
                   <TableCell sx={{ fontWeight: 700 }} align="center">
                     إجراء
                   </TableCell>
@@ -176,9 +176,9 @@ const AdmittedPatientsDialog: React.FC<AdmittedPatientsDialogProps> = ({ open, o
                       />
                     </TableCell>
                     <TableCell>{visit.created_at ? dayjs(visit.created_at).format('DD/MM/YYYY HH:mm') : '—'}</TableCell>
-                    <TableCell>
-                      <Chip size="small" label={STATUS_LABELS[visit.status] ?? visit.status} color={STATUS_COLORS[visit.status] ?? 'default'} />
-                    </TableCell>
+                    {/* <TableCell> */}
+                      {/* <Chip size="small" label={STATUS_LABELS[visit.status] ?? visit.status} color={STATUS_COLORS[visit.status] ?? 'default'} /> */}
+                    {/* </TableCell> */}
                     <TableCell align="center">
                       <Button size="small" variant="outlined" onClick={(event) => { event.stopPropagation(); handleRowClick(visit); }}>
                         فتح

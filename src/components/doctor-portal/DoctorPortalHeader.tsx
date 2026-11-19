@@ -13,6 +13,7 @@ import { getDoctorById } from '@/services/doctorService';
 import type { DoctorShift } from '@/types/doctors';
 import type { ActivePatientVisit } from '@/types/patients';
 import DoctorPortalControlsDialog from './DoctorPortalControlsDialog';
+import DoctorPortalDatePicker from './DoctorPortalDatePicker';
 import AdmittedPatientsDialog from './AdmittedPatientsDialog';
 
 interface DoctorPortalHeaderProps {
@@ -131,8 +132,9 @@ const DoctorPortalHeader: React.FC<DoctorPortalHeaderProps> = ({
         </div>
       </div>
 
-      {/* Date, stats, realtime/theme/logout moved into the F9 controls dialog */}
+      {/* Stats, realtime/theme/logout moved into the F9 controls dialog */}
       <div className="flex items-center gap-2">
+        <DoctorPortalDatePicker selectedDate={selectedDate} onDateChange={onDateChange} />
         <button
           type="button"
           onClick={() => setIsAdmittedPatientsDialogOpen(true)}
@@ -162,8 +164,6 @@ const DoctorPortalHeader: React.FC<DoctorPortalHeaderProps> = ({
         open={isControlsDialogOpen}
         onOpenChange={setIsControlsDialogOpen}
         stats={stats}
-        selectedDate={selectedDate}
-        onDateChange={onDateChange}
         isRealtimeEnabled={isRealtimeEnabled}
         isRealtimeConnected={isRealtimeConnected}
         onToggleRealtime={toggleRealtime}
